@@ -45,13 +45,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
         PRIVATE bimg_decode)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
-    target_compile_definitions(NativeEngine
-        PRIVATE WEBP)
-    target_link_libraries(NativeEngine
-        PRIVATE webp)
-endif()
-
 if(BABYLON_NATIVE_PLUGIN_SHADERCACHE)
     target_compile_definitions(NativeEngine
         PRIVATE SHADER_CACHE)
@@ -79,6 +72,12 @@ endif()
 # Required by VertexBuffer::BuildInstanceDataBuffer. Remove once we have a better solution for that method.
 target_compile_definitions(NativeEngine
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
+
+# Expose test-only hooks (used by Apps/UnitTests) when building apps; excluded from consumer builds.
+if(BABYLON_NATIVE_BUILD_APPS)
+    target_compile_definitions(NativeEngine
+        PUBLIC BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS)
+endif()
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

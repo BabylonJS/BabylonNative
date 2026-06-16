@@ -32,10 +32,11 @@
 #include <limits>
 #include <optional>
 
-#if defined(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES) && defined(WEBP)
-#include <webp/decode.h>
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+#include <atomic>
+#include <chrono>
+#include <thread>
 #endif
-
 namespace Babylon
 {
     namespace
@@ -196,26 +197,13 @@ namespace Babylon
         bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
             // Pass a bx::ErrorIgnore so bimg::imageParse reports unrecognized
-            // formats (e.g. WebP, handled by the fallback below) by returning
-            // nullptr instead of tripping its internal BX_ERROR_SCOPE assert.
-            // ErrorIgnore intentionally swallows any error that is set.
+            // or corrupt images by returning nullptr instead of tripping its
+            // internal BX_ERROR_SCOPE assert. ErrorIgnore intentionally
+            // swallows any error that is set.
             bx::ErrorIgnore parseError;
             bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()), bimg::TextureFormat::Count, &parseError)};
             if (image == nullptr)
             {
-#ifdef WEBP
-                int width;
-                int height;
-                if (WebPGetInfo(data.data(), data.size(), &width, &height))
-                {
-                    image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false);
-                    if (WebPDecodeRGBAInto(data.data(), data.size(), static_cast<uint8_t*>(image->m_data), static_cast<size_t>(image->m_size), width * 4))
-                    {
-                        return image;
-                    }
-                }
-#endif
-
                 throw std::runtime_error{"Failed to parse image."};
             }
 
@@ -335,7 +323,7 @@ namespace Babylon
                 texture->Create2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), flags);
             }
 
-            for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+            for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
             {
                 bimg::ImageMip imageMip{};
                 if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
@@ -404,7 +392,7 @@ namespace Babylon
                 for (uint8_t side = 0; side < 6; ++side)
                 {
                     bimg::ImageContainer* image{images[side]};
-                    for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+                    for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
                     {
                         bimg::ImageMip imageMip{};
                         if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
@@ -701,6 +689,9 @@ namespace Babylon
                 StaticValue("COMMAND_COPYTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::CopyTexture)),
 
                 InstanceMethod("dispose", &NativeEngine::Dispose),
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+                InstanceMethod("_disposeDrainTestSchedule", &NativeEngine::DisposeDrainTestSchedule),
+#endif
 
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
 
@@ -791,6 +782,37 @@ namespace Babylon
         m_deviceContext.SetRenderResetCallback(nullptr);
 
         m_cancellationSource->cancel();
+
+        // Cancellation doesn't stop work already running on a threadpool thread, so wait for
+        // any in-flight graphics tasks to finish before teardown frees the resources they use.
+        m_asyncTaskTracker->Wait();
+    }
+
+    NativeEngine::AsyncTaskTracker::Scope::Scope(std::shared_ptr<AsyncTaskTracker> tracker)
+        : m_tracker{std::move(tracker)}
+    {
+        std::lock_guard<std::mutex> lock{m_tracker->m_mutex};
+        ++m_tracker->m_count;
+    }
+
+    NativeEngine::AsyncTaskTracker::Scope::~Scope()
+    {
+        {
+            std::lock_guard<std::mutex> lock{m_tracker->m_mutex};
+            --m_tracker->m_count;
+        }
+        m_tracker->m_condition.notify_all();
+    }
+
+    void NativeEngine::AsyncTaskTracker::Wait()
+    {
+        std::unique_lock<std::mutex> lock{m_mutex};
+        m_condition.wait(lock, [this]() { return m_count == 0; });
+    }
+
+    std::shared_ptr<void> NativeEngine::TrackAsyncTask()
+    {
+        return std::make_shared<AsyncTaskTracker::Scope>(m_asyncTaskTracker);
     }
 
     void NativeEngine::Dispose(const Napi::CallbackInfo& /*info*/)
@@ -1001,7 +1023,12 @@ namespace Babylon
         program->SetSources(vertexSource, fragmentSource);
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}]() {
+            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}]() {
+                // Skip touching graphics resources if teardown has already begun.
+                if (cancellationSource->cancelled())
+                {
+                    return;
+                }
                 program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [jsProgramRef{Napi::Persistent(jsProgram)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
@@ -1351,7 +1378,12 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+            [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}]() {
+                // Skip touching graphics resources if teardown has already begun.
+                if (cancellationSource->cancelled())
+                {
+                    return;
+                }
                 arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
@@ -1516,7 +1548,7 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}](std::vector<bimg::ImageContainer*> images) {
                 LoadCubeTextureFromImages(texture, images, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
@@ -1564,7 +1596,7 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}](std::vector<bimg::ImageContainer*> images) {
                 LoadCubeTextureFromImages(texture, images, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
@@ -2488,4 +2520,40 @@ namespace Babylon
         assert(encoder != nullptr);
         return encoder;
     }
+
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+    static std::atomic<bool> s_disposeDrainTestTaskStarted{false};
+    static std::atomic<bool> s_disposeDrainTestTaskFinished{false};
+
+    // Test-only: schedules a tracked threadpool task (the same TrackAsyncTask mechanism used by
+    // the async texture/shader loaders) that signals start, sleeps, then signals finish. The task
+    // touches no graphics resources, so the test can observe purely whether Dispose drains it.
+    void NativeEngine::DisposeDrainTestSchedule(const Napi::CallbackInfo&)
+    {
+        s_disposeDrainTestTaskStarted = false;
+        s_disposeDrainTestTaskFinished = false;
+        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
+            [asyncTaskScope{TrackAsyncTask()}]() {
+                s_disposeDrainTestTaskStarted = true;
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                s_disposeDrainTestTaskFinished = true;
+            });
+    }
+#endif
 }
+
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+namespace Babylon::Plugins
+{
+    // Test-only accessors for the DisposeDrainTestSchedule task state (see NativeEngine.cpp).
+    bool NativeEngineDisposeDrainTestTaskStarted()
+    {
+        return ::Babylon::s_disposeDrainTestTaskStarted.load();
+    }
+
+    bool NativeEngineDisposeDrainTestTaskFinished()
+    {
+        return ::Babylon::s_disposeDrainTestTaskFinished.load();
+    }
+}
+#endif

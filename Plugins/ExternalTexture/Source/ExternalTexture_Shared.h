@@ -136,10 +136,10 @@ namespace Babylon::Plugins
         m_impl->Update(ptr, overrideFormat, layerIndex);
     }
 
-    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env) const
+    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env, std::optional<uint16_t> layerIndex) const
     {
         auto deferred = Napi::Promise::Deferred::New(env);
-        deferred.Resolve(CreateForJavaScript(env));
+        deferred.Resolve(CreateForJavaScript(env, layerIndex));
         return deferred.Promise();
     }
 }

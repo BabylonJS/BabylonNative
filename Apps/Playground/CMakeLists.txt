@@ -1,6 +1,7 @@
 FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
 
 set(BABYLON_SCRIPTS
+    "../node_modules/babylonjs-addons/babylonjs.addons.js"
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
@@ -19,12 +20,12 @@ set(SCRIPTS
     "Scripts/config.json")
 
 set(SOURCES
-    "Shared/AppContext.cpp"
-    "Shared/AppContext.h"
     "Shared/CommandLine.cpp"
     "Shared/CommandLine.h"
     "Shared/Diagnostics.cpp"
-    "Shared/Diagnostics.h")
+    "Shared/Diagnostics.h"
+    "Shared/PlaygroundScripts.cpp"
+    "Shared/PlaygroundScripts.h")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
@@ -35,12 +36,15 @@ if(APPLE)
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
         set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
-        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
+        # NativeXr is consumed transitively through `BabylonNativeEmbedding`
+        # (the Apple interop static lib); no need to link it directly.
+        set(ADDITIONAL_LIBRARIES PRIVATE z BabylonNativeEmbedding)
         set(SOURCES ${SOURCES}
             "iOS/AppDelegate.swift"
             "iOS/ViewController.swift"
-            "iOS/LibNativeBridge.h"
-            "iOS/LibNativeBridge.mm"
+            "iOS/Playground-Bridging-Header.h"
+            "AppleShared/PlaygroundBootstrap.h"
+            "AppleShared/PlaygroundBootstrap.mm"
             "AppleShared/GestureRecognizer.swift")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
@@ -48,10 +52,14 @@ if(APPLE)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
         set(RESOURCE_FILES ${SCRIPTS})
+        # NativeXr is consumed transitively through `BabylonNativeEmbedding`
+        # (the Apple interop static lib); no need to link it directly.
+        set(ADDITIONAL_LIBRARIES PRIVATE z BabylonNativeEmbedding)
         set(SOURCES ${SOURCES}
             "visionOS/App.swift"
-            "visionOS/LibNativeBridge.mm"
-            "visionOS/LibNativeBridge.h"
+            "visionOS/Playground-Bridging-Header.h"
+            "AppleShared/PlaygroundBootstrap.h"
+            "AppleShared/PlaygroundBootstrap.mm"
             "AppleShared/GestureRecognizer.swift")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
@@ -59,12 +67,15 @@ if(APPLE)
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
         set(RESOURCE_FILES ${STORYBOARD})
+        set(ADDITIONAL_LIBRARIES PRIVATE BabylonNativeEmbedding)
         set(SOURCES ${SOURCES}
             "macOS/main.mm"
-            "macOS/AppDelegate.m"
             "macOS/AppDelegate.h"
+            "macOS/AppDelegate.mm"
+            "macOS/ViewController.h"
             "macOS/ViewController.mm"
-            "macOS/ViewController.h")
+            "AppleShared/PlaygroundBootstrap.h"
+            "AppleShared/PlaygroundBootstrap.mm")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
     endif()
@@ -133,29 +144,18 @@ endif()
 
 target_include_directories(Playground PRIVATE ".")
 
+# The Embedding layer links and initializes the full canonical set of
+# polyfills/plugins (Blob, Canvas, Console, File, GraphicsDevice, the
+# Native* plugins, ScriptLoader, ShaderCache, the polyfills, etc.) and
+# forwards them transitively, so the Playground only needs to list the
+# libraries it consumes directly:
+#   - Embedding : the Runtime + View API the host is built on.
+#   - bx        : <bx/*.h> used by Shared/Diagnostics.cpp.
+#   - TestUtils : <Babylon/Plugins/TestUtils.h> used by Win32/X11 --test mode.
 target_link_libraries(Playground
-    PRIVATE AppRuntime
-    PRIVATE Blob
+    PRIVATE Embedding
     PRIVATE bx
-    PRIVATE Canvas
-    PRIVATE Console
-    PRIVATE ExternalTexture
-    PRIVATE File
-    PRIVATE GraphicsDevice
-    PRIVATE NativeCamera
-    PRIVATE NativeCapture
-    PRIVATE NativeEncoding
-    PRIVATE NativeEngine
-    PRIVATE NativeInput
-    PRIVATE NativeOptimizations
-    PRIVATE NativeTracing
-    PRIVATE Performance
-    PRIVATE ScriptLoader
-    PRIVATE ShaderCache
     PRIVATE TestUtils
-    PRIVATE TextDecoder
-    PRIVATE Window
-    PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
@@ -191,7 +191,7 @@ if(APPLE)
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.Playground.iOS"
 
             XCODE_ATTRIBUTE_SWIFT_VERSION "4.0"
-            XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/iOS/LibNativeBridge.h"
+            XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/iOS/Playground-Bridging-Header.h"
             XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
             XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks"
             XCODE_ATTRIBUTE_ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES YES
@@ -214,7 +214,7 @@ if(APPLE)
             XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.Playground.visionOS"
 
             XCODE_ATTRIBUTE_SWIFT_VERSION "5.0"
-            XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/visionOS/LibNativeBridge.h"
+            XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/visionOS/Playground-Bridging-Header.h"
             XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
             XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks"
             XCODE_ATTRIBUTE_ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES YES

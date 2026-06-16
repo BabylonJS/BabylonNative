@@ -19,10 +19,8 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 TEST(ShaderCompilation, CompileComprehensiveGLSL)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     Babylon::AppRuntime::Options options{};
 
@@ -65,12 +63,9 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
     auto sceneIsReadyFuture = sceneIsReady.get_future();
     while (sceneIsReadyFuture.wait_for(16ms) != std::future_status::ready)
     {
-        update.Finish();
         device.FinishRenderingCurrentFrame();
         device.StartRenderingCurrentFrame();
-        update.Start();
     }
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 }

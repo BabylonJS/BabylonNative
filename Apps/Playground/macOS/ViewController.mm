@@ -1,49 +1,21 @@
 #import "ViewController.h"
 
-#include <Shared/AppContext.h>
-#include <optional>
+#import <Babylon/Embedding/Apple/BabylonNativeEmbedding.h>
+#import "AppleShared/PlaygroundBootstrap.h"
 
 #import <MetalKit/MTKView.h>
 
-std::optional<AppContext> appContext{};
-
-@interface EngineView : MTKView <MTKViewDelegate>
-
-@end
-
-@implementation EngineView
-
-- (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
-{
-    if (appContext) {
-        appContext->DeviceUpdate().Finish();
-        appContext->Device().FinishRenderingCurrentFrame();
-
-        appContext->Device().UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
-
-        appContext->Device().StartRenderingCurrentFrame();
-        appContext->DeviceUpdate().Start();
-    }
-}
-
-- (void)drawInMTKView:(MTKView *)__unused view
-{
-    if (appContext) {
-        appContext->DeviceUpdate().Finish();
-        appContext->Device().FinishRenderingCurrentFrame();
-        appContext->Device().StartRenderingCurrentFrame();
-        appContext->DeviceUpdate().Start();
-    }
-}
-
-@end
-
 @implementation ViewController
+{
+    BNRuntime* _runtime;
+    BNView* _bnView;
+    MTKView* _mtkView;
+}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // Required for mouseMoved events.
+    // Required for mouseMoved events to be delivered to the view.
     NSTrackingArea* trackingArea = [
         [NSTrackingArea alloc]
         initWithRect:NSZeroRect
@@ -55,41 +27,46 @@ std::optional<AppContext> appContext{};
 }
 
 - (void)uninitialize {
-    appContext.reset();
+    // Tear down View first (closes in-flight frame, unbinds the surface),
+    // then Runtime (joins the JS thread).
+    _bnView = nil;
+    _runtime = nil;
+    [_mtkView removeFromSuperview];
+    _mtkView = nil;
 }
 
 - (void)refreshBabylon {
     [self uninitialize];
 
-    EngineView* engineView = [[EngineView alloc] initWithFrame:[self view].frame device:nil];
-    engineView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [[self view] addSubview:engineView];
-    engineView.delegate = engineView;
-    size_t width = static_cast<size_t>(engineView.drawableSize.width);
-    size_t height = static_cast<size_t>(engineView.drawableSize.height);
+    BNRuntimeOptions* options = [[BNRuntimeOptions alloc] init];
+    options.enableDebugger = YES;
+    options.enableDebugTrace = YES;
+    _runtime = [[BNRuntime alloc] initWithOptions:options];
 
-    appContext.emplace(
-        (__bridge CA::MetalLayer*)engineView.layer,
-        width,
-        height,
-        [](const char* message)
-        {
-            NSLog(@"%s", message);
-        });
+    [PlaygroundBootstrap loadScripts:_runtime];
 
-    NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+    NSArray* arguments = [[NSProcessInfo processInfo] arguments];
     if (arguments.count == 1)
     {
-        appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
+        [_runtime loadScript:@"app:///Scripts/experience.js"];
     }
     else
     {
-        for (NSUInteger i = 1; i < arguments.count; i++) {
-            appContext->ScriptLoader().LoadScript([arguments[i] UTF8String]);
+        for (NSUInteger i = 1; i < arguments.count; i++)
+        {
+            [_runtime loadScript:arguments[i]];
         }
-
-        appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
+        [_runtime loadScript:@"app:///Scripts/playground_runner.js"];
     }
+
+    _mtkView = [[MTKView alloc] initWithFrame:[self view].frame device:nil];
+    _mtkView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [[self view] addSubview:_mtkView];
+
+    // BNView attaches the runtime to the MTKView and installs a default
+    // MTKViewDelegate that drives per-frame render. Resize is driven
+    // separately from -viewDidLayout below.
+    _bnView = [[BNView alloc] initWithRuntime:_runtime view:_mtkView];
 }
 
 - (void)viewDidAppear {
@@ -104,119 +81,91 @@ std::optional<AppContext> appContext{};
     [self uninitialize];
 }
 
-- (CGFloat)getScreenHeight {
-    return [self view].frame.size.height;
-}
+- (void)viewDidLayout {
+    [super viewDidLayout];
 
-- (void)mouseMoved:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
+    // Babylon Native owns the drawable size (BNView sets
+    // autoResizeDrawable = NO), so MTKView no longer reports size changes
+    // via its delegate. Drive resize explicitly from layout, passing
+    // logical points; BNView applies the device-pixel-ratio internally.
+    if (_bnView != nil)
     {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
+        const CGSize size = _mtkView.bounds.size;
+        if (size.width > 0 && size.height > 0)
+        {
+            [_bnView resizeWithWidth:static_cast<NSUInteger>(size.width)
+                              height:static_cast<NSUInteger>(size.height)];
+        }
     }
 }
 
-- (void)mouseDown:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+#pragma mark - Input forwarding
+
+// AppKit reports event locations in window coordinates with a bottom-left
+// origin; Babylon (CSS) expects top-left. Convert here and pass logical
+// pixels through unchanged — BNView handles device-pixel-ratio scaling.
+- (NSPoint)logicalPointFromEvent:(NSEvent*)event {
+    NSPoint location = [event locationInWindow];
+    CGFloat height = [self view].frame.size.height;
+    return NSMakePoint(location.x, height - location.y);
 }
 
-- (void)mouseDragged:(NSEvent *)theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)mouseMoved:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseMoveAtX:p.x y:p.y];
 }
 
-- (void)mouseUp:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)mouseDown:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseDown:BNViewMouseButtonLeft atX:p.x y:p.y];
 }
 
-- (void)otherMouseDown:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)mouseDragged:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseMoveAtX:p.x y:p.y];
 }
 
-- (void)otherMouseDragged:(NSEvent *)theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)mouseUp:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseUp:BNViewMouseButtonLeft atX:p.x y:p.y];
 }
 
-- (void)otherMouseUp:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)otherMouseDown:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseDown:BNViewMouseButtonMiddle atX:p.x y:p.y];
 }
 
-- (void)rightMouseDown:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)otherMouseDragged:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseMoveAtX:p.x y:p.y];
 }
 
-- (void)rightMouseDragged:(NSEvent *)theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)otherMouseUp:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseUp:BNViewMouseButtonMiddle atX:p.x y:p.y];
 }
 
-- (void)rightMouseUp:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)rightMouseDown:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseDown:BNViewMouseButtonRight atX:p.x y:p.y];
 }
 
-- (void)scrollWheel:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -theEvent.deltaY);
-    }
+- (void)rightMouseDragged:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseMoveAtX:p.x y:p.y];
 }
 
-- (IBAction)refresh:(id)__unused sender
-{
+- (void)rightMouseUp:(NSEvent*)theEvent {
+    NSPoint p = [self logicalPointFromEvent:theEvent];
+    [_bnView mouseUp:BNViewMouseButtonRight atX:p.x y:p.y];
+}
+
+- (void)scrollWheel:(NSEvent*)theEvent {
+    // Negate so scroll-up matches Babylon's negative-delta convention.
+    [_bnView mouseWheel:BNViewMouseWheelAxisY delta:-theEvent.deltaY];
+}
+
+- (IBAction)refresh:(id)__unused sender {
     [self refreshBabylon];
 }
 

@@ -1,5 +1,6 @@
 #include "DeviceImpl.h"
 
+#include <Babylon/Graphics/DeviceQueries.h>
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <Babylon/JsRuntime.h>
@@ -50,6 +51,24 @@ namespace Babylon::Graphics
         }
 
         //
+        // init.platformData
+        //
+        // Configure the window/device BEFORE the resolution below. The
+        // first UpdateSize -> UpdateBgfxResolution syncs the render
+        // resolution onto the surface via ResizeRenderSurface, which reads
+        // m_state.Window — so the window must already be set. This also
+        // matches the re-attach ordering in ViewImpl::InitializeIfReady
+        // (UpdateWindow then UpdateSize).
+        //
+
+        UpdateWindow(config.Window);
+        UpdateDevice(config.Device);
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        UpdateBackBuffer(config.BackBufferColor, config.BackBufferDepthStencil);
+#endif
+
+        //
         // init.resolution
         //
 
@@ -73,17 +92,6 @@ namespace Babylon::Graphics
                 init.resolution.formatDepthStencil = bgfx::TextureFormat::D24S8;
                 break;
         }
-
-        //
-        // init.platformData
-        //
-
-        UpdateWindow(config.Window);
-        UpdateDevice(config.Device);
-
-#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        UpdateBackBuffer(config.BackBufferColor, config.BackBufferDepthStencil);
-#endif
     }
 
     DeviceImpl::~DeviceImpl()
@@ -99,9 +107,10 @@ namespace Babylon::Graphics
     void DeviceImpl::UpdateWindow(WindowT window)
     {
         std::scoped_lock lock{m_state.Mutex};
+        m_state.Window = window;
         ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
         ConfigureBgfxRenderType(m_state.Bgfx.InitState.platformData, m_state.Bgfx.InitState.type);
-        m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(window);
+        m_state.Resolution.DevicePixelRatio = Babylon::Graphics::GetDevicePixelRatio(window);
         m_state.Bgfx.Dirty = true;
     }
 
@@ -493,6 +502,11 @@ namespace Babylon::Graphics
         res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
         res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
         m_state.Bgfx.Dirty = true;
+
+        // Keep the native rendering surface in sync with the render resolution
+        // we just computed (platform/graphics-API specific; no-op where the
+        // surface size is driven elsewhere).
+        ResizeRenderSurface(m_state.Window, res.width, res.height);
     }
 
     void DeviceImpl::RequestScreenShots()

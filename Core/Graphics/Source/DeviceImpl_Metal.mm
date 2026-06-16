@@ -13,4 +13,17 @@ namespace Babylon::Graphics
             reinterpret_cast<MTL::CommandQueue*>(internalData->commandQueue),
         };
     }
+
+    void DeviceImpl::ResizeRenderSurface(WindowT window, uint32_t width, uint32_t height)
+    {
+        // The window is the CAMetalLayer we render into. Resize its drawable to
+        // match the render resolution bgfx will use so the backbuffer and the
+        // layer stay in lockstep (e.g. across hardware scaling level changes).
+        // The window is null before the first UpdateWindow (e.g. during
+        // construction), in which case there's nothing to size.
+        if (window != nullptr)
+        {
+            window->setDrawableSize(CGSizeMake(static_cast<CGFloat>(width), static_cast<CGFloat>(height)));
+        }
+    }
 }

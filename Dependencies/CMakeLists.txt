@@ -102,6 +102,13 @@ foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
     endif()
 endforeach()
 
+# WebP parsing is provided by bimg's bundled simplewebp decoder. Toggle it
+# through bimg's own config macro so disabling the option compiles the parser
+# out of bimg_decode instead of pulling in a separate libwebp dependency.
+if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP AND TARGET bimg_decode)
+    target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_WEBP=0)
+endif()
+
 if(UNIX AND NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
     # The new bx requires SSE4.2 on x86_64 (see bx scripts/toolchain.lua and
     # include/bx/inline/simd128_sse.inl which uses _mm_round_ps / _mm_blendv_ps
@@ -201,27 +208,23 @@ if(APPLE)
         message(FATAL_ERROR "Failed to generate metal-cpp single header")
     endif()
 
-    # Generate source that includes the single header with the necessary implementation defines.
-    file(WRITE "${METAL_CPP_GENERATED_DIR}/Source/Metal.cpp"
-        "#define NS_PRIVATE_IMPLEMENTATION\n"
-        "#define MTL_PRIVATE_IMPLEMENTATION\n"
-        "#define CA_PRIVATE_IMPLEMENTATION\n"
-        "#include <Metal/Metal.hpp>\n")
-
-    set(SOURCES
-        "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
-        "${METAL_CPP_GENERATED_DIR}/Source/Metal.cpp")
-
-    add_library(metal-cpp ${SOURCES})
-    target_include_directories(metal-cpp SYSTEM PUBLIC "${METAL_CPP_GENERATED_DIR}/Include")
+    # metal-cpp is consumed as a header-only library. The metal-cpp
+    # implementation (the NS / MTL / CA `*_PRIVATE_IMPLEMENTATION` globals) is
+    # already compiled into bgfx's Metal renderer, which embeds and builds its
+    # own copy of metal-cpp (see bgfx's renderer_mtl.cpp). Compiling a second
+    # copy here would define those globals in both libmetal-cpp.a and libbgfx.a;
+    # whether that produces ~1900 "duplicate symbol" link errors then depends
+    # purely on the (fragile) order in which the two static archives appear on
+    # the link line. We instead expose metal-cpp as headers only and let the
+    # single bgfx-provided implementation satisfy the symbols at link time.
+    # Graphics — the only consumer — always links bgfx on Apple, so the
+    # implementation symbols always resolve.
+    add_library(metal-cpp INTERFACE)
+    target_include_directories(metal-cpp SYSTEM INTERFACE "${METAL_CPP_GENERATED_DIR}/Include")
     target_link_libraries(metal-cpp
-        PRIVATE "-framework Foundation"
-        PRIVATE "-framework Metal"
-        PRIVATE "-framework QuartzCore")
-
-    source_group(TREE "${metal-cpp_SOURCE_DIR}" FILES ${METAL_CPP_HEADERS})
-    source_group(TREE "${METAL_CPP_GENERATED_DIR}" FILES ${SOURCES})
-    set_property(TARGET metal-cpp PROPERTY FOLDER Dependencies)
+        INTERFACE "-framework Foundation"
+        INTERFACE "-framework Metal"
+        INTERFACE "-framework QuartzCore")
 endif()
 
 # --------------------------------------------------
@@ -276,34 +279,6 @@ if(TARGET SPIRV)
 endif()
 if(TARGET MachineIndependent)
     disable_warnings(MachineIndependent)
-endif()
-
-# --------------------------------------------------
-# WebP
-# --------------------------------------------------
-if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
-    set(WEBP_BUILD_ANIM_UTILS OFF)
-    set(WEBP_BUILD_CWEBP OFF)
-    set(WEBP_BUILD_DWEBP OFF)
-    set(WEBP_BUILD_GIF2WEBP OFF)
-    set(WEBP_BUILD_IMG2WEBP OFF)
-    set(WEBP_BUILD_VWEBP OFF)
-    set(WEBP_BUILD_WEBPINFO OFF)
-    set(WEBP_BUILD_LIBWEBPMUX OFF)
-    set(WEBP_BUILD_WEBPMUX OFF)
-    set(WEBP_BUILD_EXTRAS OFF)
-    FetchContent_MakeAvailable_With_Message(libwebp)
-
-    set_property(TARGET sharpyuv PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webp PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdecode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdecoder PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdemux PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdsp PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdspdecode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpencode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webputils PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webputilsdecode PROPERTY FOLDER Dependencies/libwebp)
 endif()
 
 # --------------------------------------------------

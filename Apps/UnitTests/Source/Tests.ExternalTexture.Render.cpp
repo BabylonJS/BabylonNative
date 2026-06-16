@@ -40,10 +40,8 @@ TEST(ExternalTexture, RenderTextureArray)
 #endif
 
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto inputTexture = Helpers::CreateTextureArrayWithData(
         device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, sliceColors, SLICE_COUNT);
@@ -92,7 +90,6 @@ TEST(ExternalTexture, RenderTextureArray)
 
     startupDone.get_future().wait();
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     for (uint32_t sliceIndex = 0; sliceIndex < SLICE_COUNT; ++sliceIndex)
@@ -102,7 +99,6 @@ TEST(ExternalTexture, RenderTextureArray)
 #endif
 
         device.StartRenderingCurrentFrame();
-        update.Start();
 
         std::promise<void> renderDone;
 
@@ -128,7 +124,6 @@ TEST(ExternalTexture, RenderTextureArray)
             << "Slice " << sliceIndex << ": renderSlice timed out";
         ASSERT_NO_THROW(renderFuture.get()) << "Slice " << sliceIndex << ": renderSlice rejected";
 
-        update.Finish();
         device.FinishRenderingCurrentFrame();
 
 #ifdef HAS_RENDERDOC

@@ -196,6 +196,12 @@
         currentScene = null;
         engine.setHardwareScalingLevel(1);
 
+        // Reset render state that persists on the reused engine so each test starts fresh.
+        // A test that leaves the stencil test enabled or a scissor rect set would otherwise
+        // corrupt later tests (e.g. the glow-layer test).
+        engine.setStencilBuffer(false);
+        engine.disableScissor();
+
         // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
         engine.releaseEffects();
 

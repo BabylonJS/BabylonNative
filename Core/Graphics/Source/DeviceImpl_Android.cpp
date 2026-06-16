@@ -1,4 +1,5 @@
 #include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/DeviceQueries.h>
 #include "DeviceImpl.h"
 
 #include <AndroidExtensions/Globals.h>
@@ -20,7 +21,7 @@ namespace Babylon::Graphics
         }
     }
 
-    float DeviceImpl::GetDevicePixelRatio(WindowT)
+    float GetDevicePixelRatio(WindowT)
     {
         // In Android, the baseline DPI is 160dpi.
         // See https://developer.android.com/training/multiscreen/screendensities#dips-pels
