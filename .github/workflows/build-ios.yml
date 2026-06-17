@@ -15,6 +15,11 @@ on:
         type: string
         default: macos-latest
 
+# Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
+# npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
+env:
+  npm_config_fetch_retries: '5'
+
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
