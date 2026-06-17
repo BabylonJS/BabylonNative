@@ -172,6 +172,27 @@ class ExternalCallback {
 
     napi_value result = externalCallback->_cb(
       externalCallback->_env, reinterpret_cast<napi_callback_info>(&cbInfo));
+
+    // If a constructor (construct call) left a pending JS exception, the C++
+    // ObjectWrap instance was already destroyed by stack unwinding inside the
+    // callback, but the wrap finalizer registered by napi_wrap() is still
+    // attached to `this`. The addon-api ~ObjectWrap() cannot detach it here
+    // because napi_get_reference_value() returns null for the wrap's weak
+    // (refcount 0) reference. Detach the wrap now so a later GC does not run
+    // the finalizer on the freed native instance (use-after-free / heap
+    // corruption). The pending exception is preserved across the cleanup.
+    if (isConstructCall) {
+      bool hasException = false;
+      if (JsHasException(&hasException) == JsNoError && hasException) {
+        JsValueRef exception = JS_INVALID_REFERENCE;
+        if (JsGetAndClearException(&exception) == JsNoError) {
+          napi_remove_wrap(externalCallback->_env,
+            reinterpret_cast<napi_value>(arguments[0]), nullptr);
+          JsSetException(exception);
+        }
+      }
+    }
+
     return reinterpret_cast<JsValueRef>(result);
   }
 
@@ -1748,9 +1769,11 @@ napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) 
   CHECK_JSRT(env, JsSetExternalData(wrapper, nullptr));
 
   if (externalData != nullptr) {
-    *result = externalData->Data();
+    if (result != nullptr) {
+      *result = externalData->Data();
+    }
     delete externalData;
-  } else {
+  } else if (result != nullptr) {
     *result = nullptr;
   }
 

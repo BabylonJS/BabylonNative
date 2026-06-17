@@ -1490,6 +1490,20 @@ describe("TextDecoder", function () {
         expect(result).to.equal("H\0i");
         expect(result.length).to.equal(3);
     });
+
+    it("throwing from the constructor repeatedly does not corrupt native state", function () {
+        // Regression for a Chakra N-API ObjectWrap bug: when a wrapped
+        // constructor throws, the native instance is destroyed during stack
+        // unwinding but the wrap finalizer stayed attached to `this`, so a
+        // later GC ran the finalizer on freed memory (heap corruption). Throw
+        // many times to create many dangling wraps, then allocate/decode to
+        // exercise the heap and surface any corruption within this test run.
+        for (let i = 0; i < 100; ++i) {
+            expect(() => new TextDecoder("utf-16")).to.throw();
+        }
+        const decoder = new TextDecoder("utf-8");
+        expect(decoder.decode(new Uint8Array([79, 75]))).to.equal("OK");
+    });
 });
 
 describe("TextEncoder", function () {
