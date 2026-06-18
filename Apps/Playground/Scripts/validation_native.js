@@ -72,6 +72,58 @@
         return getExclusionReason(t);
     }
 
+    function shouldUseRenderReadinessPump(test) {
+        if (test && test.renderReadinessPump === false) {
+            return false;
+        }
+        if (globalThis.__nativeValidationRenderReadinessPump === false) {
+            return false;
+        }
+        return true;
+    }
+
+    function startSceneReadinessRenderPump(scene, onFatalError) {
+        let stopped = false;
+        let frameCount = 0;
+
+        const pump = function () {
+            if (stopped) {
+                return;
+            }
+            if (!scene || scene.isDisposed === true || (typeof scene.isDisposed === "function" && scene.isDisposed())) {
+                stopped = true;
+                return;
+            }
+
+            try {
+                if (scene.activeCamera && typeof scene.render === "function") {
+                    // Readiness renders are only for material/effect compilation.
+                    // Preserve the screenshot test's animation frame count.
+                    scene.render(true, true);
+                    frameCount++;
+                }
+            } catch (e) {
+                stopped = true;
+                if (typeof onFatalError === "function") {
+                    onFatalError(e);
+                }
+                return;
+            }
+
+            setTimeout(pump, 16);
+        };
+
+        setTimeout(pump, 0);
+        return {
+            stop: function () {
+                stopped = true;
+            },
+            getFrameCount: function () {
+                return frameCount;
+            }
+        };
+    }
+
     function logRunSummary() {
         console.log("Run complete. ran=" + ranCount +
                     " passed=" + passedCount +
@@ -235,10 +287,15 @@
         let stopped = false;
         let pendingScreenshot = null;
         let evaluated = false;
+        let readinessPump = null;
 
         const runEvaluation = function (screenshot) {
             if (evaluated) {
                 return;
+            }
+            if (readinessPump !== null) {
+                readinessPump.stop();
+                readinessPump = null;
             }
             evaluated = true;
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
@@ -255,12 +312,40 @@
         // never-ready scene into a fast test failure instead of a silent hang.
         currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
         currentScene.onReadyTimeoutObservable.addOnce(function () {
+            if (readinessPump !== null) {
+                readinessPump.stop();
+                readinessPump = null;
+            }
+            evaluated = true;
             console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
                 (currentScene.onReadyTimeoutDuration / 1000) + "s.");
             failTest(done);
         });
 
+        if (shouldUseRenderReadinessPump(test)) {
+            readinessPump = startSceneReadinessRenderPump(currentScene, function (error) {
+                if (evaluated) {
+                    return;
+                }
+                evaluated = true;
+                stopped = true;
+                console.error("Readiness render pump failed: " + (error && error.message ? error.message : String(error)));
+                failTest(done);
+            });
+        }
+
         currentScene.executeWhenReady(function () {
+            if (evaluated) {
+                return;
+            }
+            if (readinessPump !== null) {
+                const readinessFrameCount = readinessPump.getFrameCount();
+                readinessPump.stop();
+                readinessPump = null;
+                if (readinessFrameCount > 0) {
+                    console.log("Readiness render pump rendered " + readinessFrameCount + " frame(s) before validation frame counting for " + (test.title || "(unnamed)") + ".");
+                }
+            }
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
             }
@@ -300,6 +385,12 @@
                     }
                 }
                 catch (e) {
+                    if (readinessPump !== null) {
+                        readinessPump.stop();
+                        readinessPump = null;
+                    }
+                    evaluated = true;
+                    stopped = true;
                     console.error(e);
                     failTest(done);
                 }
