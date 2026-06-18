@@ -1504,6 +1504,30 @@ describe("TextDecoder", function () {
         const decoder = new TextDecoder("utf-8");
         expect(decoder.decode(new Uint8Array([79, 75]))).to.equal("OK");
     });
+
+    it("should accept the WHATWG 'utf8' label (no hyphen)", function () {
+        const decoder = new TextDecoder("utf8");
+        const result = decoder.decode(new Uint8Array([72, 105])); // "Hi"
+        expect(result).to.equal("Hi");
+    });
+
+    it("should accept utf-8 labels case-insensitively and with surrounding whitespace", function () {
+        for (const label of ["UTF-8", "UTF8", "  utf-8  ", "\tUtf8\n"]) {
+            const decoder = new TextDecoder(label);
+            expect(decoder.decode(new Uint8Array([79, 75]))).to.equal("OK");
+        }
+    });
+
+    it("should accept the other WHATWG utf-8 aliases", function () {
+        for (const label of ["unicode-1-1-utf-8", "unicode11utf8", "unicode20utf8", "x-unicode20utf8"]) {
+            const decoder = new TextDecoder(label);
+            expect(decoder.decode(new Uint8Array([79, 75]))).to.equal("OK");
+        }
+    });
+
+    it("should still throw for a genuinely unsupported encoding", function () {
+        expect(() => new TextDecoder("utf-16")).to.throw();
+    });
 });
 
 describe("TextEncoder", function () {
