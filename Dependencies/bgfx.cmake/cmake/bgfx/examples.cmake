@@ -36,7 +36,7 @@ function(add_bgfx_shader FILE FOLDER)
 
 		if(WIN32)
 			# dx11
-			set(DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx11/${FILENAME}.bin)
+			set(DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dxbc/${FILENAME}.bin)
 			if(NOT "${TYPE}" STREQUAL "COMPUTE")
 				_bgfx_shaderc_parse(
 					DX11 ${COMMON} WINDOWS
