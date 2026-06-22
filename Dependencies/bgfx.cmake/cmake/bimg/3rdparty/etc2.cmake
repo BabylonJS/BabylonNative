@@ -18,8 +18,8 @@ if(NOT ETC2_LIBRARIES)
 	file(
 		GLOB_RECURSE #
 		ETC2_SOURCES #
-		${BIMG_DIR}/3rdparty/etc2/**.cpp #
-		${BIMG_DIR}/3rdparty/etc2/**.hpp #
+		${BIMG_DIR}/3rdparty/etcpak/**.cpp #
+		${BIMG_DIR}/3rdparty/etcpak/**.hpp #
 	)
 	set(ETC2_INCLUDE_DIR ${BIMG_DIR}/3rdparty)
 endif()
