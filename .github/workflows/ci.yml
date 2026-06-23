@@ -10,16 +10,23 @@ jobs:
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
     uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: '26.4'
+      runs-on: macos-26
 
   MacOS_Ninja:
     uses: ./.github/workflows/build-macos.yml
     with:
       generator: 'Ninja Multi-Config'
+      xcode-version: '26.4'
+      runs-on: macos-26
 
   MacOS_Sanitizers:
     uses: ./.github/workflows/build-macos.yml
     with:
       enable-sanitizers: true
+      xcode-version: '26.4'
+      runs-on: macos-26
 
   # ── Apple: Xcode 26 ──────────────────────────────────────────
   MacOS_Xcode26:
