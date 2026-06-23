@@ -31,6 +31,7 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <array>
 
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
 #include <atomic>
@@ -414,6 +415,256 @@ namespace Babylon
                             texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                         }
                     }
+                }
+            }
+        }
+        // Parse a single self-contained cubemap container (e.g. .dds / .ktx /
+        // .ktx2) that already holds all six faces and their mip chain. bimg
+        // decodes these natively, so there is no need to split into six images
+        // on the JS side. Unlike ParseImage (which targets single-face 2D images
+        // and asserts !m_cubeMap), this keeps the container as-is.
+        bimg::ImageContainer* ParseCubeImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
+        {
+            bx::ErrorIgnore parseError;
+            bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()), bimg::TextureFormat::Count, &parseError)};
+            if (image == nullptr)
+            {
+                throw std::runtime_error{"Failed to parse cube image."};
+            }
+
+            if (!image->m_cubeMap)
+            {
+                bimg::imageFree(image);
+                throw std::runtime_error{"Image is not a cubemap."};
+            }
+
+            return image;
+        }
+
+        // Port of Babylon.js CubeMapToSphericalPolynomialTools.ConvertCubeMapToSphericalPolynomial.
+        // Prefiltered .dds environments need diffuse-IBL spherical harmonics, which Babylon's WebGL
+        // path computes on the CPU from the top-mip faces. The native engine cannot read cube faces
+        // back from the GPU (_readTexturePixels throws for cube faces), so we compute the harmonics
+        // here from the bimg-decoded top mip. Returns the 9x3 polynomial coefficients in
+        // SphericalPolynomial.FromArray order: x, y, z, xx, yy, zz, yz, zx, xy.
+        std::array<float, 27> ComputeCubeSphericalPolynomial(bx::AllocatorI& allocator, bimg::ImageContainer* image)
+        {
+            std::array<float, 27> result{};
+
+            bimg::ImageContainer* f32{bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false)};
+            if (f32 == nullptr)
+            {
+                return result;
+            }
+
+            const uint32_t size{f32->m_width};
+            constexpr double pi{3.14159265358979323846};
+
+            // Face orientations matching Babylon's _FileFaces, indexed by bimg cube side order
+            // (+X, -X, +Y, -Y, +Z, -Z): worldAxisForNormal, worldAxisForFileX, worldAxisForFileY.
+            struct FaceAxes
+            {
+                double n[3];
+                double fx[3];
+                double fy[3];
+            };
+            static const FaceAxes faces[6] = {
+                {{1, 0, 0}, {0, 0, -1}, {0, -1, 0}},  // +X right
+                {{-1, 0, 0}, {0, 0, 1}, {0, -1, 0}},  // -X left
+                {{0, 1, 0}, {1, 0, 0}, {0, 0, 1}},    // +Y up
+                {{0, -1, 0}, {1, 0, 0}, {0, 0, -1}},  // -Y down
+                {{0, 0, 1}, {1, 0, 0}, {0, -1, 0}},   // +Z front
+                {{0, 0, -1}, {-1, 0, 0}, {0, -1, 0}}, // -Z back
+            };
+
+            const double shConst[9] = {
+                std::sqrt(1.0 / (4.0 * pi)),
+                -std::sqrt(3.0 / (4.0 * pi)),
+                std::sqrt(3.0 / (4.0 * pi)),
+                -std::sqrt(3.0 / (4.0 * pi)),
+                std::sqrt(15.0 / (4.0 * pi)),
+                -std::sqrt(15.0 / (4.0 * pi)),
+                std::sqrt(5.0 / (16.0 * pi)),
+                -std::sqrt(15.0 / (4.0 * pi)),
+                std::sqrt(15.0 / (16.0 * pi)),
+            };
+            const double cosKernel[9] = {pi, 2.0 * pi / 3.0, 2.0 * pi / 3.0, 2.0 * pi / 3.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0};
+
+            const auto areaElement = [](double x, double y) { return std::atan2(x * y, std::sqrt(x * x + y * y + 1.0)); };
+
+            double sh[9][3] = {};
+            double totalSolidAngle{0.0};
+
+            const double du{2.0 / static_cast<double>(size)};
+            const double halfTexel{0.5 * du};
+            const double minUV{halfTexel - 1.0};
+            const double maxHdri{4096.0};
+
+            for (uint16_t side = 0; side < 6; ++side)
+            {
+                bimg::ImageMip mip{};
+                if (!bimg::imageGetRawData(*f32, side, 0, f32->m_data, f32->m_size, mip))
+                {
+                    continue;
+                }
+
+                const float* data{reinterpret_cast<const float*>(mip.m_data)};
+                const FaceAxes& f{faces[side]};
+
+                double v{minUV};
+                for (uint32_t y = 0; y < size; ++y)
+                {
+                    double u{minUV};
+                    for (uint32_t x = 0; x < size; ++x)
+                    {
+                        double dir[3] = {
+                            f.fx[0] * u + f.fy[0] * v + f.n[0],
+                            f.fx[1] * u + f.fy[1] * v + f.n[1],
+                            f.fx[2] * u + f.fy[2] * v + f.n[2],
+                        };
+                        const double len{std::sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2])};
+                        dir[0] /= len;
+                        dir[1] /= len;
+                        dir[2] /= len;
+
+                        const double deltaSolidAngle{
+                            areaElement(u - halfTexel, v - halfTexel) -
+                            areaElement(u - halfTexel, v + halfTexel) -
+                            areaElement(u + halfTexel, v - halfTexel) +
+                            areaElement(u + halfTexel, v + halfTexel)};
+
+                        const size_t idx{(static_cast<size_t>(y) * size + x) * 4};
+                        double rgb[3] = {data[idx + 0], data[idx + 1], data[idx + 2]};
+                        for (int c = 0; c < 3; ++c)
+                        {
+                            if (std::isnan(rgb[c]))
+                            {
+                                rgb[c] = 0.0;
+                            }
+                            rgb[c] = rgb[c] < 0.0 ? 0.0 : (rgb[c] > maxHdri ? maxHdri : rgb[c]);
+                        }
+
+                        const double trig[9] = {
+                            1.0,
+                            dir[1],
+                            dir[2],
+                            dir[0],
+                            dir[0] * dir[1],
+                            dir[1] * dir[2],
+                            3.0 * dir[2] * dir[2] - 1.0,
+                            dir[0] * dir[2],
+                            dir[0] * dir[0] - dir[1] * dir[1],
+                        };
+                        for (int lm = 0; lm < 9; ++lm)
+                        {
+                            const double basis{shConst[lm] * trig[lm] * deltaSolidAngle};
+                            sh[lm][0] += rgb[0] * basis;
+                            sh[lm][1] += rgb[1] * basis;
+                            sh[lm][2] += rgb[2] * basis;
+                        }
+                        totalSolidAngle += deltaSolidAngle;
+                        u += du;
+                    }
+                    v += du;
+                }
+            }
+
+            bimg::imageFree(f32);
+
+            if (totalSolidAngle <= 0.0)
+            {
+                return result;
+            }
+
+            // scaleInPlace(correction) + convertIncidentRadianceToIrradiance + convertIrradianceToLambertianRadiance.
+            const double correction{(4.0 * pi) / totalSolidAngle};
+            for (int lm = 0; lm < 9; ++lm)
+            {
+                const double scale{correction * cosKernel[lm] / pi};
+                sh[lm][0] *= scale;
+                sh[lm][1] *= scale;
+                sh[lm][2] *= scale;
+            }
+
+            // SphericalPolynomial.FromHarmonics (updateFromHarmonics then *1/pi).
+            for (int c = 0; c < 3; ++c)
+            {
+                const double l00{sh[0][c]}, l1_1{sh[1][c]}, l10{sh[2][c]}, l11{sh[3][c]};
+                const double l2_2{sh[4][c]}, l2_1{sh[5][c]}, l20{sh[6][c]}, l21{sh[7][c]}, l22{sh[8][c]};
+                const double invPi{1.0 / pi};
+                result[0 * 3 + c] = static_cast<float>(-1.02333 * l11 * invPi);                                     // x
+                result[1 * 3 + c] = static_cast<float>(-1.02333 * l1_1 * invPi);                                    // y
+                result[2 * 3 + c] = static_cast<float>(1.02333 * l10 * invPi);                                      // z
+                result[3 * 3 + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 + 0.429043 * l22) * invPi); // xx
+                result[4 * 3 + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 - 0.429043 * l22) * invPi); // yy
+                result[5 * 3 + c] = static_cast<float>((0.886277 * l00 + 0.495417 * l20) * invPi);                  // zz
+                result[6 * 3 + c] = static_cast<float>(-0.858086 * l2_1 * invPi);                                   // yz
+                result[7 * 3 + c] = static_cast<float>(-0.858086 * l21 * invPi);                                    // zx
+                result[8 * 3 + c] = static_cast<float>(0.858086 * l2_2 * invPi);                                    // xy
+            }
+
+            return result;
+        }
+
+        void LoadCubeTextureFromContainer(Graphics::Texture* texture, bimg::ImageContainer* image, bool srgb)
+        {
+            assert(image->m_cubeMap);
+            assert(image->m_width == image->m_height);
+            const uint32_t size{image->m_width};
+
+            if (texture->IsValid())
+            {
+                if (texture->Width() != size || texture->Height() != size)
+                {
+                    bimg::imageFree(image);
+                    throw std::runtime_error{"Cannot update texture from image of different size"};
+                }
+            }
+            else
+            {
+                const bool hasMips{image->m_numMips > 1};
+                const bgfx::TextureFormat::Enum format{Cast(image->m_format)};
+                const uint64_t flags{srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE};
+                texture->CreateCube(static_cast<uint16_t>(size), hasMips, 1, format, flags);
+            }
+
+            // The single release callback is attached to the last (side, mip) upload, so every
+            // expected face/mip must be present; otherwise the container would leak (the callback
+            // would never fire) and the texture would be left partially initialized. Validate the
+            // whole face/mip grid up front and fail fast.
+            for (uint8_t side = 0; side < 6; ++side)
+            {
+                for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
+                {
+                    bimg::ImageMip imageMip{};
+                    if (!bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip))
+                    {
+                        bimg::imageFree(image);
+                        throw std::runtime_error{"Cubemap container is missing one or more faces/mips."};
+                    }
+                }
+            }
+
+            // Every (side, mip) view points into the single container's backing
+            // store, so the allocation is released exactly once, after bgfx has
+            // consumed the final upload.
+            for (uint8_t side = 0; side < 6; ++side)
+            {
+                for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
+                {
+                    bimg::ImageMip imageMip{};
+                    bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip);
+
+                    bgfx::ReleaseFn releaseFn{};
+                    if (side == 5 && mip == image->m_numMips - 1)
+                    {
+                        releaseFn = [](void*, void* userData) {
+                            bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
+                        };
+                    }
+
+                    const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
+                    texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                 }
             }
         }
@@ -1532,6 +1783,44 @@ namespace Babylon
         const auto srgb{info[4].As<Napi::Boolean>().Value()};
         const auto onSuccess{info[5].As<Napi::Function>()};
         const auto onError{info[6].As<Napi::Function>()};
+
+        // A single buffer means a self-contained cubemap container (.dds / .ktx /
+        // .ktx2) that already holds all six faces and their mip chain; hand it to
+        // bimg directly instead of expecting six pre-split face images.
+        if (data.Length() == 1)
+        {
+            const auto typedArray{data[0u].As<Napi::TypedArray>()};
+            const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
+            auto dataRef{Napi::Persistent(typedArray)};
+            arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan]() {
+                return ParseCubeImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan);
+            })
+                .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}](bimg::ImageContainer* image) {
+                    // Compute the spherical harmonics from the decoded top mip before the upload
+                    // hands the container's memory to bgfx.
+                    auto sphericalPolynomial = ComputeCubeSphericalPolynomial(Graphics::DeviceContext::GetDefaultAllocator(), image);
+                    LoadCubeTextureFromContainer(texture, image, srgb);
+                    return sphericalPolynomial;
+                })
+                .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{std::move(dataRef)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<std::array<float, 27>, std::exception_ptr> result) {
+                    if (result.has_error())
+                    {
+                        onErrorRef.Call({});
+                    }
+                    else
+                    {
+                        const auto& sphericalPolynomial{result.value()};
+                        auto array{Napi::Float32Array::New(onSuccessRef.Env(), sphericalPolynomial.size())};
+                        float* dst{array.Data()};
+                        for (size_t i = 0; i < sphericalPolynomial.size(); ++i)
+                        {
+                            dst[i] = sphericalPolynomial[i];
+                        }
+                        onSuccessRef.Call({array});
+                    }
+                });
+            return;
+        }
 
         std::array<Napi::Reference<Napi::TypedArray>, 6> dataRefs;
         std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
