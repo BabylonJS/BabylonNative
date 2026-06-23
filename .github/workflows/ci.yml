@@ -11,35 +11,35 @@ jobs:
   MacOS:
     uses: ./.github/workflows/build-macos.yml
     with:
-      xcode-version: '26.4'
+      xcode-version: "26.4"
       runs-on: macos-26
 
   MacOS_Ninja:
     uses: ./.github/workflows/build-macos.yml
     with:
-      generator: 'Ninja Multi-Config'
-      xcode-version: '26.4'
+      generator: "Ninja Multi-Config"
+      xcode-version: "26.4"
       runs-on: macos-26
 
   MacOS_Sanitizers:
     uses: ./.github/workflows/build-macos.yml
     with:
       enable-sanitizers: true
-      xcode-version: '26.4'
+      xcode-version: "26.4"
       runs-on: macos-26
 
   # ── Apple: Xcode 26 ──────────────────────────────────────────
   MacOS_Xcode26:
     uses: ./.github/workflows/build-macos.yml
     with:
-      xcode-version: '26.4'
+      xcode-version: "26.4"
       runs-on: macos-26
 
   iOS_Xcode26:
     uses: ./.github/workflows/build-ios.yml
     with:
-      deployment-target: '26.0'
-      xcode-version: '26.4'
+      deployment-target: "26.0"
+      xcode-version: "26.4"
       runs-on: macos-26
 
   # ── Win32─────────────────────────────────────────────────────
@@ -142,20 +142,20 @@ jobs:
   Android_MacOS_JSC:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: macos-latest
+      runs-on: macos-26
       js-engine: JavaScriptCore
 
   Android_MacOS_V8:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: macos-latest
+      runs-on: macos-26
       js-engine: V8
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
     uses: ./.github/workflows/test-install-ios.yml
     with:
-      deployment-target: '17.2'
+      deployment-target: "17.2"
 
   Linux_Installation:
     uses: ./.github/workflows/test-install-linux.yml
