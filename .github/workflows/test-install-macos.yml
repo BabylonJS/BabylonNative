@@ -6,7 +6,7 @@ on:
       xcode-version:
         required: false
         type: string
-        default: '16.4'
+        default: "26.4.1"
 
 jobs:
   test-install:
@@ -14,7 +14,6 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-
 
       - name: Select Xcode ${{ inputs.xcode-version }}
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
