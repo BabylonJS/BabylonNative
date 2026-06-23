@@ -8,6 +8,10 @@ on:
   pull_request:
     branches: [ master ]
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
 
   version:
@@ -20,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           submodules: recursive
           fetch-depth: 0
       - id: version
@@ -53,6 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           submodules: recursive
       - name: Install Linux dependencies
         run: |
@@ -95,6 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           submodules: recursive
           fetch-depth: 0
           path: src/bgfx.cmake
