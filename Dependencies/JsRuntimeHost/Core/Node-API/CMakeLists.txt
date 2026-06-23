@@ -17,8 +17,16 @@ set(SOURCES
     "Include/Shared/napi/js_native_api.h"
     "Include/Shared/napi/js_native_api_types.h"
     "Include/Shared/napi/napi.h"
-    "Include/Shared/napi/napi-inl.h"
-    "Source/env.cc")
+    "Include/Shared/napi/napi-inl.h")
+
+# env.cc contains a generic `Napi::Eval` that goes through the C++ wrapper's
+# `Env::RunScript`, which calls our 4-argument `napi_run_script` (Babylon
+# extension carrying a `source_url`).  Hermes only provides the standard
+# 3-argument `napi_run_script`, so for Hermes we skip env.cc and provide a
+# Hermes-native `Napi::Eval` in env_hermes.cc that calls `hermes_run_script`.
+if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    list(APPEND SOURCES "Source/env.cc")
+endif()
 
 set(INCLUDE_DIRECTORIES
     PUBLIC "Include/Shared"
@@ -145,6 +153,101 @@ if(NAPI_BUILD_ABI)
         else()
             message(FATAL_ERROR "Unsupported JavaScript engine: ${NAPI_JAVASCRIPT_ENGINE}")
         endif()
+    elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+        # Hermes provides its own implementation of the standard Node-API C
+        # functions inside the `hermesNapi` static library, so we don't ship a
+        # `js_native_api_hermes.cc` here.  We only contribute the Babylon-side
+        # bridge (`env_hermes.cc`) which adapts our `Napi::Attach`/`Detach`/
+        # `Eval` helpers to Hermes's `hermes_napi_create_env` /
+        # `hermes_run_script` APIs.
+        set(SOURCES ${SOURCES}
+            "Source/env_hermes.cc")
+
+        if(NOT TARGET hermesNapi)
+            message(FATAL_ERROR "NAPI_JAVASCRIPT_ENGINE=Hermes requires the hermesNapi target. \
+Make sure Hermes was fetched at the top-level CMakeLists.txt and NAPI_JAVASCRIPT_ENGINE was set BEFORE configure.")
+        endif()
+
+        # Link Hermes PRIVATEly so its include directories and compile
+        # definitions (notably `NAPI_VERSION=10` and the vendored
+        # `hermes/napi/*` headers) don't leak to consumers of `napi`.
+        # Consumers continue to see only our shared `napi/*` headers.
+        #
+        # We link against Hermes's umbrella static library `hermesvm_a` (which
+        # transitively pulls in all the BCGen/Optimizer/Regex/Support/etc.
+        # object libraries that `hermesVMRuntime` depends on) plus the NAPI
+        # static library on top.  Linking just `hermesNapi + hermesVMRuntime +
+        # hermesPublic` leaves a long tail of unresolved symbols
+        # (bigint::exponentiate, regex::parseRegex, hbc::compileEvalModule,
+        # llvh::raw_ostream, platform_unicode::normalize, ...) which
+        # `hermesvm_a` bundles together for us.
+        set(LINK_LIBRARIES ${LINK_LIBRARIES}
+            PRIVATE hermesNapi
+            PRIVATE hermesvm_a)
+
+        # `hermes_napi.h` lives in Hermes's `API/napi/` source directory and
+        # is NOT installed alongside the other `include/hermes/napi/`
+        # headers, so the hermesNapi PUBLIC include dir doesn't expose it.
+        # Add the API/napi source directory explicitly so env_hermes.cc can
+        # `#include "hermes_napi.h"`.
+        #
+        # Additionally, Hermes uses *global* include_directories() at its
+        # project root (for the vendored LLVH headers and Hermes config
+        # output) instead of attaching them to each target.  Those globals
+        # don't propagate out of Hermes's add_subdirectory scope, so any
+        # consumer (including our napi target) that pulls in Hermes headers
+        # transitively needs them re-declared here.
+        #
+        # We resolve the binary directory via CMAKE_BINARY_DIR rather than
+        # ${hermes_BINARY_DIR} because FetchContent's lowercased per-content
+        # binary variable isn't always populated reliably across CMake
+        # versions/scopes, whereas the standard `_deps/<name>-build` layout
+        # is.
+        set(_HERMES_BINARY_DIR "${CMAKE_BINARY_DIR}/_deps/hermes-build")
+        set(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES}
+            PRIVATE "${hermes_SOURCE_DIR}/API/napi"
+            PRIVATE "${hermes_SOURCE_DIR}/include"
+            PRIVATE "${hermes_SOURCE_DIR}/public"
+            PRIVATE "${hermes_SOURCE_DIR}/external/llvh/include"
+            PRIVATE "${hermes_SOURCE_DIR}/external/llvh/gen/include"
+            PRIVATE "${_HERMES_BINARY_DIR}/include"
+            PRIVATE "${_HERMES_BINARY_DIR}/lib/config"
+            PRIVATE "${_HERMES_BINARY_DIR}/external/llvh/include")
+
+        # Hermes's headers rely on a handful of compiler-specific warning
+        # suppressions that Hermes applies globally in its own
+        # `Hermes.cmake` (e.g. `-wd4576` for C-style compound literals like
+        # `(SHLegacyValue){...}` inside `sh_legacy_value.h`).  Those
+        # globals don't propagate to our `napi` target, so we apply the
+        # minimum set needed for the headers we transitively pull in via
+        # `env_hermes.cc`.  These flags are MSVC-only — clang and gcc
+        # accept compound literals as a GNU extension under `-std=gnu++20`
+        # (which CMake picks by default) and would otherwise interpret a
+        # `/wdNNNN` argument as a missing source file path.
+        if(MSVC)
+            set(NAPI_HERMES_COMPILE_OPTIONS
+                /wd4068  # unknown pragma (GCC pragmas in Hermes headers)
+                /wd4141  # 'inline': used more than once
+                /wd4146  # unary minus on unsigned type
+                /wd4244  # conversion possible loss of data
+                /wd4267  # size_t -> smaller type conversion
+                /wd4291  # no matching delete found
+                /wd4576) # parenthesized type followed by initializer list
+        else()
+            set(NAPI_HERMES_COMPILE_OPTIONS "")
+        endif()
+
+        # Maximum GC heap size, in MiB, for the Hermes Runtime created by
+        # `Napi::Attach` (see Source/env_hermes.cc).  This is the GC's upper
+        # bound -- a ceiling, not an up-front reservation.  The 512 MiB default
+        # gives the unit-test Mocha suite generous headroom over Hermes's tiny
+        # built-in default; embedders running heavier workloads (large Babylon
+        # scenes, big typed-array buffers) can raise it at configure time with:
+        #     -DNAPI_HERMES_MAX_HEAP_SIZE_MB=<value>
+        # The value is forwarded to env_hermes.cc as a compile definition of the
+        # same name.
+        set(NAPI_HERMES_MAX_HEAP_SIZE_MB 512 CACHE STRING
+            "Maximum Hermes GC heap size in MiB for the Napi::Attach runtime (default 512)")
     else()
         message(FATAL_ERROR "Unsupported JavaScript engine: ${NAPI_JAVASCRIPT_ENGINE}")
     endif()
@@ -156,6 +259,17 @@ add_library(napi ${SOURCES})
 
 target_include_directories(napi ${INCLUDE_DIRECTORIES})
 target_link_libraries(napi ${LINK_LIBRARIES})
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    # Apply Hermes-specific warning suppressions ONLY to env_hermes.cc so
+    # they don't relax the rules for the rest of the napi sources.
+    set_source_files_properties("Source/env_hermes.cc"
+        PROPERTIES COMPILE_OPTIONS "${NAPI_HERMES_COMPILE_OPTIONS}")
+
+    # Forward the configurable Hermes GC max heap size to env_hermes.cc.
+    target_compile_definitions(napi PRIVATE
+        NAPI_HERMES_MAX_HEAP_SIZE_MB=${NAPI_HERMES_MAX_HEAP_SIZE_MB})
+endif()
 
 set_property(TARGET napi PROPERTY FOLDER Dependencies)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

@@ -7,6 +7,11 @@ Node-API contract from Node.js allows consumers of this library to interact with
 JavaScript engine with a consistent interface. This library also provides some optional
 polyfills that consumers can include if required.
 
+> **Hermes support is experimental.** The Hermes (`static_h`) engine integration is
+> available on Windows, Android, and Linux for evaluation purposes only. **Hermes is
+> not supported on Apple platforms (iOS or macOS)** — configuring the build with
+> `NAPI_JAVASCRIPT_ENGINE=Hermes` on those targets will fail with a CMake error.
+
 
 ## **Building - All Development Platforms**
 

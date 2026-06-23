@@ -112,4 +112,10 @@ namespace Babylon
         // delete isolate->GetArrayBufferAllocator();
         isolate->Dispose();
     }
+
+    void AppRuntime::DrainMicrotasks(Napi::Env)
+    {
+        // V8 auto-drains microtasks at the end of each script/callback when
+        // using the default MicrotasksPolicy.  No explicit pump needed.
+    }
 }

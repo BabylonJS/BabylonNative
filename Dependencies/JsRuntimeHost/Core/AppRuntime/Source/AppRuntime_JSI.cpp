@@ -45,4 +45,9 @@ namespace Babylon
 
         Napi::Detach(env);
     }
+
+    void AppRuntime::DrainMicrotasks(Napi::Env)
+    {
+        // JSI/V8 backed JSI auto-drains microtasks per scope.
+    }
 }

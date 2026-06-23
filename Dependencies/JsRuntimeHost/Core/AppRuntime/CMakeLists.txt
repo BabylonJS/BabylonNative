@@ -22,6 +22,23 @@ target_link_libraries(AppRuntime
     PRIVATE arcana
     PUBLIC JsRuntime)
 
+# AppRuntime_macOS.mm / AppRuntime_iOS.mm call NSLog (Foundation) and other
+# Apple ObjC++ APIs.  Xcode's "Link Frameworks Automatically" setting auto-
+# links Foundation/CoreFoundation/UIKit for ObjC translation units, so the
+# default `-G Xcode` macOS/iOS builds work without an explicit link.  Other
+# generators (notably Ninja, which we use for the Hermes macOS CI job to
+# work around the Xcode "new build system" rejecting Hermes's multi-target
+# generated source) leave those frameworks unresolved.  Declaring them
+# PUBLIC here propagates them onto the final executable's link line for
+# every generator, and also covers other Apple-side static deps in the
+# tree (e.g. UrlLib's `UrlRequest_Apple.mm` reference to NSBundle) without
+# needing to patch the dep itself.
+if(APPLE)
+    target_link_libraries(AppRuntime
+        PUBLIC "-framework Foundation"
+        PUBLIC "-framework CoreFoundation")
+endif()
+
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
     add_subdirectory(V8Inspector)
 

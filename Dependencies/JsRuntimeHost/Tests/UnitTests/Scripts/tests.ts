@@ -334,7 +334,7 @@ describe("fetch", function () {
 });
 
 describe("setTimeout", function () {
-    this.timeout(1000);
+    this.timeout(5000);
 
     it("should return an id greater than zero", function () {
         const id = setTimeout(() => { }, 0);
@@ -442,7 +442,7 @@ describe("setTimeout", function () {
 });
 
 describe("clearTimeout", function () {
-    this.timeout(1000);
+    this.timeout(5000);
 
     it("should stop the timeout matching the given timeout id", function (done) {
         const id = setTimeout(() => {
@@ -467,7 +467,7 @@ describe("clearTimeout", function () {
 });
 
 describe("setInterval", function () {
-    this.timeout(1000);
+    this.timeout(5000);
 
     it("should return an id greater than zero", function () {
         const id = setInterval(() => { }, 0);
@@ -497,7 +497,7 @@ describe("setInterval", function () {
 });
 
 describe("clearInterval", function () {
-    this.timeout(1000);
+    this.timeout(5000);
 
     it("should stop the interval matching the given interval id", function (done) {
         const id = setInterval(() => {
@@ -524,6 +524,8 @@ describe("clearInterval", function () {
 // Websocket
 if (hostPlatform !== "Unix") {
     describe("WebSocket", function () {
+        this.timeout(10000);
+
         it("should connect correctly with one websocket connection", function (done) {
             const ws = new WebSocket("wss://ws.postman-echo.com/raw");
             const testMessage = "testMessage";

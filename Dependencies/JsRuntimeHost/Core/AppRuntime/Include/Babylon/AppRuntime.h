@@ -67,6 +67,15 @@ namespace Babylon
         // extra logic around the invocation of a dispatched callback.
         void Execute(Dispatchable<void()> callback);
 
+        // Engine-specific hook called from Dispatch immediately after a user
+        // callback completes.  Most engines auto-drain microtasks at scope
+        // exit, so the implementation is a no-op for Chakra/V8/JSC/JSI.
+        // Hermes does NOT auto-drain; its implementation calls
+        // `Napi::DrainJobs(env)` so Promise continuations and queueMicrotask
+        // callbacks scheduled during the user callback actually run before
+        // the next top-level dispatch.
+        void DrainMicrotasks(Napi::Env env);
+
         Options m_options;
 
         class Impl;

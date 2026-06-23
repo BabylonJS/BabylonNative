@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  # ── Win32 ─────────────────────────────────────────────────────
+  # Win32
   Win32_x86_Chakra:
     uses: ./.github/workflows/build-win32.yml
     with:
@@ -32,7 +32,13 @@ jobs:
       platform: x64
       js-engine: V8
 
-  # ── UWP ───────────────────────────────────────────────────────
+  Win32_x64_Hermes:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      js-engine: Hermes
+
+  # UWP
   UWP_x64_Chakra:
     uses: ./.github/workflows/build-uwp.yml
     with:
@@ -57,7 +63,7 @@ jobs:
       platform: x64
       js-engine: V8
 
-  # ── Android ───────────────────────────────────────────────────
+  # Android
   Android_JSC:
     uses: ./.github/workflows/build-android.yml
     with:
@@ -68,7 +74,12 @@ jobs:
     with:
       js-engine: V8
 
-  # ── macOS ─────────────────────────────────────────────────────
+  Android_Hermes:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      js-engine: Hermes
+
+  # macOS (no Apple + Hermes until the upstream shutdown crash is fixed)
   macOS_Xcode164:
     uses: ./.github/workflows/build-macos.yml
     with:
@@ -124,7 +135,7 @@ jobs:
       runs-on: macos-26
       simulator: 'iPhone 17'
 
-  # ── Linux ─────────────────────────────────────────────────────
+  # Linux
   Ubuntu_gcc:
     uses: ./.github/workflows/build-linux.yml
 

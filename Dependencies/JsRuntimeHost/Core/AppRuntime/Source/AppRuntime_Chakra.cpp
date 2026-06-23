@@ -71,4 +71,11 @@ namespace Babylon
         // Detach must come after JsDisposeRuntime since it triggers finalizers which require env.
         Napi::Detach(env);
     }
+
+    void AppRuntime::DrainMicrotasks(Napi::Env)
+    {
+        // Chakra drains promise continuations through its
+        // JsSetPromiseContinuationCallback hook (see RunEnvironmentTier).
+        // No explicit pump needed here.
+    }
 }

@@ -109,6 +109,13 @@ namespace Babylon
     {
         m_impl->Append([this, func{std::move(func)}](Napi::Env env) mutable {
             Execute([this, env, func{std::move(func)}]() mutable {
+                // Some engines (notably Hermes) require an open NAPI handle
+                // scope before any napi_* call that materializes a value.
+                // The other engines (V8/Chakra/JSC) already provide an outer
+                // scope at the RunEnvironmentTier level, so this extra
+                // scope is harmless there but mandatory for Hermes.
+                Napi::HandleScope scope{env};
+
                 try
                 {
                     func(env);
@@ -122,6 +129,13 @@ namespace Babylon
                     assert(false);
                     std::abort();
                 }
+
+                // Drain engine-level microtasks/jobs queued during the
+                // callback (Promise continuations, queueMicrotask, etc.) so
+                // they run before the next top-level Dispatch.  No-op for
+                // engines that drain automatically; Hermes needs an explicit
+                // pump.
+                DrainMicrotasks(env);
             });
         });
     }

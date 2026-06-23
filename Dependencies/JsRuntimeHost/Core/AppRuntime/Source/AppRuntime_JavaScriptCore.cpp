@@ -23,4 +23,9 @@ namespace Babylon
         // Detach must come after JSGlobalContextRelease since it triggers finalizers which require env.
         Napi::Detach(env);
     }
+
+    void AppRuntime::DrainMicrotasks(Napi::Env)
+    {
+        // JavaScriptCore drains microtasks automatically at script boundaries.
+    }
 }
