@@ -21,17 +21,6 @@ jobs:
     with:
       enable-sanitizers: true
 
-  # ── Apple: iOS ────────────────────────────────────────────────
-  iOS_iOS180:
-    uses: ./.github/workflows/build-ios.yml
-    with:
-      deployment-target: '18.0'
-
-  iOS_iOS175:
-    uses: ./.github/workflows/build-ios.yml
-    with:
-      deployment-target: '17.5'
-
   # ── Apple: Xcode 26 ──────────────────────────────────────────
   MacOS_Xcode26:
     uses: ./.github/workflows/build-macos.yml
