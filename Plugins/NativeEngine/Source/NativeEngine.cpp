@@ -719,6 +719,7 @@ namespace Babylon
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
+                InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
 
@@ -1622,6 +1623,17 @@ namespace Babylon
     {
         const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         return Napi::Value::From(info.Env(), texture->Height());
+    }
+
+    Napi::Value NativeEngine::GetTextureLayerCount(const Napi::CallbackInfo& info)
+    {
+        const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        // When the texture is bound as a single-slice view (ViewNumLayers > 0, e.g. an
+        // ExternalTexture wrapped with a layerIndex), report the bound layer count rather
+        // than the underlying array size so consumers see a 2D texture, not an array.
+        const uint16_t viewNumLayers = texture->ViewNumLayers();
+        const uint16_t layerCount = viewNumLayers > 0 ? viewNumLayers : texture->NumLayers();
+        return Napi::Value::From(info.Env(), layerCount);
     }
 
     void NativeEngine::SetTextureSampling(NativeDataStream::Reader& data)
