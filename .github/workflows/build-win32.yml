@@ -31,6 +31,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.fc-cache
+            !${{ github.workspace }}/.fc-cache/*-build
+            !${{ github.workspace }}/.fc-cache/*-build/**
+          key: fc-v2-win32-${{ inputs.platform }}-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            fc-v2-win32-${{ inputs.platform }}-
 
       - name: Set variables
         id: vars
@@ -59,6 +69,8 @@ jobs:
           cmake -G "Visual Studio 17 2022" ^
             -B build/${{ steps.vars.outputs.solution_name }} ^
             -A ${{ inputs.platform }} ^
+            -D FETCHCONTENT_BASE_DIR=${{ github.workspace }}/.fc-cache ^
+            -D FETCHCONTENT_UPDATES_DISCONNECTED=ON ^
             ${{ steps.vars.outputs.js_define }} ^
             -D BX_CONFIG_DEBUG=ON ^
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^

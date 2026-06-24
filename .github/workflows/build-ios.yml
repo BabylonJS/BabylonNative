@@ -27,6 +27,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.fc-cache
+            !${{ github.workspace }}/.fc-cache/*-build
+            !${{ github.workspace }}/.fc-cache/*-build/**
+          key: fc-v2-ios-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            fc-v2-ios-
 
       - name: Select Xcode ${{ inputs.xcode-version }}
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
@@ -34,6 +44,8 @@ jobs:
       - name: Generate iOS solution
         run: |
           cmake -G Xcode -B build/iOS \
+            -D FETCHCONTENT_BASE_DIR=${{ github.workspace }}/.fc-cache \
+            -D FETCHCONTENT_UPDATES_DISCONNECTED=ON \
             -D IOS=ON \
             -D DEPLOYMENT_TARGET=${{ inputs.deployment-target }} \
             -D BABYLON_DEBUG_TRACE=ON \
