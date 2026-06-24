@@ -80,25 +80,6 @@ jobs:
       js-engine: Hermes
 
   # macOS (no Apple + Hermes until the upstream shutdown crash is fixed)
-  macOS_Xcode164:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      xcode-version: '16.4'
-      runs-on: macos-latest
-
-  macOS_Xcode164_Sanitizers:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      xcode-version: '16.4'
-      runs-on: macos-latest
-      enable-sanitizers: true
-
-  macOS_Xcode164_ThreadSanitizer:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      xcode-version: '16.4'
-      runs-on: macos-latest
-      enable-thread-sanitizer: true
 
   macOS_Xcode264:
     uses: ./.github/workflows/build-macos.yml
@@ -121,13 +102,6 @@ jobs:
       enable-thread-sanitizer: true
 
   # ── iOS ───────────────────────────────────────────────────────
-  iOS_Xcode164:
-    uses: ./.github/workflows/build-ios.yml
-    with:
-      xcode-version: '16.4'
-      runs-on: macos-latest
-      simulator: 'iPhone 16'
-
   iOS_Xcode264:
     uses: ./.github/workflows/build-ios.yml
     with:
