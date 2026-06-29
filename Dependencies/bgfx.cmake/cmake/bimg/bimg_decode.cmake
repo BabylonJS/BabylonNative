@@ -18,7 +18,7 @@ file(
 	GLOB_RECURSE
 	BIMG_DECODE_SOURCES #
 	${BIMG_DIR}/include/* #
-	${BIMG_DIR}/src/image_decode.* #
+	${BIMG_DIR}/src/image_decode*.* #
 	#
 	${LOADPNG_SOURCES} #
 	${MINIZ_SOURCES} #
