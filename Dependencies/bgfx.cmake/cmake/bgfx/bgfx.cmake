@@ -53,7 +53,14 @@ endif()
 if(BGFX_CONFIG_RENDERER_WEBGPU)
 	include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/webgpu.cmake)
 	if(EMSCRIPTEN)
-		target_link_options(bgfx PRIVATE "-s USE_WEBGPU=1")
+		# Emscripten's built-in WebGPU bindings (-sUSE_WEBGPU) are deprecated and
+		# expose an outdated webgpu.h that lacks the Dawn C API the current
+		# renderer_webgpu.cpp targets (wgpuInstanceWaitAny, wgpuAdapterRequestDevice,
+		# ...), so linking fails with undefined wgpu* symbols. Use Dawn's maintained
+		# emdawnwebgpu port instead. PUBLIC (not PRIVATE) so the port reaches the
+		# final link of executables that link bgfx -- a link option on a static
+		# archive otherwise never propagates to the consumer.
+		target_link_options(bgfx PUBLIC "--use-port=emdawnwebgpu")
 	else()
 		target_link_libraries(bgfx PRIVATE webgpu)
 	endif()
