@@ -24,7 +24,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // first BNView attach completes engine initialization on the JS
         // thread, in submission order.
         PlaygroundBootstrap.loadScripts(runtime)
-        runtime.loadScript("app:///Scripts/experience.js")
+        runtime.loadScript("app:///Scripts/audio.js")
+        runtime.loadScript("app:///Scripts/playground_runner.js")
 
         self.runtime = runtime
         return true
