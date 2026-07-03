@@ -24019,6 +24019,46 @@ exports.isNumeric = function (input) {
 
 /***/ },
 
+/***/ "../../node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js"
+/*!*************************************************************************!*\
+  !*** ../../node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js ***!
+  \*************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ _arrayLikeToArray)
+/* harmony export */ });
+function _arrayLikeToArray(r, a) {
+  (null == a || a > r.length) && (a = r.length);
+  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+  return n;
+}
+
+
+/***/ },
+
+/***/ "../../node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js"
+/*!**************************************************************************!*\
+  !*** ../../node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js ***!
+  \**************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ _arrayWithoutHoles)
+/* harmony export */ });
+/* harmony import */ var _arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./arrayLikeToArray.js */ "../../node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js");
+
+function _arrayWithoutHoles(r) {
+  if (Array.isArray(r)) return (0,_arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r);
+}
+
+
+/***/ },
+
 /***/ "../../node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js"
 /*!*************************************************************************!*\
   !*** ../../node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js ***!
@@ -24054,6 +24094,92 @@ function _asyncToGenerator(n) {
       _next(void 0);
     });
   };
+}
+
+
+/***/ },
+
+/***/ "../../node_modules/@babel/runtime/helpers/esm/iterableToArray.js"
+/*!************************************************************************!*\
+  !*** ../../node_modules/@babel/runtime/helpers/esm/iterableToArray.js ***!
+  \************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ _iterableToArray)
+/* harmony export */ });
+function _iterableToArray(r) {
+  if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
+}
+
+
+/***/ },
+
+/***/ "../../node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js"
+/*!**************************************************************************!*\
+  !*** ../../node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js ***!
+  \**************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ _nonIterableSpread)
+/* harmony export */ });
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+}
+
+
+/***/ },
+
+/***/ "../../node_modules/@babel/runtime/helpers/esm/toConsumableArray.js"
+/*!**************************************************************************!*\
+  !*** ../../node_modules/@babel/runtime/helpers/esm/toConsumableArray.js ***!
+  \**************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ _toConsumableArray)
+/* harmony export */ });
+/* harmony import */ var _arrayWithoutHoles_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./arrayWithoutHoles.js */ "../../node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js");
+/* harmony import */ var _iterableToArray_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./iterableToArray.js */ "../../node_modules/@babel/runtime/helpers/esm/iterableToArray.js");
+/* harmony import */ var _unsupportedIterableToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./unsupportedIterableToArray.js */ "../../node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js");
+/* harmony import */ var _nonIterableSpread_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./nonIterableSpread.js */ "../../node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js");
+
+
+
+
+function _toConsumableArray(r) {
+  return (0,_arrayWithoutHoles_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r) || (0,_iterableToArray_js__WEBPACK_IMPORTED_MODULE_1__["default"])(r) || (0,_unsupportedIterableToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(r) || (0,_nonIterableSpread_js__WEBPACK_IMPORTED_MODULE_3__["default"])();
+}
+
+
+/***/ },
+
+/***/ "../../node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js"
+/*!***********************************************************************************!*\
+  !*** ../../node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js ***!
+  \***********************************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ _unsupportedIterableToArray)
+/* harmony export */ });
+/* harmony import */ var _arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./arrayLikeToArray.js */ "../../node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js");
+
+function _unsupportedIterableToArray(r, a) {
+  if (r) {
+    if ("string" == typeof r) return (0,_arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r, a);
+    var t = {}.toString.call(r).slice(8, -1);
+    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? (0,_arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r, a) : void 0;
+  }
 }
 
 
@@ -28239,14 +28365,15 @@ var __webpack_exports__ = {};
   !*** ./src/tests.javaScript.all.ts ***!
   \*************************************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/asyncToGenerator */ "../../node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
-/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/regenerator */ "../../node_modules/@babel/runtime/regenerator/index.js");
-/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var mocha__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! mocha */ "../../node_modules/mocha/browser-entry.js");
-/* harmony import */ var mocha__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(mocha__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var chai__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! chai */ "../../node_modules/chai/index.js");
-/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @babylonjs/materials */ "@babylonjs/core");
-/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/toConsumableArray */ "../../node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var _babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/helpers/asyncToGenerator */ "../../node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babel/runtime/regenerator */ "../../node_modules/@babel/runtime/regenerator/index.js");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var mocha__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! mocha */ "../../node_modules/mocha/browser-entry.js");
+/* harmony import */ var mocha__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(mocha__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var chai__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! chai */ "../../node_modules/chai/index.js");
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @babylonjs/materials */ "@babylonjs/core");
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_5__);
 function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];if (!t) {if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {t && (r = t);var _n = 0,F = function F() {};return { s: F, n: function n() {return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] };}, e: function e(r) {throw r;}, f: F };}throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");}var o,a = !0,u = !1;return { s: function s() {t = t.call(r);}, n: function n() {var r = t.next();return a = r.done, r;}, e: function e(r) {u = !0, o = r;}, f: function f() {try {a || null == t.return || t.return();} finally {if (u) throw o;}} };}function _unsupportedIterableToArray(r, a) {if (r) {if ("string" == typeof r) return _arrayLikeToArray(r, a);var t = {}.toString.call(r).slice(8, -1);return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;}}function _arrayLikeToArray(r, a) {(null == a || a > r.length) && (a = r.length);for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];return n;}
 
 
@@ -28255,9 +28382,9 @@ function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol 
 
 
 
-mocha__WEBPACK_IMPORTED_MODULE_2__.setup("bdd");
+mocha__WEBPACK_IMPORTED_MODULE_3__.setup("bdd");
 // @ts-ignore
-mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
+mocha__WEBPACK_IMPORTED_MODULE_3__.reporter("spec");
 
 
 
@@ -28267,42 +28394,42 @@ describe("RequestFile", function () {
   this.timeout(0);
   it("should throw when requesting a URL with no protocol", function () {
     function requestFile() {
-      (0,_babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.RequestFile)("noprotocol.gltf", function () {});
+      (0,_babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.RequestFile)("noprotocol.gltf", function () {});
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(requestFile).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(requestFile).to.throw();
   });
 });
 
 describe("ColorParsing", function () {
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("")).to.equal(0);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("transparent")).to.equal(0);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("#123")).to.equal(0xff332211);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("#1234")).to.equal(0x44332211);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("#123456")).to.equal(0xff563412);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("#12345678")).to.equal(0x78563412);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("snow")).to.equal(0xfffafaff);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgb(16,32,48)")).to.equal(0xff302010);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("")).to.equal(0);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("transparent")).to.equal(0);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("#123")).to.equal(0xff332211);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("#1234")).to.equal(0x44332211);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("#123456")).to.equal(0xff563412);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("#12345678")).to.equal(0x78563412);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("snow")).to.equal(0xfffafaff);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgb(16,32,48)")).to.equal(0xff302010);
   // Alpha is a 0-1 number (or a percentage) per CSS Color, so any value above
   // 1 clamps to fully opaque. It is not a 0-255 channel like r/g/b.
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgba(16,32,48,64)")).to.equal(0xff302010);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgb(16,     32   ,  48   )")).to.equal(
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgba(16,32,48,64)")).to.equal(0xff302010);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgb(16,     32   ,  48   )")).to.equal(
     0xff302010
   );
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(
     _native.Canvas.parseColor("rgba(    16,     32   ,  48 , 64  )")
   ).to.equal(0xff302010);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgba(16,32,48,1)")).to.equal(0xff302010);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgba(16,32,48,0)")).to.equal(0x00302010);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgba(16,32,48,1)")).to.equal(0xff302010);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgba(16,32,48,0)")).to.equal(0x00302010);
   // Fractional and percentage alpha, whitespace-separated components and the
   // "/ alpha" form all used to fall through to the "unable to parse" throw.
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgba(16,32,48,0.5)")).to.equal(0x80302010);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgba(16 32 48 / 50%)")).to.equal(
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgba(16,32,48,0.5)")).to.equal(0x80302010);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgba(16 32 48 / 50%)")).to.equal(
     0x80302010
   );
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgb(16 32 48)")).to.equal(0xff302010);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("rgb(100%,0%,0%)")).to.equal(0xff0000ff);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("hsl(0,100%,50%)")).to.equal(0xff0000ff);
-  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.Canvas.parseColor("hsla(0,100%,50%,0.5)")).to.equal(
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgb(16 32 48)")).to.equal(0xff302010);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("rgb(100%,0%,0%)")).to.equal(0xff0000ff);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("hsl(0,100%,50%)")).to.equal(0xff0000ff);
+  (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.Canvas.parseColor("hsla(0,100%,50%,0.5)")).to.equal(
     0x800000ff
   );
 
@@ -28310,69 +28437,69 @@ describe("ColorParsing", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("unknownColor");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("#");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("#12345");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("rgb(11)");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("rgb(11,22,33");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("rgb(11,22,33,");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("rgba(11,   22, 33,  )");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("rgba(11,   22, 33, 44,   55,   66 )");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("rgb");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
   it("should throw", function () {
     function incorrectColor() {
       _native.Canvas.parseColor("rgba");
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(incorrectColor).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(incorrectColor).to.throw();
   });
 });
 
@@ -28388,8 +28515,8 @@ describe("Canvas2D", function () {
     var ctx = createContext();
     ctx.fillStyle = "#ff0000";
     ctx.strokeStyle = "#00ff00";
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.equal("#ff0000");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#00ff00");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.fillStyle).to.equal("#ff0000");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.strokeStyle).to.equal("#00ff00");
   });
 
   it("accepts a CanvasGradient as fillStyle", function () {
@@ -28397,10 +28524,10 @@ describe("Canvas2D", function () {
     var gradient = ctx.createLinearGradient(0, 0, 64, 64);
     gradient.addColorStop(0, "red");
     gradient.addColorStop(1, "blue");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.fillStyle = gradient;
     }).to.not.throw();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.not.equal("#ff0000");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.fillStyle).to.not.equal("#ff0000");
   });
 
   it("accepts a CanvasGradient as strokeStyle", function () {
@@ -28410,7 +28537,7 @@ describe("Canvas2D", function () {
     var gradient = ctx.createLinearGradient(0, 0, 64, 64);
     gradient.addColorStop(0, "red");
     gradient.addColorStop(1, "blue");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.strokeStyle = gradient;
     }).to.not.throw();
   });
@@ -28422,7 +28549,7 @@ describe("Canvas2D", function () {
     gradient.addColorStop(0, "yellow");
     gradient.addColorStop(0.5, "pink");
     gradient.addColorStop(1, "green");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.fillStyle = gradient;
       ctx.strokeStyle = gradient;
     }).to.not.throw();
@@ -28436,7 +28563,7 @@ describe("Canvas2D", function () {
     ctx.save();
     ctx.strokeStyle = gradient;
     ctx.restore();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#0000ff");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.strokeStyle).to.equal("#0000ff");
   });
 
   it("restores the shadow attributes across save/restore", function () {
@@ -28453,10 +28580,10 @@ describe("Canvas2D", function () {
     ctx.shadowOffsetX = 50;
     ctx.shadowOffsetY = 60;
     ctx.restore();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowColor).to.equal("#00ff00");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowBlur).to.equal(1);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowOffsetX).to.equal(2);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowOffsetY).to.equal(3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.shadowColor).to.equal("#00ff00");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.shadowBlur).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.shadowOffsetX).to.equal(2);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.shadowOffsetY).to.equal(3);
   });
 
   it("restores the remaining drawing state across save/restore", function () {
@@ -28477,12 +28604,12 @@ describe("Canvas2D", function () {
     ctx.miterLimit = 3;
     ctx.setLineDash([7, 8, 9]);
     ctx.restore();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineWidth).to.equal(1);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(1);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineCap).to.equal("butt");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineJoin).to.equal("miter");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.miterLimit).to.equal(10);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([1, 2]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.lineWidth).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.lineCap).to.equal("butt");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.lineJoin).to.equal("miter");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.miterLimit).to.equal(10);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([1, 2]);
   });
 
   it("reads back globalAlpha", function () {
@@ -28490,9 +28617,9 @@ describe("Canvas2D", function () {
     // reading it gave undefined. The value was never mirrored either, so the
     // save/restore stack carried a field nothing could observe.
     var ctx = createContext();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(1);
     ctx.globalAlpha = 0.5;
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(0.5);
   });
 
   it("ignores an out-of-range or non-finite globalAlpha", function () {
@@ -28501,15 +28628,15 @@ describe("Canvas2D", function () {
     var ctx = createContext();
     ctx.globalAlpha = 0.5;
     ctx.globalAlpha = -1;
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(0.5);
     ctx.globalAlpha = 2;
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(0.5);
     ctx.globalAlpha = Infinity;
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(0.5);
     ctx.globalAlpha = NaN;
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(0.5);
     ctx.globalAlpha = 0;
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.globalAlpha).to.equal(0);
   });
 
   it("reports the spec defaults on a fresh context", function () {
@@ -28517,10 +28644,10 @@ describe("Canvas2D", function () {
     // The C++ mirrors were value-initialized to ""/""/0/0 instead, so a fresh context
     // reported a default it was not actually drawing with.
     var ctx = createContext();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineCap).to.equal("butt");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineJoin).to.equal("miter");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineWidth).to.equal(1);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.miterLimit).to.equal(10);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.lineCap).to.equal("butt");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.lineJoin).to.equal("miter");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.lineWidth).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.miterLimit).to.equal(10);
   });
 
   it("keeps the previous dash list when a new one is rejected", function () {
@@ -28529,16 +28656,16 @@ describe("Canvas2D", function () {
     var ctx = createContext();
     ctx.setLineDash([5, 10]);
     ctx.setLineDash([-1]);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
     ctx.setLineDash([2, "x"]);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
     ctx.setLineDash([Number.NaN]);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
     // A valid list still replaces it, and an empty list still means "solid".
     ctx.setLineDash([3, 4]);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([3, 4]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([3, 4]);
     ctx.setLineDash([]);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([]);
   });
 
   it("keeps a gradient assigned to fillStyle alive across a collection", function () {
@@ -28565,7 +28692,7 @@ describe("Canvas2D", function () {
 
     // The getter has to hand back the object that was assigned. The expando proves it is
     // that same JavaScript object rather than a fresh wrapper.
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle.tag).to.equal("kept");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.fillStyle.tag).to.equal("kept");
     // ...and the native gradient behind it has to still be there.
     ctx.fillStyle.addColorStop(0.5, "green");
     ctx.fillRect(0, 0, 64, 64);
@@ -28586,7 +28713,7 @@ describe("Canvas2D", function () {
       global.CollectGarbage();
     }
 
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle.tag).to.equal("kept");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.strokeStyle.tag).to.equal("kept");
     ctx.strokeStyle.addColorStop(0.5, "green");
     ctx.strokeRect(0, 0, 64, 64);
   });
@@ -28597,13 +28724,13 @@ describe("Canvas2D", function () {
     var ctx = createContext();
     ctx.setLineDash([5, 10]);
     ctx.setLineDash("x");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
     ctx.setLineDash(null);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
     ctx.setLineDash(7);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
     ctx.setLineDash();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.getLineDash()).to.deep.equal([]);
   });
 
   it("restores font", function () {
@@ -28617,10 +28744,10 @@ describe("Canvas2D", function () {
     var saved = ctx.font;
     ctx.save();
     ctx.font = "40px Times";
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.font).to.not.equal(saved);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.font).to.not.equal(saved);
     ctx.restore();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.font).to.equal(saved);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.font).to.equal(saved);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.fillText("after restore", 0, 20);
     }).to.not.throw();
   });
@@ -28632,20 +28759,20 @@ describe("Canvas2D", function () {
     var ctx = createContext();
     ctx.fillStyle = "#ff0000";
     ctx.strokeStyle = "#00ff00";
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.fillStyle = {};
       ctx.strokeStyle = {};
       ctx.fillStyle = [];
       ctx.strokeStyle = function () {};
     }).to.not.throw();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.equal("#ff0000");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#00ff00");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.fillStyle).to.equal("#ff0000");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.strokeStyle).to.equal("#00ff00");
     // A real gradient is still accepted.
     var gradient = ctx.createLinearGradient(0, 0, 64, 0);
     gradient.addColorStop(0, "red");
     gradient.addColorStop(1, "blue");
     ctx.fillStyle = gradient;
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.not.equal("#ff0000");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.fillStyle).to.not.equal("#ff0000");
   });
 
   it("accepts two color stops at the same offset", function () {
@@ -28659,7 +28786,7 @@ describe("Canvas2D", function () {
     gradient.addColorStop(0.5, "red");
     gradient.addColorStop(0.5, "blue");
     gradient.addColorStop(1, "blue");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 64, 64);
     }).to.not.throw();
@@ -28672,10 +28799,10 @@ describe("Canvas2D", function () {
   it("survives an out-of-range rgb() component", function () {
     var ctx = createContext();
     var huge = "9".repeat(400);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.fillStyle = "rgb(".concat(huge, ", 0, 0)");
     }).to.not.throw();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.fillStyle = "rgba(0, 0, 0, ".concat(huge, ")");
     }).to.not.throw();
   });
@@ -28684,19 +28811,19 @@ describe("Canvas2D", function () {
     var ctx = createContext();
     ctx.font = "18px Arial";
     // The size regex accepts an exponent, so this parses but does not fit a float.
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.font = "18e999px Arial";
     }).to.not.throw();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.font = "".concat("9".repeat(400), " 18px Arial");
     }).to.not.throw();
     // An unparseable font is ignored, so the previous one stays in effect.
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.font).to.contain("18px");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ctx.font).to.contain("18px");
   });
 
   it("survives an out-of-range letterSpacing", function () {
     var ctx = createContext();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
       ctx.letterSpacing = "".concat("9".repeat(400), "px");
     }).to.not.throw();
   });
@@ -28714,7 +28841,7 @@ describe("Canvas2D", function () {
     { width: Infinity, height: 1 }];
 
     bad.forEach(function (source) {
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {
         ctx.createImageData(source);
       }, JSON.stringify(source)).to.throw();
     });
@@ -28723,14 +28850,14 @@ describe("Canvas2D", function () {
   it("creates image data from a valid source object", function () {
     var ctx = createContext();
     var data = ctx.createImageData({ width: 4, height: 3 });
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(data.width).to.equal(4);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(data.height).to.equal(3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(data.width).to.equal(4);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(data.height).to.equal(3);
   });
 });
 
 function createSceneAndWait(callback, done) {
-  var engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.NativeEngine();
-  var scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Scene(engine);
+  var engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.NativeEngine();
+  var scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Scene(engine);
   scene.createDefaultCamera();
   callback(engine, scene);
   scene.executeWhenReady(function () {
@@ -28743,7 +28870,7 @@ describe("Materials", function () {
   it("Empty ShaderMaterial should compile", function (done) {
     function createEmptyShaderMat() {
       createSceneAndWait(function (engine, scene) {
-        var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.MeshBuilder.CreateSphere(
+        var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.MeshBuilder.CreateSphere(
           "sphere",
           { diameter: 2, segments: 32 },
           scene
@@ -28752,7 +28879,7 @@ describe("Materials", function () {
           vertexSource: "void main() {}",
           fragmentSource: "void main() {}"
         };
-        var mat = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ShaderMaterial("shader", scene, shaders, {});
+        var mat = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ShaderMaterial("shader", scene, shaders, {});
         sphere.material = mat;
       }, done);
     }
@@ -28760,12 +28887,12 @@ describe("Materials", function () {
   });
   it("GradientMaterial should compile", function (done) {
     createSceneAndWait(function (engine, scene) {
-      var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.MeshBuilder.CreateSphere(
+      var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.MeshBuilder.CreateSphere(
         "sphere",
         { diameter: 2, segments: 32 },
         scene
       );
-      var gradientMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.GradientMaterial("grad", scene);
+      var gradientMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.GradientMaterial("grad", scene);
       sphere.material = gradientMaterial;
     }, done);
   });
@@ -28776,21 +28903,21 @@ describe("PostProcesses", function () {
   it("PassPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.PassPostProcess("Scene copy", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.PassPostProcess("Scene copy", 1.0, camera);
     }, done);
   });
   it("BlackAndWhitePostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.BlackAndWhitePostProcess("bandw", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.BlackAndWhitePostProcess("bandw", 1.0, camera);
     }, done);
   });
   it("BlurPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.BlurPostProcess(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.BlurPostProcess(
         "Horizontal blur",
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Vector2(1.0, 0),
+        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Vector2(1.0, 0),
         32,
         0.25,
         camera
@@ -28800,9 +28927,9 @@ describe("PostProcesses", function () {
   it("ConvolutionPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ConvolutionPostProcess(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ConvolutionPostProcess(
         "Sepia",
-        _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ConvolutionPostProcess.EmbossKernel,
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ConvolutionPostProcess.EmbossKernel,
         1.0,
         camera
       );
@@ -28811,28 +28938,28 @@ describe("PostProcesses", function () {
   it("HighlightsPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.HighlightsPostProcess("highlights", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.HighlightsPostProcess("highlights", 1.0, camera);
     }, done);
   });
   it("TonemapPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.TonemapPostProcess("tonemap", _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.TonemappingOperator.Hable, 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.TonemapPostProcess("tonemap", _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.TonemappingOperator.Hable, 1.0, camera);
     }, done);
   });
   it("ImageProcessingPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ImageProcessingPostProcess("processing", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ImageProcessingPostProcess("processing", 1.0, camera);
     }, done);
   });
   it("RefractionPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.RefractionPostProcess(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.RefractionPostProcess(
         "Refraction",
         "https://playground.babylonjs.com/textures/grass.jpg",
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Color3(1.0, 1.0, 1.0),
+        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Color3(1.0, 1.0, 1.0),
         0.5,
         0.5,
         1.0,
@@ -28843,7 +28970,7 @@ describe("PostProcesses", function () {
   it("DefaultPipeline", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.DefaultRenderingPipeline(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.DefaultRenderingPipeline(
         "defaultPipeline", // The name of the pipeline
         true, // Do you want the pipeline to use HDR texture?
         scene, // The scene instance
@@ -28897,25 +29024,25 @@ describe("PostProcesses", function () {
 describe("NativeEncoding", function () {
   this.timeout(0);function
 
-  expectValidPNG(_x) {return _expectValidPNG.apply(this, arguments);}function _expectValidPNG() {_expectValidPNG = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee3(blob) {var arrayBuffer, pngSignature;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context3) {while (1) switch (_context3.prev = _context3.next) {case 0:
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blob).to.be.instanceOf(Blob);_context3.next = 1;return (
+  expectValidPNG(_x) {return _expectValidPNG.apply(this, arguments);}function _expectValidPNG() {_expectValidPNG = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee3(blob) {var arrayBuffer, pngSignature;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context3) {while (1) switch (_context3.prev = _context3.next) {case 0:
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(blob).to.be.instanceOf(Blob);_context3.next = 1;return (
               blob.arrayBuffer());case 1:arrayBuffer = _context3.sent;
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(arrayBuffer.byteLength).to.be.greaterThan(0);
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(arrayBuffer.byteLength).to.be.greaterThan(0);
 
             pngSignature = new Uint8Array(arrayBuffer.slice(0, 4));
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pngSignature[0]).to.equal(137); // PNG signature bytes
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pngSignature[1]).to.equal(80); // 'P'
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pngSignature[2]).to.equal(78); // 'N'
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pngSignature[3]).to.equal(71); // 'G'
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pngSignature[0]).to.equal(137); // PNG signature bytes
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pngSignature[1]).to.equal(80); // 'P'
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pngSignature[2]).to.equal(78); // 'N'
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pngSignature[3]).to.equal(71); // 'G'
           case 2:case "end":return _context3.stop();}}, _callee3);}));return _expectValidPNG.apply(this, arguments);}
 
-  it("should encode a PNG", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var pixelData, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+  it("should encode a PNG", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee() {var pixelData, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
           pixelData = new Uint8Array(4).fill(255);_context.next = 1;return (
             _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false));case 1:result = _context.sent;_context.next = 2;return (
             expectValidPNG(result));case 2:case "end":return _context.stop();}}, _callee);}))
   );
 
-  it("should handle multiple concurrent encoding tasks", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee2() {var pixelDatas, i, results;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
+  it("should handle multiple concurrent encoding tasks", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee2() {var pixelDatas, i, results;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
           pixelDatas = [];
           for (i = 0; i < 10; i++) {
             pixelDatas.push(new Uint8Array(4).fill(255));
@@ -28986,23 +29113,23 @@ function hexToBytes(hex) {
   var SPHERE_INDICES = 273;
 
   it("publishes the codec version it was built against", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.be.a("string");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.DracoCodec.Version).to.be.a("string");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
   });
 
   it("decodes a mesh produced by the reference glTF encoder", function () {
     var decoded = _native.DracoCodec.Decode(ENCODED, { position: POSITION_ATTRIBUTE_ID });
 
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.indices.length).to.equal(indices.length);
 
     // Draco reorders points, so compare the triangles as sets of resolved corner
     // positions rather than assuming the original vertex order survived. Rounded to
     // two decimals so the comparison tolerates quantization but still separates
     // coordinates that are a whole unit apart.
     var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute.size).to.equal(3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(attribute.size).to.equal(3);
 
     var corner = function corner(buffer, i) {return (
         [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
@@ -29015,45 +29142,45 @@ function hexToBytes(hex) {
       expectedCorners.push(corner(positions, indices[i]));
       actualCorners.push(corner(attribute.data, decoded.indices[i]));
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
   });
 
   it("decodes without an explicit attribute id map", function () {
     var decoded = _native.DracoCodec.Decode(ENCODED);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.attributes.find(function (a) {return a.kind === "position";})).to.not.equal(undefined);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.attributes.find(function (a) {return a.kind === "position";})).to.not.equal(undefined);
   });
 
   it("decodes a multi-attribute mesh", function () {
     var decoded = _native.DracoCodec.Decode(SPHERE, { position: 0, normal: 1, uv: 2 });
 
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(SPHERE_VERTICES);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(SPHERE_INDICES);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.totalVertices).to.equal(SPHERE_VERTICES);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.indices.length).to.equal(SPHERE_INDICES);
 
     var byKind = {};var _iterator = _createForOfIteratorHelper(
         decoded.attributes),_step;try {for (_iterator.s(); !(_step = _iterator.n()).done;) {var a = _step.value;
         byKind[a.kind] = a;
       }} catch (err) {_iterator.e(err);} finally {_iterator.f();}
 
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.position.size).to.equal(3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.normal.size).to.equal(3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.uv.size).to.equal(2);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(byKind.position.size).to.equal(3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(byKind.normal.size).to.equal(3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(byKind.uv.size).to.equal(2);
 
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.position.data.length).to.equal(SPHERE_VERTICES * 3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.normal.data.length).to.equal(SPHERE_VERTICES * 3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.uv.data.length).to.equal(SPHERE_VERTICES * 2);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(byKind.position.data.length).to.equal(SPHERE_VERTICES * 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(byKind.normal.data.length).to.equal(SPHERE_VERTICES * 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(byKind.uv.data.length).to.equal(SPHERE_VERTICES * 2);
 
     // Every index must address a real vertex, and the geometry must actually be the
     // unit sphere that was encoded rather than plausible-looking noise.
     for (var i = 0; i < decoded.indices.length; ++i) {
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices[i]).to.be.lessThan(SPHERE_VERTICES);
+      (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.indices[i]).to.be.lessThan(SPHERE_VERTICES);
     }
 
     for (var v = 0; v < SPHERE_VERTICES; ++v) {
       var x = byKind.position.data[v * 3];
       var y = byKind.position.data[v * 3 + 1];
       var z = byKind.position.data[v * 3 + 2];
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Math.sqrt(x * x + y * y + z * z)).to.be.closeTo(1, 0.01);
+      (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(Math.sqrt(x * x + y * y + z * z)).to.be.closeTo(1, 0.01);
     }
   });
 
@@ -29062,20 +29189,20 @@ function hexToBytes(hex) {
     for (var i = 0; i < garbage.length; ++i) {
       garbage[i] = i * 37 & 0xff;
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(garbage);}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Decode(garbage);}).to.throw();
   });
 
   it("rejects truncated input", function () {
     var truncated = ENCODED.slice(0, Math.floor(ENCODED.length / 2));
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(truncated);}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Decode(truncated);}).to.throw();
   });
 
   it("rejects an empty buffer", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(new Uint8Array(0));}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Decode(new Uint8Array(0));}).to.throw();
   });
 
   it("exposes an encoder", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Encode).to.be.a("function");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.DracoCodec.Encode).to.be.a("function");
   });
 
   it("round trips a mesh through the encoder and back", function () {
@@ -29086,18 +29213,18 @@ function hexToBytes(hex) {
 
     // Int8Array, matching Babylon.js's IDracoEncodedMeshData contract and the WASM
     // encoder it stands in for.
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data).to.be.an.instanceOf(Int8Array);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.attributeIds.position).to.be.a("number");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(encoded.data).to.be.an.instanceOf(Int8Array);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(encoded.data.length).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(encoded.attributeIds.position).to.be.a("number");
 
     var decoded = _native.DracoCodec.Decode(encoded.data, { position: encoded.attributeIds.position });
 
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.indices.length).to.equal(indices.length);
 
     // Same set-of-corners comparison as the decode tests: Draco is free to reorder points.
     var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
 
     var corner = function corner(buffer, i) {return (
         [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
@@ -29110,7 +29237,7 @@ function hexToBytes(hex) {
       expectedCorners.push(corner(positions, indices[i]));
       actualCorners.push(corner(attribute.data, decoded.indices[i]));
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
   });
 
   it("encodes an unindexed mesh", function () {
@@ -29125,15 +29252,15 @@ function hexToBytes(hex) {
 
     var encoded = _native.DracoCodec.Encode(
       [{ kind: "position", dracoName: "POSITION", size: 3, data: triangle }]);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data).to.be.an.instanceOf(Int8Array);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(encoded.data).to.be.an.instanceOf(Int8Array);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(encoded.data.length).to.be.greaterThan(0);
   });
 
   it("accepts 32 bit indices", function () {
     var encoded = _native.DracoCodec.Encode(
       [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
       new Uint32Array(indices));
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(encoded.data.length).to.be.greaterThan(0);
   });
 
   it("encodes typed array views with a non-zero byteOffset", function () {
@@ -29153,19 +29280,19 @@ function hexToBytes(hex) {
     indexStorage.set(indices, padIndices);
     var indexView = indexStorage.subarray(padIndices);
 
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(positionView.byteOffset).to.be.greaterThan(0);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(indexView.byteOffset).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(positionView.byteOffset).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(indexView.byteOffset).to.be.greaterThan(0);
 
     var encoded = _native.DracoCodec.Encode(
       [{ kind: "position", dracoName: "POSITION", size: 3, data: positionView }],
       indexView);
 
     var decoded = _native.DracoCodec.Decode(encoded.data, { position: encoded.attributeIds.position });
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.indices.length).to.equal(indices.length);
 
     var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
 
     var corner = function corner(buffer, i) {return (
         [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
@@ -29178,35 +29305,35 @@ function hexToBytes(hex) {
       expectedCorners.push(corner(positions, indices[i]));
       actualCorners.push(corner(attribute.data, decoded.indices[i]));
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
   });
 
   it("rejects an index buffer that is neither 16 nor 32 bit", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
         new Int32Array([0, 1, 2, 1, 3, 2]));}).to.throw();
   });
 
   it("rejects an index count that is not a multiple of 3", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
         new Uint16Array([0, 1, 2, 1]));}).to.throw();
   });
 
   it("rejects an index that is out of range for the vertex count", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
         new Uint16Array([0, 1, 9999]));}).to.throw();
   });
 
   it("rejects an attribute length that is not a multiple of its size", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", size: 3, data: new Float32Array([0, 0, 0, 1]) }],
         indices);}).to.throw();
   });
 
   it("rejects a mesh with no position attribute", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "normal", dracoName: "NORMAL", size: 3, data: positions }],
         indices);}).to.throw();
   });
@@ -29228,14 +29355,14 @@ function hexToBytes(hex) {
   var STRIDE = 16;
 
   it("publishes the codec version it was built against", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.MeshoptCodec.Version).to.be.a("string");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.MeshoptCodec.Version).to.match(/^\d+\.\d+$/);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.MeshoptCodec.Version).to.be.a("string");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_native.MeshoptCodec.Version).to.match(/^\d+\.\d+$/);
   });
 
   it("decodes a reference stream byte for byte", function () {
     var decoded = _native.MeshoptCodec.Decode(ENCODED, COUNT, STRIDE, "ATTRIBUTES");
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.length).to.equal(EXPECTED.length);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(decoded)).to.deep.equal(Array.from(EXPECTED));
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(decoded.length).to.equal(EXPECTED.length);
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(Array.from(decoded)).to.deep.equal(Array.from(EXPECTED));
   });
 
   it("rejects malformed input", function () {
@@ -29243,37 +29370,358 @@ function hexToBytes(hex) {
     for (var i = 0; i < garbage.length; ++i) {
       garbage[i] = i * 37 & 0xff;
     }
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(garbage, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(garbage, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects truncated input", function () {
     var truncated = ENCODED.slice(0, Math.floor(ENCODED.length / 2));
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(truncated, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(truncated, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects an unknown mode", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, STRIDE, "NOT_A_MODE");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, STRIDE, "NOT_A_MODE");}).to.throw();
   });
 
   it("rejects a stride outside [1, 256]", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 0, "ATTRIBUTES");}).to.throw();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 257, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 0, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 257, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects an ATTRIBUTES stride that is not a multiple of 4", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 6, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 6, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects a negative count", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, -1, STRIDE, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, -1, STRIDE, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects a TRIANGLES count that is not a multiple of 3", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, 4, 2, "TRIANGLES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, 4, 2, "TRIANGLES");}).to.throw();
   });
 
   it("rejects a non-typed-array source", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(null, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(function () {return _native.MeshoptCodec.Decode(null, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
+});
+
+describe("WebAudio", function () {
+  this.timeout(0);
+
+  function createSilentWavArrayBuffer(sampleRate, frameCount) {
+    var bytesPerSample = 2;
+    var channelCount = 1;
+    var dataSize = frameCount * channelCount * bytesPerSample;
+    var buffer = new ArrayBuffer(44 + dataSize);
+    var view = new DataView(buffer);
+    var writeString = function writeString(offset, value) {
+      for (var i = 0; i < value.length; i++) {
+        view.setUint8(offset + i, value.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channelCount, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channelCount * bytesPerSample, true);
+    view.setUint16(32, channelCount * bytesPerSample, true);
+    view.setUint16(34, 8 * bytesPerSample, true);
+    writeString(36, "data");
+    view.setUint32(40, dataSize, true);
+    return buffer;
+  }
+
+  function createSineWavArrayBuffer(sampleRate, frameCount, frequency) {var amplitude = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0.5;
+    var bytesPerSample = 2;
+    var channelCount = 1;
+    var dataSize = frameCount * channelCount * bytesPerSample;
+    var buffer = new ArrayBuffer(44 + dataSize);
+    var view = new DataView(buffer);
+    var writeString = function writeString(offset, value) {
+      for (var i = 0; i < value.length; i++) {
+        view.setUint8(offset + i, value.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channelCount, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channelCount * bytesPerSample, true);
+    view.setUint16(32, channelCount * bytesPerSample, true);
+    view.setUint16(34, 8 * bytesPerSample, true);
+    writeString(36, "data");
+    view.setUint32(40, dataSize, true);
+
+    for (var frame = 0; frame < frameCount; frame++) {
+      var sample = Math.sin(2 * Math.PI * frequency * frame / sampleRate) * amplitude;
+      var intSample = Math.max(-32768, Math.min(32767, Math.round(sample * 32767)));
+      view.setInt16(44 + frame * bytesPerSample, intSample, true);
+    }
+
+    return buffer;
+  }function
+
+  waitForTime(_x2, _x3) {return _waitForTime.apply(this, arguments);}function _waitForTime() {_waitForTime = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee0(context, targetTime) {var timeoutMs,start,_args0 = arguments;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context0) {while (1) switch (_context0.prev = _context0.next) {case 0:timeoutMs = _args0.length > 2 && _args0[2] !== undefined ? _args0[2] : 5000;
+            start = Date.now();case 1:if (!(
+            context.currentTime < targetTime)) {_context0.next = 4;break;}if (!(
+            Date.now() - start > timeoutMs)) {_context0.next = 2;break;}throw (
+              new Error("Timed out waiting for currentTime >= ".concat(targetTime)));case 2:_context0.next = 3;return (
+
+              new Promise(function (resolve) {return setTimeout(resolve, 10);}));case 3:_context0.next = 1;break;case 4:case "end":return _context0.stop();}}, _callee0);}));return _waitForTime.apply(this, arguments);}
+
+
+
+  it("should expose AudioContext and play a decoded buffer through the node graph", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee4() {var context, sampleRate, frameCount, audioBuffer, source, gain, panner, ended;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context4) {while (1) switch (_context4.prev = _context4.next) {case 0:
+          // JavaScriptCore reports some host constructors as typeof "object".
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(AudioContext).to.exist;
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(webkitAudioContext).to.exist;
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(AudioContext).to.equal(webkitAudioContext);
+
+          context = new AudioContext();
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(context.state).to.equal("suspended");_context4.next = 1;return (
+            context.resume());case 1:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(context.state).to.equal("running");
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(context.sampleRate).to.be.greaterThan(0);
+
+          sampleRate = 44100;
+          frameCount = sampleRate; // 1 second
+          _context4.next = 2;return context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount));case 2:audioBuffer = _context4.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audioBuffer.sampleRate).to.equal(sampleRate);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audioBuffer.length).to.equal(frameCount);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audioBuffer.duration).to.be.closeTo(1, 0.01);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audioBuffer.numberOfChannels).to.equal(1);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audioBuffer.getChannelData(0).length).to.equal(frameCount);
+
+          source = context.createBufferSource();
+          gain = context.createGain();
+          panner = context.createPanner();
+
+          source.buffer = audioBuffer;
+          gain.gain.value = 0.5;
+          panner.setPosition(1, 0, 0);
+          context.listener.setPosition(0, 0, 0);
+
+          source.connect(gain);
+          gain.connect(panner);
+          panner.connect(context.destination);
+
+          ended = false;
+          source.addEventListener("ended", function () {
+            ended = true;
+          });
+
+          source.start();_context4.next = 3;return (
+            context.resume());case 3:_context4.next = 4;return (
+
+
+            new Promise(function (resolve) {return setTimeout(resolve, 50);}));case 4:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ended).to.equal(false);
+
+          source.stop();_context4.next = 5;return (
+            new Promise(function (resolve) {return setTimeout(resolve, 50);}));case 5:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ended).to.equal(true);_context4.next = 6;return (
+
+            context.close());case 6:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(context.state).to.equal("closed");case 7:case "end":return _context4.stop();}}, _callee4);}))
+  );
+
+  it("should automate AudioParam values over time", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee5() {var context, gain, scheduleStart, sampleRate, frameCount, audioBuffer, source, curve, curveStart;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context5) {while (1) switch (_context5.prev = _context5.next) {case 0:
+          context = new AudioContext();
+          gain = context.createGain();
+          gain.connect(context.destination);
+
+          scheduleStart = context.currentTime;
+          gain.gain.cancelScheduledValues(scheduleStart);
+          gain.gain.setValueAtTime(0, scheduleStart);
+          gain.gain.linearRampToValueAtTime(1, scheduleStart + 1);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(gain.gain.value).to.be.closeTo(0, 0.01);
+
+          sampleRate = context.sampleRate;
+          frameCount = Math.ceil(sampleRate * 1.5);_context5.next = 1;return (
+            context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount)));case 1:audioBuffer = _context5.sent;
+          source = context.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(gain);
+          source.start(scheduleStart);_context5.next = 2;return (
+            context.resume());case 2:_context5.next = 3;return (
+
+            waitForTime(context, scheduleStart + 0.5));case 3:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(gain.gain.value).to.be.closeTo(0.5, 0.15);
+
+          curve = new Float32Array([0, 0.25, 0.75, 1]);
+          curveStart = context.currentTime;
+          gain.gain.cancelScheduledValues(curveStart);
+          gain.gain.setValueCurveAtTime(curve, curveStart, 0.2);_context5.next = 4;return (
+            waitForTime(context, curveStart + 0.1));case 4:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(gain.gain.value).to.be.greaterThan(0.1);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(gain.gain.value).to.be.lessThan(0.9);
+
+          source.stop();_context5.next = 5;return (
+            context.close());case 5:case "end":return _context5.stop();}}, _callee5);}))
+  );
+
+  it("should return analyser frequency and time-domain data for non-silent audio", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee6() {var context, sampleRate, frequency, frameCount, audioBuffer, source, analyser, startTime, freqBytes, freqFloats, timeBytes, timeFloats, maxFreqByte, maxFreqFloat, flatTimeDomain, i, flatByteTimeDomain, _i;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context6) {while (1) switch (_context6.prev = _context6.next) {case 0:
+          context = new AudioContext();
+          sampleRate = context.sampleRate;
+          frequency = 440;
+          frameCount = sampleRate;_context6.next = 1;return (
+            context.decodeAudioData(createSineWavArrayBuffer(sampleRate, frameCount, frequency)));case 1:audioBuffer = _context6.sent;
+
+          source = context.createBufferSource();
+          analyser = context.createAnalyser();
+          analyser.fftSize = 2048;
+          analyser.smoothingTimeConstant = 0;
+
+          source.buffer = audioBuffer;
+          source.connect(analyser);
+          analyser.connect(context.destination);
+
+          startTime = context.currentTime;
+          source.start(startTime);_context6.next = 2;return (
+            context.resume());case 2:_context6.next = 3;return (
+
+            waitForTime(context, startTime + 0.25));case 3:
+
+          freqBytes = new Uint8Array(analyser.frequencyBinCount);
+          freqFloats = new Float32Array(analyser.frequencyBinCount);
+          timeBytes = new Uint8Array(analyser.fftSize);
+          timeFloats = new Float32Array(analyser.fftSize);
+
+          analyser.getByteFrequencyData(freqBytes);
+          analyser.getFloatFrequencyData(freqFloats);
+          analyser.getByteTimeDomainData(timeBytes);
+          analyser.getFloatTimeDomainData(timeFloats);
+
+          maxFreqByte = Math.max.apply(Math, (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0__["default"])(freqBytes));
+          maxFreqFloat = Math.max.apply(Math, (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0__["default"])(freqFloats));
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(maxFreqByte).to.be.greaterThan(0);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(maxFreqFloat).to.be.greaterThan(analyser.minDecibels);
+
+          flatTimeDomain = true;
+          i = 0;case 4:if (!(i < timeFloats.length)) {_context6.next = 6;break;}if (!(
+          Math.abs(timeFloats[i]) > 0.001)) {_context6.next = 5;break;}
+          flatTimeDomain = false;return _context6.abrupt("continue", 6);case 5:i++;_context6.next = 4;break;case 6:
+
+
+
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(flatTimeDomain).to.equal(false);
+
+          flatByteTimeDomain = true;
+          _i = 0;case 7:if (!(_i < timeBytes.length)) {_context6.next = 9;break;}if (!(
+          timeBytes[_i] !== 128)) {_context6.next = 8;break;}
+          flatByteTimeDomain = false;return _context6.abrupt("continue", 9);case 8:_i++;_context6.next = 7;break;case 9:
+
+
+
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(flatByteTimeDomain).to.equal(false);
+
+          source.stop();_context6.next = 10;return (
+            context.close());case 10:case "end":return _context6.stop();}}, _callee6);}))
+  );
+
+  it("should support Web Audio constructors", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee7() {var context, gainNode, pannerNode, stereoPannerNode, analyserNode, buffer, sourceNode;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context7) {while (1) switch (_context7.prev = _context7.next) {case 0:
+          context = new AudioContext();
+
+          gainNode = new GainNode(context);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(gainNode.gain.value).to.equal(1);
+
+          pannerNode = new PannerNode(context);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pannerNode.positionX.value).to.equal(0);
+
+          stereoPannerNode = new StereoPannerNode(context);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(stereoPannerNode.pan.value).to.equal(0);
+
+          analyserNode = new AnalyserNode(context);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(analyserNode.fftSize).to.equal(2048);
+
+          buffer = new AudioBuffer({ length: 128, sampleRate: 44100, numberOfChannels: 2 });
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(buffer.length).to.equal(128);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(buffer.sampleRate).to.equal(44100);
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(buffer.numberOfChannels).to.equal(2);
+
+          sourceNode = new AudioBufferSourceNode(context, { buffer: buffer });
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(sourceNode.buffer).to.equal(buffer);_context7.next = 1;return (
+
+            context.close());case 1:case "end":return _context7.stop();}}, _callee7);}))
+  );
+
+  it("should fire ended naturally when a short buffer finishes", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee8() {var context, sampleRate, frameCount, audioBuffer, source, ended, startTime, pollStart;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context8) {while (1) switch (_context8.prev = _context8.next) {case 0:
+          context = new AudioContext();
+          sampleRate = context.sampleRate;
+          frameCount = Math.ceil(sampleRate * 0.2);_context8.next = 1;return (
+            context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount)));case 1:audioBuffer = _context8.sent;
+
+          source = context.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(context.destination);
+
+          ended = false;
+          source.addEventListener("ended", function () {
+            ended = true;
+          });
+
+          startTime = context.currentTime;
+          source.start(startTime);_context8.next = 2;return (
+            context.resume());case 2:_context8.next = 3;return (
+            waitForTime(context, startTime + audioBuffer.duration + 0.2));case 3:
+
+          // Poll briefly in case the ended callback is still marshaling to the JS thread.
+          pollStart = Date.now();case 4:if (!(
+          !ended && Date.now() - pollStart < 1000)) {_context8.next = 6;break;}_context8.next = 5;return (
+            new Promise(function (resolve) {return setTimeout(resolve, 10);}));case 5:_context8.next = 4;break;case 6:
+
+
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ended).to.equal(true);_context8.next = 7;return (
+
+            context.close());case 7:case "end":return _context8.stop();}}, _callee8);}))
+  );
+
+  it("should start buffer sources at a scheduled time", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee9() {var context, sampleRate, frameCount, audioBuffer, source, ended, startTime, pollStart;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context9) {while (1) switch (_context9.prev = _context9.next) {case 0:
+          context = new AudioContext();_context9.next = 1;return (
+            context.resume());case 1:
+
+          sampleRate = context.sampleRate;
+          frameCount = Math.ceil(sampleRate * 0.1);_context9.next = 2;return (
+            context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount)));case 2:audioBuffer = _context9.sent;
+
+          source = context.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(context.destination);
+
+          ended = false;
+          source.addEventListener("ended", function () {
+            ended = true;
+          });
+
+          startTime = context.currentTime + 0.2;
+          source.start(startTime);_context9.next = 3;return (
+            waitForTime(context, startTime + 0.05));case 3:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ended).to.equal(false);_context9.next = 4;return (
+
+            waitForTime(context, startTime + audioBuffer.duration + 0.2));case 4:
+          pollStart = Date.now();case 5:if (!(
+          !ended && Date.now() - pollStart < 1000)) {_context9.next = 7;break;}_context9.next = 6;return (
+            new Promise(function (resolve) {return setTimeout(resolve, 10);}));case 6:_context9.next = 5;break;case 7:
+
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(ended).to.equal(true);_context9.next = 8;return (
+
+            context.close());case 8:case "end":return _context9.stop();}}, _callee9);}))
+  );
+
+  it("should report supported mime types from Audio.canPlayType", function () {
+    var audio = new Audio();
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audio.canPlayType("audio/wav")).to.equal("probably");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audio.canPlayType("audio/mpeg")).to.equal("probably");
+    (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(audio.canPlayType("audio/unsupported-format")).to.equal("");
   });
 });
 

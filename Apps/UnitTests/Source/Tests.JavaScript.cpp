@@ -7,6 +7,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Blob.h>
+#include <Babylon/Polyfills/WebAudio.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeEncoding.h>
 #ifdef HAS_NATIVE_DRACO
@@ -54,6 +55,7 @@ TEST(JavaScript, All)
     device.StartRenderingCurrentFrame();
 
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
+    std::optional<Babylon::Polyfills::WebAudio> nativeWebAudio;
 
     Babylon::AppRuntime::Options options{};
 
@@ -72,7 +74,7 @@ TEST(JavaScript, All)
 
     std::promise<int32_t> exitCodePromise;
 
-    runtime.Dispatch([&exitCodePromise, &device, &nativeCanvas](Napi::Env env) {
+    runtime.Dispatch([&exitCodePromise, &device, &nativeCanvas, &nativeWebAudio](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -82,6 +84,7 @@ TEST(JavaScript, All)
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::Blob::Initialize(env);
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+        nativeWebAudio.emplace(Babylon::Polyfills::WebAudio::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
         Babylon::Plugins::NativeEncoding::Initialize(env);
 #ifdef HAS_NATIVE_DRACO
@@ -120,7 +123,13 @@ TEST(JavaScript, All)
     auto exitCode = exitCodeFuture.get();
     EXPECT_EQ(exitCode, 0);
 
+    if (nativeWebAudio)
+    {
+        nativeWebAudio->ShutdownPlayback();
+    }
+
     // Runtime destructor joins the JS thread; must happen before Finish.
+    nativeWebAudio.reset();
     nativeCanvas.reset();
 
     device.FinishRenderingCurrentFrame();
