@@ -79,7 +79,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: macos-${{ inputs.generator }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
+          name: macos-${{ inputs.generator }}-${{ inputs.js-engine != '' && inputs.js-engine || 'default' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
             build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
             build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*

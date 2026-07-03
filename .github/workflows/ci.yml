@@ -78,6 +78,7 @@ jobs:
     with:
       platform: x64
       napi-type: QuickJS
+      graphics-api: D3D11
 
   Win32_x64_D3D11_Sanitizers:
     uses: ./.github/workflows/build-win32.yml
