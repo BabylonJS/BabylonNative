@@ -23,7 +23,8 @@ set(SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNRuntime.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNRuntimeInternal.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNView.mm"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNViewDelegate.mm")
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNViewDelegate.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/AudioSession.mm")
 
 add_library(BabylonNativeEmbedding STATIC ${SOURCES})
 
@@ -35,15 +36,18 @@ target_include_directories(BabylonNativeEmbedding
 
 target_link_libraries(BabylonNativeEmbedding
     PUBLIC Embedding
+    PRIVATE WebAudio
     PRIVATE "-framework Foundation"
     PRIVATE "-framework QuartzCore"
-    PRIVATE "-framework MetalKit")
+    PRIVATE "-framework MetalKit"
+    PRIVATE "-framework AVFoundation")
 
 # Enable ARC for the Obj-C++ files.
 set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNRuntime.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNView.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNViewDelegate.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/AudioSession.mm"
     PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 
 set_property(TARGET BabylonNativeEmbedding PROPERTY FOLDER Embedding)

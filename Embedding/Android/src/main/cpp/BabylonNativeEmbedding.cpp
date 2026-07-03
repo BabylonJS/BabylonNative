@@ -17,6 +17,9 @@
 #include <Babylon/Embedding/Runtime.h>
 #include <Babylon/Embedding/View.h>
 #include <Babylon/Embedding/Android/RuntimeHandle.h>
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+#include <Babylon/Embedding/Android/AudioPlatform.h>
+#endif
 
 #include <AndroidExtensions/Globals.h>
 
@@ -285,6 +288,9 @@ Java_com_babylonjs_embedding_BabylonNative_setContext(
         return;
     }
     android::global::Initialize(javaVM, context);
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+    Babylon::Embedding::Android::RegisterWebAudioPlatform(env, context, javaVM);
+#endif
 }
 
 JNIEXPORT void JNICALL
