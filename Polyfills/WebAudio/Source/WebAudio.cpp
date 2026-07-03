@@ -108,6 +108,19 @@ namespace Babylon::Polyfills
                 "removeEventListener",
                 Napi::Function::New(env, [](const Napi::CallbackInfo&) {}, "removeEventListener"));
             document.Set("createElement", Napi::Function::New(env, DocumentCreateElement, "createElement"));
+            document.Set(
+                "createTextNode",
+                Napi::Function::New(
+                    env,
+                    [](const Napi::CallbackInfo& info) {
+                        auto node = Napi::Object::New(info.Env());
+                        if (info.Length() > 0)
+                        {
+                            node.Set("nodeValue", info[0]);
+                        }
+                        return node;
+                    },
+                    "createTextNode"));
             env.Global().Set("document", document);
         }
     }

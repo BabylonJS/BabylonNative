@@ -10,6 +10,9 @@
                     return new Audio();
                 }
                 return {};
+            },
+            createTextNode: function (text) {
+                return { nodeValue: text };
             }
         };
     }
@@ -51,61 +54,87 @@
         return buffer;
     }
 
+    let clickAudioContext = null;
+    let clickAudioBuffer = null;
+
+    async function playClickBeep() {
+        if (typeof AudioContext === "undefined") {
+            BABYLON.Tools.Warn("AudioContext is not available");
+            return;
+        }
+
+        if (!clickAudioContext) {
+            clickAudioContext = new AudioContext();
+        }
+
+        if (clickAudioContext.state === "suspended") {
+            await clickAudioContext.resume();
+        }
+
+        if (!clickAudioBuffer) {
+            const wavBytes = createBeepWavArrayBuffer(44100, 0.25, 880, 0.4);
+            clickAudioBuffer = await clickAudioContext.decodeAudioData(wavBytes.slice(0));
+        }
+
+        const source = clickAudioContext.createBufferSource();
+        source.buffer = clickAudioBuffer;
+        source.connect(clickAudioContext.destination);
+        source.start(clickAudioContext.currentTime);
+        BABYLON.Tools.Log("Click beep");
+    }
+
     function createScene() {
         const engine = new BABYLON.NativeEngine({ adaptToDeviceRatio: true });
         const scene = new BABYLON.Scene(engine);
         scene.createDefaultCamera(true, true, true);
 
-        const resumeAudioIfNeeded = function () {
-            if (typeof AudioContext !== "undefined") {
-                const probe = new AudioContext();
-                if (probe.state === "suspended") {
-                    probe.resume();
-                }
-            }
-        };
-        scene.onPointerObservable.add(resumeAudioIfNeeded);
-
         const beepBuffer = createBeepWavArrayBuffer(44100, 0.25, 880, 0.4);
         let spatialSource = null;
+        let spatialStarted = false;
 
-        if (typeof BABYLON.Sound === "function") {
-            const legacySound = new BABYLON.Sound("beep", beepBuffer, scene, null, {
-                autoplay: true,
-                loop: true,
-                spatialSound: true,
-                maxDistance: 20
-            });
-            spatialSource = legacySound;
-            BABYLON.Tools.Log("Playing legacy BABYLON.Sound beep");
-        }
+        scene.onPointerObservable.add(function (pointerInfo) {
+            if (pointerInfo.type !== BABYLON.PointerEventTypes.POINTERDOWN) {
+                return;
+            }
 
-        if (typeof BABYLON.CreateAudioEngineAsync === "function" && typeof BABYLON.CreateSoundAsync === "function") {
-            BABYLON.CreateAudioEngineAsync().then(function (audioEngine) {
-                return BABYLON.CreateSoundAsync("beepV2", beepBuffer, { audioEngine: audioEngine });
-            }).then(function (sound) {
-                sound.play();
-                spatialSource = sound;
-                BABYLON.Tools.Log("Playing CreateSoundAsync beep");
-            }).catch(function (error) {
-                BABYLON.Tools.Warn("CreateSoundAsync path failed: " + error);
+            playClickBeep().catch(function (error) {
+                BABYLON.Tools.Warn("Click beep failed: " + error);
             });
-        }
+
+            if (!spatialStarted && typeof BABYLON.Sound === "function") {
+                spatialStarted = true;
+                const legacySound = new BABYLON.Sound("beep", beepBuffer, scene, function () {
+                    BABYLON.Tools.Log("Spatial beep started after click");
+                }, {
+                    autoplay: true,
+                    loop: true,
+                    spatialSound: true,
+                    maxDistance: 20
+                });
+                spatialSource = legacySound;
+            } else if (spatialSource && typeof spatialSource.play === "function") {
+                spatialSource.play();
+            }
+        });
 
         let angle = 0;
         scene.onBeforeRenderObservable.add(function () {
+            if (!spatialSource) {
+                return;
+            }
+
             angle += 0.02;
             const x = Math.cos(angle) * 3;
             const z = Math.sin(angle) * 3;
 
-            if (spatialSource) {
-                if (typeof spatialSource.setPosition === "function") {
-                    spatialSource.setPosition(new BABYLON.Vector3(x, 0, z));
-                } else if (spatialSource._soundSource) {
-                    spatialSource._soundSource.position = new BABYLON.Vector3(x, 0, z);
-                }
+            if (typeof spatialSource.setPosition === "function") {
+                spatialSource.setPosition(new BABYLON.Vector3(x, 0, z));
+            } else if (spatialSource._soundSource) {
+                spatialSource._soundSource.position = new BABYLON.Vector3(x, 0, z);
             }
         });
+
+        BABYLON.Tools.Log("Click anywhere to play a beep (and start spatial audio)");
 
         return scene;
     }
