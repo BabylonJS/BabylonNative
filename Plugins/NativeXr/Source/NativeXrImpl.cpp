@@ -275,15 +275,24 @@ namespace Babylon
                     arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, colorTextureFormat, requiresAppClear, &viewConfig,
-                              // This continuation calls GetActiveEncoder() (via frameBuffer.Clear() below), which
-                              // is only valid while the render thread's current frame is open (see
-                              // DeviceImpl::StartRenderingCurrentFrame/FinishRenderingCurrentFrame). Without pinning
-                              // a FrameCompletionScope here (mirroring ScheduleFrame's outer scope a few lines up),
-                              // this JS-thread hop can run after the render thread has already closed the frame and
-                              // nulled the encoder, dereferencing a null bgfx::Encoder* and crashing (observed as a
-                              // SIGSEGV in bgfx::EncoderImpl::discard on first XR framebuffer creation).
-                              frameScope{std::make_shared<Graphics::FrameCompletionScope>(m_sessionState->GraphicsContext.AcquireFrameCompletionScope())}]() {
+                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, colorTextureFormat, requiresAppClear, &viewConfig]() {
+                          // This continuation calls GetActiveEncoder() (via frameBuffer.Clear() below), which
+                          // is only valid while the render thread's current frame is open (see
+                          // DeviceImpl::StartRenderingCurrentFrame/FinishRenderingCurrentFrame). Without pinning
+                          // a FrameCompletionScope here (mirroring ScheduleFrame's outer scope a few lines up),
+                          // this JS-thread hop can run after the render thread has already closed the frame and
+                          // nulled the encoder, dereferencing a null bgfx::Encoder* and crashing (observed as a
+                          // SIGSEGV in bgfx::EncoderImpl::discard on first XR framebuffer creation).
+                          //
+                          // IMPORTANT: the scope must be acquired HERE, inside the lambda body, not as a
+                          // capture-list initializer. Capture initializers are evaluated eagerly when the
+                          // .then(...) call is constructed (i.e. while still inside BeginUpdate(), during
+                          // the *previous* render-thread frame), not when this continuation actually runs.
+                          // Acquiring it that early held a FrameCompletionScope open across the AfterRenderScheduler
+                          // hop, which permanently pinned m_pendingFrameScopes above zero (AfterRenderScheduler is
+                          // only pumped once FinishRenderingCurrentFrame's own pendingScopes==0 wait succeeds),
+                          // deadlocking every subsequent frame.
+                          Graphics::FrameCompletionScope frameScope{m_sessionState->GraphicsContext.AcquireFrameCompletionScope()};
                           const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
                           // TODO (rgerd): Remove old framebuffers from resource table?
                           viewConfig.FrameBuffers.resize(eyeCount);
