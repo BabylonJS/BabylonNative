@@ -6,5 +6,6 @@ The polyfills are still in an early stage and are subject to change.
 At the moment, we are using the following polyfills:
 * [Canvas](../Polyfills/Canvas/readme.md)
 * [Console](../Polyfills/Console/readme.md)
+* [WebAudio](../Polyfills/WebAudio/readme.md)
 * [Window](../Polyfills/Window/readme.md)
 * [XMLHttpRequest](../Polyfills/XMLHttpRequest/readme.md)
