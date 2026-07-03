@@ -42,6 +42,13 @@ jobs:
       xcode-version: "26.4"
       runs-on: macos-26
 
+  MacOS_QuickJS:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: "26.4"
+      runs-on: macos-26
+      js-engine: QuickJS
+
   # ── Win32─────────────────────────────────────────────────────
   Win32_x64_D3D11:
     uses: ./.github/workflows/build-win32.yml
@@ -65,6 +72,12 @@ jobs:
     with:
       platform: x64
       napi-type: Hermes
+
+  Win32_x64_QuickJS_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      napi-type: QuickJS
 
   Win32_x64_D3D11_Sanitizers:
     uses: ./.github/workflows/build-win32.yml
@@ -120,6 +133,13 @@ jobs:
       cxx: g++
       js-engine: JavaScriptCore
 
+  Ubuntu_Clang_QuickJS:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      js-engine: QuickJS
+
   # ── Android ───────────────────────────────────────────────────
   Android_Ubuntu_JSC:
     uses: ./.github/workflows/build-android.yml
@@ -139,6 +159,12 @@ jobs:
       runs-on: ubuntu-latest
       js-engine: Hermes
 
+  Android_Ubuntu_QuickJS:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: ubuntu-latest
+      js-engine: QuickJS
+
   Android_MacOS_JSC:
     uses: ./.github/workflows/build-android.yml
     with:
@@ -150,6 +176,12 @@ jobs:
     with:
       runs-on: macos-26
       js-engine: V8
+
+  Android_MacOS_QuickJS:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: macos-26
+      js-engine: QuickJS
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:

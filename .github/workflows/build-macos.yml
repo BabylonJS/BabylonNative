@@ -19,6 +19,10 @@ on:
         required: false
         type: string
         default: macos-latest
+      js-engine:
+        required: false
+        type: string
+        default: ''
 
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
@@ -41,6 +45,7 @@ jobs:
       - name: Generate macOS solution
         run: |
           cmake -G "${{ inputs.generator }}" -B build/macOS \
+            ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
             -D BABYLON_DEBUG_TRACE=ON \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
