@@ -1,6 +1,8 @@
 #include "App.h"
 #include <Babylon/DebugTrace.h>
 
+#import <Foundation/Foundation.h>
+
 #include <mach-o/dyld.h>
 
 std::filesystem::path GetExecutableDirectory()
