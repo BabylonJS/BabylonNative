@@ -173,6 +173,10 @@ namespace Babylon::Embedding
     // synchronously via inline_scheduler and submit straight to ScriptLoader.
     void RuntimeImpl::RunFirstAttachInit(Babylon::Graphics::WindowT window)
     {
+        if (m_options.log)
+        {
+            m_options.log(LogLevel::Log, "RuntimeImpl::RunFirstAttachInit: entered (host thread)");
+        }
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
         // Enable + hydrate before any JS-thread shader compilation. Both
         // calls are host-thread safe since NativeEngine hasn't been
@@ -182,6 +186,10 @@ namespace Babylon::Embedding
 #endif
 
         m_appRuntime->Dispatch([implPtr = this, window](Napi::Env env) {
+            if (implPtr->m_options.log)
+            {
+                implPtr->m_options.log(LogLevel::Log, "RuntimeImpl::RunFirstAttachInit: dispatched lambda running on JS thread");
+            }
             // 0. Install the ES2020 `globalThis` self-reference. V8/JSC/Chakra
             //    provide it intrinsically, but the embedded Hermes runtime does
             //    not, and Hermes evaluates eval()'d code as indirect (global
@@ -305,6 +313,10 @@ namespace Babylon::Embedding
 #endif
 
             // 4. Fire any host calls queued before the first View attach.
+            if (implPtr->m_options.log)
+            {
+                implPtr->m_options.log(LogLevel::Log, "RuntimeImpl::RunFirstAttachInit: about to complete m_initTcs (unblocks LoadScript)");
+            }
             implPtr->m_initTcs.complete();
         });
     }
