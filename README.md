@@ -79,6 +79,7 @@ Many core features from Babylon.js are supported. Here is a non-exhaustive list.
 
 The following are features that are not completely finished yet or have gaps.
 
+- Audio (Web Audio polyfill for Babylon.js buffer playback, spatial audio, gain/pitch automation, analysers, and scheduled `start(when)`; desktop validated via unit tests; iOS/Android integrated via Embedding with Playground on-device harness — see [Polyfills/WebAudio/readme.md](Polyfills/WebAudio/readme.md))
 - Environment (only `.env` supported)
 - GUI (text rendering experimentally supported)
 - Input (only single pointer supported)
@@ -90,7 +91,6 @@ The following are features that are not completely finished yet or have gaps.
 
 The following are features that don't work right now but will work in the future.
 
-- Audio
 - Serializers
 - Particles
 - Texture Loaders (KTX, DDS, etc.)
