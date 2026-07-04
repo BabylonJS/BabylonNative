@@ -22,6 +22,7 @@
 #include <cstring>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -77,6 +78,22 @@ namespace
         OPENXR_DEPTH_FORMAT_D24S8,
         OPENXR_DEPTH_FORMAT_D32,
     };
+
+    // Layout matches WebXROculusTouchMotionController (oculus-touch WebXR profile).
+    constexpr uint32_t kTouchControllerCount = 2;
+    constexpr uint32_t kTouchControllerButtonCount = 6;
+    constexpr uint32_t kTouchControllerAxisCount = 4;
+    constexpr uint32_t kTriggerButtonIndex = 0;
+    constexpr uint32_t kSqueezeButtonIndex = 1;
+    constexpr uint32_t kThumbstickClickButtonIndex = 3;
+    constexpr uint32_t kPrimaryButtonIndex = 4;
+    constexpr uint32_t kSecondaryButtonIndex = 5;
+    constexpr uint32_t kThumbstickXAxisIndex = 2;
+    constexpr uint32_t kThumbstickYAxisIndex = 3;
+
+    constexpr const char* kOculusTouchInteractionProfile = "/interaction_profiles/oculus/touch_controller";
+    constexpr const char* kHandSubactionPathLeft = "/user/hand/left";
+    constexpr const char* kHandSubactionPathRight = "/user/hand/right";
 
     void XrCheck(XrResult result, const char* context)
     {
@@ -236,6 +253,114 @@ namespace
 
         throw std::runtime_error("No compatible OpenXR swapchain format found.");
     }
+
+    XrPath StringToPath(XrInstance instance, const char* pathString)
+    {
+        XrPath path{};
+        XrCheck(xrStringToPath(instance, pathString, &path), "xrStringToPath");
+        return path;
+    }
+
+    std::string PathToString(XrInstance instance, XrPath path)
+    {
+        if (path == XR_NULL_PATH)
+        {
+            return {};
+        }
+
+        uint32_t bufferSize = 0;
+        XrCheck(xrPathToString(instance, path, 0, &bufferSize, nullptr), "xrPathToString(count)");
+        if (bufferSize == 0)
+        {
+            return {};
+        }
+
+        std::string pathString(bufferSize, '\0');
+        XrCheck(xrPathToString(instance, path, bufferSize, &bufferSize, pathString.data()), "xrPathToString");
+        if (!pathString.empty() && pathString.back() == '\0')
+        {
+            pathString.pop_back();
+        }
+        return pathString;
+    }
+
+    XrAction CreateInputAction(
+        XrActionSet actionSet,
+        const char* actionName,
+        XrActionType actionType,
+        uint32_t subactionPathCount,
+        const XrPath* subactionPaths)
+    {
+        XrActionCreateInfo actionCreateInfo = MakeXrStruct<XrActionCreateInfo>(XR_TYPE_ACTION_CREATE_INFO);
+        std::strncpy(actionCreateInfo.actionName, actionName, XR_MAX_ACTION_NAME_SIZE - 1);
+        std::strncpy(actionCreateInfo.localizedActionName, actionName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
+        actionCreateInfo.actionType = actionType;
+        actionCreateInfo.countSubactionPaths = subactionPathCount;
+        actionCreateInfo.subactionPaths = subactionPaths;
+
+        XrAction action{XR_NULL_HANDLE};
+        XrCheck(xrCreateAction(actionSet, &actionCreateInfo, &action), "xrCreateAction");
+        return action;
+    }
+
+    bool LocateActionSpacePose(
+        XrSpace actionSpace,
+        XrSpace referenceSpace,
+        XrTime displayTime,
+        xr::Pose& pose)
+    {
+        XrSpaceLocation location = MakeXrStruct<XrSpaceLocation>(XR_TYPE_SPACE_LOCATION);
+        const XrResult locateResult = xrLocateSpace(actionSpace, referenceSpace, displayTime, &location);
+        if (XR_FAILED(locateResult))
+        {
+            return false;
+        }
+
+        const bool orientationValid = (location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0;
+        const bool positionValid = (location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0;
+        if (!orientationValid && !positionValid)
+        {
+            return false;
+        }
+
+        if (orientationValid)
+        {
+            pose.Orientation.X = location.pose.orientation.x;
+            pose.Orientation.Y = location.pose.orientation.y;
+            pose.Orientation.Z = location.pose.orientation.z;
+            pose.Orientation.W = location.pose.orientation.w;
+        }
+
+        if (positionValid)
+        {
+            pose.Position.X = location.pose.position.x;
+            pose.Position.Y = location.pose.position.y;
+            pose.Position.Z = location.pose.position.z;
+        }
+
+        return orientationValid || positionValid;
+    }
+
+    void ResetInputSourceTrackingState(xr::System::Session::Frame::InputSource& inputSource)
+    {
+        inputSource.TrackedThisFrame = false;
+        inputSource.GamepadTrackedThisFrame = false;
+        inputSource.HandTrackedThisFrame = false;
+        inputSource.JointsTrackedThisFrame = false;
+        inputSource.InteractionProfileName.clear();
+
+        for (auto& button : inputSource.GamepadObject.Buttons)
+        {
+            button.Pressed = false;
+            button.Touched = false;
+            button.Value = 0.f;
+        }
+
+        for (auto& axis : inputSource.GamepadObject.Axes)
+        {
+            axis = 0.f;
+        }
+    }
 }
 
 namespace xr
@@ -249,6 +374,22 @@ namespace xr
         XrSessionState SessionState{XR_SESSION_STATE_UNKNOWN};
         bool SessionRunning{false};
         bool Initialized{false};
+
+        bool ActionSetCreated{false};
+        XrActionSet ActionSet{XR_NULL_HANDLE};
+        std::array<XrPath, kTouchControllerCount> HandSubactionPaths{};
+
+        XrAction GripPoseAction{XR_NULL_HANDLE};
+        XrAction AimPoseAction{XR_NULL_HANDLE};
+        XrAction SelectAction{XR_NULL_HANDLE};
+        XrAction SqueezeAction{XR_NULL_HANDLE};
+        XrAction SelectClickAction{XR_NULL_HANDLE};
+        XrAction SqueezeClickAction{XR_NULL_HANDLE};
+        XrAction ThumbstickXAction{XR_NULL_HANDLE};
+        XrAction ThumbstickYAction{XR_NULL_HANDLE};
+        XrAction ThumbstickClickAction{XR_NULL_HANDLE};
+        XrAction PrimaryClickAction{XR_NULL_HANDLE};
+        XrAction SecondaryClickAction{XR_NULL_HANDLE};
 
         bool IsInitialized() const override
         {
@@ -339,7 +480,141 @@ namespace xr
             }
             XrCheck(systemResult, "xrGetSystem");
 
+            CreateActionSetOnce();
+
             return true;
+        }
+
+        void CreateActionSetOnce()
+        {
+            if (XrContext->ActionSetCreated)
+            {
+                return;
+            }
+
+            XrActionSetCreateInfo actionSetCreateInfo = MakeXrStruct<XrActionSetCreateInfo>(XR_TYPE_ACTION_SET_CREATE_INFO);
+            std::strncpy(actionSetCreateInfo.actionSetName, "loony_touch", XR_MAX_ACTION_SET_NAME_SIZE - 1);
+            std::strncpy(actionSetCreateInfo.localizedActionSetName, "Loony Touch Controllers", XR_MAX_LOCALIZED_ACTION_SET_NAME_SIZE - 1);
+            actionSetCreateInfo.priority = 0;
+            XrCheck(xrCreateActionSet(XrContext->InstanceHandle, &actionSetCreateInfo, &XrContext->ActionSet), "xrCreateActionSet");
+
+            XrContext->HandSubactionPaths[0] = StringToPath(XrContext->InstanceHandle, kHandSubactionPathLeft);
+            XrContext->HandSubactionPaths[1] = StringToPath(XrContext->InstanceHandle, kHandSubactionPathRight);
+            const XrPath handSubactionPaths[] = {
+                XrContext->HandSubactionPaths[0],
+                XrContext->HandSubactionPaths[1],
+            };
+
+            XrContext->GripPoseAction = CreateInputAction(
+                XrContext->ActionSet,
+                "grip_pose",
+                XR_ACTION_TYPE_POSE_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->AimPoseAction = CreateInputAction(
+                XrContext->ActionSet,
+                "aim_pose",
+                XR_ACTION_TYPE_POSE_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->SelectAction = CreateInputAction(
+                XrContext->ActionSet,
+                "select",
+                XR_ACTION_TYPE_FLOAT_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->SqueezeAction = CreateInputAction(
+                XrContext->ActionSet,
+                "squeeze",
+                XR_ACTION_TYPE_FLOAT_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->SelectClickAction = CreateInputAction(
+                XrContext->ActionSet,
+                "select_click",
+                XR_ACTION_TYPE_BOOLEAN_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->SqueezeClickAction = CreateInputAction(
+                XrContext->ActionSet,
+                "squeeze_click",
+                XR_ACTION_TYPE_BOOLEAN_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->ThumbstickXAction = CreateInputAction(
+                XrContext->ActionSet,
+                "thumbstick_x",
+                XR_ACTION_TYPE_FLOAT_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->ThumbstickYAction = CreateInputAction(
+                XrContext->ActionSet,
+                "thumbstick_y",
+                XR_ACTION_TYPE_FLOAT_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->ThumbstickClickAction = CreateInputAction(
+                XrContext->ActionSet,
+                "thumbstick_click",
+                XR_ACTION_TYPE_BOOLEAN_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->PrimaryClickAction = CreateInputAction(
+                XrContext->ActionSet,
+                "primary_click",
+                XR_ACTION_TYPE_BOOLEAN_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+            XrContext->SecondaryClickAction = CreateInputAction(
+                XrContext->ActionSet,
+                "secondary_click",
+                XR_ACTION_TYPE_BOOLEAN_INPUT,
+                static_cast<uint32_t>(std::size(handSubactionPaths)),
+                handSubactionPaths);
+
+            // XrActionSuggestedBinding.binding must be a *full* input source path rooted at
+            // a top-level user path (e.g. "/user/hand/left/input/trigger/value"); paths
+            // missing that prefix are rejected by xrSuggestInteractionProfileBindings with
+            // XR_ERROR_PATH_UNSUPPORTED. x/y only exist under .../left/..., a/b only under
+            // .../right/..., per the oculus/touch_controller interaction profile's binding
+            // table, so Primary/Secondary click bind asymmetrically per hand.
+            const std::string leftHandPath = kHandSubactionPathLeft;
+            const std::string rightHandPath = kHandSubactionPathRight;
+            const XrPath interactionProfile = StringToPath(XrContext->InstanceHandle, kOculusTouchInteractionProfile);
+            const XrActionSuggestedBinding suggestedBindings[] = {
+                {XrContext->GripPoseAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/grip/pose").c_str())},
+                {XrContext->GripPoseAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/grip/pose").c_str())},
+                {XrContext->AimPoseAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/aim/pose").c_str())},
+                {XrContext->AimPoseAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/aim/pose").c_str())},
+                {XrContext->SelectAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/trigger/value").c_str())},
+                {XrContext->SelectAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/trigger/value").c_str())},
+                {XrContext->SqueezeAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/squeeze/value").c_str())},
+                {XrContext->SqueezeAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/squeeze/value").c_str())},
+                {XrContext->SelectClickAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/trigger/value").c_str())},
+                {XrContext->SelectClickAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/trigger/value").c_str())},
+                {XrContext->SqueezeClickAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/squeeze/value").c_str())},
+                {XrContext->SqueezeClickAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/squeeze/value").c_str())},
+                {XrContext->ThumbstickXAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/thumbstick/x").c_str())},
+                {XrContext->ThumbstickXAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/thumbstick/x").c_str())},
+                {XrContext->ThumbstickYAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/thumbstick/y").c_str())},
+                {XrContext->ThumbstickYAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/thumbstick/y").c_str())},
+                {XrContext->ThumbstickClickAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/thumbstick/click").c_str())},
+                {XrContext->ThumbstickClickAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/thumbstick/click").c_str())},
+                {XrContext->PrimaryClickAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/x/click").c_str())},
+                {XrContext->PrimaryClickAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/a/click").c_str())},
+                {XrContext->SecondaryClickAction, StringToPath(XrContext->InstanceHandle, (leftHandPath + "/input/y/click").c_str())},
+                {XrContext->SecondaryClickAction, StringToPath(XrContext->InstanceHandle, (rightHandPath + "/input/b/click").c_str())},
+            };
+
+            XrInteractionProfileSuggestedBinding profileBindings = MakeXrStruct<XrInteractionProfileSuggestedBinding>(XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING);
+            profileBindings.interactionProfile = interactionProfile;
+            profileBindings.suggestedBindings = suggestedBindings;
+            profileBindings.countSuggestedBindings = static_cast<uint32_t>(std::size(suggestedBindings));
+            XrCheck(
+                xrSuggestInteractionProfileBindings(XrContext->InstanceHandle, &profileBindings),
+                "xrSuggestInteractionProfileBindings");
+
+            XrContext->ActionSetCreated = true;
         }
     };
 
@@ -384,6 +659,25 @@ namespace xr
         // the Quest runtime's internal frame-pacing state machine (silent, CPU-idle hang).
         bool FrameBegun{false};
 
+        // Babylon Native's NativeXr plugin lazily creates its bgfx per-eye framebuffers the
+        // *first* time it sees a given swapchain image's GL texture pointer, via an async
+        // chain that hops from the render thread to the JS thread (see NativeXrImpl.cpp
+        // BeginUpdate()/"Initialized" flag). That chain cannot possibly finish within the
+        // same frame that first exposes the pointer via PopulateViews() below, so
+        // compositing that frame's real (still being set up) swapchain image can show
+        // whatever stale/garbage GPU memory the runtime last had there for one or both
+        // eyes (observed as intermittent, right-eye-specific tearing/black frames right
+        // after entering XR). Suppress compositor submission for the first several frames
+        // of every session so every rotating swapchain image slot gets a full frame's
+        // worth of head start before it is ever actually displayed.
+        static constexpr uint32_t SWAPCHAIN_WARMUP_FRAME_COUNT{90};
+        uint32_t SwapchainWarmupFramesRemaining{SWAPCHAIN_WARMUP_FRAME_COUNT};
+
+        std::array<XrSpace, kTouchControllerCount> GripSpaces{};
+        std::array<XrSpace, kTouchControllerCount> AimSpaces{};
+        bool InputSourcesInitialized{false};
+        bool ActionSpacesCreated{false};
+
         float DepthNearZ{DEFAULT_DEPTH_NEAR_Z};
         float DepthFarZ{DEFAULT_DEPTH_FAR_Z};
 
@@ -409,6 +703,8 @@ namespace xr
 
             ColorSwapchain = {};
             DepthSwapchain = {};
+
+            DestroyActionSpaces();
 
             if (XrContext->ReferenceSpace != XR_NULL_HANDLE)
             {
@@ -437,21 +733,19 @@ namespace xr
                 return;
             }
 
-            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Session::Impl::Initialize starting");
-
             if (!SystemImpl.IsInitialized() && !SystemImpl.TryInitialize())
             {
                 throw std::runtime_error("OpenXR system is not initialized.");
             }
 
             InitializeEglFromCurrentContext();
-            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "InitializeEglFromCurrentContext done");
             CreateSession();
-            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "CreateSession done");
+            SystemImpl.CreateActionSetOnce();
+            CreateActionSpacesAndAttach();
+            InitializeInputSources();
             CreateReferenceSpace();
             InitializeViewConfiguration();
             CreateSwapchains();
-            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "CreateSwapchains done, Initialize complete");
 
             XrContext->Initialized = true;
         }
@@ -533,6 +827,245 @@ namespace xr
             sessionCreateInfo.next = &graphicsBinding;
             sessionCreateInfo.systemId = XrContext->SystemId;
             XrCheck(xrCreateSession(XrContext->InstanceHandle, &sessionCreateInfo, &XrContext->SessionHandle), "xrCreateSession");
+        }
+
+        void InitializeInputSources()
+        {
+            if (InputSourcesInitialized)
+            {
+                return;
+            }
+
+            InputSources.clear();
+            InputSources.emplace_back();
+            InputSources.back().Handedness = Frame::InputSource::HandednessEnum::Left;
+            InputSources.back().GamepadObject.Buttons.assign(kTouchControllerButtonCount, {});
+            InputSources.back().GamepadObject.Axes.assign(kTouchControllerAxisCount, 0.f);
+
+            InputSources.emplace_back();
+            InputSources.back().Handedness = Frame::InputSource::HandednessEnum::Right;
+            InputSources.back().GamepadObject.Buttons.assign(kTouchControllerButtonCount, {});
+            InputSources.back().GamepadObject.Axes.assign(kTouchControllerAxisCount, 0.f);
+
+            InputSourcesInitialized = true;
+        }
+
+        void CreateActionSpacesAndAttach()
+        {
+            if (ActionSpacesCreated || !XrContext->ActionSetCreated)
+            {
+                return;
+            }
+
+            for (uint32_t handIndex = 0; handIndex < kTouchControllerCount; ++handIndex)
+            {
+                const XrPath subactionPath = XrContext->HandSubactionPaths[handIndex];
+
+                XrActionSpaceCreateInfo gripSpaceCreateInfo = MakeXrStruct<XrActionSpaceCreateInfo>(XR_TYPE_ACTION_SPACE_CREATE_INFO);
+                gripSpaceCreateInfo.action = XrContext->GripPoseAction;
+                gripSpaceCreateInfo.subactionPath = subactionPath;
+                gripSpaceCreateInfo.poseInActionSpace = IDENTITY_POSE;
+                XrCheck(
+                    xrCreateActionSpace(XrContext->SessionHandle, &gripSpaceCreateInfo, &GripSpaces[handIndex]),
+                    "xrCreateActionSpace(grip)");
+
+                XrActionSpaceCreateInfo aimSpaceCreateInfo = MakeXrStruct<XrActionSpaceCreateInfo>(XR_TYPE_ACTION_SPACE_CREATE_INFO);
+                aimSpaceCreateInfo.action = XrContext->AimPoseAction;
+                aimSpaceCreateInfo.subactionPath = subactionPath;
+                aimSpaceCreateInfo.poseInActionSpace = IDENTITY_POSE;
+                XrCheck(
+                    xrCreateActionSpace(XrContext->SessionHandle, &aimSpaceCreateInfo, &AimSpaces[handIndex]),
+                    "xrCreateActionSpace(aim)");
+            }
+
+            XrSessionActionSetsAttachInfo attachInfo = MakeXrStruct<XrSessionActionSetsAttachInfo>(XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO);
+            attachInfo.countActionSets = 1;
+            attachInfo.actionSets = &XrContext->ActionSet;
+            XrCheck(xrAttachSessionActionSets(XrContext->SessionHandle, &attachInfo), "xrAttachSessionActionSets");
+
+            ActionSpacesCreated = true;
+        }
+
+        void DestroyActionSpaces()
+        {
+            for (auto& gripSpace : GripSpaces)
+            {
+                if (gripSpace != XR_NULL_HANDLE)
+                {
+                    xrDestroySpace(gripSpace);
+                    gripSpace = XR_NULL_HANDLE;
+                }
+            }
+
+            for (auto& aimSpace : AimSpaces)
+            {
+                if (aimSpace != XR_NULL_HANDLE)
+                {
+                    xrDestroySpace(aimSpace);
+                    aimSpace = XR_NULL_HANDLE;
+                }
+            }
+
+            ActionSpacesCreated = false;
+        }
+
+        bool GetActionStateBoolean(XrAction action, XrPath subactionPath, bool& outValue) const
+        {
+            XrActionStateGetInfo getInfo = MakeXrStruct<XrActionStateGetInfo>(XR_TYPE_ACTION_STATE_GET_INFO);
+            getInfo.action = action;
+            getInfo.subactionPath = subactionPath;
+
+            XrActionStateBoolean state = MakeXrStruct<XrActionStateBoolean>(XR_TYPE_ACTION_STATE_BOOLEAN);
+            const XrResult result = xrGetActionStateBoolean(XrContext->SessionHandle, &getInfo, &state);
+            if (XR_FAILED(result))
+            {
+                return false;
+            }
+
+            outValue = state.isActive && state.currentState;
+            return state.isActive;
+        }
+
+        bool GetActionStateFloat(XrAction action, XrPath subactionPath, float& outValue) const
+        {
+            XrActionStateGetInfo getInfo = MakeXrStruct<XrActionStateGetInfo>(XR_TYPE_ACTION_STATE_GET_INFO);
+            getInfo.action = action;
+            getInfo.subactionPath = subactionPath;
+
+            XrActionStateFloat state = MakeXrStruct<XrActionStateFloat>(XR_TYPE_ACTION_STATE_FLOAT);
+            const XrResult result = xrGetActionStateFloat(XrContext->SessionHandle, &getInfo, &state);
+            if (XR_FAILED(result))
+            {
+                return false;
+            }
+
+            outValue = state.isActive ? state.currentState : 0.f;
+            return state.isActive;
+        }
+
+        void SyncActionsAndUpdateInputSources()
+        {
+            if (!XrContext->SessionRunning || !XrContext->ActionSetCreated || !ActionSpacesCreated)
+            {
+                for (auto& inputSource : InputSources)
+                {
+                    ResetInputSourceTrackingState(inputSource);
+                }
+                return;
+            }
+
+            XrActiveActionSet activeActionSet{};
+            activeActionSet.actionSet = XrContext->ActionSet;
+            activeActionSet.subactionPath = XR_NULL_PATH;
+
+            XrActionsSyncInfo syncInfo = MakeXrStruct<XrActionsSyncInfo>(XR_TYPE_ACTIONS_SYNC_INFO);
+            syncInfo.countActiveActionSets = 1;
+            syncInfo.activeActionSets = &activeActionSet;
+
+            const XrResult syncResult = xrSyncActions(XrContext->SessionHandle, &syncInfo);
+            if (syncResult == XR_SESSION_NOT_FOCUSED)
+            {
+                for (auto& inputSource : InputSources)
+                {
+                    ResetInputSourceTrackingState(inputSource);
+                }
+                return;
+            }
+            XrCheck(syncResult, "xrSyncActions");
+
+            for (uint32_t handIndex = 0; handIndex < kTouchControllerCount; ++handIndex)
+            {
+                auto& inputSource = InputSources[handIndex];
+                ResetInputSourceTrackingState(inputSource);
+
+                const XrPath subactionPath = XrContext->HandSubactionPaths[handIndex];
+
+                XrActionStateGetInfo gripPoseGetInfo = MakeXrStruct<XrActionStateGetInfo>(XR_TYPE_ACTION_STATE_GET_INFO);
+                gripPoseGetInfo.action = XrContext->GripPoseAction;
+                gripPoseGetInfo.subactionPath = subactionPath;
+                XrActionStatePose gripPoseState = MakeXrStruct<XrActionStatePose>(XR_TYPE_ACTION_STATE_POSE);
+                XrCheck(xrGetActionStatePose(XrContext->SessionHandle, &gripPoseGetInfo, &gripPoseState), "xrGetActionStatePose(grip)");
+
+                XrActionStateGetInfo aimPoseGetInfo = MakeXrStruct<XrActionStateGetInfo>(XR_TYPE_ACTION_STATE_GET_INFO);
+                aimPoseGetInfo.action = XrContext->AimPoseAction;
+                aimPoseGetInfo.subactionPath = subactionPath;
+                XrActionStatePose aimPoseState = MakeXrStruct<XrActionStatePose>(XR_TYPE_ACTION_STATE_POSE);
+                XrCheck(xrGetActionStatePose(XrContext->SessionHandle, &aimPoseGetInfo, &aimPoseState), "xrGetActionStatePose(aim)");
+
+                const bool gripTracked = gripPoseState.isActive;
+                const bool aimTracked = aimPoseState.isActive;
+                const bool controllerTracked = gripTracked || aimTracked;
+
+                if (gripTracked)
+                {
+                    LocateActionSpacePose(
+                        GripSpaces[handIndex],
+                        XrContext->ReferenceSpace,
+                        PredictedDisplayTime,
+                        inputSource.GripSpace.Pose);
+                }
+
+                if (aimTracked)
+                {
+                    LocateActionSpacePose(
+                        AimSpaces[handIndex],
+                        XrContext->ReferenceSpace,
+                        PredictedDisplayTime,
+                        inputSource.AimSpace.Pose);
+                }
+
+                float triggerValue = 0.f;
+                float squeezeValue = 0.f;
+                bool triggerPressed = false;
+                bool squeezePressed = false;
+                bool thumbstickClicked = false;
+                bool primaryPressed = false;
+                bool secondaryPressed = false;
+                float thumbstickX = 0.f;
+                float thumbstickY = 0.f;
+
+                GetActionStateFloat(XrContext->SelectAction, subactionPath, triggerValue);
+                GetActionStateFloat(XrContext->SqueezeAction, subactionPath, squeezeValue);
+                GetActionStateBoolean(XrContext->SelectClickAction, subactionPath, triggerPressed);
+                GetActionStateBoolean(XrContext->SqueezeClickAction, subactionPath, squeezePressed);
+                GetActionStateBoolean(XrContext->ThumbstickClickAction, subactionPath, thumbstickClicked);
+                GetActionStateBoolean(XrContext->PrimaryClickAction, subactionPath, primaryPressed);
+                GetActionStateBoolean(XrContext->SecondaryClickAction, subactionPath, secondaryPressed);
+                GetActionStateFloat(XrContext->ThumbstickXAction, subactionPath, thumbstickX);
+                GetActionStateFloat(XrContext->ThumbstickYAction, subactionPath, thumbstickY);
+
+                inputSource.GamepadObject.Buttons[kTriggerButtonIndex].Pressed = triggerPressed;
+                inputSource.GamepadObject.Buttons[kTriggerButtonIndex].Touched = triggerPressed || triggerValue > 0.f;
+                inputSource.GamepadObject.Buttons[kTriggerButtonIndex].Value = triggerValue;
+
+                inputSource.GamepadObject.Buttons[kSqueezeButtonIndex].Pressed = squeezePressed;
+                inputSource.GamepadObject.Buttons[kSqueezeButtonIndex].Touched = squeezePressed || squeezeValue > 0.f;
+                inputSource.GamepadObject.Buttons[kSqueezeButtonIndex].Value = squeezeValue;
+
+                inputSource.GamepadObject.Buttons[kThumbstickClickButtonIndex].Pressed = thumbstickClicked;
+                inputSource.GamepadObject.Buttons[kThumbstickClickButtonIndex].Touched = thumbstickClicked;
+                inputSource.GamepadObject.Buttons[kThumbstickClickButtonIndex].Value = thumbstickClicked ? 1.f : 0.f;
+
+                inputSource.GamepadObject.Buttons[kPrimaryButtonIndex].Pressed = primaryPressed;
+                inputSource.GamepadObject.Buttons[kPrimaryButtonIndex].Touched = primaryPressed;
+                inputSource.GamepadObject.Buttons[kPrimaryButtonIndex].Value = primaryPressed ? 1.f : 0.f;
+
+                inputSource.GamepadObject.Buttons[kSecondaryButtonIndex].Pressed = secondaryPressed;
+                inputSource.GamepadObject.Buttons[kSecondaryButtonIndex].Touched = secondaryPressed;
+                inputSource.GamepadObject.Buttons[kSecondaryButtonIndex].Value = secondaryPressed ? 1.f : 0.f;
+
+                inputSource.GamepadObject.Axes[kThumbstickXAxisIndex] = thumbstickX;
+                inputSource.GamepadObject.Axes[kThumbstickYAxisIndex] = thumbstickY;
+
+                XrInteractionProfileState profileState = MakeXrStruct<XrInteractionProfileState>(XR_TYPE_INTERACTION_PROFILE_STATE);
+                if (XR_SUCCEEDED(xrGetCurrentInteractionProfile(XrContext->SessionHandle, subactionPath, &profileState)))
+                {
+                    inputSource.InteractionProfileName = PathToString(XrContext->InstanceHandle, profileState.interactionProfile);
+                }
+
+                inputSource.TrackedThisFrame = controllerTracked;
+                inputSource.GamepadTrackedThisFrame = controllerTracked;
+            }
         }
 
         void CreateReferenceSpace()
@@ -656,7 +1189,6 @@ namespace xr
 
         void ProcessSessionStateChanged(const XrEventDataSessionStateChanged& stateChanged)
         {
-            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Session state changed to %d", static_cast<int>(stateChanged.state));
             XrContext->SessionState = stateChanged.state;
             switch (stateChanged.state)
             {
@@ -666,7 +1198,6 @@ namespace xr
                     beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
                     XrCheck(xrBeginSession(XrContext->SessionHandle, &beginInfo), "xrBeginSession");
                     XrContext->SessionRunning = true;
-                    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "xrBeginSession succeeded, session running");
                     break;
                 }
                 case XR_SESSION_STATE_STOPPING:
@@ -834,6 +1365,8 @@ namespace xr
             ShouldRender = frameState.shouldRender;
             PredictedDisplayTime = frameState.predictedDisplayTime;
 
+            SyncActionsAndUpdateInputSources();
+
             XrFrameBeginInfo beginInfo = MakeXrStruct<XrFrameBeginInfo>(XR_TYPE_FRAME_BEGIN_INFO);
             XrCheck(xrBeginFrame(XrContext->SessionHandle, &beginInfo), "xrBeginFrame");
             FrameBegun = true;
@@ -868,17 +1401,31 @@ namespace xr
                 // The app has finished rendering into the images PopulateViews() acquired
                 // via xrAcquireSwapchainImage/xrWaitSwapchainImage; they must be released
                 // before being referenced by a composition layer submitted to xrEndFrame,
-                // or the runtime rejects the layer as invalid.
+                // or the runtime rejects the layer as invalid. Images must always be
+                // released once acquired regardless of the warm-up gate below.
                 XrSwapchainImageReleaseInfo releaseInfo = MakeXrStruct<XrSwapchainImageReleaseInfo>(XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO);
                 XrCheck(xrReleaseSwapchainImage(ColorSwapchain.Handle, &releaseInfo), "xrReleaseSwapchainImage(color)");
                 XrCheck(xrReleaseSwapchainImage(DepthSwapchain.Handle, &releaseInfo), "xrReleaseSwapchainImage(depth)");
 
-                layer.space = XrContext->ReferenceSpace;
-                layer.viewCount = static_cast<uint32_t>(ProjectionLayerViews.size());
-                layer.views = ProjectionLayerViews.data();
-                layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&layer);
-                endInfo.layerCount = 1;
-                endInfo.layers = layers;
+                if (SwapchainWarmupFramesRemaining > 0)
+                {
+                    // See SwapchainWarmupFramesRemaining's declaration: don't composite this
+                    // frame yet, just let the runtime keep showing whatever it last had
+                    // (typically the loading/pre-XR view) while NativeXr's async per-eye
+                    // framebuffer creation catches up for this swapchain image slot.
+                    --SwapchainWarmupFramesRemaining;
+                    endInfo.layerCount = 0;
+                    endInfo.layers = nullptr;
+                }
+                else
+                {
+                    layer.space = XrContext->ReferenceSpace;
+                    layer.viewCount = static_cast<uint32_t>(ProjectionLayerViews.size());
+                    layer.views = ProjectionLayerViews.data();
+                    layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&layer);
+                    endInfo.layerCount = 1;
+                    endInfo.layers = layers;
+                }
             }
             else
             {
@@ -922,11 +1469,6 @@ namespace xr
             if (shouldEndSession)
             {
                 return nullptr;
-            }
-
-            if (!XrContext->SessionRunning)
-            {
-                __android_log_print(ANDROID_LOG_WARN, LOG_TAG, "GetNextFrame proceeding without a running session (state=%d)", static_cast<int>(XrContext->SessionState));
             }
 
             BeginFrame();
