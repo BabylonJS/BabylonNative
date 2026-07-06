@@ -16,9 +16,7 @@
         {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#8",
-            "referenceImage": "native-canvas.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Crashes on QuickJS: use-after-free during async-function resume after awaiting _native.Canvas.loadTTFAsync (QuickJS Node-API deferred-promise path)"
+            "referenceImage": "native-canvas.png"
         },
         {
             "title": "EXR Loader",

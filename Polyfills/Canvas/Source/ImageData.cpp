@@ -21,7 +21,9 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value ImageData::CreateInstance(Napi::Env env, Context* context, uint32_t width, uint32_t height)
     {
-        Napi::HandleScope scope{env};
+        // No Napi::HandleScope here: the object created by func.New() is returned to the caller.
+        // A plain HandleScope would free the handle on close, which under the reference-counted
+        // QuickJS Node-API port leaves the caller with a dangling value.
         Napi::Function func = DefineClass(
             env,
             JS_IMAGEDATA_CONSTRUCTOR_NAME,
