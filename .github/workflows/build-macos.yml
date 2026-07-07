@@ -19,6 +19,10 @@ on:
         required: false
         type: string
         default: macos-latest
+      upload-visualization-artifact:
+        required: false
+        type: boolean
+        default: false
 
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
@@ -47,6 +51,22 @@ jobs:
 
       - name: Build Playground macOS
         run: cmake --build build/macOS --target Playground --config RelWithDebInfo
+
+      - name: Package visualization test artifact
+        if: ${{ inputs.upload-visualization-artifact }}
+        run: |
+          cd build/macOS/Apps/Playground/RelWithDebInfo
+          # tar preserves the bundle's executable bits and symlinks, which a
+          # raw upload-artifact zip would strip and break the .app.
+          tar -czf playground-macos-visualization-tests.tar.gz Playground.app
+
+      - name: Upload visualization test artifact
+        if: ${{ inputs.upload-visualization-artifact }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos-visualization-tests
+          path: build/macOS/Apps/Playground/RelWithDebInfo/playground-macos-visualization-tests.tar.gz
+          if-no-files-found: error
 
       - name: Build UnitTests macOS
         run: cmake --build build/macOS --target UnitTests --config RelWithDebInfo

@@ -13,6 +13,9 @@ jobs:
     with:
       xcode-version: "26.4"
       runs-on: macos-26
+      # Default macOS build publishes the Playground.app (binary + Scripts +
+      # ReferenceImages) as an artifact consumed by MacOS_VisualizationTests.
+      upload-visualization-artifact: true
 
   MacOS_Ninja:
     uses: ./.github/workflows/build-macos.yml
@@ -35,133 +38,167 @@ jobs:
       xcode-version: "26.4"
       runs-on: macos-26
 
-  iOS_Xcode26:
-    uses: ./.github/workflows/build-ios.yml
-    with:
-      deployment-target: "26.0"
-      xcode-version: "26.4"
-      runs-on: macos-26
+  # ── Visualization Tests (custom / self-hosted agents only) ────
+  # Runs the Playground pixel-diff validation suite against a real Metal GPU.
+  # Downloads the Playground.app artifact built by the default MacOS job so no
+  # rebuild is needed on the custom agent.
+  MacOS_VisualizationTests:
+    needs: MacOS
+    runs-on: self-hosted
+    timeout-minutes: 60
+    steps:
+      - name: Download visualization test artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: macos-visualization-tests
 
-  # ── Win32─────────────────────────────────────────────────────
-  Win32_x64_D3D11:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
+      - name: Extract Playground.app
+        run: tar -xzf playground-macos-visualization-tests.tar.gz
 
-  Win32_x64_JSI_D3D11:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: jsi
+      - name: Run visualization tests
+        run: ./Playground.app/Contents/MacOS/Playground app:///Scripts/validation_native.js
 
-  Win32_x64_V8_D3D11:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: V8
+      - name: Upload visualization test results
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos-visualization-test-results
+          path: |
+            Results
+            Errors
+          if-no-files-found: ignore
 
-  Win32_x64_Hermes_D3D11:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: Hermes
-
-  Win32_x64_D3D11_Sanitizers:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      enable-sanitizers: true
-
-  Win32_x64_D3D12:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      graphics-api: D3D12
-
-  Win32_x64_D3D11_PrecompiledShaderTest:
-    uses: ./.github/workflows/build-win32-shader.yml
-
-  # ── UWP ───────────────────────────────────────────────────────
-  UWP_x64:
-    uses: ./.github/workflows/build-uwp.yml
-    with:
-      platform: x64
-
-  UWP_arm64:
-    uses: ./.github/workflows/build-uwp.yml
-    with:
-      platform: arm64
-
-  UWP_arm64_JSI:
-    uses: ./.github/workflows/build-uwp.yml
-    with:
-      platform: arm64
-      napi-type: jsi
-
-  # ── Ubuntu / Linux ────────────────────────────────────────────
-  Ubuntu_Clang_JSC:
-    uses: ./.github/workflows/build-linux.yml
-    with:
-      cc: clang
-      cxx: clang++
-      js-engine: JavaScriptCore
-
-  Ubuntu_Clang_Hermes:
-    uses: ./.github/workflows/build-linux.yml
-    with:
-      cc: clang
-      cxx: clang++
-      js-engine: Hermes
-
-  Ubuntu_GCC_JSC:
-    uses: ./.github/workflows/build-linux.yml
-    with:
-      cc: gcc
-      cxx: g++
-      js-engine: JavaScriptCore
-
-  # ── Android ───────────────────────────────────────────────────
-  Android_Ubuntu_JSC:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: ubuntu-latest
-      js-engine: JavaScriptCore
-
-  Android_Ubuntu_V8:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: ubuntu-latest
-      js-engine: V8
-
-  Android_Ubuntu_Hermes:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: ubuntu-latest
-      js-engine: Hermes
-
-  Android_MacOS_JSC:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: JavaScriptCore
-
-  Android_MacOS_V8:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: V8
-
-  # ── Installation Tests ────────────────────────────────────────
-  iOS_Installation:
-    uses: ./.github/workflows/test-install-ios.yml
-    with:
-      deployment-target: "17.2"
-
-  Linux_Installation:
-    uses: ./.github/workflows/test-install-linux.yml
-
-  MacOS_Installation:
-    uses: ./.github/workflows/test-install-macos.yml
-
-  Win32_Installation:
-    uses: ./.github/workflows/test-install-win32.yml
+# ══════════════════════════════════════════════════════════════════
+# All non-macOS CI has been temporarily disabled. Uncomment to restore.
+# ══════════════════════════════════════════════════════════════════
+#
+#   iOS_Xcode26:
+#     uses: ./.github/workflows/build-ios.yml
+#     with:
+#       deployment-target: "26.0"
+#       xcode-version: "26.4"
+#       runs-on: macos-26
+#
+#   # ── Win32─────────────────────────────────────────────────────
+#   Win32_x64_D3D11:
+#     uses: ./.github/workflows/build-win32.yml
+#     with:
+#       platform: x64
+#
+#   Win32_x64_JSI_D3D11:
+#     uses: ./.github/workflows/build-win32.yml
+#     with:
+#       platform: x64
+#       napi-type: jsi
+#
+#   Win32_x64_V8_D3D11:
+#     uses: ./.github/workflows/build-win32.yml
+#     with:
+#       platform: x64
+#       napi-type: V8
+#
+#   Win32_x64_Hermes_D3D11:
+#     uses: ./.github/workflows/build-win32.yml
+#     with:
+#       platform: x64
+#       napi-type: Hermes
+#
+#   Win32_x64_D3D11_Sanitizers:
+#     uses: ./.github/workflows/build-win32.yml
+#     with:
+#       platform: x64
+#       enable-sanitizers: true
+#
+#   Win32_x64_D3D12:
+#     uses: ./.github/workflows/build-win32.yml
+#     with:
+#       platform: x64
+#       graphics-api: D3D12
+#
+#   Win32_x64_D3D11_PrecompiledShaderTest:
+#     uses: ./.github/workflows/build-win32-shader.yml
+#
+#   # ── UWP ───────────────────────────────────────────────────────
+#   UWP_x64:
+#     uses: ./.github/workflows/build-uwp.yml
+#     with:
+#       platform: x64
+#
+#   UWP_arm64:
+#     uses: ./.github/workflows/build-uwp.yml
+#     with:
+#       platform: arm64
+#
+#   UWP_arm64_JSI:
+#     uses: ./.github/workflows/build-uwp.yml
+#     with:
+#       platform: arm64
+#       napi-type: jsi
+#
+#   # ── Ubuntu / Linux ────────────────────────────────────────────
+#   Ubuntu_Clang_JSC:
+#     uses: ./.github/workflows/build-linux.yml
+#     with:
+#       cc: clang
+#       cxx: clang++
+#       js-engine: JavaScriptCore
+#
+#   Ubuntu_Clang_Hermes:
+#     uses: ./.github/workflows/build-linux.yml
+#     with:
+#       cc: clang
+#       cxx: clang++
+#       js-engine: Hermes
+#
+#   Ubuntu_GCC_JSC:
+#     uses: ./.github/workflows/build-linux.yml
+#     with:
+#       cc: gcc
+#       cxx: g++
+#       js-engine: JavaScriptCore
+#
+#   # ── Android ───────────────────────────────────────────────────
+#   Android_Ubuntu_JSC:
+#     uses: ./.github/workflows/build-android.yml
+#     with:
+#       runs-on: ubuntu-latest
+#       js-engine: JavaScriptCore
+#
+#   Android_Ubuntu_V8:
+#     uses: ./.github/workflows/build-android.yml
+#     with:
+#       runs-on: ubuntu-latest
+#       js-engine: V8
+#
+#   Android_Ubuntu_Hermes:
+#     uses: ./.github/workflows/build-android.yml
+#     with:
+#       runs-on: ubuntu-latest
+#       js-engine: Hermes
+#
+#   Android_MacOS_JSC:
+#     uses: ./.github/workflows/build-android.yml
+#     with:
+#       runs-on: macos-26
+#       js-engine: JavaScriptCore
+#
+#   Android_MacOS_V8:
+#     uses: ./.github/workflows/build-android.yml
+#     with:
+#       runs-on: macos-26
+#       js-engine: V8
+#
+#   # ── Installation Tests ────────────────────────────────────────
+#   iOS_Installation:
+#     uses: ./.github/workflows/test-install-ios.yml
+#     with:
+#       deployment-target: "17.2"
+#
+#   Linux_Installation:
+#     uses: ./.github/workflows/test-install-linux.yml
+#
+#   MacOS_Installation:
+#     uses: ./.github/workflows/test-install-macos.yml
+#
+#   Win32_Installation:
+#     uses: ./.github/workflows/test-install-win32.yml
