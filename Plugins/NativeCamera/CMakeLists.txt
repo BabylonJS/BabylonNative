@@ -19,9 +19,15 @@ set(SOURCES
     "Source/NativeCamera.cpp"
     "Source/NativeVideo.cpp"
     "Source/NativeVideo.h"
+    "Source/VideoPlayer.h"
     "Source/CameraDevice.h"
     "Source/CameraDeviceSharedPImpl.h"
     "Source/${PLATFORM}/CameraDevice.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+
+if(APPLE)
+    # Video-file playback (HTMLVideoElement.src) backend - AVPlayer based.
+    list(APPEND SOURCES "Source/Apple/VideoPlayer.mm")
+endif()
 
 add_library(NativeCamera ${SOURCES})
 warnings_as_errors(NativeCamera)
