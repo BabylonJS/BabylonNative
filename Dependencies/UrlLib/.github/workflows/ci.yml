@@ -14,11 +14,11 @@ jobs:
       platform: x64
 
   # ── macOS ─────────────────────────────────────────────────────
-  macOS_Xcode164:
+  macOS_Xcode264:
     uses: ./.github/workflows/build-macos.yml
     with:
-      xcode-version: '16.4'
-      runs-on: macos-latest
+      xcode-version: '26.4'
+      runs-on: macos-26
 
   # ── Linux ─────────────────────────────────────────────────────
   Ubuntu_gcc:
