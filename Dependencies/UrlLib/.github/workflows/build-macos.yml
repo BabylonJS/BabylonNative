@@ -25,7 +25,7 @@ jobs:
         run: cmake -B Build/macOS -G Xcode
 
       - name: Build
-        run: cmake --build Build/macOS --target UrlLibTests --config RelWithDebInfo
+        run: cmake --build Build/macOS --config RelWithDebInfo
 
       - name: Run Tests
         working-directory: Build/macOS/Tests/RelWithDebInfo
