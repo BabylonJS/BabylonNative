@@ -11,6 +11,7 @@
 
 #include "Constants.h"
 #include "PointerEvent.h"
+#include "XRCamera.h"
 #include "XRWebGLBinding.h"
 #include "XRWebGLLayer.h"
 #include "XRRigidTransform.h"
@@ -52,6 +53,7 @@ namespace Babylon
 
             PointerEvent::Initialize(env);
 
+            XRCamera::Initialize(env);
             XRWebGLBinding::Initialize(env);
             XRWebGLLayer::Initialize(env);
             XRRigidTransform::Initialize(env);
