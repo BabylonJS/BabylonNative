@@ -64,6 +64,37 @@ describe("AbortController", function () {
 
         expect(controller.signal.aborted).to.equal(true);
     });
+
+    it("AbortSignal.abort() returns a signal already aborted with an AbortError reason", function () {
+        const signal = (AbortSignal as any).abort();
+        expect(signal.aborted).to.equal(true);
+        expect(signal.reason).to.be.an.instanceof(Error);
+        expect(signal.reason.name).to.equal("AbortError");
+    });
+
+    it("throwIfAborted() throws the reason only once aborted", function () {
+        const controller = new AbortController();
+        // Not aborted yet: must not throw.
+        (controller.signal as any).throwIfAborted();
+
+        controller.abort();
+        expect(() => (controller.signal as any).throwIfAborted()).to.throw();
+    });
+
+    it("abort(reason) records the provided reason", function () {
+        const controller = new AbortController();
+        const reason = new Error("custom reason");
+        controller.abort(reason);
+        expect((controller.signal as any).reason).to.equal(reason);
+    });
+
+    it("abort() with no reason defaults to an AbortError", function () {
+        const controller = new AbortController();
+        controller.abort();
+        const reason = (controller.signal as any).reason;
+        expect(reason).to.be.an.instanceof(Error);
+        expect(reason.name).to.equal("AbortError");
+    });
 });
 
 describe("XMLHTTPRequest", function () {
@@ -151,6 +182,23 @@ describe("XMLHTTPRequest", function () {
         expect(result.errorFired).to.equal(true);
         expect(result.loadendFired).to.equal(true);
         expect(result.readyState).to.equal(4);
+    });
+
+    it("should expose errorCode/errorDetail diagnostics after a transport failure", async function () {
+        this.timeout(30000);
+        const xhr: any = await createRequest("GET", "http://127.0.0.1:1/");
+        expect(xhr.status).to.equal(0);
+        // Non-standard, additive diagnostics: always strings; populated on Apple/Linux and empty
+        // on Windows/Android until those backends populate UrlLib's accessors. Either way the
+        // standard error event + status===0 behavior (asserted above) is unchanged.
+        expect(xhr.errorCode).to.be.a("string");
+        expect(xhr.errorDetail).to.be.a("string");
+    });
+
+    it("should expose empty errorCode/errorDetail after a successful request", async function () {
+        const xhr: any = await createRequest("GET", "app:///Scripts/symlink_target.js");
+        expect(xhr.errorCode).to.equal("");
+        expect(xhr.errorDetail).to.equal("");
     });
 
     it("should throw something when opening //", async function () {
@@ -330,6 +378,78 @@ describe("fetch", function () {
             rejected = true;
         }
         expect(rejected).to.equal(true);
+    });
+
+    it("should reject a transport failure with a TypeError carrying detail on cause", async function () {
+        this.timeout(30000);
+        let error: any;
+        try {
+            // Nothing listens on this loopback port, so the connection is refused -- a transport
+            // failure (status 0), distinct from an HTTP error status.
+            await fetch("http://127.0.0.1:1/");
+        } catch (e) {
+            error = e;
+        }
+        expect(error, "fetch should have rejected").to.not.equal(undefined);
+        // Spec-conformant shape: network errors reject with a TypeError whose message is stable
+        // (browsers/Node/undici all keep it constant so crash-report grouping stays intact).
+        expect(error).to.be.an.instanceof(TypeError);
+        expect(error.message).to.equal("fetch failed");
+        // The variable detail rides on `cause` (Node/undici shape), never on the stable message.
+        expect(error.cause, "error.cause should be populated").to.be.an("object");
+        expect(error.cause.url).to.contain("127.0.0.1");
+        expect(error.cause.status).to.equal(0);
+        // On backends where UrlLib populates transport detail (Apple/Linux) `code`/`detail` are
+        // present stable tokens; on backends that don't yet (Windows/Android) they are absent --
+        // the stable observable shape above is preserved either way.
+        if (error.cause.code !== undefined) {
+            expect(error.cause.code).to.be.a("string").and.not.equal("");
+            expect(error.cause.detail).to.be.a("string").and.not.equal("");
+        }
+    });
+
+    it("should reject a missing app:// asset with a TypeError (distinct from a network failure)", async function () {
+        let error: any;
+        try {
+            await fetch("app:///does_not_exist.js");
+        } catch (e) {
+            error = e;
+        }
+        expect(error, "fetch should have rejected").to.not.equal(undefined);
+        expect(error).to.be.an.instanceof(TypeError);
+        expect(error.message).to.equal("fetch failed");
+        expect(error.cause.url).to.contain("does_not_exist.js");
+    });
+
+    it("should reject immediately with an AbortError when the signal is already aborted", async function () {
+        const controller = new AbortController();
+        controller.abort();
+
+        let error: any;
+        try {
+            await fetch("https://github.com/", { signal: controller.signal } as any);
+        } catch (e) {
+            error = e;
+        }
+        expect(error, "fetch should have rejected").to.not.equal(undefined);
+        expect(error.name).to.equal("AbortError");
+    });
+
+    it("should reject with an AbortError when aborted in-flight", async function () {
+        this.timeout(30000);
+        const controller = new AbortController();
+        const promise = fetch("https://github.com/", { signal: controller.signal } as any);
+        // Abort before the response can arrive.
+        controller.abort();
+
+        let error: any;
+        try {
+            await promise;
+        } catch (e) {
+            error = e;
+        }
+        expect(error, "fetch should have rejected").to.not.equal(undefined);
+        expect(error.name).to.equal("AbortError");
     });
 });
 

@@ -25,12 +25,12 @@ namespace Babylon::Polyfills::Internal
         return m_signal.Value();
     }
 
-    void AbortController::Abort(const Napi::CallbackInfo&)
+    void AbortController::Abort(const Napi::CallbackInfo& info)
     {
         AbortSignal* sig = AbortSignal::Unwrap(m_signal.Value());
-        
+
         assert(sig != nullptr);
-        sig->Abort();
+        sig->Abort(info.Length() > 0 ? info[0] : info.Env().Undefined());
     }
 
     AbortController::AbortController(const Napi::CallbackInfo& info)

@@ -35,6 +35,8 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetResponseURL(const Napi::CallbackInfo& info);
         Napi::Value GetStatus(const Napi::CallbackInfo& info);
         Napi::Value GetStatusText(const Napi::CallbackInfo& info);
+        Napi::Value GetErrorCode(const Napi::CallbackInfo& info);
+        Napi::Value GetErrorDetail(const Napi::CallbackInfo& info);
 
         void AddEventListener(const Napi::CallbackInfo& info);
         void RemoveEventListener(const Napi::CallbackInfo& info);

@@ -11,10 +11,13 @@ namespace Babylon::Polyfills::Internal
                 env,
                 JS_ABORT_SIGNAL_CONSTRUCTOR_NAME,
                 {
-                    InstanceAccessor("aborted", &AbortSignal::GetAborted, &AbortSignal::SetAborted),
+                    InstanceAccessor("aborted", &AbortSignal::GetAborted, nullptr),
+                    InstanceAccessor("reason", &AbortSignal::GetReason, nullptr),
                     InstanceAccessor("onabort", &AbortSignal::GetOnAbort, &AbortSignal::SetOnAbort),
+                    InstanceMethod("throwIfAborted", &AbortSignal::ThrowIfAborted),
                     InstanceMethod("addEventListener", &AbortSignal::AddEventListener),
                     InstanceMethod("removeEventListener", &AbortSignal::RemoveEventListener),
+                    StaticMethod("abort", &AbortSignal::AbortStatic),
                 });
 
             env.Global().Set(JS_ABORT_SIGNAL_CONSTRUCTOR_NAME, func);
@@ -26,9 +29,29 @@ namespace Babylon::Polyfills::Internal
     {
     }
 
-    void AbortSignal::Abort()
+    Napi::Value AbortSignal::CreateAbortError(Napi::Env env, const char* message)
     {
+        // There is no DOMException polyfill, so represent the abort reason as an Error whose `name`
+        // is "AbortError" -- the value web code checks (`err.name === "AbortError"`).
+        Napi::Error error = Napi::Error::New(env, message);
+        error.Set("name", Napi::String::New(env, "AbortError"));
+        return error.Value();
+    }
+
+    void AbortSignal::Abort(const Napi::Value& reason)
+    {
+        if (m_aborted)
+        {
+            return;
+        }
+
         m_aborted = true;
+
+        Napi::Env env = Env();
+        const Napi::Value resolvedReason = (reason.IsUndefined() || reason.IsEmpty())
+            ? CreateAbortError(env, "The operation was aborted.")
+            : reason;
+        m_reason = Napi::Persistent(resolvedReason);
 
         auto onabort = m_onabort.Value();
         if (!onabort.IsNull() && !onabort.IsUndefined())
@@ -39,14 +62,36 @@ namespace Babylon::Polyfills::Internal
         RaiseEvent("abort");
     }
 
+    Napi::Value AbortSignal::AbortStatic(const Napi::CallbackInfo& info)
+    {
+        Napi::Env env = info.Env();
+        Napi::Object signalObject = env.Global().Get(JS_ABORT_SIGNAL_CONSTRUCTOR_NAME).As<Napi::Function>().New({});
+        AbortSignal* signal = AbortSignal::Unwrap(signalObject);
+        signal->Abort(info.Length() > 0 ? info[0] : env.Undefined());
+        return signalObject;
+    }
+
     Napi::Value AbortSignal::GetAborted(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), m_aborted);
     }
 
-    void AbortSignal::SetAborted(const Napi::CallbackInfo&, const Napi::Value& value)
+    Napi::Value AbortSignal::GetReason(const Napi::CallbackInfo&)
     {
-        m_aborted = value.As<Napi::Boolean>();
+        if (m_reason.IsEmpty())
+        {
+            return Env().Undefined();
+        }
+
+        return m_reason.Value();
+    }
+
+    void AbortSignal::ThrowIfAborted(const Napi::CallbackInfo& info)
+    {
+        if (m_aborted)
+        {
+            throw Napi::Error{info.Env(), GetReason(info)};
+        }
     }
 
     Napi::Value AbortSignal::GetOnAbort(const Napi::CallbackInfo&)

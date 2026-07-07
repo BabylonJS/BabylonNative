@@ -81,6 +81,12 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
                 InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
                 InstanceAccessor("statusText", &XMLHttpRequest::GetStatusText, nullptr),
+                // Non-standard, additive diagnostics: the normalized transport-error detail from
+                // UrlLib, empty unless the request failed at the transport layer. Browsers do not
+                // expose these, so spec-conformant code is unaffected; BN-aware code can read them
+                // to tell a DNS failure from a refused connection or a missing local asset.
+                InstanceAccessor("errorCode", &XMLHttpRequest::GetErrorCode, nullptr),
+                InstanceAccessor("errorDetail", &XMLHttpRequest::GetErrorDetail, nullptr),
                 InstanceMethod("getAllResponseHeaders", &XMLHttpRequest::GetAllResponseHeaders),
                 InstanceMethod("getResponseHeader", &XMLHttpRequest::GetResponseHeader),
                 InstanceMethod("setRequestHeader", &XMLHttpRequest::SetRequestHeader),
@@ -160,6 +166,20 @@ namespace Babylon::Polyfills::Internal
         }
 
         return Napi::String::New(Env(), std::string{m_request.StatusText()});
+    }
+
+    Napi::Value XMLHttpRequest::GetErrorCode(const Napi::CallbackInfo&)
+    {
+        // Stable symbolic token for a transport failure (e.g. "CURLE_COULDNT_CONNECT",
+        // "NSURLErrorTimedOut", "AppResourceNotFound"); empty when there was no transport failure.
+        return Napi::String::New(Env(), std::string{m_request.ErrorSymbol()});
+    }
+
+    Napi::Value XMLHttpRequest::GetErrorDetail(const Napi::CallbackInfo&)
+    {
+        // Full normalized "<domain>:<symbol>(<code>): <detail>" string; empty when there was no
+        // transport failure.
+        return Napi::String::New(Env(), std::string{m_request.ErrorString()});
     }
 
     Napi::Value XMLHttpRequest::GetResponseHeader(const Napi::CallbackInfo& info)

@@ -17,11 +17,23 @@ namespace Babylon::Polyfills::Internal
         static void Initialize(Napi::Env env);
         explicit AbortSignal(const Napi::CallbackInfo& info);
 
-        void Abort();
+        // Transition the signal to the aborted state with the given reason (undefined -> a default
+        // "AbortError"), firing onabort and any "abort" listeners. No-op if already aborted.
+        void Abort(const Napi::Value& reason);
+
+        // Build the default abort reason: an Error whose name is "AbortError" (there is no
+        // DOMException polyfill), matching what the platform uses when abort() is called with no
+        // reason and what fetch() rejects with on abort.
+        static Napi::Value CreateAbortError(Napi::Env env, const char* message);
 
     private:
         Napi::Value GetAborted(const Napi::CallbackInfo& info);
-        void SetAborted(const Napi::CallbackInfo&, const Napi::Value& value);
+
+        Napi::Value GetReason(const Napi::CallbackInfo& info);
+        void ThrowIfAborted(const Napi::CallbackInfo& info);
+
+        // AbortSignal.abort(reason?) -- returns an AbortSignal already in the aborted state.
+        static Napi::Value AbortStatic(const Napi::CallbackInfo& info);
 
         Napi::Value GetOnAbort(const Napi::CallbackInfo& info);
         void SetOnAbort(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -33,6 +45,7 @@ namespace Babylon::Polyfills::Internal
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs;
 
         Napi::FunctionReference m_onabort;
+        Napi::Reference<Napi::Value> m_reason;
         bool m_aborted = false;
     };
 }
