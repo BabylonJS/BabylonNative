@@ -1,0 +1,32 @@
+name: Build macOS
+
+on:
+  workflow_call:
+    inputs:
+      xcode-version:
+        required: true
+        type: string
+      runs-on:
+        required: false
+        type: string
+        default: macos-latest
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
+
+      - name: Configure CMake
+        run: cmake -B Build/macOS -G Xcode
+
+      - name: Build
+        run: cmake --build Build/macOS --target UrlLibTests --config RelWithDebInfo
+
+      - name: Run Tests
+        working-directory: Build/macOS/Tests/RelWithDebInfo
+        run: ./UrlLibTests
