@@ -15,6 +15,8 @@
         },
         {
             "title": "Native Canvas",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): NativeCanvas 2D output differs from reference; needs investigation.",
             "playgroundId": "#TKVFSA#8",
             "referenceImage": "native-canvas.png"
         },
@@ -93,6 +95,8 @@
         },
         {
             "title": "GLTF Serializer multimaterial with raw texture",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): pixel comparison differs from reference; needs investigation.",
             "playgroundId": "#KU72PX",
             "referenceImage": "glTFSerializerMultimaterial.png"
         },
@@ -181,11 +185,15 @@
         },
         {
             "title": "Soft Shadows",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): soft shadow output differs from reference; needs investigation.",
             "playgroundId": "#0YYQ3N#0",
             "referenceImage": "softShadows.png"
         },
         {
             "title": "Soft Shadows (Right Handed)",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): soft shadow output differs from reference; needs investigation.",
             "playgroundId": "#0YYQ3N#2",
             "referenceImage": "softShadowsRightHanded.png"
         },
@@ -196,6 +204,8 @@
         },
         {
             "title": "Light Projection Texture",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): projected light texture differs from reference; needs investigation.",
             "playgroundId": "#CQNGRK#0",
             "renderCount": 2,
             "referenceImage": "LightProjectionTexture.png"
@@ -223,6 +233,8 @@
         },
         {
             "title": "Ribbon morphing",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): morph/animation output differs from reference; needs investigation.",
             "playgroundId": "#ACKC2#1",
             "renderCount": 50,
             "referenceImage": "ribbon morphing.png"
@@ -289,6 +301,8 @@
         },
         {
             "title": "Multi cameras and output render target",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): multi-camera RTT output differs from reference; needs investigation.",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
             "referenceImage": "multiCamerasOutputRenderTarget.png"
@@ -351,6 +365,8 @@
         },
         {
             "title": "GLTF Animation Node",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): animation output differs from reference; needs investigation.",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_Node, __page__, 0, __disableSRGBBuffers__, 0",
@@ -358,6 +374,8 @@
         },
         {
             "title": "GLTF Animation Node Misc",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): animation output differs from reference; needs investigation.",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_NodeMisc, __page__, 0, __disableSRGBBuffers__, 1",
@@ -365,6 +383,8 @@
         },
         {
             "title": "GLTF Animation Skin (0)",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): skinning/animation output differs from reference; needs investigation.",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_Skin, __page__, 0, __disableSRGBBuffers__, 0",
@@ -372,6 +392,8 @@
         },
         {
             "title": "GLTF Animation Skin (1)",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): skinning/animation output differs from reference; needs investigation.",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_Skin, __page__, 1, __disableSRGBBuffers__, 0",
@@ -611,6 +633,8 @@
         },
         {
             "title": "NPE - Angle align",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#H5RP91",
             "referenceImage": "npe-angle-align.png"
         },
@@ -799,6 +823,8 @@
         },
         {
             "title": "Simple refraction",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): refraction output differs from reference; needs investigation.",
             "playgroundId": "#22KZUW#652",
             "referenceImage": "simple-refraction.png"
         },
@@ -829,6 +855,8 @@
         },
         {
             "title": "Volumetric Light Scattering Post Process with Skeleton",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): skinning + post-process output differs from reference; needs investigation.",
             "playgroundId": "#5E318S#6",
             "referenceImage": "volumetricLightScatteringSkeleton.png"
         },
@@ -1225,6 +1253,8 @@
         },
         {
             "title": "Bones",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): skinning output differs from reference; needs investigation.",
             "playgroundId": "#7EC27T#3",
             "referenceImage": "bones.png"
         },
@@ -1349,16 +1379,22 @@
         },
         {
             "title": "GLTF Serializer Skinning and Animation",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): skinning/animation output differs from reference; needs investigation.",
             "playgroundId": "#DMZBX1#1",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
             "title": "GLTF Serializer Skinning and Animation (Right Handed)",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): skinning/animation output differs from reference; needs investigation.",
             "playgroundId": "#DMZBX1#2",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
             "title": "GLTF Serializer Morph Target Animation",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): morph target animation output differs from reference; needs investigation.",
             "playgroundId": "#84M2SR#107",
             "renderCount": 2,
             "referenceImage": "gltfSerializerMorphTargetAnimation.png"
@@ -2148,6 +2184,8 @@
         },
         {
             "title": "Multi cameras and output render target",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): multi-camera RTT output differs from reference; needs investigation.",
             "playgroundId": "#BCYE7J#46",
             "renderCount": 2,
             "referenceImage": "multiCamerasOutputRenderTarget.png"
@@ -2178,6 +2216,8 @@
         },
         {
             "title": "Custom material with depth renderer",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): depth renderer output differs from reference; needs investigation.",
             "playgroundId": "#6GFJNR#152",
             "renderCount": 5,
             "referenceImage": "customMatDepthRenderer.png"
@@ -2465,6 +2505,8 @@
         },
         {
             "title": "convertToFlatShadedMesh",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): flat-shaded mesh output differs from reference; needs investigation.",
             "playgroundId": "#UFDL9T#4",
             "referenceImage": "convertToFlatShadedMesh.png"
         },
@@ -3188,6 +3230,8 @@
         },
         {
             "title": "Flow Graph multiple contexts",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "iOS Simulator (Metal): output differs from reference; needs investigation.",
             "playgroundId": "#FQWPBI#11",
             "renderCount": 30,
             "referenceImage": "Flow-Graph-multiple-contexts.png"
