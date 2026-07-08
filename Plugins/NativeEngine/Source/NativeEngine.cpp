@@ -1894,9 +1894,11 @@ namespace Babylon
     {
         const bgfx::Caps* caps = bgfx::getCaps();
         const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
-        // One slot per color attachment plus a single depth/stencil attachment. bgfx caps the total via
-        // maxFBAttachments; reject out-of-range counts up front rather than relying on the validation assert.
-        if (colorCount + 1 > caps->limits.maxFBAttachments)
+        // One slot per color attachment, plus a single depth/stencil attachment only when one is
+        // generated. bgfx caps the total via maxFBAttachments; reject out-of-range counts up front
+        // rather than relying on the validation assert.
+        const uint32_t depthStencilCount = (generateStencilBuffer || generateDepth) ? 1u : 0u;
+        if (colorCount + depthStencilCount > caps->limits.maxFBAttachments)
         {
             throw Napi::Error::New(env, "Invalid number of color attachments for frame buffer");
         }
