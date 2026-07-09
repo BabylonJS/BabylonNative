@@ -684,7 +684,9 @@ namespace Babylon::ShaderCompilerTraversers
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
@@ -694,18 +696,15 @@ namespace Babylon::ShaderCompilerTraversers
                     const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {GetStableLocation(name), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
                     // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD7),
                     // so the first instance attribute gets the highest i_data index.
-                    return {GetStableLocation(name), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {GetStableLocation(name), s_attribName[GetStableLocation(name)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
@@ -770,7 +769,9 @@ namespace Babylon::ShaderCompilerTraversers
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
 
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
@@ -780,16 +781,13 @@ namespace Babylon::ShaderCompilerTraversers
                     const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {GetStableLocation(name), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
-                    return {GetStableLocation(name), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {GetStableLocation(name), s_attribName[GetStableLocation(name)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
