@@ -67,6 +67,12 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CON
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
 
+# Disable video decoding support (not used by Babylon Native).
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_VIDEO=0)
+
+# Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_C99_API=0)
+
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
 elseif(GRAPHICS_API STREQUAL "D3D12")

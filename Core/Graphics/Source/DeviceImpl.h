@@ -13,7 +13,6 @@
 #include <napi/env.h>
 
 #include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
 
 #include <atomic>
 #include <condition_variable>

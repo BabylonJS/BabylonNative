@@ -9,7 +9,6 @@
 #include <media/NdkImageReader.h>
 #include <android/log.h>
 #include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
 #include <arcana/threading/dispatcher.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
