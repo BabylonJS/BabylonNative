@@ -677,8 +677,6 @@
         },
         {
             "title": "Attractors",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#DEZ79M#57",
             "referenceImage": "attractors.png"
         },
@@ -1568,8 +1566,6 @@
         },
         {
             "title": "Particles",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#G3ZYFU#7",
             "renderCount": 100,
             "referenceImage": "particles.png"
@@ -1843,8 +1839,6 @@
         },
         {
             "title": "Instances with color buffer",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#YPABS1#91",
             "referenceImage": "instancecolors.png"
         },
@@ -2674,8 +2668,6 @@
         },
         {
             "title": "halo-particle-system",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#2441BU#1",
             "renderCount": 20,
             "referenceImage": "halo-particle-system.png"
@@ -2690,8 +2682,6 @@
         },
         {
             "title": "particle-system-with-custom-nme-shader",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#DMLLV2",
             "renderCount": 5,
             "referenceImage": "particle-system-with-custom-nme-shader.png"
@@ -4076,288 +4066,216 @@
         },
         {
             "title": "Particles - Basic Properties - Size",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3780",
             "renderCount": 120,
             "referenceImage": "particles-basic-size.png"
         },
         {
             "title": "Particles - Basic Properties - Scale",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3782",
             "renderCount": 120,
             "referenceImage": "particles-basic-scale.png"
         },
         {
             "title": "Particles - Basic Properties - Color",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3786",
             "renderCount": 120,
             "referenceImage": "particles-basic-color.png"
         },
         {
             "title": "Particles - Basic Properties - Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3791",
             "renderCount": 120,
             "referenceImage": "particles-basic-speed.png"
         },
         {
             "title": "Particles - Basic Properties - Angular Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3796",
             "renderCount": 120,
             "referenceImage": "particles-basic-angular-speed.png"
         },
         {
             "title": "Particles - Basic Properties - Angular Speed - Rotation",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3806",
             "renderCount": 120,
             "referenceImage": "particles-basic-angular-speed-rotation.png"
         },
         {
             "title": "Particles - Basic Properties - Translation Pivot",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3808",
             "renderCount": 120,
             "referenceImage": "particles-basic-translation-pivot.png"
         },
         {
             "title": "Particles - Basic Properties - Direction",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3814",
             "renderCount": 120,
             "referenceImage": "particles-basic-direction.png"
         },
         {
             "title": "Particles - Basic Properties - Direction - Gravity",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3816",
             "renderCount": 120,
             "referenceImage": "particles-basic-direction-gravity.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Slow",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3821",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-slow.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Fast",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3823",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-fast.png"
         },
         {
             "title": "Particles - Basic Properties - Emission Limits",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3825",
             "renderCount": 120,
             "referenceImage": "particles-basic-emission-limits.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Short",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3829",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-short.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Long",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3834",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-long.png"
         },
         {
             "title": "Particles - Change - Size",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3841",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size.png"
         },
         {
             "title": "Particles - Change - Size 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3844",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size-2.png"
         },
         {
             "title": "Particles - Change - Color",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3847",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color.png"
         },
         {
             "title": "Particles - Change - Color 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3851",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color-2.png"
         },
         {
             "title": "Particles - Change - Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3853",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed.png"
         },
         {
             "title": "Particles - Change - Speed 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3855",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-2.png"
         },
         {
             "title": "Particles - Change - Speed Limit",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3859",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-limit.png"
         },
         {
             "title": "Particles - Change - Angular Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3862",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-angular-speed.png"
         },
         {
             "title": "Particles - Change - Angular Speed 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3865",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-angular-speed-2.png"
         },
         {
             "title": "Particles - Change - Drag",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3868",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag.png"
         },
         {
             "title": "Particles - Change - Drag 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3872",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag-2.png"
         },
         {
             "title": "Particles - Change - Emit Rate",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3875",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate.png"
         },
         {
             "title": "Particles - Change - Emit Rate 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3879",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate-2.png"
         },
         {
             "title": "Particles - Change - Lifetime",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3885",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime.png"
         },
         {
             "title": "Particles - Change - Lifetime 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3890",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime-2.png"
         },
         {
             "title": "Particles - Change - Start Size",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3897",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-start-size.png"
         },
         {
             "title": "Particles - Emitters - Point",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#7",
             "renderCount": 120,
             "referenceImage": "particles-emitters-point.png"
         },
         {
             "title": "Particles - Emitters - Box",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#8",
             "renderCount": 120,
             "referenceImage": "particles-emitters-box.png"
         },
         {
             "title": "Particles - Emitters - Sphere",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#9",
             "renderCount": 120,
             "referenceImage": "particles-emitters-sphere.png"
         },
         {
             "title": "Particles - Emitters - Directed Sphere",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#10",
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-sphere.png"
         },
         {
             "title": "Particles - Emitters - Hemisphere",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#11",
             "renderCount": 120,
             "referenceImage": "particles-emitters-hemisphere.png"
         },
         {
             "title": "Particles - Emitters - Cylinder",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#12",
             "renderCount": 120,
             "errorRatio": 4,
@@ -4373,72 +4291,54 @@
         },
         {
             "title": "Particles - Emitters - Cone",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#16",
             "renderCount": 120,
             "referenceImage": "particles-emitters-cone.png"
         },
         {
             "title": "Particles - Emitters - Directed Cone",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#17",
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-cone.png"
         },
         {
             "title": "Particles - Emitters - Mesh",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#20",
             "renderCount": 120,
             "referenceImage": "particles-emitters-mesh.png"
         },
         {
             "title": "Particles - Emitters - Custom",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#22",
             "renderCount": 120,
             "referenceImage": "particles-emitters-custom.png"
         },
         {
             "title": "Particles - Animations",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#2MI0A1#7",
             "renderCount": 120,
             "referenceImage": "particles-animations.png"
         },
         {
             "title": "Particles - Animations 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#2MI0A1#8",
             "renderCount": 120,
             "referenceImage": "particles-animations-2.png"
         },
         {
             "title": "Particles - Ramp Gradient",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#I2D9MM#15",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#E3VU3R",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap Alpha",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#I2D9MM#16",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap-alpha.png"
@@ -4477,16 +4377,12 @@
         },
         {
             "title": "Particles - Effects",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#1ASENS#424",
             "renderCount": 120,
             "referenceImage": "particles-effects.png"
         },
         {
             "title": "Particles - Helper - Sun",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#A97UQ6#5",
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
@@ -4510,8 +4406,6 @@
         },
         {
             "title": "Particles - Attractors",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#DEZ79M#73",
             "renderCount": 240,
             "referenceImage": "particles-attractors.png"
@@ -4541,8 +4435,6 @@
         },
         {
             "title": "Selection outline layer with instances and LOD",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#8I487I#0",
             "referenceImage": "Selection-outline-layer-with-instances-and-LOD.png"
         },
