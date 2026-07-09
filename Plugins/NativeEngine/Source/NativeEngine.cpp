@@ -1528,10 +1528,13 @@ namespace Babylon
     // so the texture is created lazily on the first upload.
     void NativeEngine::UpdateTextureDirectly(const Napi::CallbackInfo& info)
     {
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
+#else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data{info[1].As<Napi::TypedArray>()};
-        const auto faceIndex{static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value())};
-        const auto lod{static_cast<uint8_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const auto faceIndexValue{info[2].As<Napi::Number>().Uint32Value()};
+        const auto lodValue{info[3].As<Napi::Number>().Uint32Value()};
         const auto baseWidth{info[4].As<Napi::Number>().Uint32Value()};
         const auto baseHeight{info[5].As<Napi::Number>().Uint32Value()};
         const auto mipWidth{info[6].As<Napi::Number>().Uint32Value()};
@@ -1549,6 +1552,41 @@ namespace Babylon
             mipWidth > maxTextureSize || mipHeight > maxTextureSize)
         {
             throw Napi::Error::New(Env(), "Invalid base or mip dimensions for the texture.");
+        }
+
+        // Cube textures must be square and address one of the six faces; 2D textures have a single
+        // face. Validate the JS-provided face index before narrowing it to uint8_t.
+        if (isCube)
+        {
+            if (baseWidth != baseHeight || mipWidth != mipHeight)
+            {
+                throw Napi::Error::New(Env(), "Cube texture dimensions must be square.");
+            }
+            if (faceIndexValue >= 6)
+            {
+                throw Napi::Error::New(Env(), "Cube face index must be in the range [0, 5].");
+            }
+        }
+        else if (faceIndexValue != 0)
+        {
+            throw Napi::Error::New(Env(), "Face index must be 0 for a 2D texture.");
+        }
+
+        // The lod must address a real mip level: level 0 only when the texture has no mipmaps,
+        // otherwise within the mip chain implied by the base dimensions.
+        uint32_t numMips{1};
+        if (hasMips)
+        {
+            uint32_t levelDim{baseWidth > baseHeight ? baseWidth : baseHeight};
+            while (levelDim > 1)
+            {
+                levelDim >>= 1;
+                ++numMips;
+            }
+        }
+        if (lodValue >= numMips)
+        {
+            throw Napi::Error::New(Env(), "Lod exceeds the texture's mip level count.");
         }
 
         if (!texture->IsValid())
@@ -1569,6 +1607,12 @@ namespace Babylon
             throw Napi::Error::New(Env(), "The data size does not match mip dimensions and format.");
         }
 
+        // bgfx::copy takes a 32-bit size; reject anything that would truncate.
+        if (expectedSize > 0xFFFFFFFFull)
+        {
+            throw Napi::Error::New(Env(), "Texture upload size exceeds the maximum supported size.");
+        }
+
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         // bgfx must own the upload buffer (released asynchronously after the GPU consumes it).
         const bgfx::Memory* mem{bgfx::copy(bytes, static_cast<uint32_t>(data.ByteLength()))};
@@ -1584,12 +1628,13 @@ namespace Babylon
 
         if (isCube)
         {
-            texture->UpdateCube(0, faceIndex, lod, 0, 0, static_cast<uint16_t>(mipWidth), static_cast<uint16_t>(mipHeight), mem);
+            texture->UpdateCube(0, static_cast<uint8_t>(faceIndexValue), static_cast<uint8_t>(lodValue), 0, 0, static_cast<uint16_t>(mipWidth), static_cast<uint16_t>(mipHeight), mem);
         }
         else
         {
-            texture->Update2D(0, lod, 0, 0, static_cast<uint16_t>(mipWidth), static_cast<uint16_t>(mipHeight), mem);
+            texture->Update2D(0, static_cast<uint8_t>(lodValue), 0, 0, static_cast<uint16_t>(mipWidth), static_cast<uint16_t>(mipHeight), mem);
         }
+#endif
     }
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
