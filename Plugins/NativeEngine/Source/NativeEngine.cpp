@@ -715,6 +715,7 @@ namespace Babylon
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadRawTexture2DArray", &NativeEngine::LoadRawTexture2DArray),
+                InstanceMethod("updateTextureDirectly", &NativeEngine::UpdateTextureDirectly),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
@@ -1518,6 +1519,77 @@ namespace Babylon
             }
         }
 #endif
+    }
+
+    // Implements the shared JS texture-loader sink (Babylon's _uploadDataToTextureDirectly /
+    // _uploadCompressedDataToTextureDirectly), letting DDS/KTX/KTX2/Basis/IES/HDR/EXR/TGA load
+    // through the same loaders WebGL/WebGPU use. The loaders upload one (face, mip) at a time,
+    // WebGL texImage2D-style; bgfx instead needs the whole texture allocated before any update,
+    // so the texture is created lazily on the first upload.
+    void NativeEngine::UpdateTextureDirectly(const Napi::CallbackInfo& info)
+    {
+        const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
+        const auto data{info[1].As<Napi::TypedArray>()};
+        const auto faceIndex{static_cast<uint8_t>(info[2].As<Napi::Number>().Uint32Value())};
+        const auto lod{static_cast<uint8_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const auto baseWidth{info[4].As<Napi::Number>().Uint32Value()};
+        const auto baseHeight{info[5].As<Napi::Number>().Uint32Value()};
+        const auto mipWidth{info[6].As<Napi::Number>().Uint32Value()};
+        const auto mipHeight{info[7].As<Napi::Number>().Uint32Value()};
+        const auto format{static_cast<bimg::TextureFormat::Enum>(info[8].As<Napi::Number>().Uint32Value())};
+        const auto isCube{info[9].As<Napi::Boolean>().Value()};
+        const auto hasMips{info[10].As<Napi::Boolean>().Value()};
+        const auto invertY{info[11].As<Napi::Boolean>().Value()};
+
+        // Validate the JS-provided dimensions against GPU limits before narrowing to uint16_t,
+        // so an out-of-range value can't wrap into an in-range one and drive an OOB read/upload.
+        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        if (baseWidth == 0 || baseHeight == 0 || mipWidth == 0 || mipHeight == 0 ||
+            baseWidth > maxTextureSize || baseHeight > maxTextureSize ||
+            mipWidth > maxTextureSize || mipHeight > maxTextureSize)
+        {
+            throw Napi::Error::New(Env(), "Invalid base or mip dimensions for the texture.");
+        }
+
+        if (!texture->IsValid())
+        {
+            if (isCube)
+            {
+                texture->CreateCube(static_cast<uint16_t>(baseWidth), hasMips, 1, Cast(format), BGFX_TEXTURE_NONE);
+            }
+            else
+            {
+                texture->Create2D(static_cast<uint16_t>(baseWidth), static_cast<uint16_t>(baseHeight), hasMips, 1, Cast(format), BGFX_TEXTURE_NONE);
+            }
+        }
+
+        const uint64_t expectedSize{bimg::imageGetSize(nullptr, static_cast<uint16_t>(mipWidth), static_cast<uint16_t>(mipHeight), 1, false, false, 1, format)};
+        if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
+        {
+            throw Napi::Error::New(Env(), "The data size does not match mip dimensions and format.");
+        }
+
+        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
+        // bgfx must own the upload buffer (released asynchronously after the GPU consumes it).
+        const bgfx::Memory* mem{bgfx::copy(bytes, static_cast<uint32_t>(data.ByteLength()))};
+
+        // Match the existing loader flip conventions: cube faces flip only on origin-bottom-left
+        // (OpenGL), like LoadCubeTextureFromImages; 2D follows the raw/loadTexture convention.
+        // Compressed block data cannot be row-flipped.
+        const bool flip{isCube ? bgfx::getCaps()->originBottomLeft : (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)};
+        if (flip && !bimg::isCompressed(format))
+        {
+            FlipImage({mem->data, mem->size}, static_cast<uint32_t>(mipHeight));
+        }
+
+        if (isCube)
+        {
+            texture->UpdateCube(0, faceIndex, lod, 0, 0, static_cast<uint16_t>(mipWidth), static_cast<uint16_t>(mipHeight), mem);
+        }
+        else
+        {
+            texture->Update2D(0, lod, 0, 0, static_cast<uint16_t>(mipWidth), static_cast<uint16_t>(mipHeight), mem);
+        }
     }
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
