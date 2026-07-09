@@ -107,6 +107,7 @@ namespace Babylon
         void LoadRawTexture(const Napi::CallbackInfo& info);
         void UpdateTextureData(const Napi::CallbackInfo& info);
         void LoadRawTexture2DArray(const Napi::CallbackInfo& info);
+        void UpdateTextureDirectly(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
