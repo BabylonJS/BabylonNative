@@ -26,7 +26,7 @@ target_include_directories(
 			${ASTC_ENCODER_INCLUDE_DIR} #
 			${EDTAA3_INCLUDE_DIR} #
 			${ETC1_INCLUDE_DIR} #
-			${ETC2_INCLUDE_DIR} #
+			${ETCPAK_INCLUDE_DIR} #
 			${NVTT_INCLUDE_DIR} #
 			${PVRTC_INCLUDE_DIR} #
 			${TINYEXR_INCLUDE_DIR} #
@@ -43,7 +43,7 @@ file(
 	${LIBSQUISH_SOURCES} #
 	${EDTAA3_SOURCES} #
 	${ETC1_SOURCES} #
-	${ETC2_SOURCES} #
+	${ETCPAK_SOURCES} #
 	${NVTT_SOURCES} #
 	${PVRTC_SOURCES} #
 	${TINYEXR_SOURCES}
@@ -59,7 +59,7 @@ target_link_libraries(
 		   ${ASTC_ENCODER_LIBRARIES} #
 		   ${EDTAA3_LIBRARIES} #
 		   ${ETC1_LIBRARIES} #
-		   ${ETC2_LIBRARIES} #
+		   ${ETCPAK_LIBRARIES} #
 		   ${NVTT_LIBRARIES} #
 		   ${PVRTC_LIBRARIES} #
 		   ${TINYEXR_LIBRARIES} #

@@ -14,12 +14,12 @@ if(NOT IS_DIRECTORY ${BIMG_DIR})
 	return()
 endif()
 
-if(NOT ETC2_LIBRARIES)
+if(NOT ETCPAK_LIBRARIES)
 	file(
 		GLOB_RECURSE #
-		ETC2_SOURCES #
-		${BIMG_DIR}/3rdparty/etc2/**.cpp #
-		${BIMG_DIR}/3rdparty/etc2/**.hpp #
+		ETCPAK_SOURCES #
+		${BIMG_DIR}/3rdparty/etcpak/**.cpp #
+		${BIMG_DIR}/3rdparty/etcpak/**.hpp #
 	)
-	set(ETC2_INCLUDE_DIR ${BIMG_DIR}/3rdparty)
+	set(ETCPAK_INCLUDE_DIR ${BIMG_DIR}/3rdparty)
 endif()
