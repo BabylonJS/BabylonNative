@@ -165,7 +165,7 @@
 
             if (differencesCount === 0) {
                 const pixel = index / 4;
-                const width = testWidth / engine.getHardwareScalingLevel();
+                const width = Math.round(testWidth / engine.getHardwareScalingLevel());
                 console.log(`First pixel off at ${index} (pixel ${pixel} @ x=${pixel % width}, y=${Math.floor(pixel / width)}): Value: (${renderData[index]}, ${renderData[index + 1]}, ${renderData[index + 2]}) - Expected: (${referenceData[index]}, ${referenceData[index + 1]}, ${referenceData[index + 2]}) `);
             }
 
