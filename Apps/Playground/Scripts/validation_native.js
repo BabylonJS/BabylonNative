@@ -56,16 +56,13 @@
     function logFailureDiagnostics(test) {
         const outDir = TestUtils.getOutputDirectory();
         if (test.referenceImage) {
-            console.log("  Rendered result: " + outDir + "/Results/" + test.referenceImage);
-            console.log("  Diff overlay:    " + outDir + "/Errors/" + test.referenceImage);
+            console.log(`  Rendered result: ${outDir}/Results/${test.referenceImage}`);
+            console.log(`  Diff overlay:    ${outDir}/Errors/${test.referenceImage}`);
         }
         if (test.playgroundId) {
-            console.log("  Note: this test loads playgroundId " + test.playgroundId +
-                " from the snippet server and pulls GUI/assets/fonts over the network," +
-                " so a pixel diff is often a transient async asset/font-load timing flake.");
+            console.log(`  Note: this test loads playgroundId ${test.playgroundId} from the snippet server and pulls GUI/assets/fonts over the network, so a pixel diff is often a transient async asset/font-load timing flake.`);
             console.log("  Re-run in isolation to confirm a real regression:");
-            console.log("    Playground --headless --once --test \"" + (test.title || "") +
-                "\" app:///Scripts/validation_native.js");
+            console.log(`    Playground --headless --once --test "${test.title || ""}" app:///Scripts/validation_native.js`);
         }
     }
 
@@ -178,8 +175,7 @@
         if (differencesCount) {
             const pixelCount = size / 4;
             const diffRatio = (differencesCount * 100) / pixelCount;
-            console.log("Pixel difference: " + differencesCount + " / " + pixelCount + " pixels (" +
-                diffRatio.toFixed(3) + "%, per-channel threshold " + threshold + "); allowed errorRatio " + errorRatio + "%.");
+            console.log(`Pixel difference: ${differencesCount} / ${pixelCount} pixels (${diffRatio.toFixed(3)}%, per-channel threshold ${threshold}); allowed errorRatio ${errorRatio}%.`);
         } else {
             console.log("No pixel difference!");
         }
