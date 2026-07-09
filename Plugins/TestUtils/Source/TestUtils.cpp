@@ -2,7 +2,6 @@
 #include <Babylon/Plugins/TestUtils.h>
 
 #include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/decode.h>
 #include <bimg/encode.h>
