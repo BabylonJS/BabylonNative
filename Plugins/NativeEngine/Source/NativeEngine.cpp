@@ -1589,6 +1589,17 @@ namespace Babylon
             throw Napi::Error::New(Env(), "Lod exceeds the texture's mip level count.");
         }
 
+        // The mip dimensions must match the level implied by (base >> lod); otherwise bgfx would
+        // update a region that doesn't match the allocated mip level (asserts / UB on some backends).
+        const uint32_t shiftedWidth{baseWidth >> lodValue};
+        const uint32_t shiftedHeight{baseHeight >> lodValue};
+        const uint32_t expectedMipWidth{shiftedWidth > 1 ? shiftedWidth : 1};
+        const uint32_t expectedMipHeight{shiftedHeight > 1 ? shiftedHeight : 1};
+        if (mipWidth != expectedMipWidth || mipHeight != expectedMipHeight)
+        {
+            throw Napi::Error::New(Env(), "Mip dimensions do not match the base dimensions and lod.");
+        }
+
         if (!texture->IsValid())
         {
             if (isCube)
