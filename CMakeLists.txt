@@ -53,8 +53,8 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.5.0
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/CedricGuillemet/JsRuntimeHost.git
-    GIT_TAG 0e34a58a2e0a986efbf7b70434b61739c451afb7) # quickjs branch (BabylonJS/JsRuntimeHost#132)
+    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
+    GIT_TAG 8cd142951018de07c89c23f726fb7dc9c8374599)
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
