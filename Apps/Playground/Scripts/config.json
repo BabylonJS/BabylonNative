@@ -557,7 +557,7 @@
             "playgroundId": "#RKKCHG#15",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "GaussianSplatting throws Uncaught Error: Invalid argument on Babylon Native (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gsplat-splat-modify.png"
         },
         {
@@ -592,7 +592,7 @@
             "playgroundId": "#XSNFXP#2",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "gsplat-spz-sh.png"
         },
         {
@@ -618,7 +618,7 @@
             "title": "SPZ v3 - Splat",
             "playgroundId": "#V7CV8W#4",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/splats/combined_SPZv3.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "gsplat-spz-v3.png"
         },
         {
@@ -747,7 +747,7 @@
             "title": "EXT_lights_ies",
             "playgroundId": "#UIAXAU#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Loading remote https:// assets is not supported",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/EXT_lights_ies/Example.gltf: 'name' is not defined (thrown during glTF load, before pixel comparison)",
             "referenceImage": "ext-lights-ies.png"
         },
         {
@@ -957,7 +957,7 @@
             "title": "CSGVertColor",
             "playgroundId": "#R0H1IX#4",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "csgVertColor.png"
         },
         {
@@ -1160,7 +1160,7 @@
             "playgroundId": "#NZ2RZY#4",
             "renderCount": 50,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison)",
             "referenceImage": "chibi-rex.png"
         },
         {
@@ -1168,14 +1168,14 @@
             "playgroundId": "#QATUCH#32",
             "renderCount": 150,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 239982/240000 pixels differ (99.99%) on Babylon Native (renders essentially blank)",
             "referenceImage": "yeti.png"
         },
         {
             "title": "CSG",
             "playgroundId": "#R0H1IX#8",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "csg.png"
         },
         {
@@ -1204,14 +1204,14 @@
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "textureAreaLightStandard.png"
         },
         {
             "title": "Textured - Area Lights - PBR",
             "playgroundId": "#T7FXR8#102",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "texturedAreaLightsPBR.png"
         },
         {
@@ -1494,7 +1494,7 @@
             "title": "GLTF Buggy with Meshopt Compression",
             "playgroundId": "#CIYTF6#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/Buggy/glTF-MeshOpt/Buggy.gltf: Object doesn't support property or method 'createObjectURL' (missing DOM API; thrown before pixel comparison)",
             "referenceImage": "gltfBuggyMeshopt.png"
         },
         {
@@ -1650,7 +1650,7 @@
             "title": "GlowLayer",
             "playgroundId": "#LRFB2D#262",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 237981/240000 pixels differ (99.16%) on Babylon Native",
             "referenceImage": "GlowLayer.png"
         },
         {
@@ -1902,7 +1902,7 @@
             "playgroundId": "#LRFB2D#263",
             "renderCount": 30,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 236380/240000 pixels differ (98.49%) on Babylon Native",
             "referenceImage": "prepass-ssao-glow-layer.png"
         },
         {
@@ -2833,7 +2833,7 @@
             "title": "Normed 16 bits texture formats",
             "playgroundId": "#SOCPNB#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 33322, type 5. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "Normed-16-bits-texture-formats.png"
         },
         {
@@ -2876,7 +2876,7 @@
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/PowerPlant/powerplant.obj: Out of stack space (OBJ parser recursion overflow; thrown before pixel comparison)",
             "referenceImage": "FrameGraph-nrge-depth-of-field.png"
         },
         {
@@ -4471,252 +4471,252 @@
             "title": "GPU Particles - Basic Properties - Size",
             "playgroundId": "#3HLS3D#2",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-size.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Scale",
             "playgroundId": "#52KBLI#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-scale.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Color",
             "playgroundId": "#30PAK9#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-color.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Speed",
             "playgroundId": "#KU4I4J#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Angular Speed",
             "playgroundId": "#9MOFU4#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-angular-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Rotation",
             "playgroundId": "#DEVC42#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-rotation.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#QC8XA2#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-translation-pivot.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Direction",
             "playgroundId": "#M6QEUB#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-direction.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Gravity",
             "playgroundId": "#9AGK0W#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-gravity.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Emit Rate",
             "playgroundId": "#IBWI36#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-emit-rate.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Lifetime",
             "playgroundId": "#RL6BAK#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-lifetime.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Target Stop Duration",
             "playgroundId": "#4AJC72#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-target-stop.png"
         },
         {
             "title": "GPU Particles - Change - Size",
             "playgroundId": "#KF9X69#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size.png"
         },
         {
             "title": "GPU Particles - Change - Color",
             "playgroundId": "#UWRCY4#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color.png"
         },
         {
             "title": "GPU Particles - Change - Speed",
             "playgroundId": "#KBHNCB#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed.png"
         },
         {
             "title": "GPU Particles - Change - Speed Limit",
             "playgroundId": "#CTNM3R#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed-limit.png"
         },
         {
             "title": "GPU Particles - Change - Angular Speed",
             "playgroundId": "#1NLEIC#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-angular-speed.png"
         },
         {
             "title": "GPU Particles - Change - Drag",
             "playgroundId": "#02KAQL#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-drag.png"
         },
         {
             "title": "GPU Particles - Change - Size Range",
             "playgroundId": "#4EWZJ9#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size-range.png"
         },
         {
             "title": "GPU Particles - Change - Color Range",
             "playgroundId": "#3M1JEJ#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color-range.png"
         },
         {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-point.png"
         },
         {
             "title": "GPU Particles - Emitters - Box",
             "playgroundId": "#2XD9BC#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-box.png"
         },
         {
             "title": "GPU Particles - Emitters - Sphere",
             "playgroundId": "#H7XR87#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Sphere",
             "playgroundId": "#0H1ATM#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Hemisphere",
             "playgroundId": "#MRQTX7#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-hemisphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Cylinder",
             "playgroundId": "#FGRJM1#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cylinder",
             "playgroundId": "#40T8G0#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Cone",
             "playgroundId": "#W73H92#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cone.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cone",
             "playgroundId": "#GSYICK#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cone.png"
         },
         {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-y.png"
         },
         {
             "title": "GPU Particles - Billboard Stretched",
             "playgroundId": "#0612KX#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-stretched.png"
         },
         {
             "title": "GPU Particles - Multiply Blend",
             "playgroundId": "#D7LQAZ#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-multiply-blend.png"
         },
         {
             "title": "GPU Particles - Animations",
             "playgroundId": "#B0EJQY#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-animations.png"
         },
         {
             "title": "GPU Particles - Noise",
             "playgroundId": "#P6JQIP#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-noise.png"
         },
         {
             "title": "GPU Particles - Flowmaps",
             "playgroundId": "#SGAEHS#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Native lacks the 'Image' DOM constructor: throws ReferenceError: 'Image' is not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-flowmaps.png"
         },
         {
             "title": "GPU Particles - Local Space",
             "playgroundId": "#NK19TU#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-local-space.png"
         },
         {
