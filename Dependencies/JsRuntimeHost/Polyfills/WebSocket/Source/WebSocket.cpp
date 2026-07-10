@@ -43,11 +43,65 @@ namespace Babylon::Polyfills::Internal
         , m_url(info[0].As<Napi::String>())
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
+        // Keep the JS wrapper (and therefore this native object) alive for the
+        // lifetime of the connection. The socket delivers open/message/error/
+        // close notifications asynchronously via m_runtimeScheduler. Without a
+        // strong self-reference the wrapper could be garbage collected before
+        // those callbacks fire, so they would observe a cancelled cancellation
+        // source (or a destroyed `this`) and never run. The reference is
+        // released in CloseCallback, the socket's terminal event.
+        //
+        // A strong Napi::ObjectReference to the wrapper is used (rather than
+        // ObjectWrap::Ref()) so this compiles across every N-API backend,
+        // including the JSI backend whose ObjectWrap does not derive from
+        // Napi::Reference and therefore has no Ref()/Unref()/Value().
+        //
+        // ---------------------------------------------------------------------
+        // Relationship to the WHATWG WebSocket GC rules
+        // (https://websockets.spec.whatwg.org/#garbage-collection):
+        //
+        // The spec says a WebSocket must NOT be garbage collected while:
+        //   1. CONNECTING - if an open/message/error/close listener is set.
+        //   2. OPEN        - if a message/error/close listener is set
+        //                    (an `open` listener no longer counts once open).
+        //   3. CLOSING     - if an error/close listener is set.
+        //   4. it has an established connection with data queued to transmit.
+        // And if a WebSocket IS collected while still open, the user agent must
+        // start the closing handshake (send a Close frame). A CLOSED socket has
+        // no keep-alive requirement.
+        //
+        // This unconditional self-reference is a deliberate, conservative
+        // OVER-APPROXIMATION of those rules: it pins the wrapper for the entire
+        // connection regardless of ready state or which handlers are set. That
+        // satisfies every "must not be garbage collected" clause (1-4) by simply
+        // never collecting during the connection, and never trips the
+        // "collected while open" clause (the socket is never collected while
+        // open), so no normative requirement is violated.
+        //
+        // The trade-off is purely non-normative retention: a socket with no
+        // handlers, or an abandoned still-open socket, stays alive until its
+        // terminal close (or until runtime teardown, where Napi::Detach force-
+        // releases the reference) instead of being collectible as a browser
+        // permits - and consequently the spec's "start the closing handshake on
+        // GC while open" step is never exercised. Making the pin conditional on
+        // (ready state x registered handler) - and starting a closing handshake
+        // in the destructor when still OPEN - would match a browser's resource
+        // behavior more precisely, at the cost of added cross-thread complexity.
+        // This is intentionally left as the simpler, safe over-approximation.
+        // ---------------------------------------------------------------------
+        m_selfReference = Napi::Persistent(info.This().As<Napi::Object>());
         m_webSocket.Open();
     }
 
     WebSocket::~WebSocket()
     {
+        // Cancel any in-flight scheduler callbacks so they no-op instead of
+        // touching this destroyed wrapper. Note this does NOT start a WebSocket
+        // closing handshake: per the WHATWG GC rules a socket collected while
+        // still OPEN should send a Close frame, but the unconditional self-
+        // reference (see the constructor) means the wrapper is never collected
+        // while open - it is pinned until its terminal close or until runtime
+        // teardown - so that path is intentionally not implemented here.
         m_cancellationSource->cancel();
     }
 
@@ -209,6 +263,16 @@ namespace Babylon::Polyfills::Internal
             {
                 return;
             }
+            // Move the connection keep-alive established in the constructor into
+            // a local strong reference for the duration of this callback. This
+            // both releases the keep-alive (Close is the socket's terminal
+            // event) and ensures the wrapper is not finalized synchronously
+            // (and `this` deleted) while we are still executing - QuickJS frees
+            // objects the instant their refcount reaches zero. The wrapper is
+            // finalized safely when this local reference goes out of scope at
+            // the end of the callback. A moved-from ObjectReference is left
+            // empty, so the member no longer keeps the wrapper alive.
+            Napi::ObjectReference selfRef = std::move(m_selfReference);
             m_readyState = ReadyState::Closed;
             try
             {

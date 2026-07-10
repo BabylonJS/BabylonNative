@@ -11,6 +11,10 @@ on:
         required: false
         type: string
         default: g++
+      js-engine:
+        required: false
+        type: string
+        default: ''
       enable-sanitizers:
         required: false
         type: boolean
@@ -39,6 +43,7 @@ jobs:
         run: |
           cmake -B Build/ubuntu -G Ninja \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+            ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D ENABLE_THREAD_SANITIZER=${{ inputs.enable-thread-sanitizer && 'ON' || 'OFF' }} \
             -D CMAKE_C_COMPILER=${{ inputs.cc }} \

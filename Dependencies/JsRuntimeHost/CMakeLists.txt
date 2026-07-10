@@ -15,7 +15,7 @@ FetchContent_Declare(AndroidExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG 0b9f9b6d761909fbca9d3ab1f2d8ff1c3d25ed3d
+    GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(asio
     GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
@@ -51,6 +51,11 @@ FetchContent_Declare(UrlLib
     GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
     GIT_TAG e86ffb34e77092266145497681efc74e0a920ffe
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(quickjs-ng
+    GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
+    GIT_TAG 93d3f7df465027f487ed37e175a0bc3012fee79e
+    EXCLUDE_FROM_ALL)
+    
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
@@ -163,6 +168,11 @@ endif()
 
 if(BABYLON_DEBUG_TRACE)
     add_definitions(-DBABYLON_DEBUG_TRACE)
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
+    option(QJS_BUILD_LIBC "Build QuickJS with libc support." ON)
+    FetchContent_MakeAvailable_With_Message(quickjs-ng)
 endif()
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")

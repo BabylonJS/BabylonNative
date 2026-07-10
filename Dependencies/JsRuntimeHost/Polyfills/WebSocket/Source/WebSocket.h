@@ -55,5 +55,13 @@ namespace Babylon::Polyfills::Internal
         ReadyState m_readyState{ReadyState::Connecting};
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
+
+        // Strong reference to the JS wrapper object that keeps this instance
+        // alive for the duration of the connection, then released on the
+        // terminal close event. This is a deliberate, conservative over-
+        // approximation of the WHATWG WebSocket garbage-collection rules; see
+        // the extended discussion at its assignment in the constructor
+        // (WebSocket.cpp) and https://websockets.spec.whatwg.org/#garbage-collection.
+        Napi::ObjectReference m_selfReference{};
     };
 }

@@ -32,6 +32,12 @@ jobs:
       platform: x64
       js-engine: V8
 
+  Win32_x64_QuickJS:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      js-engine: QuickJS
+
   Win32_x64_Hermes:
     uses: ./.github/workflows/build-win32.yml
     with:
@@ -74,6 +80,11 @@ jobs:
     with:
       js-engine: V8
 
+  Android_QuickJS:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      js-engine: QuickJS
+
   Android_Hermes:
     uses: ./.github/workflows/build-android.yml
     with:
@@ -101,6 +112,13 @@ jobs:
       runs-on: macos-26
       enable-thread-sanitizer: true
 
+  macOS_Xcode264_QuickJS:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: '26.4'
+      runs-on: macos-26
+      js-engine: QuickJS
+
   # ── iOS ───────────────────────────────────────────────────────
   iOS_Xcode264:
     uses: ./.github/workflows/build-ios.yml
@@ -118,6 +136,11 @@ jobs:
     with:
       cc: clang
       cxx: clang++
+
+  Ubuntu_QuickJS:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      js-engine: QuickJS
 
   Ubuntu_Sanitizers_clang:
     uses: ./.github/workflows/build-linux.yml

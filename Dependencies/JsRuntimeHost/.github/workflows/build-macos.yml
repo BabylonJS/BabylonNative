@@ -10,6 +10,10 @@ on:
         required: false
         type: string
         default: macos-latest
+      js-engine:
+        required: false
+        type: string
+        default: ''
       enable-sanitizers:
         required: false
         type: boolean
@@ -32,6 +36,7 @@ jobs:
       - name: Configure CMake
         run: |
           cmake -B Build/macOS -G Xcode \
+            ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D ENABLE_THREAD_SANITIZER=${{ inputs.enable-thread-sanitizer && 'ON' || 'OFF' }}
 

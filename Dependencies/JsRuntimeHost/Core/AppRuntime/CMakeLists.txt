@@ -52,6 +52,8 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
         PRIVATE v8inspector)
 
     set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
+elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
+    target_link_libraries(AppRuntime PRIVATE qjs)
 endif()
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)

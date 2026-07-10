@@ -28,11 +28,13 @@ namespace Babylon::Polyfills::Performance
         g_startTime = std::chrono::high_resolution_clock::now();
 
         auto performance = env.Global().Get(JS_INSTANCE_NAME).As<Napi::Object>();
-        if (performance.IsUndefined())
+        if (!performance.IsUndefined())
         {
-            performance = Napi::Object::New(env);
-            env.Global().Set(JS_INSTANCE_NAME, performance);
+            return; // already defined (might be QuickJS built-in)
         }
+
+        performance = Napi::Object::New(env);
+        env.Global().Set(JS_INSTANCE_NAME, performance);
 
         performance.Set("now", Napi::Function::New(env, Now, "now"));
     }
