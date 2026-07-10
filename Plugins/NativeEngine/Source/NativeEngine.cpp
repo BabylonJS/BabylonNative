@@ -1539,7 +1539,7 @@ namespace Babylon
         const auto baseHeight{info[5].As<Napi::Number>().Uint32Value()};
         const auto mipWidth{info[6].As<Napi::Number>().Uint32Value()};
         const auto mipHeight{info[7].As<Napi::Number>().Uint32Value()};
-        const auto format{static_cast<bimg::TextureFormat::Enum>(info[8].As<Napi::Number>().Uint32Value())};
+        const auto formatValue{info[8].As<Napi::Number>().Uint32Value()};
         const auto isCube{info[9].As<Napi::Boolean>().Value()};
         const auto hasMips{info[10].As<Napi::Boolean>().Value()};
         const auto invertY{info[11].As<Napi::Boolean>().Value()};
@@ -1553,6 +1553,14 @@ namespace Babylon
         {
             throw Napi::Error::New(Env(), "Invalid base or mip dimensions for the texture.");
         }
+
+        // The format is a raw JS enum value; validate it before narrowing so an out-of-range value
+        // can't index past bimg/bgfx's format tables in Create*/imageGetSize (OOB read).
+        if (formatValue >= bimg::TextureFormat::Count)
+        {
+            throw Napi::Error::New(Env(), "Invalid texture format.");
+        }
+        const auto format{static_cast<bimg::TextureFormat::Enum>(formatValue)};
 
         // Cube textures must be square and address one of the six faces; 2D textures have a single
         // face. Validate the JS-provided face index before narrowing it to uint8_t.
