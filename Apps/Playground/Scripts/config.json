@@ -2268,14 +2268,12 @@
         },
         {
             "title": "Load GUI snippet with unicode",
-            "playgroundId": "#YS93KY#0",
-            "renderCount": 50,
+            "playgroundId": "#YS93KY#1",
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
             "title": "Parse GUI json with unicode",
-            "playgroundId": "#ERVGT5#0",
-            "renderCount": 50,
+            "playgroundId": "#ERVGT5#1",
             "referenceImage": "parseGuiJsonWithUnicode.png"
         },
         {

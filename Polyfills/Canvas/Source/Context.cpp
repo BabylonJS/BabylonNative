@@ -728,6 +728,15 @@ namespace Babylon::Polyfills::Internal
             nvgEndFrame(*m_nvg);
             frameBuffer.Unbind();
 
+            // Reserve the view id for the eventual canvas->texture blit NOW, while we are
+            // sequenced immediately after this canvas' draws but before the scene/backbuffer
+            // render is recorded. bgfx processes blits in numeric view-id order, so the copy
+            // must land AFTER the canvas Flush (source ready) yet BEFORE the fullscreen ADT
+            // layer samples the destination texture. Deferring to CopyTexture's
+            // PeekNextViewId() would place the blit after the backbuffer view, so the layer
+            // would sample the previous frame's content (a one-frame GUI latency).
+            m_canvas->SetBlitViewId(m_graphicsContext.AcquireNewViewId());
+
             for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
             {
                 // sanity check no unreleased buffers
