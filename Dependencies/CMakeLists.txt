@@ -207,6 +207,20 @@ if(NOT TARGET draco AND NOT TARGET draco_static)
 endif()
 
 # --------------------------------------------------
+# meshoptimizer (mesh decompression, native replacement for the WASM decoder)
+# --------------------------------------------------
+if(NOT TARGET meshoptimizer)
+    set(MESHOPT_BUILD_DEMO OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_BUILD_GLTFPACK OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_WERROR OFF CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable_With_Message(meshoptimizer)
+
+    set_property(TARGET meshoptimizer PROPERTY FOLDER Dependencies/meshoptimizer)
+endif()
+
+# --------------------------------------------------
 # googletest
 # --------------------------------------------------
 if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))

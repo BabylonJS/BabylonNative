@@ -49,6 +49,10 @@ FetchContent_Declare(draco
     GIT_REPOSITORY https://github.com/google/draco.git
     GIT_TAG 1.5.7
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(meshoptimizer
+    GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
+    GIT_TAG v0.22
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
     EXCLUDE_FROM_ALL)

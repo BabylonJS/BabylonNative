@@ -111,6 +111,10 @@ endif()
 # Draco decoder that Babylon.js routes to when present.
 target_link_libraries(Embedding PRIVATE NativeDraco)
 
+# NativeMeshopt is always built: it provides the native replacement for the WASM
+# meshopt decoder that Babylon.js routes to when present.
+target_link_libraries(Embedding PRIVATE NativeMeshopt)
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
     target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS=1)
     target_link_libraries(Embedding PRIVATE NativeOptimizations)

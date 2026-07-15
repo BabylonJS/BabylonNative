@@ -6,6 +6,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #endif
 #include <Babylon/Plugins/NativeDraco.h>
+#include <Babylon/Plugins/NativeMeshopt.h>
 #if BABYLON_NATIVE_PLUGIN_NATIVECAMERA
 #include <Babylon/Plugins/NativeCamera.h>
 #endif
@@ -272,6 +273,7 @@ namespace Babylon::Embedding
             Babylon::Plugins::NativeEngine::Initialize(env);
 #endif
             Babylon::Plugins::NativeDraco::Initialize(env);
+            Babylon::Plugins::NativeMeshopt::Initialize(env);
 #if BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS
             Babylon::Plugins::NativeOptimizations::Initialize(env);
 #endif

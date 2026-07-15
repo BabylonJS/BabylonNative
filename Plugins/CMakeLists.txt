@@ -19,6 +19,7 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
 endif()
 
 add_subdirectory(NativeDraco)
+add_subdirectory(NativeMeshopt)
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
     add_subdirectory(NativeInput)
