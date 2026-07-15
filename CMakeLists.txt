@@ -23,7 +23,7 @@ FetchContent_Declare(AndroidExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG b9bf9d85fce37d5fc9dbfc4a4dc5e1531bee215a
+    GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
@@ -54,7 +54,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG f07d99119887131a89a3580ada9c2a8dbc7782f7)
+    GIT_TAG 8cd142951018de07c89c23f726fb7dc9c8374599)
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26

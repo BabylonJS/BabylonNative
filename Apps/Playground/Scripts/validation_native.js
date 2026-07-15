@@ -397,21 +397,36 @@
                                 }
                             }
 
-                            currentScene = eval(code + "\r\ncreateScene(engine)");
+                            const pgCode = code + "\r\ncreateScene(engine)";
+                            // Defer scene construction to a fresh macrotask so
+                            // eval()/createScene() run at a shallow native-stack
+                            // depth instead of nested inside the native snippet
+                            // load callback. Deep scenes otherwise pile onto the
+                            // native XHR dispatch frames and can overflow engines
+                            // with a small C stack (e.g. QuickJS).
+                            setTimeout(function () {
+                                try {
+                                    currentScene = eval(pgCode);
 
-                            if (currentScene.then) {
-                                // Handle if createScene returns a promise
-                                currentScene.then(function (scene) {
-                                    currentScene = scene;
-                                    processCurrentScene(test, referenceImage, done, compareFunction);
-                                }).catch(function (e) {
-                                    console.error(e);
+                                    if (currentScene.then) {
+                                        // Handle if createScene returns a promise
+                                        currentScene.then(function (scene) {
+                                            currentScene = scene;
+                                            processCurrentScene(test, referenceImage, done, compareFunction);
+                                        }).catch(function (e) {
+                                            console.error(e);
+                                            failTest(done);
+                                        });
+                                    } else {
+                                        // Handle if createScene returns a scene
+                                        processCurrentScene(test, referenceImage, done, compareFunction);
+                                    }
+                                }
+                                catch (e) {
+                                    console.error("Failed to evaluate playground snippet " + test.playgroundId + ": " + e);
                                     failTest(done);
-                                });
-                            } else {
-                                // Handle if createScene returns a scene
-                                processCurrentScene(test, referenceImage, done, compareFunction);
-                            }
+                                }
+                            }, 0);
                         }
                         catch (e) {
                             console.error("Failed to evaluate playground snippet " + test.playgroundId + ": " + e);
@@ -468,8 +483,23 @@
                             }
                         }
 
-                        currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
-                        processCurrentScene(test, renderImage, done, compareFunction);
+                        const scriptCode = scriptToRun + test.functionToCall + "(engine)";
+                        // Defer scene construction to a fresh macrotask so
+                        // eval()/<functionToCall>() run at a shallow native-stack
+                        // depth instead of nested inside the native XHR
+                        // completion callback. Deep scenes otherwise pile onto
+                        // the native XHR dispatch frames and can overflow engines
+                        // with a small C stack (e.g. QuickJS).
+                        setTimeout(function () {
+                            try {
+                                currentScene = eval(scriptCode);
+                                processCurrentScene(test, renderImage, done, compareFunction);
+                            }
+                            catch (e) {
+                                console.error(e);
+                                failTest(done);
+                            }
+                        }, 0);
                     }
                     catch (e) {
                         console.error(e);

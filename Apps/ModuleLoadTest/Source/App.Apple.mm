@@ -4,6 +4,8 @@
 #include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/Device.h>
 
+#import <Foundation/Foundation.h>
+
 #import <Metal/Metal.hpp>
 
 #include <sys/sysctl.h>

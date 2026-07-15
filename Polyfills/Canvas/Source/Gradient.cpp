@@ -88,8 +88,10 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Object CanvasGradient::CreateLinear(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float x1, float y1)
     {
-        Napi::HandleScope scope{ env };
-
+        // NOTE: Do not open a Napi::HandleScope here. The gradient object created below is
+        // returned to the caller, and a plain (non-escapable) HandleScope would release the
+        // handle on close. Under the reference-counted QuickJS Node-API port that frees the
+        // object's only reference, yielding a dangling value (typeof "unknown", no prototype).
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME).As<Napi::Function>();
         auto gradientValue = func.New({ Napi::Value::From(env, x0), Napi::Value::From(env, y0), Napi::Value::From(env, x1), Napi::Value::From(env, y1) });
         CanvasGradient::Unwrap(gradientValue)->context = context;
@@ -98,8 +100,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Object CanvasGradient::CreateRadial(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float r0, float x1, float y1, float r1)
     {
-        Napi::HandleScope scope{ env };
-
+        // See CreateLinear: no HandleScope here so the returned gradient handle is not freed on scope close.
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME).As<Napi::Function>();
         auto gradientValue = func.New({ Napi::Value::From(env, x0), Napi::Value::From(env, y0), Napi::Value::From(env, x1), Napi::Value::From(env, y1), Napi::Value::From(env, r0), Napi::Value::From(env, r1) });
         CanvasGradient::Unwrap(gradientValue)->context = context;
