@@ -350,6 +350,7 @@ if(BGFX_BUILD_EXAMPLES)
 		49-hextile
 		50-headless
 		51-gpufont
+		52-layered
 	)
 
 	foreach(EXAMPLE ${BGFX_EXAMPLES})
