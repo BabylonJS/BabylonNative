@@ -18,6 +18,8 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
     add_subdirectory(NativeEngine)
 endif()
 
+add_subdirectory(NativeDraco)
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
     add_subdirectory(NativeInput)
 endif()

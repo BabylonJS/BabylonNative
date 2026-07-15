@@ -168,6 +168,45 @@ if(NOT TARGET glslang)
 endif()
 
 # --------------------------------------------------
+# draco (mesh decompression, native replacement for the WASM decoder)
+# --------------------------------------------------
+if(NOT TARGET draco AND NOT TARGET draco_static)
+    set(DRACO_TESTS OFF CACHE BOOL "" FORCE)
+    set(DRACO_INSTALL OFF CACHE BOOL "" FORCE)
+    set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
+    set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable_With_Message(draco)
+
+    # The combined draco library target is named `draco` for MSVC and
+    # `draco_static` for other toolchains (static build); `draco::draco` aliases
+    # whichever exists.
+    if(TARGET draco)
+        set(_draco_lib draco)
+    else()
+        set(_draco_lib draco_static)
+    endif()
+
+    # draco adds its include paths as PRIVATE (see cmake/draco_targets.cmake
+    # draco_add_library), so linking draco::draco does not expose the draco/*
+    # headers to consumers. Re-export them as PUBLIC on the combined target.
+    # The generated draco/draco_features.h is emitted under CMAKE_BINARY_DIR
+    # (draco uses ${CMAKE_BINARY_DIR} as its generated-sources root).
+    target_include_directories(${_draco_lib} SYSTEM PUBLIC
+        "${draco_SOURCE_DIR}"
+        "${draco_SOURCE_DIR}/src"
+        "${draco_BINARY_DIR}"
+        "${CMAKE_BINARY_DIR}")
+
+    # Assign IDE folders for whichever draco targets exist.
+    foreach(_draco_target IN ITEMS draco draco_static)
+        if(TARGET ${_draco_target})
+            set_property(TARGET ${_draco_target} PROPERTY FOLDER Dependencies/draco)
+        endif()
+    endforeach()
+endif()
+
+# --------------------------------------------------
 # googletest
 # --------------------------------------------------
 if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))

@@ -107,6 +107,10 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
     target_link_libraries(Embedding PRIVATE NativeEncoding)
 endif()
 
+# NativeDraco is always built: it provides the native replacement for the WASM
+# Draco decoder that Babylon.js routes to when present.
+target_link_libraries(Embedding PRIVATE NativeDraco)
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
     target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS=1)
     target_link_libraries(Embedding PRIVATE NativeOptimizations)
