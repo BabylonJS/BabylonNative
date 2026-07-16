@@ -57,13 +57,6 @@ if(APPLE)
     set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
 elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App.X11.cpp")
-    # The OpenGL ExternalTexture backend supports single-sample GL_TEXTURE_2D
-    # handles, so run the basic GetInfo/Set/Get/Update tests. The render-path
-    # tests (pixel readback) and the array/layer-index test require GL test
-    # helpers and array-texture support that this backend does not implement yet.
-    set(ADDITIONAL_COMPILE_DEFINITIONS
-        PRIVATE SKIP_RENDER_TESTS
-        PRIVATE SKIP_EXTERNAL_TEXTURE_ARRAY_TESTS)
 elseif(WIN32)
     set(SOURCES ${SOURCES}
         "Source/App.Win32.cpp"
@@ -93,6 +86,15 @@ target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
 if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
+endif()
+
+if(GRAPHICS_API STREQUAL "OpenGL")
+    # The OpenGL ExternalTexture backend imports single-sample GL_TEXTURE_2D
+    # handles only, so run the basic GetInfo/Set/Get/Update tests on any OpenGL
+    # build (Linux, or the OpenGLWindowsDevOnly dev path). The render-path tests
+    # (pixel readback) and the array/layer-index test require GL test helpers and
+    # array-texture support that this backend does not implement yet.
+    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS SKIP_EXTERNAL_TEXTURE_ARRAY_TESTS)
 endif()
 
 add_test(NAME UnitTests COMMAND UnitTests)

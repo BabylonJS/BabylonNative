@@ -250,8 +250,8 @@ namespace Babylon::Plugins
     {
     public:
         // Implemented in ExternalTexture_Shared.h
-        Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint16_t>);
+        Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint32_t>, std::optional<uint32_t>);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint16_t>, std::optional<uint32_t>, std::optional<uint32_t>);
 
         Graphics::TextureT Get() const
         {
@@ -259,7 +259,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
+        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint32_t> /*width*/, std::optional<uint32_t> /*height*/, Info& info)
         {
             if (ptr->textureType() != MTL::TextureType2D && ptr->textureType() != MTL::TextureType2DMultisample)
             {

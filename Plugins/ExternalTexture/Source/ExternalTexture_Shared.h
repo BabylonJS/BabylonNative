@@ -2,9 +2,9 @@
 
 namespace Babylon::Plugins
 {
-    ExternalTexture::Impl::Impl(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    ExternalTexture::Impl::Impl(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint32_t> width, std::optional<uint32_t> height)
     {
-        GetInfo(ptr, overrideFormat, m_info);
+        GetInfo(ptr, overrideFormat, width, height, m_info);
 
         if (m_info.MipLevels != 1 && m_info.MipLevels != 0 && !IsFullMipChain(m_info.MipLevels, m_info.Width, m_info.Height))
         {
@@ -14,10 +14,10 @@ namespace Babylon::Plugins
         Set(ptr);
     }
 
-    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex)
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex, std::optional<uint32_t> width, std::optional<uint32_t> height)
     {
         Info info;
-        GetInfo(ptr, overrideFormat, info);
+        GetInfo(ptr, overrideFormat, width, height, info);
 
         DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips %d layers",
             this, int(info.Width), int(info.Height), int(info.MipLevels), int(info.NumLayers));
@@ -78,8 +78,8 @@ namespace Babylon::Plugins
         delete texture;
     }
 
-    ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
-        : m_impl{std::make_shared<Impl>(ptr, overrideFormat)}
+    ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint32_t> width, std::optional<uint32_t> height)
+        : m_impl{std::make_shared<Impl>(ptr, overrideFormat, width, height)}
     {
     }
 
@@ -131,9 +131,9 @@ namespace Babylon::Plugins
         });
     }
 
-    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex)
+    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex, std::optional<uint32_t> width, std::optional<uint32_t> height)
     {
-        m_impl->Update(ptr, overrideFormat, layerIndex);
+        m_impl->Update(ptr, overrideFormat, layerIndex, width, height);
     }
 
     Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env, std::optional<uint16_t> layerIndex) const

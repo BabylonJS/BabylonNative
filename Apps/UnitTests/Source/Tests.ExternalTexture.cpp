@@ -23,7 +23,7 @@ TEST(ExternalTexture, Construction)
     device.StartRenderingCurrentFrame();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
-    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
     Helpers::DestroyTexture(nativeTexture);
 
     EXPECT_EQ(externalTexture.Width(), 256u);
@@ -43,7 +43,7 @@ TEST(ExternalTexture, CreateForJavaScript)
     device.StartRenderingCurrentFrame();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
-    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
     Helpers::DestroyTexture(nativeTexture);
 
     std::promise<void> done{};
@@ -82,7 +82,7 @@ TEST(ExternalTexture, Update)
     device.StartRenderingCurrentFrame();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
-    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
     Helpers::DestroyTexture(nativeTexture);
 
     EXPECT_EQ(externalTexture.Width(), 256u);
@@ -94,7 +94,7 @@ TEST(ExternalTexture, Update)
     device.StartRenderingCurrentFrame();
 
     auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 128, 128);
-    externalTexture.Update(nativeTexture2);
+    externalTexture.Update(nativeTexture2, {}, {}, 128, 128);
     Helpers::DestroyTexture(nativeTexture2);
 
     EXPECT_EQ(externalTexture.Width(), 128u);
@@ -114,7 +114,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     device.StartRenderingCurrentFrame();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
-    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
     Helpers::DestroyTexture(nativeTexture);
 
     std::promise<void> addToContext{};
@@ -160,7 +160,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 
     // Update the external texture to a new texture.
     auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
-    externalTexture.Update(nativeTexture2);
+    externalTexture.Update(nativeTexture2, {}, {}, 256, 256);
     Helpers::DestroyTexture(nativeTexture2);
 
     device.FinishRenderingCurrentFrame();

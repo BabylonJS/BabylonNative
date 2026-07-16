@@ -11,7 +11,13 @@ namespace Babylon::Plugins
     class ExternalTexture final
     {
     public:
-        ExternalTexture(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
+        // width/height are required on the OpenGL/OpenGL ES backend and ignored on all
+        // others. BabylonNative's OpenGL renderer runs on an OpenGL ES 3.0 context, which
+        // provides no way to query a texture's dimensions from a bare handle
+        // (glGetTexLevelParameteriv was only added in ES 3.1). The caller that created the
+        // texture already knows its size, so it must supply it here. The D3D/Metal backends
+        // introspect the native texture and ignore these hints.
+        ExternalTexture(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint32_t> width = {}, std::optional<uint32_t> height = {});
         ~ExternalTexture();
 
         // Copy semantics
@@ -45,7 +51,9 @@ namespace Babylon::Plugins
         Napi::Promise AddToContextAsync(Napi::Env, std::optional<uint16_t> layerIndex = {}) const;
 
         // Updates to a new texture. If layerIndex is set, views only that array layer (single-slice).
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint16_t> layerIndex = {});
+        // width/height follow the same backend-specific contract as the constructor: required on
+        // OpenGL/OpenGL ES, ignored elsewhere.
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint16_t> layerIndex = {}, std::optional<uint32_t> width = {}, std::optional<uint32_t> height = {});
 
     private:
         class Impl;
