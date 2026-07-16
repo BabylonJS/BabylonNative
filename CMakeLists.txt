@@ -48,10 +48,16 @@ FetchContent_Declare(CMakeExtensions
 # cloned because CMake's shallow path fetches only branch tips. This tag is the
 # 2026-02-09 (Chrome 146) snapshot and contains commit
 # a44d7a3d78f23c680491c0fc04f53a1df62e02ff (the reference pin) plus 7 commits.
+# GIT_SUBMODULES "" disables submodule init: Dawn's .gitmodules declares ~53
+# nested submodules (angle, swiftshader, catapult, dxc, ...), and FetchContent
+# would otherwise recursively clone them all (very slow, multi-GB). They are not
+# needed — DAWN_FETCH_DEPENDENCIES (below) runs Dawn's fetch script at configure
+# time to pull only the deps the enabled backend requires.
 FetchContent_Declare(dawn
     GIT_REPOSITORY https://github.com/google/dawn.git
     GIT_TAG        v20260209.194954
     GIT_SHALLOW    TRUE
+    GIT_SUBMODULES ""
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
