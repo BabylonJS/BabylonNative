@@ -343,6 +343,14 @@ add_subdirectory(Dependencies)
 if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
     set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "" FORCE)
     set(DAWN_BUILD_SAMPLES   OFF CACHE BOOL "" FORCE)
+    set(DAWN_BUILD_TESTS     OFF CACHE BOOL "" FORCE)
+    # No windowing/surface toolkit is needed: the NativeDawn plugin creates its
+    # own surface (Win32-only) and builds surfaceless elsewhere. Disabling GLFW
+    # (and X11/Wayland) avoids Dawn configuring GLFW, which otherwise requires
+    # X11 dev packages (libxrandr-dev etc.) on Linux CI runners.
+    set(DAWN_USE_GLFW    OFF CACHE BOOL "" FORCE)
+    set(DAWN_USE_X11     OFF CACHE BOOL "" FORCE)
+    set(DAWN_USE_WAYLAND OFF CACHE BOOL "" FORCE)
     set(TINT_BUILD_TESTS     OFF CACHE BOOL "" FORCE)
     set(TINT_BUILD_CMD_TOOLS OFF CACHE BOOL "" FORCE)
 
