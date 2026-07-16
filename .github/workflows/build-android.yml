@@ -9,6 +9,10 @@ on:
       js-engine:
         required: true
         type: string
+      nativedawn:
+        required: false
+        type: boolean
+        default: false
 
 env:
   NDK_VERSION: '28.2.13676358'
@@ -40,6 +44,7 @@ jobs:
           fi
 
       - name: Build Playground ${{ inputs.js-engine }}
+        if: ${{ !inputs.nativedawn }}
         working-directory: Apps/Playground/Android
         run: |
           chmod +x gradlew
@@ -48,3 +53,20 @@ jobs:
             -PARM64Only \
             -PNDK_VERSION=${{ env.NDK_VERSION }} \
             -PSANITIZERS=OFF
+
+      # NativeDawn (WebGPU/Dawn, Vulkan backend) build: enabling the plugin
+      # force-disables NativeEngine. The Android app native lib has no Dawn code
+      # path, so build only the NativeDawn plugin target (via the -PNativeDawn
+      # gradle property, which also restricts the CMake `targets`) to validate it
+      # compiles/links; the full APK is not assembled.
+      - name: Build NativeDawn ${{ inputs.js-engine }}
+        if: ${{ inputs.nativedawn }}
+        working-directory: Apps/Playground/Android
+        run: |
+          chmod +x gradlew
+          ./gradlew :BabylonNative:externalNativeBuildRelease \
+            -PJSEngine=${{ inputs.js-engine }} \
+            -PARM64Only \
+            -PNDK_VERSION=${{ env.NDK_VERSION }} \
+            -PSANITIZERS=OFF \
+            -PNativeDawn=ON

@@ -41,6 +41,14 @@ FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
     EXCLUDE_FROM_ALL)
+# Dawn (WebGPU) — only populated when BABYLON_NATIVE_PLUGIN_NATIVEDAWN is ON
+# (see the guarded FetchContent_MakeAvailable below). Declaring it here is free;
+# no clone happens unless the plugin is enabled.
+FetchContent_Declare(dawn
+    GIT_REPOSITORY https://github.com/google/dawn.git
+    GIT_TAG a44d7a3d78f23c680491c0fc04f53a1df62e02ff
+    GIT_SHALLOW TRUE
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
     GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
@@ -117,6 +125,7 @@ option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphic
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEDAWN "Include experimental Babylon Native Plugin NativeDawn (WebGPU via Dawn)." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin NativeEncoding." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Enable WebP image parsing in NativeEngine (via bimg)." ON)
@@ -142,6 +151,17 @@ option(BABYLON_NATIVE_POLYFILL_SCHEDULING "Include Babylon Native Polyfill Sched
 option(BABYLON_NATIVE_POLYFILL_URL "Include Babylon Native Polyfill URL." ON)
 option(BABYLON_NATIVE_POLYFILL_WEBSOCKET "Include Babylon Native Polyfill WebSocket." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
+
+# NativeDawn (experimental WebGPU-via-Dawn backend) and NativeEngine (bgfx
+# backend) are mutually exclusive: they are two implementations of the same
+# rendering role. Enabling NativeDawn forces NativeEngine off so the Playground
+# (and Embedding layer) install exactly one graphics backend / _native engine.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
+        message(STATUS "BABYLON_NATIVE_PLUGIN_NATIVEDAWN is ON: forcing BABYLON_NATIVE_PLUGIN_NATIVEENGINE OFF (mutually exclusive backends).")
+    endif()
+    set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE OFF CACHE BOOL "Include Babylon Native Plugin NativeEngine." FORCE)
+endif()
 
 # Embedding
 option(BABYLON_NATIVE_EMBEDDING "Build the cross-platform Babylon::Embedding facade (Runtime + View)." ON)
@@ -304,6 +324,56 @@ if(BABYLON_DEBUG_TRACE)
 endif()
 
 add_subdirectory(Dependencies)
+
+# ---- Experimental NativeDawn plugin: pull in Dawn (WebGPU) ----
+# Dawn is a large dependency, so it is only fetched + built when NativeDawn is
+# enabled. It is declared (git) alongside the other dependencies above but only
+# populated here, inside this guard, so builds without
+# BABYLON_NATIVE_PLUGIN_NATIVEDAWN never clone Dawn.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "" FORCE)
+    set(DAWN_BUILD_SAMPLES   OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_TESTS     OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_CMD_TOOLS OFF CACHE BOOL "" FORCE)
+
+    # Build exactly one GPU backend per platform, with the matching Tint shader
+    # writer. The WGSL reader (input) is always required; the SPIR-V/GLSL readers,
+    # the WGSL writer and the IR-binary/GLSL-validator are never needed here.
+    set(TINT_BUILD_SPV_READER     OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_WGSL_READER    ON  CACHE BOOL "" FORCE)
+    set(TINT_BUILD_WGSL_WRITER    OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_GLSL_WRITER    OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_GLSL_VALIDATOR OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_IR_BINARY      OFF CACHE BOOL "" FORCE)
+
+    # Start with every GPU backend + shader writer off; enable one set per platform.
+    set(DAWN_ENABLE_D3D11    OFF CACHE BOOL "" FORCE)
+    set(DAWN_ENABLE_D3D12    OFF CACHE BOOL "" FORCE)
+    set(DAWN_ENABLE_VULKAN   OFF CACHE BOOL "" FORCE)
+    set(DAWN_ENABLE_OPENGLES OFF CACHE BOOL "" FORCE)
+    set(DAWN_ENABLE_METAL    OFF CACHE BOOL "" FORCE)
+    set(DAWN_ENABLE_NULL     OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_HLSL_WRITER OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_MSL_WRITER  OFF CACHE BOOL "" FORCE)
+    set(TINT_BUILD_SPV_WRITER  OFF CACHE BOOL "" FORCE)
+
+    if(WIN32)
+        # Windows: Direct3D 12 (HLSL).
+        set(DAWN_ENABLE_D3D12      ON CACHE BOOL "" FORCE)
+        set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "" FORCE)
+    elseif(APPLE)
+        # macOS / iOS: Metal (MSL).
+        set(DAWN_ENABLE_METAL      ON CACHE BOOL "" FORCE)
+        set(TINT_BUILD_MSL_WRITER  ON CACHE BOOL "" FORCE)
+    else()
+        # Android / Linux: Vulkan (SPIR-V).
+        set(DAWN_ENABLE_VULKAN     ON CACHE BOOL "" FORCE)
+        set(TINT_BUILD_SPV_WRITER  ON CACHE BOOL "" FORCE)
+    endif()
+
+    FetchContent_MakeAvailable_With_Message(dawn)
+endif()
+
 add_subdirectory(Core)
 add_subdirectory(Plugins)
 add_subdirectory(Polyfills)

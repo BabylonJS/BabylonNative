@@ -10,6 +10,10 @@ if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
     add_subdirectory(NativeCapture)
 endif()
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    add_subdirectory(NativeDawn)
+endif()
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
     add_subdirectory(NativeEncoding)
 endif()
