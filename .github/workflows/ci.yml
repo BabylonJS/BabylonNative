@@ -213,11 +213,15 @@ jobs:
   MacOS_NativeDawn:
     uses: ./.github/workflows/build-macos.yml
     with:
+      runs-on: macos-26
+      xcode-version: "26.4"
       nativedawn: true
 
   iOS_NativeDawn:
     uses: ./.github/workflows/build-ios.yml
     with:
+      runs-on: macos-26
+      xcode-version: "26.4"
       deployment-target: '18.0'
       nativedawn: true
 

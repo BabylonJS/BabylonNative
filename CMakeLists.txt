@@ -41,13 +41,17 @@ FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
     EXCLUDE_FROM_ALL)
-# Dawn (WebGPU) — only populated when BABYLON_NATIVE_PLUGIN_NATIVEDAWN is ON
-# (see the guarded FetchContent_MakeAvailable below). Declaring it here is free;
-# no clone happens unless the plugin is enabled.
+# Dawn (WebGPU) — only populated + built when BABYLON_NATIVE_PLUGIN_NATIVEDAWN is
+# ON (see the guarded FetchContent_MakeAvailable below). Declaring it here is
+# free; no clone happens unless the plugin is enabled. Pinned to a Dawn dated
+# tag (a branch tip) so GIT_SHALLOW works: a raw commit SHA cannot be shallow-
+# cloned because CMake's shallow path fetches only branch tips. This tag is the
+# 2026-02-09 (Chrome 146) snapshot and contains commit
+# a44d7a3d78f23c680491c0fc04f53a1df62e02ff (the reference pin) plus 7 commits.
 FetchContent_Declare(dawn
     GIT_REPOSITORY https://github.com/google/dawn.git
-    GIT_TAG a44d7a3d78f23c680491c0fc04f53a1df62e02ff
-    GIT_SHALLOW TRUE
+    GIT_TAG        v20260209.194954
+    GIT_SHALLOW    TRUE
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
@@ -373,7 +377,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
 
     FetchContent_MakeAvailable_With_Message(dawn)
 endif()
-
 add_subdirectory(Core)
 add_subdirectory(Plugins)
 add_subdirectory(Polyfills)
