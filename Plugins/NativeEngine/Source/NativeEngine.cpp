@@ -1722,10 +1722,13 @@ namespace Babylon
             mipHeight = 1;
         }
         const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
+        // A cube texture is addressed by 6 faces per array layer (bgfx side index 0-5). The JS side passes the
+        // face in the same "layer" argument used for 2D-array slices, so the valid range is 6*numLayers.
+        const uint16_t maxLayers{texture->IsCube() ? static_cast<uint16_t>(6 * numLayers) : numLayers};
         if (width == 0 || height == 0 ||
             static_cast<uint32_t>(x) + width > mipWidth ||
             static_cast<uint32_t>(y) + height > mipHeight ||
-            layer >= numLayers)
+            layer >= maxLayers)
         {
             throw Napi::Error::New(info.Env(), "updateTextureData region is out of bounds");
         }
@@ -1760,7 +1763,16 @@ namespace Babylon
         {
             std::memcpy(mem->data, bytes, requiredSize);
         }
-        texture->Update2D(layer, mip, x, targetY, width, height, mem);
+        if (texture->IsCube())
+        {
+            // bgfx addresses a cube texture by (array layer, side 0-5). Only a single (non-array) cube is
+            // supported here, so the JS "layer" argument is the face/side index.
+            texture->UpdateCube(0, static_cast<uint8_t>(layer), mip, x, targetY, width, height, mem);
+        }
+        else
+        {
+            texture->Update2D(layer, mip, x, targetY, width, height, mem);
+        }
     }
 
     void NativeEngine::LoadRawTexture2DArray(const Napi::CallbackInfo& info)

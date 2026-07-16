@@ -31,6 +31,7 @@ namespace Babylon::Graphics
         uint16_t Width() const;
         uint16_t Height() const;
         bool HasMips() const;
+        bool IsCube() const;
         uint16_t NumLayers() const;
         bgfx::TextureFormat::Enum Format() const;
         uint64_t Flags() const;
@@ -55,6 +56,7 @@ namespace Babylon::Graphics
         uint16_t m_width{0};
         uint16_t m_height{0};
         bool m_hasMips{false};
+        bool m_isCube{false};
         uint16_t m_numLayers{0};
         bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Enum::Unknown};
         uint64_t m_flags{BGFX_TEXTURE_NONE};

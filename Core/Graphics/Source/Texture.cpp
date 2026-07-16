@@ -64,6 +64,7 @@ namespace Babylon::Graphics
         m_numLayers = numLayers;
         m_format = format;
         m_flags = flags;
+        m_isCube = false;
     }
 
     void Texture::Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -83,6 +84,7 @@ namespace Babylon::Graphics
         m_numLayers = numLayers;
         m_format = format;
         m_flags = flags;
+        m_isCube = true;
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -103,6 +105,7 @@ namespace Babylon::Graphics
         m_numLayers = numLayers;
         m_format = format;
         m_flags = flags;
+        m_isCube = false;
     }
 
     bgfx::TextureHandle Texture::Handle() const
@@ -123,6 +126,11 @@ namespace Babylon::Graphics
     bool Texture::HasMips() const
     {
         return m_hasMips;
+    }
+
+    bool Texture::IsCube() const
+    {
+        return m_isCube;
     }
 
     uint16_t Texture::NumLayers() const
