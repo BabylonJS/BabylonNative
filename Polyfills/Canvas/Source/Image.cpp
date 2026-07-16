@@ -193,6 +193,17 @@ namespace Babylon::Polyfills::Internal
         m_onerrorHandlerRef = Napi::Persistent(eventHandler);
     }
 
+    const uint8_t* NativeCanvasImage::GetPixels() const
+    {
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        if (m_imageContainer != nullptr)
+        {
+            return static_cast<const uint8_t*>(m_imageContainer->m_data);
+        }
+#endif
+        return nullptr;
+    }
+
     int NativeCanvasImage::CreateNVGImageForContext(NVGcontext* nvgContext) const
     {
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES

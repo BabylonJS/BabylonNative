@@ -9,6 +9,7 @@
 #include "nanovg/nanovg_filterstack.h"
 #include <variant>
 #include <vector>
+#include <cstdint>
 
 struct NVGcontext;
 
@@ -26,6 +27,10 @@ namespace Babylon::Polyfills::Internal
         virtual ~Context();
 
         NVGcontext* GetNVGContext() const { return *m_nvg.get(); }
+
+        // Copies a region of the CPU-side pixel mirror (populated by DrawImage) into dst (w*h*4 RGBA8 bytes).
+        // Out-of-range pixels are written as zero. Used to implement getImageData without a GPU readback.
+        void ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst) const;
 
     private:
         void FillRect(const Napi::CallbackInfo&);
@@ -136,6 +141,14 @@ namespace Babylon::Polyfills::Internal
         void FlushGraphicResources() override;
         void PlayPath2D(const NativeCanvasPath2D* path);
         void SetFilterStack();
+
+        // CPU-side RGBA8 mirror of the canvas, sized to the canvas, populated by DrawImage so that
+        // getImageData can return the exact decoded pixels (the GPU nanovg framebuffer is not read back).
+        std::vector<uint8_t> m_cpuPixels;
+        uint32_t m_cpuWidth{0};
+        uint32_t m_cpuHeight{0};
+        void EnsureCpuBuffer();
+        void BlitImageToCpu(const NativeCanvasImage& image, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh);
 
         friend class Canvas;
     };

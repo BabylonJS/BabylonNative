@@ -2,6 +2,7 @@
 #include <map>
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <optional>
 #include <regex>
 
@@ -765,6 +766,111 @@ namespace Babylon::Polyfills::Internal
         nvgArc(*m_nvg, x, y, radius, startAngle, endAngle, winding);
     }
 
+    void Context::EnsureCpuBuffer()
+    {
+        const uint32_t width = m_canvas != nullptr ? m_canvas->GetWidth() : 0;
+        const uint32_t height = m_canvas != nullptr ? m_canvas->GetHeight() : 0;
+        if (width != m_cpuWidth || height != m_cpuHeight || m_cpuPixels.empty())
+        {
+            m_cpuWidth = width;
+            m_cpuHeight = height;
+            m_cpuPixels.assign(static_cast<size_t>(width) * height * 4, 0);
+        }
+    }
+
+    void Context::BlitImageToCpu(const NativeCanvasImage& image, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh)
+    {
+        const uint8_t* src = image.GetPixels();
+        if (src == nullptr || dw == 0 || dh == 0)
+        {
+            return;
+        }
+
+        EnsureCpuBuffer();
+        if (m_cpuPixels.empty())
+        {
+            return;
+        }
+
+        const uint32_t srcWidth = image.GetWidth();
+        const uint32_t srcHeight = image.GetHeight();
+
+        for (uint32_t j = 0; j < dh; ++j)
+        {
+            const int32_t destY = dy + static_cast<int32_t>(j);
+            if (destY < 0 || destY >= static_cast<int32_t>(m_cpuHeight))
+            {
+                continue;
+            }
+
+            // Nearest-neighbor sample of the source row (exact when dh == sh).
+            const int32_t srcYRel = static_cast<int32_t>(static_cast<uint64_t>(j) * sh / dh);
+            const int32_t srcY = sy + srcYRel;
+            if (srcY < 0 || srcY >= static_cast<int32_t>(srcHeight))
+            {
+                continue;
+            }
+
+            for (uint32_t i = 0; i < dw; ++i)
+            {
+                const int32_t destX = dx + static_cast<int32_t>(i);
+                if (destX < 0 || destX >= static_cast<int32_t>(m_cpuWidth))
+                {
+                    continue;
+                }
+
+                const int32_t srcXRel = static_cast<int32_t>(static_cast<uint64_t>(i) * sw / dw);
+                const int32_t srcX = sx + srcXRel;
+                if (srcX < 0 || srcX >= static_cast<int32_t>(srcWidth))
+                {
+                    continue;
+                }
+
+                const size_t srcIndex = (static_cast<size_t>(srcY) * srcWidth + srcX) * 4;
+                const size_t destIndex = (static_cast<size_t>(destY) * m_cpuWidth + destX) * 4;
+                m_cpuPixels[destIndex + 0] = src[srcIndex + 0];
+                m_cpuPixels[destIndex + 1] = src[srcIndex + 1];
+                m_cpuPixels[destIndex + 2] = src[srcIndex + 2];
+                m_cpuPixels[destIndex + 3] = src[srcIndex + 3];
+            }
+        }
+    }
+
+    void Context::ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst) const
+    {
+        const size_t total = static_cast<size_t>(w) * h * 4;
+        std::memset(dst, 0, total);
+        if (m_cpuPixels.empty())
+        {
+            return;
+        }
+
+        for (uint32_t j = 0; j < h; ++j)
+        {
+            const int32_t srcY = sy + static_cast<int32_t>(j);
+            if (srcY < 0 || srcY >= static_cast<int32_t>(m_cpuHeight))
+            {
+                continue;
+            }
+
+            for (uint32_t i = 0; i < w; ++i)
+            {
+                const int32_t srcX = sx + static_cast<int32_t>(i);
+                if (srcX < 0 || srcX >= static_cast<int32_t>(m_cpuWidth))
+                {
+                    continue;
+                }
+
+                const size_t srcIndex = (static_cast<size_t>(srcY) * m_cpuWidth + srcX) * 4;
+                const size_t destIndex = (static_cast<size_t>(j) * w + i) * 4;
+                dst[destIndex + 0] = m_cpuPixels[srcIndex + 0];
+                dst[destIndex + 1] = m_cpuPixels[srcIndex + 1];
+                dst[destIndex + 2] = m_cpuPixels[srcIndex + 2];
+                dst[destIndex + 3] = m_cpuPixels[srcIndex + 3];
+            }
+        }
+    }
+
     void Context::DrawImage(const Napi::CallbackInfo& info)
     {
         const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(info[0].As<Napi::Object>());
@@ -800,6 +906,9 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
+
+            BlitImageToCpu(*canvasImage, 0, 0, canvasImage->GetWidth(), canvasImage->GetHeight(),
+                static_cast<int32_t>(dx), static_cast<int32_t>(dy), canvasImage->GetWidth(), canvasImage->GetHeight());
         }
         else if (info.Length() == 5)
         {
@@ -819,6 +928,9 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
+
+            BlitImageToCpu(*canvasImage, 0, 0, canvasImage->GetWidth(), canvasImage->GetHeight(),
+                static_cast<int32_t>(dx), static_cast<int32_t>(dy), static_cast<uint32_t>(dWidth), static_cast<uint32_t>(dHeight));
         }
         else if (info.Length() == 9)
         {
@@ -844,6 +956,9 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
+
+            BlitImageToCpu(*canvasImage, sx, sy, sWidth, sHeight,
+                static_cast<int32_t>(dx), static_cast<int32_t>(dy), static_cast<uint32_t>(dWidth), static_cast<uint32_t>(dHeight));
         }
         else
         {
@@ -853,13 +968,12 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
     {
-        // TODO: support source x and y
-        //const auto sx = info[0].As<Napi::Number>().Uint32Value();
-        //const auto sy = info[1].As<Napi::Number>().Uint32Value();
+        const auto sx = info[0].As<Napi::Number>().Int32Value();
+        const auto sy = info[1].As<Napi::Number>().Int32Value();
         const auto sw = info[2].As<Napi::Number>().Uint32Value();
         const auto sh = info[3].As<Napi::Number>().Uint32Value();
 
-        return ImageData::CreateInstance(info.Env(), this, sw, sh);
+        return ImageData::CreateInstance(info.Env(), this, sx, sy, sw, sh);
     }
 
     void Context::SetLineDash(const Napi::CallbackInfo& info)
