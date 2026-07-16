@@ -289,17 +289,34 @@ namespace Babylon
 
             if (generateMips)
             {
-                if (image->m_format == bimg::TextureFormat::RGB8)
+                // bimg::imageGenerateMips only supports RGBA8 and RGBA32F source data; for any
+                // other format it returns NULL. Convert first so mip generation (and the
+                // subsequent GPU upload) succeeds. High-precision / float formats are promoted to
+                // RGBA32F to preserve range; everything else - including single/dual-channel,
+                // RGB8/BGRA8 and block-compressed formats such as BC1/DXT1 - is decoded to RGBA8.
+                // Without this, e.g. a BC1 texture with generateMips produced a NULL image that the
+                // caller dereferenced, crashing the process.
+                if (image->m_format != bimg::TextureFormat::RGBA8 &&
+                    image->m_format != bimg::TextureFormat::RGBA32F)
                 {
+                    const bimg::TextureFormat::Enum dstFormat =
+                        (image->m_format == bimg::TextureFormat::R16 ||
+                         image->m_format == bimg::TextureFormat::R16F ||
+                         image->m_format == bimg::TextureFormat::RG16F ||
+                         image->m_format == bimg::TextureFormat::RG32F ||
+                         image->m_format == bimg::TextureFormat::RGBA16 ||
+                         image->m_format == bimg::TextureFormat::RGBA16F)
+                            ? bimg::TextureFormat::RGBA32F
+                            : bimg::TextureFormat::RGBA8;
+
                     bimg::ImageContainer* oldImage{image};
-                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
+                    image = bimg::imageConvert(&allocator, dstFormat, *image, false);
                     bimg::imageFree(oldImage);
-                }
-                else if (image->m_format == bimg::TextureFormat::RG16F || image->m_format == bimg::TextureFormat::RGBA16F || image->m_format == bimg::TextureFormat::RGBA16 || image->m_format == bimg::TextureFormat::R16)
-                {
-                    bimg::ImageContainer* oldImage{image};
-                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false);
-                    bimg::imageFree(oldImage);
+
+                    if (image == nullptr)
+                    {
+                        return nullptr;
+                    }
                 }
 
                 bimg::ImageContainer* oldImage{image};
@@ -307,7 +324,6 @@ namespace Babylon
                 bimg::imageFree(oldImage);
             }
 
-            assert(image != nullptr);
             return image;
         }
 
@@ -1630,6 +1646,10 @@ namespace Babylon
                 arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
+                if (image == nullptr)
+                {
+                    throw std::runtime_error{"Failed to prepare image for texture (unsupported format or image conversion failure)."};
+                }
                 LoadTextureFromImage(texture, image, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
