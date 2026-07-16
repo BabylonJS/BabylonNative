@@ -2273,6 +2273,10 @@ namespace Babylon
         auto buffer{info[6].As<Napi::ArrayBuffer>()};
         uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
         uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
+        // Optional cube-map face index (0-5). -1 (or absent) means a plain 2D read.
+        const int32_t faceIndex{(info.Length() > 9 && info[9].IsNumber()) ? info[9].As<Napi::Number>().Int32Value() : -1};
+        const bool isCubeFace{faceIndex >= 0};
+        const uint16_t srcZ{isCubeFace ? static_cast<uint16_t>(faceIndex) : static_cast<uint16_t>(0)};
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
 
@@ -2319,13 +2323,15 @@ namespace Babylon
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture = std::make_shared<bool>(false);
 
-            // If the image needs to be cropped or the texture lacks the READ_BACK flag, blit to a temp texture.
-            if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
+            // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
+            // specific cube-map face, blit to a temp 2D texture. bgfx::readTexture cannot address an
+            // individual cube face, so a cube-face read always goes through the blit (srcZ = face index).
+            if (isCubeFace || x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
                 bgfx::Encoder* encoder = GetEncoder();
-                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, srcZ, width, height, /*depth*/ 0);
 
                 sourceTextureHandle = blitTextureHandle;
                 *tempTexture = true;
