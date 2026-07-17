@@ -1760,13 +1760,41 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                     }
                 }
+                else if (visit == EvPostVisit && node->getOp() == EOpTextureFetch)
+                {
+                    // texelFetch(sampler, ivec coord, lod). The vertical flip that used to be applied
+                    // by a preprocessor macro in ProcessSamplerFlip is done here instead so that the
+                    // sampler dimensionality is known: only 2-component integer coordinates
+                    // (sampler2D-style) are flipped. sampler3D / sampler2DArray coordinates (ivec3)
+                    // are left untouched — the old macro forced every coordinate through ivec2(...),
+                    // which failed to compile against sampler3D ('no matching overloaded function').
+                    auto& sequence = node->getSequence();
+                    if (sequence.size() >= 3)
+                    {
+                        auto* sampler = sequence[0]->getAsTyped();
+                        auto* coordinate = sequence[1]->getAsTyped();
+                        auto* lod = sequence[2]->getAsTyped();
+                        if (sampler != nullptr && coordinate != nullptr && lod != nullptr &&
+                            coordinate->getType().getBasicType() == EbtInt &&
+                            !coordinate->getType().isArray() &&
+                            coordinate->getType().getVectorSize() == 2)
+                        {
+                            sequence[1] = FlipVerticalTexelCoordinate(coordinate, sampler, lod);
+                        }
+                    }
+                }
 
                 return true;
             }
 
         private:
+            // Post-visit is enabled so that texelFetch coordinates can be rewritten after their
+            // children have been traversed: the rewrite references the coordinate subtree twice,
+            // and rewriting it on the way down would make the traverser descend into that subtree
+            // twice and flip any nested texture() call inside it twice.
             FlipSamplerCoordinatesTraverser(TIntermediate* intermediate)
-                : m_intermediate{intermediate}
+                : TIntermTraverser{true, false, true}
+                , m_intermediate{intermediate}
             {
             }
 
@@ -1788,6 +1816,74 @@ namespace Babylon::ShaderCompilerTraversers
 
                 TIntermTyped* scaled{m_intermediate->addBinaryMath(EOpMul, coordinate, scale, loc)};
                 return m_intermediate->addBinaryMath(EOpAdd, scaled, offset, loc);
+            }
+
+            // Builds `ivec2(coordinate.x, textureSize(sampler, lod).y - 1 - coordinate.y)`, the
+            // integer-texel-coordinate equivalent of FlipVerticalCoordinate. This is exactly the
+            // expression the former ProcessSamplerFlip texelFetch macro expanded to, including its
+            // double evaluation of the coordinate operand.
+            //
+            // The obvious vector form `coordinate * ivec2(1, -1) + ivec2(0, size.y - 1)` must NOT
+            // be used: it emits SPIR-V OpIMul, which SPIRV-Cross omits entirely when built with
+            // SPIRV_CROSS_WEBMIN (the configuration Babylon Native ships). The multiply then
+            // silently produces no HLSL/MSL expression and the whole shader fails to cross-compile
+            // with "Cannot resolve expression type". Integer subtract and vector construction are
+            // both retained by that build, so express the flip with those only.
+            TIntermTyped* FlipVerticalTexelCoordinate(TIntermTyped* coordinate, TIntermTyped* sampler, TIntermTyped* lod)
+            {
+                const TSourceLoc& loc{coordinate->getLoc()};
+
+                // The sampler and lod operands are still referenced by the original texelFetch node.
+                // Reusing the same node pointers inside a second call (textureSize) would give those
+                // subtrees two parents in the AST, which later traversers (sampler splitting, SPIR-V
+                // generation) corrupt. Clone them so each reference is an independent node. If either
+                // operand is something we cannot safely clone, skip the flip rather than risk it.
+                TIntermTyped* samplerClone{CloneLeaf(sampler)};
+                TIntermTyped* lodClone{CloneLeaf(lod)};
+                if (samplerClone == nullptr || lodClone == nullptr)
+                {
+                    return coordinate;
+                }
+
+                TType ivec2Type{EbtInt, EvqTemporary, 2};
+                TType intType{EbtInt, EvqTemporary, 1};
+
+                // textureSize(sampler, lod) -> ivec2
+                TIntermAggregate* sizeArgs{m_intermediate->makeAggregate(samplerClone, loc)};
+                sizeArgs = m_intermediate->growAggregate(sizeArgs, lodClone, loc);
+                TIntermTyped* size{m_intermediate->addBuiltInFunctionCall(loc, EOpTextureQuerySize, false, sizeArgs, ivec2Type)};
+
+                // textureSize(sampler, lod).y - 1
+                TIntermTyped* sizeY{m_intermediate->addIndex(EOpIndexDirect, size, m_intermediate->addConstantUnion(1, loc), loc)};
+                sizeY->setType(intType);
+                TIntermTyped* maxY{m_intermediate->addBinaryMath(EOpSub, sizeY, m_intermediate->addConstantUnion(1, loc), loc)};
+
+                // coordinate.x and coordinate.y
+                TIntermTyped* coordinateX{m_intermediate->addIndex(EOpIndexDirect, coordinate, m_intermediate->addConstantUnion(0, loc), loc)};
+                coordinateX->setType(intType);
+                TIntermTyped* coordinateY{m_intermediate->addIndex(EOpIndexDirect, coordinate, m_intermediate->addConstantUnion(1, loc), loc)};
+                coordinateY->setType(intType);
+
+                // ivec2(coordinate.x, (textureSize(sampler, lod).y - 1) - coordinate.y)
+                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, maxY, coordinateY, loc)};
+                TIntermAggregate* flipped{m_intermediate->makeAggregate(coordinateX, loc)};
+                flipped = m_intermediate->growAggregate(flipped, flippedY, loc);
+                return m_intermediate->setAggregateOperator(flipped, EOpConstructIVec2, ivec2Type, loc);
+            }
+
+            // Produces an independent copy of a leaf operand (a sampler symbol or a constant lod) so
+            // it can be referenced from a second call site without aliasing the original AST node.
+            TIntermTyped* CloneLeaf(TIntermTyped* node)
+            {
+                if (TIntermSymbol* symbol = node->getAsSymbolNode())
+                {
+                    return m_intermediate->addSymbol(*symbol);
+                }
+                if (TIntermConstantUnion* constant = node->getAsConstantUnion())
+                {
+                    return m_intermediate->addConstantUnion(constant->getConstArray(), constant->getType(), node->getLoc());
+                }
+                return nullptr;
             }
 
             TIntermediate* m_intermediate{};

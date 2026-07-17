@@ -972,6 +972,7 @@ namespace Babylon
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("updateTextureData", &NativeEngine::UpdateTextureData),
                 InstanceMethod("loadRawTexture2DArray", &NativeEngine::LoadRawTexture2DArray),
+                InstanceMethod("loadRawTexture3D", &NativeEngine::LoadRawTexture3D),
                 InstanceMethod("updateTextureDirectly", &NativeEngine::UpdateTextureDirectly),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -1883,6 +1884,78 @@ namespace Babylon
                 const bgfx::Memory* dataCopy = bgfx::copy(begin, static_cast<uint32_t>(textureSize)); // This is required since BGFX must manage the data the memory.
                 texture->Update2D(i, 0, 0, 0, width, height, dataCopy);
             }
+        }
+#endif
+    }
+
+    void NativeEngine::LoadRawTexture3D(const Napi::CallbackInfo& info)
+    {
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
+#else
+        const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
+        const auto data = info[1].As<Napi::TypedArray>();
+        const auto rawWidth{info[2].As<Napi::Number>().Uint32Value()};
+        const auto rawHeight{info[3].As<Napi::Number>().Uint32Value()};
+        const auto rawDepth{info[4].As<Napi::Number>().Uint32Value()};
+        const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
+        const auto generateMips = info[6].As<Napi::Boolean>().Value();
+        const auto invertY = info[7].As<Napi::Boolean>().Value();
+
+        if (generateMips)
+        {
+            throw Napi::Error::New(Env(), "Texture 3D currently do not support mipmaps.");
+        }
+
+        if (invertY)
+        {
+            throw Napi::Error::New(Env(), "Texture 3D currently do not support invert Y.");
+        }
+
+        // width/height/depth originate from JS. Validate the raw 32-bit values against the GPU limits
+        // before narrowing to uint16_t, otherwise an out-of-range value (e.g. 70000) would wrap into an
+        // in-range uint16_t and slip past this check, driving an oversized allocation or an out-of-bounds
+        // read in the renderer.
+        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        if (rawWidth == 0 || rawHeight == 0 || rawDepth == 0 ||
+            rawWidth > maxTextureSize ||
+            rawHeight > maxTextureSize ||
+            rawDepth > maxTextureSize)
+        {
+            throw Napi::Error::New(Env(), "Invalid width, height, or depth for the 3D texture.");
+        }
+
+        const auto width{static_cast<uint16_t>(rawWidth)};
+        const auto height{static_cast<uint16_t>(rawHeight)};
+        const auto depth{static_cast<uint16_t>(rawDepth)};
+
+        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
+        texture->Create3D(width, height, depth, false, Cast(format), flags);
+
+        if (!data.IsNull())
+        {
+            // imageGetSize returns the full size in 64-bit; compare against the 64-bit byte length so a
+            // crafted width/height/depth cannot wrap the expected size and slip an undersized buffer past
+            // this check. A 3D texture is a single volume (numLayers = 1) whose depth is the 3rd argument.
+            const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, depth, false, false, 1, format)};
+            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
+            {
+                throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
+            }
+
+            uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
+            const size_t dataSize = data.ByteLength();
+
+            // bgfx::Memory uses a 32-bit size; reject a payload that would be truncated by the bgfx::copy
+            // cast below.
+            if (dataSize > UINT32_MAX)
+            {
+                throw Napi::Error::New(Env(), "The 3D texture volume size is too large.");
+            }
+
+            // This is required since BGFX must manage the memory backing the update.
+            const bgfx::Memory* dataCopy = bgfx::copy(dataPtr, static_cast<uint32_t>(dataSize));
+            texture->Update3D(0, 0, 0, 0, width, height, depth, dataCopy);
         }
 #endif
     }

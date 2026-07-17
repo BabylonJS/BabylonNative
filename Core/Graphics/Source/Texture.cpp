@@ -65,11 +65,40 @@ namespace Babylon::Graphics
         m_format = format;
         m_flags = flags;
         m_isCube = false;
+        m_is3D = false;
     }
 
     void Texture::Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
     {
         bgfx::updateTexture2D(m_handle, layer, mip, x, y, width, height, mem, pitch);
+    }
+
+    void Texture::Create3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMips, bgfx::TextureFormat::Enum format, uint64_t flags)
+    {
+        Dispose();
+
+        m_handle = bgfx::createTexture3D(width, height, depth, hasMips, format, flags);
+        if (!bgfx::isValid(m_handle))
+        {
+            throw std::runtime_error{"Failed to create 3D texture"};
+        }
+
+        m_ownsHandle = true;
+        m_width = width;
+        m_height = height;
+        m_depth = depth;
+        m_hasMips = hasMips;
+        m_numLayers = 1;
+        m_format = format;
+        m_flags = flags;
+        m_isCube = false;
+        m_is3D = false;
+        m_is3D = true;
+    }
+
+    void Texture::Update3D(uint8_t mip, uint16_t x, uint16_t y, uint16_t z, uint16_t width, uint16_t height, uint16_t depth, const bgfx::Memory* mem)
+    {
+        bgfx::updateTexture3D(m_handle, mip, x, y, z, width, height, depth, mem);
     }
 
     void Texture::CreateCube(uint16_t size, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
@@ -85,6 +114,7 @@ namespace Babylon::Graphics
         m_format = format;
         m_flags = flags;
         m_isCube = true;
+        m_is3D = false;
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -106,6 +136,7 @@ namespace Babylon::Graphics
         m_format = format;
         m_flags = flags;
         m_isCube = false;
+        m_is3D = false;
     }
 
     bgfx::TextureHandle Texture::Handle() const
@@ -133,9 +164,19 @@ namespace Babylon::Graphics
         return m_isCube;
     }
 
+    bool Texture::Is3D() const
+    {
+        return m_is3D;
+    }
+
     uint16_t Texture::NumLayers() const
     {
         return m_numLayers;
+    }
+
+    uint16_t Texture::Depth() const
+    {
+        return m_depth;
     }
 
     bgfx::TextureFormat::Enum Texture::Format() const
