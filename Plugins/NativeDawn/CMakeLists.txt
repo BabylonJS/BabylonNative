@@ -14,7 +14,8 @@ target_link_libraries(NativeDawn
     PRIVATE webgpu_dawn
     PRIVATE bx
     PRIVATE bimg
-    PRIVATE bimg_decode)
+    PRIVATE bimg_decode
+    PRIVATE bimg_encode)
 
 if(WIN32)
     target_compile_definitions(NativeDawn

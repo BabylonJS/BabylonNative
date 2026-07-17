@@ -10,10 +10,19 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <bimg/encode.h>
+#include <bx/allocator.h>
+#include <bx/error.h>
+#include <bx/file.h>
+#include <bx/filepath.h>
+
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <array>
+#include <cmath>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <utility>
@@ -2684,9 +2693,301 @@ namespace Babylon::Plugins::NativeDawn
         bool g_engineStarted = false;
         uint32_t g_blobSeq = 0;
 
+        // Deferred framebuffer readback for the validation harness. The harness
+        // calls TestUtils.getFrameBufferData() from inside the WebGPU render
+        // callback, BEFORE the engine's endFrame() submits the GPU commands. We
+        // stash the callback and perform the readback in frame(), after the rAF
+        // flush (which runs endFrame) but before present, so the surface texture
+        // holds the freshly-submitted render.
+        bool g_readbackPending = false;
+        Napi::FunctionReference g_readbackCallback;
+
         Napi::Value Noop(const Napi::CallbackInfo& info) { return info.Env().Undefined(); }
 
-        // Build a no-DOM canvas whose getContext("webgpu") returns the Dawn context.
+        // ---- minimal 2D canvas raster (enough for WebGPU texture upload) -----
+        // Babylon's WebGPU texture path sometimes draws a decoded image onto a 2D
+        // canvas (e.g. for invert-Y or resize) and uses that canvas as the
+        // copyExternalImageToTexture source. We back the 2D context with the
+        // canvas's `__pixels` RGBA8 buffer so the canvas is a valid image source.
+        struct Ctm { float sx{1}, sy{1}, tx{0}, ty{0}; std::vector<std::array<float, 4>> stack; };
+
+        Napi::ArrayBuffer EnsureCanvasBuffer(Napi::Env env, Napi::Object canvas)
+        {
+            uint32_t w = canvas.Get("width").ToNumber().Uint32Value();
+            uint32_t h = canvas.Get("height").ToNumber().Uint32Value();
+            if (w == 0) w = 1;
+            if (h == 0) h = 1;
+            const size_t need = static_cast<size_t>(w) * h * 4u;
+            Napi::Value pv = canvas.Get("__pixels");
+            if (pv.IsArrayBuffer() && pv.As<Napi::ArrayBuffer>().ByteLength() == need)
+            {
+                return pv.As<Napi::ArrayBuffer>();
+            }
+            Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, need);
+            std::memset(ab.Data(), 0, need);
+            canvas.Set("__pixels", ab);
+            return ab;
+        }
+
+        Napi::Object Make2DContext(Napi::Env env, Napi::Object canvas)
+        {
+            auto canvasRef = std::make_shared<Napi::ObjectReference>(Napi::Persistent(canvas));
+            auto ctm = std::make_shared<Ctm>();
+            Napi::Object ctx = Napi::Object::New(env);
+            ctx.Set("canvas", canvas);
+            ctx.Set("fillStyle", Napi::String::New(env, "#000000"));
+            ctx.Set("strokeStyle", Napi::String::New(env, "#000000"));
+            ctx.Set("globalAlpha", Napi::Number::New(env, 1));
+            ctx.Set("imageSmoothingEnabled", Napi::Boolean::New(env, true));
+
+            SetMethod(ctx, "save", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
+                ctm->stack.push_back({ctm->sx, ctm->sy, ctm->tx, ctm->ty});
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "restore", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
+                if (!ctm->stack.empty()) { auto a = ctm->stack.back(); ctm->stack.pop_back(); ctm->sx = a[0]; ctm->sy = a[1]; ctm->tx = a[2]; ctm->ty = a[3]; }
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "translate", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
+                ctm->tx += ctm->sx * info[0].ToNumber().FloatValue();
+                ctm->ty += ctm->sy * info[1].ToNumber().FloatValue();
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "scale", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
+                ctm->sx *= info[0].ToNumber().FloatValue();
+                ctm->sy *= info[1].ToNumber().FloatValue();
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "setTransform", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
+                if (info.Length() >= 6)
+                {
+                    ctm->sx = info[0].ToNumber().FloatValue();
+                    ctm->sy = info[3].ToNumber().FloatValue();
+                    ctm->tx = info[4].ToNumber().FloatValue();
+                    ctm->ty = info[5].ToNumber().FloatValue();
+                }
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "resetTransform", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
+                ctm->sx = 1; ctm->sy = 1; ctm->tx = 0; ctm->ty = 0;
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "transform", Noop);
+            SetMethod(ctx, "rotate", Noop);
+            SetMethod(ctx, "beginPath", Noop);
+            SetMethod(ctx, "closePath", Noop);
+            SetMethod(ctx, "fill", Noop);
+            SetMethod(ctx, "stroke", Noop);
+            SetMethod(ctx, "moveTo", Noop);
+            SetMethod(ctx, "lineTo", Noop);
+            SetMethod(ctx, "rect", Noop);
+            SetMethod(ctx, "clip", Noop);
+            SetMethod(ctx, "fillText", [canvasRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                // Text rasterization is not supported on the WebGPU backend (the
+                // bgfx/nanovg Canvas polyfill is unavailable). Ensure the backing
+                // buffer exists so the canvas is still a valid texture source.
+                EnsureCanvasBuffer(info.Env(), canvasRef->Value());
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "strokeText", Noop);
+            SetMethod(ctx, "setLineDash", Noop);
+            SetMethod(ctx, "measureText", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Object o = Napi::Object::New(info.Env());
+                o.Set("width", Napi::Number::New(info.Env(), 8));
+                return o;
+            });
+            SetMethod(ctx, "getContextAttributes", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::Object::New(info.Env());
+            });
+            SetMethod(ctx, "fillRect", [canvasRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                EnsureCanvasBuffer(info.Env(), canvasRef->Value());
+                return info.Env().Undefined();
+            });
+
+            SetMethod(ctx, "clearRect", [canvasRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                Napi::Object canvas = canvasRef->Value();
+                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
+                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
+                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
+                int x = info[0].ToNumber().Int32Value();
+                int y = info[1].ToNumber().Int32Value();
+                int w = info[2].ToNumber().Int32Value();
+                int h = info[3].ToNumber().Int32Value();
+                uint8_t* buf = static_cast<uint8_t*>(ab.Data());
+                for (int yy = y; yy < y + h && yy < ch; ++yy)
+                {
+                    if (yy < 0) continue;
+                    for (int xx = x; xx < x + w && xx < cw; ++xx)
+                    {
+                        if (xx < 0) continue;
+                        uint8_t* p = buf + (static_cast<size_t>(yy) * cw + xx) * 4;
+                        p[0] = p[1] = p[2] = p[3] = 0;
+                    }
+                }
+                return env.Undefined();
+            });
+
+            SetMethod(ctx, "drawImage", [canvasRef, ctm](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                if (info.Length() < 3 || !info[0].IsObject()) return env.Undefined();
+                Napi::Object img = info[0].As<Napi::Object>();
+                Bytes src = GetBytes(img.Get("__pixels"));
+                uint32_t iw = PropU32(img, "width", 0);
+                uint32_t ih = PropU32(img, "height", 0);
+                if (iw == 0) iw = PropU32(img, "naturalWidth", 0);
+                if (ih == 0) ih = PropU32(img, "naturalHeight", 0);
+                if (src.data == nullptr || iw == 0 || ih == 0)
+                {
+                    // Source not yet decoded (e.g. an unrendered DynamicTexture
+                    // label). Leave the destination buffer as-is.
+                    return env.Undefined();
+                }
+
+                double sx = 0, sy = 0, sw = iw, sh = ih, dx, dy, dw, dh;
+                if (info.Length() >= 9)
+                {
+                    sx = info[1].ToNumber().DoubleValue(); sy = info[2].ToNumber().DoubleValue();
+                    sw = info[3].ToNumber().DoubleValue(); sh = info[4].ToNumber().DoubleValue();
+                    dx = info[5].ToNumber().DoubleValue(); dy = info[6].ToNumber().DoubleValue();
+                    dw = info[7].ToNumber().DoubleValue(); dh = info[8].ToNumber().DoubleValue();
+                }
+                else if (info.Length() >= 5)
+                {
+                    dx = info[1].ToNumber().DoubleValue(); dy = info[2].ToNumber().DoubleValue();
+                    dw = info[3].ToNumber().DoubleValue(); dh = info[4].ToNumber().DoubleValue();
+                }
+                else
+                {
+                    dx = info[1].ToNumber().DoubleValue(); dy = info[2].ToNumber().DoubleValue();
+                    dw = iw; dh = ih;
+                }
+
+                Napi::Object canvas = canvasRef->Value();
+                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
+                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
+                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
+                uint8_t* dst = static_cast<uint8_t*>(ab.Data());
+                const int idw = static_cast<int>(std::lround(dw));
+                const int idh = static_cast<int>(std::lround(dh));
+                for (int ddy = 0; ddy < idh; ++ddy)
+                {
+                    int syi = static_cast<int>(sy + ((ddy + 0.5) / dh) * sh);
+                    if (syi < 0) syi = 0;
+                    if (syi >= static_cast<int>(ih)) syi = ih - 1;
+                    for (int ddx = 0; ddx < idw; ++ddx)
+                    {
+                        int sxi = static_cast<int>(sx + ((ddx + 0.5) / dw) * sw);
+                        if (sxi < 0) sxi = 0;
+                        if (sxi >= static_cast<int>(iw)) sxi = iw - 1;
+                        const uint8_t* sp = src.data + (static_cast<size_t>(syi) * iw + sxi) * 4;
+                        const double px = dx + ddx + 0.5;
+                        const double py = dy + ddy + 0.5;
+                        const int bx = static_cast<int>(std::floor(ctm->sx * px + ctm->tx));
+                        const int by = static_cast<int>(std::floor(ctm->sy * py + ctm->ty));
+                        if (bx < 0 || by < 0 || bx >= cw || by >= ch) continue;
+                        uint8_t* dp = dst + (static_cast<size_t>(by) * cw + bx) * 4;
+                        dp[0] = sp[0]; dp[1] = sp[1]; dp[2] = sp[2]; dp[3] = sp[3];
+                    }
+                }
+                return env.Undefined();
+            });
+
+            SetMethod(ctx, "getImageData", [canvasRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                Napi::Object canvas = canvasRef->Value();
+                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
+                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
+                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
+                int x = info[0].ToNumber().Int32Value();
+                int y = info[1].ToNumber().Int32Value();
+                int w = info[2].ToNumber().Int32Value();
+                int h = info[3].ToNumber().Int32Value();
+                if (w <= 0 || h <= 0) { w = cw; h = ch; x = 0; y = 0; }
+                Napi::ArrayBuffer out = Napi::ArrayBuffer::New(env, static_cast<size_t>(w) * h * 4u);
+                uint8_t* od = static_cast<uint8_t*>(out.Data());
+                std::memset(od, 0, static_cast<size_t>(w) * h * 4u);
+                const uint8_t* sd = static_cast<const uint8_t*>(ab.Data());
+                for (int yy = 0; yy < h; ++yy)
+                {
+                    const int syy = y + yy;
+                    if (syy < 0 || syy >= ch) continue;
+                    for (int xx = 0; xx < w; ++xx)
+                    {
+                        const int sxx = x + xx;
+                        if (sxx < 0 || sxx >= cw) continue;
+                        std::memcpy(od + (static_cast<size_t>(yy) * w + xx) * 4, sd + (static_cast<size_t>(syy) * cw + sxx) * 4, 4);
+                    }
+                }
+                Napi::Function u8c = env.Global().Get("Uint8ClampedArray").As<Napi::Function>();
+                Napi::Object dataArr = u8c.New({out, Napi::Number::New(env, 0), Napi::Number::New(env, static_cast<double>(w) * h * 4)}).As<Napi::Object>();
+                Napi::Object res = Napi::Object::New(env);
+                res.Set("data", dataArr);
+                res.Set("width", Napi::Number::New(env, w));
+                res.Set("height", Napi::Number::New(env, h));
+                return res;
+            });
+
+            SetMethod(ctx, "putImageData", [canvasRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                if (!info[0].IsObject()) return env.Undefined();
+                Napi::Object imgData = info[0].As<Napi::Object>();
+                const int dx = info.Length() > 1 ? info[1].ToNumber().Int32Value() : 0;
+                const int dy = info.Length() > 2 ? info[2].ToNumber().Int32Value() : 0;
+                const uint32_t iw = PropU32(imgData, "width", 0);
+                const uint32_t ih = PropU32(imgData, "height", 0);
+                Bytes src = GetBytes(imgData.Get("data"));
+                if (src.data == nullptr || iw == 0 || ih == 0) return env.Undefined();
+                Napi::Object canvas = canvasRef->Value();
+                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
+                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
+                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
+                uint8_t* dst = static_cast<uint8_t*>(ab.Data());
+                for (uint32_t yy = 0; yy < ih; ++yy)
+                {
+                    const int by = dy + static_cast<int>(yy);
+                    if (by < 0 || by >= ch) continue;
+                    for (uint32_t xx = 0; xx < iw; ++xx)
+                    {
+                        const int bx = dx + static_cast<int>(xx);
+                        if (bx < 0 || bx >= cw) continue;
+                        std::memcpy(dst + (static_cast<size_t>(by) * cw + bx) * 4, src.data + (static_cast<size_t>(yy) * iw + xx) * 4, 4);
+                    }
+                }
+                return env.Undefined();
+            });
+
+            SetMethod(ctx, "createImageData", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                uint32_t w = 1;
+                uint32_t h = 1;
+                if (info.Length() >= 2 && info[0].IsNumber())
+                {
+                    w = info[0].ToNumber().Uint32Value();
+                    h = info[1].ToNumber().Uint32Value();
+                }
+                else if (info.Length() >= 1 && info[0].IsObject())
+                {
+                    Napi::Object o = info[0].As<Napi::Object>();
+                    w = PropU32(o, "width", 1);
+                    h = PropU32(o, "height", 1);
+                }
+                Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, static_cast<size_t>(w) * h * 4u);
+                std::memset(ab.Data(), 0, static_cast<size_t>(w) * h * 4u);
+                Napi::Function u8c = env.Global().Get("Uint8ClampedArray").As<Napi::Function>();
+                Napi::Object dataArr = u8c.New({ab, Napi::Number::New(env, 0), Napi::Number::New(env, static_cast<double>(w) * h * 4)}).As<Napi::Object>();
+                Napi::Object res = Napi::Object::New(env);
+                res.Set("data", dataArr);
+                res.Set("width", Napi::Number::New(env, w));
+                res.Set("height", Napi::Number::New(env, h));
+                return res;
+            });
+
+            return ctx;
+        }
+
+        // Build a no-DOM canvas whose getContext("webgpu") returns the Dawn context
+        // and getContext("2d") returns the raster context above.
         Napi::Object MakeCanvas(Napi::Env env, uint32_t width, uint32_t height)
         {
             Napi::Object canvas = Napi::Object::New(env);
@@ -2696,11 +2997,25 @@ namespace Babylon::Plugins::NativeDawn
             canvas.Set("clientHeight", Napi::Number::New(env, height));
             canvas.Set("style", Napi::Object::New(env));
             SetMethod(canvas, "getContext", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                if (info.Length() > 0 && info[0].IsString() && info[0].As<Napi::String>().Utf8Value() == "webgpu")
+                Napi::Env env = info.Env();
+                const std::string type = info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
+                if (type == "webgpu")
                 {
-                    return MakeCanvasContext(info.Env());
+                    return MakeCanvasContext(env);
                 }
-                return info.Env().Null();
+                if (type == "2d")
+                {
+                    Napi::Object self = info.This().As<Napi::Object>();
+                    Napi::Value existing = self.Get("__ctx2d");
+                    if (existing.IsObject())
+                    {
+                        return existing;
+                    }
+                    Napi::Object c = Make2DContext(env, self);
+                    self.Set("__ctx2d", c);
+                    return c;
+                }
+                return env.Null();
             });
             SetMethod(canvas, "getBoundingClientRect", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
@@ -2734,6 +3049,18 @@ namespace Babylon::Plugins::NativeDawn
             SetMethod(canvas, "getRootNode", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return info.This();
             });
+            // The default Babylon loading screen appends its overlay div to
+            // `renderingCanvas.parentNode`; provide a DOM-node-like parent so
+            // displayLoadingUI()/hideLoadingUI() don't dereference undefined.
+            {
+                Napi::Object parent = Napi::Object::New(env);
+                SetMethod(parent, "appendChild", Noop);
+                SetMethod(parent, "removeChild", Noop);
+                SetMethod(parent, "insertBefore", Noop);
+                parent.Set("style", Napi::Object::New(env));
+                canvas.Set("parentNode", parent);
+                canvas.Set("parentElement", parent);
+            }
             return canvas;
         }
 
@@ -2901,6 +3228,10 @@ namespace Babylon::Plugins::NativeDawn
                     el.Set("style", Napi::Object::New(env));
                     SetMethod(el, "setAttribute", Noop);
                     SetMethod(el, "appendChild", Noop);
+                    SetMethod(el, "removeChild", Noop);
+                    SetMethod(el, "insertBefore", Noop);
+                    SetMethod(el, "addEventListener", Noop);
+                    SetMethod(el, "removeEventListener", Noop);
                     return el;
                 });
                 SetMethod(document, "addEventListener", Noop);
@@ -2908,11 +3239,58 @@ namespace Babylon::Plugins::NativeDawn
                 SetMethod(document, "getElementById", [](const Napi::CallbackInfo& info) -> Napi::Value {
                     return info.Env().Null();
                 });
+                // Return an empty array-like for the query methods some Babylon
+                // paths call (e.g. glTF loaders probing for <script>/<link> tags).
+                SetMethod(document, "getElementsByTagName", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    Napi::Env env = info.Env();
+                    const std::string tag = info.Length() > 0 && info[0].IsString()
+                        ? info[0].As<Napi::String>().Utf8Value() : "";
+                    Napi::Array arr = Napi::Array::New(env);
+                    // Some Babylon paths do getElementsByTagName("head")[0].appendChild(...)
+                    // (e.g. the default loading screen injecting a <style>). Return a
+                    // single DOM-node-like stub for head/body so [0] is valid.
+                    if (tag == "head" || tag == "body")
+                    {
+                        Napi::Object node = Napi::Object::New(env);
+                        SetMethod(node, "appendChild", Noop);
+                        SetMethod(node, "removeChild", Noop);
+                        SetMethod(node, "insertBefore", Noop);
+                        node.Set("style", Napi::Object::New(env));
+                        arr.Set(uint32_t(0), node);
+                    }
+                    return arr;
+                });
+                SetMethod(document, "getElementsByClassName", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return Napi::Array::New(info.Env());
+                });
+                SetMethod(document, "querySelectorAll", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return Napi::Array::New(info.Env());
+                });
+                SetMethod(document, "querySelector", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return info.Env().Null();
+                });
                 Napi::Object body = Napi::Object::New(env);
                 SetMethod(body, "appendChild", Noop);
+                SetMethod(body, "removeChild", Noop);
+                SetMethod(body, "insertBefore", Noop);
                 body.Set("style", Napi::Object::New(env));
                 document.Set("body", body);
+                Napi::Object head = Napi::Object::New(env);
+                SetMethod(head, "appendChild", Noop);
+                SetMethod(head, "removeChild", Noop);
+                SetMethod(head, "insertBefore", Noop);
+                head.Set("style", Napi::Object::New(env));
+                document.Set("head", head);
+                document.Set("documentElement", Napi::Object::New(env));
                 global.Set("document", document);
+            }
+            if (global.Get("OffscreenCanvas").IsUndefined())
+            {
+                global.Set("OffscreenCanvas", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    const uint32_t w = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Uint32Value() : 1;
+                    const uint32_t h = info.Length() > 1 && info[1].IsNumber() ? info[1].As<Napi::Number>().Uint32Value() : 1;
+                    return MakeCanvas(info.Env(), w, h);
+                }));
             }
             SetMethod(global, "addEventListener", Noop);
             SetMethod(global, "removeEventListener", Noop);
@@ -3091,6 +3469,24 @@ namespace Babylon::Plugins::NativeDawn
                 {
                     cb.Value().Call({Napi::Number::New(env, now)});
                 }
+                // Deferred framebuffer readback (validation harness): the render
+                // callbacks above ran the engine's beginFrame/render/endFrame, so
+                // the surface texture now holds the submitted frame. Read it back
+                // and invoke the stashed callback BEFORE presenting (present
+                // releases the texture).
+                if (g_readbackPending)
+                {
+                    g_readbackPending = false;
+                    Napi::Value rp = env.Global().Get("_nativeDawnReadPixels");
+                    if (rp.IsFunction() && !g_readbackCallback.IsEmpty())
+                    {
+                        Napi::Object res = rp.As<Napi::Function>().Call({}).As<Napi::Object>();
+                        Napi::ArrayBuffer ab = res.Get("data").As<Napi::ArrayBuffer>();
+                        Napi::Uint8Array u8 = Napi::Uint8Array::New(env, ab.ByteLength(), ab, 0);
+                        g_readbackCallback.Value().Call({u8});
+                    }
+                    g_readbackCallback.Reset();
+                }
                 // Present the frame.
                 if (g_surfaceConfigured && g_currentTextureAcquired)
                 {
@@ -3221,6 +3617,118 @@ namespace Babylon::Plugins::NativeDawn
         }
     } // namespace (bootstrap)
 
+    namespace
+    {
+        // Directory containing the running executable (for TestUtils output dir).
+        std::filesystem::path ExeDir()
+        {
+#if defined(_WIN32)
+            wchar_t buf[MAX_PATH]{};
+            ::GetModuleFileNameW(nullptr, buf, MAX_PATH);
+            return std::filesystem::path(buf).parent_path();
+#else
+            return std::filesystem::current_path();
+#endif
+        }
+
+        // Install a Dawn-compatible `TestUtils` global so validation_native.js runs
+        // on the WebGPU backend. Mirrors the bgfx TestUtils plugin's JS surface but
+        // is backed by the NativeDawn native functions (surface readback, image
+        // decode) instead of the bgfx Graphics::DeviceContext.
+        void InstallTestUtils(Napi::Env env)
+        {
+            Napi::Object global = env.Global();
+            Napi::Object tu = Napi::Object::New(env);
+
+            SetMethod(tu, "getGraphicsApiName", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::String::New(info.Env(), "WebGPU");
+            });
+            SetMethod(tu, "getOutputDirectory", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::String::New(info.Env(), ExeDir().string());
+            });
+            SetMethod(tu, "setTitle", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Value fn = info.Env().Global().Get("_nativeDawnSetTitle");
+                if (fn.IsFunction())
+                {
+                    fn.As<Napi::Function>().Call({info.Length() > 0 ? info[0] : info.Env().Undefined()});
+                }
+                return info.Env().Undefined();
+            });
+            SetMethod(tu, "updateSize", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                Napi::Object global = env.Global();
+                const uint32_t w = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Uint32Value() : g_state.width;
+                const uint32_t h = info.Length() > 1 && info[1].IsNumber() ? info[1].As<Napi::Number>().Uint32Value() : g_state.height;
+                // Resize the Dawn surface (drawing buffer) to EXACTLY w x h so the
+                // readback matches the reference-image size. Surface-only: don't
+                // tie it to the window client area (which is smaller by the title
+                // bar / menu and would give e.g. 600x380 instead of 600x400).
+                ResizeSurface(w, h);
+                Napi::Value dr = global.Get("__dawnResize");
+                if (dr.IsFunction())
+                {
+                    dr.As<Napi::Function>().Call({Napi::Number::New(env, w), Napi::Number::New(env, h)});
+                }
+                return env.Undefined();
+            });
+            SetMethod(tu, "exit", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                const int code = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 0;
+                std::fflush(stdout);
+                std::fflush(stderr);
+                std::quick_exit(code);
+                return info.Env().Undefined();
+            });
+            SetMethod(tu, "captureNextFrame", Noop);
+
+            // Reference-image decode: returns {width,height,__pixels(ArrayBuffer RGBA8)}.
+            SetMethod(tu, "decodeImage", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Value fn = info.Env().Global().Get("_nativeDawnDecodeImage");
+                return fn.As<Napi::Function>().Call({info.Length() > 0 ? info[0] : info.Env().Undefined()});
+            });
+            SetMethod(tu, "getImageData", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                Napi::Object img = info[0].As<Napi::Object>();
+                Napi::ArrayBuffer ab = img.Get("__pixels").As<Napi::ArrayBuffer>();
+                return Napi::Uint8Array::New(env, ab.ByteLength(), ab, 0);
+            });
+
+            // Framebuffer readback: the harness calls this inside the render loop
+            // (after scene.render() but before the engine's endFrame submits). We
+            // defer the actual readback to frame(), which runs after endFrame and
+            // before present, so the surface texture holds the submitted render.
+            SetMethod(tu, "getFrameBufferData", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                g_readbackCallback = Napi::Persistent(info[0].As<Napi::Function>());
+                g_readbackPending = true;
+                return info.Env().Undefined();
+            });
+
+            SetMethod(tu, "writePNG", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                Napi::Uint8Array buffer = info[0].As<Napi::Uint8Array>();
+                const uint32_t width = info[1].As<Napi::Number>().Uint32Value();
+                const uint32_t height = info[2].As<Napi::Number>().Uint32Value();
+                const std::string filename = info[3].As<Napi::String>().Utf8Value();
+                if (buffer.ByteLength() < static_cast<size_t>(width) * height * 4)
+                {
+                    return env.Undefined();
+                }
+                bx::FileWriter writer;
+                bx::FilePath filepath(filename.c_str());
+                bx::makeAll(bx::FilePath(filepath.getPath()));
+                bx::Error err;
+                if (writer.open(filepath, false, &err))
+                {
+                    bimg::imageWritePng(&writer, width, height, width * 4, buffer.Data(),
+                        bimg::TextureFormat::RGBA8, false);
+                    writer.close();
+                }
+                return env.Undefined();
+            });
+
+            global.Set("TestUtils", tu);
+        }
+    } // namespace (testutils)
+
     void Initialize(Napi::Env env, void* window, uint32_t width, uint32_t height)
     {
         if (!CreateDeviceAndSurface(window, width, height))
@@ -3244,6 +3752,7 @@ namespace Babylon::Plugins::NativeDawn
         {
             InstallWebGPU(env);
             InstallBootstrap(env);
+            InstallTestUtils(env);
         }
     }
 
