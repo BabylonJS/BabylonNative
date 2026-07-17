@@ -3157,6 +3157,31 @@ namespace Babylon::Plugins::NativeDawn
             }
             g_engineStarted = true;
 
+            // Babylon assigns Tools.LoadScript = _LoadScriptWeb when the `_native`
+            // global is absent -- which it is in the Dawn build (NativeEngine is
+            // disabled). _LoadScriptWeb injects a <script> DOM node and waits for
+            // its onload event, which never fires in this headless host. As a
+            // result Babylon's glslang + twgsl WASM helpers never load, so shaders
+            // authored in GLSL (NodeMaterial GLSL mode, ShaderMaterial,
+            // ProceduralTexture, and various custom particle/post-process effects)
+            // can never be transpiled GLSL -> SPIR-V -> WGSL and their scenes hang
+            // forever on executeWhenReady. Route script loading through the working
+            // file/XHR path instead (mirrors Babylon's own _LoadScriptNative).
+            // WGSL-authored shaders (Standard/PBR/most post-processes) bypass this
+            // path entirely and are unaffected.
+            static const char* kLoadScriptPatch =
+                "(function(){var T=BABYLON&&BABYLON.Tools;"
+                "if(!T||T.__dawnLoadScriptPatched)return;"
+                "T.__dawnLoadScriptPatched=true;"
+                "T.LoadScript=function(url,onSuccess,onError){"
+                "T.LoadFile(url,function(data){"
+                "try{Function(data).apply(null);onSuccess&&onSuccess();}"
+                "catch(e){onError&&onError('NativeDawn LoadScript eval error for '+url,e);}},"
+                "undefined,undefined,false,function(req,ex){"
+                "onError&&onError('NativeDawn LoadScript load error for '+url,ex);});};"
+                "})();";
+            env.RunScript(kLoadScriptPatch);
+
             Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
             g_bootstrapCanvas = Napi::Persistent(canvas);
             env.Global().Set("__dawnCanvas", canvas);
@@ -3208,6 +3233,73 @@ namespace Babylon::Plugins::NativeDawn
             g_engineStarted = false;
             g_blobSeq = 0;
             g_blobRegistry = Napi::Persistent(Napi::Object::New(env));
+
+            // Babylon's WebGPU shader path (and the emscripten glslang/twgsl glue
+            // it loads) references the `self` global, which browsers/web-workers
+            // define but this host does not. Without it `_initGlslangAsync` throws
+            // `ReferenceError: self is not defined`, GLSL shaders never transpile,
+            // and their scenes hang forever. Alias `self` (and `window`) to the
+            // global object.
+            if (global.Get("self").IsUndefined())
+            {
+                global.Set("self", global);
+            }
+            if (global.Get("globalThis").IsUndefined())
+            {
+                global.Set("globalThis", global);
+            }
+
+            // The host's native TextDecoder polyfill only supports UTF-8, but the
+            // emscripten glue for Babylon's glslang/twgsl WASM modules constructs
+            // `new TextDecoder('utf-16le')` (UTF16ToString). That throws, rejecting
+            // glslang init and hanging every GLSL-shader scene. Install a JS
+            // TextDecoder that adds UTF-16 (LE/BE) support and delegates all other
+            // encodings to the native decoder (preserving correct UTF-8 handling
+            // used by e.g. the glTF/Draco loaders).
+            {
+                static const char* kTextDecoderPatch =
+                    "(function(){var N=globalThis.TextDecoder;"
+                    "if(N&&N.__dawnUtf16)return;"
+                    "function norm(l){return String(l==null?'utf-8':l).trim().toLowerCase();}"
+                    "function TD(label,opts){var l=norm(label);this._label=l;"
+                    "this._le=(l==='utf-16le'||l==='utf-16'||l==='ucs-2'||l==='ucs2'||l==='unicode'||l==='csunicode'||l==='iso-10646-ucs-2');"
+                    "this._be=(l==='utf-16be');"
+                    "if(!this._le&&!this._be&&N){try{this._n=new N(label,opts);}catch(e){this._n=null;}}}"
+                    "TD.__dawnUtf16=true;"
+                    "TD.prototype.decode=function(input,o){if(input==null)return '';var b;"
+                    "if(input instanceof ArrayBuffer)b=new Uint8Array(input);"
+                    "else if(ArrayBuffer.isView(input))b=new Uint8Array(input.buffer,input.byteOffset,input.byteLength);"
+                    "else return '';"
+                    "if(this._le||this._be){var s='',le=this._le;for(var i=0;i+1<b.length;i+=2){var c=le?(b[i]|(b[i+1]<<8)):((b[i]<<8)|b[i+1]);s+=String.fromCharCode(c);}return s;}"
+                    "if(this._n)return this._n.decode(input,o);"
+                    "var out='',i2=0,n=b.length;while(i2<n){var x=b[i2++];if(x<128){out+=String.fromCharCode(x);}"
+                    "else if(x>=192&&x<224){out+=String.fromCharCode(((x&31)<<6)|(b[i2++]&63));}"
+                    "else if(x>=224&&x<240){out+=String.fromCharCode(((x&15)<<12)|((b[i2++]&63)<<6)|(b[i2++]&63));}"
+                    "else{var cp=((x&7)<<18)|((b[i2++]&63)<<12)|((b[i2++]&63)<<6)|(b[i2++]&63);cp-=0x10000;out+=String.fromCharCode(0xD800+(cp>>10),0xDC00+(cp&1023));}}return out;};"
+                    "Object.defineProperty(TD.prototype,'encoding',{get:function(){return this._label;}});"
+                    "globalThis.TextDecoder=TD;})();";
+                env.RunScript(kTextDecoderPatch);
+            }
+
+            // V8's async WebAssembly.instantiate posts compilation completion to a
+            // foreground task runner this host does not pump, so the returned
+            // promise never settles and the glslang/twgsl modules never finish
+            // loading (their scenes hang). Regular Promise microtasks DO run here,
+            // so override instantiate to compile synchronously (via the sync
+            // Module/Instance constructors) and hand back an already-resolved
+            // promise. The glslang/twgsl WASM blobs are small, so the brief
+            // synchronous compile is acceptable.
+            {
+                static const char* kWasmSyncPatch =
+                    "(function(){if(typeof WebAssembly==='undefined'||WebAssembly.__dawnSyncInstantiate)return;"
+                    "WebAssembly.__dawnSyncInstantiate=true;"
+                    "WebAssembly.instantiate=function(bytes,imports){try{"
+                    "if(bytes instanceof WebAssembly.Module){return Promise.resolve(new WebAssembly.Instance(bytes,imports));}"
+                    "var m=new WebAssembly.Module(bytes);var inst=new WebAssembly.Instance(m,imports);"
+                    "return Promise.resolve({module:m,instance:inst});}"
+                    "catch(e){return Promise.reject(e);}};})();";
+                env.RunScript(kWasmSyncPatch);
+            }
 
             // ---- canvas / document / window / location shims -----------------
             if (global.Get("document").IsUndefined())
