@@ -204,10 +204,17 @@ jobs:
   # NativeEngine. Dawn is fetched (git) only for these jobs. Win32 builds the
   # full WebGPU Playground; the other platforms build the NativeDawn plugin
   # target (plugin + Dawn) since only the Win32 host has a Dawn code path.
+  #
+  # The Win32 job runs the WebGPU validation tests, so it must use the V8 JS
+  # engine: the NativeDawn bootstrap (navigator.gpu + WebGPUEngine init +
+  # NativeEngine aliasing, and the glslang/twgsl WASM shader-translation helpers)
+  # relies on V8 semantics and fails on the Win32 default (ChakraCore) with
+  # "TypeError: Object doesn't support this action".
   Win32_x64_NativeDawn:
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
+      napi-type: V8
       nativedawn: true
 
   MacOS_NativeDawn:

@@ -27,13 +27,11 @@
             "referenceImage": "exr-loader.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "NME Shadow Map",
             "playgroundId": "#M3QR7E#83",
             "referenceImage": "nmeshadowmap.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Procedural texture with NME",
             "renderCount": 2,
             "playgroundId": "#8S19ZC#3",
@@ -838,7 +836,6 @@
             "referenceImage": "lattice-hal.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "NME Loop Block",
             "playgroundId": "#D8AK3Z#115",
             "referenceImage": "nme-loop.png"
@@ -881,7 +878,6 @@
             "referenceImage": "convolution.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Volumetric Light Scattering Post Process with Skeleton",
             "playgroundId": "#5E318S#6",
             "referenceImage": "volumetricLightScatteringSkeleton.png"
@@ -1005,7 +1001,6 @@
             "referenceImage": "Sprites.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Procedural texture with NME",
             "playgroundId": "#8S19ZC#77",
             "referenceImage": "procedural-nme.png"
@@ -1047,7 +1042,6 @@
             "referenceImage": "node-material2.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Node material 3",
             "playgroundId": "#LWGVT0#2",
             "referenceImage": "node-material3.png"
@@ -1060,7 +1054,6 @@
             "referenceImage": "node-material4.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Node material 5",
             "playgroundId": "#V8VH7B#0",
             "referenceImage": "node-material5.png"
@@ -2240,7 +2233,6 @@
             "referenceImage": "oit.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Custom material with depth renderer",
             "playgroundId": "#6GFJNR#152",
             "renderCount": 5,
@@ -2260,7 +2252,6 @@
             "referenceImage": "bakedVertexAnimationDOF.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
             "playgroundId": "#1LF9GK#3",
             "renderCount": 20,
@@ -2643,13 +2634,12 @@
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
             "playgroundId": "#Y05E2C#6",
-            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
+            "excludedGraphicsApis": ["OpenGL"],
             "reason": "OpenGL: pixel diff out of tolerance (90900 px) -- likely glow-layer + custom-shader interaction differs from D3D11. Tracked for OpenGL backend follow-up.",
             "renderCount": 5,
             "referenceImage": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "blur-cube-with-the-effect-renderer",
             "playgroundId": "#4C900K#2",
             "renderCount": 20,
@@ -2683,7 +2673,6 @@
             "referenceImage": "simple-sphere-in-4-mirrors.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "procedural-texture-with-node-material",
             "playgroundId": "#IA4X0H#1",
             "renderCount": 10,
@@ -2698,7 +2687,6 @@
             "referenceImage": "apply-all-post-processes.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "simple-custom-shader",
             "playgroundId": "#6GFJNR#2",
             "renderCount": 5,
@@ -2759,7 +2747,6 @@
             "referenceImage": "depth-renderer.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "particle-system-with-custom-nme-shader",
             "playgroundId": "#DMLLV2",
             "renderCount": 5,
@@ -4458,7 +4445,6 @@
             "referenceImage": "particles-ramp-blend.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Particles - Effects",
             "playgroundId": "#1ASENS#424",
             "renderCount": 120,
