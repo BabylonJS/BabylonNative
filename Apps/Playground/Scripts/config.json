@@ -2,18 +2,21 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Gaussian Splatting Compressed ply SH",
             "playgroundId": "#U8O4EP#1",
             "renderCount": 15,
             "referenceImage": "gsplat-compressedply-sh.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Gaussian Splatting Update Data",
             "playgroundId": "#Q0LBM8#2",
             "renderCount": 15,
             "referenceImage": "gsplat-update-data.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#8",
             "referenceImage": "native-canvas.png"
@@ -24,11 +27,13 @@
             "referenceImage": "exr-loader.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "NME Shadow Map",
             "playgroundId": "#M3QR7E#83",
             "referenceImage": "nmeshadowmap.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Procedural texture with NME",
             "renderCount": 2,
             "playgroundId": "#8S19ZC#3",
@@ -47,18 +52,21 @@
             "referenceImage": "gltfMSFTLOD.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Texture Linear Interpolation Test",
             "playgroundId": "#WGZLGJ#3009",
             "referenceImage": "gltfTextureLinearInterpolation.png",
             "renderCount": 10
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
             "renderCount": 10
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF ClearCoat",
             "playgroundId": "#YG3BBF#33",
             "referenceImage": "glTFClearCoat.png"
@@ -69,6 +77,7 @@
             "referenceImage": "iridescence_gltf.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "EXT_texture_webp",
             "playgroundId": "#LSAUH2#6",
             "referenceImage": "webp.png"
@@ -87,26 +96,31 @@
             "referenceImage": "thinInstances.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Sheen",
             "playgroundId": "#YG3BBF#2",
             "referenceImage": "glTFSheen.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer multimaterial with raw texture",
             "playgroundId": "#KU72PX",
             "referenceImage": "glTFSerializerMultimaterial.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_materials_specular",
             "playgroundId": "#RNT7K4#9",
             "referenceImage": "gltfExtensionKhrMaterialsSpecular.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_texture_transform",
             "playgroundId": "#RNT7K4#2",
             "referenceImage": "gltfExtensionKhrTextureTransform.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_materials_variants",
             "playgroundId": "#BKGTKL#3",
             "referenceImage": "gltfExtensionKhrMaterialsVariants.png"
@@ -133,17 +147,20 @@
             "referenceImage": "glowlayerandlods.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Nested BBG",
             "playgroundId": "#ZG0C8B#6",
             "renderCount": 10,
             "referenceImage": "nested_BBG.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Dynamic Texture context clip",
             "playgroundId": "#FU0ES5#47",
             "referenceImage": "dynamicTextureClip.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GUI3D SpherePanel",
             "playgroundId": "#HB4C01#9",
             "renderCount": 50,
@@ -155,6 +172,7 @@
             "referenceImage": "KernelBlur.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitive Attribute",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveAttribute, __page__, 0, __disableSRGBBuffers__, 0",
@@ -168,6 +186,7 @@
             "referenceImage": "gltfMeshPrimitiveVertexColor.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Alpha Blend",
             "playgroundId": "#SYQW69#579",
             "referenceImage": "glTFAlphaBlend.png",
@@ -217,6 +236,7 @@
             "referenceImage": "sharpen.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF BoomBox with Unlit Material",
             "playgroundId": "#GYM97C#2",
             "referenceImage": "gltfUnlit.png"
@@ -235,6 +255,7 @@
             "errorRatio": 6.0
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "LightFalloff",
             "playgroundId": "#20OAV9#11218",
             "referenceImage": "lightFalloff.png"
@@ -300,6 +321,7 @@
             "referenceImage": "multiCameraRenderingWithScissors.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png"
@@ -309,21 +331,24 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": ["OpenGL"],
+            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
             "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); pixel diff fail on Linux OpenGL (56223 px) under 0.9 hardware scaling; passes on Win32 D3D11."
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with 1.5 hardware scaling",
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with negative x and y",
             "playgroundId": "#3L5BCD#2",
             "referenceImage": "scissorTestNegativeXandY.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with out of bounds width and height",
             "playgroundId": "#3L5BCD#3",
             "referenceImage": "scissorTestOobWidthAndHeight.png"
@@ -345,11 +370,13 @@
             "referenceImage": "upVector.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Normals",
             "playgroundId": "#SMEAEB#0",
             "referenceImage": "gltfnormals.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Animation Node",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
@@ -357,6 +384,7 @@
             "referenceImage": "gltfAnimationNode.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Animation Node Misc",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
@@ -378,48 +406,56 @@
             "referenceImage": "gltfAnimationSkin1.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Buffer Interleaved",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Buffer_Interleaved, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfBufferInterleaved.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterial.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Alpha Blend",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_AlphaBlend, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialAlphaBlend.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Alpha Mask",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_AlphaMask, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialAlphaMask.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Double Sided (Front)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_DoubleSided, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialDoubleSidedFront.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Double Sided (Back)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_DoubleSided, __page__, 0, alpha = Math.PI / 2, alpha = -Math.PI / 2, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialDoubleSidedBack.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Metallic Roughness (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_MetallicRoughness, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialMetallicRoughness0.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Metallic Roughness (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_MetallicRoughness, __page__, 1, __disableSRGBBuffers__, 0",
@@ -432,12 +468,14 @@
             "referenceImage": "gltfMaterialMixed.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Specular Glossiness (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_SpecularGlossiness, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialSpecularGlossiness0.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Specular Glossiness (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_SpecularGlossiness, __page__, 1, __disableSRGBBuffers__, 0",
@@ -445,6 +483,7 @@
             "errorRatio": 5.0
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitive Mode (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
@@ -452,6 +491,7 @@
             "errorRatio": 8.0
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitive Mode (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
@@ -465,48 +505,56 @@
             "referenceImage": "gltfMeshPrimitives.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitives UV (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitivesUV, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitivesUV0.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitives UV (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitivesUV, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitivesUV1.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node Attribute (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_Attribute, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeAttribute0.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node NegativeScale (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_NegativeScale, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeNegativeScale0.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node NegativeScale (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_NegativeScale, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeNegativeScale1.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Texture Sampler (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler0.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Texture Sampler (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler1.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
             "referenceImage": "gltfAlien.png"
@@ -536,6 +584,7 @@
             "renderCount": 2
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "CesiumMan from Khronos Sample Assets",
             "playgroundId": "#4GWX8M",
             "referenceImage": "CesiumMan.png"
@@ -561,6 +610,7 @@
             "referenceImage": "gsplat-splat-modify.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Gaussian Splatting PLY SH Reload",
             "playgroundId": "#YMXPPW#1",
             "referenceImage": "gsplat-ply-sh-reload.png"
@@ -574,6 +624,7 @@
             "referenceImage": "gsplat-splat-bake-transforms.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Gaussian Splatting Depth",
             "playgroundId": "#V80DRL#12",
             "renderCount": 15,
@@ -604,6 +655,7 @@
             "referenceImage": "gsplat-viewports.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Gaussian Splatting Shadows",
             "playgroundId": "#OE54M5#16",
             "renderCount": 15,
@@ -638,6 +690,7 @@
             "referenceImage": "gsplat-part-test.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "RH billboard",
             "playgroundId": "#PDO1L6#1",
             "referenceImage": "rh-billboard.png"
@@ -785,11 +838,13 @@
             "referenceImage": "lattice-hal.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "NME Loop Block",
             "playgroundId": "#D8AK3Z#115",
             "referenceImage": "nme-loop.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Gaussian Splatting Loading",
             "playgroundId": "#CID4NN#204",
             "renderCount": 15,
@@ -826,6 +881,7 @@
             "referenceImage": "convolution.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Volumetric Light Scattering Post Process with Skeleton",
             "playgroundId": "#5E318S#6",
             "referenceImage": "volumetricLightScatteringSkeleton.png"
@@ -949,6 +1005,7 @@
             "referenceImage": "Sprites.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Procedural texture with NME",
             "playgroundId": "#8S19ZC#77",
             "referenceImage": "procedural-nme.png"
@@ -990,6 +1047,7 @@
             "referenceImage": "node-material2.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Node material 3",
             "playgroundId": "#LWGVT0#2",
             "referenceImage": "node-material3.png"
@@ -1002,6 +1060,7 @@
             "referenceImage": "node-material4.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Node material 5",
             "playgroundId": "#V8VH7B#0",
             "referenceImage": "node-material5.png"
@@ -1095,7 +1154,7 @@
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
-            "excludedGraphicsApis": ["OpenGL"],
+            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
             "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
             "referenceImage": "guiNearMenu.png"
         },
@@ -1142,6 +1201,7 @@
             "referenceImage": "shadowOnlyMaterial.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Gizmos",
             "playgroundId": "#8GY6J8#196",
             "renderCount": 50,
@@ -1196,7 +1256,7 @@
         {
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
-            "excludedGraphicsApis": ["OpenGL"],
+            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
             "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11.",
             "referenceImage": "areaLightsStandardMaterial.png"
         },
@@ -1346,22 +1406,26 @@
             "referenceImage": "glTFSerializerSharedBufferConversions.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Skinning and Animation",
             "playgroundId": "#DMZBX1#1",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Skinning and Animation (Right Handed)",
             "playgroundId": "#DMZBX1#2",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Morph Target Animation",
             "playgroundId": "#84M2SR#107",
             "renderCount": 2,
             "referenceImage": "gltfSerializerMorphTargetAnimation.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Morph Target Animation Group",
             "playgroundId": "#T087A8#29",
             "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
@@ -1514,6 +1578,7 @@
             "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node visibility test",
             "playgroundId": "#80DN99#6",
             "referenceImage": "gltfNodeVisibility.png"
@@ -1524,6 +1589,7 @@
             "referenceImage": "assetContainer.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Enable disable post process",
             "playgroundId": "#1VI6WV#19",
             "renderCount": 50,
@@ -1662,6 +1728,7 @@
             "reason": "Pixel comparison fails on Linux (125368 px diff)"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "TGA",
             "playgroundId": "#ZI77S7#4",
             "renderCount": 5,
@@ -1675,6 +1742,7 @@
             "referenceImage": "dds.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "DDS2D",
             "playgroundId": "#I2MSBE#0",
             "referenceImage": "dds2d.png"
@@ -2041,10 +2109,11 @@
             "playgroundId": "#W7E7CF#38",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": ["OpenGL"],
+            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
             "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); pixel diff fail on Linux OpenGL (56223 px) under 0.9 hardware scaling; passes on Win32 D3D11."
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with 1.5 hardware scaling",
             "playgroundId": "#W7E7CF#38",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
@@ -2171,6 +2240,7 @@
             "referenceImage": "oit.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Custom material with depth renderer",
             "playgroundId": "#6GFJNR#152",
             "renderCount": 5,
@@ -2190,6 +2260,7 @@
             "referenceImage": "bakedVertexAnimationDOF.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
             "playgroundId": "#1LF9GK#3",
             "renderCount": 20,
@@ -2257,6 +2328,7 @@
             "referenceImage": "serializeWithoutMaterials.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "UI unaffected by post-process",
             "playgroundId": "#XJVHWQ",
             "referenceImage": "uiUnaffected.png"
@@ -2267,11 +2339,13 @@
             "referenceImage": "billboardParentScale.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Load GUI snippet with unicode",
             "playgroundId": "#YS93KY#1",
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Parse GUI json with unicode",
             "playgroundId": "#ERVGT5#1",
             "referenceImage": "parseGuiJsonWithUnicode.png"
@@ -2370,6 +2444,7 @@
             "referenceImage": "Asset-Container-Instantiate-to-Scene.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Asset Container Instantiate to Scene 2",
             "playgroundId": "#5NFRVE#161",
             "referenceImage": "Asset-Container-Instantiate-to-Scene-2.png"
@@ -2456,6 +2531,7 @@
             "referenceImage": "PBR-Debug-Modes.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "convertToFlatShadedMesh",
             "playgroundId": "#UFDL9T#4",
             "referenceImage": "convertToFlatShadedMesh.png"
@@ -2466,6 +2542,7 @@
             "referenceImage": "SerializeMesh-with-hierarchy.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "MeshDebugPluginMaterial",
             "playgroundId": "#TFDNZI#2",
             "referenceImage": "MeshDebugPluginMaterial.png"
@@ -2566,12 +2643,13 @@
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
             "playgroundId": "#Y05E2C#6",
-            "excludedGraphicsApis": ["OpenGL"],
+            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
             "reason": "OpenGL: pixel diff out of tolerance (90900 px) -- likely glow-layer + custom-shader interaction differs from D3D11. Tracked for OpenGL backend follow-up.",
             "renderCount": 5,
             "referenceImage": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "blur-cube-with-the-effect-renderer",
             "playgroundId": "#4C900K#2",
             "renderCount": 20,
@@ -2605,6 +2683,7 @@
             "referenceImage": "simple-sphere-in-4-mirrors.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "procedural-texture-with-node-material",
             "playgroundId": "#IA4X0H#1",
             "renderCount": 10,
@@ -2619,6 +2698,7 @@
             "referenceImage": "apply-all-post-processes.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "simple-custom-shader",
             "playgroundId": "#6GFJNR#2",
             "renderCount": 5,
@@ -2679,6 +2759,7 @@
             "referenceImage": "depth-renderer.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "particle-system-with-custom-nme-shader",
             "playgroundId": "#DMLLV2",
             "renderCount": 5,
@@ -2760,6 +2841,7 @@
             "referenceImage": "computeMaxExtents-MorphStressTest.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "glTF Loader Capabilities",
             "playgroundId": "#EBO3J1#10",
             "referenceImage": "glTFLoaderCapabilities.png"
@@ -3156,6 +3238,7 @@
             "referenceImage": "IBL-radiance-roughness.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Synchronous Effect",
             "playgroundId": "#D9XXL3#1",
             "referenceImage": "Synchronous-Effect.png"
@@ -3278,6 +3361,7 @@
             "referenceImage": "sponza-clustered-lighting-viewports.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Test code inlining",
             "playgroundId": "#YG3BBF#51",
             "referenceImage": "Test-code-inlining.png"
@@ -4374,6 +4458,7 @@
             "referenceImage": "particles-ramp-blend.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Particles - Effects",
             "playgroundId": "#1ASENS#424",
             "renderCount": 120,
@@ -4461,6 +4546,7 @@
             "referenceImage": "vertexPullingIsUnIndexed.png"
         },
         {
+            "excludedGraphicsApis": ["WebGPU"],
             "title": "Vertex Pulling - UV Channels 1-6",
             "playgroundId": "#0SA2NH#4",
             "referenceImage": "vertexPullingUVChannels.png"

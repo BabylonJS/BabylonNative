@@ -125,6 +125,34 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground app:///Scripts/validation_native.js
 
+      # NativeDawn (WebGPU) validation. Runs the same harness on the Dawn
+      # backend; tests that don't yet render correctly on WebGPU are marked
+      # `excludedGraphicsApis: ["WebGPU"]` in config.json and are skipped, so
+      # this gates on the currently-passing WebGPU subset. --headless routes
+      # all logs to stdout for CI diagnostics.
+      - name: Validation Tests (NativeDawn)
+        if: ${{ inputs.nativedawn }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground --headless app:///Scripts/validation_native.js
+
+      - name: Upload Rendered Pictures (NativeDawn)
+        if: ${{ inputs.nativedawn && !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-rendered-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Results
+          if-no-files-found: ignore
+
+      - name: Upload Error Pictures (NativeDawn)
+        if: ${{ inputs.nativedawn && failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-error-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Errors
+          if-no-files-found: ignore
+
       - name: Upload Rendered Pictures
         if: ${{ inputs.graphics-api != 'D3D12' && !inputs.nativedawn && !cancelled() }}
         uses: actions/upload-artifact@v6
