@@ -87,6 +87,15 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
     target_link_libraries(Embedding PRIVATE NativeEngine)
 endif()
 
+# NativeDawn (experimental WebGPU-via-Dawn backend). Mutually exclusive with
+# NativeEngine (the root CMake forces NativeEngine OFF when this is ON). When
+# enabled, the View/Runtime route the graphics-device lifecycle to the NativeDawn
+# plugin instead of the bgfx Graphics::Device.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEDAWN=1)
+    target_link_libraries(Embedding PRIVATE NativeDawn)
+endif()
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
     target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEINPUT=1)
     target_link_libraries(Embedding PRIVATE NativeInput)

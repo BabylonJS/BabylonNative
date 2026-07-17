@@ -1,52 +1,30 @@
-// dawn_bootstrap.js — makes the default Playground scene scripts (experience.js
+// dawn_bootstrap.js — makes the standard Playground scene scripts (experience.js
 // and friends, written against BABYLON.NativeEngine) run on the Dawn/WebGPU
 // backend provided by the NativeDawn plugin.
 //
-// Loaded by Win32/App.cpp (NativeDawn build) after babylon.max.js + addons.
-// The native side installs navigator.gpu, _nativeDawnGetContext/Present/
-// SurfaceSize, _nativeDawnDecodeImage, _nativeDawnReadFileBytes, and the
-// standard polyfills. This script:
+// This script is evaluated by the NativeDawn plugin (Babylon::Plugins::
+// NativeDawn::Initialize) at global scope, BEFORE babylon.max.js and the scene
+// scripts load. The native side has already installed navigator.gpu,
+// _nativeDawnGetContext/Present/SurfaceSize, _nativeDawnDecodeImage,
+// _nativeDawnReadFileBytes, and the standard polyfills. This script:
 //   * installs the no-DOM canvas / image shims WebGPUEngine needs,
-//   * drives requestAnimationFrame from the native per-frame globalThis.frame(),
-//   * pre-creates and initializes a WebGPUEngine, then aliases
+//   * drives requestAnimationFrame from the native per-frame globalThis.frame()
+//     (pumped by the Embedding View::RenderFrame),
+//   * installs a __dawnResize hook (called by Embedding View::Resize),
+//   * defers WebGPUEngine creation until babylon.max.js has defined BABYLON,
+//     then pre-creates + initializes a WebGPUEngine and aliases
 //     BABYLON.NativeEngine so the scene scripts' synchronous
-//     `new BABYLON.NativeEngine()` returns the ready WebGPU engine,
-//   * reads the scene script (default experience.js) natively and evaluates it
-//     once the engine is ready.
+//     `new BABYLON.NativeEngine()` returns the ready WebGPU engine.
+//
+// Input is NOT handled here: it flows through the generic Win32 host
+// (App.cpp WndProc -> Embedding View::OnMouse* -> NativeInput ->
+// _native.DeviceInputSystem), identical to the bgfx/NativeEngine backend.
 
 (function () {
     "use strict";
 
     function log() {
         console.log("[dawn-bootstrap] " + Array.prototype.join.call(arguments, " "));
-    }
-
-    // ---- shared DOM event registry ------------------------------------------
-    // Babylon's WebDeviceInputSystem attaches its pointer/keyboard listeners to
-    // whichever element engine.getInputElement() returns and (for some events) to
-    // window/document. To route native Win32 input regardless of which target and
-    // event-name prefix ("pointer" vs "mouse") Babylon picks, canvas, document and
-    // window all funnel their addEventListener calls into this single registry,
-    // and __dawnInput dispatches to it.
-    var g_evtListeners = {};
-    function addShared(name, cb) {
-        if (typeof cb !== "function") { return; }
-        (g_evtListeners[name] = g_evtListeners[name] || []).push(cb);
-    }
-    function removeShared(name, cb) {
-        var a = g_evtListeners[name];
-        if (!a) { return; }
-        var i = a.indexOf(cb);
-        if (i !== -1) { a.splice(i, 1); }
-    }
-    function dispatchShared(evt) {
-        var a = g_evtListeners[evt.type];
-        if (!a) { return; }
-        var copy = a.slice();
-        for (var i = 0; i < copy.length; ++i) {
-            try { copy[i].call(evt.currentTarget || null, evt); }
-            catch (e) { console.error("[dawn-bootstrap] listener error: " + (e && e.stack ? e.stack : e)); }
-        }
     }
 
     // ---- no-DOM canvas / DOM shims ------------------------------------------
@@ -68,10 +46,9 @@
             },
             setAttribute: function () {},
             removeAttribute: function () {},
-            addEventListener: function (name, cb) { addShared(name, cb); },
-            removeEventListener: function (name, cb) { removeShared(name, cb); },
-            dispatchEvent: function (evt) { dispatchShared(evt); return true; },
-            // Pointer-capture no-ops (Babylon's input system may call these).
+            addEventListener: function () {},
+            removeEventListener: function () {},
+            dispatchEvent: function () { return true; },
             setPointerCapture: function () {},
             releasePointerCapture: function () {},
             hasPointerCapture: function () { return false; },
@@ -88,14 +65,14 @@
                 if (tag === "img") { return new globalThis.Image(); }
                 return { style: {}, setAttribute: function () {}, appendChild: function () {} };
             },
-            addEventListener: function (name, cb) { addShared(name, cb); },
-            removeEventListener: function (name, cb) { removeShared(name, cb); },
+            addEventListener: function () {},
+            removeEventListener: function () {},
             getElementById: function () { return null; },
             body: { appendChild: function () {}, style: {} },
         };
     }
-    globalThis.addEventListener = function (name, cb) { addShared(name, cb); };
-    globalThis.removeEventListener = function (name, cb) { removeShared(name, cb); };
+    globalThis.addEventListener = function () {};
+    globalThis.removeEventListener = function () {};
 
     if (typeof globalThis.location === "undefined") {
         globalThis.location = {
@@ -179,9 +156,9 @@
 
     // ---- requestAnimationFrame pump ------------------------------------------
     // WebGPUEngine.runRenderLoop schedules its frame via requestAnimationFrame.
-    // The native App.cpp frame loop calls globalThis.frame() once per iteration;
-    // we flush queued rAF callbacks (which run the engine's begin/render/end,
-    // submitting GPU work), then present.
+    // The Embedding View::RenderFrame calls globalThis.frame() once per host
+    // frame (on the JS thread); we flush queued rAF callbacks (which run the
+    // engine's begin/render/end, submitting GPU work), then present.
     var rafQueue = [];
     globalThis.requestAnimationFrame = function (cb) { rafQueue.push(cb); return rafQueue.length; };
     globalThis.cancelAnimationFrame = function () {};
@@ -195,12 +172,9 @@
         if (typeof _nativeDawnPresent === "function") { _nativeDawnPresent(); }
     };
 
-    // The Window polyfill provides `window` (addEventListener no-op, atob, ...)
-    // but not the timer / animation methods and its addEventListener drops
-    // handlers. The scene scripts call window.setTimeout / window.requestAnimation
-    // Frame, and Babylon's input system attaches some listeners to window; forward
-    // timers to the globals (setTimeout via the Scheduling polyfill) and route
-    // window/global event registration into the shared registry.
+    // The Window polyfill provides `window` but not the timer / animation
+    // methods; forward them to the globals so scene scripts that call
+    // window.setTimeout / window.requestAnimationFrame work.
     if (globalThis.window) {
         var w = globalThis.window;
         try { w.setTimeout = globalThis.setTimeout; } catch (e) {}
@@ -209,15 +183,13 @@
         try { w.clearInterval = globalThis.clearInterval; } catch (e) {}
         try { w.requestAnimationFrame = globalThis.requestAnimationFrame; } catch (e) {}
         try { w.cancelAnimationFrame = globalThis.cancelAnimationFrame; } catch (e) {}
-        try { w.addEventListener = function (name, cb) { addShared(name, cb); }; } catch (e) {}
-        try { w.removeEventListener = function (name, cb) { removeShared(name, cb); }; } catch (e) {}
-        try { w.dispatchEvent = function (evt) { dispatchShared(evt); return true; }; } catch (e) {}
+        try { w.addEventListener = function () {}; } catch (e) {}
+        try { w.removeEventListener = function () {}; } catch (e) {}
+        try { w.dispatchEvent = function () { return true; }; } catch (e) {}
     }
 
-    // Advertise pointer/mouse/wheel event constructors. Babylon's
-    // Scene.simulatePointer* build events via `new PointerEvent(type, init)`, and
-    // its input system uses `window.PointerEvent` for feature detection. Provide
-    // real constructors that copy the init dictionary and expose the event API.
+    // Some Babylon input feature-detection reads window.PointerEvent etc.
+    // Provide inert constructors so detection succeeds without a DOM.
     function makeEventClass() {
         return function (type, init) {
             init = init || {};
@@ -228,7 +200,7 @@
             if (typeof this.stopImmediatePropagation !== "function") { this.stopImmediatePropagation = function () {}; }
         };
     }
-    globalThis.PointerEvent = makeEventClass();
+    globalThis.PointerEvent = globalThis.PointerEvent || makeEventClass();
     globalThis.MouseEvent = globalThis.MouseEvent || makeEventClass();
     globalThis.WheelEvent = globalThis.WheelEvent || makeEventClass();
     if (typeof globalThis.Event === "undefined") { globalThis.Event = makeEventClass(); }
@@ -238,122 +210,68 @@
         try { globalThis.window.WheelEvent = globalThis.WheelEvent; } catch (e) {}
     }
 
-    // ---- engine + scene load -------------------------------------------------
-    var surf = (typeof _nativeDawnSurfaceSize === "function") ? _nativeDawnSurfaceSize() : { width: 1280, height: 720 };
-    var canvas = makeCanvas(surf.width, surf.height);
-    globalThis.__dawnCanvas = canvas;
-
-    log("creating WebGPUEngine " + surf.width + "x" + surf.height);
-    var engine = new BABYLON.WebGPUEngine(canvas, {
-        antialias: false, stencil: true, premultipliedAlpha: false, enableAllFeatures: false,
-    });
-    engine.enableOfflineSupport = false;
-    engine.disableManifestCheck = true;
-
-    // ---- native input + resize bridge ---------------------------------------
-    // Win32/App.cpp drains the message-thread pointer/resize queue each frame
-    // (on the JS thread) and calls these globals. Pointer input is injected
-    // through Scene.simulatePointer* which drives scene.onPointerObservable (and
-    // hence the camera controls) directly, independent of the DOM/device-input
-    // system selection (which doesn't attach in this no-NativeInput WebGPU host).
-    var pointerIdSeq = 1;
-    var lastX = 0;
-    var lastY = 0;
-    var PET = (typeof BABYLON !== "undefined" && BABYLON.PointerEventTypes) || {};
-    function buildPointerEventInit(name, x, y, button, buttons, deltaY, movementX, movementY) {
-        return {
-            type: name,
-            clientX: x, clientY: y,
-            offsetX: x, offsetY: y,
-            x: x, y: y, pageX: x, pageY: y, screenX: x, screenY: y,
-            movementX: movementX, movementY: movementY,
-            pointerId: pointerIdSeq,
-            pointerType: "mouse",
-            button: button,
-            buttons: buttons,
-            deltaX: 0, deltaY: deltaY, deltaZ: 0, deltaMode: 0,
-            detail: 0,
-            ctrlKey: false, shiftKey: false, altKey: false, metaKey: false,
-            preventDefault: function () {}, stopPropagation: function () {},
-            stopImmediatePropagation: function () {},
-        };
-    }
-    globalThis.__dawnInput = function (type, x, y, button, buttons, deltaY) {
-        var sc = globalThis.__dawnEngine && globalThis.__dawnEngine.scenes && globalThis.__dawnEngine.scenes[0];
-        if (!sc) { return; }
-        var movementX = x - lastX;
-        var movementY = y - lastY;
-        lastX = x;
-        lastY = y;
-        if (type === "pointerdown") { pointerIdSeq++; }
-        try {
-            var pick = new BABYLON.PickingInfo();
-            if (type === "pointerdown") {
-                sc.simulatePointerDown(pick, buildPointerEventInit("pointerdown", x, y, button, buttons, deltaY, movementX, movementY));
-            } else if (type === "pointermove") {
-                sc.simulatePointerMove(pick, buildPointerEventInit("pointermove", x, y, button, buttons, deltaY, movementX, movementY));
-            } else if (type === "pointerup") {
-                sc.simulatePointerUp(pick, buildPointerEventInit("pointerup", x, y, button, buttons, deltaY, movementX, movementY));
-            } else if (type === "wheel" && sc.onPointerObservable && PET.POINTERWHEEL !== undefined) {
-                var wevt = buildPointerEventInit("wheel", x, y, button, buttons, deltaY, movementX, movementY);
-                var pi = new BABYLON.PointerInfo(PET.POINTERWHEEL, wevt, pick);
-                sc.onPointerObservable.notifyObservers(pi, PET.POINTERWHEEL);
-            }
-        } catch (e) {
-            console.error("[dawn-bootstrap] input error: " + (e && e.stack ? e.stack : e));
+    // ---- resize bridge -------------------------------------------------------
+    // Embedding View::Resize dispatches NativeDawn::ResizeSurface then calls this
+    // (on the JS thread) so the engine's drawing buffer matches the surface.
+    var g_canvas = null;
+    globalThis.__dawnResize = function (width, height) {
+        if (g_canvas) {
+            g_canvas.width = width;
+            g_canvas.height = height;
+            g_canvas.clientWidth = width;
+            g_canvas.clientHeight = height;
         }
-    };
-
-    globalThis.__dawnResize = function (w, h) {
-        canvas.width = w;
-        canvas.height = h;
-        canvas.clientWidth = w;
-        canvas.clientHeight = h;
         if (globalThis.__dawnEngine) {
-            try { globalThis.__dawnEngine.setSize(w, h, true); }
+            try { globalThis.__dawnEngine.setSize(width, height, true); }
             catch (e) { console.error("[dawn-bootstrap] setSize error: " + (e && e.stack ? e.stack : e)); }
         }
-        // Some Babylon code listens for the window "resize" event to re-read size.
-        if (globalThis.window && typeof globalThis.window.dispatchEvent === "function") {
-            try { globalThis.window.dispatchEvent({ type: "resize" }); } catch (e) {}
-        }
     };
 
-    function loadSceneSource() {
-        var path = globalThis.__sceneFsPath;
-        if (!path || typeof _nativeDawnReadFileBytes !== "function") {
-            return null;
-        }
-        var bytes = _nativeDawnReadFileBytes(path);
-        if (!bytes) {
-            return null;
-        }
-        return new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+    // ---- deferred WebGPUEngine creation --------------------------------------
+    // This script runs before babylon.max.js, so BABYLON.WebGPUEngine does not
+    // exist yet. Hook the global BABYLON assignment (babylon.max.js's UMD does
+    // `global.BABYLON = factory()`); when it lands, pre-create + initialize a
+    // WebGPUEngine and alias BABYLON.NativeEngine so the scene scripts'
+    // synchronous `new BABYLON.NativeEngine()` returns the ready WebGPU engine.
+    var g_started = false;
+    function onBabylonReady(BABYLON) {
+        if (g_started || !BABYLON || !BABYLON.WebGPUEngine) { return; }
+        g_started = true;
+
+        var surf = (typeof _nativeDawnSurfaceSize === "function") ? _nativeDawnSurfaceSize() : { width: 1280, height: 720 };
+        g_canvas = makeCanvas(surf.width, surf.height);
+        globalThis.__dawnCanvas = g_canvas;
+
+        log("creating WebGPUEngine " + surf.width + "x" + surf.height);
+        var engine = new BABYLON.WebGPUEngine(g_canvas, {
+            antialias: false, stencil: true, premultipliedAlpha: false, enableAllFeatures: false,
+        });
+        engine.enableOfflineSupport = false;
+        engine.disableManifestCheck = true;
+
+        engine.initAsync().then(function () {
+            globalThis.__dawnEngine = engine;
+            // Scene scripts construct their engine with `new BABYLON.NativeEngine()`;
+            // return the ready WebGPU engine instead so they run unmodified.
+            BABYLON.NativeEngine = function () { return globalThis.__dawnEngine; };
+            log("WebGPUEngine ready (" + engine.getCaps().maxTextureSize + " max tex)");
+        }).catch(function (e) {
+            console.error("[dawn-bootstrap] engine init failed: " + (e && e.stack ? e.stack : e));
+        });
     }
 
-    engine.initAsync().then(function () {
-        globalThis.__dawnEngine = engine;
-        // The scene scripts construct their engine with `new BABYLON.NativeEngine()`;
-        // return the ready WebGPU engine instead so they run unmodified on WebGPU.
-        BABYLON.NativeEngine = function () { return globalThis.__dawnEngine; };
-        log("WebGPUEngine ready (" + engine.getCaps().maxTextureSize + " max tex); running scene");
-        var code = loadSceneSource();
-        if (code === null) {
-            console.error("[dawn-bootstrap] could not read scene source at " + globalThis.__sceneFsPath);
-            return;
-        }
-        (0, eval)(code + "\n//# sourceURL=" + (globalThis.__sceneName || "scene.js") + "\n");
-
-        // Ensure each scene's InputManager is attached so simulatePointer* input
-        // (from __dawnInput) is processed. The scene scripts attach camera
-        // controls but don't necessarily call scene.attachControl().
-        setTimeout(function () {
-            (engine.scenes || []).forEach(function (sc) {
-                try { if (sc.attachControl) { sc.attachControl(); } }
-                catch (e) { console.error("[dawn-bootstrap] attachControl error: " + e); }
-            });
-        }, 0);
-    }).catch(function (e) {
-        console.error("[dawn-bootstrap] init/scene load failed: " + (e && e.stack ? e.stack : e));
-    });
+    var _BABYLON = globalThis.BABYLON;
+    if (_BABYLON && _BABYLON.WebGPUEngine) {
+        onBabylonReady(_BABYLON);
+    } else {
+        Object.defineProperty(globalThis, "BABYLON", {
+            configurable: true,
+            get: function () { return _BABYLON; },
+            set: function (v) {
+                _BABYLON = v;
+                try { onBabylonReady(v); }
+                catch (e) { console.error("[dawn-bootstrap] onBabylonReady error: " + (e && e.stack ? e.stack : e)); }
+            },
+        });
+    }
 })();
