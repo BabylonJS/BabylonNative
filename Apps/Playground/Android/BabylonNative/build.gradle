@@ -18,6 +18,25 @@ if (project.hasProperty("GRAPHICS_API")) {
 
 def arcore_libpath = layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
 
+def cmakeArguments = [
+    "-DANDROID_STL=c++_shared",
+    "-DENABLE_PCH=OFF",
+    "-DGRAPHICS_API=${graphics_api}",
+    "-DARCORE_LIBPATH=${arcore_libpath}/jni",
+    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
+    "-DBABYLON_NATIVE_BUILD_APPS=ON",
+    "-DBABYLON_DEBUG_TRACE=ON"
+]
+// Hermes for Android needs HOST hermesc/shermes (they emit bytecode at build
+// time and can't run as NDK-cross-compiled binaries). JsRuntimeHost's CMake
+// bootstraps these host compilers automatically when cross-compiling, so no
+// hand-off is normally required. This property is an optional manual override:
+// pass -PimportHostCompilers=<ImportHostCompilers.cmake> to reuse a prebuilt
+// host-compiler set and skip the in-CMake bootstrap.
+if (project.hasProperty("importHostCompilers")) {
+    cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property('importHostCompilers')}")
+}
+
 configurations { natives }
 
 android {
@@ -36,13 +55,7 @@ android {
         externalNativeBuild {
             cmake {
                 abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
-                arguments "-DANDROID_STL=c++_shared",
-                    "-DENABLE_PCH=OFF",
-                    "-DGRAPHICS_API=${graphics_api}",
-                    "-DARCORE_LIBPATH=${arcore_libpath}/jni",
-                    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
-                    "-DBABYLON_NATIVE_BUILD_APPS=ON",
-                    "-DBABYLON_DEBUG_TRACE=ON"
+                arguments(*cmakeArguments)
                 cppFlags += ["-Wno-deprecated-literal-operator"]
             }
         }

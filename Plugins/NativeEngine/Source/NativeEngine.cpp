@@ -1409,10 +1409,18 @@ namespace Babylon
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
         const auto textureDestination = data.ReadPointer<Graphics::Texture>();
 
-        // Use a view id greater than every view used so far so the blit runs after
-        // all canvas Flushes that may have produced the source content (bgfx
-        // processes blits in numeric view-id order). See #1683.
-        const bgfx::ViewId blitView = m_deviceContext.PeekNextViewId();
+        // The canvas->texture blit must run AFTER the canvas Flush that produced the source
+        // (bgfx processes blits in numeric view-id order) yet BEFORE the scene/backbuffer view
+        // that samples the destination, otherwise the consumer (e.g. a fullscreen GUI ADT layer)
+        // samples the previous frame's content — a one-frame latency. Context::Flush reserves a
+        // view id immediately after the canvas draws (before the scene render is recorded) and
+        // hands it to the source texture; use it here. Non-canvas sources have no reserved id, so
+        // fall back to PeekNextViewId() (a view greater than every view used so far). See #1683.
+        bgfx::ViewId blitView = textureSource->BlitViewId();
+        if (blitView == UINT16_MAX)
+        {
+            blitView = m_deviceContext.PeekNextViewId();
+        }
         encoder->blit(blitView, textureDestination->Handle(), 0, 0, textureSource->Handle());
     }
 

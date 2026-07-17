@@ -44,6 +44,11 @@ namespace Babylon::Graphics
         uint16_t ViewNumLayers() const;
         void ViewNumLayers(uint16_t);
 
+        // View id reserved (by the Canvas polyfill) for the canvas->texture blit that fills
+        // this texture. UINT16_MAX means "unset"; consumers fall back to a freshly peeked view.
+        bgfx::ViewId BlitViewId() const { return m_blitViewId; }
+        void BlitViewId(bgfx::ViewId viewId) { m_blitViewId = viewId; }
+
     private:
         bgfx::TextureHandle m_handle{bgfx::kInvalidHandle};
         bool m_ownsHandle{false};
@@ -56,6 +61,7 @@ namespace Babylon::Graphics
         uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
         uint16_t m_viewFirstLayer{0};
         uint16_t m_viewNumLayers{0};
+        bgfx::ViewId m_blitViewId{UINT16_MAX};
         uintptr_t m_deviceID;
         DeviceContext& m_deviceContext;
     };

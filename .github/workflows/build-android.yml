@@ -12,6 +12,9 @@ on:
 
 env:
   NDK_VERSION: '28.2.13676358'
+  # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
+  # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
+  npm_config_fetch_retries: '5'
 
 jobs:
   build:
@@ -26,12 +29,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Install Ninja (Hermes host-compiler bootstrap)
+        if: inputs.js-engine == 'Hermes'
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y ninja-build
+          elif [ "${{ runner.os }}" = "macOS" ] && ! command -v ninja >/dev/null 2>&1; then
+            brew install ninja
+          fi
+
       - name: Build Playground ${{ inputs.js-engine }}
         working-directory: Apps/Playground/Android
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -PJSEngine=${{ inputs.js-engine }} \
+            -PjsEngine=${{ inputs.js-engine }} \
             -PARM64Only \
             -PNDK_VERSION=${{ env.NDK_VERSION }} \
             -PSANITIZERS=OFF

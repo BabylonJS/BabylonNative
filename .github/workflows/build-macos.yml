@@ -19,10 +19,17 @@ on:
         required: false
         type: string
         default: macos-latest
+      js-engine:
+        required: false
+        type: string
+        default: ''
 
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
   ASAN_OPTIONS: abort_on_error=1
+  # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
+  # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
+  npm_config_fetch_retries: '5'
 
 jobs:
   build:
@@ -38,6 +45,7 @@ jobs:
       - name: Generate macOS solution
         run: |
           cmake -G "${{ inputs.generator }}" -B build/macOS \
+            ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
             -D BABYLON_DEBUG_TRACE=ON \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
@@ -71,7 +79,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: macos-${{ inputs.generator }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
+          name: macos-${{ inputs.generator }}-${{ inputs.js-engine != '' && inputs.js-engine || 'default' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
             build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
             build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*

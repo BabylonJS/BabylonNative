@@ -4,7 +4,6 @@
 #include <functional>
 
 #include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
 
 namespace Babylon::Graphics
 {

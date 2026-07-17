@@ -589,6 +589,28 @@ namespace Babylon::ShaderCompilerTraversers
                        strcmp(name, "splatIndex3") != 0;
             }
 
+            // The shader attribute location assigned to a varying must be stable regardless
+            // of how many attributes are instanced -- i.e. identical between the base program
+            // compile and any instanced variant. Vertex buffers are bound using the base
+            // program's attribute locations (VertexAttributeLocations), so if a variant
+            // reassigns a per-vertex attribute to a different location (as the instance/
+            // non-instance 2-pass ordering would), that buffer's data no longer reaches the
+            // shader and reads zero. The attribute's ordinal position in the name-sorted
+            // varying map is independent of the 2-pass ordering and therefore stable.
+            unsigned int GetStableLocation(const char* name) const
+            {
+                unsigned int index = 0;
+                for (const auto& entry : m_varyingNameToSymbol)
+                {
+                    if (entry.first == name)
+                    {
+                        break;
+                    }
+                    ++index;
+                }
+                return index;
+            }
+
             unsigned int m_genericAttributesRunningCount{0};
             const std::map<std::string, uint32_t>* m_instancedAttributes{nullptr};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
@@ -662,7 +684,9 @@ namespace Babylon::ShaderCompilerTraversers
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
@@ -672,18 +696,15 @@ namespace Babylon::ShaderCompilerTraversers
                     const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
                     // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD7),
                     // so the first instance attribute gets the highest i_data index.
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
@@ -748,7 +769,9 @@ namespace Babylon::ShaderCompilerTraversers
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
 
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
@@ -758,16 +781,13 @@ namespace Babylon::ShaderCompilerTraversers
                     const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
@@ -1673,6 +1693,76 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
         };
+
+        class FlipSamplerCoordinatesTraverser : public TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program)
+            {
+                for (auto stage : {EShLangVertex, EShLangFragment})
+                {
+                    auto* intermediate{program.getIntermediate(stage)};
+                    if (intermediate != nullptr)
+                    {
+                        FlipSamplerCoordinatesTraverser traverser{intermediate};
+                        intermediate->getTreeRoot()->traverse(&traverser);
+                    }
+                }
+            }
+
+        protected:
+            virtual bool visitAggregate(TVisit visit, TIntermAggregate* node) override
+            {
+                if (visit == EvPreVisit && (node->getOp() == EOpTexture || node->getOp() == EOpTextureLod))
+                {
+                    auto& sequence = node->getSequence();
+                    if (sequence.size() >= 2)
+                    {
+                        // The coordinate is the operand right after the sampler. Only 2-component
+                        // float coordinates (sampler2D-style) are flipped; cube/array/3D coordinates
+                        // (vec3+) are left untouched, matching the original flip(vec2)/flip(vec3).
+                        auto* coordinate = sequence[1]->getAsTyped();
+                        if (coordinate != nullptr &&
+                            coordinate->getType().getBasicType() == EbtFloat &&
+                            !coordinate->getType().isArray() &&
+                            coordinate->getType().getVectorSize() == 2)
+                        {
+                            sequence[1] = FlipVerticalCoordinate(coordinate);
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+        private:
+            FlipSamplerCoordinatesTraverser(TIntermediate* intermediate)
+                : m_intermediate{intermediate}
+            {
+            }
+
+            // Builds `coordinate * vec2(1.0, -1.0) + vec2(0.0, 1.0)`, i.e. (u, 1.0 - v).
+            TIntermTyped* FlipVerticalCoordinate(TIntermTyped* coordinate)
+            {
+                const TSourceLoc& loc{coordinate->getLoc()};
+                TType vec2Type{EbtFloat, EvqConst, 2};
+
+                TConstUnionArray scaleValues{2};
+                scaleValues[0].setDConst(1.0);
+                scaleValues[1].setDConst(-1.0);
+                TIntermTyped* scale{m_intermediate->addConstantUnion(scaleValues, vec2Type, loc)};
+
+                TConstUnionArray offsetValues{2};
+                offsetValues[0].setDConst(0.0);
+                offsetValues[1].setDConst(1.0);
+                TIntermTyped* offset{m_intermediate->addConstantUnion(offsetValues, vec2Type, loc)};
+
+                TIntermTyped* scaled{m_intermediate->addBinaryMath(EOpMul, coordinate, scale, loc)};
+                return m_intermediate->addBinaryMath(EOpAdd, scaled, offset, loc);
+            }
+
+            TIntermediate* m_intermediate{};
+        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -1718,5 +1808,10 @@ namespace Babylon::ShaderCompilerTraversers
     void InvertYDerivativeOperands(TProgram& program)
     {
         InvertYDerivativeOperandsTraverser::Traverse(program);
+    }
+
+    void FlipSamplerCoordinates(TProgram& program)
+    {
+        FlipSamplerCoordinatesTraverser::Traverse(program);
     }
 }

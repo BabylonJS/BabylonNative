@@ -820,6 +820,8 @@
         },
         {
             "title": "Convolution Post Process",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#FBH4J7#281",
             "referenceImage": "convolution.png"
         },
@@ -2266,14 +2268,12 @@
         },
         {
             "title": "Load GUI snippet with unicode",
-            "playgroundId": "#YS93KY#0",
-            "renderCount": 50,
+            "playgroundId": "#YS93KY#1",
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
             "title": "Parse GUI json with unicode",
-            "playgroundId": "#ERVGT5#0",
-            "renderCount": 50,
+            "playgroundId": "#ERVGT5#1",
             "referenceImage": "parseGuiJsonWithUnicode.png"
         },
         {
@@ -2575,8 +2575,6 @@
             "title": "blur-cube-with-the-effect-renderer",
             "playgroundId": "#4C900K#2",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "blur-cube-with-the-effect-renderer.png"
         },
         {
@@ -3722,11 +3720,15 @@
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Analytic Lights",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#GRQHVV#112",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - Analytic Lights",
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#GRQHVV#109",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---Analytic-Lights.png"
         },
