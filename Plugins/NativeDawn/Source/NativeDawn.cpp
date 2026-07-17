@@ -14,6 +14,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -2657,6 +2659,59 @@ namespace Babylon::Plugins::NativeDawn
         }
     } // namespace (webgpu)
 
+    namespace
+    {
+        // Locate the directory containing the running executable so the plugin can
+        // read Scripts/dawn_bootstrap.js staged next to it by the build.
+        std::filesystem::path ExeDir()
+        {
+#if defined(_WIN32)
+            wchar_t buf[MAX_PATH]{};
+            ::GetModuleFileNameW(nullptr, buf, MAX_PATH);
+            return std::filesystem::path(buf).parent_path();
+#else
+            return std::filesystem::current_path();
+#endif
+        }
+
+        // Evaluate the Dawn bootstrap glue (dawn_bootstrap.js) at global scope.
+        // Runs before babylon.max.js and the scene scripts: it installs the no-DOM
+        // canvas/image shims, the requestAnimationFrame pump + globalThis.frame(),
+        // the __dawnResize hook, and a deferred WebGPUEngine creation that aliases
+        // BABYLON.NativeEngine once babylon.max.js defines BABYLON. Evaluating via a
+        // non-identifier reference to `eval` is an indirect eval, so the script runs
+        // in the global scope (globalThis assignments and the BABYLON accessor hook
+        // take effect globally).
+        void InstallBootstrap(Napi::Env env)
+        {
+            const std::filesystem::path scriptPath = ExeDir() / "Scripts" / "dawn_bootstrap.js";
+            std::ifstream stream{scriptPath, std::ios::binary};
+            if (!stream.good())
+            {
+                std::fprintf(stderr, "[NativeDawn] bootstrap not found: %s\n",
+                    scriptPath.string().c_str());
+                return;
+            }
+            std::string source{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
+            source += "\n//# sourceURL=dawn_bootstrap.js\n";
+
+            Napi::Value evalVal = env.Global().Get("eval");
+            if (!evalVal.IsFunction())
+            {
+                std::fprintf(stderr, "[NativeDawn] global eval unavailable; cannot run bootstrap\n");
+                return;
+            }
+            try
+            {
+                evalVal.As<Napi::Function>().Call({Napi::String::New(env, source)});
+            }
+            catch (const Napi::Error& e)
+            {
+                std::fprintf(stderr, "[NativeDawn] bootstrap eval threw: %s\n", e.what());
+            }
+        }
+    } // namespace (bootstrap)
+
     void Initialize(Napi::Env env, void* window, uint32_t width, uint32_t height)
     {
         if (!CreateDeviceAndSurface(window, width, height))
@@ -2679,6 +2734,7 @@ namespace Babylon::Plugins::NativeDawn
         if (g_state.ready)
         {
             InstallWebGPU(env);
+            InstallBootstrap(env);
         }
     }
 
