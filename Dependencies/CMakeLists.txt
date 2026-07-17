@@ -285,6 +285,19 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI" OR NAPI_JAVASCRIPT_ENGINE STREQUAL "Her
     babylon_native_force_rtti(jsi)
 endif()
 
+if(APPLE AND NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore" AND TARGET napi)
+    # find_library adds the SDK framework directory with -F, which does not
+    # classify framework headers as system headers. JsRuntimeHost uses
+    # -pedantic -Werror, so make that classification explicit for napi and all
+    # consumers while preserving warnings-as-errors for project sources.
+    get_filename_component(_JAVASCRIPTCORE_FRAMEWORKS_DIR "${JAVASCRIPTCORE_LIBRARY}" DIRECTORY)
+    if(_JAVASCRIPTCORE_FRAMEWORKS_DIR MATCHES "\\.framework$")
+        get_filename_component(_JAVASCRIPTCORE_FRAMEWORKS_DIR "${_JAVASCRIPTCORE_FRAMEWORKS_DIR}" DIRECTORY)
+    endif()
+    target_compile_options(napi PUBLIC "-iframework" "${_JAVASCRIPTCORE_FRAMEWORKS_DIR}")
+    unset(_JAVASCRIPTCORE_FRAMEWORKS_DIR)
+endif()
+
 # --------------------------------------------------
 # metal-cpp
 # --------------------------------------------------
