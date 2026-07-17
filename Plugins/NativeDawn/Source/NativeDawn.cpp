@@ -14,8 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
-#include <fstream>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -2661,53 +2660,563 @@ namespace Babylon::Plugins::NativeDawn
 
     namespace
     {
-        // Locate the directory containing the running executable so the plugin can
-        // read Scripts/dawn_bootstrap.js staged next to it by the build.
-        std::filesystem::path ExeDir()
+        // ---- Dawn bootstrap glue, implemented in C++ (Napi) -------------------
+        // Formerly dawn_bootstrap.js. Installs, at global scope and before
+        // babylon.max.js loads, everything WebGPUEngine needs to run the standard
+        // (bgfx-oriented) Playground scene scripts unmodified on Dawn/WebGPU:
+        //   * no-DOM canvas / document / window / location shims,
+        //   * image decoding shims (createImageBitmap / Image / URL.createObjectURL)
+        //     backed by the native bimg decoder,
+        //   * a requestAnimationFrame pump driven by globalThis.frame()
+        //     (called each host frame by the Embedding View::RenderFrame),
+        //   * a __dawnResize hook (called by View::Resize),
+        //   * a deferred WebGPUEngine creation that aliases BABYLON.NativeEngine
+        //     once babylon.max.js defines BABYLON, so the scene scripts'
+        //     synchronous `new BABYLON.NativeEngine()` returns the ready engine.
+        // Input is NOT handled here (it flows through NativeInput, like bgfx).
+        //
+        // All state is JS-thread-only (the plugin only ever runs on the JS thread).
+
+        std::vector<Napi::FunctionReference> g_rafQueue;
+        Napi::ObjectReference g_blobRegistry;
+        Napi::ObjectReference g_bootstrapCanvas;
+        Napi::Reference<Napi::Value> g_babylon;
+        bool g_engineStarted = false;
+        uint32_t g_blobSeq = 0;
+
+        Napi::Value Noop(const Napi::CallbackInfo& info) { return info.Env().Undefined(); }
+
+        // Build a no-DOM canvas whose getContext("webgpu") returns the Dawn context.
+        Napi::Object MakeCanvas(Napi::Env env, uint32_t width, uint32_t height)
         {
-#if defined(_WIN32)
-            wchar_t buf[MAX_PATH]{};
-            ::GetModuleFileNameW(nullptr, buf, MAX_PATH);
-            return std::filesystem::path(buf).parent_path();
-#else
-            return std::filesystem::current_path();
-#endif
+            Napi::Object canvas = Napi::Object::New(env);
+            canvas.Set("width", Napi::Number::New(env, width));
+            canvas.Set("height", Napi::Number::New(env, height));
+            canvas.Set("clientWidth", Napi::Number::New(env, width));
+            canvas.Set("clientHeight", Napi::Number::New(env, height));
+            canvas.Set("style", Napi::Object::New(env));
+            SetMethod(canvas, "getContext", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                if (info.Length() > 0 && info[0].IsString() && info[0].As<Napi::String>().Utf8Value() == "webgpu")
+                {
+                    return MakeCanvasContext(info.Env());
+                }
+                return info.Env().Null();
+            });
+            SetMethod(canvas, "getBoundingClientRect", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                Napi::Object self = info.This().As<Napi::Object>();
+                double w = self.Get("width").ToNumber().DoubleValue();
+                double h = self.Get("height").ToNumber().DoubleValue();
+                Napi::Object r = Napi::Object::New(env);
+                r.Set("x", Napi::Number::New(env, 0));
+                r.Set("y", Napi::Number::New(env, 0));
+                r.Set("left", Napi::Number::New(env, 0));
+                r.Set("top", Napi::Number::New(env, 0));
+                r.Set("right", Napi::Number::New(env, w));
+                r.Set("bottom", Napi::Number::New(env, h));
+                r.Set("width", Napi::Number::New(env, w));
+                r.Set("height", Napi::Number::New(env, h));
+                return r;
+            });
+            SetMethod(canvas, "setAttribute", Noop);
+            SetMethod(canvas, "removeAttribute", Noop);
+            SetMethod(canvas, "addEventListener", Noop);
+            SetMethod(canvas, "removeEventListener", Noop);
+            SetMethod(canvas, "dispatchEvent", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::Boolean::New(info.Env(), true);
+            });
+            SetMethod(canvas, "setPointerCapture", Noop);
+            SetMethod(canvas, "releasePointerCapture", Noop);
+            SetMethod(canvas, "hasPointerCapture", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::Boolean::New(info.Env(), false);
+            });
+            SetMethod(canvas, "focus", Noop);
+            SetMethod(canvas, "getRootNode", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return info.This();
+            });
+            return canvas;
         }
 
-        // Evaluate the Dawn bootstrap glue (dawn_bootstrap.js) at global scope.
-        // Runs before babylon.max.js and the scene scripts: it installs the no-DOM
-        // canvas/image shims, the requestAnimationFrame pump + globalThis.frame(),
-        // the __dawnResize hook, and a deferred WebGPUEngine creation that aliases
-        // BABYLON.NativeEngine once babylon.max.js defines BABYLON. Evaluating via a
-        // non-identifier reference to `eval` is an indirect eval, so the script runs
-        // in the global scope (globalThis assignments and the BABYLON accessor hook
-        // take effect globally).
+        // Decode an encoded-image ArrayBuffer/TypedArray into an ImageBitmap-like
+        // object {width,height,__pixels(RGBA8 ArrayBuffer),close} via bimg.
+        Napi::Object DecodeToBitmap(Napi::Env env, Napi::Value abVal)
+        {
+            Napi::Object bmp = Napi::Object::New(env);
+            SetMethod(bmp, "close", Noop);
+
+            Bytes in = GetBytes(abVal);
+            int w = 0;
+            int h = 0;
+            std::vector<uint8_t> rgba;
+            if (in.data == nullptr || in.size == 0 || !DecodeRGBA(in.data, in.size, rgba, w, h))
+            {
+                bmp.Set("width", Napi::Number::New(env, 1));
+                bmp.Set("height", Napi::Number::New(env, 1));
+                bmp.Set("__pixels", Napi::ArrayBuffer::New(env, 4));
+                return bmp;
+            }
+            Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, rgba.size());
+            std::memcpy(ab.Data(), rgba.data(), rgba.size());
+            bmp.Set("width", Napi::Number::New(env, w));
+            bmp.Set("height", Napi::Number::New(env, h));
+            bmp.Set("__pixels", ab);
+            return bmp;
+        }
+
+        // Resolve `src` (ArrayBuffer / TypedArray view / {arrayBuffer()} / blob URL
+        // string / fetchable URL string) to an ArrayBuffer, returning a Promise.
+        Napi::Value ToArrayBuffer(Napi::Env env, Napi::Value src)
+        {
+            if (src.IsArrayBuffer())
+            {
+                auto d = Napi::Promise::Deferred::New(env);
+                d.Resolve(src);
+                return d.Promise();
+            }
+            if (src.IsTypedArray() || src.IsDataView())
+            {
+                Napi::Object o = src.As<Napi::Object>();
+                Napi::Value buffer = o.Get("buffer");
+                double offset = o.Get("byteOffset").ToNumber().DoubleValue();
+                double length = o.Get("byteLength").ToNumber().DoubleValue();
+                Napi::Value sliced = buffer.As<Napi::Object>().Get("slice").As<Napi::Function>().Call(
+                    buffer, {Napi::Number::New(env, offset), Napi::Number::New(env, offset + length)});
+                auto d = Napi::Promise::Deferred::New(env);
+                d.Resolve(sliced);
+                return d.Promise();
+            }
+            if (src.IsObject() && src.As<Napi::Object>().Get("arrayBuffer").IsFunction())
+            {
+                Napi::Object o = src.As<Napi::Object>();
+                return o.Get("arrayBuffer").As<Napi::Function>().Call(o, {});
+            }
+            if (src.IsString())
+            {
+                const std::string id = src.As<Napi::String>().Utf8Value();
+                Napi::Value blob = g_blobRegistry.Value().Get(id);
+                if (!blob.IsUndefined())
+                {
+                    return ToArrayBuffer(env, blob);
+                }
+                Napi::Value fetchVal = env.Global().Get("fetch");
+                if (fetchVal.IsFunction())
+                {
+                    Napi::Value p = fetchVal.As<Napi::Function>().Call({src});
+                    Napi::Function toAb = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        Napi::Object r = info[0].As<Napi::Object>();
+                        return r.Get("arrayBuffer").As<Napi::Function>().Call(r, {});
+                    });
+                    return p.As<Napi::Object>().Get("then").As<Napi::Function>().Call(p, {toAb});
+                }
+            }
+            auto d = Napi::Promise::Deferred::New(env);
+            d.Reject(Napi::Error::New(env, "toArrayBuffer: unsupported source").Value());
+            return d.Promise();
+        }
+
+        // Create + initialize the WebGPUEngine once babylon.max.js has defined
+        // BABYLON, then alias BABYLON.NativeEngine to return it.
+        void OnBabylonReady(Napi::Env env, Napi::Value babylonVal)
+        {
+            if (g_engineStarted || !babylonVal.IsObject())
+            {
+                return;
+            }
+            Napi::Object babylon = babylonVal.As<Napi::Object>();
+            Napi::Value wgpuCtor = babylon.Get("WebGPUEngine");
+            if (!wgpuCtor.IsFunction())
+            {
+                return;
+            }
+            g_engineStarted = true;
+
+            Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
+            g_bootstrapCanvas = Napi::Persistent(canvas);
+            env.Global().Set("__dawnCanvas", canvas);
+
+            Napi::Object opts = Napi::Object::New(env);
+            opts.Set("antialias", Napi::Boolean::New(env, false));
+            opts.Set("stencil", Napi::Boolean::New(env, true));
+            opts.Set("premultipliedAlpha", Napi::Boolean::New(env, false));
+            opts.Set("enableAllFeatures", Napi::Boolean::New(env, false));
+
+            Napi::Object engine = wgpuCtor.As<Napi::Function>().New({canvas, opts});
+            engine.Set("enableOfflineSupport", Napi::Boolean::New(env, false));
+            engine.Set("disableManifestCheck", Napi::Boolean::New(env, true));
+            // Stash the engine so the async init callback can promote it without
+            // capturing handles; the alias is only installed once ready.
+            env.Global().Set("__dawnPendingEngine", engine);
+
+            Napi::Value initPromise = engine.Get("initAsync").As<Napi::Function>().Call(engine, {});
+            Napi::Function onReady = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                Napi::Object global = env.Global();
+                global.Set("__dawnEngine", global.Get("__dawnPendingEngine"));
+                Napi::Value babylon = global.Get("BABYLON");
+                if (babylon.IsObject())
+                {
+                    babylon.As<Napi::Object>().Set("NativeEngine",
+                        Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                            return info.Env().Global().Get("__dawnEngine");
+                        }));
+                }
+                std::fprintf(stderr, "[NativeDawn] WebGPUEngine ready\n");
+                return env.Undefined();
+            });
+            Napi::Function onErr = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                std::string msg = info.Length() > 0 ? info[0].ToString().Utf8Value() : "?";
+                std::fprintf(stderr, "[NativeDawn] engine init failed: %s\n", msg.c_str());
+                return info.Env().Undefined();
+            });
+            initPromise.As<Napi::Object>().Get("then").As<Napi::Function>().Call(initPromise, {onReady, onErr});
+        }
+
+        // Install all of the above onto the global object. Replaces the eval of
+        // dawn_bootstrap.js.
         void InstallBootstrap(Napi::Env env)
         {
-            const std::filesystem::path scriptPath = ExeDir() / "Scripts" / "dawn_bootstrap.js";
-            std::ifstream stream{scriptPath, std::ios::binary};
-            if (!stream.good())
-            {
-                std::fprintf(stderr, "[NativeDawn] bootstrap not found: %s\n",
-                    scriptPath.string().c_str());
-                return;
-            }
-            std::string source{std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{}};
-            source += "\n//# sourceURL=dawn_bootstrap.js\n";
+            Napi::Object global = env.Global();
 
-            Napi::Value evalVal = env.Global().Get("eval");
-            if (!evalVal.IsFunction())
+            g_rafQueue.clear();
+            g_engineStarted = false;
+            g_blobSeq = 0;
+            g_blobRegistry = Napi::Persistent(Napi::Object::New(env));
+
+            // ---- canvas / document / window / location shims -----------------
+            if (global.Get("document").IsUndefined())
             {
-                std::fprintf(stderr, "[NativeDawn] global eval unavailable; cannot run bootstrap\n");
-                return;
+                Napi::Object document = Napi::Object::New(env);
+                SetMethod(document, "createElement", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    Napi::Env env = info.Env();
+                    std::string tag = info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
+                    if (tag == "canvas")
+                    {
+                        return MakeCanvas(env, 1280, 720);
+                    }
+                    if (tag == "img")
+                    {
+                        return env.Global().Get("Image").As<Napi::Function>().New({});
+                    }
+                    Napi::Object el = Napi::Object::New(env);
+                    el.Set("style", Napi::Object::New(env));
+                    SetMethod(el, "setAttribute", Noop);
+                    SetMethod(el, "appendChild", Noop);
+                    return el;
+                });
+                SetMethod(document, "addEventListener", Noop);
+                SetMethod(document, "removeEventListener", Noop);
+                SetMethod(document, "getElementById", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return info.Env().Null();
+                });
+                Napi::Object body = Napi::Object::New(env);
+                SetMethod(body, "appendChild", Noop);
+                body.Set("style", Napi::Object::New(env));
+                document.Set("body", body);
+                global.Set("document", document);
             }
-            try
+            SetMethod(global, "addEventListener", Noop);
+            SetMethod(global, "removeEventListener", Noop);
+
+            if (global.Get("location").IsUndefined())
             {
-                evalVal.As<Napi::Function>().Call({Napi::String::New(env, source)});
+                Napi::Object location = Napi::Object::New(env);
+                location.Set("href", Napi::String::New(env, "file:///"));
+                location.Set("origin", Napi::String::New(env, "file://"));
+                location.Set("protocol", Napi::String::New(env, "file:"));
+                location.Set("host", Napi::String::New(env, ""));
+                location.Set("hostname", Napi::String::New(env, ""));
+                location.Set("pathname", Napi::String::New(env, "/"));
+                location.Set("search", Napi::String::New(env, ""));
+                location.Set("hash", Napi::String::New(env, ""));
+                global.Set("location", location);
             }
-            catch (const Napi::Error& e)
+
+            // ---- image decoding shims ----------------------------------------
+            Napi::Value urlVal = global.Get("URL");
+            if (urlVal.IsObject() || urlVal.IsFunction())
             {
-                std::fprintf(stderr, "[NativeDawn] bootstrap eval threw: %s\n", e.what());
+                Napi::Object url = urlVal.As<Napi::Object>();
+                if (!url.Get("createObjectURL").IsFunction())
+                {
+                    SetMethod(url, "createObjectURL", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        Napi::Env env = info.Env();
+                        std::string id = "blob:nativedawn/" + std::to_string(++g_blobSeq);
+                        g_blobRegistry.Value().Set(id, info.Length() > 0 ? info[0] : env.Undefined());
+                        return Napi::String::New(env, id);
+                    });
+                }
+                if (!url.Get("revokeObjectURL").IsFunction())
+                {
+                    SetMethod(url, "revokeObjectURL", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        if (info.Length() > 0 && info[0].IsString())
+                        {
+                            g_blobRegistry.Value().Delete(info[0].As<Napi::String>().Utf8Value());
+                        }
+                        return info.Env().Undefined();
+                    });
+                }
+            }
+
+            if (global.Get("createImageBitmap").IsUndefined())
+            {
+                SetMethod(global, "createImageBitmap", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    Napi::Env env = info.Env();
+                    Napi::Value src = info.Length() > 0 ? info[0] : env.Undefined();
+                    auto deferred = Napi::Promise::Deferred::New(env);
+                    if (src.IsObject() && src.As<Napi::Object>().Get("__pixels").IsArrayBuffer())
+                    {
+                        deferred.Resolve(src);
+                        return deferred.Promise();
+                    }
+                    Napi::Value p = ToArrayBuffer(env, src);
+                    Napi::Function onAb = Napi::Function::New(env, [deferred](const Napi::CallbackInfo& info) -> Napi::Value {
+                        Napi::Env env = info.Env();
+                        deferred.Resolve(DecodeToBitmap(env, info.Length() > 0 ? info[0] : env.Undefined()));
+                        return env.Undefined();
+                    });
+                    Napi::Function onErr = Napi::Function::New(env, [deferred](const Napi::CallbackInfo& info) -> Napi::Value {
+                        deferred.Reject(info.Length() > 0 ? info[0] : info.Env().Undefined());
+                        return info.Env().Undefined();
+                    });
+                    p.As<Napi::Object>().Get("then").As<Napi::Function>().Call(p, {onAb, onErr});
+                    return deferred.Promise();
+                });
+            }
+
+            if (global.Get("Image").IsUndefined())
+            {
+                Napi::Function imageCtor = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    Napi::Env env = info.Env();
+                    Napi::Object img = Napi::Object::New(env);
+                    img.Set("width", Napi::Number::New(env, 0));
+                    img.Set("height", Napi::Number::New(env, 0));
+                    img.Set("naturalWidth", Napi::Number::New(env, 0));
+                    img.Set("naturalHeight", Napi::Number::New(env, 0));
+                    img.Set("__pixels", env.Null());
+                    img.Set("onload", env.Null());
+                    img.Set("onerror", env.Null());
+                    img.Set("crossOrigin", env.Null());
+                    img.Set("complete", Napi::Boolean::New(env, false));
+                    img.Set("_src", Napi::String::New(env, ""));
+                    SetMethod(img, "decode", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        return Napi::Promise::Deferred::New(info.Env()).Promise();
+                    });
+                    SetMethod(img, "addEventListener", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        Napi::Object self = info.This().As<Napi::Object>();
+                        std::string name = info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
+                        if (name == "load") self.Set("onload", info[1]);
+                        else if (name == "error") self.Set("onerror", info[1]);
+                        return info.Env().Undefined();
+                    });
+                    SetMethod(img, "removeEventListener", Noop);
+
+                    // Define the async-decoding `src` accessor.
+                    auto imgRef = std::make_shared<Napi::ObjectReference>(Napi::Persistent(img));
+                    Napi::Object desc = Napi::Object::New(env);
+                    desc.Set("configurable", Napi::Boolean::New(env, true));
+                    desc.Set("get", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        return info.This().As<Napi::Object>().Get("_src");
+                    }));
+                    desc.Set("set", Napi::Function::New(env, [imgRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                        Napi::Env env = info.Env();
+                        Napi::Value v = info.Length() > 0 ? info[0] : env.Undefined();
+                        imgRef->Value().Set("_src", v);
+                        Napi::Value p = ToArrayBuffer(env, v);
+                        Napi::Function onAb = Napi::Function::New(env, [imgRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                            Napi::Env env = info.Env();
+                            Napi::Object img = imgRef->Value();
+                            Napi::Object bmp = DecodeToBitmap(env, info.Length() > 0 ? info[0] : env.Undefined());
+                            img.Set("width", bmp.Get("width"));
+                            img.Set("naturalWidth", bmp.Get("width"));
+                            img.Set("height", bmp.Get("height"));
+                            img.Set("naturalHeight", bmp.Get("height"));
+                            img.Set("__pixels", bmp.Get("__pixels"));
+                            img.Set("complete", Napi::Boolean::New(env, true));
+                            Napi::Value onload = img.Get("onload");
+                            if (onload.IsFunction())
+                            {
+                                Napi::Object ev = Napi::Object::New(env);
+                                ev.Set("target", img);
+                                onload.As<Napi::Function>().Call(img, {ev});
+                            }
+                            return env.Undefined();
+                        });
+                        Napi::Function onErr = Napi::Function::New(env, [imgRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                            Napi::Env env = info.Env();
+                            Napi::Value onerror = imgRef->Value().Get("onerror");
+                            if (onerror.IsFunction())
+                            {
+                                onerror.As<Napi::Function>().Call(imgRef->Value(), {info.Length() > 0 ? info[0] : env.Undefined()});
+                            }
+                            return env.Undefined();
+                        });
+                        p.As<Napi::Object>().Get("then").As<Napi::Function>().Call(p, {onAb, onErr});
+                        return env.Undefined();
+                    }));
+                    Napi::Object objectCtor = env.Global().Get("Object").As<Napi::Object>();
+                    objectCtor.Get("defineProperty").As<Napi::Function>().Call(objectCtor, {img, Napi::String::New(env, "src"), desc});
+                    return img;
+                });
+                global.Set("Image", imageCtor);
+                if (global.Get("HTMLImageElement").IsUndefined())
+                {
+                    global.Set("HTMLImageElement", imageCtor);
+                }
+            }
+
+            // ---- requestAnimationFrame pump ----------------------------------
+            SetMethod(global, "requestAnimationFrame", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                if (info.Length() > 0 && info[0].IsFunction())
+                {
+                    g_rafQueue.push_back(Napi::Persistent(info[0].As<Napi::Function>()));
+                }
+                return Napi::Number::New(info.Env(), static_cast<double>(g_rafQueue.size()));
+            });
+            SetMethod(global, "cancelAnimationFrame", Noop);
+            SetMethod(global, "frame", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                double now = 0.0;
+                Napi::Value perf = env.Global().Get("performance");
+                if (perf.IsObject())
+                {
+                    Napi::Value nowFn = perf.As<Napi::Object>().Get("now");
+                    if (nowFn.IsFunction())
+                    {
+                        now = nowFn.As<Napi::Function>().Call(perf, {}).ToNumber().DoubleValue();
+                    }
+                }
+                std::vector<Napi::FunctionReference> queue;
+                queue.swap(g_rafQueue);
+                for (auto& cb : queue)
+                {
+                    cb.Value().Call({Napi::Number::New(env, now)});
+                }
+                // Present the frame.
+                if (g_surfaceConfigured && g_currentTextureAcquired)
+                {
+                    g_state.surface.Present();
+                }
+                g_currentTextureAcquired = false;
+                if (g_state.instance)
+                {
+                    g_state.instance.ProcessEvents();
+                }
+                return env.Undefined();
+            });
+
+            // Forward timer/animation methods onto `window` (Window polyfill
+            // provides `window` but not these).
+            Napi::Value windowVal = global.Get("window");
+            if (windowVal.IsObject())
+            {
+                Napi::Object w = windowVal.As<Napi::Object>();
+                for (const char* name : {"setTimeout", "clearTimeout", "setInterval", "clearInterval",
+                                         "requestAnimationFrame", "cancelAnimationFrame"})
+                {
+                    Napi::Value fn = global.Get(name);
+                    if (!fn.IsUndefined())
+                    {
+                        w.Set(name, fn);
+                    }
+                }
+                SetMethod(w, "addEventListener", Noop);
+                SetMethod(w, "removeEventListener", Noop);
+                SetMethod(w, "dispatchEvent", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return Napi::Boolean::New(info.Env(), true);
+                });
+            }
+
+            // ---- inert event constructors ------------------------------------
+            auto makeEventClass = [](Napi::Env env) {
+                return Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    Napi::Env env = info.Env();
+                    Napi::Object self = info.This().As<Napi::Object>();
+                    self.Set("type", info.Length() > 0 ? info[0] : env.Undefined());
+                    if (info.Length() > 1 && info[1].IsObject())
+                    {
+                        Napi::Object init = info[1].As<Napi::Object>();
+                        Napi::Array keys = init.GetPropertyNames();
+                        for (uint32_t i = 0; i < keys.Length(); ++i)
+                        {
+                            Napi::Value k = keys.Get(i);
+                            self.Set(k, init.Get(k));
+                        }
+                    }
+                    SetMethod(self, "preventDefault", Noop);
+                    SetMethod(self, "stopPropagation", Noop);
+                    SetMethod(self, "stopImmediatePropagation", Noop);
+                    return env.Undefined();
+                });
+            };
+            for (const char* name : {"PointerEvent", "MouseEvent", "WheelEvent", "Event"})
+            {
+                if (global.Get(name).IsUndefined())
+                {
+                    global.Set(name, makeEventClass(env));
+                }
+            }
+            if (windowVal.IsObject())
+            {
+                Napi::Object w = windowVal.As<Napi::Object>();
+                for (const char* name : {"PointerEvent", "MouseEvent", "WheelEvent"})
+                {
+                    w.Set(name, global.Get(name));
+                }
+            }
+
+            // ---- resize bridge (called by Embedding View::Resize) ------------
+            SetMethod(global, "__dawnResize", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                double width = info.Length() > 0 ? info[0].ToNumber().DoubleValue() : 0.0;
+                double height = info.Length() > 1 ? info[1].ToNumber().DoubleValue() : 0.0;
+                if (!g_bootstrapCanvas.IsEmpty())
+                {
+                    Napi::Object canvas = g_bootstrapCanvas.Value();
+                    canvas.Set("width", Napi::Number::New(env, width));
+                    canvas.Set("height", Napi::Number::New(env, height));
+                    canvas.Set("clientWidth", Napi::Number::New(env, width));
+                    canvas.Set("clientHeight", Napi::Number::New(env, height));
+                }
+                Napi::Value engine = env.Global().Get("__dawnEngine");
+                if (engine.IsObject())
+                {
+                    Napi::Value setSize = engine.As<Napi::Object>().Get("setSize");
+                    if (setSize.IsFunction())
+                    {
+                        setSize.As<Napi::Function>().Call(engine, {
+                            Napi::Number::New(env, width),
+                            Napi::Number::New(env, height),
+                            Napi::Boolean::New(env, true)});
+                    }
+                }
+                return env.Undefined();
+            });
+
+            // ---- deferred WebGPUEngine creation via the BABYLON global hook --
+            g_babylon.Reset();
+            Napi::Value existing = global.Get("BABYLON");
+            if (existing.IsObject() && existing.As<Napi::Object>().Get("WebGPUEngine").IsFunction())
+            {
+                g_babylon = Napi::Persistent(existing);
+                OnBabylonReady(env, existing);
+            }
+            else
+            {
+                Napi::Object desc = Napi::Object::New(env);
+                desc.Set("configurable", Napi::Boolean::New(env, true));
+                desc.Set("get", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return g_babylon.IsEmpty() ? info.Env().Undefined() : g_babylon.Value();
+                }));
+                desc.Set("set", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    Napi::Env env = info.Env();
+                    Napi::Value v = info.Length() > 0 ? info[0] : env.Undefined();
+                    g_babylon = Napi::Persistent(v);
+                    OnBabylonReady(env, v);
+                    return env.Undefined();
+                }));
+                Napi::Object objectCtor = global.Get("Object").As<Napi::Object>();
+                objectCtor.Get("defineProperty").As<Napi::Function>().Call(objectCtor,
+                    {global, Napi::String::New(env, "BABYLON"), desc});
             }
         }
     } // namespace (bootstrap)
