@@ -793,6 +793,7 @@
             "title": "Gaussian Splatting Loading",
             "playgroundId": "#CID4NN#204",
             "renderCount": 15,
+            "renderReadinessPump": true,
             "referenceImage": "gsplat-loading.png"
         },
         {
@@ -808,6 +809,7 @@
         {
             "title": "needDepthPrePass",
             "playgroundId": "#7A66KI#1",
+            "renderReadinessPump": true,
             "referenceImage": "needDepthPrePass.png"
         },
         {
@@ -1348,11 +1350,13 @@
         {
             "title": "GLTF Serializer Skinning and Animation",
             "playgroundId": "#DMZBX1#1",
+            "renderReadinessPump": true,
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
             "title": "GLTF Serializer Skinning and Animation (Right Handed)",
             "playgroundId": "#DMZBX1#2",
+            "renderReadinessPump": true,
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {

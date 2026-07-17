@@ -94,18 +94,28 @@
     }
 
     function shouldUseRenderReadinessPump(test) {
-        if (test && test.renderReadinessPump === false) {
-            return false;
+        if (test && typeof test.renderReadinessPump === "boolean") {
+            return test.renderReadinessPump;
         }
-        if (globalThis.__nativeValidationRenderReadinessPump === false) {
-            return false;
-        }
-        return true;
+        return globalThis.__nativeValidationRenderReadinessPump === true;
     }
 
-    function startSceneReadinessRenderPump(scene, onFatalError) {
+    function formatReadinessError(error) {
+        if (error && error.stack) {
+            return error.stack;
+        }
+        if (error && error.message) {
+            return error.message;
+        }
+        return String(error);
+    }
+
+    function startSceneReadinessRenderPump(scene) {
         let stopped = false;
         let frameCount = 0;
+        let errorCount = 0;
+        let firstError = null;
+        let lastError = null;
 
         const pump = function () {
             if (stopped) {
@@ -124,11 +134,13 @@
                     frameCount++;
                 }
             } catch (e) {
-                stopped = true;
-                if (typeof onFatalError === "function") {
-                    onFatalError(e);
+                errorCount++;
+                if (errorCount === 1) {
+                    firstError = e;
+                    console.warn("Readiness render pump encountered a transient error; continuing to poll scene readiness:\n" +
+                        formatReadinessError(e));
                 }
-                return;
+                lastError = e;
             }
 
             setTimeout(pump, 16);
@@ -141,6 +153,15 @@
             },
             getFrameCount: function () {
                 return frameCount;
+            },
+            getErrorCount: function () {
+                return errorCount;
+            },
+            getFirstError: function () {
+                return firstError;
+            },
+            getLastError: function () {
+                return lastError;
             }
         };
     }
@@ -340,26 +361,29 @@
         // never-ready scene into a fast test failure instead of a silent hang.
         currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
         currentScene.onReadyTimeoutObservable.addOnce(function () {
+            let readinessErrorDetails = "";
             if (readinessPump !== null) {
+                const readinessErrorCount = readinessPump.getErrorCount();
+                if (readinessErrorCount > 0) {
+                    const firstReadinessError = readinessPump.getFirstError();
+                    const lastReadinessError = readinessPump.getLastError();
+                    readinessErrorDetails = "\nReadiness render pump observed " + readinessErrorCount + " exception(s).\nFirst error:\n" +
+                        formatReadinessError(firstReadinessError);
+                    if (lastReadinessError !== firstReadinessError) {
+                        readinessErrorDetails += "\nLast error:\n" + formatReadinessError(lastReadinessError);
+                    }
+                }
                 readinessPump.stop();
                 readinessPump = null;
             }
             evaluated = true;
             console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
-                (currentScene.onReadyTimeoutDuration / 1000) + "s.");
+                (currentScene.onReadyTimeoutDuration / 1000) + "s." + readinessErrorDetails);
             failTest(done);
         });
 
         if (shouldUseRenderReadinessPump(test)) {
-            readinessPump = startSceneReadinessRenderPump(currentScene, function (error) {
-                if (evaluated) {
-                    return;
-                }
-                evaluated = true;
-                stopped = true;
-                console.error("Readiness render pump failed: " + (error && error.message ? error.message : String(error)));
-                failTest(done);
-            });
+            readinessPump = startSceneReadinessRenderPump(currentScene);
         }
 
         currentScene.executeWhenReady(function () {
@@ -368,10 +392,14 @@
             }
             if (readinessPump !== null) {
                 const readinessFrameCount = readinessPump.getFrameCount();
+                const readinessErrorCount = readinessPump.getErrorCount();
                 readinessPump.stop();
                 readinessPump = null;
                 if (readinessFrameCount > 0) {
                     console.log("Readiness render pump rendered " + readinessFrameCount + " frame(s) before validation frame counting for " + (test.title || "(unnamed)") + ".");
+                }
+                if (readinessErrorCount > 0) {
+                    console.warn("Readiness render pump recovered from " + readinessErrorCount + " transient exception(s) before " + (test.title || "(unnamed)") + " became ready.");
                 }
             }
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
