@@ -118,6 +118,7 @@
         let lastError = null;
 
         const pump = function () {
+            let nextPumpDelay = 100;
             if (stopped) {
                 return;
             }
@@ -128,6 +129,7 @@
 
             try {
                 if (scene.activeCamera && typeof scene.render === "function") {
+                    nextPumpDelay = 16;
                     // Readiness renders are only for material/effect compilation.
                     // Preserve the screenshot test's animation frame count.
                     scene.render(true, true);
@@ -143,7 +145,7 @@
                 lastError = e;
             }
 
-            setTimeout(pump, 16);
+            setTimeout(pump, nextPumpDelay);
         };
 
         setTimeout(pump, 0);
@@ -338,14 +340,31 @@
         let evaluated = false;
         let readinessPump = null;
 
+        const stopReadinessPump = function (logFrameCount) {
+            if (readinessPump === null) {
+                return null;
+            }
+
+            const pump = readinessPump;
+            readinessPump = null;
+            const summary = {
+                frameCount: pump.getFrameCount(),
+                errorCount: pump.getErrorCount(),
+                firstError: pump.getFirstError(),
+                lastError: pump.getLastError()
+            };
+            pump.stop();
+            if (logFrameCount && summary.frameCount > 0) {
+                console.log("Readiness render pump rendered " + summary.frameCount + " frame(s) before validation frame counting for " + (test.title || "(unnamed)") + ".");
+            }
+            return summary;
+        };
+
         const runEvaluation = function (screenshot) {
             if (evaluated) {
                 return;
             }
-            if (readinessPump !== null) {
-                readinessPump.stop();
-                readinessPump = null;
-            }
+            stopReadinessPump(false);
             evaluated = true;
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
         };
@@ -362,21 +381,16 @@
         currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
         currentScene.onReadyTimeoutObservable.addOnce(function () {
             let readinessErrorDetails = "";
-            if (readinessPump !== null) {
-                const readinessErrorCount = readinessPump.getErrorCount();
-                if (readinessErrorCount > 0) {
-                    const firstReadinessError = readinessPump.getFirstError();
-                    const lastReadinessError = readinessPump.getLastError();
-                    readinessErrorDetails = "\nReadiness render pump observed " + readinessErrorCount + " exception(s).\nFirst error:\n" +
-                        formatReadinessError(firstReadinessError);
-                    if (lastReadinessError !== firstReadinessError) {
-                        readinessErrorDetails += "\nLast error:\n" + formatReadinessError(lastReadinessError);
-                    }
+            const readinessSummary = stopReadinessPump(false);
+            if (readinessSummary !== null && readinessSummary.errorCount > 0) {
+                readinessErrorDetails = "\nReadiness render pump observed " + readinessSummary.errorCount + " exception(s).\nFirst error:\n" +
+                    formatReadinessError(readinessSummary.firstError);
+                if (readinessSummary.lastError !== readinessSummary.firstError) {
+                    readinessErrorDetails += "\nLast error:\n" + formatReadinessError(readinessSummary.lastError);
                 }
-                readinessPump.stop();
-                readinessPump = null;
             }
             evaluated = true;
+            stopped = true;
             console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
                 (currentScene.onReadyTimeoutDuration / 1000) + "s." + readinessErrorDetails);
             failTest(done);
@@ -390,17 +404,9 @@
             if (evaluated) {
                 return;
             }
-            if (readinessPump !== null) {
-                const readinessFrameCount = readinessPump.getFrameCount();
-                const readinessErrorCount = readinessPump.getErrorCount();
-                readinessPump.stop();
-                readinessPump = null;
-                if (readinessFrameCount > 0) {
-                    console.log("Readiness render pump rendered " + readinessFrameCount + " frame(s) before validation frame counting for " + (test.title || "(unnamed)") + ".");
-                }
-                if (readinessErrorCount > 0) {
-                    console.warn("Readiness render pump recovered from " + readinessErrorCount + " transient exception(s) before " + (test.title || "(unnamed)") + " became ready.");
-                }
+            const readinessSummary = stopReadinessPump(true);
+            if (readinessSummary !== null && readinessSummary.errorCount > 0) {
+                console.warn("Readiness render pump recovered from " + readinessSummary.errorCount + " transient exception(s) before " + (test.title || "(unnamed)") + " became ready.");
             }
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
@@ -441,10 +447,7 @@
                     }
                 }
                 catch (e) {
-                    if (readinessPump !== null) {
-                        readinessPump.stop();
-                        readinessPump = null;
-                    }
+                    stopReadinessPump(false);
                     evaluated = true;
                     stopped = true;
                     console.error(e);
