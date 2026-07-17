@@ -19,7 +19,6 @@ set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
-    "Scripts/dawn_bootstrap.js"
     "Scripts/config.json")
 
 set(SOURCES
