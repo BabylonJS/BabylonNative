@@ -1096,6 +1096,8 @@
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
             "threshold": 35,
             "errorRatio": 0.25,
             "referenceImage": "guiNearMenu.png"
@@ -4048,18 +4050,14 @@
             "playgroundId": "#ESP440#0",
             "renderCount": 1,
             "errorRatio": 0.1,
-            "referenceImage": "texture-repetition-standard-material.png",
-            "excludedEngines": ["webgl1"],
-            "dependsOn": ["Materials", "Textures"]
+            "referenceImage": "texture-repetition-standard-material.png"
         },
         {
             "title": "Texture Repetition - PBR Material",
             "playgroundId": "#6EPUUH#0",
             "renderCount": 1,
             "errorRatio": 1.0,
-            "referenceImage": "texture-repetition-pbr-material.png",
-            "excludedEngines": ["webgl1"],
-            "dependsOn": ["PBR", "Textures"]
+            "referenceImage": "texture-repetition-pbr-material.png"
         },
         {
             "title": "Havok FloatingOrigin Multi-Region",
