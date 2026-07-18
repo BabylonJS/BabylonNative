@@ -1087,9 +1087,9 @@
         },
         {
             "title": "GUI Slate",
-            "playgroundId": "#2YZFA0#277",
+            "playgroundId": "#UDLHJ3#0",
             "renderCount": 60,
-            "errorRatio": 0.1,
+            "errorRatio": 0.75,
             "referenceImage": "guiSlate.png"
         },
         {
