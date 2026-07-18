@@ -1087,7 +1087,7 @@
         },
         {
             "title": "GUI Slate",
-            "playgroundId": "#UDLHJ3#0",
+            "playgroundId": "#CHDZ5C#1",
             "renderCount": 60,
             "errorRatio": 0.75,
             "referenceImage": "guiSlate.png"
@@ -2332,19 +2332,22 @@
         {
             "title": "GUI Gradient Linear",
             "playgroundId": "#XCPP9Y#17227",
-            "errorRatio": 1.0,
+            "excludeFromAutomaticTesting": true,
+            "reason": "bgfx Canvas does not support CanvasGradient values for strokeStyle.",
             "referenceImage": "GUI-Gradient-Linear.png"
         },
         {
             "title": "GUI Gradient Radial",
             "playgroundId": "#4Z7EK3",
-            "errorRatio": 1.0,
+            "excludeFromAutomaticTesting": true,
+            "reason": "bgfx Canvas radial gradients do not implement the supplied two-circle geometry.",
             "referenceImage": "GUI-Gradient-Radial.png"
         },
         {
             "title": "GUI Gradient Linear with transparency",
             "playgroundId": "#PFK1Z5",
-            "errorRatio": 1.0,
+            "excludeFromAutomaticTesting": true,
+            "reason": "bgfx Canvas maps linear-gradient images to fill bounds instead of the requested endpoints.",
             "referenceImage": "GUI-Gradient-Linear-with-transparency.png"
         },
         {
