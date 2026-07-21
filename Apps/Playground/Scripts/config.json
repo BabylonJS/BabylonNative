@@ -1038,8 +1038,7 @@
             "title": "LOD + Billboards + Instances",
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Instanced billboard foliage renders red instead of green (BN vertex/instance color routing regression)."
+            "errorRatio": 5
         },
         {
             "title": "Nested BBG",

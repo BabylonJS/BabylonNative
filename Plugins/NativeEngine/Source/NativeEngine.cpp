@@ -2393,9 +2393,10 @@ namespace Babylon
 
         // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
         // base bgfx location below TexCoord3 was compiled to a per-vertex slot. bgfx can only feed
-        // per-instance data into i_data slots (TexCoord3..TexCoord7), so route those attributes to
-        // the correct i_data slot via a lazily-compiled program variant. The target location mirrors
-        // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> TexCoord7.
+        // per-instance data into i_data slots (the top TEXCOORD semantics), so route those attributes
+        // to the correct i_data slot via a lazily-compiled program variant. The target location mirrors
+        // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> i_data0 (TEXCOORD31),
+        // i.e. INSTANCE_DATA_FIRST_LOCATION - rank.
         bgfx::ProgramHandle programHandle = m_currentProgram->Handle();
         if (m_boundVertexArray != nullptr)
         {
@@ -2412,7 +2413,7 @@ namespace Babylon
                     if (attrib < bgfx::Attrib::TexCoord3)
                     {
                         const size_t rank = count - 1 - ascendingIndex;
-                        const uint32_t targetLocation = static_cast<uint32_t>(bgfx::Attrib::TexCoord7) - static_cast<uint32_t>(rank);
+                        const uint32_t targetLocation = Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - static_cast<uint32_t>(rank);
                         for (const auto& [name, location] : attributeLocations)
                         {
                             if (location == static_cast<uint32_t>(attrib))
