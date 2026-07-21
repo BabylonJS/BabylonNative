@@ -17,8 +17,8 @@ namespace Babylon::ShaderCompilerCommon
     // per-instance inputs land on the top TEXCOORD semantics bgfx binds them to, and so that they
     // sort above every real vertex attribute (and can therefore be excluded from the shader's
     // attribute table below).
-    static_assert(Babylon::Plugins::TEXCOORD0_ATTRIBUTE_LOCATION == static_cast<uint32_t>(bgfx::Attrib::TexCoord0));
-    static_assert(Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION >= static_cast<uint32_t>(bgfx::Attrib::Count));
+    static_assert(Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION == static_cast<uint32_t>(bgfx::Attrib::TexCoord0));
+    static_assert(Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION >= static_cast<uint32_t>(bgfx::Attrib::Count));
 
     // Patching shader code to append clip space coordinates for the current rendering API.
     // Can be done with glslang shader traversal. Done with string patching for now.

@@ -2413,7 +2413,7 @@ namespace Babylon
                     if (attrib < bgfx::Attrib::TexCoord3)
                     {
                         const size_t rank = count - 1 - ascendingIndex;
-                        const uint32_t targetLocation = Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - static_cast<uint32_t>(rank);
+                        const uint32_t targetLocation = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - static_cast<uint32_t>(rank);
                         for (const auto& [name, location] : attributeLocations)
                         {
                             if (location == static_cast<uint32_t>(attrib))

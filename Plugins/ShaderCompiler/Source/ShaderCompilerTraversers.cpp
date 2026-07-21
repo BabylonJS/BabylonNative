@@ -7,7 +7,7 @@
 #include <bgfx/bgfx.h>
 #include <bx/bx.h>
 
-#include <Babylon/Plugins/ShaderCompiler.h>
+#include <Babylon/Graphics/BgfxShaderInfo.h>
 
 #include <arcana/experimental/array.h>
 
@@ -714,7 +714,7 @@ namespace Babylon::ShaderCompilerTraversers
                     // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
                     // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
                     return {stableLocation, s_attribInstanceName[slot]};
@@ -799,7 +799,7 @@ namespace Babylon::ShaderCompilerTraversers
                     // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
                     // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
                     return {stableLocation, s_attribInstanceName[slot]};
@@ -848,7 +848,7 @@ namespace Babylon::ShaderCompilerTraversers
                 if (IsGenericInstance(name))
                 {
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
                     return {location, s_attribInstanceName[slot]};
@@ -874,15 +874,15 @@ namespace Babylon::ShaderCompilerTraversers
                 // (TEXCOORD31) and world0 on i_data3. instanceColor follows at i_data4. The i_data name is
                 // cosmetic on D3D (binding is by TEXCOORD semantic, resolved from the location via the
                 // HLSLVertexAttributeRemap table).
-                IF_NAME_RETURN_ATTRIB("instanceColor", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 4, "i_data4")
-                IF_NAME_RETURN_ATTRIB("world0", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
-                IF_NAME_RETURN_ATTRIB("world1", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
-                IF_NAME_RETURN_ATTRIB("world2", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
-                IF_NAME_RETURN_ATTRIB("world3", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
-                IF_NAME_RETURN_ATTRIB("splatIndex0", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
-                IF_NAME_RETURN_ATTRIB("splatIndex1", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
-                IF_NAME_RETURN_ATTRIB("splatIndex2", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
-                IF_NAME_RETURN_ATTRIB("splatIndex3", Babylon::Plugins::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
+                IF_NAME_RETURN_ATTRIB("instanceColor", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 4, "i_data4")
+                IF_NAME_RETURN_ATTRIB("world0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
+                IF_NAME_RETURN_ATTRIB("world1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
+                IF_NAME_RETURN_ATTRIB("world2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
+                IF_NAME_RETURN_ATTRIB("world3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
+                IF_NAME_RETURN_ATTRIB("splatIndex0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
+                IF_NAME_RETURN_ATTRIB("splatIndex1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
+                IF_NAME_RETURN_ATTRIB("splatIndex2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
+                IF_NAME_RETURN_ATTRIB("splatIndex3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
 #undef IF_NAME_RETURN_ATTRIB
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
