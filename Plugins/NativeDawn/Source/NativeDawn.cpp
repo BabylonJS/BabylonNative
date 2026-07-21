@@ -913,6 +913,21 @@ namespace Babylon::Plugins::NativeDawn
             o.Set("usage", Napi::Number::New(env, usage));
             o.Set("mapState", Napi::String::New(env, mapped ? "mapped" : "unmapped"));
 
+            // Outstanding getMappedRange() shadow buffers for this GPUBuffer.
+            // getMappedRange must NOT hand V8 a raw pointer into Dawn's mapped
+            // memory: that memory is freed/invalidated by unmap(), leaving a
+            // dangling external ArrayBuffer that corrupts the V8 heap and crashes
+            // a later GC. Instead each getMappedRange returns a V8-owned
+            // ArrayBuffer (seeded from Dawn's current bytes) and unmap() copies
+            // those bytes back into Dawn before unmapping.
+            struct MappedRange
+            {
+                uint64_t offset;
+                uint64_t size;
+                Napi::Reference<Napi::ArrayBuffer> ab;
+            };
+            auto ranges = std::make_shared<std::vector<MappedRange>>();
+
             SetMethod(o, "mapAsync", [h](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 uint32_t mode = ArgU32(info, 0, 0);
@@ -926,23 +941,46 @@ namespace Babylon::Plugins::NativeDawn
                 d.Resolve(env.Undefined());
                 return d.Promise();
             });
-            SetMethod(o, "getMappedRange", [h](const Napi::CallbackInfo& info) -> Napi::Value {
+            SetMethod(o, "getMappedRange", [h, ranges](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 uint64_t offset = ArgU64(info, 0, 0);
                 uint64_t size = ArgIsUndef(info, 1)
                     ? (h.GetSize() - offset) : ArgU64(info, 1, 0);
-                void* ptr = h.GetMappedRange(static_cast<size_t>(offset), static_cast<size_t>(size));
-                if (ptr == nullptr)
+                Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, static_cast<size_t>(size));
+                // Seed from Dawn's current mapped bytes so read-maps work. For a
+                // write/mappedAtCreation map the source is writable too.
+                const void* src = h.GetConstMappedRange(static_cast<size_t>(offset), static_cast<size_t>(size));
+                if (src != nullptr && size > 0)
                 {
-                    return Napi::ArrayBuffer::New(env, static_cast<size_t>(size));
+                    std::memcpy(ab.Data(), src, static_cast<size_t>(size));
                 }
-                return Napi::ArrayBuffer::New(env, ptr, static_cast<size_t>(size));
+                ranges->push_back({offset, size, Napi::Persistent(ab)});
+                return ab;
             });
-            SetMethod(o, "unmap", [h, o](const Napi::CallbackInfo& info) -> Napi::Value {
+            SetMethod(o, "unmap", [h, ranges](const Napi::CallbackInfo& info) -> Napi::Value {
+                // Copy each outstanding shadow buffer back into Dawn's mapped
+                // memory before unmapping (write-through), then release the JS
+                // references so the ArrayBuffers can be collected.
+                for (auto& r : *ranges)
+                {
+                    void* dst = h.GetMappedRange(static_cast<size_t>(r.offset), static_cast<size_t>(r.size));
+                    if (dst != nullptr && !r.ab.IsEmpty())
+                    {
+                        Napi::ArrayBuffer ab = r.ab.Value();
+                        if (ab.ByteLength() >= r.size && r.size > 0)
+                        {
+                            std::memcpy(dst, ab.Data(), static_cast<size_t>(r.size));
+                        }
+                    }
+                    r.ab.Reset();
+                }
+                ranges->clear();
                 h.Unmap();
                 return info.Env().Undefined();
             });
-            SetMethod(o, "destroy", [h](const Napi::CallbackInfo& info) -> Napi::Value {
+            SetMethod(o, "destroy", [h, ranges](const Napi::CallbackInfo& info) -> Napi::Value {
+                for (auto& r : *ranges) { r.ab.Reset(); }
+                ranges->clear();
                 h.Destroy();
                 return info.Env().Undefined();
             });
@@ -2996,6 +3034,10 @@ namespace Babylon::Plugins::NativeDawn
             canvas.Set("clientWidth", Napi::Number::New(env, width));
             canvas.Set("clientHeight", Napi::Number::New(env, height));
             canvas.Set("style", Napi::Object::New(env));
+            // Some scenes stash metadata on canvas.dataset (e.g. Babylon-Lite sets
+            // canvas.dataset.ready = "true"); provide a plain object so those
+            // assignments don't throw.
+            canvas.Set("dataset", Napi::Object::New(env));
             SetMethod(canvas, "getContext", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 const std::string type = info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
@@ -3182,9 +3224,21 @@ namespace Babylon::Plugins::NativeDawn
                 "})();";
             env.RunScript(kLoadScriptPatch);
 
-            Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
+            // Reuse a canvas already created via document.getElementById (e.g. a
+            // Babylon-Lite scene that grabbed "renderCanvas" before this ran) so
+            // both engines share the single Dawn-surface-wired canvas.
+            Napi::Object canvas;
+            Napi::Value existingCanvas = env.Global().Get("__dawnCanvas");
+            if (existingCanvas.IsObject())
+            {
+                canvas = existingCanvas.As<Napi::Object>();
+            }
+            else
+            {
+                canvas = MakeCanvas(env, g_state.width, g_state.height);
+                env.Global().Set("__dawnCanvas", canvas);
+            }
             g_bootstrapCanvas = Napi::Persistent(canvas);
-            env.Global().Set("__dawnCanvas", canvas);
 
             Napi::Object opts = Napi::Object::New(env);
             opts.Set("antialias", Napi::Boolean::New(env, false));
@@ -3247,6 +3301,24 @@ namespace Babylon::Plugins::NativeDawn
             if (global.Get("globalThis").IsUndefined())
             {
                 global.Set("globalThis", global);
+            }
+
+            // WebGPU exposes its bitflag namespaces (GPUBufferUsage, GPUTextureUsage,
+            // GPUShaderStage, GPUColorWrite, GPUMapMode) as globals in browsers.
+            // Babylon.js carries internal fallbacks, but Babylon-Lite reads them
+            // straight off globalThis (e.g. globalThis.GPUShaderStage.VERTEX), so
+            // define the standard constant values here if absent.
+            {
+                static const char* kGpuConstPatch =
+                    "(function(){var g=globalThis;"
+                    "if(g.GPUBufferUsage&&g.GPUShaderStage)return;"
+                    "g.GPUBufferUsage=g.GPUBufferUsage||{MAP_READ:1,MAP_WRITE:2,COPY_SRC:4,COPY_DST:8,INDEX:16,VERTEX:32,UNIFORM:64,STORAGE:128,INDIRECT:256,QUERY_RESOLVE:512};"
+                    "g.GPUTextureUsage=g.GPUTextureUsage||{COPY_SRC:1,COPY_DST:2,TEXTURE_BINDING:4,STORAGE_BINDING:8,RENDER_ATTACHMENT:16};"
+                    "g.GPUShaderStage=g.GPUShaderStage||{VERTEX:1,FRAGMENT:2,COMPUTE:4};"
+                    "g.GPUColorWrite=g.GPUColorWrite||{RED:1,GREEN:2,BLUE:4,ALPHA:8,ALL:15};"
+                    "g.GPUMapMode=g.GPUMapMode||{READ:1,WRITE:2};"
+                    "})();";
+                env.RunScript(kGpuConstPatch);
             }
 
             // The host's native TextDecoder polyfill only supports UTF-8, but the
@@ -3329,7 +3401,29 @@ namespace Babylon::Plugins::NativeDawn
                 SetMethod(document, "addEventListener", Noop);
                 SetMethod(document, "removeEventListener", Noop);
                 SetMethod(document, "getElementById", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                    return info.Env().Null();
+                    // Hand back the single Dawn-surface-wired canvas when a scene
+                    // asks for its render canvas by id (e.g. Babylon-Lite fetches
+                    // document.getElementById("renderCanvas")). Other ids return
+                    // null, matching prior behavior so the validation harness (which
+                    // never requests a canvas by id) is unaffected. The canvas is
+                    // created lazily and cached as __dawnCanvas so the Babylon.js
+                    // bootstrap and Lite share the same canvas.
+                    Napi::Env env = info.Env();
+                    const std::string id = info.Length() > 0 && info[0].IsString()
+                        ? info[0].As<Napi::String>().Utf8Value() : "";
+                    if (id != "renderCanvas" && id != "canvas" && id != "babylon-canvas")
+                    {
+                        return env.Null();
+                    }
+                    Napi::Object global = env.Global();
+                    Napi::Value existing = global.Get("__dawnCanvas");
+                    if (existing.IsObject())
+                    {
+                        return existing;
+                    }
+                    Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
+                    global.Set("__dawnCanvas", canvas);
+                    return canvas;
                 });
                 // Return an empty array-like for the query methods some Babylon
                 // paths call (e.g. glTF loaders probing for <script>/<link> tags).
@@ -3402,6 +3496,45 @@ namespace Babylon::Plugins::NativeDawn
             }
 
             // ---- image decoding shims ----------------------------------------
+            // The host's native URL polyfill requires its arguments to be strings
+            // and throws "A string was expected" when passed a URL object as the
+            // base (e.g. `new URL(".", new URL(src, base))`, which Babylon-Lite's
+            // glTF loader does). Browsers stringify such arguments. Wrap URL to
+            // coerce non-string url/base args to strings while preserving the
+            // static helpers (createObjectURL/revokeObjectURL) added below.
+            {
+                static const char* kUrlCoercePatch =
+                    "(function(){var N=globalThis.URL;"
+                    "if(!N||N.__dawnCoerce)return;"
+                    "function W(u,b){var us=(u===undefined||u===null)?u:String(u);"
+                    "return (b===undefined||b===null)?new N(us):new N(us,String(b));}"
+                    "W.prototype=N.prototype;W.__dawnCoerce=true;"
+                    "for(var k in N){try{W[k]=N[k];}catch(e){}}"
+                    "if(N.createObjectURL)W.createObjectURL=function(){return N.createObjectURL.apply(N,arguments);};"
+                    "if(N.revokeObjectURL)W.revokeObjectURL=function(){return N.revokeObjectURL.apply(N,arguments);};"
+                    "globalThis.URL=W;})();";
+                env.RunScript(kUrlCoercePatch);
+            }
+
+            // Root-relative asset fetches (e.g. Babylon-Lite scene1's
+            // `fetch("/brdf-lut.png")`, a lab-dev-server convention) resolve to a
+            // local file that doesn't exist in this host, and a failed local fetch
+            // currently crashes the process. Redirect root-relative "/x" fetch URLs
+            // to the app's Scripts directory (app:///Scripts/x) where such assets
+            // can be placed, so self-contained lite bundles that expect their
+            // sibling assets at the site root load correctly.
+            {
+                static const char* kFetchRewritePatch =
+                    "(function(){var f=globalThis.fetch;"
+                    "if(typeof f!=='function'||f.__dawnRewrite)return;"
+                    "function W(u,o){try{"
+                    "if(typeof u==='string'&&u.charAt(0)==='/'&&u.charAt(1)!=='/'){u='app:///Scripts'+u;}"
+                    "else if(u&&typeof u==='object'&&typeof u.url==='string'&&u.url.charAt(0)==='/'&&u.url.charAt(1)!=='/'){u='app:///Scripts'+u.url;}"
+                    "}catch(e){}return f.call(this,u,o);}"
+                    "W.__dawnRewrite=true;globalThis.fetch=W;})();";
+                env.RunScript(kFetchRewritePatch);
+            }
+
             Napi::Value urlVal = global.Get("URL");
             if (urlVal.IsObject() || urlVal.IsFunction())
             {
