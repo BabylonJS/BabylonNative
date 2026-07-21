@@ -13,6 +13,13 @@ namespace bgfx
 
 namespace Babylon::ShaderCompilerCommon
 {
+    // The synthetic instance-data locations must line up with the live bgfx::Attrib enum so that
+    // per-instance inputs land on the top TEXCOORD semantics bgfx binds them to, and so that they
+    // sort above every real vertex attribute (and can therefore be excluded from the shader's
+    // attribute table below).
+    static_assert(Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION == static_cast<uint32_t>(bgfx::Attrib::TexCoord0));
+    static_assert(Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION >= static_cast<uint32_t>(bgfx::Attrib::Count));
+
     // Patching shader code to append clip space coordinates for the current rendering API.
     // Can be done with glslang shader traversal. Done with string patching for now.
     std::string ProcessShaderCoordinates(std::string_view source)
@@ -286,14 +293,34 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
             AppendBytes(vertexBytes, static_cast<uint8_t>(0));
 
-            AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
+            // Per-instance vertex attributes are encoded with synthetic locations at/above
+            // bgfx::Attrib::Count (they occupy the top TEXCOORD semantics that bgfx binds by
+            // semantic rather than via bgfx::Attrib). They must be excluded from the shader's
+            // attribute table: bgfx::attribToId only covers real bgfx::Attrib values, and the
+            // backends resolve instance data from the instance-data buffer independently. This
+            // mirrors bgfx's own reflection, which skips semantics without a bgfx::Attrib mapping.
+            uint8_t numVertexAttributes{0};
+            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+            {
+                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+                {
+                    ++numVertexAttributes;
+                }
+            }
+
+            AppendBytes(vertexBytes, numVertexAttributes);
 
             for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
             {
                 const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-                AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
+                if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+                {
+                    AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
+                }
 
                 // Map from symbolName -> originalName to associate babylon.js shader attribute -> Babylon Native attribute location.
+                // Instance-data inputs are still exposed here so the consumer can bind their vertex buffers.
                 bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
             }
             AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));

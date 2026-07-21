@@ -205,6 +205,34 @@ namespace Babylon::Plugins
             {bgfx::Attrib::TexCoord5, "TEXCOORD5"   },
             {bgfx::Attrib::TexCoord6, "TEXCOORD6"   },
             {bgfx::Attrib::TexCoord7, "TEXCOORD7"   },
+            {bgfx::Attrib::TexCoord8, "TEXCOORD8"   },
+            {bgfx::Attrib::TexCoord9, "TEXCOORD9"   },
+            {bgfx::Attrib::TexCoord10, "TEXCOORD10" },
+            {bgfx::Attrib::TexCoord11, "TEXCOORD11" },
+            {bgfx::Attrib::TexCoord12, "TEXCOORD12" },
+            {bgfx::Attrib::TexCoord13, "TEXCOORD13" },
+            {bgfx::Attrib::TexCoord14, "TEXCOORD14" },
+            {bgfx::Attrib::TexCoord15, "TEXCOORD15" },
+            // Per-instance data (i_data0..i_data15) occupies the top TEXCOORD semantics
+            // (TEXCOORD31..16), which have no bgfx::Attrib enum. The shader traversers assign
+            // them synthetic locations of (bgfx::Attrib::TexCoord0 + semanticIndex); map those
+            // back so bgfx's instance-data layout (TEXCOORD31 == i_data0, descending) binds them.
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 16, "TEXCOORD16"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 17, "TEXCOORD17"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 18, "TEXCOORD18"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 19, "TEXCOORD19"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 20, "TEXCOORD20"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 21, "TEXCOORD21"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 22, "TEXCOORD22"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 23, "TEXCOORD23"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 24, "TEXCOORD24"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 25, "TEXCOORD25"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 26, "TEXCOORD26"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 27, "TEXCOORD27"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 28, "TEXCOORD28"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 29, "TEXCOORD29"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 30, "TEXCOORD30"},
+            {Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION + 31, "TEXCOORD31"},
         };
         // clang-format on
 
