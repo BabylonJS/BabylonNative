@@ -1,5 +1,6 @@
 #include "UrlRequest_Base.h"
 
+#include <sstream>
 #include <Unknwn.h>
 #include <PathCch.h>
 #include <arcana/threading/task_conversions.h>
@@ -53,7 +54,21 @@ namespace UrlLib
 #endif
 
             m_method = method;
-            m_uri = Foundation::Uri{winrt::to_hstring(url)};
+            try
+            {
+                m_uri = Foundation::Uri{winrt::to_hstring(url)};
+            }
+            catch (const winrt::hresult_error& error)
+            {
+                // Foundation::Uri rejects some inputs (e.g. malformed or unsupported URLs)
+                // by throwing a WinRT hresult_error, which is not a std::exception. Rethrow
+                // as std::runtime_error so callers (e.g. the XMLHttpRequest polyfill) surface
+                // the real reason instead of a generic "Unknown error opening URL".
+                std::ostringstream message;
+                message << "Unable to open URL '" << url << "': " << winrt::to_string(error.message())
+                        << " (HRESULT 0x" << std::hex << std::uppercase << static_cast<uint32_t>(error.code()) << ")";
+                throw std::runtime_error{message.str()};
+            }
         }
 
         arcana::task<void, std::exception_ptr> SendAsync();
