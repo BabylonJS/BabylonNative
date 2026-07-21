@@ -91,6 +91,18 @@ elseif(IOS)
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
 endif()
 
+if(CMAKE_HOST_APPLE
+   AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
+   AND NOT CMAKE_TOOLCHAIN_FILE
+   AND NOT IOS
+   AND NOT VISIONOS
+   AND NOT CMAKE_OSX_SYSROOT)
+    # Use one coherent Xcode SDK for headers and frameworks. Leaving this empty
+    # can mix Command Line Tools headers with frameworks from the selected
+    # Xcode, which turns SDK-only diagnostics into warnings-as-errors.
+    set(CMAKE_OSX_SYSROOT macosx CACHE STRING "macOS SDK" FORCE)
+endif()
+
 project(BabylonNative)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
