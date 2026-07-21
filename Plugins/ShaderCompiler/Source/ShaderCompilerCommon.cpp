@@ -98,8 +98,19 @@ namespace Babylon::ShaderCompilerCommon
 
 #if OPENGL
             BX_UNUSED(compiler);
-            const auto stage{static_cast<uint8_t>(stages.size())};
-            stages[sampler.name] = stage;
+            // A program's vertex and fragment shaders share this stages map, and Babylon's
+            // generated GLSL frequently declares the same sampler in both stages. Assign a stage
+            // (texture unit) the first time a sampler name is seen and reuse it thereafter; without
+            // the guard the second pass would re-run stages[name] = stages.size() on already-present
+            // names, which doesn't grow the map, collapsing every such sampler onto the same unit.
+            // That produced multiple sampler2D uniforms and a samplerCube all pointing at one unit,
+            // which GLES/ANGLE rejects at draw time with GL_INVALID_OPERATION (D3D11/Metal don't
+            // validate this, so the bug was GL-only). Each sampler now gets its own distinct unit,
+            // mirroring WebGL's Effect._bindSamplerUniformToChannel.
+            if (stages.find(sampler.name) == stages.end())
+            {
+                stages[sampler.name] = static_cast<uint8_t>(stages.size());
+            }
 #else
             stages[sampler.name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
 #endif
