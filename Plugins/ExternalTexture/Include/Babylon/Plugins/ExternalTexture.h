@@ -8,6 +8,14 @@
 namespace Babylon::Plugins
 {
     // All operations of this class must be called from the graphics thread unless otherwise noted.
+    //
+    // Ownership: on the OpenGL/OpenGL ES backend, ExternalTexture does NOT take ownership of the
+    // texture handle -- OpenGL has no way to reference-count a texture name -- so the caller must
+    // keep the source texture alive for as long as this ExternalTexture (and any JavaScript texture
+    // created from it) is in use. Deleting the handle earlier leaves a dangling GL name that bgfx
+    // later dereferences (e.g. glObjectLabel under a debug build), which is a fatal error on strict
+    // drivers. The D3D11/D3D12/Metal backends retain the native texture, so on those backends the
+    // caller may release its own reference immediately after construction.
     class ExternalTexture final
     {
     public:

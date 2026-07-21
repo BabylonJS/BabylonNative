@@ -24,12 +24,15 @@ TEST(ExternalTexture, Construction)
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
-    Helpers::DestroyTexture(nativeTexture);
 
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
 
     device.FinishRenderingCurrentFrame();
+
+    // The OpenGL backend does not take ownership of the handle, so the source texture must
+    // outlive the ExternalTexture (see ExternalTexture.h). Destroy it only now.
+    Helpers::DestroyTexture(nativeTexture);
 #endif
 }
 
@@ -44,7 +47,6 @@ TEST(ExternalTexture, CreateForJavaScript)
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
-    Helpers::DestroyTexture(nativeTexture);
 
     std::promise<void> done{};
 
@@ -69,6 +71,10 @@ TEST(ExternalTexture, CreateForJavaScript)
     done.get_future().wait();
 
     device.FinishRenderingCurrentFrame();
+
+    // The GL backend doesn't own the handle; destroy the source texture only after bgfx has
+    // finished using it (see ExternalTexture.h).
+    Helpers::DestroyTexture(nativeTexture);
 #endif
 }
 
@@ -83,7 +89,6 @@ TEST(ExternalTexture, Update)
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
-    Helpers::DestroyTexture(nativeTexture);
 
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
@@ -95,12 +100,16 @@ TEST(ExternalTexture, Update)
 
     auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 128, 128);
     externalTexture.Update(nativeTexture2, {}, {}, 128, 128);
-    Helpers::DestroyTexture(nativeTexture2);
 
     EXPECT_EQ(externalTexture.Width(), 128u);
     EXPECT_EQ(externalTexture.Height(), 128u);
 
     device.FinishRenderingCurrentFrame();
+
+    // The GL backend doesn't own these handles; destroy them only after all rendering that
+    // referenced them has completed (see ExternalTexture.h).
+    Helpers::DestroyTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture2);
 #endif
 }
 
@@ -115,7 +124,6 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, {}, 256, 256};
-    Helpers::DestroyTexture(nativeTexture);
 
     std::promise<void> addToContext{};
     std::promise<void> promiseResolved{};
@@ -161,9 +169,13 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     // Update the external texture to a new texture.
     auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     externalTexture.Update(nativeTexture2, {}, {}, 256, 256);
-    Helpers::DestroyTexture(nativeTexture2);
 
     device.FinishRenderingCurrentFrame();
+
+    // The GL backend doesn't own these handles; destroy them only after all frames that
+    // referenced them have completed (see ExternalTexture.h).
+    Helpers::DestroyTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture2);
 #endif
 }
 
@@ -179,7 +191,6 @@ TEST(ExternalTexture, AddToContextAsyncWithLayerIndex)
     // Array texture (3 layers) so a non-zero layer index is valid.
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256, 3);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    Helpers::DestroyTexture(nativeTexture);
 
     std::promise<void> addToContext{};
     std::promise<void> promiseResolved{};
@@ -220,5 +231,10 @@ TEST(ExternalTexture, AddToContextAsyncWithLayerIndex)
 
     // get() (not wait()) so a rejected promise rethrows and fails the test.
     EXPECT_NO_THROW(promiseResolved.get_future().get());
+
+    // The GL backend doesn't own the handle; destroy the source texture only after all
+    // rendering that referenced it has completed (see ExternalTexture.h). Harmless on
+    // D3D/Metal, which retain the native texture.
+    Helpers::DestroyTexture(nativeTexture);
 #endif
 }
