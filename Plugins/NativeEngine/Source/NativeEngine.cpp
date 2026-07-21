@@ -1484,8 +1484,21 @@ namespace Babylon
         const auto height{static_cast<uint16_t>(rawHeight)};
         const auto depth{static_cast<uint16_t>(rawDepth)};
 
-        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
-        texture->Create2D(width, height, generateMips, depth, Cast(format), flags);
+        // bgfx only allocates a true array texture (GL_TEXTURE_2D_ARRAY /
+        // D3D11 Texture2DArray) when numLayers > 1; a single-layer request
+        // collapses to a plain 2D texture (GL_TEXTURE_2D). The cross-compiled
+        // shaders always sample this resource as a 2D-array sampler
+        // (e.g. `sampler2DArray morphTargets`), so on OpenGL the single-layer
+        // 2D texture cannot bind to the array sampler and reads as zero --
+        // which, for texture-based morph targets with a single target,
+        // collapses all vertices to the origin and makes the mesh disappear.
+        // WebGL2 creates a real depth-1 TEXTURE_2D_ARRAY, so match that by
+        // allocating at least two layers; only the requested `depth` layers
+        // are ever uploaded or sampled (the shader indexes an explicit layer).
+        const uint16_t allocLayers{depth > 1 ? depth : static_cast<uint16_t>(2)};
+
+        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
+        texture->Create2D(width, height, generateMips, allocLayers, Cast(format), flags);
 
         if (!data.IsNull())
         {
