@@ -33,7 +33,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <sstream>
+#include <ostream>
 #include <string>
 
 namespace
@@ -61,15 +61,20 @@ namespace
     }
 
     // Build a file:// URL for an absolute path so ScriptLoader/File can fetch it.
-    std::string GetUrlFromPath(const std::string& path)
+    // Build a file:// URL for an absolute path so ScriptLoader/File can fetch it.
+    // Mirrors the Win32 Playground helper: feed UrlCreateFromPathA the UTF-8
+    // bytes of the path and return the NUL-terminated result (ignoring the
+    // API-reported length, which may include the terminator).
+    std::string GetUrlFromPath(const std::filesystem::path& path)
     {
+        const std::u8string utf8 = path.u8string();
         char url[2048];
         DWORD length = ARRAYSIZE(url);
-        if (FAILED(UrlCreateFromPathA(path.c_str(), url, &length, 0)))
+        if (FAILED(UrlCreateFromPathA(reinterpret_cast<const char*>(utf8.c_str()), url, &length, 0)))
         {
-            throw std::runtime_error("Failed to create URL from path: " + path);
+            throw std::runtime_error("Failed to create URL from path.");
         }
-        return std::string{url, length};
+        return std::string{url};
     }
 
     LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -108,13 +113,25 @@ namespace
         }
     }
 
+    // A std::streambuf that discards everything written to it. Used as the sink
+    // for ShaderCache::Save when we only need the returned entry count -- Save
+    // serializes the whole cache (shader bytecode included), so an ostringstream
+    // would repeatedly allocate large buffers during the polling loop.
+    class NullBuffer : public std::streambuf
+    {
+    public:
+        int overflow(int c) override { return c; }
+        std::streamsize xsputn(const char*, std::streamsize n) override { return n; }
+    };
+
     // Read the current shader-cache entry count. The runtime is suspended first
     // so the JS thread's in-flight frame is closed and no shader compilation is
     // in progress while ShaderCache::Save walks the cache.
     uint32_t CountShaderCacheEntries(Babylon::Embedding::Runtime& runtime)
     {
         runtime.Suspend();
-        std::ostringstream sink;
+        NullBuffer nullBuffer;
+        std::ostream sink{&nullBuffer};
         const uint32_t count = Babylon::Plugins::ShaderCache::Save(sink);
         runtime.Resume();
         return count;
@@ -167,7 +184,7 @@ int main(int argc, char** argv)
     std::string scriptUrl;
     try
     {
-        scriptUrl = GetUrlFromPath(scriptAbsolute.string());
+        scriptUrl = GetUrlFromPath(scriptAbsolute);
     }
     catch (const std::exception& e)
     {

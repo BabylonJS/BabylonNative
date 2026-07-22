@@ -7,8 +7,11 @@
 # ShaderCache to a file.
 #
 # Usage:
-#     ShaderCacheGenerator <scene.js> <output.bin> [--width N] [--height N]
-#                          [--max-frames N] [--stable-checks N] [--check-interval N]
+#     ShaderCacheGenerator <scene.js> <output.bin> [shared Playground options]
+#
+# Only the two positional arguments (scene script + output cache file) are
+# required; any additional flags are the shared Playground command-line options
+# (run with --help to list them).
 #
 # The produced cache is GRAPHICS_API-specific: configuring with
 # -DGRAPHICS_API=OpenGLWindowsDevOnly (which maps to the OpenGL/ANGLE backend)
