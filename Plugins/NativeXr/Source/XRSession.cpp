@@ -26,10 +26,25 @@
 #include "XRSession.h"
 #include "XRFrame.h"
 
+#include <string>
+
 namespace Babylon
 {
     namespace
     {
+        constexpr const char* GENERIC_TOUCH_CONTROLLER_PROFILE = "generic-trigger-squeeze-touchpad-thumbstick";
+        constexpr const char* OCULUS_TOUCH_CONTROLLER_PROFILE = "oculus-touch";
+
+        const char* WebXRProfileFromInteractionProfile(const std::string& interactionProfileName)
+        {
+            if (interactionProfileName.find("touch_controller") != std::string::npos)
+            {
+                return OCULUS_TOUCH_CONTROLLER_PROFILE;
+            }
+
+            return GENERIC_TOUCH_CONTROLLER_PROFILE;
+        }
+
         void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)
         {
             auto env = jsInputSource.Env();
@@ -201,7 +216,7 @@ namespace Babylon
             jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
 
             auto profiles = Napi::Array::New(env, 1);
-            Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
+            Napi::Value string = Napi::String::New(env, WebXRProfileFromInteractionProfile(inputSource.InteractionProfileName));
             profiles.Set(uint32_t{ 0 }, string);
             jsInputSource.Set("profiles", profiles);
 
