@@ -7,6 +7,18 @@ if(NOT ANDROID)
     add_subdirectory(Playground)
 endif()
 
+# ShaderCacheGenerator: Win32 + OpenGL headless tool that renders a scene .js
+# until its shaders are compiled, then writes the ShaderCache to a file.
+# Configure with -DGRAPHICS_API=OpenGLWindowsDevOnly (which maps to OpenGL +
+# ANGLE). Needs the ShaderCache plugin, the runtime shader compiler
+# (COMPILESHADERS), and the Embedding Runtime/View API it is built on.
+if((WIN32 AND NOT WINDOWS_STORE) AND GRAPHICS_API STREQUAL OpenGL
+        AND BABYLON_NATIVE_EMBEDDING
+        AND BABYLON_NATIVE_PLUGIN_SHADERCACHE
+        AND BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS)
+    add_subdirectory(ShaderCacheGenerator)
+endif()
+
 if((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE))
     add_subdirectory(UnitTests)
     add_subdirectory(ModuleLoadTest)
