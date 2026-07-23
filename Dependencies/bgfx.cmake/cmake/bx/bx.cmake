@@ -99,6 +99,23 @@ target_compile_features(bx PUBLIC cxx_std_14)
 # (note: see bx\scripts\toolchain.lua for equivalent compiler flag)
 target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus /Zc:preprocessor>)
 
+# bx's x86_64 SIMD path (include/bx/inline/simd128_sse.inl) uses SSE4.1
+# intrinsics (e.g. _mm_round_ps / _mm_blendv_ps). bx's scripts/toolchain.lua
+# sets an SSE4.2 minspec for x86_64 targets, but this CMake build did not, so
+# GCC/Clang frontends (which do not enable SSE4.x by default) fail to compile
+# the SIMD path on x86_64 with "needs target feature sse4.1". Propagate the same
+# minspec here, PUBLIC so that bgfx / bimg (which compile bx SIMD headers into
+# their own translation units) inherit it. MSVC (cl.exe) permits the intrinsics
+# without an ISA flag and is left untouched.
+if(APPLE)
+	# Apple builds may be universal (arm64 + x86_64 compiled in a single
+	# invocation); -Xarch_x86_64 scopes the flag to the x86_64 slice only, so the
+	# arm64 slice (which uses the NEON SIMD path) is unaffected.
+	target_compile_options(bx PUBLIC "$<$<CXX_COMPILER_ID:AppleClang,Clang>:SHELL:-Xarch_x86_64 -msse4.2>")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
+	target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:GNU,Clang>:-msse4.2>)
+endif()
+
 # Link against psapi on Windows
 if(WIN32)
 	target_link_libraries(bx PUBLIC psapi)
