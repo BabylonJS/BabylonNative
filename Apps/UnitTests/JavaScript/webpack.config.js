@@ -12,6 +12,7 @@ module.exports = {
     "tests.shaderCompilation.comprehensiveGLSL": './src/tests.shaderCompilation.comprehensiveGLSL.ts',
     "tests.externalTexture.msaa": './src/tests.externalTexture.msaa.ts',
     "tests.externalTexture.deviceLoss": './src/tests.externalTexture.deviceLoss.ts',
+    "tests.externalTexture.layerCount": './src/tests.externalTexture.layerCount.ts',
   },
   externals: {
     "@babylonjs/core": "BABYLON",
