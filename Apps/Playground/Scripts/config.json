@@ -50,21 +50,18 @@
             "referenceImage": "gltfMSFTLOD.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Texture Linear Interpolation Test",
             "playgroundId": "#WGZLGJ#3009",
             "referenceImage": "gltfTextureLinearInterpolation.png",
             "renderCount": 10
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
             "renderCount": 10
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF ClearCoat",
             "playgroundId": "#YG3BBF#33",
             "referenceImage": "glTFClearCoat.png"
@@ -75,7 +72,6 @@
             "referenceImage": "iridescence_gltf.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "EXT_texture_webp",
             "playgroundId": "#LSAUH2#6",
             "referenceImage": "webp.png"
@@ -94,31 +90,26 @@
             "referenceImage": "thinInstances.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Sheen",
             "playgroundId": "#YG3BBF#2",
             "referenceImage": "glTFSheen.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer multimaterial with raw texture",
             "playgroundId": "#KU72PX",
             "referenceImage": "glTFSerializerMultimaterial.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_materials_specular",
             "playgroundId": "#RNT7K4#9",
             "referenceImage": "gltfExtensionKhrMaterialsSpecular.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_texture_transform",
             "playgroundId": "#RNT7K4#2",
             "referenceImage": "gltfExtensionKhrTextureTransform.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Extension KHR_materials_variants",
             "playgroundId": "#BKGTKL#3",
             "referenceImage": "gltfExtensionKhrMaterialsVariants.png"
@@ -170,7 +161,6 @@
             "referenceImage": "KernelBlur.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitive Attribute",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveAttribute, __page__, 0, __disableSRGBBuffers__, 0",
@@ -184,7 +174,6 @@
             "referenceImage": "gltfMeshPrimitiveVertexColor.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Alpha Blend",
             "playgroundId": "#SYQW69#579",
             "referenceImage": "glTFAlphaBlend.png",
@@ -234,7 +223,6 @@
             "referenceImage": "sharpen.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF BoomBox with Unlit Material",
             "playgroundId": "#GYM97C#2",
             "referenceImage": "gltfUnlit.png"
@@ -368,13 +356,11 @@
             "referenceImage": "upVector.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Normals",
             "playgroundId": "#SMEAEB#0",
             "referenceImage": "gltfnormals.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Animation Node",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
@@ -382,7 +368,6 @@
             "referenceImage": "gltfAnimationNode.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Animation Node Misc",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
@@ -404,56 +389,48 @@
             "referenceImage": "gltfAnimationSkin1.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Buffer Interleaved",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Buffer_Interleaved, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfBufferInterleaved.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterial.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Alpha Blend",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_AlphaBlend, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialAlphaBlend.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Alpha Mask",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_AlphaMask, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialAlphaMask.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Double Sided (Front)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_DoubleSided, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialDoubleSidedFront.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Double Sided (Back)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_DoubleSided, __page__, 0, alpha = Math.PI / 2, alpha = -Math.PI / 2, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialDoubleSidedBack.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Metallic Roughness (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_MetallicRoughness, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialMetallicRoughness0.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Metallic Roughness (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_MetallicRoughness, __page__, 1, __disableSRGBBuffers__, 0",
@@ -466,14 +443,12 @@
             "referenceImage": "gltfMaterialMixed.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Specular Glossiness (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_SpecularGlossiness, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMaterialSpecularGlossiness0.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Material Specular Glossiness (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_SpecularGlossiness, __page__, 1, __disableSRGBBuffers__, 0",
@@ -503,56 +478,48 @@
             "referenceImage": "gltfMeshPrimitives.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitives UV (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitivesUV, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitivesUV0.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Mesh Primitives UV (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitivesUV, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitivesUV1.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node Attribute (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_Attribute, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeAttribute0.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node NegativeScale (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_NegativeScale, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeNegativeScale0.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node NegativeScale (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_NegativeScale, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeNegativeScale1.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Texture Sampler (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler0.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Texture Sampler (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler1.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
             "referenceImage": "gltfAlien.png"
@@ -1399,26 +1366,22 @@
             "referenceImage": "glTFSerializerSharedBufferConversions.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Skinning and Animation",
             "playgroundId": "#DMZBX1#1",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Skinning and Animation (Right Handed)",
             "playgroundId": "#DMZBX1#2",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Morph Target Animation",
             "playgroundId": "#84M2SR#107",
             "renderCount": 2,
             "referenceImage": "gltfSerializerMorphTargetAnimation.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Serializer Morph Target Animation Group",
             "playgroundId": "#T087A8#29",
             "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
@@ -1571,7 +1534,6 @@
             "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "GLTF Node visibility test",
             "playgroundId": "#80DN99#6",
             "referenceImage": "gltfNodeVisibility.png"
@@ -2533,7 +2495,6 @@
             "referenceImage": "SerializeMesh-with-hierarchy.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "MeshDebugPluginMaterial",
             "playgroundId": "#TFDNZI#2",
             "referenceImage": "MeshDebugPluginMaterial.png"
@@ -2828,7 +2789,6 @@
             "referenceImage": "computeMaxExtents-MorphStressTest.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "glTF Loader Capabilities",
             "playgroundId": "#EBO3J1#10",
             "referenceImage": "glTFLoaderCapabilities.png"

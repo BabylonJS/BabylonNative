@@ -361,6 +361,67 @@ namespace Babylon::Plugins::NativeDawn
             return { nullptr, 0 };
         }
 
+        // ---- base64 (used to turn object-URL blobs into universally-resolvable
+        // data: URLs; see createObjectURL below) ------------------------------
+        std::string Base64Encode(const uint8_t* data, size_t size)
+        {
+            static const char* T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            std::string out;
+            out.reserve(((size + 2) / 3) * 4);
+            size_t i = 0;
+            for (; i + 2 < size; i += 3)
+            {
+                uint32_t b = (uint32_t(data[i]) << 16) | (uint32_t(data[i + 1]) << 8) | uint32_t(data[i + 2]);
+                out.push_back(T[(b >> 18) & 63]);
+                out.push_back(T[(b >> 12) & 63]);
+                out.push_back(T[(b >> 6) & 63]);
+                out.push_back(T[b & 63]);
+            }
+            if (i < size)
+            {
+                uint32_t b = uint32_t(data[i]) << 16;
+                bool two = (i + 1 < size);
+                if (two) b |= uint32_t(data[i + 1]) << 8;
+                out.push_back(T[(b >> 18) & 63]);
+                out.push_back(T[(b >> 12) & 63]);
+                out.push_back(two ? T[(b >> 6) & 63] : '=');
+                out.push_back('=');
+            }
+            return out;
+        }
+
+        bool Base64Decode(const char* data, size_t size, std::vector<uint8_t>& out)
+        {
+            static int8_t rev[256];
+            static bool init = false;
+            if (!init)
+            {
+                for (int i = 0; i < 256; ++i) rev[i] = -1;
+                const char* T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+                for (int i = 0; i < 64; ++i) rev[(uint8_t)T[i]] = (int8_t)i;
+                init = true;
+            }
+            out.clear();
+            out.reserve((size / 4) * 3);
+            uint32_t buf = 0;
+            int bits = 0;
+            for (size_t i = 0; i < size; ++i)
+            {
+                uint8_t c = (uint8_t)data[i];
+                if (c == '=' || c == '\n' || c == '\r' || c == ' ' || c == '\t') continue;
+                int8_t v = rev[c];
+                if (v < 0) return false;
+                buf = (buf << 6) | (uint32_t)v;
+                bits += 6;
+                if (bits >= 8)
+                {
+                    bits -= 8;
+                    out.push_back((uint8_t)((buf >> bits) & 0xFF));
+                }
+            }
+            return true;
+        }
+
         // IEEE-754 float32 -> float16 (half). Adequate for the [0,1] image data
         // that copyExternalImageToTexture converts into half-float textures.
         uint16_t FloatToHalf(float value)
@@ -3162,6 +3223,27 @@ namespace Babylon::Plugins::NativeDawn
             if (src.IsString())
             {
                 const std::string id = src.As<Napi::String>().Utf8Value();
+                if (id.rfind("data:", 0) == 0)
+                {
+                    auto d = Napi::Promise::Deferred::New(env);
+                    size_t comma = id.find(',');
+                    size_t semi = id.find(";base64");
+                    if (comma != std::string::npos && semi != std::string::npos && semi < comma)
+                    {
+                        std::vector<uint8_t> bytes;
+                        const char* b64 = id.c_str() + comma + 1;
+                        size_t b64len = id.size() - comma - 1;
+                        if (Base64Decode(b64, b64len, bytes))
+                        {
+                            Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, bytes.size());
+                            std::memcpy(ab.Data(), bytes.data(), bytes.size());
+                            d.Resolve(ab);
+                            return d.Promise();
+                        }
+                    }
+                    d.Resolve(Napi::ArrayBuffer::New(env, 0));
+                    return d.Promise();
+                }
                 Napi::Value blob = g_blobRegistry.Value().Get(id);
                 if (!blob.IsUndefined())
                 {
@@ -3495,6 +3577,27 @@ namespace Babylon::Plugins::NativeDawn
                 global.Set("location", location);
             }
 
+            // Babylon's WebGPU engine reloads glTF external-texture object URLs
+            // through its internal XHR/data-URL loader (forceBitmapOverHTML-
+            // ImageElement). That path cannot resolve our `blob:nativedawn/N`
+            // ids (only createImageBitmap's ToArrayBuffer can), so such textures
+            // used to load as 0 bytes -> 1x1 -> black. Stash the source bytes on
+            // each Blob instance (as `__dawnU8`) so createObjectURL below can
+            // return a universally-resolvable `data:` URL instead.
+            {
+                static const char* kBlobStashPatch =
+                    "(function(){var R=globalThis.Blob;"
+                    "if(typeof R!=='function'||R.__dawnStash)return;"
+                    "function W(parts,opts){var b=new R(parts,opts);try{"
+                    "var p=parts&&parts[0],u8=null;"
+                    "if(p instanceof ArrayBuffer)u8=new Uint8Array(p);"
+                    "else if(p&&p.buffer instanceof ArrayBuffer)u8=new Uint8Array(p.buffer,p.byteOffset||0,p.byteLength);"
+                    "if(u8){b.__dawnU8=u8;b.__dawnType=(opts&&opts.type)||'';}"
+                    "}catch(e){}return b;}"
+                    "W.prototype=R.prototype;W.__dawnStash=true;globalThis.Blob=W;})();";
+                env.RunScript(kBlobStashPatch);
+            }
+
             // ---- image decoding shims ----------------------------------------
             // The host's native URL polyfill requires its arguments to be strings
             // and throws "A string was expected" when passed a URL object as the
@@ -3543,6 +3646,28 @@ namespace Babylon::Plugins::NativeDawn
                 {
                     SetMethod(url, "createObjectURL", [](const Napi::CallbackInfo& info) -> Napi::Value {
                         Napi::Env env = info.Env();
+                        // If the blob carries stashed source bytes (see Blob patch),
+                        // return a data: URL so Babylon's internal XHR/data-URL
+                        // texture loader can resolve it (blob:nativedawn ids can't
+                        // be resolved by that path). Falls back to the registry.
+                        if (info.Length() > 0 && info[0].IsObject())
+                        {
+                            Napi::Object blob = info[0].As<Napi::Object>();
+                            Napi::Value u8 = blob.Get("__dawnU8");
+                            if (u8.IsTypedArray() || u8.IsArrayBuffer())
+                            {
+                                Bytes b = GetBytes(u8);
+                                if (b.data != nullptr && b.size != 0)
+                                {
+                                    std::string type;
+                                    Napi::Value ty = blob.Get("__dawnType");
+                                    if (ty.IsString()) type = ty.As<Napi::String>().Utf8Value();
+                                    if (type.empty()) type = "application/octet-stream";
+                                    std::string dataUrl = "data:" + type + ";base64," + Base64Encode(b.data, b.size);
+                                    return Napi::String::New(env, dataUrl);
+                                }
+                            }
+                        }
                         std::string id = "blob:nativedawn/" + std::to_string(++g_blobSeq);
                         g_blobRegistry.Value().Set(id, info.Length() > 0 ? info[0] : env.Undefined());
                         return Napi::String::New(env, id);
