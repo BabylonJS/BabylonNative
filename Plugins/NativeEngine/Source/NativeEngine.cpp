@@ -714,6 +714,7 @@ namespace Babylon
                 InstanceMethod("initializeTexture", &NativeEngine::InitializeTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
+                InstanceMethod("updateTextureData", &NativeEngine::UpdateTextureData),
                 InstanceMethod("loadRawTexture2DArray", &NativeEngine::LoadRawTexture2DArray),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
@@ -1447,6 +1448,77 @@ namespace Babylon
         image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
         LoadTextureFromImage(texture, image, false);
 #endif
+    }
+
+    void NativeEngine::UpdateTextureData(const Napi::CallbackInfo& info)
+    {
+        const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
+        const auto data{info[1].As<Napi::TypedArray>()};
+        const auto x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
+        const auto y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const auto width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
+        const auto height{static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value())};
+        const uint16_t layer{info.Length() > 6 && !info[6].IsUndefined() ? static_cast<uint16_t>(info[6].As<Napi::Number>().Uint32Value()) : static_cast<uint16_t>(0)};
+        const uint8_t mip{info.Length() > 7 && !info[7].IsUndefined() ? static_cast<uint8_t>(info[7].As<Napi::Number>().Uint32Value()) : static_cast<uint8_t>(0)};
+        const bool invertY{info.Length() > 8 && !info[8].IsUndefined() ? info[8].As<Napi::Boolean>().Value() : false};
+
+        if (texture == nullptr || !texture->IsValid())
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData called on an invalid texture");
+        }
+
+        // Validate the (JS-controlled) update rectangle against the mip-level extents before handing it to
+        // bgfx, so an out-of-range origin/size can't drive an out-of-bounds read of the source buffer below.
+        uint32_t mipWidth{static_cast<uint32_t>(texture->Width()) >> mip};
+        uint32_t mipHeight{static_cast<uint32_t>(texture->Height()) >> mip};
+        if (mipWidth == 0)
+        {
+            mipWidth = 1;
+        }
+        if (mipHeight == 0)
+        {
+            mipHeight = 1;
+        }
+        const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
+        if (width == 0 || height == 0 ||
+            static_cast<uint32_t>(x) + width > mipWidth ||
+            static_cast<uint32_t>(y) + height > mipHeight ||
+            layer >= numLayers)
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData region is out of bounds");
+        }
+
+        // Size of the source rectangle in the texture's own format. bgfx is always linked (bimg is not, in
+        // builds without image loading), so size the upload with bgfx::calcTextureSize rather than bimg.
+        bgfx::TextureInfo textureInfo;
+        bgfx::calcTextureSize(textureInfo, width, height, 1, false, false, 1, texture->Format());
+        const uint32_t requiredSize{textureInfo.storageSize};
+        if (requiredSize == 0 || data.ByteLength() < requiredSize)
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData data size does not match width, height, and texture format");
+        }
+
+        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
+
+        // Match the vertical orientation the base upload applies (PrepareImage flips the whole image when
+        // originBottomLeft ? invertY : !invertY). To land a sub-rectangle at the same place, flip it to the
+        // mirrored Y origin and reverse its rows so row 0 of the source lines up with the flipped base data.
+        const bool flip{bgfx::getCaps()->originBottomLeft ? invertY : !invertY};
+        const uint16_t targetY{flip ? static_cast<uint16_t>(mipHeight - y - height) : y};
+        const bgfx::Memory* mem{bgfx::alloc(requiredSize)};
+        if (flip)
+        {
+            const uint32_t rowBytes{requiredSize / height};
+            for (uint16_t row = 0; row < height; ++row)
+            {
+                std::memcpy(mem->data + static_cast<size_t>(row) * rowBytes, bytes + static_cast<size_t>(height - 1 - row) * rowBytes, rowBytes);
+            }
+        }
+        else
+        {
+            std::memcpy(mem->data, bytes, requiredSize);
+        }
+        texture->Update2D(layer, mip, x, targetY, width, height, mem);
     }
 
     void NativeEngine::LoadRawTexture2DArray(const Napi::CallbackInfo& info)
