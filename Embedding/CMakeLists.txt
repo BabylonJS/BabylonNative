@@ -80,6 +80,11 @@ if(BABYLON_NATIVE_POLYFILL_WEBSOCKET)
     target_link_libraries(Embedding PRIVATE WebSocket)
 endif()
 
+if(BABYLON_NATIVE_POLYFILL_WEBAUDIO)
+    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_POLYFILL_WEBAUDIO=1)
+    target_link_libraries(Embedding PRIVATE WebAudio)
+endif()
+
 # ----- Conditionally-included plugins -----
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)

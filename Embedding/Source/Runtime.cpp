@@ -56,6 +56,10 @@
 #include <Babylon/Polyfills/Window.h>
 #endif
 
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+#include <Babylon/Polyfills/WebAudio.h>
+#endif
+
 #include <cassert>
 #include <fstream>
 #include <sstream>
@@ -143,6 +147,14 @@ namespace Babylon::Embedding
 
 #if BABYLON_NATIVE_POLYFILL_CANVAS
         m_canvas.reset();
+#endif
+
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+        if (m_webAudio)
+        {
+            m_webAudio->ShutdownPlayback();
+        }
+        m_webAudio.reset();
 #endif
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
@@ -258,6 +270,10 @@ namespace Babylon::Embedding
 
 #if BABYLON_NATIVE_POLYFILL_CANVAS
             implPtr->m_canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+#endif
+
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+            implPtr->m_webAudio.emplace(Babylon::Polyfills::WebAudio::Initialize(env));
 #endif
 
             // 3. Plugins.
@@ -411,6 +427,12 @@ namespace Babylon::Embedding
             m_impl->SaveShaderCache();
 #endif
             m_impl->m_appRuntime->Suspend();
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+            if (m_impl->m_webAudio)
+            {
+                m_impl->m_webAudio->SuspendPlayback();
+            }
+#endif
         }
     }
 
@@ -425,6 +447,12 @@ namespace Babylon::Embedding
         if (m_impl->m_suspendCount.fetch_sub(1, std::memory_order_relaxed) == 1)
         {
             m_impl->m_appRuntime->Resume();
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+            if (m_impl->m_webAudio)
+            {
+                m_impl->m_webAudio->ResumePlayback();
+            }
+#endif
             // Re-open the frame on the attached View. On a view that was
             // attached but never sized, this also drives the deferred
             // first-Resize init via InitializeIfReady.

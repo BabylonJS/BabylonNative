@@ -5,3 +5,7 @@ endif()
 if(BABYLON_NATIVE_POLYFILL_CANVAS)
     add_subdirectory(Canvas)
 endif()
+
+if(BABYLON_NATIVE_POLYFILL_WEBAUDIO)
+    add_subdirectory(WebAudio)
+endif()
