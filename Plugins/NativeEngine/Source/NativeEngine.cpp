@@ -77,6 +77,8 @@ namespace Babylon
             constexpr uint64_t MULTIPLY = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_DST_COLOR, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
             constexpr uint64_t MAXIMIZED = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
             constexpr uint64_t ONEONE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t ONEONE_ONEONE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
+            constexpr uint64_t LAYER_ACCUMULATE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
             constexpr uint64_t PREMULTIPLIED = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ONE);
             constexpr uint64_t PREMULTIPLIED_PORTERDUFF = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
             constexpr uint64_t INTERPOLATE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR, BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR);
@@ -598,6 +600,8 @@ namespace Babylon
                 StaticValue("ALPHA_MULTIPLY", Napi::Number::From(env, AlphaMode::MULTIPLY)),
                 StaticValue("ALPHA_MAXIMIZED", Napi::Number::From(env, AlphaMode::MAXIMIZED)),
                 StaticValue("ALPHA_ONEONE", Napi::Number::From(env, AlphaMode::ONEONE)),
+                StaticValue("ALPHA_ONEONE_ONEONE", Napi::Number::From(env, AlphaMode::ONEONE_ONEONE)),
+                StaticValue("ALPHA_LAYER_ACCUMULATE", Napi::Number::From(env, AlphaMode::LAYER_ACCUMULATE)),
                 StaticValue("ALPHA_PREMULTIPLIED", Napi::Number::From(env, AlphaMode::PREMULTIPLIED)),
                 StaticValue("ALPHA_PREMULTIPLIED_PORTERDUFF", Napi::Number::From(env, AlphaMode::PREMULTIPLIED_PORTERDUFF)),
                 StaticValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
@@ -726,6 +730,7 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
 
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
+                InstanceMethod("createMultiFrameBuffer", &NativeEngine::CreateMultiFrameBuffer),
 
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
@@ -1874,12 +1879,57 @@ namespace Babylon
         const bool generateDepth = info[4].As<Napi::Boolean>();
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
 
-        std::array<bgfx::Attachment, 2> attachments{};
+        // A single render target is just the zero-or-one color attachment case of the shared implementation.
+        Graphics::Texture* const colorTextures[]{texture};
+        const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr ? 1u : 0u};
+
+        return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples);
+    }
+
+    Napi::Value NativeEngine::CreateMultiFrameBuffer(const Napi::CallbackInfo& info)
+    {
+        const auto colorTexturesArray = info[0].As<Napi::Array>();
+        const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
+        const bool generateDepth = info[4].As<Napi::Boolean>();
+        const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
+
+        const uint32_t colorCount = colorTexturesArray.Length();
+        // BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS is 8, so at most 8 color attachments fit alongside the depth attachment.
+        std::array<Graphics::Texture*, 8> colorTextures{};
+        if (colorCount > colorTextures.size())
+        {
+            throw Napi::Error::New(info.Env(), "Invalid number of color attachments for multi render target frame buffer");
+        }
+
+        for (uint32_t i = 0; i < colorCount; ++i)
+        {
+            colorTextures[i] = colorTexturesArray.Get(i).As<Napi::Pointer<Graphics::Texture>>().Get();
+        }
+
+        return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples);
+    }
+
+    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples)
+    {
+        const bgfx::Caps* caps = bgfx::getCaps();
+        const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
+        // One slot per color attachment, plus a single depth/stencil attachment only when one is
+        // generated. bgfx caps the total via maxFBAttachments; reject out-of-range counts up front
+        // rather than relying on the validation assert.
+        const uint32_t depthStencilCount = (generateStencilBuffer || generateDepth) ? 1u : 0u;
+        if (colorCount + depthStencilCount > caps->limits.maxFBAttachments)
+        {
+            throw Napi::Error::New(env, "Invalid number of color attachments for frame buffer");
+        }
+
+        // BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS is 8, so 8 color + 1 depth fits in a fixed array.
+        std::array<bgfx::Attachment, 9> attachments{};
         uint8_t numAttachments = 0;
 
-        if (texture != nullptr)
+        for (Graphics::Texture* texture : colorTextures)
         {
-            const bgfx::Caps* caps = bgfx::getCaps();
             // bgfx validation now asserts when trying to use BGFX_RESOLVE_AUTO_GEN_MIPS with a texture that doesn't have the BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN flag,
             // but before it would just ignore the flag and not generate mips without any warning. This prevents validation assert, but rendering might be broken if autogen
             // mips were expected. Basically this change preserves previous behavior.
@@ -1894,7 +1944,7 @@ namespace Babylon
         {
             if (generateStencilBuffer && !generateDepth)
             {
-                JsConsoleLogger::LogWarn(info.Env(), "Stencil without depth is not supported, assuming depth and stencil");
+                JsConsoleLogger::LogWarn(env, "Stencil without depth is not supported, assuming depth and stencil");
             }
 
             auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | RenderTargetSamplesToBgfxMsaaFlag(samples);
@@ -1926,11 +1976,11 @@ namespace Babylon
                 bgfx::destroy(depthStencilTextureHandle);
             }
 
-            throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
+            throw Napi::Error::New(env, "Failed to create frame buffer");
         }
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer, depthStencilAttachmentIndex);
-        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
+        return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
     // TODO: This doesn't get called when an Engine instance is disposed.

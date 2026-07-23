@@ -32,6 +32,11 @@
 
 namespace Babylon
 {
+    namespace Graphics
+    {
+        class Texture;
+    }
+
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
@@ -114,6 +119,8 @@ namespace Babylon
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value ReadTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
+        Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
+        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples);
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
