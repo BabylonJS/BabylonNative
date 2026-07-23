@@ -1348,6 +1348,7 @@ namespace Babylon
         const bool renderTarget = info[5].As<Napi::Boolean>();
         const bool srgb = info[6].As<Napi::Boolean>();
         const uint32_t samples = info[7].IsUndefined() ? 1 : info[7].As<Napi::Number>().Uint32Value();
+        const bool isCube = info.Length() > 8 && !info[8].IsUndefined() && info[8].As<Napi::Boolean>();
 
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
@@ -1359,7 +1360,15 @@ namespace Babylon
             flags |= BGFX_TEXTURE_SRGB;
         }
 
-        texture->Create2D(width, height, hasMips, 1, format, flags);
+        if (isCube)
+        {
+            // Cube render target: width is the per-face size.
+            texture->CreateCube(width, hasMips, 1, format, flags);
+        }
+        else
+        {
+            texture->Create2D(width, height, hasMips, 1, format, flags);
+        }
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
@@ -1873,6 +1882,8 @@ namespace Babylon
         const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
         const bool generateDepth = info[4].As<Napi::Boolean>();
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
+        // Optional cube-face / array layer for the color attachment (single-face cube render targets).
+        const uint16_t layer = (info.Length() > 6 && !info[6].IsUndefined()) ? static_cast<uint16_t>(info[6].As<Napi::Number>().Uint32Value()) : 0;
 
         std::array<bgfx::Attachment, 2> attachments{};
         uint8_t numAttachments = 0;
@@ -1883,7 +1894,7 @@ namespace Babylon
             // bgfx validation now asserts when trying to use BGFX_RESOLVE_AUTO_GEN_MIPS with a texture that doesn't have the BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN flag,
             // but before it would just ignore the flag and not generate mips without any warning. This prevents validation assert, but rendering might be broken if autogen
             // mips were expected. Basically this change preserves previous behavior.
-            attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, 0, 1, 0
+            attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, layer, 1, 0
                 , 0 != (caps->formats[texture->Format()] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) ? BGFX_RESOLVE_AUTO_GEN_MIPS : BGFX_RESOLVE_NONE
                 );
         }
