@@ -148,12 +148,20 @@
     const canvas = window;
     globalThis.canvas = canvas;
 
-    // Random replacement
+    // Random replacement. Deterministic so reference images are reproducible.
+    // Reinstalled per-test (see runTest) because some playgrounds overwrite
+    // Math.random with their own closure -- e.g. "Selection outline layer with
+    // instances" (#UR9706#0) does `window.Math.random = ... window.seed ...`,
+    // leaving a global RNG that the harness's `seed = 1` reset can no longer
+    // touch. Left in place, every later test (notably GPU particle systems,
+    // whose random textures are filled from Math.random) gets shifted random
+    // values and drifts across the pixel-diff threshold.
     let seed = 1;
-    Math.random = function () {
+    const deterministicRandom = function () {
         const x = Math.sin(seed++) * 10000;
         return x - Math.floor(x);
-    }
+    };
+    Math.random = deterministicRandom;
 
     function compare(test, renderData, referenceImage, threshold, errorRatio) {
         const referenceData = TestUtils.getImageData(referenceImage);
@@ -537,6 +545,10 @@
         TestUtils.setTitle(testInfo);
 
         seed = 1;
+        // Reinstall the deterministic RNG: a prior test may have replaced
+        // Math.random with its own function (see the definition above), which
+        // would make `seed = 1` a no-op and leave later tests non-deterministic.
+        Math.random = deterministicRandom;
 
         // Restore per-test isolation for global Babylon loader state. Some
         // playgrounds add a BABYLON.SceneLoader.OnPluginActivatedObservable
@@ -559,6 +571,17 @@
         // own createScene.
         if (typeof engine.useReverseDepthBuffer !== "undefined") {
             engine.useReverseDepthBuffer = false;
+        }
+
+        // Reset snapshot rendering. "FAST snapshot CPU particles" (#AW6Q7E#0)
+        // uses BABYLON.SnapshotRenderingHelper.enableSnapshotRendering(), which
+        // sets engine.snapshotRendering = true. Snapshot mode caches the render
+        // command buffer, so every later test replays the snapshot's draws
+        // instead of its own -- GPU particle systems in particular then render
+        // stale/shifted output and drift across the pixel-diff threshold. A test
+        // that needs snapshot mode re-enables it in its own createScene.
+        if (typeof engine.snapshotRendering !== "undefined") {
+            engine.snapshotRendering = false;
         }
 
         if (generateReferences) {
