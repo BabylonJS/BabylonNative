@@ -551,6 +551,16 @@
             BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
         }
 
+        // Reset global engine flags that some playgrounds set and never restore.
+        // e.g. "Reverse depth buffer and shadows" (#WL4Q8J#20) and the CSM variant
+        // set engine.useReverseDepthBuffer = true; left on, every later test renders
+        // with a reversed depth test and depth-sensitive tests fail (e.g. "Sample
+        // depth texture" rendered black). A test that needs it re-enables it in its
+        // own createScene.
+        if (typeof engine.useReverseDepthBuffer !== "undefined") {
+            engine.useReverseDepthBuffer = false;
+        }
+
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);
         } else {
