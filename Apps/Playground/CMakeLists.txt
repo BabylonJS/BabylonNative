@@ -146,9 +146,10 @@ target_include_directories(Playground PRIVATE ".")
 
 # The Embedding layer links and initializes the full canonical set of
 # polyfills/plugins (Blob, Canvas, Console, File, GraphicsDevice, the
-# Native* plugins, ScriptLoader, ShaderCache, the polyfills, etc.) and
-# forwards them transitively, so the Playground only needs to list the
-# libraries it consumes directly:
+# Native* plugins — including NativeDawn when BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+# is ON — ScriptLoader, ShaderCache, the polyfills, etc.) and forwards them
+# transitively, so the Playground only needs to list the libraries it consumes
+# directly:
 #   - Embedding : the Runtime + View API the host is built on.
 #   - bx        : <bx/*.h> used by Shared/Diagnostics.cpp.
 #   - TestUtils : <Babylon/Plugins/TestUtils.h> used by Win32/X11 --test mode.
@@ -163,6 +164,15 @@ target_link_libraries(Playground
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
 add_custom_command(TARGET Playground POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:Playground>>,copy,true> $<TARGET_RUNTIME_DLLS:Playground> $<TARGET_FILE_DIR:Playground> COMMAND_EXPAND_LISTS)
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN AND WIN32 AND EXISTS "$ENV{SystemRoot}/System32/d3dcompiler_47.dll")
+    # Dawn's D3D12 backend dynamically loads d3dcompiler_47.dll (FXC). The
+    # Windows SDK ships a stub placeholder on PATH, so copy the real System32 DLL
+    # beside the exe to guarantee RequestDevice succeeds.
+    add_custom_command(TARGET Playground POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$ENV{SystemRoot}/System32/d3dcompiler_47.dll" "$<TARGET_FILE_DIR:Playground>"
+        COMMENT "Copying d3dcompiler_47.dll for Dawn")
+endif()
 
 if(ANGLE_LIBEGL)
     add_custom_command(TARGET Playground POST_BUILD

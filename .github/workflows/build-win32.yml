@@ -18,6 +18,10 @@ on:
         required: false
         type: boolean
         default: false
+      nativedawn:
+        required: false
+        type: boolean
+        default: false
 
 # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
 # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
@@ -55,6 +59,16 @@ jobs:
           echo "js_define=$JS_DEFINE" >> "$GITHUB_OUTPUT"
           echo "solution_name=Win32_${{ inputs.platform }}${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "sanitizer_flag=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}" >> "$GITHUB_OUTPUT"
+          # NativeDawn (WebGPU/Dawn) build: enable the plugin (which force-disables
+          # NativeEngine) and build only the Playground target, since the
+          # bgfx-based validation/unit/module tests don't apply to this backend.
+          if [ "${{ inputs.nativedawn }}" = "true" ]; then
+            echo "dawn_flag=-D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON" >> "$GITHUB_OUTPUT"
+            echo "build_target=--target Playground" >> "$GITHUB_OUTPUT"
+          else
+            echo "dawn_flag=" >> "$GITHUB_OUTPUT"
+            echo "build_target=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Generate solution
         shell: cmd
@@ -63,6 +77,7 @@ jobs:
             -B build/${{ steps.vars.outputs.solution_name }} ^
             -A ${{ inputs.platform }} ^
             ${{ steps.vars.outputs.js_define }} ^
+            ${{ steps.vars.outputs.dawn_flag }} ^
             -D BX_CONFIG_DEBUG=ON ^
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
             -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
@@ -72,7 +87,7 @@ jobs:
       - name: Build
         shell: cmd
         run: |
-          cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo -- /m
+          cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo ${{ steps.vars.outputs.build_target }} -- /m
 
       - name: Enable Crash Dumps
         shell: cmd
@@ -104,14 +119,42 @@ jobs:
           )
 
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && !inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground app:///Scripts/validation_native.js
 
+      # NativeDawn (WebGPU) validation. Runs the same harness on the Dawn
+      # backend; tests that don't yet render correctly on WebGPU are marked
+      # `excludedGraphicsApis: ["WebGPU"]` in config.json and are skipped, so
+      # this gates on the currently-passing WebGPU subset. --headless routes
+      # all logs to stdout for CI diagnostics.
+      - name: Validation Tests (NativeDawn)
+        if: ${{ inputs.nativedawn }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground --headless app:///Scripts/validation_native.js
+
+      - name: Upload Rendered Pictures (NativeDawn)
+        if: ${{ inputs.nativedawn && !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-rendered-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Results
+          if-no-files-found: ignore
+
+      - name: Upload Error Pictures (NativeDawn)
+        if: ${{ inputs.nativedawn && failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-error-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Errors
+          if-no-files-found: ignore
+
       - name: Upload Rendered Pictures
-        if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
+        if: ${{ inputs.graphics-api != 'D3D12' && !inputs.nativedawn && !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
@@ -134,14 +177,14 @@ jobs:
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo\Playground.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Unit Tests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && !inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo
           UnitTests
 
       - name: Module Load Test
-        if: ${{ !inputs.enable-sanitizers }}
+        if: ${{ !inputs.enable-sanitizers && !inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo

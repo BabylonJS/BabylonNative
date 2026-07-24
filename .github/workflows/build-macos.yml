@@ -23,6 +23,10 @@ on:
         required: false
         type: string
         default: ''
+      nativedawn:
+        required: false
+        type: boolean
+        default: false
 
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
@@ -43,6 +47,7 @@ jobs:
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
 
       - name: Generate macOS solution
+        if: ${{ !inputs.nativedawn }}
         run: |
           cmake -G "${{ inputs.generator }}" -B build/macOS \
             ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
@@ -51,25 +56,42 @@ jobs:
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
 
       - name: Build Playground macOS
+        if: ${{ !inputs.nativedawn }}
         run: cmake --build build/macOS --target Playground --config RelWithDebInfo
 
       - name: Build UnitTests macOS
+        if: ${{ !inputs.nativedawn }}
         run: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
 
       - name: Build ModuleLoadTest macOS
+        if: ${{ !inputs.nativedawn }}
         run: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
 
+      # NativeDawn (WebGPU/Dawn, Metal backend) build: enabling the plugin
+      # force-disables NativeEngine. The macOS Playground host has no Dawn code
+      # path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
+      # compiles/links; the bgfx unit tests don't apply.
+      - name: Build NativeDawn macOS
+        if: ${{ inputs.nativedawn }}
+        run: |
+          cmake -G "${{ inputs.generator }}" -B build/macOS \
+            -D BABYLON_DEBUG_TRACE=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON
+          cmake --build build/macOS --target NativeDawn --config RelWithDebInfo
+
       - name: Enable Core Dump
+        if: ${{ !inputs.nativedawn }}
         run: sudo sysctl -w kern.corefile=%N.core.%P
 
       - name: Run UnitTests macOS
+        if: ${{ !inputs.nativedawn }}
         run: |
           cd build/macOS/Apps/UnitTests/RelWithDebInfo
           ulimit -c unlimited
           ./UnitTests
 
       - name: Run ModuleLoadTest macOS
-        if: ${{ !inputs.enable-sanitizers }}
+        if: ${{ !inputs.enable-sanitizers && !inputs.nativedawn }}
         run: |
           cd build/macOS/Apps/ModuleLoadTest/RelWithDebInfo
           ulimit -c unlimited

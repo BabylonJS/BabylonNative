@@ -105,6 +105,17 @@
     globalThis.engine = engine;
     engine.getCaps().parallelShaderCompile = undefined;
 
+    // The default HTML loading screen pokes at DOM nodes (document head, an
+    // <img> logo with a network fetch) that don't meaningfully exist in this
+    // headless host. It's a pure overlay and never part of the captured 3D
+    // frame, so disable it. Prevents SceneLoader (glTF imports) from calling
+    // engine.displayLoadingUI().
+    if (BABYLON.SceneLoader) {
+        BABYLON.SceneLoader.ShowLoadingScreen = false;
+    }
+    engine.displayLoadingUI = function () { };
+    engine.hideLoadingUI = function () { };
+
     // Broaden Babylon's default retry strategy for the test framework: in addition to
     // network drops (status 0, the default trigger), also retry transient HTTP errors
     // (5xx) and rate limits (429). Applies to every BABYLON.Tools.LoadFile request
@@ -570,28 +581,36 @@
         }
     }
 
-    OffscreenCanvas = function (width, height) {
-        return {
-            width: width
-            , height: height
-            , getContext: function (type) {
-                return {
-                    fillRect: function (x, y, w, h) { }
-                    , measureText: function (text) { return 8; }
-                    , fillText: function (text, x, y) { }
-                };
-            }
-        };
+    // Only define no-op DOM stubs if the host hasn't already provided functional
+    // ones. The NativeDawn (WebGPU) backend installs a real 2D canvas + document
+    // (needed for WebGPU texture upload); the bgfx backend provides neither, so
+    // these fallbacks apply there.
+    if (typeof OffscreenCanvas === "undefined") {
+        OffscreenCanvas = function (width, height) {
+            return {
+                width: width
+                , height: height
+                , getContext: function (type) {
+                    return {
+                        fillRect: function (x, y, w, h) { }
+                        , measureText: function (text) { return 8; }
+                        , fillText: function (text, x, y) { }
+                    };
+                }
+            };
+        }
     }
 
-    document = {
-        createElement: function (type) {
-            if (type === "canvas") {
-                return new OffscreenCanvas(64, 64);
-            }
-            return {};
-        },
-        removeEventListener: function () { }
+    if (typeof document === "undefined") {
+        document = {
+            createElement: function (type) {
+                if (type === "canvas") {
+                    return new OffscreenCanvas(64, 64);
+                }
+                return {};
+            },
+            removeEventListener: function () { }
+        }
     }
 
     const xhr = new XMLHttpRequest();

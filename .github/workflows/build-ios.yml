@@ -14,6 +14,10 @@ on:
         required: false
         type: string
         default: macos-latest
+      nativedawn:
+        required: false
+        type: boolean
+        default: false
 
 # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
 # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
@@ -32,6 +36,7 @@ jobs:
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
 
       - name: Generate iOS solution
+        if: ${{ !inputs.nativedawn }}
         run: |
           cmake -G Xcode -B build/iOS \
             -D IOS=ON \
@@ -40,10 +45,35 @@ jobs:
             -D CMAKE_IOS_INSTALL_COMBINED=NO
 
       - name: Build Playground iOS
+        if: ${{ !inputs.nativedawn }}
         run: |
           xcodebuild \
             -project build/iOS/BabylonNative.xcodeproj \
             -scheme Playground \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO
+
+      # NativeDawn (WebGPU/Dawn, Metal backend) build: enabling the plugin
+      # force-disables NativeEngine. The iOS Playground host has no Dawn code
+      # path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
+      # compiles/links.
+      - name: Generate iOS solution (NativeDawn)
+        if: ${{ inputs.nativedawn }}
+        run: |
+          cmake -G Xcode -B build/iOS \
+            -D IOS=ON \
+            -D DEPLOYMENT_TARGET=${{ inputs.deployment-target }} \
+            -D BABYLON_DEBUG_TRACE=ON \
+            -D CMAKE_IOS_INSTALL_COMBINED=NO \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON
+
+      - name: Build NativeDawn iOS
+        if: ${{ inputs.nativedawn }}
+        run: |
+          xcodebuild \
+            -project build/iOS/BabylonNative.xcodeproj \
+            -scheme NativeDawn \
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO
