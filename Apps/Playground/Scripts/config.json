@@ -269,7 +269,8 @@
         {
             "title": "Fresnel",
             "playgroundId": "#603JUZ#1",
-            "referenceImage": "fresnel.png"
+            "referenceImage": "fresnel.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Unindexed mesh",
@@ -555,7 +556,8 @@
         {
             "title": "Merge Meshes with submeshes",
             "playgroundId": "#ZHPFRQ",
-            "referenceImage": "mergemeshes-sub.png"
+            "referenceImage": "mergemeshes-sub.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Gaussian Splatting modify",
@@ -588,7 +590,8 @@
             "title": "Gaussian Splatting Depth Alpha Blended",
             "playgroundId": "#V80DRL#19",
             "renderCount": 15,
-            "referenceImage": "gsplat-depth-alpha-blended.png"
+            "referenceImage": "gsplat-depth-alpha-blended.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Gaussian Splatting SPZ SH",
@@ -602,7 +605,8 @@
             "title": "Gaussian Splatting viewports",
             "playgroundId": "#CG8GO3#1",
             "renderCount": 15,
-            "referenceImage": "gsplat-viewports.png"
+            "referenceImage": "gsplat-viewports.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Gaussian Splatting Shadows",
@@ -652,22 +656,26 @@
         {
             "title": "MSDF",
             "playgroundId": "#6RLCWP#20",
-            "referenceImage": "msdf.png"
+            "referenceImage": "msdf.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "MSDF Screen projected",
             "playgroundId": "#6RLCWP#48",
-            "referenceImage": "msdf-projected.png"
+            "referenceImage": "msdf-projected.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "MSDF Billboard",
             "playgroundId": "#6RLCWP#23",
-            "referenceImage": "msdf-billboard.png"
+            "referenceImage": "msdf-billboard.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "MSDF Stroke",
             "playgroundId": "#6RLCWP#41",
-            "referenceImage": "msdf-stroke.png"
+            "referenceImage": "msdf-stroke.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Attractors",
@@ -677,7 +685,8 @@
         {
             "title": "PBR in mirror",
             "playgroundId": "#Q7DP2M",
-            "referenceImage": "pbr-mirror.png"
+            "referenceImage": "pbr-mirror.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "OpenPBR Base Weight",
@@ -709,13 +718,15 @@
             "title": "OpenPBR Base Diffuse Roughness Prefiltered IBL",
             "playgroundId": "#MXACV7#27",
             "renderCount": 5,
-            "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl.png"
+            "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "OpenPBR Base Diffuse Roughness SH IBL",
             "playgroundId": "#MXACV7#32",
             "renderCount": 2,
-            "referenceImage": "openpbr-base-diffuse-roughness-spherical-harmonics.png"
+            "referenceImage": "openpbr-base-diffuse-roughness-spherical-harmonics.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "NME Glow Manual",
@@ -756,7 +767,8 @@
             "title": "Gaussian Splatting NME",
             "playgroundId": "#WXWJKN#4",
             "renderCount": 15,
-            "referenceImage": "gsplat-nme.png"
+            "referenceImage": "gsplat-nme.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Lattice",
@@ -766,7 +778,8 @@
         {
             "title": "HAL Lattice",
             "playgroundId": "#HBZD72#7",
-            "referenceImage": "lattice-hal.png"
+            "referenceImage": "lattice-hal.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "NME Loop Block",
@@ -798,7 +811,8 @@
             "title": "Decal map PP",
             "playgroundId": "#9BVW2S#101",
             "renderCount": 50,
-            "referenceImage": "decal-map-pp.png"
+            "referenceImage": "decal-map-pp.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Convolution Post Process",
@@ -815,7 +829,8 @@
         {
             "title": "Volumetric Light Scattering Post Process with Morph Targets",
             "playgroundId": "#5E318S#7",
-            "referenceImage": "volumetricLightScatteringMorphTargets.png"
+            "referenceImage": "volumetricLightScatteringMorphTargets.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Color correction",
@@ -831,17 +846,20 @@
             "title": "BoundingInfo Helper",
             "playgroundId": "#BCNJD4#61",
             "renderCount": 2,
-            "referenceImage": "bbhelper.png"
+            "referenceImage": "bbhelper.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "NMEGLTF",
             "playgroundId": "#WGZLGJ#10320",
-            "referenceImage": "nmegltf.png"
+            "referenceImage": "nmegltf.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPUPicker",
             "playgroundId": "#1RWFMT#8",
-            "referenceImage": "gpuPicker.png"
+            "referenceImage": "gpuPicker.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Trailmesh tapered and untapered",
@@ -868,22 +886,26 @@
         {
             "title": "Node Geometry - Building generator",
             "playgroundId": "#7RWIUU#29",
-            "referenceImage": "nodeGeometryBuildingGenerator.png"
+            "referenceImage": "nodeGeometryBuildingGenerator.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GreasedLine - non camera facing",
             "playgroundId": "#FJRQ8N#150",
-            "referenceImage": "greased-line-non-camera-facing.png"
+            "referenceImage": "greased-line-non-camera-facing.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GreasedLine - basic",
             "playgroundId": "#H1LRZ3#103",
-            "referenceImage": "greased-line-basic.png"
+            "referenceImage": "greased-line-basic.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GreasedLine - simple material",
             "playgroundId": "#H1LRZ3#427",
-            "referenceImage": "greased-line-simple-material.png"
+            "referenceImage": "greased-line-simple-material.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "MeshBuilder.CreateText",
@@ -928,12 +950,14 @@
             "title": "Particle subemitters",
             "playgroundId": "#1LK70I#40",
             "renderCount": 50,
-            "referenceImage": "subemitters.png"
+            "referenceImage": "subemitters.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Node material 0",
             "playgroundId": "#M5VQE9#41",
-            "referenceImage": "node-material0.png"
+            "referenceImage": "node-material0.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Node material 1",
@@ -945,7 +969,8 @@
         {
             "title": "Node material 2",
             "playgroundId": "#WYM31D#13",
-            "referenceImage": "node-material2.png"
+            "referenceImage": "node-material2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Node material 3",
@@ -955,7 +980,8 @@
         {
             "title": "Node material 4",
             "playgroundId": "#ZYGRII#1",
-            "referenceImage": "node-material4.png"
+            "referenceImage": "node-material4.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Node material 5",
@@ -965,17 +991,20 @@
         {
             "title": "Node material 6",
             "playgroundId": "#2XY3Z4#3",
-            "referenceImage": "node-material6.png"
+            "referenceImage": "node-material6.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Node material 7",
             "playgroundId": "#10I31V#323",
-            "referenceImage": "node-material7.png"
+            "referenceImage": "node-material7.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Node material PBR 1",
             "playgroundId": "#D8AK3Z#121",
-            "referenceImage": "node-material-pbr-1.png"
+            "referenceImage": "node-material-pbr-1.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Basis loader",
@@ -1000,17 +1029,20 @@
         {
             "title": "Weighted animations",
             "playgroundId": "#LL5BIQ#636",
-            "referenceImage": "weighted-animations.png"
+            "referenceImage": "weighted-animations.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Anisotropic",
             "playgroundId": "#MAXCNU#1",
-            "referenceImage": "anisotropic.png"
+            "referenceImage": "anisotropic.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Clear Coat",
             "playgroundId": "#YACNQS#2",
-            "referenceImage": "clearCoat.png"
+            "referenceImage": "clearCoat.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GUI Transform StackPanel",
@@ -1030,7 +1062,8 @@
             "title": "GUI Slate",
             "playgroundId": "#2YZFA0#277",
             "renderCount": 60,
-            "referenceImage": "guiSlate.png"
+            "referenceImage": "guiSlate.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GUI Near Menu",
@@ -1051,12 +1084,14 @@
             "title": "LineEdgesRenderer",
             "playgroundId": "#T90MQ4#19",
             "renderCount": 50,
-            "referenceImage": "LineEdgesRenderer.png"
+            "referenceImage": "LineEdgesRenderer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Simulate pointer",
             "playgroundId": "#8MGKWK#574",
-            "referenceImage": "simulatePointer.png"
+            "referenceImage": "simulatePointer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Color Grading",
@@ -1067,7 +1102,8 @@
             "title": "Clip planes",
             "playgroundId": "#Y6W087#0",
             "renderCount": 5,
-            "referenceImage": "clipplanes.png"
+            "referenceImage": "clipplanes.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "ShadowOnlyMaterial",
@@ -1086,7 +1122,8 @@
             "title": "Particle Helper",
             "playgroundId": "#1VGT5D#2",
             "renderCount": 50,
-            "referenceImage": "particle-helper.png"
+            "referenceImage": "particle-helper.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Chibi Rex",
@@ -1100,7 +1137,8 @@
             "title": "Yeti",
             "playgroundId": "#QATUCH#32",
             "renderCount": 150,
-            "referenceImage": "yeti.png"
+            "referenceImage": "yeti.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "CSG",
@@ -1112,13 +1150,15 @@
         {
             "title": "Fresnel",
             "playgroundId": "#603JUZ#3",
-            "referenceImage": "fresnel.png"
+            "referenceImage": "fresnel.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Highlights",
             "playgroundId": "#P7N8YW#1",
             "renderCount": 5,
-            "referenceImage": "highlights.png"
+            "referenceImage": "highlights.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Area Lights - Standard Material",
@@ -1130,12 +1170,14 @@
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
-            "referenceImage": "textureAreaLightStandard.png"
+            "referenceImage": "textureAreaLightStandard.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Textured - Area Lights - PBR",
             "playgroundId": "#T7FXR8#102",
-            "referenceImage": "texturedAreaLightsPBR.png"
+            "referenceImage": "texturedAreaLightsPBR.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Area Lights - PBR",
@@ -1168,18 +1210,21 @@
         {
             "title": "point light shadows",
             "playgroundId": "#XDNVAY#1",
-            "referenceImage": "pointLightShadows.png"
+            "referenceImage": "pointLightShadows.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Shadow depth wrappers",
             "playgroundId": "#PNQRY1#73",
             "renderCount": 20,
-            "referenceImage": "shadowDepthWrappers.png"
+            "referenceImage": "shadowDepthWrappers.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Displacement map",
             "playgroundId": "#WZ8JL4#0",
-            "referenceImage": "displacementMap.png"
+            "referenceImage": "displacementMap.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Custom render target",
@@ -1293,7 +1338,8 @@
         {
             "title": "GLTF Serializer KHR materials clearcoat",
             "playgroundId": "#9N6CLU#23",
-            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png"
+            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Serializer KHR gpu instancing",
@@ -1355,31 +1401,36 @@
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Serializer un/compressed texture roundtrip",
             "playgroundId": "#8NTR5X#8",
             "replace": "//options//, roundtrip = true;",
-            "referenceImage": "glTFSerializerTextureExport.png"
+            "referenceImage": "glTFSerializerTextureExport.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
@@ -1406,13 +1457,15 @@
             "title": "GLTF Extension KHR_materials_volume",
             "playgroundId": "#YG3BBF#16",
             "renderCount": 5,
-            "referenceImage": "gltfExtensionKhrMaterialsVolume.png"
+            "referenceImage": "gltfExtensionKhrMaterialsVolume.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Extension KHR_materials_volume with analytic light",
             "playgroundId": "#YG3BBF#48",
             "renderCount": 5,
-            "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png"
+            "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLTF Node visibility test",
@@ -1434,7 +1487,8 @@
             "title": "Depth of field",
             "playgroundId": "#IDSQK2#86",
             "renderCount": 20,
-            "referenceImage": "depthOfField.png"
+            "referenceImage": "depthOfField.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Default pipeline",
@@ -1445,17 +1499,20 @@
         {
             "title": "GLTF Mesh Primitive Attribute Test",
             "playgroundId": "#G1FXQ4#0",
-            "referenceImage": "gltfMeshPrimAttribTest.png"
+            "referenceImage": "gltfMeshPrimAttribTest.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBR glossy",
             "playgroundId": "#DFQKIR#0",
-            "referenceImage": "pbrglossy.png"
+            "referenceImage": "pbrglossy.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBR rough",
             "playgroundId": "#PI9IE8#5",
-            "referenceImage": "pbrrough.png"
+            "referenceImage": "pbrrough.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles",
@@ -1466,43 +1523,51 @@
         {
             "title": "PBRMetallicRoughnessMaterial",
             "playgroundId": "#2FDQT5#13",
-            "referenceImage": "PBRMetallicRoughnessMaterial.png"
+            "referenceImage": "PBRMetallicRoughnessMaterial.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBRSpecularGlossinessMaterial",
             "playgroundId": "#Z1VL3V#4",
-            "referenceImage": "PBRSpecularGlossinessMaterial.png"
+            "referenceImage": "PBRSpecularGlossinessMaterial.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBR",
             "playgroundId": "#LCA0Q4#27",
-            "referenceImage": "pbr.png"
+            "referenceImage": "pbr.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBR refraction",
             "playgroundId": "#LCA0Q4#26",
-            "referenceImage": "pbr-refraction.png"
+            "referenceImage": "pbr-refraction.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBR shader code coverage 1",
             "playgroundId": "#QI7TL3#63",
-            "referenceImage": "pbr-codecoverage1.png"
+            "referenceImage": "pbr-codecoverage1.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBR shader code coverage 2",
             "playgroundId": "#QI7TL3#64",
-            "referenceImage": "pbr-codecoverage2.png"
+            "referenceImage": "pbr-codecoverage2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "PBR shader code coverage 3",
             "playgroundId": "#QI7TL3#65",
-            "referenceImage": "pbr-codecoverage3.png"
+            "referenceImage": "pbr-codecoverage3.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "MultiSample render targets",
             "playgroundId": "#12MKMN#0",
             "renderCount": 20,
-            "referenceImage": "MultiSample-render-targets.png"
+            "referenceImage": "MultiSample-render-targets.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Default rendering pipeline",
@@ -1519,18 +1584,21 @@
         {
             "title": "Instanced Bones",
             "playgroundId": "#2YLJ1L#2",
-            "referenceImage": "instancedBones.png"
+            "referenceImage": "instancedBones.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GlowLayer",
             "playgroundId": "#LRFB2D#262",
-            "referenceImage": "GlowLayer.png"
+            "referenceImage": "GlowLayer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Local cubemaps",
             "playgroundId": "#RNASML#4",
             "renderCount": 2,
-            "referenceImage": "local-cubemaps.png"
+            "referenceImage": "local-cubemaps.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "TGA",
@@ -1541,7 +1609,8 @@
         {
             "title": "DDS",
             "playgroundId": "#ZI77S7#3",
-            "referenceImage": "dds.png"
+            "referenceImage": "dds.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "DDS2D",
@@ -1561,7 +1630,8 @@
         {
             "title": "MeshSimplification",
             "playgroundId": "#1ED15P#46",
-            "referenceImage": "meshSimplification.png"
+            "referenceImage": "meshSimplification.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "DepthRenderer",
@@ -1573,13 +1643,15 @@
             "title": "Realtime Filtering",
             "playgroundId": "#FEEK7G#118",
             "renderCount": 5,
-            "referenceImage": "realtimeFiltering.png"
+            "referenceImage": "realtimeFiltering.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Realtime Filtering Irradiance",
             "playgroundId": "#FEEK7G#1089",
             "renderCount": 5,
-            "referenceImage": "realtimeFilteringIrradiance.png"
+            "referenceImage": "realtimeFilteringIrradiance.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Realtime Filtering Irradiance with CDF",
@@ -1593,7 +1665,8 @@
             "title": "Prefiltering Irradiance on load",
             "playgroundId": "#FEEK7G#1111",
             "renderCount": 5,
-            "referenceImage": "prefilteringIrradiance.png"
+            "referenceImage": "prefilteringIrradiance.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prefiltering Irradiance on load with CDF",
@@ -1639,13 +1712,15 @@
         {
             "title": "glTF to OBJ (LH)",
             "playgroundId": "#HYZWGK#3",
-            "referenceImage": "gltfToObjLH.png"
+            "referenceImage": "gltfToObjLH.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "glTF to OBJ (RH)",
             "playgroundId": "#HYZWGK#3",
             "replace": "//options//, useRightHandedSystem = true;",
-            "referenceImage": "gltfToObjRH.png"
+            "referenceImage": "gltfToObjRH.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GLB load from ArrayBuffer",
@@ -1656,7 +1731,8 @@
             "title": "Motion Blur",
             "playgroundId": "#E5YGEL#20",
             "renderCount": 10,
-            "referenceImage": "motionBlur.png"
+            "referenceImage": "motionBlur.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Shadows and LODs",
@@ -1667,7 +1743,8 @@
             "title": "Shadows CSM and LODs",
             "playgroundId": "#24HWT9#20",
             "renderCount": 2,
-            "referenceImage": "shadowscsmandlod.png"
+            "referenceImage": "shadowscsmandlod.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Glow layer and LODs",
@@ -1678,13 +1755,15 @@
             "title": "Shadows with instances in left handed system",
             "playgroundId": "#MSAHKR#79",
             "renderCount": 10,
-            "referenceImage": "shadowsinstancesleft.png"
+            "referenceImage": "shadowsinstancesleft.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Shadows with instances in right handed system",
             "playgroundId": "#MSAHKR#13",
             "renderCount": 10,
-            "referenceImage": "shadowsinstancesright.png"
+            "referenceImage": "shadowsinstancesright.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Instances with color buffer",
@@ -1695,36 +1774,42 @@
             "title": "Prepass SSAO + particles",
             "playgroundId": "#65MUMZ#47",
             "renderCount": 50,
-            "referenceImage": "prepass-ssao-particles.png"
+            "referenceImage": "prepass-ssao-particles.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + instances",
             "playgroundId": "#YB006J#795",
-            "referenceImage": "prepass-ssao-instances.png"
+            "referenceImage": "prepass-ssao-instances.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + instanced bones",
             "playgroundId": "#0K8EYN#197",
             "renderCount": 50,
-            "referenceImage": "prepass-ssao-instanced-bones.png"
+            "referenceImage": "prepass-ssao-instanced-bones.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + depth of field",
             "playgroundId": "#8F5HYV#72",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-dof.png"
+            "referenceImage": "prepass-ssao-dof.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass + mirror, without postprocess",
             "playgroundId": "#PIZ1GK#1084",
             "renderCount": 10,
-            "referenceImage": "prepass-mirror-without-pp.png"
+            "referenceImage": "prepass-mirror-without-pp.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass + mirror, with postprocesses",
             "playgroundId": "#PIZ1GK#1085",
             "renderCount": 10,
-            "referenceImage": "prepass-mirror-with-pp.png"
+            "referenceImage": "prepass-mirror-with-pp.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + sprites",
@@ -1738,13 +1823,15 @@
             "title": "Prepass SSAO + glow layer",
             "playgroundId": "#LRFB2D#263",
             "renderCount": 30,
-            "referenceImage": "prepass-ssao-glow-layer.png"
+            "referenceImage": "prepass-ssao-glow-layer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + bounding box renderer",
             "playgroundId": "#4F33I3#35",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-bbr.png"
+            "referenceImage": "prepass-ssao-bbr.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + line edges renderer",
@@ -1758,13 +1845,15 @@
             "title": "Prepass SSAO + B&W post process",
             "playgroundId": "#N55Q2M#8",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-b-and-w.png"
+            "referenceImage": "prepass-ssao-b-and-w.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + clip planes",
             "playgroundId": "#Y6W087#71",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-clip-planes.png"
+            "referenceImage": "prepass-ssao-clip-planes.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + GUI",
@@ -1778,7 +1867,8 @@
             "title": "Prepass SSAO + LOD",
             "playgroundId": "#FFMFW5#29",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-lod.png"
+            "referenceImage": "prepass-ssao-lod.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + shadow only",
@@ -1792,43 +1882,50 @@
             "title": "Prepass SSAO + highlight layer",
             "playgroundId": "#1KUJ0A#416",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-highlight-layer.png"
+            "referenceImage": "prepass-ssao-highlight-layer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + point light",
             "playgroundId": "#XDNVAY#6",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-point-light.png"
+            "referenceImage": "prepass-ssao-point-light.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + on/off post-process",
             "playgroundId": "#1VI6WV#20",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-on-off-pp.png"
+            "referenceImage": "prepass-ssao-on-off-pp.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + thin instances",
             "playgroundId": "#V1JE4Z#25",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-thin-instances.png"
+            "referenceImage": "prepass-ssao-thin-instances.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + depth renderer",
             "playgroundId": "#3HPMAA#1",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-depth-renderer.png"
+            "referenceImage": "prepass-ssao-depth-renderer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + visibility",
             "playgroundId": "#PXC9CF#7",
             "renderCount": 30,
-            "referenceImage": "prepass-ssao-visibility.png"
+            "referenceImage": "prepass-ssao-visibility.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass SSAO + default pipeline",
             "playgroundId": "#NAW8EA#7",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-default-pipeline.png"
+            "referenceImage": "prepass-ssao-default-pipeline.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Prepass MBlur + Lens",
@@ -1840,7 +1937,8 @@
             "title": "Prepass SSAO + MSAA",
             "playgroundId": "#12MKMN#7",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-msaa.png"
+            "referenceImage": "prepass-ssao-msaa.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Scissor test",
@@ -1866,25 +1964,29 @@
             "title": "Refraction local cube map STD",
             "playgroundId": "#RJN64I#7",
             "renderCount": 1,
-            "referenceImage": "refraction-local-std.png"
+            "referenceImage": "refraction-local-std.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Refraction local cube map PBR",
             "playgroundId": "#RJN64I#5",
             "renderCount": 1,
-            "referenceImage": "refraction-local-pbr.png"
+            "referenceImage": "refraction-local-pbr.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Instances + motion blur",
             "playgroundId": "#YB006J#547",
             "renderCount": 10,
-            "referenceImage": "instances-mb.png"
+            "referenceImage": "instances-mb.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Instances + GBR + motion blur",
             "playgroundId": "#YB006J#549",
             "renderCount": 10,
-            "referenceImage": "instances-gbr-mb.png"
+            "referenceImage": "instances-gbr-mb.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Instances manual update + motion blur",
@@ -1906,7 +2008,8 @@
             "title": "Thin instances + motion blur + manual",
             "playgroundId": "#HJGC2G#245",
             "renderCount": 30,
-            "referenceImage": "thin-instances-mb-manual.png"
+            "referenceImage": "thin-instances-mb-manual.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Thin instances + dynamic buffer resize",
@@ -1930,13 +2033,15 @@
             "title": "Reverse depth buffer and shadows",
             "playgroundId": "#WL4Q8J#20",
             "renderCount": 10,
-            "referenceImage": "reverseDepthBufferShadows.png"
+            "referenceImage": "reverseDepthBufferShadows.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Reverse depth buffer and CSM shadows",
             "playgroundId": "#IIZ9UU#248",
             "renderCount": 10,
-            "referenceImage": "reverseDepthBufferCSMShadows.png"
+            "referenceImage": "reverseDepthBufferCSMShadows.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Multi cameras and output render target",
@@ -1948,19 +2053,22 @@
             "title": "Multi cameras and output render target with depth texture (D24)",
             "playgroundId": "#BCYE7J#36",
             "renderCount": 2,
-            "referenceImage": "multiCamerasOutputRenderTarget.png"
+            "referenceImage": "multiCamerasOutputRenderTarget.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Sample depth texture",
             "playgroundId": "#8RU8Q3#158",
             "renderCount": 2,
-            "referenceImage": "sampleDepthTexture.png"
+            "referenceImage": "sampleDepthTexture.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Order independent transparency",
             "playgroundId": "#1PLV5Z#104",
             "renderCount": 5,
-            "referenceImage": "oit.png"
+            "referenceImage": "oit.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Custom material with depth renderer",
@@ -1971,7 +2079,8 @@
         {
             "title": "Baked Vertex Animation",
             "playgroundId": "#14WJWW#13",
-            "referenceImage": "bakedVertexAnimation.png"
+            "referenceImage": "bakedVertexAnimation.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Baked Vertex Animation with Depth Of Field",
@@ -1989,7 +2098,8 @@
             "title": "Bones and morphs computation order",
             "playgroundId": "#WGZLGJ#4040",
             "renderCount": 40,
-            "referenceImage": "bonesMorphsCompute.png"
+            "referenceImage": "bonesMorphsCompute.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "DepthRenderer rhs",
@@ -2002,7 +2112,8 @@
         {
             "title": "Test updateTextureData",
             "playgroundId": "#EVX1DH#80",
-            "referenceImage": "testUpdateTextureData.png"
+            "referenceImage": "testUpdateTextureData.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Material Plugin",
@@ -2068,13 +2179,15 @@
             "title": "Multi shadow generators per light",
             "playgroundId": "#LMQGSX#2",
             "renderCount": 5,
-            "referenceImage": "multiSGPerLight.png"
+            "referenceImage": "multiSGPerLight.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Fluid rendering particle system",
             "playgroundId": "#544N0Q#67",
             "renderCount": 120,
-            "referenceImage": "fluidParticleSystem.png"
+            "referenceImage": "fluidParticleSystem.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Fluid rendering box sphere",
@@ -2134,7 +2247,8 @@
         {
             "title": "Load babylon files with same geometry uniqueId",
             "playgroundId": "#3UCFHS",
-            "referenceImage": "Load-babylon-files-with-same-geometry-uniqueId.png"
+            "referenceImage": "Load-babylon-files-with-same-geometry-uniqueId.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Roundtrip babylon file with node, skeletal, and morph animations; uniqueId",
@@ -2165,17 +2279,20 @@
             "title": "Screen Space Reflections 2",
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
-            "referenceImage": "Screen-Space-Reflections-2.png"
+            "referenceImage": "Screen-Space-Reflections-2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "MultiRenderTarget with different texture types",
             "playgroundId": "#XSNYAU#22",
-            "referenceImage": "MultiRenderTarget-with-different-texture-types.png"
+            "referenceImage": "MultiRenderTarget-with-different-texture-types.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Decal Map",
             "playgroundId": "#9BVW2S#67",
-            "referenceImage": "Decal-Map.png"
+            "referenceImage": "Decal-Map.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GUI Text Block with resizeToFit and forceResizeWidth",
@@ -2194,7 +2311,8 @@
         {
             "title": "Scene Recorder Apply Delta",
             "playgroundId": "#9ZS92P#9",
-            "referenceImage": "Scene-Recorder-Apply-Delta.png"
+            "referenceImage": "Scene-Recorder-Apply-Delta.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Sprites Pixel Perfect",
@@ -2252,7 +2370,8 @@
         {
             "title": "SerializeScene and ImportMesh with MorphTargetManager",
             "playgroundId": "#HPV2TZ#378",
-            "referenceImage": "SerializeScene-and-ImportMesh-with-MorphTargetManager.png"
+            "referenceImage": "SerializeScene-and-ImportMesh-with-MorphTargetManager.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Vertex buffers with non aligned strides",
@@ -2290,12 +2409,14 @@
         {
             "title": "Command encoder order in WebGPU 1",
             "playgroundId": "#064AUB#125",
-            "referenceImage": "CommandEncodedWebGPU1.png"
+            "referenceImage": "CommandEncodedWebGPU1.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Command encoder order in WebGPU 2",
             "playgroundId": "#CMH5VF#7",
-            "referenceImage": "CommandEncodedWebGPU2.png"
+            "referenceImage": "CommandEncodedWebGPU2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "edge-renderer-and-zOffset",
@@ -2319,13 +2440,15 @@
             "title": "show-bounding-box",
             "playgroundId": "#0LN1JD#9",
             "renderCount": 5,
-            "referenceImage": "show-bounding-box.png"
+            "referenceImage": "show-bounding-box.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "cube-reflection-with-probe-and-mirrors",
             "playgroundId": "#X3V1NN#7",
             "renderCount": 20,
-            "referenceImage": "cube-reflection-with-probe-and-mirrors.png"
+            "referenceImage": "cube-reflection-with-probe-and-mirrors.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
@@ -2354,7 +2477,8 @@
         {
             "title": "soft-transparent-shadows",
             "playgroundId": "#G3DJGA#0",
-            "referenceImage": "soft-transparent-shadows.png"
+            "referenceImage": "soft-transparent-shadows.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "torus-knot-mirror",
@@ -2376,7 +2500,8 @@
             "title": "apply-all-post-processes",
             "playgroundId": "#MJ59Y8#18",
             "renderCount": 10,
-            "referenceImage": "apply-all-post-processes.png"
+            "referenceImage": "apply-all-post-processes.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "simple-custom-shader",
@@ -2404,19 +2529,22 @@
             "title": "custom-handling-of-materials-for-render-target-pass",
             "playgroundId": "#FIVL25#21",
             "renderCount": 60,
-            "referenceImage": "custom-handling-of-materials-for-render-target-pass.png"
+            "referenceImage": "custom-handling-of-materials-for-render-target-pass.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "dissolve-effect-with-node-material-and-glow-layer",
             "playgroundId": "#F6PGMC#12",
             "renderCount": 2,
-            "referenceImage": "dissolve-effect-with-node-material-and-glow-layer.png"
+            "referenceImage": "dissolve-effect-with-node-material-and-glow-layer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "cascaded-shadow-maps-and-flying-saucers",
             "playgroundId": "#IIZ9UU#63",
             "renderCount": 10,
-            "referenceImage": "cascaded-shadow-maps-and-flying-saucers.png"
+            "referenceImage": "cascaded-shadow-maps-and-flying-saucers.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "halo-particle-system",
@@ -2441,7 +2569,8 @@
         {
             "title": "lens-flare",
             "playgroundId": "#KICG93#2",
-            "referenceImage": "lens-flare.png"
+            "referenceImage": "lens-flare.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "change-texture-of-material",
@@ -2453,13 +2582,15 @@
             "title": "screen-space-curvature",
             "playgroundId": "#YF8D42#22",
             "renderCount": 5,
-            "referenceImage": "screen-space-curvature.png"
+            "referenceImage": "screen-space-curvature.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Render to 3D RT",
             "playgroundId": "#XSNYAU#83",
             "renderCount": 5,
-            "referenceImage": "Render to 3D RT.png"
+            "referenceImage": "Render to 3D RT.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Shadows in RHS mode",
@@ -2476,28 +2607,32 @@
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 2;",
-            "referenceImage": "computeMaxExtents-BoxAnimated.png"
+            "referenceImage": "computeMaxExtents-BoxAnimated.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "computeMaxExtents (Fox 0)",
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 0;",
-            "referenceImage": "computeMaxExtents-Fox0.png"
+            "referenceImage": "computeMaxExtents-Fox0.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "computeMaxExtents (Fox 1)",
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 1;",
-            "referenceImage": "computeMaxExtents-Fox1.png"
+            "referenceImage": "computeMaxExtents-Fox1.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "computeMaxExtents (MorphStressTest)",
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 5;",
-            "referenceImage": "computeMaxExtents-MorphStressTest.png"
+            "referenceImage": "computeMaxExtents-MorphStressTest.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "glTF Loader Capabilities",
@@ -2508,13 +2643,15 @@
             "title": "glTF Loader Cameras RH",
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = true;",
-            "referenceImage": "glTFLoaderCameras.png"
+            "referenceImage": "glTFLoaderCameras.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "glTF Loader Cameras LH",
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = false;",
-            "referenceImage": "glTFLoaderCameras.png"
+            "referenceImage": "glTFLoaderCameras.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "IBL Voxel Shadowing",
@@ -2527,7 +2664,8 @@
         {
             "title": "Glow layer with vertex alpha",
             "playgroundId": "#GWAX2G#7",
-            "referenceImage": "Glow-layer-with-vertex-alpha.png"
+            "referenceImage": "Glow-layer-with-vertex-alpha.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "IBL Voxel Shadowing Right-Handed",
@@ -2591,7 +2729,8 @@
             "title": "FrameGraph nrge csm shadows with autoCalcDepthBounds",
             "playgroundId": "#JWKDME#192",
             "renderCount": 10,
-            "referenceImage": "FrameGraph-nrge-csm-shadows-with-autoCalcDepthBounds.png"
+            "referenceImage": "FrameGraph-nrge-csm-shadows-with-autoCalcDepthBounds.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge custom rendering",
@@ -2603,22 +2742,26 @@
         {
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
-            "referenceImage": "FrameGraph-nrge-depth-of-field.png"
+            "referenceImage": "FrameGraph-nrge-depth-of-field.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge glow layer",
             "playgroundId": "#IG8NRC#84",
-            "referenceImage": "FrameGraph-nrge-glow-layer.png"
+            "referenceImage": "FrameGraph-nrge-glow-layer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge highlight layer",
             "playgroundId": "#QZYNMK#3",
-            "referenceImage": "FrameGraph-nrge-highlight-layer.png"
+            "referenceImage": "FrameGraph-nrge-highlight-layer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge SSR cube",
             "playgroundId": "#PIZ1GK#2386",
-            "referenceImage": "FrameGraph-nrge-SSR-cube.png"
+            "referenceImage": "FrameGraph-nrge-SSR-cube.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge SSR HillValley",
@@ -2630,29 +2773,34 @@
         {
             "title": "FrameGraph nrge SSR neon",
             "playgroundId": "#Z6C5EF#5",
-            "referenceImage": "FrameGraph-nrge-SSR-neon.png"
+            "referenceImage": "FrameGraph-nrge-SSR-neon.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge motion blur",
             "playgroundId": "#YB006J#793",
             "renderCount": 40,
-            "referenceImage": "FrameGraph-nrge-motion-blur.png"
+            "referenceImage": "FrameGraph-nrge-motion-blur.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge bounding boxes",
             "playgroundId": "#IG8NRC#85",
-            "referenceImage": "FrameGraph-nrge-bounding-boxes.png"
+            "referenceImage": "FrameGraph-nrge-bounding-boxes.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge frozen meshes",
             "playgroundId": "#9SDNZF#34",
-            "referenceImage": "FrameGraph-nrge-frozen-meshes.png"
+            "referenceImage": "FrameGraph-nrge-frozen-meshes.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge TAA",
             "playgroundId": "#IG8NRC#87",
             "renderCount": 15,
-            "referenceImage": "FrameGraph-nrge-TAA.png"
+            "referenceImage": "FrameGraph-nrge-TAA.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge rig camera",
@@ -2664,27 +2812,32 @@
         {
             "title": "FrameGraph nrge clustered lights (simple)",
             "playgroundId": "#1QCA2M#37",
-            "referenceImage": "FrameGraph-nrge-clustered-lights-simple-.png"
+            "referenceImage": "FrameGraph-nrge-clustered-lights-simple-.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge multiple post processes",
             "playgroundId": "#SYQW69#1363",
-            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png"
+            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge SSAO",
             "playgroundId": "#SYQW69#1368",
-            "referenceImage": "FrameGraph-nrge-SSAO.png"
+            "referenceImage": "FrameGraph-nrge-SSAO.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge volumetric lighting",
             "playgroundId": "#3VH0AC#2",
-            "referenceImage": "FrameGraph-nrge-volumetric-lighting.png"
+            "referenceImage": "FrameGraph-nrge-volumetric-lighting.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge OIT",
             "playgroundId": "#MIACY4#13",
-            "referenceImage": "FrameGraph-nrge-OIT.png"
+            "referenceImage": "FrameGraph-nrge-OIT.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge OIT (Geometry renderer)",
@@ -2696,22 +2849,26 @@
         {
             "title": "FrameGraph nrge multi-render targets",
             "playgroundId": "#XSNYAU#160",
-            "referenceImage": "FrameGraph-nrge-multi-render-targets.png"
+            "referenceImage": "FrameGraph-nrge-multi-render-targets.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge transmission",
             "playgroundId": "#ZNTBN2#10",
-            "referenceImage": "FrameGraph-nrge-transmission.png"
+            "referenceImage": "FrameGraph-nrge-transmission.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge selection outline layer",
             "playgroundId": "#ADUC74#1",
-            "referenceImage": "FrameGraph-nrge-selection-outline-layer.png"
+            "referenceImage": "FrameGraph-nrge-selection-outline-layer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge multi RTT MSAA",
             "playgroundId": "#JAG54A",
-            "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png"
+            "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrg gui bloom",
@@ -2730,12 +2887,14 @@
         {
             "title": "FrameGraph highlight layer",
             "playgroundId": "#PV8OLY#33",
-            "referenceImage": "FrameGraph-highlight-layer.png"
+            "referenceImage": "FrameGraph-highlight-layer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph custom rendering",
             "playgroundId": "#RM56RY#25",
-            "referenceImage": "FrameGraph-custom-rendering.png"
+            "referenceImage": "FrameGraph-custom-rendering.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph gui bloom",
@@ -2747,70 +2906,83 @@
         {
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
-            "referenceImage": "FrameGraph-image-processing.png"
+            "referenceImage": "FrameGraph-image-processing.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph motion blur screen based",
             "playgroundId": "#YB006J#787",
             "renderCount": 10,
-            "referenceImage": "FrameGraph-motion-blur-screen-based.png"
+            "referenceImage": "FrameGraph-motion-blur-screen-based.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph motion blur object based",
             "playgroundId": "#YB006J#788",
             "renderCount": 10,
-            "referenceImage": "FrameGraph-motion-blur-object-based.png"
+            "referenceImage": "FrameGraph-motion-blur-object-based.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph motion blur skinned",
             "playgroundId": "#YB006J#789",
             "renderCount": 40,
-            "referenceImage": "FrameGraph-motion-blur-skinned.png"
+            "referenceImage": "FrameGraph-motion-blur-skinned.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph convolution post process",
             "playgroundId": "#SYQW69#1365",
-            "referenceImage": "FrameGraph-convolution-post-process.png"
+            "referenceImage": "FrameGraph-convolution-post-process.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph screen space curvature post process",
             "playgroundId": "#SYQW69#1366",
-            "referenceImage": "FrameGraph-screen-space-curvature-post-process.png"
+            "referenceImage": "FrameGraph-screen-space-curvature-post-process.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph sharpen post process",
             "playgroundId": "#SYQW69#1367",
-            "referenceImage": "FrameGraph-sharpen-post-process.png"
+            "referenceImage": "FrameGraph-sharpen-post-process.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph custom post process",
             "playgroundId": "#R33LVG#5",
-            "referenceImage": "FrameGraph-custom-post-process.png"
+            "referenceImage": "FrameGraph-custom-post-process.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph volumetric lighting",
             "playgroundId": "#3VH0AC",
-            "referenceImage": "FrameGraph-volumetric-lighting.png"
+            "referenceImage": "FrameGraph-volumetric-lighting.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph OIT",
             "playgroundId": "#MIACY4#11",
-            "referenceImage": "FrameGraph-OIT.png"
+            "referenceImage": "FrameGraph-OIT.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph multi-render targets",
             "playgroundId": "#XSNYAU#165",
-            "referenceImage": "FrameGraph-multi-render-targets.png"
+            "referenceImage": "FrameGraph-multi-render-targets.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph selection outline",
             "playgroundId": "#E1F0GP#4",
-            "referenceImage": "FrameGraph-selection-outline.png"
+            "referenceImage": "FrameGraph-selection-outline.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Render target texture with clustered lights",
             "playgroundId": "#1QCA2M#11",
-            "referenceImage": "Render-target-texture-with-clustered-lights.png"
+            "referenceImage": "Render-target-texture-with-clustered-lights.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "IBL radiance roughness",
@@ -2835,7 +3007,8 @@
         {
             "title": "Hide Loading Screen",
             "playgroundId": "#EQP888#8",
-            "referenceImage": "Hide-Loading-Screen.png"
+            "referenceImage": "Hide-Loading-Screen.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Flow Graph multiple contexts",
@@ -2846,13 +3019,15 @@
         {
             "title": "KHR diffuse transmission",
             "playgroundId": "#RX52XX#1",
-            "referenceImage": "KHR-diffuse-transmission.png"
+            "referenceImage": "KHR-diffuse-transmission.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "SubSurface Scattering",
             "playgroundId": "#5H0H89#129",
             "renderCount": 10,
-            "referenceImage": "SubSurface-Scattering.png"
+            "referenceImage": "SubSurface-Scattering.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Specular Reflectance with IOR",
@@ -3022,42 +3197,50 @@
         {
             "title": "Atmosphere Day",
             "playgroundId": "#VO1Z0C#39",
-            "referenceImage": "atmosphere-day.png"
+            "referenceImage": "atmosphere-day.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Atmosphere Day (Planet Origin)",
             "playgroundId": "#VO1Z0C#40",
-            "referenceImage": "atmosphere-day.png"
+            "referenceImage": "atmosphere-day.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Atmosphere Day (Ray Marching)",
             "playgroundId": "#VO1Z0C#41",
-            "referenceImage": "atmosphere-day-ray-marching.png"
+            "referenceImage": "atmosphere-day-ray-marching.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Atmosphere Sunset",
             "playgroundId": "#VO1Z0C#42",
-            "referenceImage": "atmosphere-sunset.png"
+            "referenceImage": "atmosphere-sunset.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Atmosphere Sunset (Planet Origin)",
             "playgroundId": "#VO1Z0C#43",
-            "referenceImage": "atmosphere-sunset.png"
+            "referenceImage": "atmosphere-sunset.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Atmosphere Night",
             "playgroundId": "#VO1Z0C#45",
-            "referenceImage": "atmosphere-night.png"
+            "referenceImage": "atmosphere-night.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Atmosphere Night (Planet Origin)",
             "playgroundId": "#VO1Z0C#46",
-            "referenceImage": "atmosphere-night.png"
+            "referenceImage": "atmosphere-night.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Atmosphere Space View",
             "playgroundId": "#VO1Z0C#47",
-            "referenceImage": "atmosphere-space-view.png"
+            "referenceImage": "atmosphere-space-view.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "OpenPBR IBL Reflectance with IOR",
@@ -3351,7 +3534,8 @@
             "title": "OpenPBR Thin Film Textures - IBL",
             "playgroundId": "#GRQHVV#174",
             "renderCount": 2,
-            "referenceImage": "OpenPBR-Thin-Film-Textures---IBL.png"
+            "referenceImage": "OpenPBR-Thin-Film-Textures---IBL.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - IBL",
@@ -3676,12 +3860,14 @@
         {
             "title": "Background material blur",
             "playgroundId": "#UU7RQ#4458",
-            "referenceImage": "Background-material-blur.png"
+            "referenceImage": "Background-material-blur.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
-            "referenceImage": "Lighting-Volume.png"
+            "referenceImage": "Lighting-Volume.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Havok FloatingOrigin Multi-Region",
@@ -3696,7 +3882,8 @@
             "title": "NME Particles with PositionW",
             "playgroundId": "#RA18GJ#17",
             "renderCount": 120,
-            "referenceImage": "NME-Particles-with-PositionW.png"
+            "referenceImage": "NME-Particles-with-PositionW.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Basic Properties - Size",
@@ -3919,7 +4106,8 @@
             "title": "Particles - Emitters - Directed Cylinder",
             "playgroundId": "#WLX2I2#14",
             "renderCount": 120,
-            "referenceImage": "particles-emitters-directed-cylinder.png"
+            "referenceImage": "particles-emitters-directed-cylinder.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Emitters - Cone",
@@ -3979,25 +4167,29 @@
             "title": "Particles - Billboard Y",
             "playgroundId": "#T3ZCP7#5",
             "renderCount": 180,
-            "referenceImage": "particles-billboard-y.png"
+            "referenceImage": "particles-billboard-y.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Billboard False",
             "playgroundId": "#XWG0HV#4",
             "renderCount": 120,
-            "referenceImage": "particles-billboard-false.png"
+            "referenceImage": "particles-billboard-false.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Multiply Blend",
             "playgroundId": "#M1HYFH#6",
             "renderCount": 120,
-            "referenceImage": "particles-multiply-blend.png"
+            "referenceImage": "particles-multiply-blend.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Ramp Blend",
             "playgroundId": "#XPVJMM#4",
             "renderCount": 120,
-            "referenceImage": "particles-ramp-blend.png"
+            "referenceImage": "particles-ramp-blend.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Effects",
@@ -4016,13 +4208,15 @@
             "title": "Particles - Helper - Smoke",
             "playgroundId": "#XRRTC0#2",
             "renderCount": 120,
-            "referenceImage": "particles-helper-smoke.png"
+            "referenceImage": "particles-helper-smoke.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Helper - Fire",
             "playgroundId": "#I2D9MM#18",
             "renderCount": 120,
-            "referenceImage": "particles-helper-fire.png"
+            "referenceImage": "particles-helper-fire.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Attractors",
@@ -4034,18 +4228,21 @@
             "title": "Particles - Flowmaps",
             "playgroundId": "#M58G3X#4",
             "renderCount": 240,
-            "referenceImage": "particles-flowmaps.png"
+            "referenceImage": "particles-flowmaps.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Particles - Flowmaps 2",
             "playgroundId": "#PPC2EI#5",
             "renderCount": 120,
-            "referenceImage": "particles-flowmaps-2.png"
+            "referenceImage": "particles-flowmaps-2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Selection outline layer with instances",
             "playgroundId": "#UR9706#0",
-            "referenceImage": "Selection-outline-layer-with-instances.png"
+            "referenceImage": "Selection-outline-layer-with-instances.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Selection outline layer with instances and LOD",
@@ -4083,17 +4280,20 @@
         {
             "title": "GPU Particles - Basic Properties - Size",
             "playgroundId": "#3HLS3D#2",
-            "referenceImage": "gpu-particles-basic-size.png"
+            "referenceImage": "gpu-particles-basic-size.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Scale",
             "playgroundId": "#52KBLI#0",
-            "referenceImage": "gpu-particles-basic-scale.png"
+            "referenceImage": "gpu-particles-basic-scale.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Color",
             "playgroundId": "#30PAK9#0",
-            "referenceImage": "gpu-particles-basic-color.png"
+            "referenceImage": "gpu-particles-basic-color.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Speed",
@@ -4105,102 +4305,122 @@
         {
             "title": "GPU Particles - Basic Properties - Angular Speed",
             "playgroundId": "#9MOFU4#0",
-            "referenceImage": "gpu-particles-basic-angular-speed.png"
+            "referenceImage": "gpu-particles-basic-angular-speed.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Rotation",
             "playgroundId": "#DEVC42#0",
-            "referenceImage": "gpu-particles-basic-rotation.png"
+            "referenceImage": "gpu-particles-basic-rotation.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#QC8XA2#0",
-            "referenceImage": "gpu-particles-basic-translation-pivot.png"
+            "referenceImage": "gpu-particles-basic-translation-pivot.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Direction",
             "playgroundId": "#M6QEUB#0",
-            "referenceImage": "gpu-particles-basic-direction.png"
+            "referenceImage": "gpu-particles-basic-direction.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Gravity",
             "playgroundId": "#9AGK0W#0",
-            "referenceImage": "gpu-particles-basic-gravity.png"
+            "referenceImage": "gpu-particles-basic-gravity.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Emit Rate",
             "playgroundId": "#IBWI36#0",
-            "referenceImage": "gpu-particles-basic-emit-rate.png"
+            "referenceImage": "gpu-particles-basic-emit-rate.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Lifetime",
             "playgroundId": "#RL6BAK#0",
-            "referenceImage": "gpu-particles-basic-lifetime.png"
+            "referenceImage": "gpu-particles-basic-lifetime.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Basic Properties - Target Stop Duration",
             "playgroundId": "#4AJC72#0",
-            "referenceImage": "gpu-particles-basic-target-stop.png"
+            "referenceImage": "gpu-particles-basic-target-stop.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Size",
             "playgroundId": "#KF9X69#0",
-            "referenceImage": "gpu-particles-change-size.png"
+            "referenceImage": "gpu-particles-change-size.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Color",
             "playgroundId": "#UWRCY4#0",
-            "referenceImage": "gpu-particles-change-color.png"
+            "referenceImage": "gpu-particles-change-color.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Speed",
             "playgroundId": "#KBHNCB#0",
-            "referenceImage": "gpu-particles-change-speed.png"
+            "referenceImage": "gpu-particles-change-speed.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Speed Limit",
             "playgroundId": "#CTNM3R#0",
-            "referenceImage": "gpu-particles-change-speed-limit.png"
+            "referenceImage": "gpu-particles-change-speed-limit.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Angular Speed",
             "playgroundId": "#1NLEIC#0",
-            "referenceImage": "gpu-particles-change-angular-speed.png"
+            "referenceImage": "gpu-particles-change-angular-speed.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Drag",
             "playgroundId": "#02KAQL#0",
-            "referenceImage": "gpu-particles-change-drag.png"
+            "referenceImage": "gpu-particles-change-drag.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Size Range",
             "playgroundId": "#4EWZJ9#0",
-            "referenceImage": "gpu-particles-change-size-range.png"
+            "referenceImage": "gpu-particles-change-size-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Color Range",
             "playgroundId": "#3M1JEJ#0",
-            "referenceImage": "gpu-particles-change-color-range.png"
+            "referenceImage": "gpu-particles-change-color-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
-            "referenceImage": "gpu-particles-emitters-point.png"
+            "referenceImage": "gpu-particles-emitters-point.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Box",
             "playgroundId": "#2XD9BC#0",
-            "referenceImage": "gpu-particles-emitters-box.png"
+            "referenceImage": "gpu-particles-emitters-box.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Sphere",
             "playgroundId": "#H7XR87#0",
-            "referenceImage": "gpu-particles-emitters-sphere.png"
+            "referenceImage": "gpu-particles-emitters-sphere.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Directed Sphere",
             "playgroundId": "#0H1ATM#0",
-            "referenceImage": "gpu-particles-emitters-directed-sphere.png"
+            "referenceImage": "gpu-particles-emitters-directed-sphere.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Hemisphere",
@@ -4219,68 +4439,81 @@
         {
             "title": "GPU Particles - Emitters - Directed Cylinder",
             "playgroundId": "#40T8G0#0",
-            "referenceImage": "gpu-particles-emitters-directed-cylinder.png"
+            "referenceImage": "gpu-particles-emitters-directed-cylinder.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Cone",
             "playgroundId": "#W73H92#0",
-            "referenceImage": "gpu-particles-emitters-cone.png"
+            "referenceImage": "gpu-particles-emitters-cone.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Directed Cone",
             "playgroundId": "#GSYICK#0",
-            "referenceImage": "gpu-particles-emitters-directed-cone.png"
+            "referenceImage": "gpu-particles-emitters-directed-cone.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
-            "referenceImage": "gpu-particles-billboard-y.png"
+            "referenceImage": "gpu-particles-billboard-y.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Billboard Stretched",
             "playgroundId": "#0612KX#0",
-            "referenceImage": "gpu-particles-billboard-stretched.png"
+            "referenceImage": "gpu-particles-billboard-stretched.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Multiply Blend",
             "playgroundId": "#D7LQAZ#0",
-            "referenceImage": "gpu-particles-multiply-blend.png"
+            "referenceImage": "gpu-particles-multiply-blend.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Animations",
             "playgroundId": "#B0EJQY#0",
-            "referenceImage": "gpu-particles-animations.png"
+            "referenceImage": "gpu-particles-animations.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Noise",
             "playgroundId": "#P6JQIP#0",
-            "referenceImage": "gpu-particles-noise.png"
+            "referenceImage": "gpu-particles-noise.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Flowmaps",
             "playgroundId": "#SGAEHS#0",
-            "referenceImage": "gpu-particles-flowmaps.png"
+            "referenceImage": "gpu-particles-flowmaps.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Local Space",
             "playgroundId": "#NK19TU#0",
-            "referenceImage": "gpu-particles-local-space.png"
+            "referenceImage": "gpu-particles-local-space.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Node material PBR Pure WebGPU",
             "playgroundId": "#D8AK3Z#122",
-            "referenceImage": "node-material-pbr-2.png"
+            "referenceImage": "node-material-pbr-2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Reverse depth buffer fix flicker",
             "playgroundId": "#67JFXI#15",
-            "referenceImage": "reverseDepthBufferFixFlicker.png"
+            "referenceImage": "reverseDepthBufferFixFlicker.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "wgsl-in-shadermaterial",
             "playgroundId": "#8RU8Q3#193",
             "renderCount": 30,
-            "referenceImage": "wgsl-in-shadermaterial.png"
+            "referenceImage": "wgsl-in-shadermaterial.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "terrain-erosion",
@@ -4293,17 +4526,20 @@
         {
             "title": "Read-write storage texture compute",
             "playgroundId": "#Z7YGTU#0",
-            "referenceImage": "readwrite-storage-texture-compute.png"
+            "referenceImage": "readwrite-storage-texture-compute.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Read-only storage texture fragment shader",
             "playgroundId": "#1VFBXO#0",
-            "referenceImage": "readonly-storage-texture-fragment.png"
+            "referenceImage": "readonly-storage-texture-fragment.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph nrge clustered lights",
             "playgroundId": "#1QCA2M#36",
-            "referenceImage": "FrameGraph-nrge-clustered-lights.png"
+            "referenceImage": "FrameGraph-nrge-clustered-lights.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Depth Renderer and RTT - debug markers",
@@ -4313,7 +4549,8 @@
         {
             "title": "Clustered lights - debug markers",
             "playgroundId": "#1QCA2M#47",
-            "referenceImage": "Clustered-lights---debug-markers.png"
+            "referenceImage": "Clustered-lights---debug-markers.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "CSM  FrameGraph - debug markers",
@@ -4325,7 +4562,8 @@
         {
             "title": "Reflection Probes - debug markers",
             "playgroundId": "#KA93U#1723",
-            "referenceImage": "Reflection-Probes---debug-markers.png"
+            "referenceImage": "Reflection-Probes---debug-markers.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Unbalanced push pop - debug markers",
@@ -4348,7 +4586,7 @@
             "title": "Gaussian Splatting GLTF",
             "playgroundId": "#WSAFDA#0",
             "referenceImage": "gsplat-splat-gltf.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (36.513%\r)"
         },
         {
@@ -4356,137 +4594,140 @@
             "playgroundId": "#418POI#12",
             "referenceImage": "gsplat-lod.png",
             "renderCount": 15,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "Error: Invalid argument\r\r"
         },
         {
             "title": "MSAA RTT samples=4 (magnified)",
             "playgroundId": "#DY1H5P#0",
             "referenceImage": "msaa-rtt-samples4-magnified.png",
-            "errorRatio": 5
+            "errorRatio": 5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Gaussian Splatting GPU Picking",
             "playgroundId": "#834G5K#0",
             "referenceImage": "gsplat-gpu-picking.png",
             "renderCount": 15,
-            "errorRatio": 5
+            "errorRatio": 5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Gaussian Splatting SPZ SH No WASM",
             "playgroundId": "##XSNFXP#12",
             "referenceImage": "gsplat-spz-sh.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "requires ReadableStream (streaming load) not implemented"
         },
         {
             "title": "Gaussian Splatting SPZ Extensions",
             "playgroundId": "#XSNFXP#8",
             "referenceImage": "gsplat-spz-extensions.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting SPZ V4 Extensions",
             "playgroundId": "#XSNFXP#25",
             "referenceImage": "gsplat-spz-v4-extensions.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4",
             "playgroundId": "#XSNFXP#5",
             "referenceImage": "gsplat-spz-sh-order-4.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4 No WASM",
             "playgroundId": "#XSNFXP#13",
             "referenceImage": "gsplat-spz-sh-order-4.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "requires ReadableStream (streaming load) not implemented"
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat",
             "playgroundId": "#XSNFXP#6",
             "referenceImage": "gsplat-spz-detailed-splat.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat No WASM",
             "playgroundId": "#XSNFXP#14",
             "referenceImage": "gsplat-spz-detailed-splat.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "requires ReadableStream (streaming load) not implemented"
         },
         {
             "title": "Gaussian Splatting PLY SH Order 4",
             "playgroundId": "#XSNFXP#7",
-            "referenceImage": "gsplat-ply-sh-order-4.png"
+            "referenceImage": "gsplat-ply-sh-order-4.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Gaussian Splatting Debug Opacity Scale",
             "playgroundId": "#XSNFXP#16",
             "referenceImage": "gsplat-debug-opacity-scale.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Debug Opacity Saturate",
             "playgroundId": "#XSNFXP#17",
             "referenceImage": "gsplat-debug-opacity-saturate.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Debug Size Culling",
             "playgroundId": "#XSNFXP#19",
             "referenceImage": "gsplat-debug-size-culling.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Debug Opacity Culling",
             "playgroundId": "#XSNFXP#20",
             "referenceImage": "gsplat-debug-opacity-culling.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Debug Clipping Box",
             "playgroundId": "#XSNFXP#21",
             "referenceImage": "gsplat-debug-clipping-box.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Debug Diffuse Only",
             "playgroundId": "#XSNFXP#22",
             "referenceImage": "gsplat-debug-diffuse-only.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Debug SH4 Only",
             "playgroundId": "#XSNFXP#24",
             "referenceImage": "gsplat-debug-sh4-only.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Compound Incremental Update",
             "playgroundId": "#DAID4Q#7",
             "referenceImage": "gsplat-compound-incremental-update.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "Gaussian Splatting Compound No SH then Full SH",
             "playgroundId": "#DAID4Q#8",
             "referenceImage": "gsplat-compound-no-sh-then-full-sh.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
@@ -4494,7 +4735,7 @@
             "playgroundId": "#DAID4Q#2",
             "referenceImage": "gsplat-ibl-shadows.png",
             "renderCount": 15,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
@@ -4502,7 +4743,7 @@
             "playgroundId": "#DAID4Q#10",
             "referenceImage": "gsplat-ibl-shadows-camera-switch.png",
             "renderCount": 15,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
@@ -4510,7 +4751,7 @@
             "playgroundId": "#DAID4Q#4",
             "referenceImage": "gsplat-compound-ibl-shadows-single-part.png",
             "renderCount": 15,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
@@ -4518,7 +4759,7 @@
             "playgroundId": "#DAID4Q#5",
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts.png",
             "renderCount": 15,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
@@ -4526,7 +4767,7 @@
             "playgroundId": "#DAID4Q#6",
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts-mixed-visibility.png",
             "renderCount": 15,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
@@ -4534,7 +4775,7 @@
             "playgroundId": "#QA2662#24",
             "referenceImage": "gsplat-sogs-sh-nolookup.png",
             "errorRatio": 5,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "crashes on WebGPU/Dawn"
         },
         {
@@ -4543,7 +4784,7 @@
             "referenceImage": "gsplat-debug-part-test.png",
             "renderCount": 5,
             "errorRatio": 5,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "fails on WebGPU/Dawn"
         },
         {
@@ -4552,7 +4793,7 @@
             "referenceImage": "gsplat-debug-part-auto-tracking-test.png",
             "renderCount": 5,
             "errorRatio": 5,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "fails on WebGPU/Dawn"
         },
         {
@@ -4560,14 +4801,14 @@
             "playgroundId": "#XQZVOI#0",
             "referenceImage": "gsplat-part-test.png",
             "errorRatio": 5,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "fails on WebGPU/Dawn"
         },
         {
             "title": "Gaussian Splatting Loading RH",
             "playgroundId": "#CID4NN#398",
             "referenceImage": "gsplat-loading-rh.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (7.797%\r)"
         },
         {
@@ -4575,7 +4816,8 @@
             "playgroundId": "#IOPV79#0",
             "referenceImage": "needDepthPrePassMaterialPluginVariants.png",
             "renderCount": 2,
-            "errorRatio": 0.1
+            "errorRatio": 0.1,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "needDepthPrePass extended material families",
@@ -4583,78 +4825,84 @@
             "referenceImage": "needDepthPrePassExtendedMaterialFamilies.png",
             "renderCount": 60,
             "errorRatio": 0.1,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (10.243%\r)"
         },
         {
             "title": "GPUPicker Depth Point and Normal",
             "playgroundId": "#JVKFZJ#0",
             "referenceImage": "gpuPickerDepthPointNormal.png",
-            "renderCount": 30
+            "renderCount": 30,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "3D Procedural Textures",
             "playgroundId": "#AYZY4Q#34",
             "referenceImage": "procedural-textures-3d.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (48.472%\r)"
         },
         {
             "title": "Iridescence NME",
             "playgroundId": "#2FDQT5#1507",
-            "referenceImage": "iridescence-nme.png"
+            "referenceImage": "iridescence-nme.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Sprite maps",
             "playgroundId": "#ARLADE#23",
             "referenceImage": "sprite-maps.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (96.170%\r)"
         },
         {
             "title": "Spotlight shadows",
             "playgroundId": "#U2F7P9#4",
-            "referenceImage": "point-light-shadows.png"
+            "referenceImage": "point-light-shadows.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Sliders",
             "playgroundId": "#HATGQZ#3",
             "referenceImage": "Sliders.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (5.491%\r)"
         },
         {
             "title": "Pointers",
             "playgroundId": "#1GLEJK#5",
             "referenceImage": "pointers.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (4.690%\r)"
         },
         {
             "title": "FAST snapshot CPU particles",
             "playgroundId": "#AW6Q7E#0",
             "referenceImage": "fast-snapshot-cpu-particles.png",
-            "renderCount": 30
+            "renderCount": 30,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Sponza",
             "sceneFolder": "/Scenes/Sponza/",
             "sceneFilename": "Sponza.babylon",
-            "referenceImage": "Sponza.png"
+            "referenceImage": "Sponza.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Windows cafe",
             "sceneFolder": "/Scenes/WCafe/",
             "sceneFilename": "WCafe.babylon",
             "referenceImage": "WCafe.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (34.653%\r)"
         },
         {
             "title": "Espilit",
             "sceneFolder": "/Scenes/Espilit/",
             "sceneFilename": "espilit.babylon",
-            "referenceImage": "Espilit.png"
+            "referenceImage": "Espilit.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "The car",
@@ -4662,21 +4910,22 @@
             "sceneFilename": "TheCar.binary.babylon",
             "referenceImage": "TheCar.png",
             "errorRatio": 5,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (90.795%\r)"
         },
         {
             "title": "Viper",
             "sceneFolder": "/Scenes/Viper/",
             "sceneFilename": "Viper.babylon",
-            "referenceImage": "Viper.png"
+            "referenceImage": "Viper.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Retail",
             "sceneFolder": "/Scenes/Retail/",
             "sceneFilename": "Retail.babylon",
             "referenceImage": "retail.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (21.276%\r)"
         },
         {
@@ -4684,40 +4933,44 @@
             "sceneFolder": "/Scenes/hillvalley/",
             "sceneFilename": "HillValley.incremental.babylon",
             "referenceImage": "Hillvalley.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (93.177%\r)"
         },
         {
             "title": "Heart",
             "sceneFolder": "/Scenes/Heart/",
             "sceneFilename": "Heart.babylon",
-            "referenceImage": "Heart.png"
+            "referenceImage": "Heart.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Mansion",
             "sceneFolder": "/Scenes/Mansion/",
             "sceneFilename": "Mansion.babylon",
-            "referenceImage": "mansion.png"
+            "referenceImage": "mansion.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "SpaceDeK",
             "sceneFolder": "/Scenes/SpaceDek/",
             "sceneFilename": "SpaceDek.babylon",
             "referenceImage": "SpaceDeK.png",
-            "errorRatio": 5
+            "errorRatio": 5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Flat2009",
             "sceneFolder": "/Scenes/Flat2009/",
             "sceneFilename": "Flat2009.babylon",
-            "referenceImage": "Flat2009.png"
+            "referenceImage": "Flat2009.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Charting",
             "playgroundId": "#FX57Z1#0",
             "referenceImage": "charting.png",
             "errorRatio": 3,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (16.629%\r)"
         },
         {
@@ -4725,7 +4978,7 @@
             "scriptToRun": "/Demos/Fog/fog.js",
             "functionToCall": "CreateFogScene",
             "referenceImage": "fog.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
@@ -4733,7 +4986,7 @@
             "scriptToRun": "/Demos/Polygon/polygon.js",
             "functionToCall": "CreatePolygonScene",
             "referenceImage": "polygon.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
@@ -4742,7 +4995,7 @@
             "functionToCall": "CreateLinesTestScene",
             "referenceImage": "lines.png",
             "replace": "updateVerticesDataDirectly, updateVerticesData",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
@@ -4752,7 +5005,7 @@
             "replaceUrl": "lens4.png, lens5.png",
             "rootPath": "/Demos/Lens/",
             "referenceImage": "lens.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
@@ -4760,13 +5013,14 @@
             "scriptToRun": "/Demos/SelfShadowing/shadows.js",
             "functionToCall": "CreateShadowsTestScene",
             "referenceImage": "selfShadowing.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
             "title": "Reflection probes",
             "playgroundId": "#JHGNUU#0",
-            "referenceImage": "refprobe.png"
+            "referenceImage": "refprobe.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GUI",
@@ -4774,7 +5028,7 @@
             "functionToCall": "createScene",
             "referenceImage": "GUI.png",
             "errorRatio": 4,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
@@ -4783,46 +5037,51 @@
             "functionToCall": "CreateProceduralTextureTestScene",
             "referenceImage": "procedural.png",
             "replace": "./land, https://cdn.rawgit.com/BabylonJS/Website/06ecbea7/Demos/Procedural/land",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
             "title": "SSAO2",
             "playgroundId": "#XT1HAS#1",
-            "referenceImage": "ssao2.png"
+            "referenceImage": "ssao2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "OBJ empty normal",
             "playgroundId": "#26R8NS#15",
-            "referenceImage": "objEmptyNormal.png"
+            "referenceImage": "objEmptyNormal.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "KTX2 decoder test",
             "playgroundId": "#EIJH8L#27",
             "referenceImage": "ktx2decoder.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
         },
         {
             "title": "Screen space reflections",
             "playgroundId": "#PIZ1GK#1059",
-            "referenceImage": "ssr.png"
+            "referenceImage": "ssr.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Geometry buffer renderer",
             "playgroundId": "#PIZ1GK#1620",
-            "referenceImage": "geometrybufferrenderer.png"
+            "referenceImage": "geometrybufferrenderer.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Basic GPU particle system",
             "playgroundId": "#PU4WYI#262",
-            "referenceImage": "gpuparticle-basic.png"
+            "referenceImage": "gpuparticle-basic.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Show all procedural textures",
             "playgroundId": "#4N0QRP#1",
             "referenceImage": "allProcTextures.png",
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "\r"
         },
         {
@@ -4834,12 +5093,14 @@
         {
             "title": "Grid Material",
             "playgroundId": "#RKGF05",
-            "referenceImage": "grid-material.png"
+            "referenceImage": "grid-material.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Multi Scale Grid Material",
             "playgroundId": "#RKGF05#5",
-            "referenceImage": "multi-scale-grid-material.png"
+            "referenceImage": "multi-scale-grid-material.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "default-render-pipeline",
@@ -4962,281 +5223,331 @@
         {
             "title": "Selection outline layer instance selected with LOD",
             "playgroundId": "#M4HHTC#0",
-            "referenceImage": "selectionOutlineInstanceLOD.png"
+            "referenceImage": "selectionOutlineInstanceLOD.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Color Gradient With Color2",
             "playgroundId": "#3PCCJ0#0",
-            "referenceImage": "gpu-particles-change-color-gradient-with-color2.png"
+            "referenceImage": "gpu-particles-change-color-gradient-with-color2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Speed Range",
             "playgroundId": "#JPPZGY#0",
-            "referenceImage": "gpu-particles-change-speed-range.png"
+            "referenceImage": "gpu-particles-change-speed-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Speed Limit Range",
             "playgroundId": "#UQ1RMS#0",
-            "referenceImage": "gpu-particles-change-speed-limit-range.png"
+            "referenceImage": "gpu-particles-change-speed-limit-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Angular Speed Range",
             "playgroundId": "#MSX6FE#0",
-            "referenceImage": "gpu-particles-change-angular-speed-range.png"
+            "referenceImage": "gpu-particles-change-angular-speed-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Drag Range",
             "playgroundId": "#Q1JW04#0",
-            "referenceImage": "gpu-particles-change-drag-range.png"
+            "referenceImage": "gpu-particles-change-drag-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Emit Rate Gradient",
             "playgroundId": "#SV62YO#1",
-            "referenceImage": "gpu-particles-change-emit-rate-gradient.png"
+            "referenceImage": "gpu-particles-change-emit-rate-gradient.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Emit Rate Gradient 2",
             "playgroundId": "#RBK6TJ#1",
-            "referenceImage": "gpu-particles-change-emit-rate-gradient-2.png"
+            "referenceImage": "gpu-particles-change-emit-rate-gradient-2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Emit Rate Gradient Range",
             "playgroundId": "#9KLZH0#1",
-            "referenceImage": "gpu-particles-change-emit-rate-gradient-range.png"
+            "referenceImage": "gpu-particles-change-emit-rate-gradient-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Start Size Gradient",
             "playgroundId": "#HF5UQ7#0",
-            "referenceImage": "gpu-particles-change-start-size-gradient.png"
+            "referenceImage": "gpu-particles-change-start-size-gradient.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Start Size Gradient Range",
             "playgroundId": "#9QAHDL#0",
-            "referenceImage": "gpu-particles-change-start-size-gradient-range.png"
+            "referenceImage": "gpu-particles-change-start-size-gradient-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Lifetime Gradient",
             "playgroundId": "#ZEQD5L#0",
-            "referenceImage": "gpu-particles-change-lifetime-gradient.png"
+            "referenceImage": "gpu-particles-change-lifetime-gradient.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Lifetime Gradient 2",
             "playgroundId": "#E980M9#0",
-            "referenceImage": "gpu-particles-change-lifetime-gradient-2.png"
+            "referenceImage": "gpu-particles-change-lifetime-gradient-2.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Change - Lifetime Gradient Range",
             "playgroundId": "#716Y0L#0",
-            "referenceImage": "gpu-particles-change-lifetime-gradient-range.png"
+            "referenceImage": "gpu-particles-change-lifetime-gradient-range.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Emitters - Mesh",
             "playgroundId": "#7XBJVF#0",
-            "referenceImage": "gpu-particles-emitters-mesh.png"
+            "referenceImage": "gpu-particles-emitters-mesh.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Billboard Stretched Local",
             "playgroundId": "#HLL4B1#0",
-            "referenceImage": "gpu-particles-billboard-stretched-local.png"
+            "referenceImage": "gpu-particles-billboard-stretched-local.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Attractors Single",
             "playgroundId": "#2GCFP9#0",
             "referenceImage": "gpu-particles-attractors-single.png",
-            "errorRatio": 2.5
+            "errorRatio": 2.5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Attractors Multiple",
             "playgroundId": "#S02QKE#0",
             "referenceImage": "gpu-particles-attractors-multiple.png",
-            "errorRatio": 2.5
+            "errorRatio": 2.5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Attractors Ring",
             "playgroundId": "#D08NSG#0",
             "referenceImage": "gpu-particles-attractors-ring.png",
-            "errorRatio": 2.5
+            "errorRatio": 2.5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - Attractors Local",
             "playgroundId": "#UK6P4V#0",
             "referenceImage": "gpu-particles-attractors-local.png",
-            "errorRatio": 2.5
+            "errorRatio": 2.5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - From Particle System",
             "playgroundId": "#7JQ28N#0",
-            "referenceImage": "gpu-particles-from-particle-system.png"
+            "referenceImage": "gpu-particles-from-particle-system.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "GPU Particles - From Particle System - Flow Map",
             "playgroundId": "#9H7NNG#0",
-            "referenceImage": "gpu-particles-from-particle-system-flow-map.png"
+            "referenceImage": "gpu-particles-from-particle-system-flow-map.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "ArcRotate legacy inertia comparison",
             "playgroundId": "#UAPORV#0",
             "referenceImage": "arc-legacy-inertia-comparison.png",
             "renderCount": 30,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "pixel diff vs reference on WebGPU/Dawn (99.990%\r)"
         },
         {
             "title": "ArcRotate legacy panningInertia glide",
             "playgroundId": "#8S8H0S#0",
             "referenceImage": "arc-legacy-panning-inertia.png",
-            "renderCount": 30
+            "renderCount": 30,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "ArcRotate legacy inertialRadiusOffset glide",
             "playgroundId": "#98108I#0",
             "referenceImage": "arc-legacy-radius-glide.png",
-            "renderCount": 30
+            "renderCount": 30,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "ArcRotate legacy beta limits clamp glide",
             "playgroundId": "#FBLW1J#0",
             "referenceImage": "arc-legacy-beta-limits.png",
-            "renderCount": 30
+            "renderCount": 30,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "ArcRotate legacy radius limits clamp glide",
             "playgroundId": "#QWTJH9#0",
             "referenceImage": "arc-legacy-radius-limits.png",
-            "renderCount": 30
+            "renderCount": 30,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "ArcRotate legacy combined axis glide",
             "playgroundId": "#SJJRY4#0",
             "referenceImage": "arc-legacy-combined-glide.png",
-            "renderCount": 30
+            "renderCount": 30,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Texture Repetition - Standard Material",
             "playgroundId": "#ESP440#0",
-            "referenceImage": "texture-repetition-standard-material.png"
+            "referenceImage": "texture-repetition-standard-material.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Texture Repetition - PBR Material",
             "playgroundId": "#6EPUUH#0",
             "referenceImage": "texture-repetition-pbr-material.png",
-            "errorRatio": 7.5
+            "errorRatio": 7.5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Texture Repetition - OpenPBR Material",
             "playgroundId": "#GOKMFP#0",
             "referenceImage": "texture-repetition-openpbr-material.png",
-            "errorRatio": 7.5
+            "errorRatio": 7.5,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - cube + Phong material",
             "playgroundId": "#DZBTQU#0",
-            "referenceImage": "fbx-m01-cube-phong.png"
+            "referenceImage": "fbx-m01-cube-phong.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - n-gons + vertex colors",
             "playgroundId": "#DZBTQU#1",
-            "referenceImage": "fbx-m02-ngons.png"
+            "referenceImage": "fbx-m02-ngons.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - smooth vs flat normals",
             "playgroundId": "#DZBTQU#2",
-            "referenceImage": "fbx-m03-normals.png"
+            "referenceImage": "fbx-m03-normals.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - material properties",
             "playgroundId": "#DZBTQU#3",
-            "referenceImage": "fbx-m04-materials.png"
+            "referenceImage": "fbx-m04-materials.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - texture slots",
             "playgroundId": "#DZBTQU#4",
-            "referenceImage": "fbx-m05-textures.png"
+            "referenceImage": "fbx-m05-textures.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - UV transform",
             "playgroundId": "#DZBTQU#5",
-            "referenceImage": "fbx-m06-uv-transform.png"
+            "referenceImage": "fbx-m06-uv-transform.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - multi-material submeshes",
             "playgroundId": "#DZBTQU#6",
-            "referenceImage": "fbx-m07-multimaterial.png"
+            "referenceImage": "fbx-m07-multimaterial.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - transform chains",
             "playgroundId": "#DZBTQU#7",
-            "referenceImage": "fbx-m08-transforms.png"
+            "referenceImage": "fbx-m08-transforms.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - skinning",
             "playgroundId": "#DZBTQU#8",
-            "referenceImage": "fbx-m09-skinning.png"
+            "referenceImage": "fbx-m09-skinning.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - morph targets",
             "playgroundId": "#DZBTQU#9",
-            "referenceImage": "fbx-m10-morph.png"
+            "referenceImage": "fbx-m10-morph.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - node animation",
             "playgroundId": "#DZBTQU#10",
-            "referenceImage": "fbx-m11-node-anim.png"
+            "referenceImage": "fbx-m11-node-anim.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - skeletal animation",
             "playgroundId": "#DZBTQU#11",
-            "referenceImage": "fbx-m12-skeletal-anim.png"
+            "referenceImage": "fbx-m12-skeletal-anim.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - morph animation",
             "playgroundId": "#DZBTQU#12",
-            "referenceImage": "fbx-m13-morph-anim.png"
+            "referenceImage": "fbx-m13-morph-anim.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - multiple animation clips",
             "playgroundId": "#DZBTQU#13",
-            "referenceImage": "fbx-m14-multiclip.png"
+            "referenceImage": "fbx-m14-multiclip.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - cameras and lights",
             "playgroundId": "#DZBTQU#14",
-            "referenceImage": "fbx-m15-camera-lights.png"
+            "referenceImage": "fbx-m15-camera-lights.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - axis Y-up",
             "playgroundId": "#DZBTQU#15",
-            "referenceImage": "fbx-m16-axis-yup.png"
+            "referenceImage": "fbx-m16-axis-yup.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - axis Z-up conversion",
             "playgroundId": "#DZBTQU#16",
-            "referenceImage": "fbx-m16-axis-zup.png"
+            "referenceImage": "fbx-m16-axis-zup.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FBX loader - unit scale",
             "playgroundId": "#DZBTQU#17",
-            "referenceImage": "fbx-m16-units.png"
+            "referenceImage": "fbx-m16-units.png",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "CSG2 Right-Handed glTF winding",
             "playgroundId": "#1HYT9N#0",
             "referenceImage": "csg2-righthanded-gltf-winding.png",
             "errorRatio": 1.5,
-            "excludedGraphicsApis": ["WebGPU"],
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "gaussian-splat/asset stream load unsupported on host XHR"
         },
         {
             "title": "FreeCamera framerate-independent movement",
             "playgroundId": "#Y3PG6K#0",
             "referenceImage": "freecamera-framerate-independent-movement.png",
-            "renderCount": 1
+            "renderCount": 1,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FlyCamera framerate-independent movement",
             "playgroundId": "#PX1JQY#0",
             "referenceImage": "flycamera-framerate-independent-movement.png",
-            "renderCount": 1
+            "renderCount": 1,
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         }
     ]
 }
