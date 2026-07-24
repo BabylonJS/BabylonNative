@@ -25,6 +25,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <functional>
 #include <utility>
 #include <vector>
 
@@ -52,6 +53,29 @@ namespace Babylon::Plugins::NativeDawn
         };
 
         State g_state;
+
+        // Deferred GPU-resource destruction. Calling wgpu Destroy() the instant
+        // Babylon disposes a buffer/texture/queryset can trigger a Dawn
+        // "used in submit while destroyed" device error when an in-flight command
+        // (or a render bundle recorded this frame) still references it. Those
+        // errors accumulate over a long in-process validation run and eventually
+        // wedge the device (every later test renders black). Defer the real
+        // Destroy() a few frames so the GPU has retired the referencing work.
+        std::vector<std::pair<int, std::function<void()>>> g_pendingDestroy;
+        void DeferDestroy(std::function<void()> fn)
+        {
+            g_pendingDestroy.emplace_back(3, std::move(fn));
+        }
+        void FlushPendingDestroy()
+        {
+            size_t w = 0;
+            for (size_t r = 0; r < g_pendingDestroy.size(); ++r)
+            {
+                if (--g_pendingDestroy[r].first <= 0) { g_pendingDestroy[r].second(); }
+                else { g_pendingDestroy[w++] = std::move(g_pendingDestroy[r]); }
+            }
+            g_pendingDestroy.resize(w);
+        }
 
         void LogDeviceError(const wgpu::Device&, wgpu::ErrorType type, wgpu::StringView message)
         {
@@ -1042,7 +1066,7 @@ namespace Babylon::Plugins::NativeDawn
             SetMethod(o, "destroy", [h, ranges](const Napi::CallbackInfo& info) -> Napi::Value {
                 for (auto& r : *ranges) { r.ab.Reset(); }
                 ranges->clear();
-                h.Destroy();
+                DeferDestroy([h]() mutable { h.Destroy(); });
                 return info.Env().Undefined();
             });
             return o;
@@ -1092,7 +1116,7 @@ namespace Babylon::Plugins::NativeDawn
                 return MakeTextureView(env, h.CreateView(&d));
             });
             SetMethod(o, "destroy", [h](const Napi::CallbackInfo& info) -> Napi::Value {
-                h.Destroy();
+                DeferDestroy([h]() mutable { h.Destroy(); });
                 return info.Env().Undefined();
             });
             return o;
@@ -1153,7 +1177,7 @@ namespace Babylon::Plugins::NativeDawn
             SetHandle(o, h);
             o.Set("count", Napi::Number::New(env, count));
             SetMethod(o, "destroy", [h](const Napi::CallbackInfo& info) -> Napi::Value {
-                h.Destroy();
+                DeferDestroy([h]() mutable { h.Destroy(); });
                 return info.Env().Undefined();
             });
             return o;
@@ -1950,7 +1974,22 @@ namespace Babylon::Plugins::NativeDawn
                 uint32_t h = PropU32(bmp, "height", 0);
                 if (px.data == nullptr || w == 0 || h == 0)
                 {
-                    throw Napi::Error::New(env, "copyExternalImageToTexture: source has no decoded pixels");
+                    // Tolerant path: some sources arrive without pixels -- e.g. GUI /
+                    // DynamicTexture canvases whose 2D text/gradient content we don't
+                    // rasterize, or a texture whose async decode yielded nothing.
+                    // Rather than throw an uncaught error that aborts the entire
+                    // scene (failing otherwise-correct tests on one incidental
+                    // texture), skip this upload and leave the destination texture
+                    // unchanged so the rest of the frame still renders.
+                    static bool warned = false;
+                    if (!warned)
+                    {
+                        warned = true;
+                        std::fprintf(stdout, "[NativeDawn] copyExternalImageToTexture: source has no decoded pixels; skipping (w=%u h=%u hasPixels=%d)\n",
+                            w, h, px.data != nullptr ? 1 : 0);
+                        std::fflush(stdout);
+                    }
+                    return env.Undefined();
                 }
                 bool flipY = false;
                 {
@@ -1964,6 +2003,24 @@ namespace Babylon::Plugins::NativeDawn
                 if (ext.width == 0) ext.width = w;
                 if (ext.height == 0) ext.height = h;
                 if (ext.depthOrArrayLayers == 0) ext.depthOrArrayLayers = 1;
+
+                // Clamp the copy extent to the destination texture's mip bounds.
+                // Source canvases/bitmaps can be a pixel larger than the texture
+                // Babylon created from a fractional CSS/GUI size (e.g. 3380x103
+                // into a 3379x102 texture); an out-of-bounds WriteTexture is a
+                // Dawn validation error that loses the whole device and cascades
+                // into every subsequent test failing.
+                if (tci.texture)
+                {
+                    const uint32_t mip = tci.mipLevel;
+                    uint32_t tw = tci.texture.GetWidth() >> mip;  if (tw == 0) tw = 1;
+                    uint32_t th = tci.texture.GetHeight() >> mip; if (th == 0) th = 1;
+                    const uint32_t availW = (tci.origin.x < tw) ? (tw - tci.origin.x) : 0u;
+                    const uint32_t availH = (tci.origin.y < th) ? (th - tci.origin.y) : 0u;
+                    if (ext.width > availW) ext.width = availW;
+                    if (ext.height > availH) ext.height = availH;
+                    if (ext.width == 0 || ext.height == 0) return env.Undefined();
+                }
 
                 // Destination texture format (the spec allows the source RGBA8 to
                 // be converted to the destination format on copy).
@@ -2890,6 +2947,34 @@ namespace Babylon::Plugins::NativeDawn
             });
             SetMethod(ctx, "strokeText", Noop);
             SetMethod(ctx, "setLineDash", Noop);
+            // Path / shape ops we don't rasterize (GUI backgrounds, rounded rects,
+            // arcs). No-ops keep the canvas a valid texture source; strokeRect just
+            // ensures the backing buffer exists like fillRect.
+            SetMethod(ctx, "strokeRect", [canvasRef](const Napi::CallbackInfo& info) -> Napi::Value {
+                EnsureCanvasBuffer(info.Env(), canvasRef->Value());
+                return info.Env().Undefined();
+            });
+            SetMethod(ctx, "arc", Noop);
+            SetMethod(ctx, "arcTo", Noop);
+            SetMethod(ctx, "ellipse", Noop);
+            SetMethod(ctx, "quadraticCurveTo", Noop);
+            SetMethod(ctx, "bezierCurveTo", Noop);
+            SetMethod(ctx, "roundRect", Noop);
+            SetMethod(ctx, "clearHitCanvas", Noop);
+            // Gradients / patterns: return a stub carrying addColorStop so GUI code
+            // that builds a gradient fillStyle doesn't throw. We don't rasterize
+            // the gradient, but the object shape is honored.
+            auto makeGradient = [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Object g = Napi::Object::New(info.Env());
+                SetMethod(g, "addColorStop", Noop);
+                return g;
+            };
+            SetMethod(ctx, "createLinearGradient", makeGradient);
+            SetMethod(ctx, "createRadialGradient", makeGradient);
+            SetMethod(ctx, "createConicGradient", makeGradient);
+            SetMethod(ctx, "createPattern", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return info.Env().Null();
+            });
             SetMethod(ctx, "measureText", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Object o = Napi::Object::New(info.Env());
                 o.Set("width", Napi::Number::New(info.Env(), 8));
@@ -3138,6 +3223,13 @@ namespace Babylon::Plugins::NativeDawn
             });
             SetMethod(canvas, "setAttribute", Noop);
             SetMethod(canvas, "removeAttribute", Noop);
+            // toDataURL: we don't PNG-encode here; return a 1x1 transparent PNG so
+            // callers (screenshot/serialization helpers) get a valid data: URL
+            // instead of throwing "toDataURL is not a function".
+            SetMethod(canvas, "toDataURL", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::String::New(info.Env(),
+                    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+            });
             SetMethod(canvas, "addEventListener", Noop);
             SetMethod(canvas, "removeEventListener", Noop);
             SetMethod(canvas, "dispatchEvent", [](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -3472,12 +3564,30 @@ namespace Babylon::Plugins::NativeDawn
                     }
                     Napi::Object el = Napi::Object::New(env);
                     el.Set("style", Napi::Object::New(env));
+                    el.Set("clientWidth", Napi::Number::New(env, 0));
+                    el.Set("clientHeight", Napi::Number::New(env, 0));
                     SetMethod(el, "setAttribute", Noop);
                     SetMethod(el, "appendChild", Noop);
                     SetMethod(el, "removeChild", Noop);
                     SetMethod(el, "insertBefore", Noop);
                     SetMethod(el, "addEventListener", Noop);
                     SetMethod(el, "removeEventListener", Noop);
+                    SetMethod(el, "focus", Noop);
+                    SetMethod(el, "blur", Noop);
+                    SetMethod(el, "getContext", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        return info.Env().Null();
+                    });
+                    // GUI controls query getInputElement().getBoundingClientRect();
+                    // provide a zero-rect so those paths don't throw.
+                    SetMethod(el, "getBoundingClientRect", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        Napi::Env env = info.Env();
+                        Napi::Object r = Napi::Object::New(env);
+                        for (const char* k : {"x", "y", "left", "top", "right", "bottom", "width", "height"})
+                        {
+                            r.Set(k, Napi::Number::New(env, 0));
+                        }
+                        return r;
+                    });
                     return el;
                 });
                 SetMethod(document, "addEventListener", Noop);
@@ -3847,6 +3957,10 @@ namespace Babylon::Plugins::NativeDawn
                 {
                     g_state.instance.ProcessEvents();
                 }
+                // Retire GPU resources whose deferred-destroy delay has elapsed
+                // (see DeferDestroy). Runs after ProcessEvents so completed
+                // submissions have released their references.
+                FlushPendingDestroy();
                 return env.Undefined();
             });
 
