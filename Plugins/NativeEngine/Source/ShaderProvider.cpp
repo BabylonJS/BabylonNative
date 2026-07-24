@@ -35,7 +35,9 @@ namespace Babylon
     {
         // The shader cache is keyed only by source, so it must be bypassed when routing instanced
         // attributes (otherwise a variant would collide with the base program's cached shader).
-        const bool useCache = instancedAttributes.empty();
+        // Only referenced inside the SHADER_CACHE blocks below, so mark it maybe_unused for builds
+        // that compile with the ShaderCache plugin disabled.
+        [[maybe_unused]] const bool useCache = instancedAttributes.empty();
 
 #ifdef SHADER_CACHE
         if (useCache && Plugins::ShaderCache::IsEnabled())
