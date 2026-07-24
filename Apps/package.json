@@ -6,7 +6,7 @@
     "UnitTests/JavaScript"
   ],
   "scripts": {
-    "getNightly": "node scripts/getNightly.js && npm run downlevel:native-scripts -- node_modules/babylonjs/babylon.max.js node_modules/babylonjs-addons/babylonjs.addons.js",
+    "getNightly": "node scripts/getNightly.js && npm run downlevel:native-scripts -- node_modules/babylonjs/babylon.max.js",
     "downlevel:native-scripts": "node scripts/downlevelNativeScripts.mjs"
   },
   "devDependencies": {
