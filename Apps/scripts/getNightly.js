@@ -20,6 +20,8 @@ function download(filename, url) {
 var files = [
   ['node_modules/babylonjs/babylon.max.js', 'https://preview.babylonjs.com/babylon.max.js'],
   ['node_modules/babylonjs/babylon.max.js.map', 'https://preview.babylonjs.com/babylon.max.js.map'],
+  ['node_modules/babylonjs-addons/babylonjs.addons.js', 'https://preview.babylonjs.com/addons/babylonjs.addons.js'],
+  ['node_modules/babylonjs-addons/babylonjs.addons.js.map', 'https://preview.babylonjs.com/addons/babylonjs.addons.js.map'],
   ['node_modules/babylonjs-materials/babylonjs.materials.js', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.js'],
   ['node_modules/babylonjs-materials/babylonjs.materials.js.map', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.js.map'],
   ['node_modules/babylonjs-loaders/babylonjs.loaders.js', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.js'],
