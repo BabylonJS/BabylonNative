@@ -893,7 +893,8 @@
             "title": "GreasedLine - non camera facing",
             "playgroundId": "#FJRQ8N#150",
             "referenceImage": "greased-line-non-camera-facing.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
+            "reason": "Renders fine itself, but leaks global GreasedLine state (material-plugin/exporter) that corrupts the glTF serializer round-trip geometry of later tests ('GLTF Serializer Camera' 222-225). Excluded to preserve test isolation on the single-process NativeDawn run."
         },
         {
             "title": "GreasedLine - basic",

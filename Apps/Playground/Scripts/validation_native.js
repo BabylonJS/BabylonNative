@@ -538,6 +538,19 @@
 
         seed = 1;
 
+        // Restore per-test isolation for global Babylon loader state. Some
+        // playgrounds add a BABYLON.SceneLoader.OnPluginActivatedObservable
+        // observer and never remove it -- e.g. "Yeti" (#QATUCH#32) forces the
+        // glTF loader's animationStartMode to ALL. Left in place, every later
+        // glTF scene auto-plays EVERY animation group instead of just the first,
+        // blending all animations and rendering the wrong animated pose (this is
+        // why "GLTF Serializer Skinning and Animation" failed only when a prior
+        // test leaked such an observer). Clearing here drops leaked observers; a
+        // test's own observer is (re)added later in its own createScene.
+        if (BABYLON.SceneLoader && BABYLON.SceneLoader.OnPluginActivatedObservable) {
+            BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
+        }
+
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);
         } else {
