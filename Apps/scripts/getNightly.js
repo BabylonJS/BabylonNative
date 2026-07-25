@@ -3,17 +3,47 @@ var fs = require('fs');
 
 function download(filename, url) {
   return new Promise(function (resolve, reject) {
-    https.get(url, function (response) {
-      if (response.statusCode !== 200) {
-        response.resume();
-        reject(new Error('GET ' + url + ' failed with status ' + response.statusCode));
+    var file = fs.createWriteStream(filename);
+    var settled = false;
+
+    function fail(err) {
+      if (settled) {
         return;
       }
-      var file = fs.createWriteStream(filename);
-      file.on('error', reject);
-      file.on('finish', resolve);
+      settled = true;
+      file.destroy();
+      reject(err);
+    }
+
+    file.on('error', fail);
+    // 'close', not 'finish': 'finish' fires once the data is flushed but before the descriptor is
+    // released, and the down-level step runs against these files immediately afterwards.
+    file.on('close', function () {
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
+    });
+
+    var request = https.get(url, function (response) {
+      if (response.statusCode !== 200) {
+        response.resume();
+        fail(new Error('GET ' + url + ' failed with status ' + response.statusCode));
+        return;
+      }
+      response.on('error', fail);
+      // A server-side abort emits neither 'finish' nor 'error' on the file, so without this the
+      // promise would never settle.
+      response.on('aborted', function () {
+        fail(new Error('GET ' + url + ' aborted by the server'));
+      });
       response.pipe(file);
-    }).on('error', reject);
+    });
+
+    request.on('error', fail);
+    request.setTimeout(120000, function () {
+      request.destroy(new Error('GET ' + url + ' timed out'));
+    });
   });
 }
 
