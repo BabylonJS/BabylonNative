@@ -4,7 +4,7 @@ name: Format
 on:
   push:
     branches: [ master ]
-  pull_request_target:
+  pull_request:
     branches: [ master ]
 
 jobs:
@@ -12,13 +12,7 @@ jobs:
     name: cmake-format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-      - name: Add base repo to git config
-        run: git remote add upstream ${{ github.event.pull_request.base.repo.html_url }}
-        if: startsWith(github.event_name, 'pull_request')
+      - uses: actions/checkout@v7
       - name: Format CMake files
         id: cmake-format
         uses: PuneetMatharu/cmake-format-lint-action@v1.0.6
@@ -31,13 +25,7 @@ jobs:
     needs: cmake-format-check
     if: always() && startsWith(github.event_name, 'pull_request') && needs.cmake-format-check.result == 'failure'
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-      - name: Add base repo to git config
-        run: git remote add upstream ${{ github.event.pull_request.base.repo.html_url }}
-        if: startsWith(github.event_name, 'pull_request')
+      - uses: actions/checkout@v7
       - name: Format CMake files
         id: cmake-format
         uses: PuneetMatharu/cmake-format-lint-action@v1.0.6
