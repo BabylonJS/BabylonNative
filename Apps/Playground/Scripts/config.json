@@ -2909,6 +2909,7 @@
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
             "referenceImage": "FrameGraph-image-processing.png",
+            "renderCount": 40,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
