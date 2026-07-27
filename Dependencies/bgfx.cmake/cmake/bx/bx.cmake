@@ -108,10 +108,31 @@ target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus /Zc:p
 # their own translation units) inherit it. MSVC (cl.exe) permits the intrinsics
 # without an ISA flag and is left untouched.
 if(APPLE)
-	# Apple builds may be universal (arm64 + x86_64 compiled in a single
-	# invocation); -Xarch_x86_64 scopes the flag to the x86_64 slice only, so the
-	# arm64 slice (which uses the NEON SIMD path) is unaffected.
-	target_compile_options(bx PUBLIC "$<$<CXX_COMPILER_ID:AppleClang,Clang>:SHELL:-Xarch_x86_64 -msse4.2>")
+	# Apple builds may be universal (multiple slices compiled in a single
+	# invocation). Work out which slices are actually being built: an explicit
+	# CMAKE_OSX_ARCHITECTURES wins, otherwise it is a single-slice build for the
+	# host/system processor.
+	set(BX_APPLE_ARCHS ${CMAKE_OSX_ARCHITECTURES})
+	if(NOT BX_APPLE_ARCHS)
+		set(BX_APPLE_ARCHS ${CMAKE_SYSTEM_PROCESSOR})
+	endif()
+	list(LENGTH BX_APPLE_ARCHS BX_APPLE_ARCH_COUNT)
+
+	if(NOT "x86_64" IN_LIST BX_APPLE_ARCHS)
+		# No x86_64 slice, so no SSE minspec is needed. Note that -Xarch_x86_64
+		# must not be added here either: with no x86_64 slice to apply it to,
+		# clang reports it as an unused argument, which is fatal under -Werror.
+	elseif(BX_APPLE_ARCH_COUNT GREATER 1)
+		# Universal build; -Xarch_x86_64 scopes the flag to the x86_64 slice only,
+		# so the arm64 slice (which uses the NEON SIMD path) is unaffected.
+		target_compile_options(bx PUBLIC "$<$<CXX_COMPILER_ID:AppleClang,Clang>:SHELL:-Xarch_x86_64 -msse4.2>")
+	else()
+		# Single-slice x86_64 build; the flag applies to the only slice there is.
+		target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:AppleClang,Clang>:-msse4.2>)
+	endif()
+
+	unset(BX_APPLE_ARCH_COUNT)
+	unset(BX_APPLE_ARCHS)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
 	target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:GNU,Clang>:-msse4.2>)
 endif()
