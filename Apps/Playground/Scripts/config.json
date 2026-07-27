@@ -2909,8 +2909,7 @@
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
             "referenceImage": "FrameGraph-image-processing.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "Renders correctly on real GPUs (matches reference locally), but on the CI runner's software D3D12 (WARP) adapter this manual FrameGraph (HALF_FLOAT 4x-MSAA color RT -> FrameGraphImageProcessingTask -> FrameGraphCopyToBackbufferColorTask) produces a fully empty/transparent backbuffer (RGBA 0,0,0,0), 62% pixel diff, with no Dawn device error. Not a timing issue (deterministic; renderCount=40 did not change it) and not reproducible locally (this Dawn build has no software/fallback adapter and no adapter enumeration to select WARP). Other FrameGraph/MSAA tests pass on WARP, so this is specific to this task chain. Excluded on WebGPU until it can be reproduced/fixed against a WARP adapter."
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "FrameGraph motion blur screen based",
