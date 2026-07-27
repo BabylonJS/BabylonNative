@@ -9,7 +9,7 @@ FetchContent_MakeAvailable(googletest)
 set_property(TARGET gtest PROPERTY FOLDER Dependencies)
 set_property(TARGET gtest_main PROPERTY FOLDER Dependencies)
 
-add_executable(UrlLibTests UrlRequestErrorReporting.cpp)
+add_executable(UrlLibTests UrlRequestErrorReporting.cpp SchemeResolver.cpp)
 
 target_link_libraries(UrlLibTests
     PRIVATE UrlLib

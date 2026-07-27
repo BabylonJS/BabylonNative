@@ -24,7 +24,24 @@ namespace UrlLib
 
     void UrlRequest::Open(UrlMethod method, const std::string& url)
     {
+        // Divert URLs whose scheme has a registered resolver (e.g. blob:) away from the platform
+        // transport; the resolver supplies the response in SendAsync().
+        if (m_impl->BeginSchemeResolution(url))
+        {
+            return;
+        }
+
         m_impl->Open(method, url);
+    }
+
+    void UrlRequest::RegisterSchemeResolver(std::string scheme, UrlSchemeResolver resolver)
+    {
+        Impl::RegisterSchemeResolver(std::move(scheme), std::move(resolver));
+    }
+
+    void UrlRequest::UnregisterSchemeResolver(std::string scheme)
+    {
+        Impl::UnregisterSchemeResolver(std::move(scheme));
     }
 
     UrlResponseType UrlRequest::ResponseType() const
@@ -59,6 +76,15 @@ namespace UrlLib
 
     arcana::task<void, std::exception_ptr> UrlRequest::SendAsync()
     {
+        // Registered-scheme requests (e.g. blob:) are served synchronously from the resolver; the
+        // resolution is deferred to here (rather than Open) so a blob: URL revoked between open()
+        // and send() is honored.
+        if (m_impl->IsSchemeResolution())
+        {
+            m_impl->ResolveScheme();
+            return arcana::task_from_result<std::exception_ptr>();
+        }
+
         return m_impl->SendAsync();
     }
 
@@ -99,6 +125,11 @@ namespace UrlLib
 
     gsl::span<const std::byte> UrlRequest::ResponseBuffer() const
     {
+        if (m_impl->IsSchemeResolution())
+        {
+            return m_impl->ResolvedResponseBuffer();
+        }
+
         return m_impl->ResponseBuffer();
     }
 }
