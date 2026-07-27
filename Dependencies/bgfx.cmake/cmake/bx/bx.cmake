@@ -125,7 +125,18 @@ if(APPLE)
 	elseif(BX_APPLE_ARCH_COUNT GREATER 1)
 		# Universal build; -Xarch_x86_64 scopes the flag to the x86_64 slice only,
 		# so the arm64 slice (which uses the NEON SIMD path) is unaffected.
-		target_compile_options(bx PUBLIC "$<$<CXX_COMPILER_ID:AppleClang,Clang>:SHELL:-Xarch_x86_64 -msse4.2>")
+		#
+		# -Wno-unused-command-line-argument is required because CMAKE_OSX_ARCHITECTURES
+		# is only an upper bound on the slices that actually get compiled. Xcode picks
+		# the slices per SDK at build time, so an iOS build configured for "arm64;x86_64"
+		# (leetal/ios-cmake's OS64COMBINED, where x86_64 is the simulator slice) compiles
+		# only arm64 against the iphoneos SDK. clang then sees an -Xarch_x86_64 that
+		# applies to nothing and reports it as an unused argument, which is fatal for
+		# projects building with -Werror.
+		target_compile_options(
+			bx PUBLIC
+			"$<$<CXX_COMPILER_ID:AppleClang,Clang>:SHELL:-Xarch_x86_64 -msse4.2 -Wno-unused-command-line-argument>"
+		)
 	else()
 		# Single-slice x86_64 build; the flag applies to the only slice there is.
 		target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:AppleClang,Clang>:-msse4.2>)
