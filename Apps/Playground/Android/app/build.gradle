@@ -83,6 +83,11 @@ tasks.named('preBuild').configure { dependsOn ':BabylonNative:assembleRelease' }
 tasks.register('copyFiles') {
     doLast {
         copy {
+            from '../../../node_modules/babylonjs-addons'
+            include "babylonjs.addons.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
             from '../../../node_modules/babylonjs'
             include "babylon.max.js"
             into 'src/main/assets/Scripts'

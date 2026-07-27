@@ -11,6 +11,10 @@
 #include <Babylon/Polyfills/Canvas.h>
 #endif
 
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+#include <Babylon/Polyfills/WebAudio.h>
+#endif
+
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
 #include <Babylon/Plugins/NativeInput.h>
 #endif
@@ -52,6 +56,10 @@ namespace Babylon::Embedding
 
 #if BABYLON_NATIVE_POLYFILL_CANVAS
         std::optional<Babylon::Polyfills::Canvas> m_canvas;
+#endif
+
+#if BABYLON_NATIVE_POLYFILL_WEBAUDIO
+        std::optional<Babylon::Polyfills::WebAudio> m_webAudio;
 #endif
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT

@@ -28,6 +28,15 @@ add_library(base-n INTERFACE)
 target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
 # --------------------------------------------------
+# miniaudio
+# --------------------------------------------------
+if(BABYLON_NATIVE_POLYFILL_WEBAUDIO)
+    # miniaudio's own CMakeLists defines the `miniaudio` target (header-only
+    # include path plus optional extras). Consume it as-is.
+    FetchContent_MakeAvailable_With_Message(miniaudio)
+endif()
+
+# --------------------------------------------------
 # bgfx.cmake
 # --------------------------------------------------
 set(BGFX_BUILD_EXAMPLES OFF)

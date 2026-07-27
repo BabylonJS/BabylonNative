@@ -38,7 +38,8 @@ public class PlaygroundActivity extends Activity {
         // the first View attach completes engine init on the JS thread, in
         // submission order.
         loadBootstrapScripts(mRuntimeHandle);
-        BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");
+        BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/audio.js");
+        BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/playground_runner.js");
 
         mView = new BabylonView(getApplication(), mRuntimeHandle);
         setContentView(mView);

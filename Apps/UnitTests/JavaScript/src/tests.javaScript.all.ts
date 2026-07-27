@@ -328,6 +328,327 @@ describe("NativeEncoding", function () {
   });
 });
 
+describe("WebAudio", function () {
+  this.timeout(0);
+
+  function createSilentWavArrayBuffer(sampleRate: number, frameCount: number): ArrayBuffer {
+    const bytesPerSample = 2;
+    const channelCount = 1;
+    const dataSize = frameCount * channelCount * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    const writeString = (offset: number, value: string) => {
+      for (let i = 0; i < value.length; i++) {
+        view.setUint8(offset + i, value.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channelCount, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channelCount * bytesPerSample, true);
+    view.setUint16(32, channelCount * bytesPerSample, true);
+    view.setUint16(34, 8 * bytesPerSample, true);
+    writeString(36, "data");
+    view.setUint32(40, dataSize, true);
+    return buffer;
+  }
+
+  function createSineWavArrayBuffer(sampleRate: number, frameCount: number, frequency: number, amplitude: number = 0.5): ArrayBuffer {
+    const bytesPerSample = 2;
+    const channelCount = 1;
+    const dataSize = frameCount * channelCount * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    const writeString = (offset: number, value: string) => {
+      for (let i = 0; i < value.length; i++) {
+        view.setUint8(offset + i, value.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channelCount, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channelCount * bytesPerSample, true);
+    view.setUint16(32, channelCount * bytesPerSample, true);
+    view.setUint16(34, 8 * bytesPerSample, true);
+    writeString(36, "data");
+    view.setUint32(40, dataSize, true);
+
+    for (let frame = 0; frame < frameCount; frame++) {
+      const sample = Math.sin((2 * Math.PI * frequency * frame) / sampleRate) * amplitude;
+      const intSample = Math.max(-32768, Math.min(32767, Math.round(sample * 32767)));
+      view.setInt16(44 + frame * bytesPerSample, intSample, true);
+    }
+
+    return buffer;
+  }
+
+  async function waitForTime(context: AudioContext, targetTime: number, timeoutMs: number = 5000): Promise<void> {
+    const start = Date.now();
+    while (context.currentTime < targetTime) {
+      if (Date.now() - start > timeoutMs) {
+        throw new Error(`Timed out waiting for currentTime >= ${targetTime}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+
+  it("should expose AudioContext and play a decoded buffer through the node graph", async function () {
+    // JavaScriptCore reports some host constructors as typeof "object".
+    expect(AudioContext).to.exist;
+    expect(webkitAudioContext).to.exist;
+    expect(AudioContext).to.equal(webkitAudioContext);
+
+    const context = new AudioContext();
+    expect(context.state).to.equal("suspended");
+    await context.resume();
+    expect(context.state).to.equal("running");
+    expect(context.sampleRate).to.be.greaterThan(0);
+
+    const sampleRate = 44100;
+    const frameCount = sampleRate; // 1 second
+    const audioBuffer = await context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount));
+    expect(audioBuffer.sampleRate).to.equal(sampleRate);
+    expect(audioBuffer.length).to.equal(frameCount);
+    expect(audioBuffer.duration).to.be.closeTo(1, 0.01);
+    expect(audioBuffer.numberOfChannels).to.equal(1);
+    expect(audioBuffer.getChannelData(0).length).to.equal(frameCount);
+
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    const panner = context.createPanner();
+
+    source.buffer = audioBuffer;
+    gain.gain.value = 0.5;
+    panner.setPosition(1, 0, 0);
+    context.listener.setPosition(0, 0, 0);
+
+    source.connect(gain);
+    gain.connect(panner);
+    panner.connect(context.destination);
+
+    let ended = false;
+    source.addEventListener("ended", () => {
+      ended = true;
+    });
+
+    source.start();
+    await context.resume();
+
+    // Allow the audio thread to mix at least one callback.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(ended).to.equal(false);
+
+    source.stop();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(ended).to.equal(true);
+
+    await context.close();
+    expect(context.state).to.equal("closed");
+  });
+
+  it("should automate AudioParam values over time", async function () {
+    const context = new AudioContext();
+    const gain = context.createGain();
+    gain.connect(context.destination);
+
+    const scheduleStart = context.currentTime;
+    gain.gain.cancelScheduledValues(scheduleStart);
+    gain.gain.setValueAtTime(0, scheduleStart);
+    gain.gain.linearRampToValueAtTime(1, scheduleStart + 1);
+    expect(gain.gain.value).to.be.closeTo(0, 0.01);
+
+    const sampleRate = context.sampleRate;
+    const frameCount = Math.ceil(sampleRate * 1.5);
+    const audioBuffer = await context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount));
+    const source = context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(gain);
+    source.start(scheduleStart);
+    await context.resume();
+
+    await waitForTime(context, scheduleStart + 0.5);
+    expect(gain.gain.value).to.be.closeTo(0.5, 0.15);
+
+    const curve = new Float32Array([0, 0.25, 0.75, 1]);
+    const curveStart = context.currentTime;
+    gain.gain.cancelScheduledValues(curveStart);
+    gain.gain.setValueCurveAtTime(curve, curveStart, 0.2);
+    await waitForTime(context, curveStart + 0.1);
+    expect(gain.gain.value).to.be.greaterThan(0.1);
+    expect(gain.gain.value).to.be.lessThan(0.9);
+
+    source.stop();
+    await context.close();
+  });
+
+  it("should return analyser frequency and time-domain data for non-silent audio", async function () {
+    const context = new AudioContext();
+    const sampleRate = context.sampleRate;
+    const frequency = 440;
+    const frameCount = sampleRate;
+    const audioBuffer = await context.decodeAudioData(createSineWavArrayBuffer(sampleRate, frameCount, frequency));
+
+    const source = context.createBufferSource();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0;
+
+    source.buffer = audioBuffer;
+    source.connect(analyser);
+    analyser.connect(context.destination);
+
+    const startTime = context.currentTime;
+    source.start(startTime);
+    await context.resume();
+
+    await waitForTime(context, startTime + 0.25);
+
+    const freqBytes = new Uint8Array(analyser.frequencyBinCount);
+    const freqFloats = new Float32Array(analyser.frequencyBinCount);
+    const timeBytes = new Uint8Array(analyser.fftSize);
+    const timeFloats = new Float32Array(analyser.fftSize);
+
+    analyser.getByteFrequencyData(freqBytes);
+    analyser.getFloatFrequencyData(freqFloats);
+    analyser.getByteTimeDomainData(timeBytes);
+    analyser.getFloatTimeDomainData(timeFloats);
+
+    const maxFreqByte = Math.max(...freqBytes);
+    const maxFreqFloat = Math.max(...freqFloats);
+    expect(maxFreqByte).to.be.greaterThan(0);
+    expect(maxFreqFloat).to.be.greaterThan(analyser.minDecibels);
+
+    let flatTimeDomain = true;
+    for (let i = 0; i < timeFloats.length; i++) {
+      if (Math.abs(timeFloats[i]) > 0.001) {
+        flatTimeDomain = false;
+        break;
+      }
+    }
+    expect(flatTimeDomain).to.equal(false);
+
+    let flatByteTimeDomain = true;
+    for (let i = 0; i < timeBytes.length; i++) {
+      if (timeBytes[i] !== 128) {
+        flatByteTimeDomain = false;
+        break;
+      }
+    }
+    expect(flatByteTimeDomain).to.equal(false);
+
+    source.stop();
+    await context.close();
+  });
+
+  it("should support Web Audio constructors", async function () {
+    const context = new AudioContext();
+
+    const gainNode = new GainNode(context);
+    expect(gainNode.gain.value).to.equal(1);
+
+    const pannerNode = new PannerNode(context);
+    expect(pannerNode.positionX.value).to.equal(0);
+
+    const stereoPannerNode = new StereoPannerNode(context);
+    expect(stereoPannerNode.pan.value).to.equal(0);
+
+    const analyserNode = new AnalyserNode(context);
+    expect(analyserNode.fftSize).to.equal(2048);
+
+    const buffer = new AudioBuffer({ length: 128, sampleRate: 44100, numberOfChannels: 2 });
+    expect(buffer.length).to.equal(128);
+    expect(buffer.sampleRate).to.equal(44100);
+    expect(buffer.numberOfChannels).to.equal(2);
+
+    const sourceNode = new AudioBufferSourceNode(context, { buffer });
+    expect(sourceNode.buffer).to.equal(buffer);
+
+    await context.close();
+  });
+
+  it("should fire ended naturally when a short buffer finishes", async function () {
+    const context = new AudioContext();
+    const sampleRate = context.sampleRate;
+    const frameCount = Math.ceil(sampleRate * 0.2);
+    const audioBuffer = await context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount));
+
+    const source = context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(context.destination);
+
+    let ended = false;
+    source.addEventListener("ended", () => {
+      ended = true;
+    });
+
+    const startTime = context.currentTime;
+    source.start(startTime);
+    await context.resume();
+    await waitForTime(context, startTime + audioBuffer.duration + 0.2);
+
+    // Poll briefly in case the ended callback is still marshaling to the JS thread.
+    const pollStart = Date.now();
+    while (!ended && Date.now() - pollStart < 1000) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(ended).to.equal(true);
+
+    await context.close();
+  });
+
+  it("should start buffer sources at a scheduled time", async function () {
+    const context = new AudioContext();
+    await context.resume();
+
+    const sampleRate = context.sampleRate;
+    const frameCount = Math.ceil(sampleRate * 0.1);
+    const audioBuffer = await context.decodeAudioData(createSilentWavArrayBuffer(sampleRate, frameCount));
+
+    const source = context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(context.destination);
+
+    let ended = false;
+    source.addEventListener("ended", () => {
+      ended = true;
+    });
+
+    const startTime = context.currentTime + 0.2;
+    source.start(startTime);
+    await waitForTime(context, startTime + 0.05);
+    expect(ended).to.equal(false);
+
+    await waitForTime(context, startTime + audioBuffer.duration + 0.2);
+    const pollStart = Date.now();
+    while (!ended && Date.now() - pollStart < 1000) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(ended).to.equal(true);
+
+    await context.close();
+  });
+
+  it("should report supported mime types from Audio.canPlayType", function () {
+    const audio = new Audio();
+    expect(audio.canPlayType("audio/wav")).to.equal("probably");
+    expect(audio.canPlayType("audio/mpeg")).to.equal("probably");
+    expect(audio.canPlayType("audio/unsupported-format")).to.equal("");
+  });
+});
+
 mocha.run((failures) => {
   // Test program will wait for code to be set before exiting
   if (failures > 0) {
