@@ -126,6 +126,32 @@ namespace Babylon::Plugins::NativeDawn
             // Device.
             wgpu::DeviceDescriptor devDesc{};
             devDesc.SetUncapturedErrorCallback(&LogDeviceError);
+
+            // WARP (software D3D12) MSAA-resolve workaround.
+            // On the software adapter used by CI runners (no discrete GPU),
+            // Dawn's lazy resource clearing wipes an MSAA resolve target's
+            // content *after* the resolve but *before* the next pass samples it
+            // (the resolved subresource isn't flagged initialized on this path).
+            // The net effect is that any FrameGraph doing MSAA-render -> resolve
+            // -> post-process (e.g. "FrameGraph image processing") reads an empty
+            // resolve target and produces a fully transparent/black frame, while
+            // the exact same graph is correct on real GPUs. Forcing resources to
+            // be eagerly cleared at creation marks them initialized up-front and
+            // sidesteps the bad lazy clear. Scope it to CPU/software adapters so
+            // real GPUs are completely unaffected (no perf or behavior change).
+            wgpu::AdapterInfo adapterInfo{};
+            g_state.adapter.GetInfo(&adapterInfo);
+            const bool isSoftwareAdapter = (adapterInfo.adapterType == wgpu::AdapterType::CPU);
+
+            wgpu::DawnTogglesDescriptor toggles{};
+            const char* kWarpWorkaround = "nonzero_clear_resources_on_creation_for_testing";
+            if (isSoftwareAdapter)
+            {
+                toggles.enabledToggleCount = 1;
+                toggles.enabledToggles = &kWarpWorkaround;
+                devDesc.nextInChain = &toggles;
+                std::fprintf(stderr, "[NativeDawn] software adapter detected -- enabling MSAA-resolve lazy-clear workaround\n");
+            }
             wgpu::Future df = g_state.adapter.RequestDevice(&devDesc, wgpu::CallbackMode::WaitAnyOnly,
                 [](wgpu::RequestDeviceStatus status, wgpu::Device device, wgpu::StringView message, wgpu::Device* out) {
                     if (status == wgpu::RequestDeviceStatus::Success)
