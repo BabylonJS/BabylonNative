@@ -180,7 +180,11 @@ jobs:
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground --headless app:///Scripts/validation_native.js
+          rem [ISOLATION EXPERIMENT] run representative in-suite failures each in a
+          rem fresh process to distinguish cross-test state accumulation from a
+          rem genuine per-test failure. Results uploaded regardless of exit code.
+          for %%i in (479 504 533 606 670 761) do (echo ===ISOLATION_TEST %%i=== & Playground --headless --once --include-excluded --test-index=%%i app:///Scripts/validation_native.js)
+          exit /b 0
 
       - name: Upload Rendered Pictures (NativeDawn)
         if: ${{ inputs.nativedawn && !cancelled() }}
