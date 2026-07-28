@@ -10,6 +10,18 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+// jsruntimehost's V8 N-API enqueues GC finalizers into napi_env__::pending_finalizers
+// but, unlike real Node's event-loop-backed env, never drains that queue at runtime.
+// NativeDawn creates many short-lived N-API wrappers per frame (one per WebGPU object:
+// command encoders, passes, views, bind groups...), so their finalizers — and the
+// wgpu handles they would release — accumulate unbounded until the process OOMs.
+// When built against V8 we reach into the internal env to nudge GC and drain the queue
+// (see PumpJsFinalizers). NATIVEDAWN_V8_FINALIZER_DRAIN is defined by CMake only when
+// NAPI_JAVASCRIPT_ENGINE == V8; other engines finalize through their own mechanisms.
+#if defined(NATIVEDAWN_V8_FINALIZER_DRAIN)
+#include "js_native_api_v8.h"
+#endif
+
 #include <bimg/encode.h>
 #include <bx/allocator.h>
 #include <bx/error.h>
@@ -308,9 +320,51 @@ namespace Babylon::Plugins::NativeDawn
             return o;
         }
 
+        // Count of GPU wrappers created since process start. Used to gate how
+        // often we force GC + drain finalizers (see PumpJsFinalizers): dropped
+        // wrappers are only reclaimed when V8 collects and their N-API finalizer
+        // runs, and this host never drains finalizers on its own during the
+        // native render loop.
+        uint64_t g_wrappersCreated = 0;
+
+#if defined(NATIVEDAWN_V8_FINALIZER_DRAIN)
+        uint64_t g_wrappersAtLastPump = 0;
+        // Force a GC (so dead wrappers' finalizers get enqueued) then drain the
+        // napi finalizer queue (which this host otherwise never drains at
+        // runtime). Bounded-frequency: only forces GC once enough wrappers have
+        // been created since the last pump, so steady-state rendering isn't
+        // penalised by a full GC every frame.
+        void PumpJsFinalizers(Napi::Env env, bool force)
+        {
+            constexpr uint64_t kWrappersPerPump = 1500;
+            if (!force && g_wrappersCreated - g_wrappersAtLastPump < kWrappersPerPump)
+            {
+                return;
+            }
+            g_wrappersAtLastPump = g_wrappersCreated;
+
+            auto* e = reinterpret_cast<napi_env__*>(static_cast<napi_env>(env));
+            if (e->isolate != nullptr)
+            {
+                // Runs GC and invokes first-pass weak callbacks, which enqueue
+                // the dead wrappers' finalizers into pending_finalizers.
+                e->isolate->LowMemoryNotification();
+            }
+            while (!e->pending_finalizers.empty())
+            {
+                v8impl::RefTracker* rt = *e->pending_finalizers.begin();
+                e->pending_finalizers.erase(rt);
+                rt->Finalize();
+            }
+        }
+#else
+        void PumpJsFinalizers(Napi::Env, bool) {}
+#endif
+
         template <typename T>
         Napi::External<T> MakeExt(Napi::Env env, const T& h)
         {
+            ++g_wrappersCreated;
             return Napi::External<T>::New(env, new T(h), [](Napi::Env, T* p) { delete p; });
         }
 
@@ -3999,6 +4053,11 @@ namespace Babylon::Plugins::NativeDawn
                         g_readbackCallback.Value().Call({u8});
                     }
                     g_readbackCallback.Reset();
+                    // Reclaim this frame's short-lived GPU wrappers now: the
+                    // validation harness renders only a frame or two per scene,
+                    // so the gated per-frame pump below may not fire before the
+                    // next scene loads and starts allocating again.
+                    PumpJsFinalizers(env, true);
                 }
                 // Present the frame.
                 if (g_surfaceConfigured && g_currentTextureAcquired)
@@ -4014,6 +4073,10 @@ namespace Babylon::Plugins::NativeDawn
                 // (see DeferDestroy). Runs after ProcessEvents so completed
                 // submissions have released their references.
                 FlushPendingDestroy();
+                // Bounded-frequency GC + finalizer drain so dropped GPU wrappers
+                // (and the Dawn allocations they hold) don't accumulate across a
+                // long-running session. No-op on non-V8 engines.
+                PumpJsFinalizers(env, false);
                 return env.Undefined();
             });
 
