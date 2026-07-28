@@ -2909,7 +2909,8 @@
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
             "referenceImage": "FrameGraph-image-processing.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
+            "reason": "Renders correctly on real GPUs, but on the CI runner's software D3D12 adapter ('Microsoft Basic Render Driver'/WARP) the FrameGraph MSAA color RT -> resolve -> image-processing chain yields an empty/transparent backbuffer (62% black). Root cause is WARP losing the MSAA resolve target's content (Dawn lazy-clear). The nonzero_clear_resources_on_creation_for_testing toggle fixes it on some WARP versions (local repro) but not the CI runner's WARP, so this is excluded on WebGPU until a WARP-robust fix is found."
         },
         {
             "title": "FrameGraph motion blur screen based",
