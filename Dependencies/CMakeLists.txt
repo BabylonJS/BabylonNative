@@ -351,33 +351,30 @@ endif()
 # metal-cpp
 # --------------------------------------------------
 if(APPLE)
-    # Generate a single header.
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
-    set(metal-cpp_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/metal-cpp")
+    # metal-cpp is consumed as a header-only library, and the header comes from
+    # bgfx rather than from a separate copy of the metal-cpp repo.
+    #
+    # The metal-cpp implementation (the NS / MTL / CA `*_PRIVATE_IMPLEMENTATION`
+    # globals) is already compiled into bgfx's Metal renderer, which embeds its
+    # own single-header copy of metal-cpp (see bgfx's renderer_mtl.cpp).
+    # Compiling a second copy here would define those globals in both
+    # libmetal-cpp.a and libbgfx.a; whether that produces ~1900 "duplicate
+    # symbol" link errors then depends purely on the (fragile) order in which
+    # the two static archives appear on the link line. So we expose headers
+    # only and let the single bgfx-provided implementation satisfy the symbols
+    # at link time. Graphics — the only consumer — always links bgfx on Apple,
+    # so the implementation symbols always resolve.
+    #
+    # Using bgfx's own header (instead of vendoring the metal-cpp repo and
+    # re-running its MakeSingleHeader.py) keeps declarations and implementation
+    # at the exact same metal-cpp version, and drops both the second copy of
+    # the sources and the configure-time Python dependency.
     set(METAL_CPP_GENERATED_DIR "${CMAKE_BINARY_DIR}/metal-cpp")
-    execute_process(
-        COMMAND ${Python3_EXECUTABLE}
-            "${metal-cpp_SOURCE_DIR}/SingleHeader/MakeSingleHeader.py"
-            "${metal-cpp_SOURCE_DIR}/Foundation/Foundation.hpp"
-            "${metal-cpp_SOURCE_DIR}/Metal/Metal.hpp"
-            "${metal-cpp_SOURCE_DIR}/QuartzCore/QuartzCore.hpp"
-            -o "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
-        RESULT_VARIABLE METAL_CPP_RESULT)
-    if(NOT METAL_CPP_RESULT EQUAL 0)
-        message(FATAL_ERROR "Failed to generate metal-cpp single header")
-    endif()
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/bgfx/3rdparty/metal-cpp/metal.hpp"
+        "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
+        COPYONLY)
 
-    # metal-cpp is consumed as a header-only library. The metal-cpp
-    # implementation (the NS / MTL / CA `*_PRIVATE_IMPLEMENTATION` globals) is
-    # already compiled into bgfx's Metal renderer, which embeds and builds its
-    # own copy of metal-cpp (see bgfx's renderer_mtl.cpp). Compiling a second
-    # copy here would define those globals in both libmetal-cpp.a and libbgfx.a;
-    # whether that produces ~1900 "duplicate symbol" link errors then depends
-    # purely on the (fragile) order in which the two static archives appear on
-    # the link line. We instead expose metal-cpp as headers only and let the
-    # single bgfx-provided implementation satisfy the symbols at link time.
-    # Graphics — the only consumer — always links bgfx on Apple, so the
-    # implementation symbols always resolve.
     add_library(metal-cpp INTERFACE)
     target_include_directories(metal-cpp SYSTEM INTERFACE "${METAL_CPP_GENERATED_DIR}/Include")
     target_link_libraries(metal-cpp
