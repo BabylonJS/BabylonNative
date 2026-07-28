@@ -44,19 +44,125 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
 endif()
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    # Hermes support is experimental and limited to Windows, Android and Linux.
+    # Bail out early rather than failing deep inside Hermes' Apple framework
+    # machinery.
+    if(APPLE OR IOS)
+        message(FATAL_ERROR
+            "NAPI_JAVASCRIPT_ENGINE=Hermes is not supported on Apple platforms.")
+    endif()
+
+    # HERMES_ENABLE_TOOLS must stay ON: even with HERMES_ENABLE_TEST_SUITE OFF,
+    # Hermes unconditionally adds external/node-api-cts and
+    # external/node-api-tests whenever HERMES_ENABLE_NAPI is on, and those refer
+    # to the `hermes` CLI target via $<TARGET_FILE:hermes>. Nothing ships in our
+    # binaries because Hermes is declared EXCLUDE_FROM_ALL.
     set(HERMES_ENABLE_TOOLS ON CACHE BOOL "" FORCE)
     set(HERMES_ENABLE_TEST_SUITE OFF CACHE BOOL "" FORCE)
     set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL "" FORCE)
     set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
     set(HERMES_ENABLE_NAPI ON CACHE BOOL "" FORCE)
+    # Hermes defaults HERMES_SLOW_DEBUG=ON, which compiles internal sanity
+    # checks in even for optimized builds; they can SIGABRT during Runtime
+    # teardown. Embedders don't need them.
     set(HERMES_SLOW_DEBUG OFF CACHE BOOL "" FORCE)
+    if(ANDROID)
+        # Hermes only skips its ICU lookup on Android when HERMES_IS_ANDROID is
+        # set, which is part of Hermes' React Native / fbjni packaging that we
+        # don't use. Unicode-lite avoids pulling ICU and fbjni into this
+        # standalone NDK build.
+        set(HERMES_UNICODE_LITE ON CACHE BOOL "" FORCE)
+    endif()
     if(WIN32)
         # The vendored Boost.Context assembler backend breaks under MSBuild; the
         # Win32 Fiber implementation needs no assembler and is functionally
         # equivalent for Hermes' usage.
         set(BOOST_CONTEXT_IMPLEMENTATION "winfib" CACHE STRING "" FORCE)
     endif()
-    FetchContent_MakeAvailable_With_Message(hermes)
+
+    # ------------------------------------------------------------------
+    # Cross-compilation: bootstrap the Hermes host compilers automatically.
+    #
+    # `hermesc`/`shermes` are HOST tools Hermes runs at build time. When
+    # cross-compiling (the Android NDK build) the in-tree tool targets are built
+    # for the *target* and can't run on the build host, so Hermes has to be
+    # handed prebuilt host compilers through IMPORT_HOST_COMPILERS.
+    #
+    # This has to happen at configure time, before Hermes itself is configured,
+    # because Hermes consumes IMPORT_HOST_COMPILERS during its own configure. An
+    # explicit -DIMPORT_HOST_COMPILERS=... still wins and skips the bootstrap.
+    set(_bn_hermes_populated_early FALSE)
+    if(CMAKE_CROSSCOMPILING AND NOT IMPORT_HOST_COMPILERS)
+        # Source-relative (not ${CMAKE_SOURCE_DIR}-relative: the Android build
+        # adds BabylonNative as a subdirectory of the Gradle project) and shared
+        # across target ABIs so the host tools are built once. /Build is
+        # git-ignored.
+        set(_bn_hermes_host_dir "${CMAKE_CURRENT_LIST_DIR}/../Build/HermesHostTools")
+        set(_bn_hermes_host_import "${_bn_hermes_host_dir}/ImportHostCompilers.cmake")
+
+        if(NOT EXISTS "${_bn_hermes_host_import}")
+            message(STATUS "Hermes: bootstrapping host compilers (hermesc/shermes) for cross-compilation")
+
+            # Download Hermes now so the host build can be configured from the
+            # same sources the target build will use.
+            FetchContent_GetProperties(hermes)
+            if(NOT hermes_POPULATED)
+                FetchContent_Populate(hermes)
+                set(_bn_hermes_populated_early TRUE)
+            endif()
+
+            find_program(_bn_host_ninja ninja)
+            if(_bn_host_ninja)
+                set(_bn_host_generator -G Ninja)
+            else()
+                set(_bn_host_generator "")
+            endif()
+
+            # No toolchain file is passed, so CMake picks the host compiler.
+            execute_process(
+                COMMAND "${CMAKE_COMMAND}"
+                    ${_bn_host_generator}
+                    -S "${hermes_SOURCE_DIR}"
+                    -B "${_bn_hermes_host_dir}"
+                    -D CMAKE_BUILD_TYPE=Release
+                    -D HERMES_UNICODE_LITE=ON
+                    -D HERMES_ENABLE_TEST_SUITE=OFF
+                    -D HERMES_ENABLE_NAPI=OFF
+                RESULT_VARIABLE _bn_host_cfg_result)
+            if(NOT _bn_host_cfg_result EQUAL 0)
+                message(FATAL_ERROR
+                    "Hermes host-compiler bootstrap: configure failed (${_bn_host_cfg_result}).")
+            endif()
+
+            execute_process(
+                COMMAND "${CMAKE_COMMAND}" --build "${_bn_hermes_host_dir}"
+                    --target hermesc shermes --config Release
+                RESULT_VARIABLE _bn_host_build_result)
+            if(NOT _bn_host_build_result EQUAL 0)
+                message(FATAL_ERROR
+                    "Hermes host-compiler bootstrap: build failed (${_bn_host_build_result}).")
+            endif()
+        endif()
+
+        if(NOT EXISTS "${_bn_hermes_host_import}")
+            message(FATAL_ERROR
+                "Hermes host-compiler bootstrap did not produce ${_bn_hermes_host_import}.")
+        endif()
+
+        set(IMPORT_HOST_COMPILERS "${_bn_hermes_host_import}" CACHE FILEPATH
+            "Imported Hermes host compilers (hermesc/shermes) for cross-compilation" FORCE)
+        message(STATUS "Hermes: using bootstrapped host compilers at ${IMPORT_HOST_COMPILERS}")
+    endif()
+
+    if(_bn_hermes_populated_early)
+        # FetchContent_MakeAvailable is a no-op once the content is populated,
+        # so add the subdirectory ourselves (mirroring the EXCLUDE_FROM_ALL on
+        # the declaration).
+        message(STATUS "Fetching hermes - done")
+        add_subdirectory("${hermes_SOURCE_DIR}" "${hermes_BINARY_DIR}" EXCLUDE_FROM_ALL)
+    else()
+        FetchContent_MakeAvailable_With_Message(hermes)
+    endif()
 
     # FetchContent only defines `hermes_SOURCE_DIR` in this directory scope, but
     # Core/Node-API needs it to reach Hermes' non-installed `API/napi` headers
