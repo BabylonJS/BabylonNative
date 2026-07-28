@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -218,7 +219,7 @@ namespace Babylon::Plugins
         // per-point attribute and returns its attribute id (which equals its unique id, see
         // PointCloud::SetAttribute -> set_unique_id).
         template<typename T>
-        int AddAttributeToMesh(draco::Mesh& mesh, draco::GeometryAttribute::Type type, draco::DataType dataType, long numVertices, int8_t numComponents, const T* values)
+        int AddAttributeToMesh(draco::Mesh& mesh, draco::GeometryAttribute::Type type, draco::DataType dataType, uint32_t numVertices, int8_t numComponents, const T* values)
         {
             std::unique_ptr<draco::PointAttribute> att(new draco::PointAttribute());
             att->Init(type, numComponents, dataType, /* normalized */ false, numVertices);
@@ -232,18 +233,41 @@ namespace Babylon::Plugins
             {
                 mesh.set_num_points(numVertices);
             }
-            else if (mesh.num_points() != static_cast<uint32_t>(numVertices))
+            else if (mesh.num_points() != numVertices)
             {
                 return -1;
             }
             return attId;
         }
 
+        // Reads and validates an attribute's component count. draco stores the component count as
+        // an int8_t, and divides the element count by it, so a non-positive or oversized value would
+        // either divide by zero or silently truncate.
+        int8_t ReadAttributeSize(Napi::Env env, const Napi::Object& attr, const Napi::TypedArray& data)
+        {
+            const int32_t size = attr.Get("size").As<Napi::Number>().Int32Value();
+            if (size <= 0 || size > std::numeric_limits<int8_t>::max())
+            {
+                throw Napi::RangeError::New(env, "Draco: attribute 'size' must be in [1, 127], got " + std::to_string(size));
+            }
+            if (data.ElementLength() % static_cast<size_t>(size) != 0)
+            {
+                throw Napi::RangeError::New(env, "Draco: attribute data length (" + std::to_string(data.ElementLength()) +
+                    ") is not a multiple of its component count (" + std::to_string(size) + ").");
+            }
+            const size_t numVertices = data.ElementLength() / static_cast<size_t>(size);
+            if (static_cast<uint64_t>(numVertices) > 0xFFFFFFFFull)
+            {
+                throw Napi::RangeError::New(env, "Draco: attribute has too many vertices: " + std::to_string(numVertices));
+            }
+            return static_cast<int8_t>(size);
+        }
+
         // Dispatches AddAttributeToMesh on the typed array's element type, mirroring the WASM
         // encoder's addAttributeMap.
         int AddTypedAttributeToMesh(Napi::Env env, draco::Mesh& mesh, draco::GeometryAttribute::Type type, const Napi::TypedArray& data, int8_t numComponents)
         {
-            const long numVertices = static_cast<long>(data.ElementLength()) / numComponents;
+            const uint32_t numVertices = static_cast<uint32_t>(data.ElementLength() / static_cast<size_t>(numComponents));
             switch (data.TypedArrayType())
             {
                 case napi_float32_array: return AddAttributeToMesh<float>(mesh, type, draco::DT_FLOAT32, numVertices, numComponents, TypedArrayData<float>(data));
@@ -260,11 +284,26 @@ namespace Babylon::Plugins
         }
 
         // Reads an index typed array (Uint16Array or Uint32Array) into a flat int vector.
-        std::vector<int> ReadIndices(const Napi::TypedArray& data)
+        std::vector<int> ReadIndices(Napi::Env env, const Napi::TypedArray& data)
         {
+            const auto arrayType = data.TypedArrayType();
+            if (arrayType != napi_uint32_array && arrayType != napi_uint16_array)
+            {
+                throw Napi::TypeError::New(env, "Draco: indices must be a Uint16Array or a Uint32Array.");
+            }
+
             const size_t count = data.ElementLength();
+            if (count % 3 != 0)
+            {
+                throw Napi::RangeError::New(env, "Draco: index count (" + std::to_string(count) + ") is not a multiple of 3.");
+            }
+            if (static_cast<uint64_t>(count / 3) > 0xFFFFFFFFull)
+            {
+                throw Napi::RangeError::New(env, "Draco: too many faces: " + std::to_string(count / 3));
+            }
+
             std::vector<int> out(count);
-            if (data.TypedArrayType() == napi_uint32_array)
+            if (arrayType == napi_uint32_array)
             {
                 const uint32_t* src = TypedArrayData<uint32_t>(data);
                 for (size_t i = 0; i < count; ++i) { out[i] = static_cast<int>(src[i]); }
@@ -290,7 +329,7 @@ namespace Babylon::Plugins
             const auto options = (info.Length() > 2 && info[2].IsObject()) ? info[2].As<Napi::Object>() : Napi::Object::New(env);
 
             // Locate the mandatory position attribute and its vertex count.
-            long positionVerticesCount = 0;
+            uint32_t positionVerticesCount = 0;
             bool hasPosition = false;
             for (uint32_t i = 0; i < attributesIn.Length(); ++i)
             {
@@ -298,8 +337,8 @@ namespace Babylon::Plugins
                 if (attr.Get("dracoName").As<Napi::String>().Utf8Value() == "POSITION")
                 {
                     const auto data = attr.Get("data").As<Napi::TypedArray>();
-                    const int8_t size = static_cast<int8_t>(attr.Get("size").As<Napi::Number>().Int32Value());
-                    positionVerticesCount = static_cast<long>(data.ElementLength()) / size;
+                    const int8_t size = ReadAttributeSize(env, attr, data);
+                    positionVerticesCount = static_cast<uint32_t>(data.ElementLength() / static_cast<size_t>(size));
                     hasPosition = true;
                     break;
                 }
@@ -313,16 +352,32 @@ namespace Babylon::Plugins
             std::vector<int> indices;
             if (info.Length() > 1 && info[1].IsTypedArray())
             {
-                indices = ReadIndices(info[1].As<Napi::TypedArray>());
+                indices = ReadIndices(env, info[1].As<Napi::TypedArray>());
+
+                // Every index addresses a point in the position attribute; draco would otherwise
+                // read out of bounds when building the corner table.
+                for (const int index : indices)
+                {
+                    if (index < 0 || static_cast<uint32_t>(index) >= positionVerticesCount)
+                    {
+                        throw Napi::RangeError::New(env, "Draco: index " + std::to_string(index) +
+                            " is out of range for " + std::to_string(positionVerticesCount) + " vertices.");
+                    }
+                }
             }
             else
             {
+                if (positionVerticesCount % 3 != 0)
+                {
+                    throw Napi::RangeError::New(env, "Draco: unindexed meshes need a vertex count that is a multiple of 3, got " +
+                        std::to_string(positionVerticesCount) + ".");
+                }
                 indices.resize(positionVerticesCount);
-                for (long i = 0; i < positionVerticesCount; ++i) { indices[i] = static_cast<int>(i); }
+                for (uint32_t i = 0; i < positionVerticesCount; ++i) { indices[i] = static_cast<int>(i); }
             }
 
             draco::Mesh mesh;
-            const long numFaces = static_cast<long>(indices.size()) / 3;
+            const uint32_t numFaces = static_cast<uint32_t>(indices.size() / 3);
             mesh.SetNumFaces(numFaces);
             for (draco::FaceIndex f(0); f < numFaces; ++f)
             {
@@ -344,8 +399,8 @@ namespace Babylon::Plugins
                 const auto attr = attributesIn.Get(i).As<Napi::Object>();
                 const std::string kind = attr.Get("kind").As<Napi::String>().Utf8Value();
                 const std::string dracoName = attr.Get("dracoName").As<Napi::String>().Utf8Value();
-                const int8_t size = static_cast<int8_t>(attr.Get("size").As<Napi::Number>().Int32Value());
                 const auto data = attr.Get("data").As<Napi::TypedArray>();
+                const int8_t size = ReadAttributeSize(env, attr, data);
                 const draco::GeometryAttribute::Type type = DracoAttributeTypeFromName(dracoName);
 
                 const int attId = AddTypedAttributeToMesh(env, mesh, type, data, size);

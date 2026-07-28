@@ -34,13 +34,57 @@ namespace Babylon::Plugins
             const auto* source = static_cast<const unsigned char*>(sourceArray.ArrayBuffer().Data()) + sourceArray.ByteOffset();
             const size_t sourceSize = sourceArray.ByteLength();
 
-            const size_t count = static_cast<size_t>(info[1].As<Napi::Number>().Int64Value());
-            const size_t stride = static_cast<size_t>(info[2].As<Napi::Number>().Int64Value());
+            const int64_t countIn = info[1].As<Napi::Number>().Int64Value();
+            const int64_t strideIn = info[2].As<Napi::Number>().Int64Value();
             const std::string mode = info[3].As<Napi::String>().Utf8Value();
+
+            // meshoptimizer validates these with assert(), which compiles out in release builds,
+            // so out-of-range values would be undefined behavior rather than a thrown error.
+            if (countIn < 0)
+            {
+                throw Napi::RangeError::New(env, "Meshopt: count must not be negative, got " + std::to_string(countIn));
+            }
+            if (strideIn <= 0 || strideIn > 256)
+            {
+                throw Napi::RangeError::New(env, "Meshopt: stride must be in [1, 256], got " + std::to_string(strideIn));
+            }
+            if (mode == "ATTRIBUTES")
+            {
+                if (strideIn % 4 != 0)
+                {
+                    throw Napi::RangeError::New(env, "Meshopt: ATTRIBUTES stride must be a multiple of 4, got " + std::to_string(strideIn));
+                }
+            }
+            else if (mode == "TRIANGLES" || mode == "INDICES")
+            {
+                if (strideIn != 2 && strideIn != 4)
+                {
+                    throw Napi::RangeError::New(env, "Meshopt: " + mode + " stride must be 2 or 4, got " + std::to_string(strideIn));
+                }
+                if (mode == "TRIANGLES" && countIn % 3 != 0)
+                {
+                    throw Napi::RangeError::New(env, "Meshopt: TRIANGLES count must be a multiple of 3, got " + std::to_string(countIn));
+                }
+            }
+            else
+            {
+                throw Napi::Error::New(env, "Meshopt: Unsupported decode mode: " + mode);
+            }
+
+            const size_t count = static_cast<size_t>(countIn);
+            const size_t stride = static_cast<size_t>(strideIn);
 
             // Round count up to a multiple of 4 (the reference decoder over-allocates
             // and runs the vertex filter over count4 elements).
             const size_t count4 = (count + 3) & ~static_cast<size_t>(3);
+
+            // Guard the allocation size so a huge count cannot wrap size_t.
+            constexpr int64_t maxDecodedBytes = 1LL << 31;
+            if (static_cast<int64_t>(count4) * strideIn > maxDecodedBytes)
+            {
+                throw Napi::RangeError::New(env, "Meshopt: decoded size (" + std::to_string(count4) + " x " +
+                    std::to_string(strideIn) + " bytes) exceeds the 2 GB limit.");
+            }
 
             std::vector<unsigned char> temp(count4 * stride, 0);
 
@@ -53,13 +97,9 @@ namespace Babylon::Plugins
             {
                 result = meshopt_decodeIndexBuffer(temp.data(), count, stride, source, sourceSize);
             }
-            else if (mode == "INDICES")
-            {
-                result = meshopt_decodeIndexSequence(temp.data(), count, stride, source, sourceSize);
-            }
             else
             {
-                throw Napi::Error::New(env, std::string("Meshopt: Unsupported decode mode: ") + mode);
+                result = meshopt_decodeIndexSequence(temp.data(), count, stride, source, sourceSize);
             }
 
             if (result != 0)

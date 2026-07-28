@@ -170,7 +170,7 @@ endif()
 # --------------------------------------------------
 # draco (mesh decompression, native replacement for the WASM decoder)
 # --------------------------------------------------
-if(NOT TARGET draco AND NOT TARGET draco_static)
+if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_static)
     set(DRACO_TESTS OFF CACHE BOOL "" FORCE)
     set(DRACO_INSTALL OFF CACHE BOOL "" FORCE)
     set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
@@ -209,7 +209,7 @@ endif()
 # --------------------------------------------------
 # meshoptimizer (mesh decompression, native replacement for the WASM decoder)
 # --------------------------------------------------
-if(NOT TARGET meshoptimizer)
+if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT AND NOT TARGET meshoptimizer)
     set(MESHOPT_BUILD_DEMO OFF CACHE BOOL "" FORCE)
     set(MESHOPT_BUILD_GLTFPACK OFF CACHE BOOL "" FORCE)
     set(MESHOPT_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
