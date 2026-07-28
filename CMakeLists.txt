@@ -5,6 +5,7 @@ if(POLICY CMP0135)
 endif()
 
 include(FetchContent)
+include(${CMAKE_CURRENT_SOURCE_DIR}/Scripts/extensions.cmake)
 
 # --------------------------------------------------
 # Declarations
@@ -17,10 +18,6 @@ include(FetchContent)
 # FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
 # targets that are part of the Babylon Native contract.
 
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 2e85a8d43b89246c460112c9e5546ad54b6e87b4
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
@@ -29,45 +26,11 @@ FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(base-n
-    GIT_REPOSITORY https://github.com/azawadzki/base-n.git
-    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 6c5515826c428337b7cbc0a5a7cc6d12325ce72b
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(glslang
-    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(ios-cmake
-    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 4.5.0
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 8cd142951018de07c89c23f726fb7dc9c8374599)
-FetchContent_Declare(metal-cpp
-    GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
-    GIT_TAG metal-cpp_26
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(SPIRV-Cross
-    GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG a512817ddbcd879a3929aef7d1d762871bdf8635
-    EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
-
-FetchContent_MakeAvailable(CMakeExtensions)
-
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
 # which makes all dependencies to be fetched and packaged.

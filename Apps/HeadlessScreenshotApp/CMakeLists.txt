@@ -2,7 +2,7 @@ FetchContent_Declare(DirectXTK
     GIT_REPOSITORY https://github.com/microsoft/DirectXTK.git
     GIT_TAG e7d9b64ca6bb8977d4e3006727deaf57a7c1de84)
 
-FetchContent_MakeAvailable(CMakeExtensions)
+include(${CMAKE_SOURCE_DIR}/Scripts/extensions.cmake)
 
 set(BUILD_TESTING OFF)
 set(BUILD_TOOLS OFF)

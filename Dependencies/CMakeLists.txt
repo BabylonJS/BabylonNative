@@ -20,10 +20,13 @@ if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
 endif()
 
 # --------------------------------------------------
+# UrlLib
+# --------------------------------------------------
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/UrlLib)
+
+# --------------------------------------------------
 # base-n
 # --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(base-n)
-
 add_library(base-n INTERFACE)
 target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
@@ -38,7 +41,7 @@ set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 
-FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
 # This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
@@ -156,7 +159,7 @@ endif()
 set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF)
 
 if(NOT TARGET glslang)
-    FetchContent_MakeAvailable_With_Message(glslang)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/glslang)
 
     set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
     set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
@@ -188,20 +191,12 @@ if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) 
 endif()
 
 # --------------------------------------------------
-# JsRuntimeHost
-# --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
-
-# --------------------------------------------------
 # metal-cpp
 # --------------------------------------------------
-if(APPLE OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(metal-cpp)
-endif()
-
 if(APPLE)
     # Generate a single header.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    set(metal-cpp_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/metal-cpp")
     set(METAL_CPP_GENERATED_DIR "${CMAKE_BINARY_DIR}/metal-cpp")
     execute_process(
         COMMAND ${Python3_EXECUTABLE}
@@ -259,7 +254,7 @@ endif()
 if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
     set(SPIRV_CROSS_ENABLE_HLSL OFF)
 endif()
-FetchContent_MakeAvailable_With_Message(SPIRV-Cross)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 if(TARGET spirv-cross-glsl)
     set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)

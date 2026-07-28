@@ -1,46 +1,37 @@
-# BabylonNative Script Debugging on Win32 and Android
-You can use Chromium DevTools to debug your JavaScript while running a Win32 BabylonNative application (x86/x64) or Android with the V8 JavaScript engine.
-
-## Set up BabylonNative to Use V8
-When running CMake, be sure to specify the following flag in order to use V8 as the underlying JavaScript engine (overriding default behavior, which on Windows is to use the Chakra engine):
-`-D NAPI_JAVASCRIPT_ENGINE=V8`
-
-For example:
-```powershell
-mkdir Build
-cd Build
-cmake -A Win32 -D NAPI_JAVASCRIPT_ENGINE=V8 ..
-```
-
-for Android, simply open the Playground project with AndroidStudio. V8 is the default JS engine for this platform.
+# JsRuntimeHost Script Debugging
+You can use Chromium DevTools to debug your JavaScript while running with the V8 JavaScript engine (Default Engine for Android).
 
 ## Add the Remote Target URL
-Depending on which Chromium-based browser you're using (Edge or Chrome), navigate to `edge://inspect` or `chrome://inspect`.
-Click `Configure...` and in the target discovery settings add an entry `localhost:{port}`, where `{port}` is consistent with the one supplied to the call to [`StartInspector`](https://github.com/BabylonJS/BabylonNative/blob/2db465f5569d8eb833245a41030c5219cfa3fe59/Apps/Playground/Win32/App.cpp#L141-L144) in App.cpp. This function call spins up the server responsible for communicating with the DevTools inspector client on the specified port, identifying itself with the specified title.
-If you don't modify the code in the Playground Application, then the port will be 5643 and the app title shown on the DevTools page will be "BabylonNative Playground".
+On whichever Chromium-based browser you're using (Edge or Chrome), navigate to `about://inspect`.
+Click `Configure...` and in the target discovery settings add an entry `localhost:5643`.
 
 ![Target discovery settings](Images/DevTools/chrome-targets.png)
 
-## Click Inspect
-Run the Playground application and wait for the DevTools page to recognize the inspector server spun up by the app. Once you see the app pop up in the list of Remote Targets, you may click inspect to open up a DevTools window.
+## Setting Up To Debug
+Make sure to change the line in [tests.js](https://github.com/BabylonJS/JsRuntimeHost/blob/f487c7b3f89b407e95a53543a06a34f1a1fbb860/Tests/UnitTests/Scripts/tests.js#L2) to true, or else the DevTools won't have enough time to attach to the JavaScript Instance. If you are debugging your own script, you can also use [setTimeout()](https://developer.mozilla.org/en-US/docs/web/api/settimeout) to delay the execution of the code you are trying to debug while you wait to attach the debugger.
 
-![Ready to inspect](Images/DevTools/chrome-playground.png)
+## Debugging on Android/Emulator
+
+Install [ADB](https://developer.android.com/tools/releases/platform-tools) and run the following command with an Android device plugged in or Android emulator running.
+```
+adb forward tcp:5643 tcp:5643
+```
+
+Note, every time the Android device is unplugged and re-plugged, this ADB command need to be run again.
+
+## Click Inspect
+Run the UnitTests application and wait for the DevTools page to recognize the inspector server spun up by the app. Once you see the app pop up in the list of Remote Targets, you may click inspect to open up a DevTools window.
+
+![Ready to inspect](Images/DevTools/chrome-inspect.png)
+
+## DevTool Settings
+
+There is also a setting that needs to be enabled in the DevTools. Go into the settings by clicking on the gear in the top right corner and check this box in the preferences tab. This only needs to be done once.
+
+![DevTools window](Images/DevTools/devtools-settings.png)
 
 ## View Logs, Set Breakpoints, Profile, and More
 Once you have the DevTools window open, you can use it in the same way as if you were inspecting a web page.
 For more information, see this documentation from Google on [how to debug JavaScript using Chrome DevTools](https://developer.chrome.com/docs/devtools/javascript/).
 
-![DevTools window](Images/DevTools/devtools-breakpoint.png)
-
-## Debugging on Android
-
-There are some subtilities when debugging on Android. First, `app://` scheme is not supported by the dev tools. Favor loading from an HTTP server running on your workstation and update the requests URL in your code.
-By default, Android apps don't support unsecured HTTP requests. Change the manifest to allow it by adding:
-```
-<application 
-...
-android:usesCleartextTraffic="true"
-...
-</application>
-```
-Or make the requests to point to a secured server.
+![DevTools window](Images/DevTools/chrome-debugger.png)
