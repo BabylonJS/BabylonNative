@@ -1,6 +1,7 @@
 #include <bgfx/bgfx.h>
 #include <map>
 #include <cstring>
+#include <limits>
 #include "Canvas.h"
 #include "Context.h"
 #include "ImageData.h"
@@ -49,7 +50,15 @@ namespace Babylon::Polyfills::Internal
         m_width = info[3].As<Napi::Number>().Uint32Value();
         m_height = info[4].As<Napi::Number>().Uint32Value();
 
-        m_pixels.resize(static_cast<size_t>(m_width) * m_height * 4);
+        // Context::GetImageData already rejects regions this large, but keep the invariant local
+        // so the size_t multiplication below can never wrap (size_t is 32-bit on 32-bit ABIs).
+        const uint64_t pixelCount{static_cast<uint64_t>(m_width) * m_height};
+        if (pixelCount > std::numeric_limits<size_t>::max() / 4)
+        {
+            throw Napi::RangeError::New(info.Env(), "ImageData: requested region is too large.");
+        }
+
+        m_pixels.resize(static_cast<size_t>(pixelCount) * 4);
         if (context != nullptr && !m_pixels.empty())
         {
             context->ReadPixels(sx, sy, m_width, m_height, m_pixels.data());
@@ -68,7 +77,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value ImageData::GetData(const Napi::CallbackInfo& info)
     {
-        const auto size{static_cast<size_t>(m_width) * m_height * 4};
+        const auto size{m_pixels.size()};
         auto data{Napi::Uint8Array::New(info.Env(), size)};
         if (size > 0)
         {

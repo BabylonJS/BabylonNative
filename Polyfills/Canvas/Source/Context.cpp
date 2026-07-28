@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <limits>
 #include <optional>
 #include <regex>
 
@@ -778,18 +779,22 @@ namespace Babylon::Polyfills::Internal
         {
             m_cpuWidth = width;
             m_cpuHeight = height;
-            m_cpuPixels.assign(static_cast<size_t>(width) * height * 4, 0);
-        }
-    }
 
-    void Context::BlitImageToCpu(const NativeCanvasImage& image, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh)
-    {
-        BlitPixelsToCpu(image.GetPixels(), image.GetWidth(), image.GetHeight(), sx, sy, sw, sh, dx, dy, dw, dh);
+            const uint64_t pixelCount = static_cast<uint64_t>(width) * height;
+            if (pixelCount > std::numeric_limits<size_t>::max() / 4)
+            {
+                // Leave the mirror empty; drawImage and getImageData both no-op safely on it.
+                m_cpuPixels.clear();
+                return;
+            }
+
+            m_cpuPixels.assign(static_cast<size_t>(pixelCount) * 4, 0);
+        }
     }
 
     void Context::BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh)
     {
-        if (src == nullptr || dw == 0 || dh == 0)
+        if (src == nullptr || dw == 0 || dh == 0 || sw == 0 || sh == 0 || srcWidth == 0 || srcHeight == 0)
         {
             return;
         }
@@ -800,39 +805,37 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        for (uint32_t j = 0; j < dh; ++j)
+        // Clamp the iteration range to the destination rect's intersection with the canvas up
+        // front. The destination size is caller-controlled (and reaches us as an unsigned value,
+        // so a negative width wraps to ~4e9), and iterating the full rect just to reject every
+        // pixel would stall the JS thread. int64_t keeps dx/dy + dw/dh from overflowing.
+        const int64_t iBegin = std::max<int64_t>(0, -static_cast<int64_t>(dx));
+        const int64_t iEnd = std::min<int64_t>(dw, static_cast<int64_t>(m_cpuWidth) - dx);
+        const int64_t jBegin = std::max<int64_t>(0, -static_cast<int64_t>(dy));
+        const int64_t jEnd = std::min<int64_t>(dh, static_cast<int64_t>(m_cpuHeight) - dy);
+
+        for (int64_t j = jBegin; j < jEnd; ++j)
         {
-            const int32_t destY = dy + static_cast<int32_t>(j);
-            if (destY < 0 || destY >= static_cast<int32_t>(m_cpuHeight))
-            {
-                continue;
-            }
-
             // Nearest-neighbor sample of the source row (exact when dh == sh).
-            const int32_t srcYRel = static_cast<int32_t>(static_cast<uint64_t>(j) * sh / dh);
-            const int32_t srcY = sy + srcYRel;
-            if (srcY < 0 || srcY >= static_cast<int32_t>(srcHeight))
+            const int64_t srcY = sy + static_cast<int64_t>(j) * sh / dh;
+            if (srcY < 0 || srcY >= static_cast<int64_t>(srcHeight))
             {
                 continue;
             }
 
-            for (uint32_t i = 0; i < dw; ++i)
+            const size_t destRow = static_cast<size_t>(dy + j) * m_cpuWidth;
+            const size_t srcRow = static_cast<size_t>(srcY) * srcWidth;
+
+            for (int64_t i = iBegin; i < iEnd; ++i)
             {
-                const int32_t destX = dx + static_cast<int32_t>(i);
-                if (destX < 0 || destX >= static_cast<int32_t>(m_cpuWidth))
+                const int64_t srcX = sx + static_cast<int64_t>(i) * sw / dw;
+                if (srcX < 0 || srcX >= static_cast<int64_t>(srcWidth))
                 {
                     continue;
                 }
 
-                const int32_t srcXRel = static_cast<int32_t>(static_cast<uint64_t>(i) * sw / dw);
-                const int32_t srcX = sx + srcXRel;
-                if (srcX < 0 || srcX >= static_cast<int32_t>(srcWidth))
-                {
-                    continue;
-                }
-
-                const size_t srcIndex = (static_cast<size_t>(srcY) * srcWidth + srcX) * 4;
-                const size_t destIndex = (static_cast<size_t>(destY) * m_cpuWidth + destX) * 4;
+                const size_t srcIndex = (srcRow + static_cast<size_t>(srcX)) * 4;
+                const size_t destIndex = (destRow + static_cast<size_t>(dx + i)) * 4;
                 m_cpuPixels[destIndex + 0] = src[srcIndex + 0];
                 m_cpuPixels[destIndex + 1] = src[srcIndex + 1];
                 m_cpuPixels[destIndex + 2] = src[srcIndex + 2];
@@ -898,11 +901,32 @@ namespace Babylon::Polyfills::Internal
                 return;
             }
 
+            // Everything below is caller-supplied. bimg::imageConvert reads width*height*bpp bits
+            // from the source and writes width*height*4 bytes to the destination without knowing
+            // either buffer's real length, so validate both before handing it any pointers.
+            if (format >= bimg::TextureFormat::Count)
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap has an out-of-range pixel format.");
+            }
+
+            const uint64_t pixelCount = static_cast<uint64_t>(width) * height;
+            if (pixelCount > std::numeric_limits<size_t>::max() / 4)
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions are too large.");
+            }
+
+            const uint64_t requiredBits = static_cast<uint64_t>(data.ByteLength()) * 8;
+            const uint8_t bitsPerPixel = bimg::getBitsPerPixel(format);
+            if (bitsPerPixel == 0 || pixelCount > requiredBits / bitsPerPixel)
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap data is smaller than width*height for its format.");
+            }
+
             const uint8_t* srcBytes = data.Data();
-            std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4);
+            std::vector<uint8_t> rgba(static_cast<size_t>(pixelCount) * 4);
             if (format == bimg::TextureFormat::RGBA8)
             {
-                std::memcpy(rgba.data(), srcBytes, std::min<size_t>(rgba.size(), data.ByteLength()));
+                std::memcpy(rgba.data(), srcBytes, rgba.size());
             }
             else if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), rgba.data(), bimg::TextureFormat::RGBA8, srcBytes, format, width, height, 1))
             {
@@ -1017,10 +1041,22 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
     {
+        if (info.Length() < 4)
+        {
+            throw Napi::Error::New(info.Env(), "Context2D.getImageData: invalid number of parameters");
+        }
+
         const auto sx = info[0].As<Napi::Number>().Int32Value();
         const auto sy = info[1].As<Napi::Number>().Int32Value();
         const auto sw = info[2].As<Napi::Number>().Uint32Value();
         const auto sh = info[3].As<Napi::Number>().Uint32Value();
+
+        // The region is caller-supplied and backs a width*height*4 allocation, so reject sizes
+        // that would overflow size_t before ImageData tries to allocate them.
+        if (static_cast<uint64_t>(sw) * sh > std::numeric_limits<size_t>::max() / 4)
+        {
+            throw Napi::RangeError::New(info.Env(), "Context2D.getImageData: requested region is too large.");
+        }
 
         return ImageData::CreateInstance(info.Env(), this, sx, sy, sw, sh);
     }
