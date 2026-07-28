@@ -83,9 +83,12 @@ if(NAPI_BUILD_ABI)
             set(LINK_LIBRARIES ${LINK_LIBRARIES}
                 PUBLIC "${JSC_ANDROID_DIR}/jni/${ANDROID_ABI}/libjsc.so")
         elseif(APPLE)
-            find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
+            # Linker flag rather than find_library: find_library resolves to an
+            # absolute .tbd inside whichever SDK was active at configure time
+            # (iPhoneOS for an IOS build), which then cannot be linked into an
+            # iPhoneSimulator binary. The flag lets Xcode pick the right SDK.
             set(LINK_LIBRARIES ${LINK_LIBRARIES}
-                PUBLIC ${JAVASCRIPTCORE_LIBRARY})
+                PUBLIC "-framework JavaScriptCore")
         elseif(UNIX)
             set(LINK_LIBRARIES ${LINK_LIBRARIES}
                 PUBLIC ${JAVASCRIPTCORE_LIBRARY})

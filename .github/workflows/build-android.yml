@@ -32,6 +32,9 @@ jobs:
         with:
           tool-cache: false
           large-packages: false
+          # Must stay false: this would delete /usr/local/lib/android, i.e. the
+          # SDK the Gradle build and the emulator both need.
+          android: false
 
       - uses: actions/setup-java@v5
         with:
