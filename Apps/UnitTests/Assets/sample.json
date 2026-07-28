@@ -1,0 +1,8 @@
+{
+    "name": "fetch-polyfill-test",
+    "value": 42,
+    "nested": {
+        "enabled": true,
+        "items": [1, 2, 3]
+    }
+}

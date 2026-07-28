@@ -8,7 +8,7 @@ Click `Configure...` and in the target discovery settings add an entry `localhos
 ![Target discovery settings](Images/DevTools/chrome-targets.png)
 
 ## Setting Up To Debug
-Make sure to change the line in [tests.js](https://github.com/BabylonJS/JsRuntimeHost/blob/f487c7b3f89b407e95a53543a06a34f1a1fbb860/Tests/UnitTests/Scripts/tests.js#L2) to true, or else the DevTools won't have enough time to attach to the JavaScript Instance. If you are debugging your own script, you can also use [setTimeout()](https://developer.mozilla.org/en-US/docs/web/api/settimeout) to delay the execution of the code you are trying to debug while you wait to attach the debugger.
+Make sure to set `waitForDebugger` to `true` in [Tests.JsRuntime.cpp](../Apps/UnitTests/Source/Tests.JsRuntime.cpp), or else the DevTools won't have enough time to attach to the JavaScript Instance. If you are debugging your own script, you can also use [setTimeout()](https://developer.mozilla.org/en-US/docs/web/api/settimeout) to delay the execution of the code you are trying to debug while you wait to attach the debugger.
 
 ## Debugging on Android/Emulator
 

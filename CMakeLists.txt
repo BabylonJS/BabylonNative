@@ -90,6 +90,18 @@ option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_L
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
 
+# Apps/UnitTests is built everywhere. Its JsRuntimeHost half is pure JavaScript
+# runtime coverage and needs nothing but a JS engine, so it runs on every
+# platform. Its Babylon Native half drives a real graphics device through a
+# platform window, which only exists on the desktop hosts, so those tests are
+# opt-out there and unavailable elsewhere.
+if((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE))
+    set(BABYLON_NATIVE_UNIT_TESTS_GRAPHICS_DEFAULT ON)
+else()
+    set(BABYLON_NATIVE_UNIT_TESTS_GRAPHICS_DEFAULT OFF)
+endif()
+option(BABYLON_NATIVE_UNIT_TESTS_GRAPHICS "Include the Babylon Native graphics tests in the UnitTests app." ${BABYLON_NATIVE_UNIT_TESTS_GRAPHICS_DEFAULT})
+
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
 
@@ -335,6 +347,15 @@ elseif(ANDROID)
     set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for Node-API")
 elseif(UNIX)
     set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for Node-API")
+endif()
+
+# Apps/UnitTests drives arcana's blocking queue deterministically to reproduce
+# shutdown races (see AppRuntime.DestroyDoesNotDeadlock). The hook lives inside
+# arcana's header-only queue, so it has to be enabled for *every* translation
+# unit that instantiates one -- notably Core/AppRuntime -- not just the test
+# target, otherwise the test observes a queue that never calls the hook.
+if(BABYLON_NATIVE_BUILD_APPS OR JSRUNTIMEHOST_TESTS)
+    add_compile_definitions(ARCANA_TEST_HOOKS)
 endif()
 
 add_subdirectory(Dependencies)

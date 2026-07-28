@@ -19,10 +19,19 @@ env:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ inputs.runs-on == 'ubuntu-latest' && 90 || 45 }}
     steps:
       - uses: actions/checkout@v5
 
+      # The Hermes host-compiler bootstrap, four ABIs of NDK output and an
+      # emulator image together fill the default hosted runner disk; reclaim the
+      # unused toolchains before anything is downloaded.
+      - name: Free disk space
+        if: inputs.js-engine == 'Hermes' && runner.os == 'Linux'
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          large-packages: false
 
       - uses: actions/setup-java@v5
         with:
@@ -48,3 +57,53 @@ jobs:
             -PARM64Only \
             -PNDK_VERSION=${{ env.NDK_VERSION }} \
             -PSANITIZERS=OFF
+
+      # reactivecircus/android-emulator-runner needs /dev/kvm to be writable by
+      # the runner user; the hosted Ubuntu image ships it root-only. macOS
+      # runners have no KVM, so the emulator run is Linux only.
+      - name: Enable KVM group permissions
+        if: runner.os == 'Linux'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Apps/UnitTests on the emulator. This covers the JsRuntimeHost suites
+      # only: the Babylon Native graphics suites need a desktop window and
+      # graphics device, so BABYLON_NATIVE_UNIT_TESTS_GRAPHICS is off here.
+      - name: Run UnitTests on the emulator
+        if: runner.os == 'Linux'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -no-boot-anim -no-audio
+          disable-animations: true
+          working-directory: Apps/UnitTests/Android
+          script: |
+            chmod +x gradlew
+            ./gradlew connectedAndroidTest \
+              -PabiFilters=x86_64 \
+              -PjsEngine=${{ inputs.js-engine }} \
+              -PNDK_VERSION=${{ env.NDK_VERSION }}
+
+      - name: Dump UnitTests results
+        if: always() && runner.os == 'Linux'
+        working-directory: Apps/UnitTests/Android
+        run: |
+          for f in app/build/outputs/androidTest-results/connected/**/*.xml; do
+            [ -e "$f" ] && echo "=== $f ===" && cat "$f"
+          done
+
+      - name: Upload UnitTests report
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-unittests-${{ inputs.js-engine }}-${{ inputs.runs-on }}
+          path: |
+            Apps/UnitTests/Android/app/build/reports/androidTests/**
+            Apps/UnitTests/Android/app/build/outputs/androidTest-results/**
+          if-no-files-found: ignore

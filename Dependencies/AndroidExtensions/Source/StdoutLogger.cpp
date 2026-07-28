@@ -92,17 +92,19 @@ namespace android::StdoutLogger
 
         g_started = false;
 
+        // Only the write ends are owned here. Closing them makes getline() in
+        // the reader threads return -1, so each thread breaks out of its loop
+        // and fclose()s its own stream -- which is what closes the read end.
+        // Closing the read end here as well would be a double close: fdsan
+        // tracks it as owned by the thread's FILE* and aborts the process
+        // ("attempted to close file descriptor N, ... actually owned by FILE*").
         if (fd_stdout[1] != -1)
         {
             close(fd_stdout[1]);
             fd_stdout[1] = -1;
         }
 
-        if (fd_stdout[0] != -1)
-        {
-            close(fd_stdout[0]);
-            fd_stdout[0] = -1;
-        }
+        fd_stdout[0] = -1;
 
         if (fd_stderr[1] != -1)
         {
@@ -110,11 +112,7 @@ namespace android::StdoutLogger
             fd_stderr[1] = -1;
         }
 
-        if (fd_stderr[0] != -1)
-        {
-            close(fd_stderr[0]);
-            fd_stderr[0] = -1;
-        }
+        fd_stderr[0] = -1;
     }
 
     bool IsStarted()
