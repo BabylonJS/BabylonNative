@@ -167,6 +167,26 @@ if(NOT TARGET glslang)
     set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 endif()
 
+# Assigns an IDE folder to every target a dependency declares, including those in
+# nested directories. draco alone contributes ~25 internal object libraries; listing
+# them by name would silently go stale whenever the dependency reorganizes its build,
+# leaving targets ungrouped at the solution root.
+function(group_directory_targets DIR FOLDER_NAME)
+    get_property(_targets DIRECTORY "${DIR}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_target IN LISTS _targets)
+        # INTERFACE libraries have no build output and cannot carry a FOLDER.
+        get_target_property(_type ${_target} TYPE)
+        if(NOT _type STREQUAL "INTERFACE_LIBRARY")
+            set_property(TARGET ${_target} PROPERTY FOLDER "${FOLDER_NAME}")
+        endif()
+    endforeach()
+
+    get_property(_subdirs DIRECTORY "${DIR}" PROPERTY SUBDIRECTORIES)
+    foreach(_subdir IN LISTS _subdirs)
+        group_directory_targets("${_subdir}" "${FOLDER_NAME}")
+    endforeach()
+endfunction()
+
 # --------------------------------------------------
 # draco (mesh decompression, native replacement for the WASM decoder)
 # --------------------------------------------------
@@ -198,12 +218,8 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_s
         "${draco_BINARY_DIR}"
         "${CMAKE_BINARY_DIR}")
 
-    # Assign IDE folders for whichever draco targets exist.
-    foreach(_draco_target IN ITEMS draco draco_static)
-        if(TARGET ${_draco_target})
-            set_property(TARGET ${_draco_target} PROPERTY FOLDER Dependencies/draco)
-        endif()
-    endforeach()
+    # Assign IDE folders for every draco target, not just the combined library.
+    group_directory_targets("${draco_SOURCE_DIR}" Dependencies/draco)
 endif()
 
 # --------------------------------------------------
@@ -217,7 +233,7 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT AND NOT TARGET meshoptimizer)
 
     FetchContent_MakeAvailable_With_Message(meshoptimizer)
 
-    set_property(TARGET meshoptimizer PROPERTY FOLDER Dependencies/meshoptimizer)
+    group_directory_targets("${meshoptimizer_SOURCE_DIR}" Dependencies/meshoptimizer)
 endif()
 
 # --------------------------------------------------
