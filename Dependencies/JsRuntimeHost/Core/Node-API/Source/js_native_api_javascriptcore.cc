@@ -1547,7 +1547,12 @@ napi_status napi_typeof(napi_env env, napi_value value, napi_valuetype* result) 
     case kJSTypeSymbol: *result = napi_symbol; break;
     default:
       JSObjectRef object{ToJSObject(env, value)};
-      if (JSObjectIsFunction(env->context, object)) {
+      // Consult JSObjectIsConstructor in addition to JSObjectIsFunction: some JSC builds (e.g.
+      // libjavascriptcoregtk) report constructors created via JSObjectMakeConstructor -- such as
+      // node-addon-api DefineClass constructors -- as not-a-function, which would otherwise be
+      // classified as napi_object and make Napi IsFunction() reject otherwise-valid constructors
+      // (see issue #194).
+      if (JSObjectIsFunction(env->context, object) || JSObjectIsConstructor(env->context, object)) {
         *result = napi_function;
       } else {
         NativeInfo* info = NativeInfo::Get<NativeInfo>(object);

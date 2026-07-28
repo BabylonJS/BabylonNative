@@ -1235,6 +1235,101 @@ describe("URL", function () {
     });
 });
 
+// URL.createObjectURL / revokeObjectURL (blob: URL registry)
+describe("URL.createObjectURL", function () {
+    this.timeout(0);
+
+    it("mints a blob: URL for a Blob", function () {
+        const url = URL.createObjectURL(new Blob(["hello"], { type: "text/plain" }));
+        expect(url).to.be.a("string");
+        expect(url.indexOf("blob:")).to.equal(0);
+        URL.revokeObjectURL(url);
+    });
+
+    it("throws when createObjectURL is given a non-Blob", function () {
+        expect(() => URL.createObjectURL({} as any)).to.throw();
+        expect(() => URL.createObjectURL("not a blob" as any)).to.throw();
+    });
+
+    it("resolves a blob: URL through fetch (text + content-type)", async function () {
+        const url = URL.createObjectURL(new Blob(["hello blob"], { type: "text/plain" }));
+        const response = await fetch(url);
+        expect(response.ok).to.equal(true);
+        expect(response.status).to.equal(200);
+        expect(response.headers.get("content-type")).to.equal("text/plain");
+        expect(await response.text()).to.equal("hello blob");
+        URL.revokeObjectURL(url);
+    });
+
+    it("resolves binary blob bytes through fetch", async function () {
+        const bytes = new Uint8Array([1, 2, 3, 4, 250]);
+        const url = URL.createObjectURL(new Blob([bytes]));
+        const response = await fetch(url);
+        const buffer = new Uint8Array(await response.arrayBuffer());
+        expect(Array.from(buffer)).to.deep.equal([1, 2, 3, 4, 250]);
+        URL.revokeObjectURL(url);
+    });
+
+    it("resolves a blob: URL through XMLHttpRequest", async function () {
+        const url = URL.createObjectURL(new Blob(["xhr blob"], { type: "text/plain" }));
+        const xhr = await new Promise<XMLHttpRequest>((resolve) => {
+            const req = new XMLHttpRequest();
+            req.open("GET", url);
+            req.addEventListener("loadend", () => resolve(req));
+            req.send();
+        });
+        expect(xhr.status).to.equal(200);
+        expect(xhr.statusText).to.equal("OK");
+        expect(xhr.responseText).to.equal("xhr blob");
+        expect(xhr.getResponseHeader("content-type")).to.equal("text/plain");
+        URL.revokeObjectURL(url);
+    });
+
+    it("fetch rejects after the blob: URL is revoked", async function () {
+        const url = URL.createObjectURL(new Blob(["gone"]));
+        URL.revokeObjectURL(url);
+        let rejected = false;
+        try {
+            await fetch(url);
+        } catch (e) {
+            rejected = true;
+        }
+        expect(rejected).to.equal(true);
+    });
+
+    it("XMLHttpRequest reports status 0 and fires 'error' after revoke", async function () {
+        const url = URL.createObjectURL(new Blob(["gone"]));
+        URL.revokeObjectURL(url);
+        const result = await new Promise<{ status: number; errorFired: boolean }>((resolve) => {
+            const req = new XMLHttpRequest();
+            let errorFired = false;
+            req.addEventListener("error", () => { errorFired = true; });
+            req.addEventListener("loadend", () => resolve({ status: req.status, errorFired }));
+            req.open("GET", url);
+            req.send();
+        });
+        expect(result.status).to.equal(0);
+        expect(result.errorFired).to.equal(true);
+    });
+
+    it("XMLHttpRequest honors a revoke between open() and send()", async function () {
+        const url = URL.createObjectURL(new Blob(["late revoke"]));
+        const result = await new Promise<{ status: number; errorFired: boolean }>((resolve) => {
+            const req = new XMLHttpRequest();
+            let errorFired = false;
+            req.addEventListener("error", () => { errorFired = true; });
+            req.addEventListener("loadend", () => resolve({ status: req.status, errorFired }));
+            req.open("GET", url);
+            // Revoked after open() but before send(): the store is re-checked at send() time, so
+            // this must surface as a network error rather than serving stale bytes.
+            URL.revokeObjectURL(url);
+            req.send();
+        });
+        expect(result.status).to.equal(0);
+        expect(result.errorFired).to.equal(true);
+    });
+});
+
 // URLSearchParams
 describe("URLSearchParams", function () {
 

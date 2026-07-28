@@ -49,7 +49,7 @@ FetchContent_Declare(llhttp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(UrlLib
     GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-    GIT_TAG e86ffb34e77092266145497681efc74e0a920ffe
+    GIT_TAG 0c991337a1160ba7a2d062bf8e342d0a66f48dc9
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(quickjs-ng
     GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git

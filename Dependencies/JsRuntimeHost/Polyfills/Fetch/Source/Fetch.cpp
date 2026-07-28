@@ -79,13 +79,9 @@ namespace Babylon::Polyfills::Internal
         // when an error is thrown) -- in that case the rejection simply carries no synthetic frames.
         std::string CaptureCallSiteStack(Napi::Env env)
         {
-            // Detect the global Error constructor with IsUndefined()/IsNull() rather than
-            // IsFunction(): some JavaScriptCore/JSI builds classify constructor functions as
-            // typeof 'object', so napi_typeof reports napi_object and IsFunction() would
-            // incorrectly skip stack capture even though Error is callable (see the Blob check
-            // below for the same rationale). Error is always present, so this guard is defensive.
+            // Error is always present and callable; this guard is defensive.
             const Napi::Value errorCtor = env.Global().Get("Error");
-            if (errorCtor.IsUndefined() || errorCtor.IsNull())
+            if (!errorCtor.IsFunction())
             {
                 return {};
             }
@@ -305,12 +301,9 @@ namespace Babylon::Polyfills::Internal
                 Napi::Env env = info.Env();
                 const auto deferred = Napi::Promise::Deferred::New(env);
 
-                // Use IsUndefined()/IsNull() rather than IsFunction() to detect the Blob
-                // polyfill: some JavaScriptCore/JSI builds classify constructor functions as
-                // typeof 'object', so napi_typeof reports napi_object and IsFunction() would
-                // incorrectly reject even when the Blob polyfill is installed.
+                // Require the Blob polyfill to be installed.
                 const auto blobConstructor = env.Global().Get("Blob");
-                if (blobConstructor.IsUndefined() || blobConstructor.IsNull())
+                if (!blobConstructor.IsFunction())
                 {
                     deferred.Reject(Napi::Error::New(env, "fetch: Blob is not available in this environment").Value());
                     return deferred.Promise();

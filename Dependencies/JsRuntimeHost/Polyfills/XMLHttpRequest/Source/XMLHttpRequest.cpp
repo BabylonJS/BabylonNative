@@ -2,6 +2,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <arcana/tracing/trace_region.h>
+#include <cstring>
 #include <sstream>
 
 namespace Babylon::Polyfills::Internal
