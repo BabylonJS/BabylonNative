@@ -83,20 +83,17 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -no-boot-anim -no-audio
           disable-animations: true
           working-directory: Apps/UnitTests/Android
+          # NOTE: android-emulator-runner runs this script one line at a time
+          # through `sh -c`, so backslash line continuations do not work here.
           script: |
             chmod +x gradlew
-            ./gradlew connectedAndroidTest \
-              -PabiFilters=x86_64 \
-              -PjsEngine=${{ inputs.js-engine }} \
-              -PNDK_VERSION=${{ env.NDK_VERSION }}
+            ./gradlew connectedAndroidTest -PabiFilters=x86_64 -PjsEngine=${{ inputs.js-engine }} -PNDK_VERSION=${{ env.NDK_VERSION }}
 
       - name: Dump UnitTests results
         if: always() && runner.os == 'Linux'
         working-directory: Apps/UnitTests/Android
         run: |
-          for f in app/build/outputs/androidTest-results/connected/**/*.xml; do
-            [ -e "$f" ] && echo "=== $f ===" && cat "$f"
-          done
+          find app/build/outputs/androidTest-results/connected -name '*.xml' -print -exec cat {} \; || true
 
       - name: Upload UnitTests report
         if: always() && runner.os == 'Linux'
