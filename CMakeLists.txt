@@ -322,6 +322,21 @@ if(BABYLON_DEBUG_TRACE)
     add_compile_definitions(BABYLON_DEBUG_TRACE)
 endif()
 
+# Select the Node-API JavaScript engine before descending into Dependencies:
+# the engine determines which engine-specific dependencies (QuickJS, Hermes,
+# asio/llhttp for the V8 inspector) have to be made available there. The same
+# per-platform defaults are repeated in Core/Node-API/CMakeLists.txt so that
+# directory still works standalone; `set(... CACHE ...)` makes that a no-op.
+if(WIN32)
+    set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for Node-API")
+elseif(APPLE)
+    set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for Node-API")
+elseif(ANDROID)
+    set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for Node-API")
+elseif(UNIX)
+    set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for Node-API")
+endif()
+
 add_subdirectory(Dependencies)
 add_subdirectory(Core)
 add_subdirectory(Plugins)

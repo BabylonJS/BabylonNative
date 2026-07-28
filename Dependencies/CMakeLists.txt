@@ -57,6 +57,12 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
         set(BOOST_CONTEXT_IMPLEMENTATION "winfib" CACHE STRING "" FORCE)
     endif()
     FetchContent_MakeAvailable_With_Message(hermes)
+
+    # FetchContent only defines `hermes_SOURCE_DIR` in this directory scope, but
+    # Core/Node-API needs it to reach Hermes' non-installed `API/napi` headers
+    # (upstream JsRuntimeHost fetched Hermes from its own root, where the
+    # variable propagated down automatically).
+    set(hermes_SOURCE_DIR "${hermes_SOURCE_DIR}" CACHE INTERNAL "Hermes source directory")
 endif()
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
@@ -69,6 +75,10 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
     set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
     FetchContent_MakeAvailable_With_Message(llhttp)
     set_property(TARGET llhttp_static PROPERTY FOLDER Dependencies)
+
+    # Core/AppRuntime/V8Inspector consumes `${llhttp_SOURCE_DIR}/include`, which
+    # FetchContent only defines in this directory scope.
+    set(llhttp_SOURCE_DIR "${llhttp_SOURCE_DIR}" CACHE INTERNAL "llhttp source directory")
 endif()
 
 # --------------------------------------------------
