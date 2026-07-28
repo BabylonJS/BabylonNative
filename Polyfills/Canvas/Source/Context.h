@@ -149,6 +149,10 @@ namespace Babylon::Polyfills::Internal
         uint32_t m_cpuHeight{0};
         void EnsureCpuBuffer();
         void BlitImageToCpu(const NativeCanvasImage& image, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh);
+        // Core RGBA8 blit used by both the NativeCanvasImage and (plain) ImageBitmap drawImage paths.
+        void BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh);
+        // Shared drawImage body: draws the nanovg image (arity 3/5/9) and mirrors it to the CPU buffer.
+        void DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, const uint8_t* srcPixels, uint32_t srcWidth, uint32_t srcHeight);
 
         friend class Canvas;
     };

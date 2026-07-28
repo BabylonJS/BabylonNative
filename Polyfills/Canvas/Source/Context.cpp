@@ -32,6 +32,10 @@
 #include "LineCaps.h"
 #include "Gradient.h"
 
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+#include <bimg/bimg.h>
+#endif
+
 namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONTEXT_CONSTRUCTOR_NAME = "Context";
@@ -780,7 +784,11 @@ namespace Babylon::Polyfills::Internal
 
     void Context::BlitImageToCpu(const NativeCanvasImage& image, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh)
     {
-        const uint8_t* src = image.GetPixels();
+        BlitPixelsToCpu(image.GetPixels(), image.GetWidth(), image.GetHeight(), sx, sy, sw, sh, dx, dy, dw, dh);
+    }
+
+    void Context::BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh)
+    {
         if (src == nullptr || dw == 0 || dh == 0)
         {
             return;
@@ -791,9 +799,6 @@ namespace Babylon::Polyfills::Internal
         {
             return;
         }
-
-        const uint32_t srcWidth = image.GetWidth();
-        const uint32_t srcHeight = image.GetHeight();
 
         for (uint32_t j = 0; j < dh; ++j)
         {
@@ -873,7 +878,47 @@ namespace Babylon::Polyfills::Internal
 
     void Context::DrawImage(const Napi::CallbackInfo& info)
     {
-        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(info[0].As<Napi::Object>());
+        Napi::Object imageObj = info[0].As<Napi::Object>();
+
+        // NativeEngine.createImageBitmap() returns a plain object carrying the raw decoded pixels
+        // ({data, width, height, format}) rather than a wrapped NativeCanvasImage. Because Babylon
+        // Native sets forceBitmapOverHTMLImageElement, LoadImage delivers these bitmaps to drawImage
+        // (e.g. Mesh.applyDisplacementMap, height/flow maps). Unwrapping such a plain object as a
+        // NativeCanvasImage would dereference garbage and crash, so handle it explicitly by
+        // converting the pixels to RGBA8 and drawing/blitting them directly.
+        if (imageObj.Has("data") && imageObj.Get("data").IsTypedArray())
+        {
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+            const auto data = imageObj.Get("data").As<Napi::Uint8Array>();
+            const uint32_t width = imageObj.Get("width").As<Napi::Number>().Uint32Value();
+            const uint32_t height = imageObj.Get("height").As<Napi::Number>().Uint32Value();
+            const auto format = static_cast<bimg::TextureFormat::Enum>(imageObj.Get("format").As<Napi::Number>().Uint32Value());
+            if (width == 0 || height == 0)
+            {
+                return;
+            }
+
+            const uint8_t* srcBytes = data.Data();
+            std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4);
+            if (format == bimg::TextureFormat::RGBA8)
+            {
+                std::memcpy(rgba.data(), srcBytes, std::min<size_t>(rgba.size(), data.ByteLength()));
+            }
+            else if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), rgba.data(), bimg::TextureFormat::RGBA8, srcBytes, format, width, height, 1))
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: unsupported ImageBitmap pixel format.");
+            }
+
+            const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
+            DrawImageCommon(info, imageIndex, rgba.data(), width, height);
+            nvgDeleteImage(*m_nvg, imageIndex);
+            return;
+#else
+            throw Napi::Error::New(info.Env(), "drawImage: image loading disabled in this build.");
+#endif
+        }
+
+        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);
 
         int imageIndex{-1};
         const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
@@ -888,27 +933,33 @@ namespace Babylon::Polyfills::Internal
         }
         assert(imageIndex != -1);
 
+        DrawImageCommon(info, imageIndex, canvasImage->GetPixels(), canvasImage->GetWidth(), canvasImage->GetHeight());
+    }
+
+    void Context::DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, const uint8_t* srcPixels, uint32_t srcWidth, uint32_t srcHeight)
+    {
+        const auto imgWidth = static_cast<float>(srcWidth);
+        const auto imgHeight = static_cast<float>(srcHeight);
+
         if (info.Length() == 3)
         {
             const auto dx = static_cast<float>(info[1].As<Napi::Number>().Int32Value());
             const auto dy = static_cast<float>(info[2].As<Napi::Number>().Int32Value());
-            const auto width = static_cast<float>(canvasImage->GetWidth());
-            const auto height = static_cast<float>(canvasImage->GetHeight());
 
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, width, height, 0.f, imageIndex, 1.f);
+            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, imgWidth, imgHeight, 0.f, imageIndex, 1.f);
 
             if (!m_isClipped)
             {
                 nvgBeginPath(*m_nvg);
             }
 
-            nvgRect(*m_nvg, dx, dy, width, height);
+            nvgRect(*m_nvg, dx, dy, imgWidth, imgHeight);
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
 
-            BlitImageToCpu(*canvasImage, 0, 0, canvasImage->GetWidth(), canvasImage->GetHeight(),
-                static_cast<int32_t>(dx), static_cast<int32_t>(dy), canvasImage->GetWidth(), canvasImage->GetHeight());
+            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight,
+                static_cast<int32_t>(dx), static_cast<int32_t>(dy), srcWidth, srcHeight);
         }
         else if (info.Length() == 5)
         {
@@ -929,7 +980,7 @@ namespace Babylon::Polyfills::Internal
             SetFilterStack();
             nvgFill(*m_nvg);
 
-            BlitImageToCpu(*canvasImage, 0, 0, canvasImage->GetWidth(), canvasImage->GetHeight(),
+            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight,
                 static_cast<int32_t>(dx), static_cast<int32_t>(dy), static_cast<uint32_t>(dWidth), static_cast<uint32_t>(dHeight));
         }
         else if (info.Length() == 9)
@@ -942,8 +993,6 @@ namespace Babylon::Polyfills::Internal
             const auto dy = static_cast<float>(info[6].As<Napi::Number>().Int32Value());
             const auto dWidth = static_cast<float>(info[7].As<Napi::Number>().Uint32Value());
             const auto dHeight = static_cast<float>(info[8].As<Napi::Number>().Uint32Value());
-            const auto width = static_cast<float>(canvasImage->GetWidth());
-            const auto height = static_cast<float>(canvasImage->GetHeight());
 
             NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
 
@@ -957,7 +1006,7 @@ namespace Babylon::Polyfills::Internal
             SetFilterStack();
             nvgFill(*m_nvg);
 
-            BlitImageToCpu(*canvasImage, sx, sy, sWidth, sHeight,
+            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, sx, sy, sWidth, sHeight,
                 static_cast<int32_t>(dx), static_cast<int32_t>(dy), static_cast<uint32_t>(dWidth), static_cast<uint32_t>(dHeight));
         }
         else
