@@ -22,6 +22,8 @@
 #include <cstring>
 #include <array>
 #include <cmath>
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -137,11 +139,36 @@ namespace Babylon::Plugins::NativeDawn
             // resolve target and produces a fully transparent/black frame, while
             // the exact same graph is correct on real GPUs. Forcing resources to
             // be eagerly cleared at creation marks them initialized up-front and
-            // sidesteps the bad lazy clear. Scope it to CPU/software adapters so
-            // real GPUs are completely unaffected (no perf or behavior change).
+            // sidesteps the bad lazy clear. Scope it to software adapters so real
+            // GPUs are unaffected. Detection is deliberately broad: Dawn does not
+            // consistently report the CI WARP adapter as AdapterType::CPU, so we
+            // also match the Microsoft vendor id (0x1414) and WARP / "Basic
+            // Render Driver" device/description strings.
             wgpu::AdapterInfo adapterInfo{};
             g_state.adapter.GetInfo(&adapterInfo);
-            const bool isSoftwareAdapter = (adapterInfo.adapterType == wgpu::AdapterType::CPU);
+
+            auto svContains = [](wgpu::StringView sv, const char* needle) -> bool {
+                if (sv.data == nullptr || sv.length == 0) { return false; }
+                std::string s(sv.data, sv.length);
+                std::string n(needle);
+                std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                return s.find(n) != std::string::npos;
+            };
+            const bool isSoftwareAdapter =
+                adapterInfo.adapterType == wgpu::AdapterType::CPU ||
+                adapterInfo.vendorID == 0x1414 /* Microsoft (WARP) */ ||
+                svContains(adapterInfo.device, "warp") ||
+                svContains(adapterInfo.device, "basic render") ||
+                svContains(adapterInfo.description, "warp") ||
+                svContains(adapterInfo.description, "basic render");
+
+            std::fprintf(stderr, "[NativeDawn] adapter: device='%.*s' vendor='%.*s' vendorID=0x%x type=%d backend=%d software=%d\n",
+                static_cast<int>(adapterInfo.device.length), adapterInfo.device.data,
+                static_cast<int>(adapterInfo.vendor.length), adapterInfo.vendor.data,
+                static_cast<unsigned>(adapterInfo.vendorID),
+                static_cast<int>(adapterInfo.adapterType), static_cast<int>(adapterInfo.backendType),
+                isSoftwareAdapter ? 1 : 0);
 
             wgpu::DawnTogglesDescriptor toggles{};
             const char* kWarpWorkaround = "nonzero_clear_resources_on_creation_for_testing";
