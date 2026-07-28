@@ -717,10 +717,20 @@
                     ranCount++;
                     if (!status) {
                         failedCount++;
-                        // failTest() already triggered the debugger before
-                        // reaching this callback; no second `debugger` here.
-                        logRunSummary();
-                        TestUtils.exit(-1);
+                        // ENUMERATION MODE (temporary): continue-on-failure so a
+                        // single run surfaces every failing test index/title.
+                        // Grep this token in CI logs to collect the full failure
+                        // set, then restore fail-fast (exit(-1) here) once the
+                        // config exclusions are in place.
+                        console.log("INPROC_FAIL_IDX " + i + " " + currentTitle);
+                        i++;
+                        if (justOnce || i >= config.tests.length) {
+                            logRunSummary();
+                            engine.dispose();
+                            TestUtils.exit(failedCount > 0 ? -1 : 0);
+                            return;
+                        }
+                        setTimeout(function () { recursiveRunTest(i); }, 0);
                         return;
                     }
                     passedCount++;
@@ -728,7 +738,7 @@
                     if (justOnce || i >= config.tests.length) {
                         logRunSummary();
                         engine.dispose();
-                        TestUtils.exit(0);
+                        TestUtils.exit(failedCount > 0 ? -1 : 0);
                         return;
                     }
                     // Defer next iteration to avoid blowing Chakra's
