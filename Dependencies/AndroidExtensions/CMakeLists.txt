@@ -10,7 +10,7 @@ FetchContent_Declare(arcana.cpp
     GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 # --------------------------------------------------
 
-include(${CMAKE_SOURCE_DIR}/Scripts/extensions.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../../Scripts/extensions.cmake)
 
 project(AndroidExtensions)
 

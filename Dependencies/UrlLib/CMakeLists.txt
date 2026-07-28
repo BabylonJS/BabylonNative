@@ -10,9 +10,9 @@ FetchContent_Declare(arcana.cpp
     GIT_TAG        7c6be8aaa29effbc8ee1a2217388fb6e399150d2)
 # --------------------------------------------------
 
-include(${CMAKE_SOURCE_DIR}/Scripts/extensions.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../../Scripts/extensions.cmake)
 
-if(IOS AND PROJECT_IS_TOP_LEVEL)
+if(IOS AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(ios-cmake_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ios-cmake")
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")

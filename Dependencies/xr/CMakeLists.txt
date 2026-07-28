@@ -5,10 +5,10 @@ include(FetchContent)
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-include(${CMAKE_SOURCE_DIR}/Scripts/extensions.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../../Scripts/extensions.cmake)
 
-if(IOS)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
+if(IOS AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(ios-cmake_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ios-cmake")
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")

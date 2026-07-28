@@ -5,7 +5,7 @@ FetchContent_Declare(DirectXTK
     # compiled before DirectXTK's own CMakeLists.txt is processed (see below).
     SOURCE_SUBDIR DoNotConfigure)
 
-include(${CMAKE_SOURCE_DIR}/Scripts/extensions.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../../Scripts/extensions.cmake)
 
 set(BUILD_TESTING OFF)
 set(BUILD_TOOLS OFF)

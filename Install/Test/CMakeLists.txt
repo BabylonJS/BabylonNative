@@ -13,7 +13,7 @@ FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz")
 # --------------------------------------------------
 
-include(${CMAKE_SOURCE_DIR}/Scripts/extensions.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../../Scripts/extensions.cmake)
 
 project(TestInstall)
 
