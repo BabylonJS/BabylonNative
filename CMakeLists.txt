@@ -12,11 +12,13 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/Scripts/extensions.cmake)
 # --------------------------------------------------
 
 # EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
-# targets to the ALL_BUILD target.  We do this for all dependencies except
-# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
-# that are part of the Babylon Native contract. When adding dependencies using
-# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
-# targets that are part of the Babylon Native contract.
+# targets to the ALL_BUILD target. When adding dependencies using FetchContent,
+# add the EXCLUDE_FROM_ALL option except where there are top-level targets that
+# are part of the Babylon Native contract.
+#
+# Most dependencies are now vendored directly in the monorepo (see Dependencies/,
+# and Core/ + Polyfills/ for what used to be the JsRuntimeHost repository), so
+# only the remaining externally fetched ones are declared here.
 
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
@@ -26,8 +28,23 @@ FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG f693a3eb7fe72a5f19b975289afc4f437d373d9c
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(hermes
+    GIT_REPOSITORY https://github.com/facebook/hermes.git
+    GIT_TAG 348582831f50954895da8e80cc91112d51036c69
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(llhttp
+    URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz"
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(quickjs-ng
+    GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
+    GIT_TAG 93d3f7df465027f487ed37e175a0bc3012fee79e
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
@@ -39,7 +56,7 @@ FetchContent_Declare(googletest
 # like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(ios-cmake_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/ios-cmake")
     if(NOT BABYLON_NATIVE_BUILD_SOURCETREE)
         set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     endif()
@@ -106,6 +123,29 @@ option(BABYLON_NATIVE_POLYFILL_URL "Include Babylon Native Polyfill URL." ON)
 option(BABYLON_NATIVE_POLYFILL_WEBSOCKET "Include Babylon Native Polyfill WebSocket." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 
+# JsRuntimeHost (vendored under Core/ and Polyfills/ since the monorepo merge)
+option(JSRUNTIMEHOST_TESTS "Include JsRuntimeHost Tests." OFF)
+option(NAPI_BUILD_ABI "Build the ABI layer." ON)
+
+# JsRuntimeHost - Core
+option(JSRUNTIMEHOST_CORE_APPRUNTIME "Include JsRuntimeHost Core AppRuntime" ON)
+option(JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR "Include the V8 inspector protocol required to debug JavaScript with a V8 debugger." ON)
+option(JSRUNTIMEHOST_CORE_SCRIPTLOADER "Include JsRuntimeHost Core ScriptLoader" ON)
+
+# JsRuntimeHost - Polyfills
+option(JSRUNTIMEHOST_POLYFILL_CONSOLE "Include JsRuntimeHost Polyfill Console." ON)
+option(JSRUNTIMEHOST_POLYFILL_SCHEDULING "Include JsRuntimeHost Polyfill Scheduling." ON)
+option(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST "Include JsRuntimeHost Polyfill XMLHttpRequest." ON)
+option(JSRUNTIMEHOST_POLYFILL_FETCH "Include JsRuntimeHost Polyfill fetch." ON)
+option(JSRUNTIMEHOST_POLYFILL_URL "Include JsRuntimeHost Polyfill URL and URLSearchParams." ON)
+option(JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER "Include JsRuntimeHost Polyfills AbortController and AbortSignal." ON)
+option(JSRUNTIMEHOST_POLYFILL_WEBSOCKET "Include JsRuntimeHost Polyfill WebSocket." ON)
+option(JSRUNTIMEHOST_POLYFILL_BLOB "Include JsRuntimeHost Polyfill Blob." ON)
+option(JSRUNTIMEHOST_POLYFILL_FILE "Include JsRuntimeHost Polyfill File and FileReader." ON)
+option(JSRUNTIMEHOST_POLYFILL_PERFORMANCE "Include JsRuntimeHost Polyfill Performance." ON)
+option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDecoder." ON)
+option(JSRUNTIMEHOST_POLYFILL_TEXTENCODER "Include JsRuntimeHost Polyfill TextEncoder." ON)
+
 # Embedding
 option(BABYLON_NATIVE_EMBEDDING "Build the cross-platform Babylon::Embedding facade (Runtime + View)." ON)
 option(BABYLON_NATIVE_EMBEDDING_ANDROID "Build the Android JNI interop layer for Babylon::Embedding." OFF)
@@ -166,6 +206,22 @@ elseif(UNIX)
     set(BABYLON_NATIVE_PLATFORM "Unix")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+# JsRuntimeHost uses its own platform naming for its per-platform source files
+# (Core/AppRuntime/Source/AppRuntime_<platform>.*).
+if(ANDROID)
+    set(JSRUNTIMEHOST_PLATFORM "Android")
+elseif(IOS OR VISIONOS)
+    set(JSRUNTIMEHOST_PLATFORM "iOS")
+elseif(APPLE)
+    set(JSRUNTIMEHOST_PLATFORM "macOS")
+elseif(WINDOWS_STORE)
+    set(JSRUNTIMEHOST_PLATFORM "UWP")
+elseif(WIN32)
+    set(JSRUNTIMEHOST_PLATFORM "Win32")
+elseif(UNIX)
+    set(JSRUNTIMEHOST_PLATFORM "Unix")
 endif()
 
 if(APPLE)

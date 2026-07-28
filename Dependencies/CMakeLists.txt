@@ -4,13 +4,14 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # AndroidExtensions
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/AndroidExtensions)
 endif()
 
 # --------------------------------------------------
 # arcana.cpp
 # --------------------------------------------------
 FetchContent_MakeAvailable_With_Message(arcana.cpp)
+set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 
 # --------------------------------------------------
 # arcore-android-sdk
@@ -23,12 +24,52 @@ endif()
 # UrlLib
 # --------------------------------------------------
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/UrlLib)
+set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 
 # --------------------------------------------------
 # base-n
 # --------------------------------------------------
 add_library(base-n INTERFACE)
-target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
+target_include_directories(base-n INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/base-n/include")
+set_property(TARGET base-n PROPERTY FOLDER Dependencies)
+
+# --------------------------------------------------
+# JavaScript engine dependencies (JsRuntimeHost)
+# --------------------------------------------------
+# These are only needed for the non-default engines / the V8 inspector, so they
+# are still fetched on demand rather than vendored in the monorepo.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
+    option(QJS_BUILD_LIBC "Build QuickJS with libc support." ON)
+    FetchContent_MakeAvailable_With_Message(quickjs-ng)
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    set(HERMES_ENABLE_TOOLS ON CACHE BOOL "" FORCE)
+    set(HERMES_ENABLE_TEST_SUITE OFF CACHE BOOL "" FORCE)
+    set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL "" FORCE)
+    set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
+    set(HERMES_ENABLE_NAPI ON CACHE BOOL "" FORCE)
+    set(HERMES_SLOW_DEBUG OFF CACHE BOOL "" FORCE)
+    if(WIN32)
+        # The vendored Boost.Context assembler backend breaks under MSBuild; the
+        # Win32 Fiber implementation needs no assembler and is functionally
+        # equivalent for Hermes' usage.
+        set(BOOST_CONTEXT_IMPLEMENTATION "winfib" CACHE STRING "" FORCE)
+    endif()
+    FetchContent_MakeAvailable_With_Message(hermes)
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+    FetchContent_MakeAvailable_With_Message(asio)
+    add_library(asio INTERFACE)
+    target_include_directories(asio INTERFACE "${asio_SOURCE_DIR}/asio/include")
+    set_property(TARGET asio PROPERTY FOLDER Dependencies)
+
+    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+    set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
+    FetchContent_MakeAvailable_With_Message(llhttp)
+    set_property(TARGET llhttp_static PROPERTY FOLDER Dependencies)
+endif()
 
 # --------------------------------------------------
 # bgfx.cmake
