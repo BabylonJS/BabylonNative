@@ -125,6 +125,51 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground app:///Scripts/validation_native.js
 
+      # ── Babylon-Lite bundle smoke test (NativeDawn / WebGPU only) ──────────
+      # Clone Babylon-Lite, build its library, bundle the first scene (scene1 —
+      # BoomBox PBR) into a single self-contained IIFE, then run it through the
+      # Playground on the WebGPU/Dawn backend and pixel-compare the render
+      # against a committed reference (Apps/Playground/ReferenceImages/
+      # lite-scene1.png). This validates that a real Babylon-Lite consumer bundle
+      # renders correctly on NativeDawn. Runs BEFORE the visualization tests.
+      - name: Setup pnpm (NativeDawn Lite bundle)
+        if: ${{ inputs.nativedawn }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - name: Setup Node (NativeDawn Lite bundle)
+        if: ${{ inputs.nativedawn }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build Babylon-Lite scene1 bundle
+        if: ${{ inputs.nativedawn }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $lite = Join-Path $env:RUNNER_TEMP "babylon-lite"
+          git clone --depth 1 https://github.com/BabylonJS/Babylon-Lite.git $lite
+          Set-Location $lite
+          pnpm install --no-frozen-lockfile
+          pnpm build:lib
+          pnpm add -D -w esbuild
+          $dest = Join-Path $env:GITHUB_WORKSPACE "build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Scripts"
+          $script = Join-Path $env:GITHUB_WORKSPACE ".github/scripts/bundle-lite-scene.mjs"
+          node $script $lite scene1 (Join-Path $dest "scene1.playground.js")
+          # brdf-lut.png is fetched at runtime as "/brdf-lut.png" -> redirected
+          # to app:///Scripts/brdf-lut.png by the NativeDawn plugin.
+          Copy-Item (Join-Path $lite "lab/public/brdf-lut.png") (Join-Path $dest "brdf-lut.png") -Force
+          Get-Item (Join-Path $dest "scene1.playground.js") | Select-Object FullName, Length
+
+      - name: Babylon-Lite Bundle Test (NativeDawn)
+        if: ${{ inputs.nativedawn }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground --headless app:///Scripts/lite_native.js
+
       # NativeDawn (WebGPU) validation. Runs the same harness on the Dawn
       # backend; tests that don't yet render correctly on WebGPU are marked
       # `excludedGraphicsApis: ["WebGPU"]` in config.json and are skipped, so
