@@ -920,6 +920,15 @@ namespace Babylon::Polyfills::Internal
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions are too large.");
             }
 
+            // imageGetSize takes uint16_t extents, so anything above 65535 would be truncated and
+            // produce a size for a much smaller image. A 65537x1 RGBA8 bitmap would come back as
+            // 1x1 (4 bytes), a 4-byte buffer would pass the check below, and the RGBA8 memcpy
+            // would then read width*height*4 bytes from it. Reject what bimg cannot describe.
+            if (width > std::numeric_limits<uint16_t>::max() || height > std::numeric_limits<uint16_t>::max())
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions exceed the maximum supported size.");
+            }
+
             // Ask bimg for the size rather than computing width*height*bpp/8: block-compressed
             // formats round up to whole blocks and have a minimum block count, so a 1x1 BC1 image
             // still occupies one 8-byte block. The naive bits-per-pixel math would accept a
@@ -1078,10 +1087,44 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "Context2D.getImageData: invalid number of parameters");
         }
 
-        const auto sx = info[0].As<Napi::Number>().Int32Value();
-        const auto sy = info[1].As<Napi::Number>().Int32Value();
-        const auto sw = info[2].As<Napi::Number>().Uint32Value();
-        const auto sh = info[3].As<Napi::Number>().Uint32Value();
+        auto sx = info[0].As<Napi::Number>().Int32Value();
+        auto sy = info[1].As<Napi::Number>().Int32Value();
+        const auto swInt = info[2].As<Napi::Number>().Int32Value();
+        const auto shInt = info[3].As<Napi::Number>().Int32Value();
+
+        // Parse the extents as signed. Read via Uint32Value, a width of -1 wraps to 4294967295,
+        // and the size_t guard below does not catch it on 64-bit because 4294967295 * 1 is far
+        // below SIZE_MAX/4, so ImageData would go on to allocate roughly 17 GB.
+        //
+        // A negative extent is legal: the browser treats it as a rectangle running in the
+        // opposite direction and returns the normalized region, so fold the sign into the
+        // origin rather than rejecting it. INT32_MIN has no positive counterpart, so it is
+        // rejected outright instead of being negated into itself.
+        if (swInt == std::numeric_limits<int32_t>::min() || shInt == std::numeric_limits<int32_t>::min())
+        {
+            throw Napi::RangeError::New(info.Env(), "Context2D.getImageData: requested region is too large.");
+        }
+
+        uint32_t sw, sh;
+        if (swInt < 0)
+        {
+            sw = static_cast<uint32_t>(-swInt);
+            sx -= static_cast<int32_t>(sw);
+        }
+        else
+        {
+            sw = static_cast<uint32_t>(swInt);
+        }
+
+        if (shInt < 0)
+        {
+            sh = static_cast<uint32_t>(-shInt);
+            sy -= static_cast<int32_t>(sh);
+        }
+        else
+        {
+            sh = static_cast<uint32_t>(shInt);
+        }
 
         // The region is caller-supplied and backs a width*height*4 allocation, so reject sizes
         // that would overflow size_t before ImageData tries to allocate them.
