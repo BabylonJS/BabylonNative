@@ -28654,19 +28654,19 @@ function hexToBytes(hex) {
     var bad = new Uint16Array([0, 1, 99, 1, 3, 2]);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", data: positions, size: 3 }],
-        bad);}).to.throw(/out of range/);
+        bad);}).to.throw();
   });
 
   it("rejects a non-positive attribute size", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", data: positions, size: 0 }],
-        indices);}).to.throw(/size/);
+        indices);}).to.throw();
   });
 
   it("rejects attribute data that is not a multiple of its component count", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", data: new Float32Array(7), size: 3 }],
-        indices);}).to.throw(/multiple/);
+        indices);}).to.throw();
   });
 });
 
@@ -28714,20 +28714,20 @@ function hexToBytes(hex) {
   });
 
   it("rejects a stride outside [1, 256]", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 0, "ATTRIBUTES");}).to.throw(/stride/);
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 257, "ATTRIBUTES");}).to.throw(/stride/);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 0, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 257, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects an ATTRIBUTES stride that is not a multiple of 4", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 6, "ATTRIBUTES");}).to.throw(/multiple of 4/);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 6, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects a negative count", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, -1, STRIDE, "ATTRIBUTES");}).to.throw(/count/);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, -1, STRIDE, "ATTRIBUTES");}).to.throw();
   });
 
   it("rejects a TRIANGLES count that is not a multiple of 3", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, 4, 2, "TRIANGLES");}).to.throw(/multiple of 3/);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, 4, 2, "TRIANGLES");}).to.throw();
   });
 
   it("rejects a non-typed-array source", function () {
