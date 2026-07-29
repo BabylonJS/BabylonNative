@@ -351,24 +351,48 @@ function hexToBytes(hex: string): Uint8Array {
   ]);
   const indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
 
-  function encodeFixture() {
-    return _native.DracoCodec.Encode(
-      [{ kind: "position", dracoName: "POSITION", data: positions, size: 3 }],
-      indices);
-  }
+  // Encoded by the reference draco3dgltf 1.5.7 encoder (the same package Babylon.js takes
+  // its decoder from), standard edgebreaker, 14-bit position quantization. Using a fixture
+  // from the reference encoder rather than our own output pins this decoder to the upstream
+  // bitstream instead of to itself.
+  const ENCODED = hexToBytes(
+    "445241434f02020101000000040200020000011fff011101ff00000100090300000201010100030301300110030024824a0400000000ff3f00000000000000000000000000000000803f0e");
+  const POSITION_ATTRIBUTE_ID = 0;
+
+  // A 63-vertex UV sphere carrying POSITION, NORMAL and TEX_COORD, encoded by the same
+  // reference encoder with per-attribute quantization. The single-triangle-pair fixture
+  // above cannot exercise multi-attribute decoding or a non-degenerate edgebreaker
+  // traversal, which are what the glTF-bitstream-only build actually restricts.
+  //
+  // The expected counts below are what the reference draco3dgltf decoder reports for this
+  // exact buffer, not the pre-encode mesh: Draco merges points whose attributes all match
+  // and drops the degenerate triangles at the poles, so 63 vertices / 96 triangles going
+  // in becomes 62 vertices / 91 triangles coming out.
+  const SPHERE = hexToBytes(
+    "445241434f020201010000003a5b025b05001a5fd73e55ad3e55d5aa3e5555adaa3ea55455559faaaaaa565501ff0111" +
+    "ff02694af8058097a3755f03ff0000000000010100010009030000020101090300010301030902000202010101000f2b" +
+    "a106b907592e51030c141534f4dfc29a78ddaf7f80bed2ffff2bad28fedf4fcb03010030a7577c44104633030047e86d" +
+    "00c02304008f08128a7a003c181d05009108c20010d48301102848f888fa0fdc030090d02b010050db9591d895901000" +
+    "749b07f388bca224060084f91f49f408cd0c0088ee9110006466480800ba0d840110a80703405010e61175c5500b00ba" +
+    "12a805005dc92b23d12b9dc1b6fbb400e0113dc2480c8007eb8a9208c2b43d000009bd1200f8b4a016007425510b00bc" +
+    "525702009fd62b010050eb950040a8ed4a0040d48a5a00d095422d00f04aa0160078a54f0b00ba92570200a2b62b0180" +
+    "50eb0cb89da8ed3600e0110200490409030580074762004098a00000e1aef8881e8cb7010090b0ed018047f8081f1100" +
+    "80b0001075ea0e00cc0c00000000ff3f0000000080bf000080bf000080bf000000400e000301000b036904135103f109" +
+    "a106b9270e3ecb87a50ecead84ceeaa8bdde65000002dc7542d24fdbb29af35e882de5dab6c48d3dd1bbeceebaec45c6" +
+    "73b0bb6b772244eb067057e873dc4e3d72c57b21b6539244f9b4fe44ef620ee3d4cf9108b00b40340076034034000000" +
+    "44130dc01c19673cc72e4413bd8b398c673cc72e00d10010057042d294b60000fc0fd127b6b63cbd9acf91f1ffff9492" +
+    "621f37ff030000ff0100000a010101000d039532550a1b0901090109010a0eb9fbab2e93abef3f8700fcff00aceaff00" +
+    "60a0001a8220220800400800820822089a0000000000ff0f000000000000000000000000803f0c");
+  const SPHERE_VERTICES = 62;
+  const SPHERE_INDICES = 273;
 
   it("publishes the codec version it was built against", function () {
     expect(_native.DracoCodec.Version).to.be.a("string");
     expect(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
   });
 
-  it("round trips a mesh through encode and decode", function () {
-    const encoded = encodeFixture();
-    expect(encoded.data).to.be.instanceOf(Uint8Array);
-    expect(encoded.data.length).to.be.greaterThan(0);
-    expect(encoded.attributeIds).to.have.property("position");
-
-    const decoded = _native.DracoCodec.Decode(encoded.data, encoded.attributeIds);
+  it("decodes a mesh produced by the reference glTF encoder", function () {
+    const decoded = _native.DracoCodec.Decode(ENCODED, { position: POSITION_ATTRIBUTE_ID });
 
     expect(decoded.totalVertices).to.equal(positions.length / 3);
     expect(decoded.indices.length).to.equal(indices.length);
@@ -395,6 +419,45 @@ function hexToBytes(hex: string): Uint8Array {
     expect(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
   });
 
+  it("decodes without an explicit attribute id map", function () {
+    const decoded = _native.DracoCodec.Decode(ENCODED);
+    expect(decoded.totalVertices).to.equal(positions.length / 3);
+    expect(decoded.attributes.find((a: any) => a.kind === "position")).to.not.equal(undefined);
+  });
+
+  it("decodes a multi-attribute mesh", function () {
+    const decoded = _native.DracoCodec.Decode(SPHERE, { position: 0, normal: 1, uv: 2 });
+
+    expect(decoded.totalVertices).to.equal(SPHERE_VERTICES);
+    expect(decoded.indices.length).to.equal(SPHERE_INDICES);
+
+    const byKind: any = {};
+    for (const a of decoded.attributes) {
+      byKind[a.kind] = a;
+    }
+
+    expect(byKind.position.size).to.equal(3);
+    expect(byKind.normal.size).to.equal(3);
+    expect(byKind.uv.size).to.equal(2);
+
+    expect(byKind.position.data.length).to.equal(SPHERE_VERTICES * 3);
+    expect(byKind.normal.data.length).to.equal(SPHERE_VERTICES * 3);
+    expect(byKind.uv.data.length).to.equal(SPHERE_VERTICES * 2);
+
+    // Every index must address a real vertex, and the geometry must actually be the
+    // unit sphere that was encoded rather than plausible-looking noise.
+    for (let i = 0; i < decoded.indices.length; ++i) {
+      expect(decoded.indices[i]).to.be.lessThan(SPHERE_VERTICES);
+    }
+
+    for (let v = 0; v < SPHERE_VERTICES; ++v) {
+      const x = byKind.position.data[v * 3];
+      const y = byKind.position.data[v * 3 + 1];
+      const z = byKind.position.data[v * 3 + 2];
+      expect(Math.sqrt(x * x + y * y + z * z)).to.be.closeTo(1, 0.01);
+    }
+  });
+
   it("rejects malformed input", function () {
     const garbage = new Uint8Array(64);
     for (let i = 0; i < garbage.length; ++i) {
@@ -404,8 +467,7 @@ function hexToBytes(hex: string): Uint8Array {
   });
 
   it("rejects truncated input", function () {
-    const encoded = encodeFixture();
-    const truncated = encoded.data.slice(0, Math.floor(encoded.data.length / 2));
+    const truncated = ENCODED.slice(0, Math.floor(ENCODED.length / 2));
     expect(() => _native.DracoCodec.Decode(truncated)).to.throw();
   });
 
@@ -413,29 +475,8 @@ function hexToBytes(hex: string): Uint8Array {
     expect(() => _native.DracoCodec.Decode(new Uint8Array(0))).to.throw();
   });
 
-  it("rejects encoding without a position attribute", function () {
-    expect(() => _native.DracoCodec.Encode(
-      [{ kind: "normal", dracoName: "NORMAL", data: positions, size: 3 }],
-      indices)).to.throw();
-  });
-
-  it("rejects an index that is out of range for the vertex count", function () {
-    const bad = new Uint16Array([0, 1, 99, 1, 3, 2]);
-    expect(() => _native.DracoCodec.Encode(
-      [{ kind: "position", dracoName: "POSITION", data: positions, size: 3 }],
-      bad)).to.throw();
-  });
-
-  it("rejects a non-positive attribute size", function () {
-    expect(() => _native.DracoCodec.Encode(
-      [{ kind: "position", dracoName: "POSITION", data: positions, size: 0 }],
-      indices)).to.throw();
-  });
-
-  it("rejects attribute data that is not a multiple of its component count", function () {
-    expect(() => _native.DracoCodec.Encode(
-      [{ kind: "position", dracoName: "POSITION", data: new Float32Array(7), size: 3 }],
-      indices)).to.throw();
+  it("does not expose an encoder", function () {
+    expect(_native.DracoCodec.Encode).to.equal(undefined);
   });
 });
 
