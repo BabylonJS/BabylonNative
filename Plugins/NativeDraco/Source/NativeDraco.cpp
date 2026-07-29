@@ -28,8 +28,17 @@ namespace Babylon::Plugins
         // backend implements napi_get_property_names by calling Object.getOwnPropertyNames with
         // an argument count of zero, so the object under inspection is never passed and the call
         // evaluates getOwnPropertyNames(undefined), which throws. That makes GetPropertyNames
-        // unusable on JavaScriptCore, which is the default engine on macOS and iOS. Calling
-        // Object.keys through the global object goes through napi_call_function with the
+        // unusable on JavaScriptCore, which is the default engine on macOS and iOS.
+        //
+        // Supplying the missing argument would not be enough for a general fix: Node-API
+        // specifies the enumerable properties including the prototype chain (what V8 returns),
+        // whereas getOwnPropertyNames is own-only and includes non-enumerables. Chakra has the
+        // same enumerability mismatch and QuickJS omits the prototype chain, so this is a
+        // conformance gap across all three non-V8 backends.
+        // Tracked by https://github.com/BabylonJS/JsRuntimeHost/issues/216 - remove this helper
+        // in favour of GetPropertyNames() once that is fixed.
+        //
+        // Calling Object.keys through the global object goes through napi_call_function with the
         // argument actually supplied, and behaves identically on every engine for the plain data
         // objects this map is built from.
         Napi::Array OwnPropertyNames(Napi::Env env, const Napi::Object& object)
