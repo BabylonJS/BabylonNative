@@ -24,6 +24,23 @@ namespace Babylon::Plugins
 {
     namespace
     {
+        // Enumerates an object's own keys.
+        //
+        // Deliberately not Napi::Object::GetPropertyNames(). JsRuntimeHost's JavaScriptCore
+        // backend implements napi_get_property_names by calling Object.getOwnPropertyNames with
+        // an argument count of zero, so the object under inspection is never passed and the call
+        // evaluates getOwnPropertyNames(undefined), which throws. That makes GetPropertyNames
+        // unusable on JavaScriptCore, which is the default engine on macOS and iOS. Calling
+        // Object.keys through the global object goes through napi_call_function with the
+        // argument actually supplied, and behaves identically on every engine for the plain data
+        // objects this map is built from.
+        Napi::Array OwnPropertyNames(Napi::Env env, const Napi::Object& object)
+        {
+            const auto objectCtor = env.Global().Get("Object").As<Napi::Object>();
+            const auto keys = objectCtor.Get("keys").As<Napi::Function>();
+            return keys.Call(objectCtor, {object}).As<Napi::Array>();
+        }
+
         // De-interleaves and tightly packs one Draco attribute's per-point values into a
         // freshly allocated JS typed array of type T. This mirrors emscripten's
         // GetAttributeDataArrayForAllPoints, which Babylon's WASM decoder relies on.
@@ -153,7 +170,7 @@ namespace Babylon::Plugins
             {
                 // glTF path: caller provides a map of Babylon vertex-buffer kind -> Draco unique id.
                 const auto attributeIds = info[1].As<Napi::Object>();
-                const auto keys = attributeIds.GetPropertyNames();
+                const auto keys = OwnPropertyNames(env, attributeIds);
                 for (uint32_t i = 0; i < keys.Length(); ++i)
                 {
                     const auto kind = keys.Get(i).As<Napi::String>().Utf8Value();
