@@ -30,7 +30,7 @@ namespace Babylon::Polyfills::Internal
 
         // Copies a region of the CPU-side pixel mirror (populated by DrawImage) into dst (w*h*4 RGBA8 bytes).
         // Out-of-range pixels are written as zero. Used to implement getImageData without a GPU readback.
-        void ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst) const;
+        void ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst);
 
     private:
         void FillRect(const Napi::CallbackInfo&);

@@ -844,10 +844,15 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Context::ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst) const
+    void Context::ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst)
     {
         const size_t total = static_cast<size_t>(w) * h * 4;
         std::memset(dst, 0, total);
+
+        // Resync the mirror to the canvas first. Without this, a canvas resize followed by
+        // getImageData with no intervening drawImage would read the old buffer using the old
+        // dimensions and hand back stale pixels; EnsureCpuBuffer reallocates and zero-fills.
+        EnsureCpuBuffer();
         if (m_cpuPixels.empty())
         {
             return;
@@ -901,9 +906,9 @@ namespace Babylon::Polyfills::Internal
                 return;
             }
 
-            // Everything below is caller-supplied. bimg::imageConvert reads width*height*bpp bits
-            // from the source and writes width*height*4 bytes to the destination without knowing
-            // either buffer's real length, so validate both before handing it any pointers.
+            // Everything below is caller-supplied. bimg::imageConvert reads the source and writes
+            // width*height*4 bytes to the destination without knowing either buffer's real length,
+            // so validate both before handing it any pointers.
             if (format >= bimg::TextureFormat::Count)
             {
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap has an out-of-range pixel format.");
@@ -915,9 +920,12 @@ namespace Babylon::Polyfills::Internal
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions are too large.");
             }
 
-            const uint64_t requiredBits = static_cast<uint64_t>(data.ByteLength()) * 8;
-            const uint8_t bitsPerPixel = bimg::getBitsPerPixel(format);
-            if (bitsPerPixel == 0 || pixelCount > requiredBits / bitsPerPixel)
+            // Ask bimg for the size rather than computing width*height*bpp/8: block-compressed
+            // formats round up to whole blocks and have a minimum block count, so a 1x1 BC1 image
+            // still occupies one 8-byte block. The naive bits-per-pixel math would accept a
+            // 1-byte buffer for it and imageConvert would then read past the end.
+            const uint64_t requiredBytes = bimg::imageGetSize(nullptr, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, false, false, 1, format);
+            if (requiredBytes == 0 || data.ByteLength() < requiredBytes)
             {
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap data is smaller than width*height for its format.");
             }
@@ -987,10 +995,22 @@ namespace Babylon::Polyfills::Internal
         }
         else if (info.Length() == 5)
         {
-            const auto dx = static_cast<float>(info[1].As<Napi::Number>().Int32Value());
-            const auto dy = static_cast<float>(info[2].As<Napi::Number>().Int32Value());
-            const auto dWidth = static_cast<float>(info[3].As<Napi::Number>().Uint32Value());
-            const auto dHeight = static_cast<float>(info[4].As<Napi::Number>().Uint32Value());
+            const auto dxInt = info[1].As<Napi::Number>().Int32Value();
+            const auto dyInt = info[2].As<Napi::Number>().Int32Value();
+            const auto dWidthInt = info[3].As<Napi::Number>().Int32Value();
+            const auto dHeightInt = info[4].As<Napi::Number>().Int32Value();
+
+            // Parse the extents as signed: read via Uint32Value, a negative width wraps to ~4e9,
+            // which would queue an enormous nvgRect. A non-positive extent draws nothing.
+            if (dWidthInt <= 0 || dHeightInt <= 0)
+            {
+                return;
+            }
+
+            const auto dx = static_cast<float>(dxInt);
+            const auto dy = static_cast<float>(dyInt);
+            const auto dWidth = static_cast<float>(dWidthInt);
+            const auto dHeight = static_cast<float>(dHeightInt);
 
             NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
 
@@ -1005,18 +1025,30 @@ namespace Babylon::Polyfills::Internal
             nvgFill(*m_nvg);
 
             BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight,
-                static_cast<int32_t>(dx), static_cast<int32_t>(dy), static_cast<uint32_t>(dWidth), static_cast<uint32_t>(dHeight));
+                dxInt, dyInt, static_cast<uint32_t>(dWidthInt), static_cast<uint32_t>(dHeightInt));
         }
         else if (info.Length() == 9)
         {
             const auto sx = info[1].As<Napi::Number>().Int32Value();
             const auto sy = info[2].As<Napi::Number>().Int32Value();
-            const auto sWidth = info[3].As<Napi::Number>().Uint32Value();
-            const auto sHeight = info[4].As<Napi::Number>().Uint32Value();
-            const auto dx = static_cast<float>(info[5].As<Napi::Number>().Int32Value());
-            const auto dy = static_cast<float>(info[6].As<Napi::Number>().Int32Value());
-            const auto dWidth = static_cast<float>(info[7].As<Napi::Number>().Uint32Value());
-            const auto dHeight = static_cast<float>(info[8].As<Napi::Number>().Uint32Value());
+            const auto sWidthInt = info[3].As<Napi::Number>().Int32Value();
+            const auto sHeightInt = info[4].As<Napi::Number>().Int32Value();
+            const auto dxInt = info[5].As<Napi::Number>().Int32Value();
+            const auto dyInt = info[6].As<Napi::Number>().Int32Value();
+            const auto dWidthInt = info[7].As<Napi::Number>().Int32Value();
+            const auto dHeightInt = info[8].As<Napi::Number>().Int32Value();
+
+            if (sWidthInt <= 0 || sHeightInt <= 0 || dWidthInt <= 0 || dHeightInt <= 0)
+            {
+                return;
+            }
+
+            const auto sWidth = static_cast<uint32_t>(sWidthInt);
+            const auto sHeight = static_cast<uint32_t>(sHeightInt);
+            const auto dx = static_cast<float>(dxInt);
+            const auto dy = static_cast<float>(dyInt);
+            const auto dWidth = static_cast<float>(dWidthInt);
+            const auto dHeight = static_cast<float>(dHeightInt);
 
             NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
 
@@ -1031,7 +1063,7 @@ namespace Babylon::Polyfills::Internal
             nvgFill(*m_nvg);
 
             BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, sx, sy, sWidth, sHeight,
-                static_cast<int32_t>(dx), static_cast<int32_t>(dy), static_cast<uint32_t>(dWidth), static_cast<uint32_t>(dHeight));
+                dxInt, dyInt, static_cast<uint32_t>(dWidthInt), static_cast<uint32_t>(dHeightInt));
         }
         else
         {
