@@ -85,6 +85,18 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
+# NativeDraco and NativeMeshopt default to OFF, so link and exercise them only when the
+# consuming build opted in. CI turns both on for the jobs that run UnitTests.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)
+    target_link_libraries(UnitTests PRIVATE NativeDraco)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_DRACO)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT)
+    target_link_libraries(UnitTests PRIVATE NativeMeshopt)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_MESHOPT)
+endif()
+
 if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
 endif()

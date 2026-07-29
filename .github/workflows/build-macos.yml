@@ -47,6 +47,8 @@ jobs:
           cmake -G "${{ inputs.generator }}" -B build/macOS \
             ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
             -D BABYLON_DEBUG_TRACE=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
 

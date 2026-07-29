@@ -5,6 +5,14 @@
 
 #include <meshoptimizer.h>
 
+// bgfx vendors its own copy of meshoptimizer under bgfx/3rdparty/meshoptimizer. It is reached
+// as <meshoptimizer/src/meshoptimizer.h> rather than <meshoptimizer.h>, so it does not collide
+// today, but the guard in Dependencies/CMakeLists.txt skips our FetchContent when a target named
+// meshoptimizer already exists. If that ever resolves the other way we would decode with a
+// different codec version than the one this file was written against, which fails as silent
+// data corruption rather than a build break. Pin it.
+static_assert(MESHOPTIMIZER_VERSION == 220, "NativeMeshopt expects meshoptimizer 0.22; check the include path and revalidate the decode paths before bumping.");
+
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -14,6 +22,13 @@ namespace Babylon::Plugins
 {
     namespace
     {
+        // MESHOPTIMIZER_VERSION is an integer like 220 meaning 0.22. Render it the way the
+        // project versions its own releases so the JavaScript side can compare it directly
+        // against the version a stream was produced with.
+        std::string MeshoptVersionString()
+        {
+            return std::to_string(MESHOPTIMIZER_VERSION / 1000) + "." + std::to_string((MESHOPTIMIZER_VERSION / 10) % 100);
+        }
         // Native equivalent of MeshoptDecoder.decodeGltfBufferAsync:
         //   decodeMeshopt(source: Uint8Array, count, stride, mode, filter?) -> Uint8Array
         // where mode is "ATTRIBUTES" | "TRIANGLES" | "INDICES" and filter (optional)
@@ -141,6 +156,14 @@ namespace Babylon::Plugins::NativeMeshopt
     void BABYLON_API Initialize(Napi::Env env)
     {
         auto native{JsRuntime::NativeObject::GetFromJavaScript(env)};
-        native.Set("decodeMeshopt", Napi::Function::New(env, DecodeMeshopt, "decodeMeshopt"));
+
+        // Grouped for the same reasons as DracoCodec. Version matters more here: meshoptimizer
+        // stores its codec version in the first header byte and a decoder rejects streams newer
+        // than it understands, returning an error rather than degraded output. Publishing the
+        // version lets the JavaScript side fall back before it tries.
+        auto codec = Napi::Object::New(env);
+        codec.Set("Decode", Napi::Function::New(env, DecodeMeshopt, "Decode"));
+        codec.Set("Version", Napi::String::New(env, MeshoptVersionString()));
+        native.Set("MeshoptCodec", codec);
     }
 }

@@ -11,6 +11,7 @@
 #include <draco/point_cloud/point_cloud.h>
 #include <draco/attributes/geometry_attribute.h>
 #include <draco/attributes/point_attribute.h>
+#include <draco/core/draco_version.h>
 
 #include <cstdint>
 #include <cstring>
@@ -449,7 +450,11 @@ namespace Babylon::Plugins
                 throw Napi::Error::New(env, std::string("Draco: Failed to encode: ") + status.error_msg());
             }
 
-            auto encodedData = Napi::Int8Array::New(env, buffer.size());
+            // Uint8Array, not Int8Array: this is opaque binary output, and every other binary
+            // value crossing this boundary (MeshoptCodec.Decode, the ImageBitmap paths) is
+            // unsigned. Int8Array would surface every byte above 127 as a negative number to
+            // callers that index it directly.
+            auto encodedData = Napi::Uint8Array::New(env, buffer.size());
             std::memcpy(encodedData.Data(), buffer.data(), buffer.size());
 
             auto result = Napi::Object::New(env);
@@ -465,7 +470,16 @@ namespace Babylon::Plugins::NativeDraco
     void BABYLON_API Initialize(Napi::Env env)
     {
         auto native{JsRuntime::NativeObject::GetFromJavaScript(env)};
-        native.Set("decodeDracoMesh", Napi::Function::New(env, DecodeDracoMesh, "decodeDracoMesh"));
-        native.Set("encodeDracoMesh", Napi::Function::New(env, EncodeDracoMesh, "encodeDracoMesh"));
+
+        // Exposed as a single object rather than free functions so that the JavaScript side
+        // needs one feature probe instead of one per entry point, and so the object can carry
+        // the version of the codec built into this binary. A bare function name cannot express
+        // that, and Draco's bitstream is versioned, so a caller holding a stream this build is
+        // too old to read has no other way to find out ahead of time.
+        auto codec = Napi::Object::New(env);
+        codec.Set("Decode", Napi::Function::New(env, DecodeDracoMesh, "Decode"));
+        codec.Set("Encode", Napi::Function::New(env, EncodeDracoMesh, "Encode"));
+        codec.Set("Version", Napi::String::New(env, draco::kDracoVersion));
+        native.Set("DracoCodec", codec);
     }
 }

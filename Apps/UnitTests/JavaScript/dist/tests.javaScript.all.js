@@ -28559,6 +28559,182 @@ describe("NativeEncoding", function () {
   );
 });
 
+function hexToBytes(hex) {
+  var out = new Uint8Array(hex.length / 2);
+  for (var i = 0; i < out.length; ++i) {
+    out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return out;
+}
+
+// Both plugins default to OFF, so report them as skipped rather than silently passing
+// when the build did not opt in. CI enables both for the jobs that run UnitTests.
+(typeof _native.DracoCodec !== "undefined" ? describe : describe.skip)("NativeDraco", function () {
+  this.timeout(0);
+
+  // Two triangles sharing an edge. Values are exact halves so they survive the float32
+  // round trip bit-for-bit once quantization is disabled.
+  var positions = new Float32Array([
+  0, 0, 0,
+  1, 0, 0,
+  0, 1, 0,
+  1, 1, 0]
+  );
+  var indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
+
+  function encodeFixture() {
+    return _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", data: positions, size: 3 }],
+      indices);
+  }
+
+  it("publishes the codec version it was built against", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.be.a("string");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("round trips a mesh through encode and decode", function () {
+    var encoded = encodeFixture();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data).to.be.instanceOf(Uint8Array);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.attributeIds).to.have.property("position");
+
+    var decoded = _native.DracoCodec.Decode(encoded.data, encoded.attributeIds);
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+
+    // Draco reorders points, so compare the triangles as sets of resolved corner
+    // positions rather than assuming the original vertex order survived. Rounded to
+    // two decimals so the comparison tolerates quantization but still separates
+    // coordinates that are a whole unit apart.
+    var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute.size).to.equal(3);
+
+    var corner = function corner(buffer, i) {return (
+        [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
+        map(function (v) {return v.toFixed(2);}).
+        join(","));};
+
+    var expectedCorners = [];
+    var actualCorners = [];
+    for (var i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  });
+
+  it("rejects malformed input", function () {
+    var garbage = new Uint8Array(64);
+    for (var i = 0; i < garbage.length; ++i) {
+      garbage[i] = i * 37 & 0xff;
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(garbage);}).to.throw();
+  });
+
+  it("rejects truncated input", function () {
+    var encoded = encodeFixture();
+    var truncated = encoded.data.slice(0, Math.floor(encoded.data.length / 2));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(truncated);}).to.throw();
+  });
+
+  it("rejects an empty buffer", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(new Uint8Array(0));}).to.throw();
+  });
+
+  it("rejects encoding without a position attribute", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "normal", dracoName: "NORMAL", data: positions, size: 3 }],
+        indices);}).to.throw();
+  });
+
+  it("rejects an index that is out of range for the vertex count", function () {
+    var bad = new Uint16Array([0, 1, 99, 1, 3, 2]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", data: positions, size: 3 }],
+        bad);}).to.throw(/out of range/);
+  });
+
+  it("rejects a non-positive attribute size", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", data: positions, size: 0 }],
+        indices);}).to.throw(/size/);
+  });
+
+  it("rejects attribute data that is not a multiple of its component count", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", data: new Float32Array(7), size: 3 }],
+        indices);}).to.throw(/multiple/);
+  });
+});
+
+(typeof _native.MeshoptCodec !== "undefined" ? describe : describe.skip)("NativeMeshopt", function () {
+  this.timeout(0);
+
+  // Produced by the reference meshoptimizer 0.22 JavaScript encoder
+  // (MeshoptEncoder.encodeVertexBuffer) over 6 vertices of 16-byte stride, so this
+  // pins our native decoder against the upstream bitstream rather than against itself.
+  var ENCODED = hexToBytes(
+    "a00000013ff000007fffa0606001380000007e0000013ff0000020ff9070480130800000800000013ff0000080ff" +
+    "a0606001320000007e012aa000000000000000000000000000000000000000000000000000000000800000000000beadde");
+  var EXPECTED = hexToBytes(
+    "00000000000000800000000000beadde0000c03f000010c00000403f01beadde00004040000090c00000c03f02beadde" +
+    "000090400000d8c00000104003beadde0000c040000010c10000404004beadde0000f040000034c10000704005beadde");
+  var COUNT = 6;
+  var STRIDE = 16;
+
+  it("publishes the codec version it was built against", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.MeshoptCodec.Version).to.be.a("string");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.MeshoptCodec.Version).to.match(/^\d+\.\d+$/);
+  });
+
+  it("decodes a reference stream byte for byte", function () {
+    var decoded = _native.MeshoptCodec.Decode(ENCODED, COUNT, STRIDE, "ATTRIBUTES");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.length).to.equal(EXPECTED.length);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(decoded)).to.deep.equal(Array.from(EXPECTED));
+  });
+
+  it("rejects malformed input", function () {
+    var garbage = new Uint8Array(ENCODED.length);
+    for (var i = 0; i < garbage.length; ++i) {
+      garbage[i] = i * 37 & 0xff;
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(garbage, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
+
+  it("rejects truncated input", function () {
+    var truncated = ENCODED.slice(0, Math.floor(ENCODED.length / 2));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(truncated, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
+
+  it("rejects an unknown mode", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, STRIDE, "NOT_A_MODE");}).to.throw();
+  });
+
+  it("rejects a stride outside [1, 256]", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 0, "ATTRIBUTES");}).to.throw(/stride/);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 257, "ATTRIBUTES");}).to.throw(/stride/);
+  });
+
+  it("rejects an ATTRIBUTES stride that is not a multiple of 4", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 6, "ATTRIBUTES");}).to.throw(/multiple of 4/);
+  });
+
+  it("rejects a negative count", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, -1, STRIDE, "ATTRIBUTES");}).to.throw(/count/);
+  });
+
+  it("rejects a TRIANGLES count that is not a multiple of 3", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, 4, 2, "TRIANGLES");}).to.throw(/multiple of 3/);
+  });
+
+  it("rejects a non-typed-array source", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(null, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
+});
+
 mocha.run(function (failures) {
   // Test program will wait for code to be set before exiting
   if (failures > 0) {
