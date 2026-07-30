@@ -1031,44 +1031,57 @@ namespace
 
         if (gl->ncalls > 0)
         {
-            bgfx::allocTransientVertexBuffer(&gl->tvb, gl->nverts, s_nvgLayout);
+            // bgfx asserts inside allocTransientVertexBuffer when the request exceeds what
+            // remains of this frame's transient buffer, so the request must be checked
+            // *before* the call - inspecting gl->tvb afterwards (as this code used to) is
+            // unreachable in an assert-enabled build. A canvas painted with a very large
+            // number of ops, or several canvases sharing one frame, can legitimately exceed
+            // the budget.
+            //
+            // The draw calls below index the buffer using offsets recorded while the geometry
+            // was built, so a partial allocation cannot be rendered: every draw past the
+            // truncation point would read outside the buffer. That is not merely wrong
+            // visually - it makes the D3D11 debug layer emit an oversized diagnostic per draw
+            // call, which is slow enough to stall a validation run for the better part of an
+            // hour. Drop the whole flush instead, so the frame is simply missing this canvas
+            // content rather than issuing out-of-bounds draws or aborting the process.
+            const uint32_t availVerts = bgfx::getAvailTransientVertexBuffer(uint32_t(gl->nverts), s_nvgLayout);
+            const bool vertsFit = availVerts >= uint32_t(gl->nverts);
+            BX_WARN(vertsFit, "Canvas draw skipped: transient vertex buffer exhausted (%d requested, %u available)", gl->nverts, availVerts);
 
-            int allocated = gl->tvb.size/gl->tvb.stride;
-
-            if (allocated < gl->nverts)
+            if (vertsFit && gl->nverts > 0)
             {
-                gl->nverts = allocated;
-                BX_WARN(true, "Vertex number truncated due to transient vertex buffer overflow");
-            }
+                bgfx::allocTransientVertexBuffer(&gl->tvb, uint32_t(gl->nverts), s_nvgLayout);
 
-            bx::memCopy(gl->tvb.data, gl->verts, gl->nverts * sizeof(struct NVGvertex) );
+                bx::memCopy(gl->tvb.data, gl->verts, gl->nverts * sizeof(struct NVGvertex) );
 
-            for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
-            {
-                struct GLNVGcall* call = &gl->calls[ii];
-
-                const GLNVGblend* blend = &call->blendFunc;
-                gl->state = BGFX_STATE_BLEND_FUNC_SEPARATE(blend->srcRGB, blend->dstRGB, blend->srcAlpha, blend->dstAlpha)
-                    | BGFX_STATE_WRITE_RGB
-                    | BGFX_STATE_WRITE_A
-                    ;
-                switch (call->type)
+                for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
                 {
-                case GLNVG_FILL:
-                    glnvg__fill(gl, call);
-                    break;
+                    struct GLNVGcall* call = &gl->calls[ii];
 
-                case GLNVG_CONVEXFILL:
-                    glnvg__convexFill(gl, call);
-                    break;
+                    const GLNVGblend* blend = &call->blendFunc;
+                    gl->state = BGFX_STATE_BLEND_FUNC_SEPARATE(blend->srcRGB, blend->dstRGB, blend->srcAlpha, blend->dstAlpha)
+                        | BGFX_STATE_WRITE_RGB
+                        | BGFX_STATE_WRITE_A
+                        ;
+                    switch (call->type)
+                    {
+                    case GLNVG_FILL:
+                        glnvg__fill(gl, call);
+                        break;
 
-                case GLNVG_STROKE:
-                    glnvg__stroke(gl, call);
-                    break;
+                    case GLNVG_CONVEXFILL:
+                        glnvg__convexFill(gl, call);
+                        break;
 
-                case GLNVG_TRIANGLES:
-                    glnvg__triangles(gl, call);
-                    break;
+                    case GLNVG_STROKE:
+                        glnvg__stroke(gl, call);
+                        break;
+
+                    case GLNVG_TRIANGLES:
+                        glnvg__triangles(gl, call);
+                        break;
+                    }
                 }
             }
         }
