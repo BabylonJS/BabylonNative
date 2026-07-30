@@ -167,6 +167,82 @@ if(NOT TARGET glslang)
     set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 endif()
 
+# Assigns an IDE folder to every target a dependency declares, including those in
+# nested directories. draco alone contributes ~25 internal object libraries; listing
+# them by name would silently go stale whenever the dependency reorganizes its build,
+# leaving targets ungrouped at the solution root.
+function(group_directory_targets DIR FOLDER_NAME)
+    get_property(_targets DIRECTORY "${DIR}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_target IN LISTS _targets)
+        # INTERFACE libraries have no build output and cannot carry a FOLDER.
+        get_target_property(_type ${_target} TYPE)
+        if(NOT _type STREQUAL "INTERFACE_LIBRARY")
+            set_property(TARGET ${_target} PROPERTY FOLDER "${FOLDER_NAME}")
+        endif()
+    endforeach()
+
+    get_property(_subdirs DIRECTORY "${DIR}" PROPERTY SUBDIRECTORIES)
+    foreach(_subdir IN LISTS _subdirs)
+        group_directory_targets("${_subdir}" "${FOLDER_NAME}")
+    endforeach()
+endfunction()
+
+# --------------------------------------------------
+# draco (mesh decompression, native replacement for the WASM decoder)
+# --------------------------------------------------
+if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_static)
+    set(DRACO_TESTS OFF CACHE BOOL "" FORCE)
+    set(DRACO_INSTALL OFF CACHE BOOL "" FORCE)
+    set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
+    set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
+
+    # Build only the features in the Draco glTF bitstream spec: mesh compression, normal
+    # encoding and the standard edgebreaker. This is the same subset Babylon.js decodes
+    # with, since its default configuration loads draco_decoder_gltf.wasm rather than the
+    # full decoder, so it costs no capability the JavaScript path has. It drops point cloud
+    # compression, the predictive edgebreaker and pre-glTF backwards compatibility.
+    set(DRACO_GLTF_BITSTREAM ON CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable_With_Message(draco)
+
+    # The combined draco library target is named `draco` for MSVC and
+    # `draco_static` for other toolchains (static build); `draco::draco` aliases
+    # whichever exists.
+    if(TARGET draco)
+        set(_draco_lib draco)
+    else()
+        set(_draco_lib draco_static)
+    endif()
+
+    # draco adds its include paths as PRIVATE (see cmake/draco_targets.cmake
+    # draco_add_library), so linking draco::draco does not expose the draco/*
+    # headers to consumers. Re-export them as PUBLIC on the combined target.
+    # The generated draco/draco_features.h is emitted under CMAKE_BINARY_DIR
+    # (draco uses ${CMAKE_BINARY_DIR} as its generated-sources root).
+    target_include_directories(${_draco_lib} SYSTEM PUBLIC
+        "${draco_SOURCE_DIR}"
+        "${draco_SOURCE_DIR}/src"
+        "${draco_BINARY_DIR}"
+        "${CMAKE_BINARY_DIR}")
+
+    # Assign IDE folders for every draco target, not just the combined library.
+    group_directory_targets("${draco_SOURCE_DIR}" Dependencies/draco)
+endif()
+
+# --------------------------------------------------
+# meshoptimizer (mesh decompression, native replacement for the WASM decoder)
+# --------------------------------------------------
+if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT AND NOT TARGET meshoptimizer)
+    set(MESHOPT_BUILD_DEMO OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_BUILD_GLTFPACK OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_WERROR OFF CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable_With_Message(meshoptimizer)
+
+    group_directory_targets("${meshoptimizer_SOURCE_DIR}" Dependencies/meshoptimizer)
+endif()
+
 # --------------------------------------------------
 # googletest
 # --------------------------------------------------

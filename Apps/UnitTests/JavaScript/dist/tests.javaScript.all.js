@@ -28247,7 +28247,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var chai__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! chai */ "../../node_modules/chai/index.js");
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @babylonjs/materials */ "@babylonjs/core");
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_4__);
-
+function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];if (!t) {if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {t && (r = t);var _n = 0,F = function F() {};return { s: F, n: function n() {return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] };}, e: function e(r) {throw r;}, f: F };}throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");}var o,a = !0,u = !1;return { s: function s() {t = t.call(r);}, n: function n() {var r = t.next();return a = r.done, r;}, e: function e(r) {u = !0, o = r;}, f: function f() {try {a || null == t.return || t.return();} finally {if (u) throw o;}} };}function _unsupportedIterableToArray(r, a) {if (r) {if ("string" == typeof r) return _arrayLikeToArray(r, a);var t = {}.toString.call(r).slice(8, -1);return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;}}function _arrayLikeToArray(r, a) {(null == a || a > r.length) && (a = r.length);for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];return n;}
 
 
 
@@ -28557,6 +28557,223 @@ describe("NativeEncoding", function () {
             )));case 1:results = _context2.sent;_context2.next = 2;return (
             Promise.all(results.map(function (b) {return expectValidPNG(b);})));case 2:case "end":return _context2.stop();}}, _callee2);}))
   );
+});
+
+function hexToBytes(hex) {
+  var out = new Uint8Array(hex.length / 2);
+  for (var i = 0; i < out.length; ++i) {
+    out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return out;
+}
+
+// Both plugins default to OFF, so report them as skipped rather than silently passing
+// when the build did not opt in. CI enables both for the jobs that run UnitTests.
+(typeof _native.DracoCodec !== "undefined" ? describe : describe.skip)("NativeDraco", function () {
+  this.timeout(0);
+
+  // Two triangles sharing an edge. Values are exact halves so they survive the float32
+  // round trip bit-for-bit once quantization is disabled.
+  var positions = new Float32Array([
+  0, 0, 0,
+  1, 0, 0,
+  0, 1, 0,
+  1, 1, 0]
+  );
+  var indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
+
+  // Encoded by the reference draco3dgltf 1.5.7 encoder (the same package Babylon.js takes
+  // its decoder from), standard edgebreaker, 14-bit position quantization. Using a fixture
+  // from the reference encoder rather than our own output pins this decoder to the upstream
+  // bitstream instead of to itself.
+  var ENCODED = hexToBytes(
+    "445241434f02020101000000040200020000011fff011101ff00000100090300000201010100030301300110030024824a0400000000ff3f00000000000000000000000000000000803f0e");
+  var POSITION_ATTRIBUTE_ID = 0;
+
+  // A 63-vertex UV sphere carrying POSITION, NORMAL and TEX_COORD, encoded by the same
+  // reference encoder with per-attribute quantization. The single-triangle-pair fixture
+  // above cannot exercise multi-attribute decoding or a non-degenerate edgebreaker
+  // traversal, which are what the glTF-bitstream-only build actually restricts.
+  //
+  // The expected counts below are what the reference draco3dgltf decoder reports for this
+  // exact buffer, not the pre-encode mesh: Draco merges points whose attributes all match
+  // and drops the degenerate triangles at the poles, so 63 vertices / 96 triangles going
+  // in becomes 62 vertices / 91 triangles coming out.
+  var SPHERE = hexToBytes(
+    "445241434f020201010000003a5b025b05001a5fd73e55ad3e55d5aa3e5555adaa3ea55455559faaaaaa565501ff0111" +
+    "ff02694af8058097a3755f03ff0000000000010100010009030000020101090300010301030902000202010101000f2b" +
+    "a106b907592e51030c141534f4dfc29a78ddaf7f80bed2ffff2bad28fedf4fcb03010030a7577c44104633030047e86d" +
+    "00c02304008f08128a7a003c181d05009108c20010d48301102848f888fa0fdc030090d02b010050db9591d895901000" +
+    "749b07f388bca224060084f91f49f408cd0c0088ee9110006466480800ba0d840110a80703405010e61175c5500b00ba" +
+    "12a805005dc92b23d12b9dc1b6fbb400e0113dc2480c8007eb8a9208c2b43d000009bd1200f8b4a016007425510b00bc" +
+    "525702009fd62b010050eb950040a8ed4a0040d48a5a00d095422d00f04aa0160078a54f0b00ba92570200a2b62b0180" +
+    "50eb0cb89da8ed3600e0110200490409030580074762004098a00000e1aef8881e8cb7010090b0ed018047f8081f1100" +
+    "80b0001075ea0e00cc0c00000000ff3f0000000080bf000080bf000080bf000000400e000301000b036904135103f109" +
+    "a106b9270e3ecb87a50ecead84ceeaa8bdde65000002dc7542d24fdbb29af35e882de5dab6c48d3dd1bbeceebaec45c6" +
+    "73b0bb6b772244eb067057e873dc4e3d72c57b21b6539244f9b4fe44ef620ee3d4cf9108b00b40340076034034000000" +
+    "44130dc01c19673cc72e4413bd8b398c673cc72e00d10010057042d294b60000fc0fd127b6b63cbd9acf91f1ffff9492" +
+    "621f37ff030000ff0100000a010101000d039532550a1b0901090109010a0eb9fbab2e93abef3f8700fcff00aceaff00" +
+    "60a0001a8220220800400800820822089a0000000000ff0f000000000000000000000000803f0c");
+  var SPHERE_VERTICES = 62;
+  var SPHERE_INDICES = 273;
+
+  it("publishes the codec version it was built against", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.be.a("string");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("decodes a mesh produced by the reference glTF encoder", function () {
+    var decoded = _native.DracoCodec.Decode(ENCODED, { position: POSITION_ATTRIBUTE_ID });
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+
+    // Draco reorders points, so compare the triangles as sets of resolved corner
+    // positions rather than assuming the original vertex order survived. Rounded to
+    // two decimals so the comparison tolerates quantization but still separates
+    // coordinates that are a whole unit apart.
+    var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute.size).to.equal(3);
+
+    var corner = function corner(buffer, i) {return (
+        [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
+        map(function (v) {return v.toFixed(2);}).
+        join(","));};
+
+    var expectedCorners = [];
+    var actualCorners = [];
+    for (var i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  });
+
+  it("decodes without an explicit attribute id map", function () {
+    var decoded = _native.DracoCodec.Decode(ENCODED);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.attributes.find(function (a) {return a.kind === "position";})).to.not.equal(undefined);
+  });
+
+  it("decodes a multi-attribute mesh", function () {
+    var decoded = _native.DracoCodec.Decode(SPHERE, { position: 0, normal: 1, uv: 2 });
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(SPHERE_VERTICES);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(SPHERE_INDICES);
+
+    var byKind = {};var _iterator = _createForOfIteratorHelper(
+        decoded.attributes),_step;try {for (_iterator.s(); !(_step = _iterator.n()).done;) {var a = _step.value;
+        byKind[a.kind] = a;
+      }} catch (err) {_iterator.e(err);} finally {_iterator.f();}
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.position.size).to.equal(3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.normal.size).to.equal(3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.uv.size).to.equal(2);
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.position.data.length).to.equal(SPHERE_VERTICES * 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.normal.data.length).to.equal(SPHERE_VERTICES * 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(byKind.uv.data.length).to.equal(SPHERE_VERTICES * 2);
+
+    // Every index must address a real vertex, and the geometry must actually be the
+    // unit sphere that was encoded rather than plausible-looking noise.
+    for (var i = 0; i < decoded.indices.length; ++i) {
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices[i]).to.be.lessThan(SPHERE_VERTICES);
+    }
+
+    for (var v = 0; v < SPHERE_VERTICES; ++v) {
+      var x = byKind.position.data[v * 3];
+      var y = byKind.position.data[v * 3 + 1];
+      var z = byKind.position.data[v * 3 + 2];
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Math.sqrt(x * x + y * y + z * z)).to.be.closeTo(1, 0.01);
+    }
+  });
+
+  it("rejects malformed input", function () {
+    var garbage = new Uint8Array(64);
+    for (var i = 0; i < garbage.length; ++i) {
+      garbage[i] = i * 37 & 0xff;
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(garbage);}).to.throw();
+  });
+
+  it("rejects truncated input", function () {
+    var truncated = ENCODED.slice(0, Math.floor(ENCODED.length / 2));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(truncated);}).to.throw();
+  });
+
+  it("rejects an empty buffer", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(new Uint8Array(0));}).to.throw();
+  });
+
+  it("does not expose an encoder", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Encode).to.equal(undefined);
+  });
+});
+
+(typeof _native.MeshoptCodec !== "undefined" ? describe : describe.skip)("NativeMeshopt", function () {
+  this.timeout(0);
+
+  // Produced by the reference meshoptimizer 0.22 JavaScript encoder
+  // (MeshoptEncoder.encodeVertexBuffer) over 6 vertices of 16-byte stride, so this
+  // pins our native decoder against the upstream bitstream rather than against itself.
+  var ENCODED = hexToBytes(
+    "a00000013ff000007fffa0606001380000007e0000013ff0000020ff9070480130800000800000013ff0000080ff" +
+    "a0606001320000007e012aa000000000000000000000000000000000000000000000000000000000800000000000beadde");
+  var EXPECTED = hexToBytes(
+    "00000000000000800000000000beadde0000c03f000010c00000403f01beadde00004040000090c00000c03f02beadde" +
+    "000090400000d8c00000104003beadde0000c040000010c10000404004beadde0000f040000034c10000704005beadde");
+  var COUNT = 6;
+  var STRIDE = 16;
+
+  it("publishes the codec version it was built against", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.MeshoptCodec.Version).to.be.a("string");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.MeshoptCodec.Version).to.match(/^\d+\.\d+$/);
+  });
+
+  it("decodes a reference stream byte for byte", function () {
+    var decoded = _native.MeshoptCodec.Decode(ENCODED, COUNT, STRIDE, "ATTRIBUTES");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.length).to.equal(EXPECTED.length);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(decoded)).to.deep.equal(Array.from(EXPECTED));
+  });
+
+  it("rejects malformed input", function () {
+    var garbage = new Uint8Array(ENCODED.length);
+    for (var i = 0; i < garbage.length; ++i) {
+      garbage[i] = i * 37 & 0xff;
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(garbage, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
+
+  it("rejects truncated input", function () {
+    var truncated = ENCODED.slice(0, Math.floor(ENCODED.length / 2));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(truncated, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
+
+  it("rejects an unknown mode", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, STRIDE, "NOT_A_MODE");}).to.throw();
+  });
+
+  it("rejects a stride outside [1, 256]", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 0, "ATTRIBUTES");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 257, "ATTRIBUTES");}).to.throw();
+  });
+
+  it("rejects an ATTRIBUTES stride that is not a multiple of 4", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, COUNT, 6, "ATTRIBUTES");}).to.throw();
+  });
+
+  it("rejects a negative count", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, -1, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
+
+  it("rejects a TRIANGLES count that is not a multiple of 3", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(ENCODED, 4, 2, "TRIANGLES");}).to.throw();
+  });
+
+  it("rejects a non-typed-array source", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.MeshoptCodec.Decode(null, COUNT, STRIDE, "ATTRIBUTES");}).to.throw();
+  });
 });
 
 mocha.run(function (failures) {
