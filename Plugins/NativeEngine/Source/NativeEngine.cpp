@@ -2413,7 +2413,7 @@ namespace Babylon
         }
 
         // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
-        // base bgfx location below TexCoord3 was compiled to a per-vertex slot. bgfx can only feed
+        // real per-vertex bgfx location was compiled to a per-vertex slot. bgfx can only feed
         // per-instance data into i_data slots (the top TEXCOORD semantics), so route those attributes
         // to the correct i_data slot via a lazily-compiled program variant. The target location mirrors
         // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> i_data0 (TEXCOORD31),
@@ -2431,7 +2431,16 @@ namespace Babylon
                 for (const auto& instance : instances)
                 {
                     const bgfx::Attrib::Enum attrib = instance.first;
-                    if (attrib < bgfx::Attrib::TexCoord3)
+                    // "Real per-vertex slot" means Position..TexCoord15, i.e. < Attrib::Count. The
+                    // built-in instanced attributes (world0-3, splatIndex0-3, instanceColor) are
+                    // assigned synthetic locations at/above INSTANCE_DATA_FIRST_LOCATION - 4, which
+                    // is >= Attrib::Count, so they compare false here and are correctly skipped:
+                    // they already arrive as instance data.
+                    // The previous TexCoord3 boundary silently dropped generic instanced attributes
+                    // landing on TexCoord3..TexCoord15 (e.g. sprite cellInfo -> TexCoord3), leaving
+                    // them reading per-vertex garbage even though BuildInstanceDataBuffer had
+                    // already packed them into the instance data buffer.
+                    if (attrib < bgfx::Attrib::Count)
                     {
                         const size_t rank = count - 1 - ascendingIndex;
                         const uint32_t targetLocation = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - static_cast<uint32_t>(rank);

@@ -19,6 +19,12 @@ namespace Babylon::ShaderCompilerCommon
     // attribute table below).
     static_assert(Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION == static_cast<uint32_t>(bgfx::Attrib::TexCoord0));
     static_assert(Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION >= static_cast<uint32_t>(bgfx::Attrib::Count));
+    // The assert above only covers i_data0, the *highest* instance-data location. NativeEngine::Draw
+    // reroutes any attribute whose location is < bgfx::Attrib::Count, so what that guard actually
+    // depends on is the *lowest* built-in one (instanceColor, on i_data4). Were bgfx::Attrib::Count
+    // to grow past it, the assert above would still pass while instanceColor started being rerouted
+    // as if it were per-vertex data -- the same silent-garbage failure the guard exists to prevent.
+    static_assert(Babylon::Graphics::BUILTIN_INSTANCE_DATA_LAST_LOCATION >= static_cast<uint32_t>(bgfx::Attrib::Count));
 
     // Patching shader code to append clip space coordinates for the current rendering API.
     // Can be done with glslang shader traversal. Done with string patching for now.
