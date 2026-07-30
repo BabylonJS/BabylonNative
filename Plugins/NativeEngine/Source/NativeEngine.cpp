@@ -2413,7 +2413,7 @@ namespace Babylon
         }
 
         // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
-        // base bgfx location below TexCoord3 was compiled to a per-vertex slot. bgfx can only feed
+        // real per-vertex bgfx location was compiled to a per-vertex slot. bgfx can only feed
         // per-instance data into i_data slots (the top TEXCOORD semantics), so route those attributes
         // to the correct i_data slot via a lazily-compiled program variant. The target location mirrors
         // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> i_data0 (TEXCOORD31),
@@ -2431,12 +2431,11 @@ namespace Babylon
                 for (const auto& instance : instances)
                 {
                     const bgfx::Attrib::Enum attrib = instance.first;
-                    // Reroute every consumer-instanced attribute that was compiled to a real
-                    // per-vertex bgfx Attrib slot (Position..TexCoord15, i.e. < Attrib::Count).
-                    // The built-in instanced attributes (world0-3, splatIndex0-3, instanceColor)
-                    // are assigned synthetic locations at/above INSTANCE_DATA_FIRST_LOCATION - 4,
-                    // which is >= Attrib::Count, so they still compare false here and are correctly
-                    // skipped: they already arrive as instance data.
+                    // "Real per-vertex slot" means Position..TexCoord15, i.e. < Attrib::Count. The
+                    // built-in instanced attributes (world0-3, splatIndex0-3, instanceColor) are
+                    // assigned synthetic locations at/above INSTANCE_DATA_FIRST_LOCATION - 4, which
+                    // is >= Attrib::Count, so they compare false here and are correctly skipped:
+                    // they already arrive as instance data.
                     // The previous TexCoord3 boundary silently dropped generic instanced attributes
                     // landing on TexCoord3..TexCoord15 (e.g. sprite cellInfo -> TexCoord3), leaving
                     // them reading per-vertex garbage even though BuildInstanceDataBuffer had
