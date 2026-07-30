@@ -41,6 +41,7 @@ jobs:
       deployment-target: "26.0"
       xcode-version: "26.4"
       runs-on: macos-26
+      simulator: "iPhone 17"
 
   MacOS_QuickJS:
     uses: ./.github/workflows/build-macos.yml
