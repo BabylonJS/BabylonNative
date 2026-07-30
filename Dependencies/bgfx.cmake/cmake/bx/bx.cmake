@@ -99,54 +99,67 @@ target_compile_features(bx PUBLIC cxx_std_14)
 # (note: see bx\scripts\toolchain.lua for equivalent compiler flag)
 target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus /Zc:preprocessor>)
 
-# bx's x86_64 SIMD path (include/bx/inline/simd128_sse.inl) uses SSE4.1
-# intrinsics (e.g. _mm_round_ps / _mm_blendv_ps). bx's scripts/toolchain.lua
-# sets an SSE4.2 minspec for x86_64 targets, but this CMake build did not, so
-# GCC/Clang frontends (which do not enable SSE4.x by default) fail to compile
-# the SIMD path on x86_64 with "needs target feature sse4.1". Propagate the same
-# minspec here, PUBLIC so that bgfx / bimg (which compile bx SIMD headers into
-# their own translation units) inherit it. MSVC (cl.exe) permits the intrinsics
-# without an ISA flag and is left untouched.
+# bx's SIMD path (bx/inline/simd128_sse.inl) uses SSE4.1 intrinsics on x86, matching the
+# SSE4.2 minspec bx's own scripts/toolchain.lua sets. GCC-style drivers need the flag
+# explicitly or the build fails with "needs target feature sse4.1"; MSVC's cl.exe does not.
+# PUBLIC because bgfx/bimg compile bx's SIMD headers into their own translation units.
+set(BX_X86_ARCH_REGEX "^(x86_64|amd64|AMD64|x64|i[3-6]86|x86)$")
+
 if(APPLE)
-	# Apple builds may be universal (multiple slices compiled in a single
-	# invocation). Work out which slices are actually being built: an explicit
-	# CMAKE_OSX_ARCHITECTURES wins, otherwise it is a single-slice build for the
-	# host/system processor.
-	set(BX_APPLE_ARCHS ${CMAKE_OSX_ARCHITECTURES})
-	if(NOT BX_APPLE_ARCHS)
-		set(BX_APPLE_ARCHS ${CMAKE_SYSTEM_PROCESSOR})
+	# Apple builds can be universal and CMAKE_SYSTEM_PROCESSOR names only one slice (it is
+	# aarch64 for ios-cmake's SIMULATOR64COMBINED, which also builds x86_64), so the slice
+	# list has to come from CMAKE_OSX_ARCHITECTURES.
+	set(BX_TARGET_ARCHS ${CMAKE_OSX_ARCHITECTURES})
+	if(NOT BX_TARGET_ARCHS)
+		set(BX_TARGET_ARCHS ${CMAKE_SYSTEM_PROCESSOR})
 	endif()
-	list(LENGTH BX_APPLE_ARCHS BX_APPLE_ARCH_COUNT)
 
-	if(NOT "x86_64" IN_LIST BX_APPLE_ARCHS)
-		# No x86_64 slice, so no SSE minspec is needed. Note that -Xarch_x86_64
-		# must not be added here either: with no x86_64 slice to apply it to,
-		# clang reports it as an unused argument, which is fatal under -Werror.
-	elseif(BX_APPLE_ARCH_COUNT GREATER 1)
-		# Universal build; -Xarch_x86_64 scopes the flag to the x86_64 slice only,
-		# so the arm64 slice (which uses the NEON SIMD path) is unaffected.
-		#
-		# -Wno-unused-command-line-argument is required because CMAKE_OSX_ARCHITECTURES
-		# is only an upper bound on the slices that actually get compiled. Xcode picks
-		# the slices per SDK at build time, so an iOS build configured for "arm64;x86_64"
-		# (leetal/ios-cmake's OS64COMBINED, where x86_64 is the simulator slice) compiles
-		# only arm64 against the iphoneos SDK. clang then sees an -Xarch_x86_64 that
-		# applies to nothing and reports it as an unused argument, which is fatal for
-		# projects building with -Werror.
-		target_compile_options(
-			bx PUBLIC
-			"$<$<CXX_COMPILER_ID:AppleClang,Clang>:SHELL:-Xarch_x86_64 -msse4.2 -Wno-unused-command-line-argument>"
-		)
+	set(BX_X86_ARCHS ${BX_TARGET_ARCHS})
+	list(FILTER BX_X86_ARCHS INCLUDE REGEX "${BX_X86_ARCH_REGEX}")
+	list(LENGTH BX_TARGET_ARCHS BX_TARGET_ARCH_COUNT)
+
+	if(NOT BX_X86_ARCHS)
+		# Nothing to do. An -Xarch_ flag matching no slice is an unused argument, which is
+		# fatal for consumers building with -Werror.
+	elseif(BX_TARGET_ARCH_COUNT EQUAL 1)
+		target_compile_options(bx PUBLIC "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-msse4.2>")
 	else()
-		# Single-slice x86_64 build; the flag applies to the only slice there is.
-		target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:AppleClang,Clang>:-msse4.2>)
+		# -Xarch_ scopes the minspec to the x86 slices so arm64 keeps bx's NEON path.
+		# -Wno-unused-command-line-argument is required because one invocation need not cover
+		# every slice: Xcode compiles per slice, and ios-cmake's COMBINED platforms narrow the
+		# slice list further per SDK.
+		set(BX_SSE_MINSPEC "")
+		foreach(BX_X86_ARCH IN LISTS BX_X86_ARCHS)
+			list(APPEND BX_SSE_MINSPEC "-Xarch_${BX_X86_ARCH}" "-msse4.2")
+		endforeach()
+		list(APPEND BX_SSE_MINSPEC "-Wno-unused-command-line-argument")
+		list(JOIN BX_SSE_MINSPEC " " BX_SSE_MINSPEC)
+		target_compile_options(bx PUBLIC "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:SHELL:${BX_SSE_MINSPEC}>")
+		unset(BX_SSE_MINSPEC)
 	endif()
 
-	unset(BX_APPLE_ARCH_COUNT)
-	unset(BX_APPLE_ARCHS)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
-	target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:GNU,Clang>:-msse4.2>)
+	unset(BX_TARGET_ARCH_COUNT)
+	unset(BX_X86_ARCHS)
+	unset(BX_TARGET_ARCHS)
+elseif(NOT EMSCRIPTEN)
+	# CMAKE_CXX_COMPILER_ARCHITECTURE_ID is the target arch where the compiler reports it
+	# (MSVC/clang-cl); CMAKE_SYSTEM_PROCESSOR reports the host on Windows but is the target
+	# elsewhere (the Android NDK sets i686 for the x86 ABI). Emscripten reports x86 yet builds
+	# bx's wasm path, and emcc rejects -msse4.2 without -msimd128.
+	if(CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+		set(BX_TARGET_ARCH "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
+	else()
+		set(BX_TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+	endif()
+
+	if(BX_TARGET_ARCH MATCHES "${BX_X86_ARCH_REGEX}")
+		target_compile_options(bx PUBLIC "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-msse4.2>")
+	endif()
+
+	unset(BX_TARGET_ARCH)
 endif()
+
+unset(BX_X86_ARCH_REGEX)
 
 # Link against psapi on Windows
 if(WIN32)
