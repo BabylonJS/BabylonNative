@@ -115,21 +115,6 @@ if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP AND TARGET bimg_decode)
     target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_WEBP=0)
 endif()
 
-if(NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    # The new bx requires SSE4.2 on x86_64 (see bx scripts/toolchain.lua and
-    # include/bx/inline/simd128_sse.inl which uses _mm_round_ps / _mm_blendv_ps
-    # under "SSE4.1 - always available with SSE4.2 minspec"). bgfx.cmake does
-    # not propagate this flag, so add it explicitly for any GCC/Clang frontend on
-    # x86_64 (e.g. Linux, or Clang targeting Windows), none of which enable SSE4.x
-    # by default. MSVC (cl.exe) allows the intrinsics regardless and Apple Silicon
-    # is unaffected.
-    foreach(_bx_target IN ITEMS bx bgfx bimg bimg_decode bimg_encode)
-        if(TARGET ${_bx_target})
-            target_compile_options(${_bx_target} PRIVATE -msse4.2)
-        endif()
-    endforeach()
-endif()
-
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     # Use GLVND libraries for EGL support in bgfx
     set(OpenGL_GL_PREFERENCE GLVND)
