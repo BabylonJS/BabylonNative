@@ -47,6 +47,9 @@ jobs:
           elif [ "${{ inputs.napi-type }}" = "Hermes" ]; then
             SUFFIX="_Hermes"
             JS_DEFINE="-DNAPI_JAVASCRIPT_ENGINE=Hermes -DHERMES_ALLOW_BOOST_CONTEXT=0"
+          elif [ "${{ inputs.napi-type }}" = "QuickJS" ]; then
+            SUFFIX="_QuickJS"
+            JS_DEFINE="-DNAPI_JAVASCRIPT_ENGINE=QuickJS"
           fi
           echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
           echo "js_define=$JS_DEFINE" >> "$GITHUB_OUTPUT"
@@ -64,6 +67,8 @@ jobs:
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
             -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
             -D BABYLON_DEBUG_TRACE=ON ^
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
+            -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
             -D ENABLE_SANITIZERS=${{ steps.vars.outputs.sanitizer_flag }}
 
       - name: Build

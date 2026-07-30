@@ -71,6 +71,10 @@ namespace Babylon::Polyfills::Internal
         Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
         FrameBufferPool m_frameBufferPool;
 
+        // View id reserved by Context::Flush (right after this canvas' draws) for the
+        // canvas->texture blit issued from NativeEngine::CopyTexture. See Context::Flush.
+        void SetBlitViewId(bgfx::ViewId viewId) { m_blitViewId = viewId; }
+
         Graphics::DeviceContext& GetGraphicsContext()
         {
             return m_graphicsContext;
@@ -99,6 +103,7 @@ namespace Babylon::Polyfills::Internal
 
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
         std::unique_ptr<Graphics::Texture> m_texture{};
+        bgfx::ViewId m_blitViewId{UINT16_MAX};
         bool m_dirty{};
         bool m_clear{};
 

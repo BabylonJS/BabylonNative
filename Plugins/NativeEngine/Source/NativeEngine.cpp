@@ -1414,10 +1414,18 @@ namespace Babylon
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
         const auto textureDestination = data.ReadPointer<Graphics::Texture>();
 
-        // Use a view id greater than every view used so far so the blit runs after
-        // all canvas Flushes that may have produced the source content (bgfx
-        // processes blits in numeric view-id order). See #1683.
-        const bgfx::ViewId blitView = m_deviceContext.PeekNextViewId();
+        // The canvas->texture blit must run AFTER the canvas Flush that produced the source
+        // (bgfx processes blits in numeric view-id order) yet BEFORE the scene/backbuffer view
+        // that samples the destination, otherwise the consumer (e.g. a fullscreen GUI ADT layer)
+        // samples the previous frame's content — a one-frame latency. Context::Flush reserves a
+        // view id immediately after the canvas draws (before the scene render is recorded) and
+        // hands it to the source texture; use it here. Non-canvas sources have no reserved id, so
+        // fall back to PeekNextViewId() (a view greater than every view used so far). See #1683.
+        bgfx::ViewId blitView = textureSource->BlitViewId();
+        if (blitView == UINT16_MAX)
+        {
+            blitView = m_deviceContext.PeekNextViewId();
+        }
         encoder->blit(blitView, textureDestination->Handle(), 0, 0, textureSource->Handle());
     }
 
@@ -1489,8 +1497,21 @@ namespace Babylon
         const auto height{static_cast<uint16_t>(rawHeight)};
         const auto depth{static_cast<uint16_t>(rawDepth)};
 
-        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
-        texture->Create2D(width, height, generateMips, depth, Cast(format), flags);
+        // bgfx only allocates a true array texture (GL_TEXTURE_2D_ARRAY /
+        // D3D11 Texture2DArray) when numLayers > 1; a single-layer request
+        // collapses to a plain 2D texture (GL_TEXTURE_2D). The cross-compiled
+        // shaders always sample this resource as a 2D-array sampler
+        // (e.g. `sampler2DArray morphTargets`), so on OpenGL the single-layer
+        // 2D texture cannot bind to the array sampler and reads as zero --
+        // which, for texture-based morph targets with a single target,
+        // collapses all vertices to the origin and makes the mesh disappear.
+        // WebGL2 creates a real depth-1 TEXTURE_2D_ARRAY, so match that by
+        // allocating at least two layers; only the requested `depth` layers
+        // are ever uploaded or sampled (the shader indexes an explicit layer).
+        const uint16_t allocLayers{depth > 1 ? depth : static_cast<uint16_t>(2)};
+
+        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
+        texture->Create2D(width, height, generateMips, allocLayers, Cast(format), flags);
 
         if (!data.IsNull())
         {
@@ -2442,10 +2463,11 @@ namespace Babylon
         }
 
         // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
-        // base bgfx location below TexCoord3 was compiled to a per-vertex slot. bgfx can only feed
-        // per-instance data into i_data slots (TexCoord3..TexCoord7), so route those attributes to
-        // the correct i_data slot via a lazily-compiled program variant. The target location mirrors
-        // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> TexCoord7.
+        // real per-vertex bgfx location was compiled to a per-vertex slot. bgfx can only feed
+        // per-instance data into i_data slots (the top TEXCOORD semantics), so route those attributes
+        // to the correct i_data slot via a lazily-compiled program variant. The target location mirrors
+        // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> i_data0 (TEXCOORD31),
+        // i.e. INSTANCE_DATA_FIRST_LOCATION - rank.
         bgfx::ProgramHandle programHandle = m_currentProgram->Handle();
         if (m_boundVertexArray != nullptr)
         {
@@ -2459,10 +2481,19 @@ namespace Babylon
                 for (const auto& instance : instances)
                 {
                     const bgfx::Attrib::Enum attrib = instance.first;
-                    if (attrib < bgfx::Attrib::TexCoord3)
+                    // "Real per-vertex slot" means Position..TexCoord15, i.e. < Attrib::Count. The
+                    // built-in instanced attributes (world0-3, splatIndex0-3, instanceColor) are
+                    // assigned synthetic locations at/above INSTANCE_DATA_FIRST_LOCATION - 4, which
+                    // is >= Attrib::Count, so they compare false here and are correctly skipped:
+                    // they already arrive as instance data.
+                    // The previous TexCoord3 boundary silently dropped generic instanced attributes
+                    // landing on TexCoord3..TexCoord15 (e.g. sprite cellInfo -> TexCoord3), leaving
+                    // them reading per-vertex garbage even though BuildInstanceDataBuffer had
+                    // already packed them into the instance data buffer.
+                    if (attrib < bgfx::Attrib::Count)
                     {
                         const size_t rank = count - 1 - ascendingIndex;
-                        const uint32_t targetLocation = static_cast<uint32_t>(bgfx::Attrib::TexCoord7) - static_cast<uint32_t>(rank);
+                        const uint32_t targetLocation = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - static_cast<uint32_t>(rank);
                         for (const auto& [name, location] : attributeLocations)
                         {
                             if (location == static_cast<uint32_t>(attrib))

@@ -7,6 +7,8 @@
 #include <bgfx/bgfx.h>
 #include <bx/bx.h>
 
+#include <Babylon/Graphics/BgfxShaderInfo.h>
+
 #include <arcana/experimental/array.h>
 
 #include <gsl/gsl>
@@ -589,6 +591,28 @@ namespace Babylon::ShaderCompilerTraversers
                        strcmp(name, "splatIndex3") != 0;
             }
 
+            // The shader attribute location assigned to a varying must be stable regardless
+            // of how many attributes are instanced -- i.e. identical between the base program
+            // compile and any instanced variant. Vertex buffers are bound using the base
+            // program's attribute locations (VertexAttributeLocations), so if a variant
+            // reassigns a per-vertex attribute to a different location (as the instance/
+            // non-instance 2-pass ordering would), that buffer's data no longer reaches the
+            // shader and reads zero. The attribute's ordinal position in the name-sorted
+            // varying map is independent of the 2-pass ordering and therefore stable.
+            unsigned int GetStableLocation(const char* name) const
+            {
+                unsigned int index = 0;
+                for (const auto& entry : m_varyingNameToSymbol)
+                {
+                    if (entry.first == name)
+                    {
+                        break;
+                    }
+                    ++index;
+                }
+                return index;
+            }
+
             unsigned int m_genericAttributesRunningCount{0};
             const std::map<std::string, uint32_t>* m_instancedAttributes{nullptr};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
@@ -616,6 +640,14 @@ namespace Babylon::ShaderCompilerTraversers
                     "a_texcoord5",
                     "a_texcoord6",
                     "a_texcoord7",
+                    "a_texcoord8",
+                    "a_texcoord9",
+                    "a_texcoord10",
+                    "a_texcoord11",
+                    "a_texcoord12",
+                    "a_texcoord13",
+                    "a_texcoord14",
+                    "a_texcoord15",
                 };
             static_assert(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
             constexpr static const char* s_attribInstanceName[] =
@@ -625,6 +657,17 @@ namespace Babylon::ShaderCompilerTraversers
                     "i_data2",
                     "i_data3",
                     "i_data4",
+                    "i_data5",
+                    "i_data6",
+                    "i_data7",
+                    "i_data8",
+                    "i_data9",
+                    "i_data10",
+                    "i_data11",
+                    "i_data12",
+                    "i_data13",
+                    "i_data14",
+                    "i_data15",
                 };
         };
 
@@ -662,28 +705,27 @@ namespace Babylon::ShaderCompilerTraversers
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (TEXCOORD7 ==
-                    // i_data0, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
+                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
-                    // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD7),
+                    // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD31),
                     // so the first instance attribute gets the highest i_data index.
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
@@ -748,26 +790,25 @@ namespace Babylon::ShaderCompilerTraversers
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
 
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (TEXCOORD7 ==
-                    // i_data0, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
+                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
@@ -801,12 +842,13 @@ namespace Babylon::ShaderCompilerTraversers
                 // Consumer-declared instanced attributes with no built-in mapping (e.g. the
                 // fluid renderer's `position` or an instanced `color`) are routed to the bgfx
                 // per-instance i_data location supplied by the caller. That location is derived
-                // from the draw-time instance packing order (TEXCOORD7 == i_data0, descending),
-                // so per-instance data reaches the shader instead of the per-vertex input.
+                // from the draw-time instance packing order (INSTANCE_DATA_FIRST_LOCATION == i_data0
+                // == TEXCOORD31, descending), so per-instance data reaches the shader instead of the
+                // per-vertex input.
                 if (IsGenericInstance(name))
                 {
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
                     return {location, s_attribInstanceName[slot]};
@@ -826,19 +868,26 @@ namespace Babylon::ShaderCompilerTraversers
                 IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
                 IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
                 IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
-                IF_NAME_RETURN_ATTRIB("instanceColor", bgfx::Attrib::TexCoord3, "i_data5")
-                IF_NAME_RETURN_ATTRIB("world0", bgfx::Attrib::TexCoord4, "i_data0")
-                IF_NAME_RETURN_ATTRIB("world1", bgfx::Attrib::TexCoord5, "i_data1")
-                IF_NAME_RETURN_ATTRIB("world2", bgfx::Attrib::TexCoord6, "i_data2")
-                IF_NAME_RETURN_ATTRIB("world3", bgfx::Attrib::TexCoord7, "i_data3")
-                IF_NAME_RETURN_ATTRIB("splatIndex0", bgfx::Attrib::TexCoord4, "i_data0")
-                IF_NAME_RETURN_ATTRIB("splatIndex1", bgfx::Attrib::TexCoord5, "i_data1")
-                IF_NAME_RETURN_ATTRIB("splatIndex2", bgfx::Attrib::TexCoord6, "i_data2")
-                IF_NAME_RETURN_ATTRIB("splatIndex3", bgfx::Attrib::TexCoord7, "i_data3")
+                // Built-in instanced attributes: each occupies a fixed synthetic instance-data location.
+                // world0..world3 (and splatIndex0..3) pack lowest-location -> highest i_data slot so that,
+                // combined with BuildInstanceDataBuffer's descending-key packing, world3 lands on i_data0
+                // (TEXCOORD31) and world0 on i_data3. instanceColor follows at i_data4. The i_data name is
+                // cosmetic on D3D (binding is by TEXCOORD semantic, resolved from the location via the
+                // HLSLVertexAttributeRemap table). Adding one on a lower slot means bumping
+                // BUILTIN_INSTANCE_DATA_SLOT_COUNT in BgfxShaderInfo.h.
+                IF_NAME_RETURN_ATTRIB("instanceColor", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 4, "i_data4")
+                IF_NAME_RETURN_ATTRIB("world0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
+                IF_NAME_RETURN_ATTRIB("world1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
+                IF_NAME_RETURN_ATTRIB("world2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
+                IF_NAME_RETURN_ATTRIB("world3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
+                IF_NAME_RETURN_ATTRIB("splatIndex0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
+                IF_NAME_RETURN_ATTRIB("splatIndex1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
+                IF_NAME_RETURN_ATTRIB("splatIndex2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
+                IF_NAME_RETURN_ATTRIB("splatIndex3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
 #undef IF_NAME_RETURN_ATTRIB
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
+                    throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
                 return {attributeLocation, name};
             }
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};

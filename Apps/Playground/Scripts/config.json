@@ -557,7 +557,7 @@
             "playgroundId": "#RKKCHG#15",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "GaussianSplatting throws Uncaught Error: Invalid argument on Babylon Native (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gsplat-splat-modify.png"
         },
         {
@@ -592,7 +592,7 @@
             "playgroundId": "#XSNFXP#2",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "gsplat-spz-sh.png"
         },
         {
@@ -618,7 +618,7 @@
             "title": "SPZ v3 - Splat",
             "playgroundId": "#V7CV8W#4",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/splats/combined_SPZv3.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "gsplat-spz-v3.png"
         },
         {
@@ -677,8 +677,6 @@
         },
         {
             "title": "Attractors",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#DEZ79M#57",
             "referenceImage": "attractors.png"
         },
@@ -749,7 +747,7 @@
             "title": "EXT_lights_ies",
             "playgroundId": "#UIAXAU#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Loading remote https:// assets is not supported",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/EXT_lights_ies/Example.gltf: 'name' is not defined (thrown during glTF load, before pixel comparison)",
             "referenceImage": "ext-lights-ies.png"
         },
         {
@@ -847,8 +845,6 @@
         {
             "title": "NME Multi Build",
             "playgroundId": "#D8AK3Z#113",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "nme-multi-build.png"
         },
         {
@@ -959,7 +955,7 @@
             "title": "CSGVertColor",
             "playgroundId": "#R0H1IX#4",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "csgVertColor.png"
         },
         {
@@ -1040,8 +1036,7 @@
             "title": "LOD + Billboards + Instances",
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Instanced billboard foliage renders red instead of green (BN vertex/instance color routing regression)."
+            "errorRatio": 5
         },
         {
             "title": "Nested BBG",
@@ -1162,7 +1157,7 @@
             "playgroundId": "#NZ2RZY#4",
             "renderCount": 50,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison)",
             "referenceImage": "chibi-rex.png"
         },
         {
@@ -1170,14 +1165,14 @@
             "playgroundId": "#QATUCH#32",
             "renderCount": 150,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 239982/240000 pixels differ (99.99%) on Babylon Native (renders essentially blank)",
             "referenceImage": "yeti.png"
         },
         {
             "title": "CSG",
             "playgroundId": "#R0H1IX#8",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "csg.png"
         },
         {
@@ -1206,14 +1201,14 @@
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "textureAreaLightStandard.png"
         },
         {
             "title": "Textured - Area Lights - PBR",
             "playgroundId": "#T7FXR8#102",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "texturedAreaLightsPBR.png"
         },
         {
@@ -1269,9 +1264,9 @@
         {
             "title": "Custom render target",
             "playgroundId": "#TQCEBF#5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 D3D11 plain (STATUS_BREAKPOINT)",
-            "referenceImage": "customRTT.png"
+            "referenceImage": "customRTT.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "GL cube skybox face-boundary seam (~12% pixel diff in upper sky); passes on D3D11/D3D12. Per-face vertical flip is required (disabling it worsens diff to 43%); residual seam is a bgfx-level GL cubemap face-boundary/seamless-filtering issue. Tracked for OpenGL backend follow-up."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
@@ -1496,7 +1491,7 @@
             "title": "GLTF Buggy with Meshopt Compression",
             "playgroundId": "#CIYTF6#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/Buggy/glTF-MeshOpt/Buggy.gltf: Object doesn't support property or method 'createObjectURL' (missing DOM API; thrown before pixel comparison)",
             "referenceImage": "gltfBuggyMeshopt.png"
         },
         {
@@ -1568,8 +1563,6 @@
         },
         {
             "title": "Particles",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#G3ZYFU#7",
             "renderCount": 100,
             "referenceImage": "particles.png"
@@ -1654,7 +1647,7 @@
             "title": "GlowLayer",
             "playgroundId": "#LRFB2D#262",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 237981/240000 pixels differ (99.16%) on Babylon Native",
             "referenceImage": "GlowLayer.png"
         },
         {
@@ -1843,8 +1836,6 @@
         },
         {
             "title": "Instances with color buffer",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#YPABS1#91",
             "referenceImage": "instancecolors.png"
         },
@@ -1908,7 +1899,7 @@
             "playgroundId": "#LRFB2D#263",
             "renderCount": 30,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 236380/240000 pixels differ (98.49%) on Babylon Native",
             "referenceImage": "prepass-ssao-glow-layer.png"
         },
         {
@@ -2274,14 +2265,12 @@
         },
         {
             "title": "Load GUI snippet with unicode",
-            "playgroundId": "#YS93KY#0",
-            "renderCount": 50,
+            "playgroundId": "#YS93KY#1",
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
             "title": "Parse GUI json with unicode",
-            "playgroundId": "#ERVGT5#0",
-            "renderCount": 50,
+            "playgroundId": "#ERVGT5#1",
             "referenceImage": "parseGuiJsonWithUnicode.png"
         },
         {
@@ -2674,8 +2663,6 @@
         },
         {
             "title": "halo-particle-system",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#2441BU#1",
             "renderCount": 20,
             "referenceImage": "halo-particle-system.png"
@@ -2690,8 +2677,6 @@
         },
         {
             "title": "particle-system-with-custom-nme-shader",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#DMLLV2",
             "renderCount": 5,
             "referenceImage": "particle-system-with-custom-nme-shader.png"
@@ -2843,15 +2828,13 @@
             "title": "Normed 16 bits texture formats",
             "playgroundId": "#SOCPNB#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 33322, type 5. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "Normed-16-bits-texture-formats.png"
         },
         {
             "title": "UV2 Morphing",
             "playgroundId": "#N5DLM7#1",
-            "referenceImage": "UV2-Morphing.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "UV2-Morphing.png"
         },
         {
             "title": "FrameGraph nrge shadows",
@@ -2886,7 +2869,7 @@
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/PowerPlant/powerplant.obj: Out of stack space (OBJ parser recursion overflow; thrown before pixel comparison)",
             "referenceImage": "FrameGraph-nrge-depth-of-field.png"
         },
         {
@@ -4076,288 +4059,216 @@
         },
         {
             "title": "Particles - Basic Properties - Size",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3780",
             "renderCount": 120,
             "referenceImage": "particles-basic-size.png"
         },
         {
             "title": "Particles - Basic Properties - Scale",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3782",
             "renderCount": 120,
             "referenceImage": "particles-basic-scale.png"
         },
         {
             "title": "Particles - Basic Properties - Color",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3786",
             "renderCount": 120,
             "referenceImage": "particles-basic-color.png"
         },
         {
             "title": "Particles - Basic Properties - Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3791",
             "renderCount": 120,
             "referenceImage": "particles-basic-speed.png"
         },
         {
             "title": "Particles - Basic Properties - Angular Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3796",
             "renderCount": 120,
             "referenceImage": "particles-basic-angular-speed.png"
         },
         {
             "title": "Particles - Basic Properties - Angular Speed - Rotation",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3806",
             "renderCount": 120,
             "referenceImage": "particles-basic-angular-speed-rotation.png"
         },
         {
             "title": "Particles - Basic Properties - Translation Pivot",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3808",
             "renderCount": 120,
             "referenceImage": "particles-basic-translation-pivot.png"
         },
         {
             "title": "Particles - Basic Properties - Direction",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3814",
             "renderCount": 120,
             "referenceImage": "particles-basic-direction.png"
         },
         {
             "title": "Particles - Basic Properties - Direction - Gravity",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3816",
             "renderCount": 120,
             "referenceImage": "particles-basic-direction-gravity.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Slow",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3821",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-slow.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Fast",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3823",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-fast.png"
         },
         {
             "title": "Particles - Basic Properties - Emission Limits",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3825",
             "renderCount": 120,
             "referenceImage": "particles-basic-emission-limits.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Short",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3829",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-short.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Long",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3834",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-long.png"
         },
         {
             "title": "Particles - Change - Size",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3841",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size.png"
         },
         {
             "title": "Particles - Change - Size 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3844",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size-2.png"
         },
         {
             "title": "Particles - Change - Color",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3847",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color.png"
         },
         {
             "title": "Particles - Change - Color 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3851",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color-2.png"
         },
         {
             "title": "Particles - Change - Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3853",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed.png"
         },
         {
             "title": "Particles - Change - Speed 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3855",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-2.png"
         },
         {
             "title": "Particles - Change - Speed Limit",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3859",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-limit.png"
         },
         {
             "title": "Particles - Change - Angular Speed",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3862",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-angular-speed.png"
         },
         {
             "title": "Particles - Change - Angular Speed 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3865",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-angular-speed-2.png"
         },
         {
             "title": "Particles - Change - Drag",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3868",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag.png"
         },
         {
             "title": "Particles - Change - Drag 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3872",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag-2.png"
         },
         {
             "title": "Particles - Change - Emit Rate",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3875",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate.png"
         },
         {
             "title": "Particles - Change - Emit Rate 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3879",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate-2.png"
         },
         {
             "title": "Particles - Change - Lifetime",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3885",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime.png"
         },
         {
             "title": "Particles - Change - Lifetime 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3890",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime-2.png"
         },
         {
             "title": "Particles - Change - Start Size",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#0K3AQ2#3897",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-start-size.png"
         },
         {
             "title": "Particles - Emitters - Point",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#7",
             "renderCount": 120,
             "referenceImage": "particles-emitters-point.png"
         },
         {
             "title": "Particles - Emitters - Box",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#8",
             "renderCount": 120,
             "referenceImage": "particles-emitters-box.png"
         },
         {
             "title": "Particles - Emitters - Sphere",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#9",
             "renderCount": 120,
             "referenceImage": "particles-emitters-sphere.png"
         },
         {
             "title": "Particles - Emitters - Directed Sphere",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#10",
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-sphere.png"
         },
         {
             "title": "Particles - Emitters - Hemisphere",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#11",
             "renderCount": 120,
             "referenceImage": "particles-emitters-hemisphere.png"
         },
         {
             "title": "Particles - Emitters - Cylinder",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#12",
             "renderCount": 120,
             "errorRatio": 4,
@@ -4373,72 +4284,54 @@
         },
         {
             "title": "Particles - Emitters - Cone",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#16",
             "renderCount": 120,
             "referenceImage": "particles-emitters-cone.png"
         },
         {
             "title": "Particles - Emitters - Directed Cone",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#17",
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-cone.png"
         },
         {
             "title": "Particles - Emitters - Mesh",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#20",
             "renderCount": 120,
             "referenceImage": "particles-emitters-mesh.png"
         },
         {
             "title": "Particles - Emitters - Custom",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#WLX2I2#22",
             "renderCount": 120,
             "referenceImage": "particles-emitters-custom.png"
         },
         {
             "title": "Particles - Animations",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#2MI0A1#7",
             "renderCount": 120,
             "referenceImage": "particles-animations.png"
         },
         {
             "title": "Particles - Animations 2",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#2MI0A1#8",
             "renderCount": 120,
             "referenceImage": "particles-animations-2.png"
         },
         {
             "title": "Particles - Ramp Gradient",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#I2D9MM#15",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#E3VU3R",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap Alpha",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#I2D9MM#16",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap-alpha.png"
@@ -4477,16 +4370,12 @@
         },
         {
             "title": "Particles - Effects",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#1ASENS#424",
             "renderCount": 120,
             "referenceImage": "particles-effects.png"
         },
         {
             "title": "Particles - Helper - Sun",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#A97UQ6#5",
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
@@ -4510,8 +4399,6 @@
         },
         {
             "title": "Particles - Attractors",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#DEZ79M#73",
             "renderCount": 240,
             "referenceImage": "particles-attractors.png"
@@ -4541,8 +4428,6 @@
         },
         {
             "title": "Selection outline layer with instances and LOD",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: crashes with MTLVertexDescriptor assertion (attribute references a buffer with no stride) in the particle/instance rendering path on macOS.",
             "playgroundId": "#8I487I#0",
             "referenceImage": "Selection-outline-layer-with-instances-and-LOD.png"
         },
@@ -4561,9 +4446,7 @@
         {
             "title": "Vertex Pulling - Morph Targets and Bones",
             "playgroundId": "#CT4C3C#2",
-            "referenceImage": "vertexPullingMorphBones.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "vertexPullingMorphBones.png"
         },
         {
             "title": "Vertex Pulling - isUnIndexed with index buffer",
@@ -4579,252 +4462,252 @@
             "title": "GPU Particles - Basic Properties - Size",
             "playgroundId": "#3HLS3D#2",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-size.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Scale",
             "playgroundId": "#52KBLI#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-scale.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Color",
             "playgroundId": "#30PAK9#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-color.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Speed",
             "playgroundId": "#KU4I4J#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Angular Speed",
             "playgroundId": "#9MOFU4#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-angular-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Rotation",
             "playgroundId": "#DEVC42#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-rotation.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#QC8XA2#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-translation-pivot.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Direction",
             "playgroundId": "#M6QEUB#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-direction.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Gravity",
             "playgroundId": "#9AGK0W#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-gravity.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Emit Rate",
             "playgroundId": "#IBWI36#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-emit-rate.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Lifetime",
             "playgroundId": "#RL6BAK#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-lifetime.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Target Stop Duration",
             "playgroundId": "#4AJC72#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-target-stop.png"
         },
         {
             "title": "GPU Particles - Change - Size",
             "playgroundId": "#KF9X69#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size.png"
         },
         {
             "title": "GPU Particles - Change - Color",
             "playgroundId": "#UWRCY4#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color.png"
         },
         {
             "title": "GPU Particles - Change - Speed",
             "playgroundId": "#KBHNCB#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed.png"
         },
         {
             "title": "GPU Particles - Change - Speed Limit",
             "playgroundId": "#CTNM3R#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed-limit.png"
         },
         {
             "title": "GPU Particles - Change - Angular Speed",
             "playgroundId": "#1NLEIC#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-angular-speed.png"
         },
         {
             "title": "GPU Particles - Change - Drag",
             "playgroundId": "#02KAQL#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-drag.png"
         },
         {
             "title": "GPU Particles - Change - Size Range",
             "playgroundId": "#4EWZJ9#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size-range.png"
         },
         {
             "title": "GPU Particles - Change - Color Range",
             "playgroundId": "#3M1JEJ#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color-range.png"
         },
         {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-point.png"
         },
         {
             "title": "GPU Particles - Emitters - Box",
             "playgroundId": "#2XD9BC#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-box.png"
         },
         {
             "title": "GPU Particles - Emitters - Sphere",
             "playgroundId": "#H7XR87#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Sphere",
             "playgroundId": "#0H1ATM#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Hemisphere",
             "playgroundId": "#MRQTX7#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-hemisphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Cylinder",
             "playgroundId": "#FGRJM1#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cylinder",
             "playgroundId": "#40T8G0#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Cone",
             "playgroundId": "#W73H92#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cone.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cone",
             "playgroundId": "#GSYICK#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cone.png"
         },
         {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-y.png"
         },
         {
             "title": "GPU Particles - Billboard Stretched",
             "playgroundId": "#0612KX#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-stretched.png"
         },
         {
             "title": "GPU Particles - Multiply Blend",
             "playgroundId": "#D7LQAZ#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-multiply-blend.png"
         },
         {
             "title": "GPU Particles - Animations",
             "playgroundId": "#B0EJQY#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-animations.png"
         },
         {
             "title": "GPU Particles - Noise",
             "playgroundId": "#P6JQIP#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-noise.png"
         },
         {
             "title": "GPU Particles - Flowmaps",
             "playgroundId": "#SGAEHS#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Native lacks the 'Image' DOM constructor: throws ReferenceError: 'Image' is not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-flowmaps.png"
         },
         {
             "title": "GPU Particles - Local Space",
             "playgroundId": "#NK19TU#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-local-space.png"
         },
         {

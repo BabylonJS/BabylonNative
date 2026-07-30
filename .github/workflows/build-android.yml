@@ -47,4 +47,6 @@ jobs:
             -PjsEngine=${{ inputs.js-engine }} \
             -PARM64Only \
             -PNDK_VERSION=${{ env.NDK_VERSION }} \
+            -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+            -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             -PSANITIZERS=OFF
