@@ -82,6 +82,7 @@ namespace Babylon::Graphics
     {
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
         m_viewId = m_deviceContext.AcquireNewViewId();
+        m_viewIdGeneration = m_deviceContext.ViewIdGeneration();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
@@ -197,12 +198,14 @@ namespace Babylon::Graphics
 
     void FrameBuffer::SetBgfxViewPortAndScissor(const Rect& viewPort, const Rect& scissor)
     {
-        if (m_viewId.has_value() && viewPort.Equals(m_bgfxViewPort) && scissor.Equals(m_bgfxScissor))
+        if (m_viewId.has_value() && m_viewIdGeneration == m_deviceContext.ViewIdGeneration() &&
+            viewPort.Equals(m_bgfxViewPort) && scissor.Equals(m_bgfxScissor))
         {
             return;
         }
 
         m_viewId = m_deviceContext.AcquireNewViewId();
+        m_viewIdGeneration = m_deviceContext.ViewIdGeneration();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);

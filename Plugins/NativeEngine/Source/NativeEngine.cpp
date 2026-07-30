@@ -1409,6 +1409,8 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(NativeDataStream::Reader& data)
     {
+        // Note: GetEncoder may perform a mid-frame view flush, which resets the view counter.
+        // Fetch it before reading the reservation below so the generation check sees that.
         bgfx::Encoder* encoder = GetEncoder();
 
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
@@ -1421,8 +1423,16 @@ namespace Babylon
         // view id immediately after the canvas draws (before the scene render is recorded) and
         // hands it to the source texture; use it here. Non-canvas sources have no reserved id, so
         // fall back to PeekNextViewId() (a view greater than every view used so far). See #1683.
+        //
+        // A reservation is only usable while it is still ordered relative to views handed out
+        // now: if a mid-frame flush reset the counter since the reservation was made, the
+        // reserved (high) id would sort *after* the consumer's freshly acquired (low) id and
+        // reintroduce exactly the latency the reservation exists to prevent. In that case the
+        // flush has already submitted the canvas draws in a previous bgfx frame, so the source
+        // is complete and PeekNextViewId() — which precedes every view the consumer has yet to
+        // acquire — is both safe and correctly ordered.
         bgfx::ViewId blitView = textureSource->BlitViewId();
-        if (blitView == UINT16_MAX)
+        if (blitView == UINT16_MAX || textureSource->BlitViewIdGeneration() != m_deviceContext.ViewIdGeneration())
         {
             blitView = m_deviceContext.PeekNextViewId();
         }

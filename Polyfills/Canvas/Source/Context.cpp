@@ -741,7 +741,7 @@ namespace Babylon::Polyfills::Internal
             // layer samples the destination texture. Deferring to CopyTexture's
             // PeekNextViewId() would place the blit after the backbuffer view, so the layer
             // would sample the previous frame's content (a one-frame GUI latency).
-            m_canvas->SetBlitViewId(m_graphicsContext.AcquireNewViewId());
+            m_canvas->SetBlitViewId(m_graphicsContext.AcquireNewViewId(), m_graphicsContext.ViewIdGeneration());
 
             for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
             {

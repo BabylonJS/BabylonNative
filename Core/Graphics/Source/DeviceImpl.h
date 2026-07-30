@@ -94,6 +94,7 @@ namespace Babylon::Graphics
 
         bgfx::ViewId AcquireNewViewId();
         bgfx::ViewId PeekNextViewId() const;
+        uint32_t ViewIdGeneration() const;
 
         // Mid-frame view flush. If the current logical frame has acquired close to
         // the maximum number of bgfx views, flush the accumulated views via a
@@ -149,6 +150,12 @@ namespace Babylon::Graphics
         bgfx::Encoder* m_frameEncoder{nullptr};
 
         std::atomic<bgfx::ViewId> m_nextViewId{0};
+
+        // Incremented every time PerformMidFrameViewFlush resets m_nextViewId in the middle of a
+        // logical frame. Anything that caches a view id across draw calls must also cache this
+        // value and re-acquire when it no longer matches, otherwise the cached (high) id would
+        // sort after ids acquired from the reset counter and invert submission order.
+        std::atomic<uint32_t> m_viewIdGeneration{0};
 
         std::atomic<bool> m_captureNextFrame{false};
 

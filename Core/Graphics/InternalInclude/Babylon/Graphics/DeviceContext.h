@@ -120,6 +120,10 @@ namespace Babylon::Graphics
         bgfx::ViewId AcquireNewViewId();
         bgfx::ViewId PeekNextViewId() const;
 
+        // Bumped whenever a mid-frame flush resets the view counter. Cache this alongside any
+        // view id that is retained across draw calls and re-acquire when it changes.
+        uint32_t ViewIdGeneration() const;
+
         // If the current frame is close to exhausting bgfx views, flush accumulated
         // views (cross-thread bgfx::frame + view-counter reset) so rendering can
         // continue within the same logical frame. Call at draw/clear op boundaries.

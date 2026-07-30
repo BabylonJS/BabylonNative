@@ -494,6 +494,11 @@ namespace Babylon::Graphics
         return m_nextViewId.load();
     }
 
+    uint32_t DeviceImpl::ViewIdGeneration() const
+    {
+        return m_viewIdGeneration.load();
+    }
+
     void DeviceImpl::FlushViewsIfNeeded()
     {
         // Reserve headroom below the hard cap: a single draw/clear operation can
@@ -561,6 +566,12 @@ namespace Babylon::Graphics
 
         bgfx::frame();
         m_nextViewId.store(0);
+
+        // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
+        // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
+        // Without this a cached high id would sort *after* every id handed out from the reset
+        // counter, inverting submission order relative to the JS-side draw order.
+        m_viewIdGeneration.fetch_add(1);
 
         m_frameEncoder = bgfx::begin(true);
     }

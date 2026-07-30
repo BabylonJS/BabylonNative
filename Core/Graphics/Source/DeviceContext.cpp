@@ -137,6 +137,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.PeekNextViewId();
     }
 
+    uint32_t DeviceContext::ViewIdGeneration() const
+    {
+        return m_graphicsImpl.ViewIdGeneration();
+    }
+
     void DeviceContext::FlushViewsIfNeeded()
     {
         m_graphicsImpl.FlushViewsIfNeeded();

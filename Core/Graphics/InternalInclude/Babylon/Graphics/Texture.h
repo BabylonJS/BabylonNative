@@ -45,9 +45,17 @@ namespace Babylon::Graphics
         void ViewNumLayers(uint16_t);
 
         // View id reserved (by the Canvas polyfill) for the canvas->texture blit that fills
-        // this texture. UINT16_MAX means "unset"; consumers fall back to a freshly peeked view.
+        // this texture, together with the view-id generation it was reserved in. UINT16_MAX
+        // means "unset"; a generation mismatch means a mid-frame view flush has since reset the
+        // view counter and the reservation no longer orders before later views. In both cases
+        // consumers fall back to a freshly peeked view.
         bgfx::ViewId BlitViewId() const { return m_blitViewId; }
-        void BlitViewId(bgfx::ViewId viewId) { m_blitViewId = viewId; }
+        uint32_t BlitViewIdGeneration() const { return m_blitViewIdGeneration; }
+        void BlitViewId(bgfx::ViewId viewId, uint32_t generation)
+        {
+            m_blitViewId = viewId;
+            m_blitViewIdGeneration = generation;
+        }
 
     private:
         bgfx::TextureHandle m_handle{bgfx::kInvalidHandle};
@@ -62,6 +70,7 @@ namespace Babylon::Graphics
         uint16_t m_viewFirstLayer{0};
         uint16_t m_viewNumLayers{0};
         bgfx::ViewId m_blitViewId{UINT16_MAX};
+        uint32_t m_blitViewIdGeneration{0};
         uintptr_t m_deviceID;
         DeviceContext& m_deviceContext;
     };
