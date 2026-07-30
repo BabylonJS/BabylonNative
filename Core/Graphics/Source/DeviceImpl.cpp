@@ -46,11 +46,12 @@ namespace Babylon::Graphics
         // object. That is tens of megabytes reserved regardless of how much a
         // consumer actually draws.
         //
-        // Start empty instead and let bgfx grow the arrays on demand, up to the
-        // same BGFX_CONFIG_MAX_DRAW_CALLS ceiling, so the headroom is still there
-        // for scenes that need it but is not paid for when it is unused. Growth is
-        // in BGFX_CONFIG_DRAW_CALL_BLOCK-sized steps, and once grown the arrays are
-        // never shrunk below one such block.
+        // Ask for the smallest bgfx allows instead and let it grow the arrays on
+        // demand, up to the same BGFX_CONFIG_MAX_DRAW_CALLS ceiling, so the headroom
+        // is still there for scenes that need it but is not paid for when it is
+        // unused. bgfx::init clamps numDrawCalls up to BGFX_CONFIG_DRAW_CALL_BLOCK,
+        // so 0 here means one block, not nothing. Growth and shrink are both in
+        // block-sized steps, and the arrays are never shrunk below one block.
         //
         // numDrawCallPeakFrames is how many frames a high-water mark must go
         // unmatched before the arrays are shrunk again. It must be non-zero, or
