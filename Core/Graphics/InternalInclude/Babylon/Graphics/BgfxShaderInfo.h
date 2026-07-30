@@ -23,6 +23,16 @@ namespace Babylon::Graphics
     inline constexpr uint32_t TEXCOORD0_ATTRIBUTE_LOCATION{10};
     inline constexpr uint32_t INSTANCE_DATA_FIRST_LOCATION{TEXCOORD0_ATTRIBUTE_LOCATION + INSTANCE_DATA_FIRST_TEXCOORD};
 
+    /// The built-in per-instance attributes occupy the top BUILTIN_INSTANCE_DATA_SLOT_COUNT i_data
+    /// slots: world0-3 and splatIndex0-3 map to i_data0..i_data3, instanceColor to i_data4 (see
+    /// ShaderCompilerTraversers.cpp's attribute table). BUILTIN_INSTANCE_DATA_LAST_LOCATION is the
+    /// lowest synthetic location any of them can occupy; it is the boundary NativeEngine::Draw's
+    /// "< bgfx::Attrib::Count means a real per-vertex attribute that needs rerouting" guard rests
+    /// on, so it -- not just INSTANCE_DATA_FIRST_LOCATION -- must stay >= bgfx::Attrib::Count.
+    /// Keep in sync when adding a built-in per-instance attribute on a lower i_data slot.
+    inline constexpr uint32_t BUILTIN_INSTANCE_DATA_SLOT_COUNT{5};
+    inline constexpr uint32_t BUILTIN_INSTANCE_DATA_LAST_LOCATION{INSTANCE_DATA_FIRST_LOCATION - (BUILTIN_INSTANCE_DATA_SLOT_COUNT - 1)};
+
     struct BgfxShaderInfo
     {
         std::vector<uint8_t> VertexBytes{};
