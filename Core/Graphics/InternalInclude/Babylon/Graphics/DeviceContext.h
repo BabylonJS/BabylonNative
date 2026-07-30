@@ -120,6 +120,11 @@ namespace Babylon::Graphics
         bgfx::ViewId AcquireNewViewId();
         bgfx::ViewId PeekNextViewId() const;
 
+        // If the current frame is close to exhausting bgfx views, flush accumulated
+        // views (cross-thread bgfx::frame + view-counter reset) so rendering can
+        // continue within the same logical frame. Call at draw/clear op boundaries.
+        void FlushViewsIfNeeded();
+
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);

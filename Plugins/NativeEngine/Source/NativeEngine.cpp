@@ -2597,6 +2597,12 @@ namespace Babylon
 
     bgfx::Encoder* NativeEngine::GetEncoder()
     {
+        // Draw/clear/compute operations all fetch the encoder here before recording
+        // any state. This is a safe boundary to flush accumulated bgfx views (which
+        // may swap the active encoder) so a single Babylon frame that renders many
+        // passes (e.g. nested utility layers) never runs out of views.
+        m_deviceContext.FlushViewsIfNeeded();
+
         bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
         assert(encoder != nullptr);
         return encoder;

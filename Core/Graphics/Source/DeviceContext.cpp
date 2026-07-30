@@ -137,6 +137,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.PeekNextViewId();
     }
 
+    void DeviceContext::FlushViewsIfNeeded()
+    {
+        m_graphicsImpl.FlushViewsIfNeeded();
+    }
+
     void DeviceContext::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
     {
         std::scoped_lock lock{m_textureHandleToInfoMutex};
