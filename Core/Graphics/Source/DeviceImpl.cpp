@@ -46,18 +46,24 @@ namespace Babylon::Graphics
         // object. That is tens of megabytes reserved regardless of how much a
         // consumer actually draws.
         //
-        // Ask for the smallest bgfx allows instead and let it grow the arrays on
-        // demand, up to the same BGFX_CONFIG_MAX_DRAW_CALLS ceiling, so the headroom
-        // is still there for scenes that need it but is not paid for when it is
-        // unused. bgfx::init clamps numDrawCalls up to BGFX_CONFIG_DRAW_CALL_BLOCK,
-        // so 0 here means one block, not nothing. Growth and shrink are both in
-        // block-sized steps, and the arrays are never shrunk below one block.
+        // Ask for a much smaller starting capacity instead and let bgfx grow the
+        // arrays on demand, up to the same BGFX_CONFIG_MAX_DRAW_CALLS ceiling, so the
+        // headroom is still there for scenes that need it but is not paid for when it
+        // is unused. Growth and shrink are both in BGFX_CONFIG_DRAW_CALL_BLOCK steps,
+        // and the arrays are never shrunk below one block.
+        //
+        // Growth is reactive: the frame that first exceeds the current capacity drops
+        // the draws past it and only the next frame sees the larger arrays. 4096 is
+        // high enough that no realistic Babylon Native scene starts above it, so the
+        // growth path is effectively a safety net rather than something a scene hits
+        // on its way up. An embedder that knows its own ceiling can go lower by
+        // overriding BGFX_CONFIG_DRAW_CALL_BLOCK and InitialDrawCallCapacity.
         //
         // numDrawCallPeakFrames is how many frames a high-water mark must go
         // unmatched before the arrays are shrunk again. It must be non-zero, or
         // bgfx skips the resizing entirely and the arrays stay fixed at whatever
         // numDrawCalls asked for.
-        init.limits.numDrawCalls = 0;
+        init.limits.numDrawCalls = config.InitialDrawCallCapacity;
         init.limits.numDrawCallPeakFrames = 60;
 
         // Use the noop renderer if the configuration has no window and no size.
