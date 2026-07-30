@@ -5,6 +5,9 @@
 #if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
 #include <Babylon/Plugins/NativeEngine.h>
 #endif
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#include <Babylon/Plugins/NativeDawn.h>
+#endif
 #if BABYLON_NATIVE_PLUGIN_NATIVECAMERA
 #include <Babylon/Plugins/NativeCamera.h>
 #endif
@@ -171,7 +174,7 @@ namespace Babylon::Embedding
     // completes m_initTcs to unblock host calls that were queued before the
     // first attach. Post-init, those host calls fire their continuation
     // synchronously via inline_scheduler and submit straight to ScriptLoader.
-    void RuntimeImpl::RunFirstAttachInit(Babylon::Graphics::WindowT window)
+    void RuntimeImpl::RunFirstAttachInit(Babylon::Graphics::WindowT window, uint32_t width, uint32_t height)
     {
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
         // Enable + hydrate before any JS-thread shader compilation. Both
@@ -181,7 +184,7 @@ namespace Babylon::Embedding
         LoadShaderCache();
 #endif
 
-        m_appRuntime->Dispatch([implPtr = this, window](Napi::Env env) {
+        m_appRuntime->Dispatch([implPtr = this, window, width, height](Napi::Env env) {
             // 0. Install the ES2020 `globalThis` self-reference. V8/JSC/Chakra
             //    provide it intrinsically, but the embedded Hermes runtime does
             //    not, and Hermes evaluates eval()'d code as indirect (global
@@ -190,7 +193,9 @@ namespace Babylon::Embedding
             env.Global().Set("globalThis", env.Global());
 
             // 1. Make the Device available to JS.
+#if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
             implPtr->m_device->AddToJavaScript(env);
+#endif
 
             // 2. Polyfills (always-on).
             Babylon::Polyfills::Blob::Initialize(env);
@@ -269,6 +274,12 @@ namespace Babylon::Embedding
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
             Babylon::Plugins::NativeEngine::Initialize(env);
+#elif BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+            // NativeDawn replaces the bgfx NativeEngine: it creates the Dawn
+            // (WebGPU) device + surface bound to `window`, installs navigator.gpu
+            // and the WebGPU globals, and (via its bootstrap) drives the scene on
+            // a WebGPUEngine. `width`/`height` are the initial surface size.
+            Babylon::Plugins::NativeDawn::Initialize(env, window, width, height);
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS
             Babylon::Plugins::NativeOptimizations::Initialize(env);
@@ -298,10 +309,20 @@ namespace Babylon::Embedding
                     });
             }
 #endif
-#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+            // TestUtils is bgfx-only (its constructor acquires the bgfx
+            // Graphics::DeviceContext, which the NativeDawn backend does not
+            // create). `window`/`width`/`height` are consumed by
+            // NativeDawn::Initialize above.
+#elif BABYLON_NATIVE_PLUGIN_TESTUTILS
             Babylon::Plugins::TestUtils::Initialize(env, window);
 #else
             (void)window;
+#endif
+#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+            // Initial surface size is only consumed by the NativeDawn plugin init.
+            (void)width;
+            (void)height;
 #endif
 
             // 4. Fire any host calls queued before the first View attach.

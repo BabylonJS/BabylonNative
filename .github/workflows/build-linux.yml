@@ -16,6 +16,10 @@ on:
         required: false
         type: boolean
         default: false
+      nativedawn:
+        required: false
+        type: boolean
+        default: false
 
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
@@ -40,7 +44,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build
 
+      - name: Install Vulkan packages (NativeDawn)
+        if: ${{ inputs.nativedawn }}
+        run: sudo apt-get install -y libvulkan-dev libx11-xcb-dev
+
       - name: Build X11
+        if: ${{ !inputs.nativedawn }}
         run: |
           cmake -G Ninja -B build/Linux \
             -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
@@ -53,30 +62,50 @@ jobs:
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux
 
+      # NativeDawn (WebGPU/Dawn, Vulkan backend) build: enabling the plugin
+      # force-disables NativeEngine. The Linux Playground host has no Dawn code
+      # path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
+      # compiles/links; the bgfx validation/unit tests don't apply.
+      - name: Build NativeDawn
+        if: ${{ inputs.nativedawn }}
+        run: |
+          cmake -G Ninja -B build/Linux \
+            -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
+            -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
+            -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+            -D BX_CONFIG_DEBUG=ON \
+            -D OpenGL_GL_PREFERENCE=GLVND \
+            -D BABYLON_DEBUG_TRACE=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON .
+          ninja -C build/Linux NativeDawn
+
       - name: Enable Core Dump
+        if: ${{ !inputs.nativedawn }}
         run: sudo sysctl -w kernel.core_pattern=core.%p
 
       - name: Validation Tests
+        if: ${{ !inputs.nativedawn }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
           xvfb-run ./Playground app:///Scripts/validation_native.js
 
       - name: Unit Tests
+        if: ${{ !inputs.nativedawn }}
         run: |
           cd build/Linux/Apps/UnitTests
           ulimit -c unlimited
           xvfb-run ./UnitTests
 
       - name: Module Load Test
-        if: ${{ !inputs.enable-sanitizers }}
+        if: ${{ !inputs.enable-sanitizers && !inputs.nativedawn }}
         run: |
           cd build/Linux/Apps/ModuleLoadTest
           ulimit -c unlimited
           xvfb-run ./ModuleLoadTest
 
       - name: Upload Rendered Pictures
-        if: always()
+        if: ${{ always() && !inputs.nativedawn }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures

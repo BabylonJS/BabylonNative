@@ -3,6 +3,8 @@
 #include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/DeviceQueries.h>
 
+#include <napi/napi.h>
+
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -41,6 +43,19 @@ namespace Babylon::Embedding
                 throw std::runtime_error{std::string{operation} + " requires non-zero width and height."};
             }
         }
+
+        // Current device-pixel ratio: the bgfx Graphics::Device's stored value
+        // when present, otherwise the window's (the NativeDawn backend has no
+        // Graphics::Device, so input/coordinate conversion falls back to the
+        // window DPR). Only referenced by the NativeInput forwarding methods.
+        [[maybe_unused]] float CurrentDpr(RuntimeImpl& impl, Babylon::Graphics::WindowT window)
+        {
+            if (impl.m_device)
+            {
+                return impl.m_device->GetDevicePixelRatio();
+            }
+            return Babylon::Graphics::GetDevicePixelRatio(window);
+        }
     }
 
     View::View(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow)
@@ -62,6 +77,10 @@ namespace Babylon::Embedding
 
     ViewImpl::~ViewImpl()
     {
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+        // NativeDawn presents each frame inside its per-frame Tick, so there is
+        // no host-held in-flight frame to close on teardown.
+#else
         // Close the in-flight frame iff one is currently open: i.e. the
         // view is initialized and the Runtime is not externally suspended
         // (Suspend already closed the frame). The Device persists on the
@@ -71,6 +90,7 @@ namespace Babylon::Embedding
         {
             m_runtime.m_device->FinishRenderingCurrentFrame();
         }
+#endif
 
         m_runtime.m_currentView = nullptr;
     }
@@ -86,7 +106,9 @@ namespace Babylon::Embedding
         {
             return;
         }
+#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
         m_runtime.m_device->FinishRenderingCurrentFrame();
+#endif
     }
 
     void ViewImpl::Resume()
@@ -98,7 +120,9 @@ namespace Babylon::Embedding
             InitializeIfReady();
             return;
         }
+#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
         m_runtime.m_device->StartRenderingCurrentFrame();
+#endif
     }
 
     // Single recipe for binding the Device to this view's window and
@@ -117,6 +141,28 @@ namespace Babylon::Embedding
         }
 
         const auto [lw, lh] = *m_size;
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+        // NativeDawn owns the device/surface lifecycle; there is no bgfx
+        // Graphics::Device to construct here. The plugin's Initialize (creating
+        // the Dawn device + surface bound to m_window at the current size) runs
+        // inside RunFirstAttachInit on the JS thread.
+        const bool firstAttachEver = !m_runtime.m_dawnInitialized;
+        if (!firstAttachEver)
+        {
+            // Re-attach to an existing Runtime: reconfigure the Dawn surface to
+            // the current size on the JS thread (where the Dawn device lives).
+            m_runtime.m_appRuntime->Dispatch([lw, lh](Napi::Env) {
+                Babylon::Plugins::NativeDawn::ResizeSurface(lw, lh);
+            });
+        }
+        m_initialized = true;
+
+        if (firstAttachEver)
+        {
+            m_runtime.m_dawnInitialized = true;
+            m_runtime.RunFirstAttachInit(m_window, lw, lh);
+        }
+#else
         const bool firstAttachEver = !m_runtime.m_device;
         if (firstAttachEver)
         {
@@ -146,8 +192,9 @@ namespace Babylon::Embedding
 
         if (firstAttachEver)
         {
-            m_runtime.RunFirstAttachInit(m_window);
+            m_runtime.RunFirstAttachInit(m_window, lw, lh);
         }
+#endif
     }
 
     void View::RenderFrame()
@@ -169,10 +216,29 @@ namespace Babylon::Embedding
             return;
         }
 
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+        // WebGPUEngine drives its render loop from requestAnimationFrame, pumped
+        // by the JS-thread global frame(). Dispatch one frame at a time (throttled
+        // so the JS queue can't flood): flush rAF (runs the engine's render +
+        // GPU submit) and present via NativeDawn::Tick.
+        if (!impl.m_dawnFrameInFlight.exchange(true))
+        {
+            impl.m_appRuntime->Dispatch([implPtr = &impl](Napi::Env env) {
+                Napi::Value frame = env.Global().Get("frame");
+                if (frame.IsFunction())
+                {
+                    frame.As<Napi::Function>().Call({});
+                }
+                Babylon::Plugins::NativeDawn::Tick(env);
+                implPtr->m_dawnFrameInFlight.store(false, std::memory_order_relaxed);
+            });
+        }
+#else
         // Babylon's JS render loop runs between Start and Finish, scheduled
         // via DeviceUpdate's SafeTimespanGuarantor onto the JS thread.
         impl.m_device->FinishRenderingCurrentFrame();
         impl.m_device->StartRenderingCurrentFrame();
+#endif
     }
 
     // Stores the host-supplied size on the ViewImpl, then either pushes
@@ -187,10 +253,21 @@ namespace Babylon::Embedding
 
         // DPR source: before init, query the window directly (Device
         // doesn't exist or is still bound to the previous attach). After
-        // init, the Device's stored DPR is authoritative.
-        const float dpr = !m_impl->m_initialized
-            ? Babylon::Graphics::GetDevicePixelRatio(m_impl->m_window)
-            : impl.m_device->GetDevicePixelRatio();
+        // init, the Device's stored DPR is authoritative (bgfx). NativeDawn
+        // has no Device, so keep querying the window.
+        float dpr;
+        if (!m_impl->m_initialized)
+        {
+            dpr = Babylon::Graphics::GetDevicePixelRatio(m_impl->m_window);
+        }
+        else
+        {
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+            dpr = Babylon::Graphics::GetDevicePixelRatio(m_impl->m_window);
+#else
+            dpr = impl.m_device->GetDevicePixelRatio();
+#endif
+        }
         const auto [lw, lh] = ToLogicalSize(width, height, units, dpr);
         ValidateNonZeroSize(lw, lh, "View::Resize logical size");
 
@@ -198,7 +275,22 @@ namespace Babylon::Embedding
 
         if (m_impl->m_initialized)
         {
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+            // Reconfigure the Dawn surface and the JS engine's drawing buffer on
+            // the JS thread (where the Dawn device lives).
+            impl.m_appRuntime->Dispatch([lw, lh](Napi::Env env) {
+                Babylon::Plugins::NativeDawn::ResizeSurface(lw, lh);
+                Napi::Value resizeFn = env.Global().Get("__dawnResize");
+                if (resizeFn.IsFunction())
+                {
+                    resizeFn.As<Napi::Function>().Call({
+                        Napi::Number::New(env, lw),
+                        Napi::Number::New(env, lh)});
+                }
+            });
+#else
             impl.m_device->UpdateSize(lw, lh);
+#endif
         }
         else
         {
@@ -212,10 +304,10 @@ namespace Babylon::Embedding
     void View::OnPointerDown(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = m_impl->m_runtime;
-        if (impl.m_input && impl.m_device)
+        if (impl.m_input)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
-                                                  impl.m_device->GetDevicePixelRatio());
+                                                  CurrentDpr(impl, m_impl->m_window));
             impl.m_input->TouchDown(static_cast<uint32_t>(pointerId),
                                      static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
@@ -225,10 +317,10 @@ namespace Babylon::Embedding
     void View::OnPointerMove(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = m_impl->m_runtime;
-        if (impl.m_input && impl.m_device)
+        if (impl.m_input)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
-                                                  impl.m_device->GetDevicePixelRatio());
+                                                  CurrentDpr(impl, m_impl->m_window));
             impl.m_input->TouchMove(static_cast<uint32_t>(pointerId),
                                      static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
@@ -238,10 +330,10 @@ namespace Babylon::Embedding
     void View::OnPointerUp(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = m_impl->m_runtime;
-        if (impl.m_input && impl.m_device)
+        if (impl.m_input)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
-                                                  impl.m_device->GetDevicePixelRatio());
+                                                  CurrentDpr(impl, m_impl->m_window));
             impl.m_input->TouchUp(static_cast<uint32_t>(pointerId),
                                    static_cast<int32_t>(lx),
                                    static_cast<int32_t>(ly));
@@ -251,10 +343,10 @@ namespace Babylon::Embedding
     void View::OnMouseDown(uint32_t buttonIndex, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = m_impl->m_runtime;
-        if (impl.m_input && impl.m_device)
+        if (impl.m_input)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
-                                                  impl.m_device->GetDevicePixelRatio());
+                                                  CurrentDpr(impl, m_impl->m_window));
             impl.m_input->MouseDown(buttonIndex,
                                      static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
@@ -264,10 +356,10 @@ namespace Babylon::Embedding
     void View::OnMouseUp(uint32_t buttonIndex, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = m_impl->m_runtime;
-        if (impl.m_input && impl.m_device)
+        if (impl.m_input)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
-                                                  impl.m_device->GetDevicePixelRatio());
+                                                  CurrentDpr(impl, m_impl->m_window));
             impl.m_input->MouseUp(buttonIndex,
                                    static_cast<int32_t>(lx),
                                    static_cast<int32_t>(ly));
@@ -277,10 +369,10 @@ namespace Babylon::Embedding
     void View::OnMouseMove(float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = m_impl->m_runtime;
-        if (impl.m_input && impl.m_device)
+        if (impl.m_input)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
-                                                  impl.m_device->GetDevicePixelRatio());
+                                                  CurrentDpr(impl, m_impl->m_window));
             impl.m_input->MouseMove(static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
         }

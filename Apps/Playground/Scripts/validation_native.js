@@ -105,6 +105,17 @@
     globalThis.engine = engine;
     engine.getCaps().parallelShaderCompile = undefined;
 
+    // The default HTML loading screen pokes at DOM nodes (document head, an
+    // <img> logo with a network fetch) that don't meaningfully exist in this
+    // headless host. It's a pure overlay and never part of the captured 3D
+    // frame, so disable it. Prevents SceneLoader (glTF imports) from calling
+    // engine.displayLoadingUI().
+    if (BABYLON.SceneLoader) {
+        BABYLON.SceneLoader.ShowLoadingScreen = false;
+    }
+    engine.displayLoadingUI = function () { };
+    engine.hideLoadingUI = function () { };
+
     // Broaden Babylon's default retry strategy for the test framework: in addition to
     // network drops (status 0, the default trigger), also retry transient HTTP errors
     // (5xx) and rate limits (429). Applies to every BABYLON.Tools.LoadFile request
@@ -137,12 +148,20 @@
     const canvas = window;
     globalThis.canvas = canvas;
 
-    // Random replacement
+    // Random replacement. Deterministic so reference images are reproducible.
+    // Reinstalled per-test (see runTest) because some playgrounds overwrite
+    // Math.random with their own closure -- e.g. "Selection outline layer with
+    // instances" (#UR9706#0) does `window.Math.random = ... window.seed ...`,
+    // leaving a global RNG that the harness's `seed = 1` reset can no longer
+    // touch. Left in place, every later test (notably GPU particle systems,
+    // whose random textures are filled from Math.random) gets shifted random
+    // values and drifts across the pixel-diff threshold.
     let seed = 1;
-    Math.random = function () {
+    const deterministicRandom = function () {
         const x = Math.sin(seed++) * 10000;
         return x - Math.floor(x);
-    }
+    };
+    Math.random = deterministicRandom;
 
     function compare(test, renderData, referenceImage, threshold, errorRatio) {
         const referenceData = TestUtils.getImageData(referenceImage);
@@ -526,6 +545,44 @@
         TestUtils.setTitle(testInfo);
 
         seed = 1;
+        // Reinstall the deterministic RNG: a prior test may have replaced
+        // Math.random with its own function (see the definition above), which
+        // would make `seed = 1` a no-op and leave later tests non-deterministic.
+        Math.random = deterministicRandom;
+
+        // Restore per-test isolation for global Babylon loader state. Some
+        // playgrounds add a BABYLON.SceneLoader.OnPluginActivatedObservable
+        // observer and never remove it -- e.g. "Yeti" (#QATUCH#32) forces the
+        // glTF loader's animationStartMode to ALL. Left in place, every later
+        // glTF scene auto-plays EVERY animation group instead of just the first,
+        // blending all animations and rendering the wrong animated pose (this is
+        // why "GLTF Serializer Skinning and Animation" failed only when a prior
+        // test leaked such an observer). Clearing here drops leaked observers; a
+        // test's own observer is (re)added later in its own createScene.
+        if (BABYLON.SceneLoader && BABYLON.SceneLoader.OnPluginActivatedObservable) {
+            BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
+        }
+
+        // Reset global engine flags that some playgrounds set and never restore.
+        // e.g. "Reverse depth buffer and shadows" (#WL4Q8J#20) and the CSM variant
+        // set engine.useReverseDepthBuffer = true; left on, every later test renders
+        // with a reversed depth test and depth-sensitive tests fail (e.g. "Sample
+        // depth texture" rendered black). A test that needs it re-enables it in its
+        // own createScene.
+        if (typeof engine.useReverseDepthBuffer !== "undefined") {
+            engine.useReverseDepthBuffer = false;
+        }
+
+        // Reset snapshot rendering. "FAST snapshot CPU particles" (#AW6Q7E#0)
+        // uses BABYLON.SnapshotRenderingHelper.enableSnapshotRendering(), which
+        // sets engine.snapshotRendering = true. Snapshot mode caches the render
+        // command buffer, so every later test replays the snapshot's draws
+        // instead of its own -- GPU particle systems in particular then render
+        // stale/shifted output and drift across the pixel-diff threshold. A test
+        // that needs snapshot mode re-enables it in its own createScene.
+        if (typeof engine.snapshotRendering !== "undefined") {
+            engine.snapshotRendering = false;
+        }
 
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);
@@ -570,28 +627,36 @@
         }
     }
 
-    OffscreenCanvas = function (width, height) {
-        return {
-            width: width
-            , height: height
-            , getContext: function (type) {
-                return {
-                    fillRect: function (x, y, w, h) { }
-                    , measureText: function (text) { return 8; }
-                    , fillText: function (text, x, y) { }
-                };
-            }
-        };
+    // Only define no-op DOM stubs if the host hasn't already provided functional
+    // ones. The NativeDawn (WebGPU) backend installs a real 2D canvas + document
+    // (needed for WebGPU texture upload); the bgfx backend provides neither, so
+    // these fallbacks apply there.
+    if (typeof OffscreenCanvas === "undefined") {
+        OffscreenCanvas = function (width, height) {
+            return {
+                width: width
+                , height: height
+                , getContext: function (type) {
+                    return {
+                        fillRect: function (x, y, w, h) { }
+                        , measureText: function (text) { return 8; }
+                        , fillText: function (text, x, y) { }
+                    };
+                }
+            };
+        }
     }
 
-    document = {
-        createElement: function (type) {
-            if (type === "canvas") {
-                return new OffscreenCanvas(64, 64);
-            }
-            return {};
-        },
-        removeEventListener: function () { }
+    if (typeof document === "undefined") {
+        document = {
+            createElement: function (type) {
+                if (type === "canvas") {
+                    return new OffscreenCanvas(64, 64);
+                }
+                return {};
+            },
+            removeEventListener: function () { }
+        }
     }
 
     const xhr = new XMLHttpRequest();
@@ -652,10 +717,20 @@
                     ranCount++;
                     if (!status) {
                         failedCount++;
-                        // failTest() already triggered the debugger before
-                        // reaching this callback; no second `debugger` here.
-                        logRunSummary();
-                        TestUtils.exit(-1);
+                        // ENUMERATION MODE (temporary): continue-on-failure so a
+                        // single run surfaces every failing test index/title.
+                        // Grep this token in CI logs to collect the full failure
+                        // set, then restore fail-fast (exit(-1) here) once the
+                        // config exclusions are in place.
+                        console.log("INPROC_FAIL_IDX " + i + " " + currentTitle);
+                        i++;
+                        if (justOnce || i >= config.tests.length) {
+                            logRunSummary();
+                            engine.dispose();
+                            TestUtils.exit(failedCount > 0 ? -1 : 0);
+                            return;
+                        }
+                        setTimeout(function () { recursiveRunTest(i); }, 0);
                         return;
                     }
                     passedCount++;
@@ -663,7 +738,7 @@
                     if (justOnce || i >= config.tests.length) {
                         logRunSummary();
                         engine.dispose();
-                        TestUtils.exit(0);
+                        TestUtils.exit(failedCount > 0 ? -1 : 0);
                         return;
                     }
                     // Defer next iteration to avoid blowing Chakra's
