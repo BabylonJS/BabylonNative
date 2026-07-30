@@ -259,6 +259,14 @@ namespace
         PoolInterface frameBufferPool;
         bgfx::Encoder* encoder;
 
+        // When true, the next non-filtered draw call must acquire a fresh (higher)
+        // bgfx view on the canvas framebuffer so it is ordered after any pool-buffer
+        // views used by a preceding filtered draw. Consecutive non-filtered draws
+        // otherwise share a single view to avoid exhausting the bgfx view budget
+        // (a canvas painted with thousands of ops would otherwise leak thousands of
+        // views within a single device frame -> "Too many views").
+        bool canvasViewNeedsRefresh;
+
         struct GLNVGtexture* textures;
         float view[2];
         int ntextures;
@@ -702,6 +710,27 @@ namespace
         encoder->setIndexBuffer(&tib);
     }
 
+    // Gates acquisition of a fresh bgfx view for a canvas draw call. A filtered draw
+    // (blur/etc.) uses intermediate pool framebuffers on higher-id views, so the next
+    // canvas draw must be re-bound to a fresh (higher) view to preserve draw order.
+    // Consecutive non-filtered draws instead share the canvas framebuffer's current
+    // view, preventing view-budget exhaustion ("Too many views") when a DynamicTexture
+    // is painted with thousands of ops in a single device frame.
+    static Babylon::Graphics::FrameBuffer* glnvg__beginFinalFrameBuffer(struct GLNVGcontext* gl, struct GLNVGcall* call)
+    {
+        Babylon::Graphics::FrameBuffer* finalFrameBuffer = gl->frameBuffer;
+        if (call->filterStack.HasFilters() || gl->canvasViewNeedsRefresh)
+        {
+            finalFrameBuffer->Bind();
+        }
+        return finalFrameBuffer;
+    }
+
+    static void glnvg__endFinalFrameBuffer(struct GLNVGcontext* gl, struct GLNVGcall* call)
+    {
+        gl->canvasViewNeedsRefresh = call->filterStack.HasFilters();
+    }
+
     static void glnvg__fill(struct GLNVGcontext* gl, struct GLNVGcall* call)
     {
         bgfx::ProgramHandle firstProg = gl->prog;
@@ -797,10 +826,9 @@ namespace
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
-        Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
-
+        Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+        glnvg__endFinalFrameBuffer(gl, call);
     }
 
     static void glnvg__convexFill(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -857,10 +885,9 @@ namespace
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
-        Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
-
+        Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+        glnvg__endFinalFrameBuffer(gl, call);
     }
 
     static void glnvg__stroke(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -900,10 +927,9 @@ namespace
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
-        Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
-
+        Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+        glnvg__endFinalFrameBuffer(gl, call);
     }
 
     static void glnvg__triangles(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -938,10 +964,9 @@ namespace
                 screenSpaceQuad(gl->encoder, s_originBottomLeft);
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
 			};
-            Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-            finalFrameBuffer->Bind(); // Should this be bound elsewhere?
-
+            Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
             call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+            glnvg__endFinalFrameBuffer(gl, call);
         }
     }
 
@@ -988,6 +1013,9 @@ namespace
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
         //gl->frameBuffer->SetViewPort(gl->encoder, 0.f, 0.f, gl->view[0], gl->view[1]);
+        // The canvas framebuffer is bound with a fresh view by Context::Flush before this
+        // flush runs, so the first draw call can reuse that view without re-binding.
+        gl->canvasViewNeedsRefresh = false;
         if (!gl->prog.idx)
         {
             bgfx::RendererType::Enum type = bgfx::getRendererType();
