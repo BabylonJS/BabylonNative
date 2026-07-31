@@ -38,36 +38,14 @@ set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 
-FetchContent_MakeAvailable_With_Message(bgfx.cmake)
-
-# Babylon Native tunes a number of bgfx compile-time settings. Every value passed to
-# babylon_native_bgfx_config below is a *default*: an embedder can override any of them
-# by setting the matching BGFX_CONFIG_<name> variable before adding Babylon Native.
-#
-# The value is used as written, so an embedder can spell one the way bgfx spells its own
-# defaults -- (4<<10) and the like. CMake booleans are the one thing that cannot be used,
-# because the C preprocessor has nothing to do with them, and bgfx.cmake declares several
-# of these names as options that can already hold ON or OFF. Those fall back to the
-# default below.
-#
-# These are emitted here rather than left to bgfx.cmake because emitting the resolved
-# value here is what makes overriding work at all: these definitions are added after
-# bgfx.cmake's, so they are last on the compile line and win. Before this indirection they
-# were hard-coded, so an embedder's value produced a conflicting duplicate definition and
-# the hard-coded one took effect.
-function(babylon_native_bgfx_config NAME DEFAULT)
-    set(value "${BGFX_CONFIG_${NAME}}")
-    string(TOUPPER "${value}" value_upper)
-    if(value STREQUAL "" OR value_upper MATCHES "^(ON|OFF|TRUE|FALSE|YES|NO|Y|N|IGNORE|NOTFOUND|.*-NOTFOUND)$")
-        set(value "${DEFAULT}")
+# Babylon Native's bgfx settings are defaults. A value already supplied, on the command
+# line or by a project embedding Babylon Native, is left alone. bgfx.cmake forwards
+# whichever value survives, so each setting reaches the compiler exactly once.
+macro(babylon_native_bgfx_config NAME DEFAULT)
+    if("${BGFX_CONFIG_${NAME}}" STREQUAL "")
+        set(BGFX_CONFIG_${NAME} "${DEFAULT}")
     endif()
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_${NAME}=${value})
-endfunction()
-
-# Turn off debug annotations as it causes an access violation in D3D12.
-# This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
-# See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
-babylon_native_bgfx_config(DEBUG_ANNOTATION 0)
+endmacro()
 
 babylon_native_bgfx_config(DEFAULT_MAX_ENCODERS 2)
 babylon_native_bgfx_config(MAX_VERTEX_STREAMS 18)
@@ -75,24 +53,6 @@ babylon_native_bgfx_config(MIN_RESOURCE_COMMAND_BUFFER_SIZE 16)
 babylon_native_bgfx_config(MIN_UNIFORM_BUFFER_SIZE 4096)
 babylon_native_bgfx_config(UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE 256)
 babylon_native_bgfx_config(UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE 1024)
-target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
-
-# The Canvas polyfill allocates one bgfx framebuffer per JS Canvas object and per
-# text-rendering operation; combined with V8 GC pacing this can exceed the default
-# 128 limit during long playground sweeps, so Canvas builds need a floor of 512.
-# That floor is a Canvas requirement, not a universal one: an embedder that disables
-# the polyfill draws into a handful of framebuffers and should be able to select a
-# much smaller pool. Clamp only when Canvas is actually being built, and otherwise
-# leave bgfx on its own default unless the embedder asked for something.
-if(BABYLON_NATIVE_POLYFILL_CANVAS)
-    if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 512)
-        set(BGFX_CONFIG_MAX_FRAME_BUFFERS 512)
-    endif()
-endif()
-
-if(BGFX_CONFIG_MAX_FRAME_BUFFERS)
-    babylon_native_bgfx_config(MAX_FRAME_BUFFERS ${BGFX_CONFIG_MAX_FRAME_BUFFERS})
-endif()
 
 # Temporary disable uniform debug.
 babylon_native_bgfx_config(DEBUG_UNIFORM 0)
@@ -102,6 +62,23 @@ babylon_native_bgfx_config(VIDEO 0)
 
 # Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
 babylon_native_bgfx_config(C99_API 0)
+
+# The Canvas polyfill allocates one bgfx framebuffer per JS Canvas object and per
+# text-rendering operation; combined with V8 GC pacing this can exceed the bgfx default
+# of 128 during long playground sweeps. An embedder that disables the polyfill draws
+# into a handful of framebuffers and has no reason to pay for the larger pool.
+if(BABYLON_NATIVE_POLYFILL_CANVAS)
+    babylon_native_bgfx_config(MAX_FRAME_BUFFERS 512)
+endif()
+
+FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+
+# Turn off debug annotations as it causes an access violation in D3D12.
+# This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
+# See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
+
+target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
