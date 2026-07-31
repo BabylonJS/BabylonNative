@@ -45,11 +45,20 @@
 #ifndef GL_COMPRESSED_LUMINANCE_LATC1_EXT
 #  define GL_COMPRESSED_LUMINANCE_LATC1_EXT 0x8C70
 #endif
+#ifndef GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT
+#  define GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT 0x8C71
+#endif
 #ifndef GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT
 #  define GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT 0x8C72
 #endif
+#ifndef GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT
+#  define GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT 0x8C73
+#endif
 #ifndef GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB
 #  define GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB 0x8E8E
+#endif
+#ifndef GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB
+#  define GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB 0x8E8F
 #endif
 #ifndef GL_COMPRESSED_RGBA_BPTC_UNORM_ARB
 #  define GL_COMPRESSED_RGBA_BPTC_UNORM_ARB 0x8E8C
@@ -251,8 +260,11 @@ namespace Babylon::Plugins
             { GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,            GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT       }, // BC2
             { GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,            GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT       }, // BC3
             { GL_COMPRESSED_LUMINANCE_LATC1_EXT,           GL_ZERO                                      }, // BC4
+            { GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT,    GL_ZERO                                      }, // BC4S
             { GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT,     GL_ZERO                                      }, // BC5
+            { GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT, GL_ZERO                                   }, // BC5S
             { GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB,     GL_ZERO                                      }, // BC6H
+            { GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB,   GL_ZERO                                      }, // BC6HU
             { GL_COMPRESSED_RGBA_BPTC_UNORM_ARB,           GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB      }, // BC7
             { GL_ETC1_RGB8_OES,                            GL_ZERO                                      }, // ETC1
             { GL_COMPRESSED_RGB8_ETC2,                     GL_COMPRESSED_SRGB8_ETC2                     }, // ETC2
@@ -337,6 +349,7 @@ namespace Babylon::Plugins
             { GL_RGB5_A1,                                  GL_ZERO                                      }, // BGR5A1
             { GL_RGB5_A1,                                  GL_ZERO                                      }, // RGB5A1
             { GL_RGB10_A2,                                 GL_ZERO                                      }, // RGB10A2
+            { GL_RGB10_A2UI,                               GL_ZERO                                      }, // RGB10A2U
             { GL_R11F_G11F_B10F,                           GL_ZERO                                      }, // RG11B10F
             { GL_ZERO,                                     GL_ZERO                                      }, // UnknownDepth
             { GL_DEPTH_COMPONENT16,                        GL_ZERO                                      }, // D16
@@ -346,6 +359,7 @@ namespace Babylon::Plugins
             { GL_DEPTH_COMPONENT32F,                       GL_ZERO                                      }, // D16F
             { GL_DEPTH_COMPONENT32F,                       GL_ZERO                                      }, // D24F
             { GL_DEPTH_COMPONENT32F,                       GL_ZERO                                      }, // D32F
+            { GL_DEPTH32F_STENCIL8,                        GL_ZERO                                      }, // D32FS8
             { GL_STENCIL_INDEX8,                           GL_ZERO                                      }, // D0S8
         };
         static_assert(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
