@@ -1786,9 +1786,11 @@ namespace Babylon
         }
         if (texture->IsCube())
         {
-            // bgfx addresses a cube texture by (array layer, side 0-5). Only a single (non-array) cube is
-            // supported here, so the JS "layer" argument is the face/side index.
-            texture->UpdateCube(0, static_cast<uint8_t>(layer), mip, x, targetY, width, height, mem);
+            // bgfx addresses a cube texture by (array layer, side 0-5), but the JS side packs both into the
+            // single "layer" argument it also uses for 2D-array slices (6 consecutive faces per array layer,
+            // which is what the bounds check above allows). Decompose it, otherwise a cube-array face index
+            // above 5 would be forwarded as an out-of-range side and every update would land on array layer 0.
+            texture->UpdateCube(static_cast<uint16_t>(layer / 6), static_cast<uint8_t>(layer % 6), mip, x, targetY, width, height, mem);
         }
         else
         {
@@ -2372,12 +2374,23 @@ namespace Babylon
             buffer = Napi::ArrayBuffer::New(env, bufferLength);
         }
 
+        // The face/layer index is JS-controlled and is forwarded to encoder->blit as srcZ, so validate it
+        // before it can drive an out-of-bounds read inside bgfx. Babylon.js passes this argument for both
+        // cube maps (face 0-5, six consecutive faces per array layer) and 2D arrays (slice index, which can
+        // legitimately exceed 5), and -1 for a plain 2D read -- so the bound is the texture's srcZ extent,
+        // not a flat 0-5.
+        const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
+        const uint32_t maxSrcZ{texture->IsCube() ? 6u * numLayers : numLayers};
+        if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture face/layer index is out of range for this texture.").Value());
+        }
         // Make sure the buffer is big enough for the offset + length. Both
         // bufferOffset and bufferLength are JS-supplied uint32_t, so widen the
         // addition to 64-bit: computing it in 32-bit can wrap around (e.g. offset
         // 0xF0000000 + length 0x20000000), letting an out-of-range offset pass this
         // gate and overflow the ArrayBuffer backing store in the memcpy below.
-        if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
+        else if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
         }

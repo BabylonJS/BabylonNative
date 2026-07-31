@@ -92,7 +92,6 @@ namespace Babylon::Graphics
         m_format = format;
         m_flags = flags;
         m_isCube = false;
-        m_is3D = false;
         m_is3D = true;
     }
 
