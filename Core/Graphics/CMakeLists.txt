@@ -18,6 +18,12 @@ set(SOURCES
     "Source/DeviceImpl_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/Texture.cpp")
 
+if(GRAPHICS_API STREQUAL "OpenGL")
+    list(APPEND SOURCES
+        "Include/RendererType/OpenGL/Babylon/Graphics/GL/SharedPtr.h"
+        "Include/RendererType/OpenGL/Babylon/Graphics/GL/Texture.h")
+endif()
+
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 

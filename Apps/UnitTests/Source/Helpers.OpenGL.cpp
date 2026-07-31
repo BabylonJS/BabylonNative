@@ -4,6 +4,7 @@
 #include <GLES3/gl3.h>
 
 #include <stdexcept>
+#include <thread>
 
 namespace Helpers
 {
@@ -14,9 +15,11 @@ namespace Helpers
     // (the same thread the tests create textures on).
     Babylon::Graphics::TextureT CreateTexture(Babylon::Graphics::DeviceT, uint32_t width, uint32_t height, uint32_t arraySize, bool renderTarget, uint32_t samples)
     {
-        // The array / render-target / MSAA variants are only exercised by the
-        // render-path tests, which are skipped on this backend (see CMakeLists.txt).
-        if (arraySize != 1 || renderTarget || samples != 1)
+        // OpenGL needs no special allocation for a texture that will be attached to a
+        // framebuffer, so renderTarget only has to be recorded as usage below. Array and
+        // multisample images would need a different texture target; the tests that ask for
+        // those are skipped on this backend (see CMakeLists.txt).
+        if (arraySize != 1 || samples != 1)
         {
             throw std::runtime_error{"Helpers::CreateTexture(OpenGL): only single-sample, non-array GL_TEXTURE_2D textures are supported"};
         }
@@ -39,13 +42,30 @@ namespace Helpers
 
         EXPECT_EQ(glGetError(), static_cast<GLenum>(GL_NO_ERROR));
 
-        return texture;
+        // Hand back a reference-counted image, mirroring what the D3D and Metal helpers return.
+        // The release callback owns the GL name, so the texture dies with the last reference and
+        // DestroyTexture just drops the caller's own.
+        //
+        // glDeleteTextures needs a current GL context, which this backend only has on the thread
+        // that created the texture. ExternalTexture is copyable, so the last reference can be
+        // dropped anywhere; the contract is that embedders marshal, and this assertion turns a
+        // violation into a test failure instead of a silently leaked texture.
+        const auto creatingThread = std::this_thread::get_id();
+        return Babylon::Graphics::GL::Texture::Create(texture, width, height, GL_RGBA8,
+            renderTarget ? Babylon::Graphics::GL::Texture::Usage::RenderTarget
+                         : Babylon::Graphics::GL::Texture::Usage::Sampled,
+            [creatingThread](unsigned int name) {
+                EXPECT_EQ(creatingThread, std::this_thread::get_id());
+                glDeleteTextures(1, &name);
+            });
     }
 
     void DestroyTexture(Babylon::Graphics::TextureT texture)
     {
-        GLuint handle = texture;
-        glDeleteTextures(1, &handle);
+        if (texture != nullptr)
+        {
+            texture->RemoveReference();
+        }
     }
 
     Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT, uint32_t, uint32_t, const Color*, uint32_t)

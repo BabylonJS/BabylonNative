@@ -349,111 +349,38 @@ namespace Babylon::Plugins
             { GL_STENCIL_INDEX8,                           GL_ZERO                                      }, // D0S8
         };
         static_assert(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
-
-        // Recover the bgfx color format of a GL_TEXTURE_2D handle using only OpenGL
-        // ES 3.0 entry points. glGetTexLevelParameteriv (which would report the
-        // internal format directly) is ES 3.1, so instead the texture is attached to
-        // a scratch framebuffer and its per-channel bit depths, component type and
-        // color encoding are read back and matched to a bgfx format. Returns
-        // bgfx::TextureFormat::Unknown when the texture is not one of the
-        // color-renderable formats handled here (callers can pass an explicit
-        // overrideFormat in that case). Restores the previous framebuffer binding.
-        bgfx::TextureFormat::Enum DeriveBgfxColorFormatFromTexture(GLuint texture, bool& isSrgb)
-        {
-            isSrgb = false;
-
-            GLint previousFbo = 0;
-            glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFbo);
-
-            GLuint fbo = 0;
-            glGenFramebuffers(1, &fbo);
-            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-            const auto attachmentParam = [](GLenum pname) {
-                GLint value = 0;
-                glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, pname, &value);
-                return value;
-            };
-
-            bgfx::TextureFormat::Enum format = bgfx::TextureFormat::Unknown;
-
-            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE &&
-                attachmentParam(GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE) == GL_TEXTURE)
-            {
-                const GLint r = attachmentParam(GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE);
-                const GLint g = attachmentParam(GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE);
-                const GLint b = attachmentParam(GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE);
-                const GLint a = attachmentParam(GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE);
-                const GLint type = attachmentParam(GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE);
-                isSrgb = attachmentParam(GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING) == GL_SRGB;
-
-                const auto channels = [&](GLint rr, GLint gg, GLint bb, GLint aa) {
-                    return r == rr && g == gg && b == bb && a == aa;
-                };
-
-                if (type == GL_FLOAT)
-                {
-                    if (channels(32, 32, 32, 32)) format = bgfx::TextureFormat::RGBA32F;
-                    else if (channels(16, 16, 16, 16)) format = bgfx::TextureFormat::RGBA16F;
-                    else if (channels(32, 32, 0, 0)) format = bgfx::TextureFormat::RG32F;
-                    else if (channels(16, 16, 0, 0)) format = bgfx::TextureFormat::RG16F;
-                    else if (channels(32, 0, 0, 0)) format = bgfx::TextureFormat::R32F;
-                    else if (channels(16, 0, 0, 0)) format = bgfx::TextureFormat::R16F;
-                    else if (channels(11, 11, 10, 0)) format = bgfx::TextureFormat::RG11B10F;
-                }
-                else if (type == GL_UNSIGNED_NORMALIZED)
-                {
-                    if (channels(8, 8, 8, 8)) format = bgfx::TextureFormat::RGBA8;
-                    else if (channels(16, 16, 16, 16)) format = bgfx::TextureFormat::RGBA16;
-                    else if (channels(10, 10, 10, 2)) format = bgfx::TextureFormat::RGB10A2;
-                    else if (channels(5, 5, 5, 1)) format = bgfx::TextureFormat::RGB5A1;
-                    else if (channels(4, 4, 4, 4)) format = bgfx::TextureFormat::RGBA4;
-                    else if (channels(5, 6, 5, 0)) format = bgfx::TextureFormat::R5G6B5;
-                    else if (channels(8, 8, 8, 0)) format = bgfx::TextureFormat::RGB8;
-                    else if (channels(8, 8, 0, 0)) format = bgfx::TextureFormat::RG8;
-                    else if (channels(8, 0, 0, 0)) format = bgfx::TextureFormat::R8;
-                }
-            }
-
-            // sRGB encoding only distinguishes the 8-bit unorm color formats in bgfx.
-            if (format != bgfx::TextureFormat::RGBA8 && format != bgfx::TextureFormat::RGB8)
-            {
-                isSrgb = false;
-            }
-
-            glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFbo));
-            glDeleteFramebuffers(1, &fbo);
-
-            return format;
-        }
     }
 
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
         // Implemented in ExternalTexture_Shared.h
-        Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint32_t>, std::optional<uint32_t>);
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint16_t>, std::optional<uint32_t>, std::optional<uint32_t>);
+        Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint16_t>);
 
         Graphics::TextureT Get() const
         {
-            return m_ptr;
+            return m_ptr.Get();
         }
 
     private:
-        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint32_t> width, std::optional<uint32_t> height, Info& info)
+        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
-            // NOTE: GL state queries below require the bgfx OpenGL context to be
-            // current on this thread. ExternalTexture is constructed/updated on
-            // the same scheduler that AddToContextAsync uses for bgfx work, so
-            // the context current-ness is the caller's responsibility.
+            // NOTE: the GL state queries below require the bgfx OpenGL context to be current on
+            // this thread. ExternalTexture is constructed/updated on the same scheduler that
+            // AddToContextAsync uses for bgfx work, so context current-ness is the caller's
+            // responsibility.
 
-            const GLuint texture = static_cast<GLuint>(ptr);
+            if (ptr == nullptr)
+            {
+                throw std::runtime_error{"ExternalTexture: null OpenGL texture"};
+            }
 
-            // Reject obviously invalid handles up front. glIsTexture only
-            // returns true for handles that have already been used (bound at
-            // least once); any real FBO color attachment will satisfy this.
+            const GLuint texture = ptr->Handle();
+
+            // Reject obviously invalid handles up front. glIsTexture only returns true for
+            // handles that have already been used (bound at least once); any real FBO color
+            // attachment will satisfy this.
             if (texture == 0 || glIsTexture(texture) == GL_FALSE)
             {
                 throw std::runtime_error{"ExternalTexture: invalid OpenGL texture handle"};
@@ -467,120 +394,97 @@ namespace Babylon::Plugins
             while (glGetError() != GL_NO_ERROR) { }
 
             glBindTexture(GL_TEXTURE_2D, texture);
-            // If the handle is bound to a non-GL_TEXTURE_2D target (e.g.
-            // GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_2D_ARRAY, cube map, external)
-            // the bind raises GL_INVALID_OPERATION and the GL_TEXTURE_2D binding
-            // is unchanged. Querying parameters in that state would silently read
-            // the previously bound texture. Detect and reject explicitly.
-            if (glGetError() != GL_NO_ERROR)
+            // If the handle is bound to a non-GL_TEXTURE_2D target (e.g. GL_TEXTURE_2D_MULTISAMPLE,
+            // GL_TEXTURE_2D_ARRAY, cube map, external) the bind raises GL_INVALID_OPERATION and the
+            // GL_TEXTURE_2D binding is unchanged. Reject that explicitly rather than silently
+            // describing whichever texture happened to be bound.
+            const bool wrongTarget = glGetError() != GL_NO_ERROR;
+            glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previousBinding));
+            if (wrongTarget)
             {
-                glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previousBinding));
                 throw std::runtime_error{"ExternalTexture: only GL_TEXTURE_2D handles are supported (multisample/array/cube/external rejected)"};
             }
 
-            // OpenGL ES 3.0 provides no way to query a texture's dimensions from a
-            // bare handle (glGetTexLevelParameteriv is ES 3.1), so the caller must
-            // supply them. Reject missing/degenerate dimensions explicitly.
-            if (!width.has_value() || !height.has_value() || width.value() == 0 || height.value() == 0)
+            // Dimensions travel with the texture. OpenGL ES 3.0 cannot report them from a bare
+            // handle (glGetTexLevelParameteriv is ES 3.1), which is why GL::Texture carries them.
+            if (ptr->Width() == 0 || ptr->Height() == 0)
             {
-                glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previousBinding));
-                throw std::runtime_error{"ExternalTexture: width and height must be supplied for the OpenGL backend"};
+                throw std::runtime_error{"ExternalTexture: OpenGL texture has degenerate dimensions"};
             }
 
-            // Restore the caller's GL_TEXTURE_2D binding; the format is recovered
-            // below via framebuffer-attachment queries, which take the texture id
-            // directly and do not need it bound.
-            glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previousBinding));
+            info.Width = static_cast<uint16_t>(ptr->Width());
+            info.Height = static_cast<uint16_t>(ptr->Height());
 
-            info.Width = static_cast<uint16_t>(width.value());
-            info.Height = static_cast<uint16_t>(height.value());
-
-            // ES 3.0 cannot introspect the mip chain from a handle; external
-            // textures bridged into bgfx are single-level render targets.
+            // ES 3.0 cannot introspect the mip chain from a handle, and GL_TEXTURE_2D is a
+            // single-layer target, so external textures bridged into bgfx are single-level and
+            // single-layer. bgfx::createTexture2D uses NumLayers directly, so it must be >= 1.
             info.MipLevels = 1;
-
-            // GL_TEXTURE_2D is a single-layer target; array textures are rejected
-            // above by the GL_TEXTURE_2D-only bind check. bgfx::createTexture2D
-            // (ImplBase) uses NumLayers directly, so it must be at least 1.
             info.NumLayers = 1;
 
-            // OpenGL has no portable way to ask a bare texture handle whether it is
-            // being used as a render-target attachment. ExternalTexture's sole
-            // supported use case is bridging an FBO color attachment back into bgfx,
-            // so we always advertise the texture as a render target.
-            info.Flags |= BGFX_TEXTURE_RT;
-
-            if (overrideFormat.has_value())
+            // OpenGL cannot be asked whether a texture is usable as a framebuffer attachment, so
+            // GL::Texture carries what its creator declared. bgfx rejects an attachment whose
+            // texture has no BGFX_TEXTURE_RT* flag, and the flag also narrows format validation
+            // to framebuffer-renderable formats, so it must not be set for sampled-only images.
+            if (ptr->IsRenderTarget())
             {
-                // The caller supplied a GL internal format; reverse-map it to a
-                // bgfx format via the same table the D3D/Metal backends use.
-                const GLenum targetFormat = static_cast<GLenum>(overrideFormat.value());
+                info.Flags |= BGFX_TEXTURE_RT;
+            }
 
-                bool formatFound = false;
-                for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
+            // The GL internal format travels with the texture too. An explicit override still
+            // wins, so callers can reinterpret (e.g. select the sRGB twin), exactly as on D3D
+            // and Metal.
+            const GLenum targetFormat = static_cast<GLenum>(overrideFormat.value_or(ptr->Format()));
+
+            bool formatFound = false;
+            for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
+            {
+                const auto bgfxFormat = static_cast<bgfx::TextureFormat::Enum>(i);
+
+                // GL has no distinct BGRA-ordered internal formats: bgfx maps each BGRA*/BGR*
+                // variant to the SAME GL internal format as its RGBA twin (BGRA8/RGBA8 ->
+                // GL_RGBA8, B5G6R5/R5G6B5 -> GL_RGB565, etc.). Because this reverse lookup stops
+                // at the first match and the BGRA rows precede their RGBA twins, skip the
+                // BGRA-ordered rows so the RGBA (correct channel order) twin wins.
+                if (bgfxFormat == bgfx::TextureFormat::BGRA8 ||
+                    bgfxFormat == bgfx::TextureFormat::BGRA4 ||
+                    bgfxFormat == bgfx::TextureFormat::BGR5A1 ||
+                    bgfxFormat == bgfx::TextureFormat::B5G6R5)
                 {
-                    const auto bgfxFormat = static_cast<bgfx::TextureFormat::Enum>(i);
-
-                    // GL has no distinct BGRA-ordered internal formats: bgfx maps each
-                    // BGRA*/BGR* variant to the SAME GL internal format as its RGBA twin
-                    // (BGRA8/RGBA8 -> GL_RGBA8, B5G6R5/R5G6B5 -> GL_RGB565, etc.). Because
-                    // this reverse lookup stops at the first match and the BGRA rows
-                    // precede their RGBA twins, skip the BGRA-ordered rows so the RGBA
-                    // (correct channel order) twin wins.
-                    if (bgfxFormat == bgfx::TextureFormat::BGRA8 ||
-                        bgfxFormat == bgfx::TextureFormat::BGRA4 ||
-                        bgfxFormat == bgfx::TextureFormat::BGR5A1 ||
-                        bgfxFormat == bgfx::TextureFormat::B5G6R5)
-                    {
-                        continue;
-                    }
-
-                    const auto& format = s_textureFormat[i];
-                    if (format.m_fmt == GL_ZERO && format.m_fmtSrgb == GL_ZERO)
-                    {
-                        continue;
-                    }
-
-                    if (format.m_fmt == targetFormat || format.m_fmtSrgb == targetFormat)
-                    {
-                        info.Format = bgfxFormat;
-                        if (format.m_fmtSrgb == targetFormat && format.m_fmtSrgb != GL_ZERO)
-                        {
-                            info.Flags |= BGFX_TEXTURE_SRGB;
-                        }
-                        formatFound = true;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!formatFound)
+                const auto& format = s_textureFormat[i];
+                if (format.m_fmt == GL_ZERO && format.m_fmtSrgb == GL_ZERO)
                 {
-                    throw std::runtime_error{"ExternalTexture: unsupported OpenGL texture internal format override"};
+                    continue;
+                }
+
+                if (format.m_fmt == targetFormat || format.m_fmtSrgb == targetFormat)
+                {
+                    info.Format = bgfxFormat;
+                    if (format.m_fmtSrgb == targetFormat && format.m_fmtSrgb != GL_ZERO)
+                    {
+                        info.Flags |= BGFX_TEXTURE_SRGB;
+                    }
+                    formatFound = true;
+                    break;
                 }
             }
-            else
+
+            if (!formatFound)
             {
-                // No override: recover the format directly from the live texture
-                // using ES 3.0 framebuffer-attachment queries.
-                bool isSrgb = false;
-                info.Format = DeriveBgfxColorFormatFromTexture(texture, isSrgb);
-                if (info.Format == bgfx::TextureFormat::Unknown)
-                {
-                    throw std::runtime_error{"ExternalTexture: could not determine the OpenGL texture format; pass an explicit format override"};
-                }
-                if (isSrgb)
-                {
-                    info.Flags |= BGFX_TEXTURE_SRGB;
-                }
+                throw std::runtime_error{"ExternalTexture: unsupported OpenGL texture internal format"};
             }
         }
 
+        // Takes a reference of our own, so the caller may remove its own reference whenever it
+        // likes, exactly as the D3D and Metal backends do with their platform holders.
         void Set(Graphics::TextureT ptr)
         {
-            m_ptr = static_cast<GLuint>(ptr);
+            m_ptr.CopyFrom(ptr);
         }
 
-        GLuint m_ptr{};
+        Graphics::GL::SharedPtr<Graphics::GL::Texture> m_ptr{};
     };
 }
 
