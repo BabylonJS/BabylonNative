@@ -46,24 +46,25 @@ namespace Babylon::Graphics
         // object. That is tens of megabytes reserved regardless of how much a
         // consumer actually draws.
         //
-        // Ask for a much smaller starting capacity instead and let bgfx grow the
-        // arrays on demand, up to the same BGFX_CONFIG_MAX_DRAW_CALLS ceiling, so the
-        // headroom is still there for scenes that need it but is not paid for when it
-        // is unused. Growth and shrink are both in BGFX_CONFIG_DRAW_CALL_BLOCK steps,
-        // and the arrays are never shrunk below one block.
+        // Ask for the smallest capacity bgfx allows instead and let it grow the arrays
+        // on demand, up to the same BGFX_CONFIG_MAX_DRAW_CALLS ceiling, so the headroom
+        // is still there for scenes that need it but is not paid for when it is unused.
+        // bgfx clamps numDrawCalls up to BGFX_CONFIG_DRAW_CALL_BLOCK, so 0 asks for one
+        // block, not for nothing. Growth and shrink are both in block-sized steps, and
+        // the arrays are never shrunk below one block, which makes the block the single
+        // knob for how much a consumer reserves. Babylon Native sets it to 4096 in
+        // Dependencies/CMakeLists.txt.
         //
         // Growth is reactive: the frame that first exceeds the current capacity drops
-        // the draws past it and only the next frame sees the larger arrays. 4096 is
-        // high enough that no realistic Babylon Native scene starts above it, so the
-        // growth path is effectively a safety net rather than something a scene hits
-        // on its way up. An embedder that knows its own ceiling can go lower by
-        // overriding BGFX_CONFIG_DRAW_CALL_BLOCK and InitialDrawCallCapacity.
+        // the draws past it and only the next frame sees the larger arrays. That is why
+        // the block is not left at bgfx's default of 1024 -- a consumer should reserve
+        // above its own ceiling and treat growth as a safety net.
         //
         // numDrawCallPeakFrames is how many frames a high-water mark must go
         // unmatched before the arrays are shrunk again. It must be non-zero, or
         // bgfx skips the resizing entirely and the arrays stay fixed at whatever
         // numDrawCalls asked for.
-        init.limits.numDrawCalls = config.InitialDrawCallCapacity;
+        init.limits.numDrawCalls = 0;
         init.limits.numDrawCallPeakFrames = 60;
 
         // Use the noop renderer if the configuration has no window and no size.

@@ -56,14 +56,6 @@ namespace Babylon::Graphics
         // Format to use when creating the depth/stencil texture for the back buffer.
         // Specify DepthStencilFormat::None to not create a depth/stencil texture.
         DepthStencilFormat BackBufferDepthStencilFormat{DepthStencilFormat::Depth24Stencil8};
-
-        // Number of draw call slots bgfx reserves per frame up front. bgfx grows this
-        // on demand up to BGFX_CONFIG_MAX_DRAW_CALLS, so this is a starting point, not
-        // a cap. The frame that first exceeds it drops the draws past it, so lower it
-        // only when the scene's draw call ceiling is known. bgfx rounds the value up to
-        // a multiple of BGFX_CONFIG_DRAW_CALL_BLOCK (1024 by default), which is also
-        // the smallest capacity it will ever use.
-        uint32_t InitialDrawCallCapacity{4096};
     };
 
     class DeviceImpl;
