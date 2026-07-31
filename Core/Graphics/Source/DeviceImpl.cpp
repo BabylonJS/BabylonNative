@@ -334,8 +334,9 @@ namespace Babylon::Graphics
         //
         // While waiting, also service any mid-frame view-flush requests from the JS
         // thread (see FlushViewsIfNeeded): the JS thread parks itself and we advance a
-        // bgfx frame here on the render thread to reset the view counter, then hand a
-        // fresh encoder back so rendering continues within the same logical frame.
+        // non-presenting bgfx frame here on the render thread to reset the view counter,
+        // then hand a fresh encoder back so rendering continues within the same logical
+        // frame.
         {
             std::unique_lock lock{m_frameSyncMutex};
             while (true)
@@ -551,9 +552,9 @@ namespace Babylon::Graphics
 
     // Called on the render thread from FinishRenderingCurrentFrame while holding
     // m_frameSyncMutex, with the requesting JS thread parked in FlushViewsIfNeeded
-    // (so the frame encoder is idle). End the current encoder, advance a bgfx frame
-    // to submit the accumulated views and reset the view counter, then begin a fresh
-    // encoder for the remainder of the logical frame.
+    // (so the frame encoder is idle). End the current encoder, advance a non-presenting
+    // bgfx frame to submit the accumulated views and reset the view counter, then begin
+    // a fresh encoder for the remainder of the logical frame.
     void DeviceImpl::PerformMidFrameViewFlush()
     {
         ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
@@ -564,7 +565,12 @@ namespace Babylon::Graphics
             m_frameEncoder = nullptr;
         }
 
-        bgfx::frame();
+        // BGFX_FRAME_FLUSH executes all queued rendering commands and resets bgfx's per-frame
+        // state (including the view counter) without presenting the backbuffer. A plain
+        // bgfx::frame() would flip a half-drawn backbuffer to the screen partway through the
+        // logical frame; bgfx remembers the flush in m_flushPrevFrame so the next real frame
+        // still flips exactly once.
+        bgfx::frame(BGFX_FRAME_FLUSH);
         m_nextViewId.store(0);
 
         // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
