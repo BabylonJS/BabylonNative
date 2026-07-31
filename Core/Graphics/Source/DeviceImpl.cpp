@@ -40,30 +40,17 @@ namespace Babylon::Graphics
         auto& init = m_state.Bgfx.InitState;
         init.callback = &m_bgfxCallback;
 
-        // bgfx sizes its per-frame render-item arrays (sort keys, RenderItem,
-        // RenderBind) from limits.numDrawCalls, and by default that is
-        // BGFX_CONFIG_MAX_DRAW_CALLS (65535) allocated up front, for every Frame
-        // object. That is tens of megabytes reserved regardless of how much a
-        // consumer actually draws.
+        // bgfx reserves limits.numDrawCalls render-item slots (sort keys, RenderItem,
+        // RenderBind) up front for every Frame, and defaults to
+        // BGFX_CONFIG_MAX_DRAW_CALLS (65535) -- tens of megabytes.
         //
-        // Ask for the smallest capacity bgfx allows instead and let it grow the arrays
-        // on demand, up to the same BGFX_CONFIG_MAX_DRAW_CALLS ceiling, so the headroom
-        // is still there for scenes that need it but is not paid for when it is unused.
-        // bgfx clamps numDrawCalls up to BGFX_CONFIG_DRAW_CALL_BLOCK, so 0 asks for one
-        // block, not for nothing. Growth and shrink are both in block-sized steps, and
-        // the arrays are never shrunk below one block, which makes the block the single
-        // knob for how much a consumer reserves. Babylon Native sets it to 4096 in
-        // Dependencies/CMakeLists.txt.
+        // 0 asks for a single BGFX_CONFIG_DRAW_CALL_BLOCK instead (4096, set in
+        // Dependencies/CMakeLists.txt), and bgfx resizes in block steps up to that same
+        // ceiling. Growth is reactive -- the frame that overflows drops the draws past
+        // capacity -- so the block should sit above the expected peak.
         //
-        // Growth is reactive: the frame that first exceeds the current capacity drops
-        // the draws past it and only the next frame sees the larger arrays. That is why
-        // the block is not left at bgfx's default of 1024 -- a consumer should reserve
-        // above its own ceiling and treat growth as a safety net.
-        //
-        // numDrawCallPeakFrames is how many frames a high-water mark must go
-        // unmatched before the arrays are shrunk again. It must be non-zero, or
-        // bgfx skips the resizing entirely and the arrays stay fixed at whatever
-        // numDrawCalls asked for.
+        // numDrawCallPeakFrames is the shrink delay in frames, ~1s at 60fps. Resizing
+        // is disabled entirely at 0.
         init.limits.numDrawCalls = 0;
         init.limits.numDrawCallPeakFrames = 60;
 
