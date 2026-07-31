@@ -54,19 +54,45 @@ set(BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version")
 set(BGFX_LIBRARY_TYPE "STATIC" CACHE STRING "Linking type for library")
 set_property(CACHE BGFX_LIBRARY_TYPE PROPERTY STRINGS "STATIC" "SHARED")
 
-set(BGFX_CONFIG_DEFAULT_MAX_ENCODERS "" CACHE STRING "Specify default maximum encoder count (multithreaded only)")
-set(BGFX_CONFIG_MAX_DRAW_CALLS "" CACHE STRING "Specify maximum draw calls")
-set(BGFX_CONFIG_MAX_VIEWS "" CACHE STRING "Specify maximum view count (should be a power of two)")
-set(BGFX_CONFIG_MAX_FRAME_BUFFERS "" CACHE STRING "Specify maximum frame buffers")
-set(BGFX_CONFIG_MAX_VERTEX_LAYOUTS "" CACHE STRING "Specify maximum vertex layouts")
-set(BGFX_CONFIG_MAX_VERTEX_BUFFERS "" CACHE STRING "Specify maximum vertex buffer count")
-set(BGFX_CONFIG_MAX_DYNAMIC_VERTEX_BUFFERS "" CACHE STRING "Specify maximum dynamic vertex buffer count")
-set(BGFX_CONFIG_MAX_INDEX_BUFFERS "" CACHE STRING "Specify maximum index buffer count")
-set(BGFX_CONFIG_MAX_DYNAMIC_INDEX_BUFFERS "" CACHE STRING "Specify maximum dynamic index buffer count")
-set(BGFX_CONFIG_MAX_TEXTURES "" CACHE STRING "Specify maximum texture count")
-set(BGFX_CONFIG_MAX_TEXTURE_SAMPLERS "" CACHE STRING "Specify maximum texture samplers")
-set(BGFX_CONFIG_MAX_SHADERS "" CACHE STRING "Specify shader count")
-set(BGFX_CONFIG_SORT_KEY_NUM_BITS_PROGRAM "" CACHE STRING "Specify maximum program count as 2^(program bits)")
+# Declare a bgfx compile-time option and record it for forwarding to the bgfx target.
+#
+# An explicitly supplied value always wins. A normal variable set by a parent project is
+# honoured rather than erased, matching how CMP0077 makes option() behave, and a cache
+# entry from -D is left alone.
+macro(bgfx_config_option NAME DOC)
+	if(NOT DEFINED BGFX_CONFIG_${NAME})
+		set(BGFX_CONFIG_${NAME} "" CACHE STRING "${DOC}")
+	endif()
+	list(APPEND BGFX_CONFIG_OPTIONS "BGFX_CONFIG_${NAME}")
+endmacro()
+
+# Forwarded separately because it is combined with BGFX_CONFIG_MULTITHREADED.
+if(NOT DEFINED BGFX_CONFIG_DEFAULT_MAX_ENCODERS)
+	set(BGFX_CONFIG_DEFAULT_MAX_ENCODERS "" CACHE STRING "Specify default maximum encoder count (multithreaded only)")
+endif()
+
+bgfx_config_option(MAX_DRAW_CALLS "Specify maximum draw calls")
+bgfx_config_option(DRAW_CALL_BLOCK "Specify draw call allocation granularity")
+bgfx_config_option(MAX_VIEWS "Specify maximum view count (should be a power of two)")
+bgfx_config_option(MAX_FRAME_BUFFERS "Specify maximum frame buffers")
+bgfx_config_option(MAX_VERTEX_LAYOUTS "Specify maximum vertex layouts")
+bgfx_config_option(MAX_VERTEX_BUFFERS "Specify maximum vertex buffer count")
+bgfx_config_option(MAX_VERTEX_STREAMS "Specify maximum vertex stream count")
+bgfx_config_option(MAX_DYNAMIC_VERTEX_BUFFERS "Specify maximum dynamic vertex buffer count")
+bgfx_config_option(MAX_INDEX_BUFFERS "Specify maximum index buffer count")
+bgfx_config_option(MAX_DYNAMIC_INDEX_BUFFERS "Specify maximum dynamic index buffer count")
+bgfx_config_option(MAX_TEXTURES "Specify maximum texture count")
+bgfx_config_option(MAX_TEXTURE_SAMPLERS "Specify maximum texture samplers")
+bgfx_config_option(MAX_SHADERS "Specify shader count")
+bgfx_config_option(SORT_KEY_NUM_BITS_PROGRAM "Specify maximum program count as 2^(program bits)")
+bgfx_config_option(MIN_RESOURCE_COMMAND_BUFFER_SIZE "Specify minimum resource command buffer size")
+bgfx_config_option(MIN_UNIFORM_BUFFER_SIZE "Specify minimum uniform buffer size")
+bgfx_config_option(UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE "Specify uniform buffer resize threshold size")
+bgfx_config_option(UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE "Specify uniform buffer resize increment size")
+bgfx_config_option(DEBUG_UNIFORM "Specify whether uniform debug checks are enabled (0 or 1)")
+bgfx_config_option(VIDEO "Specify whether video decoding support is built (0 or 1)")
+bgfx_config_option(C99_API "Specify whether the C99 API is built (0 or 1)")
+
 set(BGFX_CMAKE_USER_SCRIPT "" CACHE STRING "Path to custom cmake script to include")
 
 if(BGFX_CMAKE_USER_SCRIPT)
