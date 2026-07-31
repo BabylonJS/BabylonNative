@@ -10,16 +10,24 @@ if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
     add_subdirectory(NativeCapture)
 endif()
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)
+    add_subdirectory(NativeDraco)
+endif()
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
     add_subdirectory(NativeEncoding)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
     add_subdirectory(NativeEngine)
+    endif()
+
+    if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
+    add_subdirectory(NativeInput)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
-    add_subdirectory(NativeInput)
+if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT)
+    add_subdirectory(NativeMeshopt)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
