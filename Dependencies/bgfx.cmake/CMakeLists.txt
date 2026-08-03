@@ -91,7 +91,6 @@ bgfx_config_option(MIN_UNIFORM_BUFFER_SIZE "Specify minimum uniform buffer size"
 bgfx_config_option(UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE "Specify uniform buffer resize threshold size")
 bgfx_config_option(UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE "Specify uniform buffer resize increment size")
 bgfx_config_option(DEBUG_UNIFORM "Specify whether uniform debug checks are enabled (0 or 1)")
-bgfx_config_option(VIDEO "Specify whether video decoding support is built (0 or 1)")
 bgfx_config_option(C99_API "Specify whether the C99 API is built (0 or 1)")
 
 set(BGFX_CMAKE_USER_SCRIPT "" CACHE STRING "Path to custom cmake script to include")
