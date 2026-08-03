@@ -96,6 +96,12 @@ if(APPLE)
         INTERFACE metal-cpp)
 endif()
 
+if(ANGLE_GLESV2_IMPORT_LIB)
+    # Consumers of the OpenGL RendererType headers above may call GL ES directly.
+    target_link_libraries(GraphicsDevice
+        INTERFACE "${ANGLE_GLESV2_IMPORT_LIB}")
+endif()
+
 # ---------------------
 # GraphicsDeviceContext
 # ---------------------
