@@ -25,7 +25,6 @@ set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
     "Source/Tests.ExternalTexture.cpp"
-    "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
     "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
@@ -36,9 +35,11 @@ set(SOURCES
     "Source/Helpers.h"
     "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
+# Both of these need Helpers::CreateDevice, which only the D3D backends define.
 if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.cpp")
+        "Source/Tests.Device.cpp"
+        "Source/Tests.ExternalTexture.DeviceLoss.cpp")
 endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
