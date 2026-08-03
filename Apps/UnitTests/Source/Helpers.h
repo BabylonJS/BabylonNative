@@ -12,6 +12,9 @@ namespace Helpers
         uint8_t R, G, B, A;
     };
 
+    // The helpers upload arrays of Color straight to the GPU as tightly packed RGBA8.
+    static_assert(sizeof(Color) == 4, "Color must be tightly packed to upload as RGBA8");
+
     // Creates a 2D texture (or 2D array if arraySize > 1). When renderTarget is true, the texture
     // also gets the render-target bind flag so it can be wrapped as the color attachment of a
     // bgfx framebuffer via wrapNativeTexture. samples > 1 requires renderTarget = true.

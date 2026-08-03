@@ -3,6 +3,7 @@
 
 #include <GLES3/gl3.h>
 
+#include <algorithm>
 #include <stdexcept>
 #include <thread>
 
@@ -101,19 +102,13 @@ namespace Helpers
 
     Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT, uint32_t width, uint32_t height, const Color* sliceColors, uint32_t sliceCount)
     {
-        // glTexImage3D takes the whole array as one tightly packed buffer, slice-major.
-        const size_t sliceSize = static_cast<size_t>(width) * height * 4;
-        std::vector<uint8_t> pixels(sliceSize * sliceCount);
+        // glTexImage3D takes the whole array as one tightly packed buffer, slice-major. Color is
+        // laid out exactly as GL_RGBA/GL_UNSIGNED_BYTE expects, so the slices upload as they are.
+        const size_t texelsPerSlice = static_cast<size_t>(width) * height;
+        std::vector<Color> pixels(texelsPerSlice * sliceCount);
         for (uint32_t slice = 0; slice < sliceCount; ++slice)
         {
-            for (uint32_t i = 0; i < width * height; ++i)
-            {
-                uint8_t* p = pixels.data() + slice * sliceSize + static_cast<size_t>(i) * 4;
-                p[0] = sliceColors[slice].R;
-                p[1] = sliceColors[slice].G;
-                p[2] = sliceColors[slice].B;
-                p[3] = sliceColors[slice].A;
-            }
+            std::fill_n(pixels.data() + slice * texelsPerSlice, texelsPerSlice, sliceColors[slice]);
         }
 
         return CreateGLTexture(width, height, sliceCount, false, pixels.data());
