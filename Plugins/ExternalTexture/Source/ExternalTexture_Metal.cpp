@@ -256,6 +256,11 @@ namespace
 
 namespace Babylon::Plugins
 {
+    uintptr_t NativeTextureHandle(Graphics::TextureT ptr)
+    {
+        return reinterpret_cast<uintptr_t>(ptr);
+    }
+
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
