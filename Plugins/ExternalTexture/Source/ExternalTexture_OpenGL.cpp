@@ -411,31 +411,6 @@ namespace Babylon::Plugins
                 throw std::runtime_error{"ExternalTexture: OpenGL texture has no layers"};
             }
 
-            // Save the current binding for the target this texture claims so we don't disturb
-            // caller state. An array image lives in a different binding point than a 2D one.
-            const bool isArray = ptr->Layers() > 1;
-            const GLenum target = isArray ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
-
-            GLint previousBinding = 0;
-            glGetIntegerv(isArray ? GL_TEXTURE_BINDING_2D_ARRAY : GL_TEXTURE_BINDING_2D, &previousBinding);
-
-            // Drain any pre-existing GL error so we can detect bind failure below.
-            while (glGetError() != GL_NO_ERROR) { }
-
-            glBindTexture(target, texture);
-            // A GL name belongs to exactly one target for its lifetime. Binding it to a different
-            // one raises GL_INVALID_OPERATION and leaves the binding unchanged, so this also
-            // catches a handle whose declared layer count disagrees with how it was allocated, and
-            // targets this backend does not support at all (multisample, cube, external).
-            const bool wrongTarget = glGetError() != GL_NO_ERROR;
-            glBindTexture(target, static_cast<GLuint>(previousBinding));
-            if (wrongTarget)
-            {
-                throw std::runtime_error{isArray
-                    ? "ExternalTexture: OpenGL texture is not a GL_TEXTURE_2D_ARRAY despite declaring multiple layers"
-                    : "ExternalTexture: only GL_TEXTURE_2D and GL_TEXTURE_2D_ARRAY handles are supported (multisample/cube/external rejected)"};
-            }
-
             // Dimensions travel with the texture. OpenGL ES 3.0 cannot report them from a bare
             // handle (glGetTexLevelParameteriv is ES 3.1), which is why GL::Texture carries them.
             if (ptr->Width() == 0 || ptr->Height() == 0)
