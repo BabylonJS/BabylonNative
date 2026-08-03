@@ -10,9 +10,9 @@
 #include <algorithm>
 
 // This backend runs on BabylonNative's OpenGL ES 3.0 context, so it uses only
-// ES 3.0 entry points. Texture dimensions cannot be queried from a bare handle
-// on ES 3.0 (glGetTexLevelParameteriv is ES 3.1), so the caller supplies them;
-// the format is recovered via ES 3.0 framebuffer-attachment queries.
+// ES 3.0 entry points. Neither the dimensions nor the internal format can be
+// queried from a bare handle on ES 3.0 (glGetTexLevelParameteriv is ES 3.1),
+// so GL::Texture carries both.
 #include <GLES3/gl3.h>
 
 #include "ExternalTexture_Base.h"
@@ -21,7 +21,7 @@
 // formats whose enum values are not present in the standard GLES headers.
 // Define them here (values per the OpenGL registry) so the format table
 // below mirrors bgfx/src/renderer_gl.cpp's s_textureFormat[]. These are
-// used purely for reverse-mapping a queried internalFormat to a
+// used purely for reverse-mapping a texture's internalFormat to a
 // bgfx::TextureFormat::Enum and never passed to a GL call here, so it is
 // safe to define them unconditionally.
 #ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
@@ -242,11 +242,16 @@
 
 namespace Babylon::Plugins
 {
+    uintptr_t NativeTextureHandle(Graphics::TextureT ptr)
+    {
+        return ptr == nullptr ? 0 : static_cast<uintptr_t>(ptr->Handle());
+    }
+
     namespace
     {
         // Two-column slice of the bgfx OpenGLES s_textureFormat[] table
         // (see bgfx/src/renderer_gl.cpp). Indexed by bgfx::TextureFormat::Enum.
-        // Used by GetInfo to reverse-map a queried GL internalFormat back to
+        // Used by GetInfo to reverse-map a texture's GL internalFormat back to
         // the corresponding bgfx::TextureFormat::Enum (with sRGB detection).
         struct TextureFormatInfo
         {

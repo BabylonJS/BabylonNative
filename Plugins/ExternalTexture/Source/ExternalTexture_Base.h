@@ -7,9 +7,15 @@
 #include <set>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 
 namespace Babylon::Plugins
 {
+    // The value bgfx wants as this texture's native handle. Defined per backend in
+    // ExternalTexture_<API>.cpp: the pointer itself on D3D and Metal, and on OpenGL the GL
+    // name rather than the address of the wrapper holding it.
+    uintptr_t NativeTextureHandle(Graphics::TextureT ptr);
+
     class ExternalTexture::ImplBase
     {
     public:
@@ -69,7 +75,7 @@ namespace Babylon::Plugins
                     Format(),
                     Flags(),
                     0,
-                    Graphics::NativeTextureHandle(ptr)
+                    NativeTextureHandle(ptr)
                 );
 
                 if (!bgfx::isValid(handle))
