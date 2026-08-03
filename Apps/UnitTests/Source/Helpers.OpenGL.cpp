@@ -59,9 +59,16 @@ namespace Helpers
             // dropped anywhere; the contract is that embedders marshal, and this assertion turns a
             // violation into a test failure instead of a silently leaked texture.
             const auto creatingThread = std::this_thread::get_id();
-            return Babylon::Graphics::GL::Texture::Create(texture, width, height, layers, GL_RGBA8,
-                renderTarget ? Babylon::Graphics::GL::Texture::Usage::RenderTarget
-                             : Babylon::Graphics::GL::Texture::Usage::Sampled,
+            return Babylon::Graphics::GL::Texture::Create(
+                {
+                    .Handle = texture,
+                    .Width = width,
+                    .Height = height,
+                    .Layers = layers,
+                    .Format = GL_RGBA8,
+                    .Usage = renderTarget ? Babylon::Graphics::GL::Texture::Usage::RenderTarget
+                                          : Babylon::Graphics::GL::Texture::Usage::Sampled,
+                },
                 [creatingThread](unsigned int name) {
                     EXPECT_EQ(creatingThread, std::this_thread::get_id());
                     glDeleteTextures(1, &name);
