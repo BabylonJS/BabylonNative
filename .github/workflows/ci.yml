@@ -92,6 +92,16 @@ jobs:
       platform: x64
       graphics-api: D3D12
 
+  # Build-only: Linux already runs UnitTests on GL, so this job exists purely to catch Windows
+  # GL compile/link breaks. Tests aren't run because the runner's ANGLE comes from whatever
+  # browser version happens to be installed — an uncontrolled, auto-updating input.
+  Win32_x64_OpenGL:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      graphics-api: OpenGLWindowsDevOnly
+      build-only: true
+
   Win32_x64_D3D11_PrecompiledShaderTest:
     uses: ./.github/workflows/build-win32-shader.yml
 
