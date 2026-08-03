@@ -31,9 +31,8 @@ namespace Helpers
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
 
-        // Allocate a single, texture-complete mip level. The pixel contents are
-        // never read back by the enabled tests; only the queried dimensions and
-        // internal format matter.
+        // Allocate a single, texture-complete mip level. The initial contents are left
+        // undefined: the render tests clear and draw into this image before reading it back.
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -73,8 +72,27 @@ namespace Helpers
         throw std::runtime_error{"not implemented"};
     }
 
-    std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo&, Babylon::Graphics::TextureT, uint32_t, uint32_t)
+    std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo&, Babylon::Graphics::TextureT texture, uint32_t width, uint32_t height)
     {
-        throw std::runtime_error{"not implemented"};
+        // ES 3.0 has no glGetTexImage, so the only way to get texels back off a texture is to
+        // attach it to a framebuffer and read that. The caller classifies pixels by count rather
+        // than position, so GL's bottom-left origin (vs D3D's top-left) needs no correction.
+        GLint previousFramebuffer = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+
+        GLuint framebuffer = 0;
+        glGenFramebuffers(1, &framebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->Handle(), 0);
+        EXPECT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), static_cast<GLenum>(GL_FRAMEBUFFER_COMPLETE));
+
+        std::vector<uint8_t> pixels(static_cast<size_t>(width) * height * 4);
+        glReadPixels(0, 0, static_cast<GLsizei>(width), static_cast<GLsizei>(height), GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+        EXPECT_EQ(glGetError(), static_cast<GLenum>(GL_NO_ERROR));
+
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(previousFramebuffer));
+        glDeleteFramebuffers(1, &framebuffer);
+
+        return pixels;
     }
 }

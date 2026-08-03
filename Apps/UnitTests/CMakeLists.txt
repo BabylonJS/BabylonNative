@@ -101,12 +101,15 @@ if(GRAPHICS_API STREQUAL "D3D12")
 endif()
 
 if(GRAPHICS_API STREQUAL "OpenGL")
-    # The OpenGL ExternalTexture backend imports single-sample GL_TEXTURE_2D
-    # handles only, so run the basic GetInfo/Set/Get/Update tests on any OpenGL
-    # build (Linux, or the OpenGLWindowsDevOnly dev path). The render-path tests
-    # (pixel readback) and the array/layer-index test require GL test helpers and
-    # array-texture support that this backend does not implement yet.
-    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS SKIP_EXTERNAL_TEXTURE_ARRAY_TESTS)
+    # The OpenGL ExternalTexture backend imports single-sample, non-array GL_TEXTURE_2D
+    # handles, so the multisample and texture-array tests exercise support it does not
+    # have. The device-loss test additionally needs a Helpers::CreateDevice that this
+    # backend does not provide. The single-sample render test does run, covering the
+    # render-target path.
+    target_compile_definitions(UnitTests PRIVATE
+        SKIP_EXTERNAL_TEXTURE_ARRAY_TESTS
+        SKIP_MULTISAMPLE_TESTS
+        SKIP_DEVICE_LOSS_TESTS)
 endif()
 
 add_test(NAME UnitTests COMMAND UnitTests)
