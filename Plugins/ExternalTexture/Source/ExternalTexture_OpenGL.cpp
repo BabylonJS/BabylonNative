@@ -405,23 +405,35 @@ namespace Babylon::Plugins
                 throw std::runtime_error{"ExternalTexture: invalid OpenGL texture handle"};
             }
 
-            // Save the current GL_TEXTURE_2D binding so we don't disturb caller state.
+            // bgfx::createTexture2D uses NumLayers directly, so it must be >= 1.
+            if (ptr->Layers() == 0)
+            {
+                throw std::runtime_error{"ExternalTexture: OpenGL texture has no layers"};
+            }
+
+            // Save the current binding for the target this texture claims so we don't disturb
+            // caller state. An array image lives in a different binding point than a 2D one.
+            const bool isArray = ptr->Layers() > 1;
+            const GLenum target = isArray ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
+
             GLint previousBinding = 0;
-            glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousBinding);
+            glGetIntegerv(isArray ? GL_TEXTURE_BINDING_2D_ARRAY : GL_TEXTURE_BINDING_2D, &previousBinding);
 
             // Drain any pre-existing GL error so we can detect bind failure below.
             while (glGetError() != GL_NO_ERROR) { }
 
-            glBindTexture(GL_TEXTURE_2D, texture);
-            // If the handle is bound to a non-GL_TEXTURE_2D target (e.g. GL_TEXTURE_2D_MULTISAMPLE,
-            // GL_TEXTURE_2D_ARRAY, cube map, external) the bind raises GL_INVALID_OPERATION and the
-            // GL_TEXTURE_2D binding is unchanged. Reject that explicitly rather than silently
-            // describing whichever texture happened to be bound.
+            glBindTexture(target, texture);
+            // A GL name belongs to exactly one target for its lifetime. Binding it to a different
+            // one raises GL_INVALID_OPERATION and leaves the binding unchanged, so this also
+            // catches a handle whose declared layer count disagrees with how it was allocated, and
+            // targets this backend does not support at all (multisample, cube, external).
             const bool wrongTarget = glGetError() != GL_NO_ERROR;
-            glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previousBinding));
+            glBindTexture(target, static_cast<GLuint>(previousBinding));
             if (wrongTarget)
             {
-                throw std::runtime_error{"ExternalTexture: only GL_TEXTURE_2D handles are supported (multisample/array/cube/external rejected)"};
+                throw std::runtime_error{isArray
+                    ? "ExternalTexture: OpenGL texture is not a GL_TEXTURE_2D_ARRAY despite declaring multiple layers"
+                    : "ExternalTexture: only GL_TEXTURE_2D and GL_TEXTURE_2D_ARRAY handles are supported (multisample/cube/external rejected)"};
             }
 
             // Dimensions travel with the texture. OpenGL ES 3.0 cannot report them from a bare
@@ -434,11 +446,11 @@ namespace Babylon::Plugins
             info.Width = static_cast<uint16_t>(ptr->Width());
             info.Height = static_cast<uint16_t>(ptr->Height());
 
-            // ES 3.0 cannot introspect the mip chain from a handle, and GL_TEXTURE_2D is a
-            // single-layer target, so external textures bridged into bgfx are single-level and
-            // single-layer. bgfx::createTexture2D uses NumLayers directly, so it must be >= 1.
+            // ES 3.0 cannot introspect the mip chain from a handle, so external textures bridged
+            // into bgfx are single-level. The layer count travels with the texture for the same
+            // reason the dimensions do.
             info.MipLevels = 1;
-            info.NumLayers = 1;
+            info.NumLayers = static_cast<uint16_t>(ptr->Layers());
 
             // OpenGL cannot be asked whether a texture is usable as a framebuffer attachment, so
             // GL::Texture carries what its creator declared. bgfx rejects an attachment whose

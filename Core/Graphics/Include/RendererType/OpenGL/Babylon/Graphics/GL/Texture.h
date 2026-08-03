@@ -37,10 +37,14 @@ namespace Babylon::Graphics::GL
 
         // handle is a GL texture name and format a GL internal format (GLenum), spelled as
         // unsigned int so this header stays independent of any GL headers.
-        static Texture* Create(unsigned int handle, uint32_t width, uint32_t height,
+        //
+        // layers is the number of array slices: 1 for a GL_TEXTURE_2D image, more for a
+        // GL_TEXTURE_2D_ARRAY one. The target is derived from it rather than passed, so the
+        // caller never has to name a GL enum.
+        static Texture* Create(unsigned int handle, uint32_t width, uint32_t height, uint32_t layers,
             unsigned int format, Usage usage, std::function<void(unsigned int)> release = {})
         {
-            return new Texture{handle, width, height, format, usage, std::move(release)};
+            return new Texture{handle, width, height, layers, format, usage, std::move(release)};
         }
 
         void AddReference() noexcept
@@ -64,6 +68,7 @@ namespace Babylon::Graphics::GL
         unsigned int Handle() const noexcept { return m_handle; }
         uint32_t Width() const noexcept { return m_width; }
         uint32_t Height() const noexcept { return m_height; }
+        uint32_t Layers() const noexcept { return m_layers; }
         unsigned int Format() const noexcept { return m_format; }
         bool IsRenderTarget() const noexcept { return m_usage == Usage::RenderTarget; }
 
@@ -71,11 +76,12 @@ namespace Babylon::Graphics::GL
         Texture& operator=(const Texture&) = delete;
 
     private:
-        Texture(unsigned int handle, uint32_t width, uint32_t height, unsigned int format,
-            Usage usage, std::function<void(unsigned int)> release)
+        Texture(unsigned int handle, uint32_t width, uint32_t height, uint32_t layers,
+            unsigned int format, Usage usage, std::function<void(unsigned int)> release)
             : m_handle{handle}
             , m_width{width}
             , m_height{height}
+            , m_layers{layers}
             , m_format{format}
             , m_usage{usage}
             , m_release{std::move(release)}
@@ -88,6 +94,7 @@ namespace Babylon::Graphics::GL
         unsigned int m_handle{};
         uint32_t m_width{};
         uint32_t m_height{};
+        uint32_t m_layers{1};
         unsigned int m_format{};
         Usage m_usage{Usage::Sampled};
         std::function<void(unsigned int)> m_release{};
@@ -95,10 +102,11 @@ namespace Babylon::Graphics::GL
 
     // Creates a Texture and takes over the reference Create returns.
     inline SharedPtr<Texture> MakeTexture(unsigned int handle, uint32_t width, uint32_t height,
-        unsigned int format, Texture::Usage usage, std::function<void(unsigned int)> release = {})
+        uint32_t layers, unsigned int format, Texture::Usage usage,
+        std::function<void(unsigned int)> release = {})
     {
         SharedPtr<Texture> ptr;
-        ptr.Attach(Texture::Create(handle, width, height, format, usage, std::move(release)));
+        ptr.Attach(Texture::Create(handle, width, height, layers, format, usage, std::move(release)));
         return ptr;
     }
 }
