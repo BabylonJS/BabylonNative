@@ -65,6 +65,10 @@ elseif(WIN32)
         "Source/RenderDoc.h"
         "Source/RenderDoc.cpp")
     set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
+    if(GRAPHICS_API STREQUAL "OpenGL")
+        # Helpers.OpenGL.cpp is stubs that throw, same as the Linux GL build above.
+        set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
+    endif()
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})

@@ -43,5 +43,13 @@ add_test(NAME ModuleLoadTest COMMAND ModuleLoadTest CONFIGURATIONS Release RelWi
 add_custom_command(TARGET ModuleLoadTest POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:ModuleLoadTest>>,copy,true> $<TARGET_RUNTIME_DLLS:ModuleLoadTest> $<TARGET_FILE_DIR:ModuleLoadTest> COMMAND_EXPAND_LISTS)
 
+if(ANGLE_LIBEGL)
+    add_custom_command(TARGET ModuleLoadTest POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBEGL}" "$<TARGET_FILE_DIR:ModuleLoadTest>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBGLESV2}" "$<TARGET_FILE_DIR:ModuleLoadTest>"
+        COMMENT "Copying ANGLE libraries to ModuleLoadTest output directory"
+    )
+endif()
+
 set_property(TARGET ModuleLoadTest PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
