@@ -53,6 +53,11 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESH
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
+# bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
+# directory, and Windows has no system copy the way Linux and Android do.
+# Expose the path so the OpenGL backends of our own targets can use it.
+set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
+
 # Canvas plugin allocates one bgfx framebuffer per JS Canvas object and per
 # text-rendering operation; combined with V8 GC pacing this can exceed the
 # default 128 limit during long playground sweeps. We enforce a floor of 512:

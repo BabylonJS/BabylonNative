@@ -100,6 +100,12 @@ if(ANGLE_GLESV2_IMPORT_LIB)
     # Consumers of the OpenGL RendererType headers above may call GL ES directly.
     target_link_libraries(GraphicsDevice
         INTERFACE "${ANGLE_GLESV2_IMPORT_LIB}")
+
+    # Windows has no GL ES SDK, and the browser ships ANGLE's DLLs without headers, so those
+    # consumers also need somewhere to find <GLES3/gl3.h>. bgfx vendors the Khronos headers
+    # but keeps the directory PRIVATE, so name it here rather than relying on that target.
+    target_include_directories(GraphicsDevice
+        INTERFACE "${BGFX_KHRONOS_INCLUDE_DIR}")
 endif()
 
 # ---------------------
