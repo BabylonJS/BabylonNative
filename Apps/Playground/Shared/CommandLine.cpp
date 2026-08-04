@@ -221,11 +221,6 @@ namespace
             "                              May be specified multiple times (OR).\n",
             [](PlaygroundOptions& o, std::string_view value, std::string&) { o.TestFilters.emplace_back(value); }},
 
-        FlagSpec{"--skip", "", FlagKind::ValueRequired, "PATTERN",
-            "Skip tests whose title contains PATTERN.",
-            "                              May be specified multiple times (OR).\n",
-            [](PlaygroundOptions& o, std::string_view value, std::string&) { o.SkipTests.emplace_back(value); }},
-
         FlagSpec{"--test-index", "", FlagKind::ValueRequired, "LIST",
             "Run only the listed indices. LIST may be a",
             "                              comma list of numbers or N-M ranges,\n"

@@ -92,14 +92,6 @@ jobs:
       platform: x64
       graphics-api: D3D12
 
-  # OpenGLWindowsDevOnly gets its ANGLE from an installed Chromium browser, which is why it is
-  # dev-only. Nothing else on Windows compiles the GL backend.
-  Win32_x64_OpenGL:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      graphics-api: OpenGLWindowsDevOnly
-
   Win32_x64_D3D11_PrecompiledShaderTest:
     uses: ./.github/workflows/build-win32-shader.yml
 

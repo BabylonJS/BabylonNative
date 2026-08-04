@@ -130,13 +130,6 @@ namespace
             }
             js.Set("testFilters", filters);
 
-            auto skips = Napi::Array::New(env, playgroundOptions.SkipTests.size());
-            for (uint32_t idx = 0; idx < playgroundOptions.SkipTests.size(); ++idx)
-            {
-                skips[idx] = Napi::String::New(env, playgroundOptions.SkipTests[idx]);
-            }
-            js.Set("skipTests", skips);
-
             auto indices = Napi::Array::New(env, playgroundOptions.TestIndices.size());
             for (uint32_t idx = 0; idx < playgroundOptions.TestIndices.size(); ++idx)
             {
