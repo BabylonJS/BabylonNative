@@ -12,21 +12,24 @@ namespace Helpers
         uint8_t R, G, B, A;
     };
 
+    // The helpers upload arrays of Color straight to the GPU as tightly packed RGBA8.
+    static_assert(sizeof(Color) == 4, "Color must be tightly packed to upload as RGBA8");
+
     // Creates a 2D texture (or 2D array if arraySize > 1). When renderTarget is true, the texture
     // also gets the render-target bind flag so it can be wrapped as the color attachment of a
     // bgfx framebuffer via wrapNativeTexture. samples > 1 requires renderTarget = true.
-    // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
+    // Implemented for D3D11, Metal and OpenGL; D3D12 throws. OpenGL throws for samples > 1.
     Babylon::Graphics::TextureT CreateTexture(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, uint32_t arraySize = 1, bool renderTarget = false, uint32_t samples = 1);
     void DestroyTexture(Babylon::Graphics::TextureT texture);
 
     // Creates a 2D texture array initialized to one solid color per slice. Used by
     // Tests.ExternalTexture.Render to compose a multi-slice input texture.
-    // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
+    // Implemented for D3D11, Metal and OpenGL; D3D12 throws.
     Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const Color* sliceColors, uint32_t sliceCount);
 
     // Reads back the texture's pixels into an 8-bit RGBA byte buffer (R, G, B, A byte order on all backends).
     // If the texture is multisampled, the samples are resolved down to 1 before the readback.
-    // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
+    // Implemented for D3D11, Metal and OpenGL; D3D12 throws.
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo& platformInfo, Babylon::Graphics::TextureT texture, uint32_t width, uint32_t height);
 
     // Returns a graphics device suitable for use as Babylon::Graphics::Configuration::Device. The
