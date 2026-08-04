@@ -160,6 +160,14 @@ namespace Babylon::Graphics
         // sort after ids acquired from the reset counter and invert submission order.
         std::atomic<uint32_t> m_viewIdGeneration{0};
 
+        // Number of mid-frame view flushes performed during the current logical frame; reset
+        // when the frame is actually presented. The flush lets a logical frame exceed bgfx's
+        // per-frame view budget, but each one is a blocking round-trip to the render thread,
+        // so an unbounded number of them turns pathological content into an apparent hang
+        // instead of an error. FlushViewsIfNeeded stops rescuing past kMaxMidFrameViewFlushes
+        // and lets AcquireNewViewId throw, which is the pre-existing behaviour.
+        std::atomic<uint32_t> m_midFrameFlushCount{0};
+
         std::atomic<bool> m_captureNextFrame{false};
 
         std::optional<arcana::cancellation_source> m_cancellationSource{};

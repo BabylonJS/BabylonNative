@@ -521,6 +521,15 @@ namespace Babylon::Graphics
         // (maxViews - 1) is reserved for readback blits.
         constexpr bgfx::ViewId kViewFlushMargin = 16;
 
+        // Maximum mid-frame flushes allowed in one logical frame. Measured: no test in the
+        // validation suite needs any at the real 256-view budget, and the heaviest content
+        // found so far (the excluded "Nested BBG", which renders in a setInterval) peaks at
+        // 5. 64 leaves generous headroom for legitimately heavy content while bounding a
+        // mechanism that is otherwise unlimited: each flush is a blocking round-trip to the
+        // render thread, so an unbounded number of them would degrade into an apparent hang
+        // rather than an error.
+        constexpr uint32_t kMaxMidFrameViewFlushes = 64;
+
         const bgfx::ViewId maxViews = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews);
         if (maxViews <= kViewFlushMargin)
         {
@@ -528,6 +537,17 @@ namespace Babylon::Graphics
         }
 
         if (m_nextViewId.load() < static_cast<uint32_t>(maxViews - kViewFlushMargin))
+        {
+            return;
+        }
+
+        // Bound the rescue. Each flush is a blocking round-trip to the render thread, so
+        // content that needs an unbounded number of them (e.g. a snippet that renders in a
+        // setInterval without ever letting the frame present) would appear to hang rather
+        // than fail. Past the budget, stop flushing and let AcquireNewViewId throw
+        // "Too many views" — the pre-existing behaviour, and a far better diagnostic than a
+        // process that makes progress too slowly to ever finish.
+        if (m_midFrameFlushCount.load() >= kMaxMidFrameViewFlushes)
         {
             return;
         }
@@ -586,6 +606,7 @@ namespace Babylon::Graphics
         // still flips exactly once.
         bgfx::frame(BGFX_FRAME_FLUSH);
         m_nextViewId.store(0);
+        m_midFrameFlushCount.fetch_add(1);
 
         // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
         // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
@@ -666,6 +687,7 @@ namespace Babylon::Graphics
         }
 
         m_nextViewId.store(0);
+        m_midFrameFlushCount.store(0);
     }
 
     void DeviceImpl::CaptureCallback(const BgfxCallback::CaptureData& data)
