@@ -25,6 +25,7 @@ set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
     "Source/Tests.ExternalTexture.cpp"
+    "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
     "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
@@ -35,11 +36,9 @@ set(SOURCES
     "Source/Helpers.h"
     "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
-# Both of these need Helpers::CreateDevice, which only the D3D backends define.
 if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.cpp"
-        "Source/Tests.ExternalTexture.DeviceLoss.cpp")
+        "Source/Tests.Device.cpp")
 endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
@@ -64,10 +63,6 @@ elseif(WIN32)
         "Source/RenderDoc.h"
         "Source/RenderDoc.cpp")
     set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
-    if(GRAPHICS_API STREQUAL "OpenGL")
-        # Helpers.OpenGL.cpp is stubs that throw, same as the Linux GL build above.
-        set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
-    endif()
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})

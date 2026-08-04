@@ -35,8 +35,8 @@ namespace Helpers
     // Returns a graphics device suitable for use as Babylon::Graphics::Configuration::Device. The
     // returned handle is owned by the caller and must be released with DestroyDevice.
     //
-    // Defined only on D3D11 and D3D12 -- the tests that consume these helpers are gated to those
-    // backends. On D3D11 returns an ID3D11Device created via D3D11CreateDevice(WARP);
+    // Defined only on D3D11 and D3D12 -- the Tests.Device.cpp test that consumes these helpers is
+    // gated to those backends. On D3D11 returns an ID3D11Device created via D3D11CreateDevice(WARP);
     // on D3D12 returns an ID3D12Device created via D3D12CreateDevice on the WARP DXGI adapter.
     //
     // Note: on D3D12, D3D12CreateDevice(WARP) returns the same singleton pointer on successive calls
