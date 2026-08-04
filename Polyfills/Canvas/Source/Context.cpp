@@ -681,6 +681,25 @@ namespace Babylon::Polyfills::Internal
             scope.emplace(m_graphicsContext.AcquireFrameCompletionScope());
         }
 
+        // A canvas flush is the one stretch of a frame that acquires views without ever
+        // reaching NativeEngine::GetEncoder, so no budget check runs inside it. Its cost is
+        // not bounded either: the pool recycles framebuffers but not view ids (Acquire ->
+        // Bind() drops the cached id, the draw re-acquires, Release -> Clear() acquires
+        // again), so it scales with filter-op count. That means kViewFlushMargin cannot be
+        // sized to cover it, and a frame that is just under the flush threshold on entry
+        // here would run past maxViews and throw "Too many views".
+        //
+        // Check once, here. This is the only safe point in the flush:
+        //   - after the scope above, so m_pendingFrameScopes > 0 and the flush handshake is
+        //     actually serviceable by the parked render thread (it no-ops otherwise);
+        //   - before the encoder is read below, so a flush that swaps the frame encoder
+        //     cannot leave us holding a stale pointer;
+        //   - before nvgBeginFrame, so no nanovg transient buffer exists to be invalidated
+        //     (those are allocated in glnvg__renderFlush during nvgEndFrame).
+        // This does not bound a single canvas' cost, but it reduces the requirement from
+        // "the margin must cover an arbitrary canvas" to "one canvas must fit in maxViews".
+        m_graphicsContext.FlushViewsIfNeeded();
+
         bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
         if (encoder == nullptr)
         {
@@ -741,7 +760,7 @@ namespace Babylon::Polyfills::Internal
             // layer samples the destination texture. Deferring to CopyTexture's
             // PeekNextViewId() would place the blit after the backbuffer view, so the layer
             // would sample the previous frame's content (a one-frame GUI latency).
-            m_canvas->SetBlitViewId(m_graphicsContext.AcquireNewViewId());
+            m_canvas->SetBlitViewId(m_graphicsContext.AcquireNewViewId(), m_graphicsContext.ViewIdGeneration());
 
             for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
             {

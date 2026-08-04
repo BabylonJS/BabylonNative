@@ -4434,8 +4434,6 @@
         {
             "title": "Vertex Pulling - Normals UVs Colors Tangents",
             "playgroundId": "#664OF3#6",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "vertexPullingNormalsUVsColors.png"
         },
         {
