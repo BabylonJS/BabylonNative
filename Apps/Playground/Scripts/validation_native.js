@@ -11,6 +11,7 @@
     const listTests = !!opts.listTests;
     const includeExcluded = !!opts.includeExcluded;
     const testFilters = Array.isArray(opts.testFilters) ? opts.testFilters.map(s => String(s).toLowerCase()) : [];
+    const skipTests = Array.isArray(opts.skipTests) ? opts.skipTests.map(s => String(s)) : [];
     const testIndices = Array.isArray(opts.testIndices) ? opts.testIndices.map(n => +n) : [];
     // CLI --capture=N: 1-based frame index at which to call
     // TestUtils.captureNextFrame() for every executed test. The runner
@@ -87,6 +88,14 @@
     }
 
     function getSkipReason(t) {
+        // An explicit --skip outranks --include-excluded: it names one test, so treating it
+        // as just another config.json exclusion would let the blanket flag override it.
+        const title = (t.title || "").toLowerCase();
+        for (let i = 0; i < skipTests.length; ++i) {
+            if (title.indexOf(skipTests[i].toLowerCase()) !== -1) {
+                return "--skip " + skipTests[i];
+            }
+        }
         if (includeExcluded) {
             return null;
         }

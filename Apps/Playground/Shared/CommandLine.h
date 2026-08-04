@@ -31,6 +31,11 @@ struct PlaygroundOptions
     std::vector<std::string> TestFilters;
     std::vector<int> TestIndices;
 
+    // Titles to skip even when they are not excluded in config.json. Exists so a CI
+    // configuration can drop a test that is broken only on that configuration's driver,
+    // without hiding it from every other configuration the way config.json would.
+    std::vector<std::string> SkipTests;
+
     // Positional script arguments (URLs / paths).
     std::vector<std::string> Scripts;
 };

@@ -56,6 +56,17 @@ jobs:
           echo "solution_name=Win32_${{ inputs.platform }}${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "sanitizer_flag=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}" >> "$GITHUB_OUTPUT"
 
+          # This runner has no graphics adapter, so ANGLE falls back to the Direct3D Basic
+          # Render Driver, where Node material 5 terminates the process. The same test passes
+          # on Linux OpenGL and on Windows OpenGL with a real GPU, so it is skipped here
+          # rather than in config.json, which would hide it from those too.
+          # See https://github.com/BabylonJS/BabylonNative/issues/1815.
+          VALIDATION_SKIPS=""
+          if [ "${{ inputs.graphics-api }}" = "OpenGLWindowsDevOnly" ]; then
+            VALIDATION_SKIPS='--skip "Node material 5"'
+          fi
+          echo "validation_skips=$VALIDATION_SKIPS" >> "$GITHUB_OUTPUT"
+
       - name: Generate solution
         shell: cmd
         run: |
@@ -110,7 +121,7 @@ jobs:
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground app:///Scripts/validation_native.js
+          Playground ${{ steps.vars.outputs.validation_skips }} app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures
         if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
