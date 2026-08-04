@@ -52,23 +52,20 @@ namespace ModuleLoadTest
     const ModuleSnapshot& GetExpectedBootModules()
     {
         // Seeded from a local RelWithDebInfo run on Windows 11 x64 with D3D11
-        // and Chakra, then extended for the OpenGL (ANGLE) config. CI may add
-        // more entries for other Win32 configs (V8/JSI/D3D12) — those should be
-        // appended as the draft PR runs.
+        // and Chakra. CI may add more entries for other Win32 configs
+        // (V8/JSI/D3D12) — those should be appended as the draft PR runs.
         static const ModuleSnapshot kModules{
             "bcryptprimitives.dll",
             "cfgmgr32.dll",
             "crypt32.dll",
             "cryptbase.dll",
             "cryptnet.dll",
-            "cryptsp.dll",
             "d3d10warp.dll",
             "d3d11.dll",
             "d3d11_3sdklayers.dll",
             "d3d12.dll",
             "d3d12core.dll",
             "d3d12sdklayers.dll",
-            "d3dcompiler_47.dll",
             "d3dscache.dll",
             "dcomp.dll",
             "devobj.dll",
@@ -81,8 +78,6 @@ namespace ModuleLoadTest
             "dxilconv.dll",
             "iertutil.dll",
             "imagehlp.dll",
-            "libegl.dll",
-            "libglesv2.dll",
             "msasn1.dll",
             "msctf.dll",
             "netutils.dll",

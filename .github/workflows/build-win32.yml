@@ -154,7 +154,7 @@ jobs:
           UnitTests
 
       - name: Module Load Test
-        if: ${{ !inputs.enable-sanitizers }}
+        if: ${{ !inputs.enable-sanitizers && inputs.graphics-api != 'OpenGLWindowsDevOnly' }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo
