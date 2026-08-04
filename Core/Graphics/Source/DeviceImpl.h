@@ -149,7 +149,10 @@ namespace Babylon::Graphics
         // Read by all consumers via DeviceContext::GetActiveEncoder() → DeviceImpl::GetActiveEncoder().
         bgfx::Encoder* m_frameEncoder{nullptr};
 
-        std::atomic<bgfx::ViewId> m_nextViewId{0};
+        // Widened to uint32_t so that a run of failed acquisitions cannot wrap the counter
+        // back into the valid view range. AcquireNewViewId saturates it at limits.maxViews,
+        // so it is always safe to narrow back to a bgfx::ViewId.
+        std::atomic<uint32_t> m_nextViewId{0};
 
         // Incremented every time PerformMidFrameViewFlush resets m_nextViewId in the middle of a
         // logical frame. Anything that caches a view id across draw calls must also cache this

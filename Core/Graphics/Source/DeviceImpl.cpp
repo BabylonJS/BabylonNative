@@ -482,17 +482,31 @@ namespace Babylon::Graphics
 
     bgfx::ViewId DeviceImpl::AcquireNewViewId()
     {
-        bgfx::ViewId viewId = m_nextViewId.fetch_add(1);
-        if (viewId >= bgfx::getCaps()->limits.maxViews)
+        // Saturating increment. A plain fetch_add that is undone on the throw path would be
+        // two separate atomic operations, so a concurrent PeekNextViewId could observe an
+        // out-of-range value in between, and repeated failed acquisitions could drive the
+        // counter past the cap. This loop fuses the "check the cap" and "take the id" steps,
+        // clamping at maxViews, so the counter is never observable above the cap no matter
+        // how many acquisitions fail.
+        const uint32_t maxViews = bgfx::getCaps()->limits.maxViews;
+
+        uint32_t viewId = m_nextViewId.load(std::memory_order_relaxed);
+        while (viewId < maxViews && !m_nextViewId.compare_exchange_weak(viewId, viewId + 1))
+        {
+        }
+
+        if (viewId >= maxViews)
         {
             throw std::runtime_error{"Too many views"};
         }
-        return viewId;
+
+        return static_cast<bgfx::ViewId>(viewId);
     }
 
     bgfx::ViewId DeviceImpl::PeekNextViewId() const
     {
-        return m_nextViewId.load();
+        // Saturated at maxViews by AcquireNewViewId, so this always narrows safely.
+        return static_cast<bgfx::ViewId>(m_nextViewId.load());
     }
 
     uint32_t DeviceImpl::ViewIdGeneration() const
@@ -513,7 +527,7 @@ namespace Babylon::Graphics
             return;
         }
 
-        if (m_nextViewId.load() < static_cast<bgfx::ViewId>(maxViews - kViewFlushMargin))
+        if (m_nextViewId.load() < static_cast<uint32_t>(maxViews - kViewFlushMargin))
         {
             return;
         }
