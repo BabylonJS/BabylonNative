@@ -1789,9 +1789,10 @@ namespace Babylon::ShaderCompilerTraversers
 
         private:
             // Post-visit is enabled so that texelFetch coordinates can be rewritten after their
-            // children have been traversed: the rewrite references the coordinate subtree twice,
-            // and rewriting it on the way down would make the traverser descend into that subtree
-            // twice and flip any nested texture() call inside it twice.
+            // children have been traversed. The rewrite copies the coordinate subtree, and doing
+            // that on the way down would leave the copy unvisited while the original still got
+            // flipped, so a nested texture() call inside the coordinate would be flipped in one
+            // reference but not the other.
             FlipSamplerCoordinatesTraverser(TIntermediate* intermediate)
                 : TIntermTraverser{true, false, true}
                 , m_intermediate{intermediate}
@@ -1833,17 +1834,16 @@ namespace Babylon::ShaderCompilerTraversers
             {
                 const TSourceLoc& loc{coordinate->getLoc()};
 
-                // The sampler and lod operands are still referenced by the original texelFetch node.
-                // Reusing the same node pointers inside a second call (textureSize) would give those
-                // subtrees two parents in the AST, which later traversers (sampler splitting, SPIR-V
-                // generation) corrupt. Clone them so each reference is an independent node. If either
-                // operand is something we cannot safely clone, skip the flip rather than risk it.
-                TIntermTyped* samplerClone{CloneLeaf(sampler)};
-                TIntermTyped* lodClone{CloneLeaf(lod)};
-                if (samplerClone == nullptr || lodClone == nullptr)
-                {
-                    return coordinate;
-                }
+                // Every operand referenced more than once below has to be an independent subtree.
+                // Reusing a node pointer would give it two parents in the AST, which later traversers
+                // (sampler splitting, SPIR-V generation) do not expect. The sampler and lod are each
+                // referenced twice because textureSize repeats them, and the coordinate is referenced
+                // twice because the flip reads both .x and .y, so all three need a copy. The original
+                // node is kept for one reference and the clone used for the other, leaving every node
+                // with exactly one parent.
+                TIntermTyped* samplerClone{CloneExpression(sampler)};
+                TIntermTyped* lodClone{CloneExpression(lod)};
+                TIntermTyped* coordinateClone{CloneExpression(coordinate)};
 
                 TType ivec2Type{EbtInt, EvqTemporary, 2};
                 TType intType{EbtInt, EvqTemporary, 1};
@@ -1858,10 +1858,11 @@ namespace Babylon::ShaderCompilerTraversers
                 sizeY->setType(intType);
                 TIntermTyped* maxY{m_intermediate->addBinaryMath(EOpSub, sizeY, m_intermediate->addConstantUnion(1, loc), loc)};
 
-                // coordinate.x and coordinate.y
+                // coordinate.x and coordinate.y. The clone supplies the second reference so that
+                // neither subtree ends up with two parents.
                 TIntermTyped* coordinateX{m_intermediate->addIndex(EOpIndexDirect, coordinate, m_intermediate->addConstantUnion(0, loc), loc)};
                 coordinateX->setType(intType);
-                TIntermTyped* coordinateY{m_intermediate->addIndex(EOpIndexDirect, coordinate, m_intermediate->addConstantUnion(1, loc), loc)};
+                TIntermTyped* coordinateY{m_intermediate->addIndex(EOpIndexDirect, coordinateClone, m_intermediate->addConstantUnion(1, loc), loc)};
                 coordinateY->setType(intType);
 
                 // ivec2(coordinate.x, (textureSize(sampler, lod).y - 1) - coordinate.y)
@@ -1871,19 +1872,70 @@ namespace Babylon::ShaderCompilerTraversers
                 return m_intermediate->setAggregateOperator(flipped, EOpConstructIVec2, ivec2Type, loc);
             }
 
-            // Produces an independent copy of a leaf operand (a sampler symbol or a constant lod) so
-            // it can be referenced from a second call site without aliasing the original AST node.
-            TIntermTyped* CloneLeaf(TIntermTyped* node)
+            // Produces an independent copy of an expression subtree so it can be referenced from a
+            // second call site without giving any original node two parents in the AST.
+            //
+            // The clone is structural: each node's operator, type and source location are copied
+            // verbatim rather than rebuilt through TIntermediate::add*, so no constant folding,
+            // type promotion or precision inference can make the copy diverge from the original.
+            //
+            // Anything not reachable in a texel coordinate expression (ternaries, array methods)
+            // is reported rather than silently skipped -- returning the coordinate unflipped would
+            // sample with an un-flipped Y and produce a wrong image with no diagnostic at all.
+            TIntermTyped* CloneExpression(TIntermTyped* node)
             {
+                if (node == nullptr)
+                {
+                    throw std::runtime_error{"FlipSamplerCoordinates: missing operand in texelFetch."};
+                }
+
                 if (TIntermSymbol* symbol = node->getAsSymbolNode())
                 {
                     return m_intermediate->addSymbol(*symbol);
                 }
+
                 if (TIntermConstantUnion* constant = node->getAsConstantUnion())
                 {
                     return m_intermediate->addConstantUnion(constant->getConstArray(), constant->getType(), node->getLoc());
                 }
-                return nullptr;
+
+                if (TIntermBinary* binary = node->getAsBinaryNode())
+                {
+                    auto* clone = new TIntermBinary{binary->getOp()};
+                    clone->setLeft(CloneExpression(binary->getLeft()));
+                    clone->setRight(CloneExpression(binary->getRight()));
+                    clone->setType(binary->getType());
+                    clone->setLoc(binary->getLoc());
+                    return clone;
+                }
+
+                if (TIntermUnary* unary = node->getAsUnaryNode())
+                {
+                    auto* clone = new TIntermUnary{unary->getOp()};
+                    clone->setOperand(CloneExpression(unary->getOperand()));
+                    clone->setType(unary->getType());
+                    clone->setLoc(unary->getLoc());
+                    return clone;
+                }
+
+                if (TIntermAggregate* aggregate = node->getAsAggregate())
+                {
+                    auto* clone = new TIntermAggregate{aggregate->getOp()};
+                    for (TIntermNode* child : aggregate->getSequence())
+                    {
+                        clone->getSequence().push_back(CloneExpression(child == nullptr ? nullptr : child->getAsTyped()));
+                    }
+                    clone->setType(aggregate->getType());
+                    clone->setLoc(aggregate->getLoc());
+                    clone->setName(aggregate->getName());
+                    if (aggregate->isUserDefined())
+                    {
+                        clone->setUserDefined();
+                    }
+                    return clone;
+                }
+
+                throw std::runtime_error{"FlipSamplerCoordinates: unsupported expression in a texelFetch operand; cannot flip the texel coordinate."};
             }
 
             TIntermediate* m_intermediate{};

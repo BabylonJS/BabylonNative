@@ -43,9 +43,23 @@ namespace Babylon::Graphics
         return bgfx::isValid(m_handle);
     }
 
+    void Texture::ResetMetadata()
+    {
+        m_width = 0;
+        m_height = 0;
+        m_depth = 0;
+        m_hasMips = false;
+        m_isCube = false;
+        m_is3D = false;
+        m_numLayers = 0;
+        m_format = bgfx::TextureFormat::Enum::Unknown;
+        m_flags = BGFX_TEXTURE_NONE;
+    }
+
     void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
+        ResetMetadata();
 
         // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
         const auto* mem = (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
@@ -64,8 +78,6 @@ namespace Babylon::Graphics
         m_numLayers = numLayers;
         m_format = format;
         m_flags = flags;
-        m_isCube = false;
-        m_is3D = false;
     }
 
     void Texture::Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -76,6 +88,7 @@ namespace Babylon::Graphics
     void Texture::Create3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMips, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
+        ResetMetadata();
 
         m_handle = bgfx::createTexture3D(width, height, depth, hasMips, format, flags);
         if (!bgfx::isValid(m_handle))
@@ -91,7 +104,6 @@ namespace Babylon::Graphics
         m_numLayers = 1;
         m_format = format;
         m_flags = flags;
-        m_isCube = false;
         m_is3D = true;
     }
 
@@ -103,6 +115,7 @@ namespace Babylon::Graphics
     void Texture::CreateCube(uint16_t size, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
+        ResetMetadata();
 
         m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags);
         m_ownsHandle = true;
@@ -113,7 +126,6 @@ namespace Babylon::Graphics
         m_format = format;
         m_flags = flags;
         m_isCube = true;
-        m_is3D = false;
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -124,6 +136,7 @@ namespace Babylon::Graphics
     void Texture::Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
+        ResetMetadata();
 
         assert(bgfx::isValid(handle));
         m_handle = handle;
@@ -134,8 +147,6 @@ namespace Babylon::Graphics
         m_numLayers = numLayers;
         m_format = format;
         m_flags = flags;
-        m_isCube = false;
-        m_is3D = false;
     }
 
     bgfx::TextureHandle Texture::Handle() const

@@ -1764,6 +1764,20 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "updateTextureData data size does not match width, height, and texture format");
         }
 
+        // Block-compressed formats are rejected outright. Their payload is a grid of 4x4 (or larger)
+        // blocks, so the row-reversal below would be wrong twice over: the stride it derives is
+        // requiredSize / height, which is a fraction of a block row rather than a whole one (an 8-byte
+        // BC1 block at 4x4 yields 2), and even with the right stride, mirroring block rows cannot flip a
+        // texture vertically without re-encoding the texel rows packed inside each block. bgfx also
+        // requires block-aligned x/y/width/height for these formats. The base upload path
+        // (loadTexture -> PrepareImage) already handles compressed data, so this is not a capability loss.
+        // In bgfx's TextureFormat enum every block-compressed format sorts before Unknown, which lets
+        // this be checked without bimg.
+        if (texture->Format() < bgfx::TextureFormat::Unknown)
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData does not support block-compressed texture formats");
+        }
+
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
 
         // Match the vertical orientation the base upload applies (PrepareImage flips the whole image when

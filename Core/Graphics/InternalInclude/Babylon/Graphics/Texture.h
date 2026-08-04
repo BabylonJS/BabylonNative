@@ -56,6 +56,12 @@ namespace Babylon::Graphics
         void BlitViewId(bgfx::ViewId viewId) { m_blitViewId = viewId; }
 
     private:
+        // Resets every piece of shape metadata to its default. Each Create*/Attach calls this
+        // before assigning the subset that applies to it, so a field a given path does not set
+        // (m_depth is only meaningful for Create3D) cannot survive from the previous, differently
+        // shaped texture this object described.
+        void ResetMetadata();
+
         bgfx::TextureHandle m_handle{bgfx::kInvalidHandle};
         bool m_ownsHandle{false};
         uint16_t m_width{0};
