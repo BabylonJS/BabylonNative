@@ -315,10 +315,13 @@ namespace Babylon::ShaderCompilerTraversers
                 // We only care about loose scalar/vector uniforms. Excluding matrices, samplers,
                 // UBO blocks (EbtBlock) and uniform struct instances (EbtStruct) prevents the
                 // traverser from rewriting whole blocks/structs to vec4, which destroys their
-                // member layout and member names.
+                // member layout and member names. Uniforms that are already vec4 need no widening,
+                // so they are skipped as a fast path: retyping them is a no-op and addShapeConversion
+                // would return the node unchanged, leaving only pointless AST churn.
                 const auto basic = type.getBasicType();
                 if (type.getQualifier().isUniformOrBuffer()
                     && !type.isMatrix()
+                    && type.getVectorSize() < 4
                     && (basic == EbtFloat || basic == EbtInt || basic == EbtUint || basic == EbtBool))
                 {
                     // At present, this may end up creating layered swizzles; i.e., if a vec3 was already being projected
@@ -390,6 +393,12 @@ namespace Babylon::ShaderCompilerTraversers
                             {
                                 selection->setFalseBlock(shapeConversion);
                             }
+                        }
+                        else if (auto* branch = parent->getAsBranchNode())
+                        {
+                            // A uniform returned directly (`return someUniform;`) is the branch's
+                            // expression, so the conversion replaces that expression in place.
+                            branch->setExpression(shapeConversion);
                         }
                         else
                         {
