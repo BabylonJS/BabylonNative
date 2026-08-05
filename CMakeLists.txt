@@ -161,6 +161,13 @@ option(BABYLON_NATIVE_EMBEDDING_ANDROID "Build the Android JNI interop layer for
 # hosts that don't want the interop layer can explicitly disable.
 option(BABYLON_NATIVE_EMBEDDING_APPLE "Build the Apple (iOS / macOS / visionOS) Obj-C++ interop layer for Babylon::Embedding." ${APPLE})
 
+# RTTI
+# Babylon Native does not use dynamic_cast or typeid anywhere in Core, Plugins,
+# Polyfills, Embedding or Apps, but compilers emit RTTI records for every
+# polymorphic class by default. Disabling it is a pure size win. UBSan's vptr
+# check does need RTTI, so the sanitizer block below forces this back ON.
+option(ENABLE_RTTI "Emit C++ RTTI. Required by UBSan's vptr check." OFF)
+
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
@@ -361,6 +368,18 @@ if(MSVC)
 
     # Enable multiprocessor compilation for faster builds
     add_compile_options(/MP)
+endif()
+
+if(NOT ENABLE_RTTI)
+    # Applied to C++ only: /GR- and -fno-rtti are not valid for C sources, and
+    # the guard also keeps the flag off any C dependency compiled in-tree.
+    # .mm/.mmm sources compile as CXX here because project() only enables C and
+    # CXX, so Objective-C++ is covered by the same guard.
+    if(MSVC)
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/GR->)
+    else()
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+    endif()
 endif()
 
 if(APPLE)
