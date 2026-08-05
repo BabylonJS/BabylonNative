@@ -273,6 +273,18 @@ endif()
 # --------------------------------------------------
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
 
+# Two JsRuntimeHost targets cannot be built without RTTI:
+#   v8inspector - includes asio, whose headers use typeid() unconditionally
+#                 (any_executor.hpp, service_registry.hpp, handler_work.hpp).
+#                 Clang and GCC reject this outright; MSVC only warns.
+#   jsi         - Hermes (fetched by JsRuntimeHost) builds its API/hermes
+#                 targets with RTTI, and their vtables reference "typeinfo for
+#                 facebook::jsi::*" which only jsi.cpp emits. Compiling jsi
+#                 without RTTI drops those definitions and the link fails.
+#                 The same target name is used by Node-API-JSI for V8JSI.
+babylon_native_force_rtti(v8inspector)
+babylon_native_force_rtti(jsi)
+
 # --------------------------------------------------
 # metal-cpp
 # --------------------------------------------------

@@ -371,16 +371,28 @@ if(MSVC)
 endif()
 
 if(NOT ENABLE_RTTI)
-    # Applied to C++ only: /GR- and -fno-rtti are not valid for C sources, and
-    # the guard also keeps the flag off any C dependency compiled in-tree.
-    # .mm/.mmm sources compile as CXX here because project() only enables C and
-    # CXX, so Objective-C++ is covered by the same guard.
+    # Applied to C++ only: /GR- and -fno-rtti are not valid for C sources.
+    # OBJCXX is listed explicitly so Objective-C++ (.mm) sources are covered on
+    # Apple regardless of whether CMake classifies them as CXX or OBJCXX.
     if(MSVC)
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/GR->)
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR->)
     else()
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-fno-rtti>)
     endif()
 endif()
+
+# Re-enables RTTI for a single target. Needed by dependencies that genuinely
+# require it; see the call sites for the specific reason in each case.
+function(babylon_native_force_rtti target)
+    if(NOT TARGET ${target})
+        return()
+    endif()
+    if(MSVC)
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR>)
+    else()
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-frtti>)
+    endif()
+endfunction()
 
 if(APPLE)
     # Create scheme for installation and other targets
