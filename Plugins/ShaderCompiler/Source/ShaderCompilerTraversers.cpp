@@ -319,6 +319,7 @@ namespace Babylon::ShaderCompilerTraversers
                 const auto basic = type.getBasicType();
                 if (type.getQualifier().isUniformOrBuffer()
                     && !type.isMatrix()
+                    && type.getVectorSize() < 4
                     && (basic == EbtFloat || basic == EbtInt || basic == EbtUint || basic == EbtBool))
                 {
                     // At present, this may end up creating layered swizzles; i.e., if a vec3 was already being projected
