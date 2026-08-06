@@ -80,6 +80,11 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
 
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
+# bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
+# directory, and Windows has no system copy the way Linux and Android do.
+# Expose the path so the OpenGL backends of our own targets can use it.
+set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
+
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
 elseif(GRAPHICS_API STREQUAL "D3D12")

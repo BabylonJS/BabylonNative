@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG e7773eed1d0c37f663420e9b8e15d16903aef68f
+    GIT_TAG f7333d92a0ca19ad9a6bd2efb34548e8a8d8a792
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -280,6 +280,65 @@ if(BABYLON_NATIVE_OPENGLES_FROM_BROWSER)
 
     if(NOT ANGLE_LIBEGL)
         message(FATAL_ERROR "OpenGLWindowsDevOnly requires ANGLE libraries (libEGL.dll, libGLESv2.dll) from Edge or Chrome, but none were found.")
+    endif()
+
+    # The browser ships ANGLE as DLLs with no import libraries. bgfx resolves its GL entry
+    # points dynamically, but code that calls GL ES directly needs something to link against,
+    # so synthesize an import library from the DLL's export table.
+    get_filename_component(_msvc_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    find_program(ANGLE_DUMPBIN_EXECUTABLE NAMES dumpbin dumpbin.exe HINTS "${_msvc_bin_dir}")
+    find_program(ANGLE_LIB_EXECUTABLE NAMES lib lib.exe HINTS "${_msvc_bin_dir}")
+    if(NOT ANGLE_DUMPBIN_EXECUTABLE OR NOT ANGLE_LIB_EXECUTABLE)
+        message(FATAL_ERROR "OpenGLWindowsDevOnly requires the MSVC dumpbin and lib tools to generate an ANGLE import library.")
+    endif()
+
+    set(_angle_gen_dir "${CMAKE_BINARY_DIR}/ANGLE")
+    set(ANGLE_GLESV2_IMPORT_LIB "${_angle_gen_dir}/libGLESv2.lib")
+
+    if(NOT EXISTS "${ANGLE_GLESV2_IMPORT_LIB}" OR "${ANGLE_LIBGLESV2}" IS_NEWER_THAN "${ANGLE_GLESV2_IMPORT_LIB}")
+        execute_process(
+            COMMAND "${ANGLE_DUMPBIN_EXECUTABLE}" /nologo /exports "${ANGLE_LIBGLESV2}"
+            OUTPUT_VARIABLE _angle_exports
+            RESULT_VARIABLE _angle_exports_result
+            ERROR_VARIABLE _angle_exports_error
+        )
+        if(NOT _angle_exports_result EQUAL 0)
+            message(FATAL_ERROR "Failed to read the exports of ${ANGLE_LIBGLESV2}: ${_angle_exports_error}")
+        endif()
+
+        # Export table rows look like "  1422   58D 00023330 glIsTexture"; keep the names.
+        string(REGEX MATCHALL "[0-9A-F]+ +gl[A-Za-z0-9_]+" _angle_export_rows "${_angle_exports}")
+        set(_angle_def_exports "")
+        foreach(_angle_row IN LISTS _angle_export_rows)
+            string(REGEX REPLACE "^.+ +" "" _angle_symbol "${_angle_row}")
+            string(APPEND _angle_def_exports "    ${_angle_symbol}\n")
+        endforeach()
+        if(NOT _angle_def_exports)
+            message(FATAL_ERROR "Found no GL ES entry points exported by ${ANGLE_LIBGLESV2}.")
+        endif()
+
+        if(CMAKE_VS_PLATFORM_NAME STREQUAL "Win32")
+            set(_angle_machine "x86")
+        elseif(CMAKE_VS_PLATFORM_NAME)
+            set(_angle_machine "${CMAKE_VS_PLATFORM_NAME}")
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            set(_angle_machine "x86")
+        else()
+            set(_angle_machine "x64")
+        endif()
+
+        file(MAKE_DIRECTORY "${_angle_gen_dir}")
+        file(WRITE "${_angle_gen_dir}/libGLESv2.def" "LIBRARY libGLESv2\nEXPORTS\n${_angle_def_exports}")
+        execute_process(
+            COMMAND "${ANGLE_LIB_EXECUTABLE}" /nologo "/def:${_angle_gen_dir}/libGLESv2.def" "/machine:${_angle_machine}" "/out:${ANGLE_GLESV2_IMPORT_LIB}"
+            RESULT_VARIABLE _angle_lib_result
+            OUTPUT_QUIET
+            ERROR_VARIABLE _angle_lib_error
+        )
+        if(NOT _angle_lib_result EQUAL 0)
+            message(FATAL_ERROR "Failed to generate an ANGLE import library: ${_angle_lib_error}")
+        endif()
+        message(STATUS "Generated ANGLE import library: ${ANGLE_GLESV2_IMPORT_LIB}")
     endif()
 endif()
 

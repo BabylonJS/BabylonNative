@@ -14,7 +14,7 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev ninja-build
+          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libgles-dev libcurl4-openssl-dev libwayland-dev ninja-build
 
       - name: Configure
         run: |
@@ -28,3 +28,10 @@ jobs:
 
       - name: Install
         run: cmake --install build/Linux --prefix=build/Linux/Install --config RelWithDebInfo
+
+      - name: Test Install
+        run: |
+          cmake Install/Test -B build/TestInstall -G Ninja \
+            -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+            -D INSTALL_DIR=$GITHUB_WORKSPACE/build/Linux/Install
+          cmake --build build/TestInstall --config RelWithDebInfo
