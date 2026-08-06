@@ -1906,6 +1906,7 @@ namespace Babylon::ShaderCompilerTraversers
                     clone->setRight(CloneExpression(binary->getRight()));
                     clone->setType(binary->getType());
                     clone->setLoc(binary->getLoc());
+                    clone->setOperationPrecision(binary->getOperationPrecision());
                     return clone;
                 }
 
@@ -1915,12 +1916,21 @@ namespace Babylon::ShaderCompilerTraversers
                     clone->setOperand(CloneExpression(unary->getOperand()));
                     clone->setType(unary->getType());
                     clone->setLoc(unary->getLoc());
+                    clone->setOperationPrecision(unary->getOperationPrecision());
                     return clone;
                 }
 
                 if (TIntermAggregate* aggregate = node->getAsAggregate())
                 {
-                    auto* clone = new TIntermAggregate{aggregate->getOp()};
+                    // TIntermAggregate's operator-taking constructor leaves the userDefined flag
+                    // uninitialized; only the default constructor sets it. Building the clone with
+                    // the default constructor and assigning the operator afterwards is therefore the
+                    // only way to get a node whose flag is well defined. Constructing it any other
+                    // way would leave a texelFetch nested inside another texelFetch's coordinate
+                    // reading indeterminate memory: post-order traversal rewrites the inner call
+                    // first, so the outer rewrite clones a subtree that this function produced.
+                    auto* clone = new TIntermAggregate{};
+                    clone->setOperator(aggregate->getOp());
                     for (TIntermNode* child : aggregate->getSequence())
                     {
                         clone->getSequence().push_back(CloneExpression(child == nullptr ? nullptr : child->getAsTyped()));
@@ -1928,7 +1938,14 @@ namespace Babylon::ShaderCompilerTraversers
                     clone->setType(aggregate->getType());
                     clone->setLoc(aggregate->getLoc());
                     clone->setName(aggregate->getName());
-                    if (aggregate->isUserDefined())
+                    clone->setOperationPrecision(aggregate->getOperationPrecision());
+                    clone->getQualifierList() = aggregate->getQualifierList();
+
+                    // userDefined distinguishes a call to a user-declared function from a call to a
+                    // built-in, so it is only meaningful on -- and only ever initialized by glslang
+                    // on -- an EOpFunctionCall node. Reading it for any other operator would be the
+                    // same uninitialized read described above, just on a node glslang built.
+                    if (aggregate->getOp() == EOpFunctionCall && aggregate->isUserDefined())
                     {
                         clone->setUserDefined();
                     }
