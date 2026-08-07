@@ -44,6 +44,12 @@ namespace Babylon::Polyfills::Internal
         float s1o = clampf(offset1, 0.0f, 1.0f);
         unsigned s = static_cast<unsigned>(s0o * static_cast<float>(GRADIENT_SAMPLES_L));
         unsigned e = static_cast<unsigned>(s1o * static_cast<float>(GRADIENT_SAMPLES_L));
+        // Coincident stops produce an empty span; the per-sample deltas below would divide
+        // by zero and write NaNs into the ramp.
+        if (e <= s)
+        {
+            return;
+        }
         float r = color0.rgba[0];
         float g = color0.rgba[1];
         float b = color0.rgba[2];
@@ -156,7 +162,9 @@ namespace Babylon::Polyfills::Internal
         {
             return 0;
         }
-        uint32_t data[GRADIENT_SAMPLES_L];
+        // Zero-initialize: the spans below only cover the range the stops span, so any
+        // sample left untouched would otherwise be read from uninitialized stack memory.
+        uint32_t data[GRADIENT_SAMPLES_L]{};
         int stopIndex{};
         std::vector<ColorStop> colorStops(nstops);
         for (auto& stop : colors)
@@ -339,6 +347,36 @@ namespace Babylon::Polyfills::Internal
         int img = nvgCreateImageRGBA(*context.lock(), width, height, 0, (unsigned char*)image);
         free(image);
         return img;
+    }
+
+    NVGpaint CanvasGradient::Paint()
+    {
+        UpdateCache();
+
+        auto nvg = context.lock();
+        if (gradientType == GradientType::Linear)
+        {
+            // The linear ramp is baked into a GRADIENT_SAMPLES_L x 1 image, so orient the
+            // pattern along (x0,y0)->(x1,y1) and let it span exactly that distance. The
+            // vertical extent is irrelevant (the image is one texel tall and clamps), but it
+            // must be non-zero. Sampling outside the extent clamps to the edge texel, which
+            // is precisely the "pad" behavior the spec requires beyond the end stops.
+            const float dx = x1 - x0;
+            const float dy = y1 - y0;
+            float length = std::sqrt(dx * dx + dy * dy);
+            if (length < 1e-4f)
+            {
+                // A zero-length gradient would divide by zero in the shader; keep it finite so
+                // the whole shape clamps to a single stop instead of rendering garbage.
+                length = 1e-4f;
+            }
+            return nvgImagePattern(*nvg, x0, y0, length, length, std::atan2(dy, dx), cachedImage, 1.f);
+        }
+
+        // The radial ramp is baked into a square image whose inscribed circle is the r1
+        // isoline, so map that image onto the bounding box of the outer circle.
+        const float radius = std::max(r1, 1e-4f);
+        return nvgImagePattern(*nvg, x1 - radius, y1 - radius, 2.f * radius, 2.f * radius, 0.f, cachedImage, 1.f);
     }
 
     void CanvasGradient::UpdateCache()
