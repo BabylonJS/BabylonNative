@@ -24,15 +24,27 @@ endif()
 
 project(xr)
 
+# Android Quest builds select OpenXR instead of ARCore via -DXR_ANDROID_BACKEND=OpenXR.
+if(ANDROID)
+    set(XR_ANDROID_BACKEND "ARCore" CACHE STRING "Android XR backend: ARCore or OpenXR")
+    set_property(CACHE XR_ANDROID_BACKEND PROPERTY STRINGS ARCore OpenXR)
+endif()
+
 set(DYNAMIC_LOADER OFF CACHE BOOL "Build the loader as a .dll library")
 
 set(SOURCES "Include/XR.h"
             "Source/Shared/XRHelpers.h")
 
 if (ANDROID)
-    set(SOURCES ${SOURCES}
-        "Source/ARCore/Include/IXrContextARCore.h"
-        "Source/ARCore/XR.cpp")
+    if(XR_ANDROID_BACKEND STREQUAL "OpenXR")
+        set(SOURCES ${SOURCES}
+            "Source/OpenXR/Android/Include/IXrContextOpenXR.h"
+            "Source/OpenXR/Android/XR.cpp")
+    else()
+        set(SOURCES ${SOURCES}
+            "Source/ARCore/Include/IXrContextARCore.h"
+            "Source/ARCore/XR.cpp")
+    endif()
 elseif(IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     set(SOURCES ${SOURCES}
         "Source/ARKit/Include/IXrContextARKit.h"
@@ -49,16 +61,36 @@ if (APPLE)
 endif()
 
 if (ANDROID)
-    add_library(arcore SHARED IMPORTED)
-    set_target_properties(arcore PROPERTIES IMPORTED_LOCATION
-                          ${ARCORE_LIBPATH}/${ANDROID_ABI}/libarcore_sdk_c.so
-                          INTERFACE_INCLUDE_DIRECTORIES ${arcore-android-sdk_SOURCE_DIR}/libraries/include)
+    if(XR_ANDROID_BACKEND STREQUAL "OpenXR")
+        set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+        set(BUILD_CONFORMANCE_TESTS OFF CACHE BOOL "" FORCE)
+        set(BUILD_API_LAYERS OFF CACHE BOOL "" FORCE)
+        set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+        set(BUILD_LOADER ON CACHE BOOL "" FORCE)
 
-    add_library(glm INTERFACE)
-    set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${arcore-android-sdk_SOURCE_DIR}/libraries/glm)
+        FetchContent_Declare(OpenXR-SDK
+            GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
+            GIT_TAG release-1.1.47)
+        FetchContent_MakeAvailable(OpenXR-SDK)
 
-    target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
-elseif (IOS)    
+        target_compile_definitions(xr PRIVATE
+            XR_USE_PLATFORM_ANDROID
+            XR_USE_GRAPHICS_API_OPENGL_ES)
+
+        target_include_directories(xr PRIVATE "Source/OpenXR/Android")
+        target_link_libraries(xr PRIVATE openxr_loader AndroidExtensions EGL GLESv3)
+    else()
+        add_library(arcore SHARED IMPORTED)
+        set_target_properties(arcore PROPERTIES IMPORTED_LOCATION
+                              ${ARCORE_LIBPATH}/${ANDROID_ABI}/libarcore_sdk_c.so
+                              INTERFACE_INCLUDE_DIRECTORIES ${arcore-android-sdk_SOURCE_DIR}/libraries/include)
+
+        add_library(glm INTERFACE)
+        set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${arcore-android-sdk_SOURCE_DIR}/libraries/glm)
+
+        target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
+    endif()
+elseif (IOS)
     target_link_libraries(xr PRIVATE "-framework ARKit")
 endif()
 
