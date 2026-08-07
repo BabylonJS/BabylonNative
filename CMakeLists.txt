@@ -161,18 +161,23 @@ option(BABYLON_NATIVE_EMBEDDING_ANDROID "Build the Android JNI interop layer for
 # hosts that don't want the interop layer can explicitly disable.
 option(BABYLON_NATIVE_EMBEDDING_APPLE "Build the Apple (iOS / macOS / visionOS) Obj-C++ interop layer for Babylon::Embedding." ${APPLE})
 
+# Sanitizers
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+
 # RTTI
 # Babylon Native does not use dynamic_cast or typeid anywhere in Core, Plugins,
 # Polyfills, Embedding or Apps, but compilers emit RTTI records for every
 # polymorphic class by default. Disabling it is a pure size win. UBSan's vptr
-# check does need RTTI, so the sanitizer block below forces this back ON.
-option(ENABLE_RTTI "Emit C++ RTTI. Required by UBSan's vptr check." OFF)
-
-# Sanitizers
-option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+# check is the only thing that needs RTTI, so it is derived from the sanitizer
+# switch rather than exposed as an option of its own.
+#
+# Deliberately a plain variable and not a cache entry: a cached ENABLE_RTTI
+# would persist ON in any build directory that was configured with
+# -DENABLE_SANITIZERS=ON even once, so re-configuring that directory without
+# sanitizers would silently keep emitting RTTI and lose the size win.
+set(ENABLE_RTTI ${ENABLE_SANITIZERS})
 
 if(ENABLE_SANITIZERS)
-    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         set(SANITIZERS "address,undefined")
         # Check for Clang since vptr and fdsan are Clang-specific
@@ -383,9 +388,14 @@ endif()
 
 # Re-enables RTTI for a single target. Needed by dependencies that genuinely
 # require it; see the call sites for the specific reason in each case.
+#
+# A missing target is a hard error rather than a silent no-op: call sites are
+# expected to gate on whatever configuration provides the target, so a name
+# that does not resolve means the dependency was renamed upstream. Returning
+# quietly there would defer the failure to a missing-`typeinfo` link error.
 function(babylon_native_force_rtti target)
     if(NOT TARGET ${target})
-        return()
+        message(FATAL_ERROR "babylon_native_force_rtti: no such target '${target}'.")
     endif()
     if(MSVC)
         target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR>)
