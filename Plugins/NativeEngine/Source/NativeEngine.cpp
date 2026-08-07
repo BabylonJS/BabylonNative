@@ -254,6 +254,11 @@ namespace Babylon
             return image;
         }
 
+        // Returns a non-null image, or throws if any conversion step fails. Throwing rather than
+        // returning null keeps every caller safe by default: the async load paths run inside arcana
+        // tasks, which capture the exception and route it to their JavaScript onError callback,
+        // and the one synchronous caller translates it into a Napi::Error. Returning null instead
+        // would be silently dereferenced by LoadTextureFromImage / LoadCubeTextureFromImages.
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
             assert(
@@ -280,9 +285,16 @@ namespace Babylon
 
             if (srgb && !bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB))
             {
+                const bimg::TextureFormat::Enum srcFormat{image->m_format};
+
                 bimg::ImageContainer* oldImage{image};
                 image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
                 bimg::imageFree(oldImage);
+
+                if (image == nullptr)
+                {
+                    throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to RGBA8 for sRGB upload."};
+                }
 
                 assert(bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB));
             }
@@ -309,19 +321,27 @@ namespace Babylon
                             ? bimg::TextureFormat::RGBA32F
                             : bimg::TextureFormat::RGBA8;
 
+                    const bimg::TextureFormat::Enum srcFormat{image->m_format};
+
                     bimg::ImageContainer* oldImage{image};
                     image = bimg::imageConvert(&allocator, dstFormat, *image, false);
                     bimg::imageFree(oldImage);
 
                     if (image == nullptr)
                     {
-                        return nullptr;
+                        throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to " +
+                            bimg::getName(dstFormat) + " for mip generation."};
                     }
                 }
 
                 bimg::ImageContainer* oldImage{image};
                 image = bimg::imageGenerateMips(&allocator, *image);
                 bimg::imageFree(oldImage);
+
+                if (image == nullptr)
+                {
+                    throw std::runtime_error{"Failed to generate mips for image."};
+                }
             }
 
             return image;
@@ -1647,10 +1667,6 @@ namespace Babylon
                 arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
-                if (image == nullptr)
-                {
-                    throw std::runtime_error{"Failed to prepare image for texture (unsupported format or image conversion failure)."};
-                }
                 LoadTextureFromImage(texture, image, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
@@ -1708,7 +1724,18 @@ namespace Babylon
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, bytes)};
-        image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
+
+        // Unlike the async load paths, this one runs on the JavaScript thread, so a std::exception
+        // escaping here would not be routed to an onError callback. Surface it as a JS error.
+        try
+        {
+            image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
+        }
+        catch (const std::exception& exception)
+        {
+            throw Napi::Error::New(Env(), exception.what());
+        }
+
         LoadTextureFromImage(texture, image, false);
 #endif
     }
