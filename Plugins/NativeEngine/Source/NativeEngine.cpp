@@ -25,6 +25,7 @@
 #include <stb/stb_image_resize2.h>
 #include <bx/math.h>
 #include <bx/error.h>
+#include <algorithm>
 #endif
 
 #include <cassert>
@@ -1757,18 +1758,24 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "updateTextureData called on an invalid texture");
         }
 
-        // Validate the (JS-controlled) update rectangle against the mip-level extents before handing it to
-        // bgfx, so an out-of-range origin/size can't drive an out-of-bounds read of the source buffer below.
-        uint32_t mipWidth{static_cast<uint32_t>(texture->Width()) >> mip};
-        uint32_t mipHeight{static_cast<uint32_t>(texture->Height()) >> mip};
-        if (mipWidth == 0)
+        // Validate the (JS-controlled) mip level against the texture's actual mip chain before it is used
+        // as a shift distance. A mip >= 32 would make the shifts below undefined behaviour, and any mip
+        // past the end of the chain would be forwarded to bgfx, which asserts on it. This also implicitly
+        // rejects mip > 0 on a texture created without mips, where numMips is 1. bgfx is always linked
+        // (bimg is not, in builds without image loading), so query the chain length through bgfx.
+        bgfx::TextureInfo mipChainInfo;
+        bgfx::calcTextureSize(mipChainInfo, texture->Width(), texture->Height(), 1, texture->IsCube(), texture->HasMips(), 1, texture->Format());
+        if (mip >= mipChainInfo.numMips)
         {
-            mipWidth = 1;
+            throw Napi::Error::New(info.Env(), "updateTextureData mip level " + std::to_string(mip) +
+                " is out of range for a texture with " + std::to_string(mipChainInfo.numMips) + " mip level(s)");
         }
-        if (mipHeight == 0)
-        {
-            mipHeight = 1;
-        }
+
+        // Validate the update rectangle against the mip-level extents before handing it to bgfx, so an
+        // out-of-range origin/size can't drive an out-of-bounds read of the source buffer below. Mip
+        // extents floor at 1, matching how bgfx sizes the tail of the chain for non-square textures.
+        const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mip)};
+        const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mip)};
         const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
         // A cube texture is addressed by 6 faces per array layer (bgfx side index 0-5). The JS side passes the
         // face in the same "layer" argument used for 2D-array slices, so the valid range is 6*numLayers.
@@ -2422,7 +2429,17 @@ namespace Babylon
         // not a flat 0-5.
         const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
         const uint32_t maxSrcZ{texture->IsCube() ? 6u * numLayers : numLayers};
-        if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
+        // The mip level is JS-controlled and is both used as a shift distance below and forwarded to
+        // encoder->blit. Reject it before either happens: a mip >= 32 would make the shifts undefined
+        // behaviour, and any mip past the end of the chain would trip a bgfx assert. A texture created
+        // without mips has numMips == 1, so this also rejects mipLevel > 0 for that case.
+        bgfx::TextureInfo mipChainInfo;
+        bgfx::calcTextureSize(mipChainInfo, texture->Width(), texture->Height(), 1, texture->IsCube(), texture->HasMips(), 1, sourceTextureFormat);
+        if (mipLevel >= mipChainInfo.numMips)
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
+        }
+        else if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture face/layer index is out of range for this texture.").Value());
         }
@@ -2450,10 +2467,15 @@ namespace Babylon
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture = std::make_shared<bool>(false);
 
+            // Extents of the requested mip. mipLevel was validated against the mip chain above, so the
+            // shifts are well defined here; they floor at 1 to match how bgfx sizes the tail of the chain.
+            const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel)};
+            const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
+
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
             // specific cube-map face, blit to a temp 2D texture. bgfx::readTexture cannot address an
             // individual cube face, so a cube-face read always goes through the blit (srcZ = face index).
-            if (isCubeFace || x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
+            if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
