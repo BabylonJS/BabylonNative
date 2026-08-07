@@ -388,15 +388,9 @@ endif()
 
 # Re-enables RTTI for a single target. Needed by dependencies that genuinely
 # require it; see the call sites for the specific reason in each case.
-#
-# A missing target is a hard error rather than a silent no-op: call sites are
-# expected to gate on whatever configuration provides the target, so a name
-# that does not resolve means the dependency was renamed upstream. Returning
-# quietly there would defer the failure to a missing-`typeinfo` link error.
+# Call sites gate on the configuration that provides the target, so an
+# unresolved name is a mistake and target_compile_options reports it.
 function(babylon_native_force_rtti target)
-    if(NOT TARGET ${target})
-        message(FATAL_ERROR "babylon_native_force_rtti: no such target '${target}'.")
-    endif()
     if(MSVC)
         target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR>)
     else()
