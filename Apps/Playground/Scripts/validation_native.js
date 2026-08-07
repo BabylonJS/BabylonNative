@@ -493,7 +493,7 @@
                         setTimeout(function () {
                             try {
                                 currentScene = eval(scriptCode);
-                                processCurrentScene(test, renderImage, done, compareFunction);
+                                processCurrentScene(test, referenceImage, done, compareFunction);
                             }
                             catch (e) {
                                 console.error(e);
