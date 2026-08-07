@@ -164,8 +164,20 @@ option(BABYLON_NATIVE_EMBEDDING_APPLE "Build the Apple (iOS / macOS / visionOS) 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
+# RTTI
+# Babylon Native does not use dynamic_cast or typeid anywhere in Core, Plugins,
+# Polyfills, Embedding or Apps, but compilers emit RTTI records for every
+# polymorphic class by default. Disabling it is a pure size win. UBSan's vptr
+# check is the only thing that needs RTTI, so it is derived from the sanitizer
+# switch rather than exposed as an option of its own.
+#
+# Deliberately a plain variable and not a cache entry: a cached ENABLE_RTTI
+# would persist ON in any build directory that was configured with
+# -DENABLE_SANITIZERS=ON even once, so re-configuring that directory without
+# sanitizers would silently keep emitting RTTI and lose the size win.
+set(ENABLE_RTTI ${ENABLE_SANITIZERS})
+
 if(ENABLE_SANITIZERS)
-    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         set(SANITIZERS "address,undefined")
         # Check for Clang since vptr and fdsan are Clang-specific
@@ -362,6 +374,29 @@ if(MSVC)
     # Enable multiprocessor compilation for faster builds
     add_compile_options(/MP)
 endif()
+
+if(NOT ENABLE_RTTI)
+    # Applied to C++ only: /GR- and -fno-rtti are not valid for C sources.
+    # OBJCXX is listed explicitly so Objective-C++ (.mm) sources are covered on
+    # Apple regardless of whether CMake classifies them as CXX or OBJCXX.
+    if(MSVC)
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR->)
+    else()
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-fno-rtti>)
+    endif()
+endif()
+
+# Re-enables RTTI for a single target. Needed by dependencies that genuinely
+# require it; see the call sites for the specific reason in each case.
+# Call sites gate on the configuration that provides the target, so an
+# unresolved name is a mistake and target_compile_options reports it.
+function(babylon_native_force_rtti target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR>)
+    else()
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-frtti>)
+    endif()
+endfunction()
 
 if(APPLE)
     # Create scheme for installation and other targets
