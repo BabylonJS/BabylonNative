@@ -365,8 +365,11 @@ namespace Babylon::Polyfills::Internal
             // The linear ramp is baked into a GRADIENT_SAMPLES_L x 1 image, so orient the
             // pattern along (x0,y0)->(x1,y1) and let it span exactly that distance. The
             // vertical extent is irrelevant (the image is one texel tall and clamps), but it
-            // must be non-zero. Sampling outside the extent clamps to the edge texel, which
-            // is precisely the "pad" behavior the spec requires beyond the end stops.
+            // must be non-zero, and matching it to the length keeps u and v on the same scale
+            // -- nanovg divides the fragment position by the extent, so a small fixed height
+            // against a long gradient would cost float precision. Sampling outside the extent
+            // clamps to the edge texel, which is precisely the "pad" behavior the spec
+            // requires beyond the end stops.
             const float dx = x1 - x0;
             const float dy = y1 - y0;
             float length = std::sqrt(dx * dx + dy * dy);
