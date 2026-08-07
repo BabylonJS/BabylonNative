@@ -56,6 +56,7 @@ namespace Babylon::Polyfills::Internal
         void Arc(const Napi::CallbackInfo&);
         void DrawImage(const Napi::CallbackInfo&);
         Napi::Value GetImageData(const Napi::CallbackInfo&);
+        Napi::Value CreateImageData(const Napi::CallbackInfo&);
         void SetLineDash(const Napi::CallbackInfo&);
         void StrokeText(const Napi::CallbackInfo&);
         Napi::Value CreateLinearGradient(const Napi::CallbackInfo&);
@@ -126,8 +127,6 @@ namespace Babylon::Polyfills::Internal
 
         Graphics::DeviceContext& m_graphicsContext;
 
-        bool m_isClipped{false};
-
         struct RectangleClipping
         {
             float left, top, width, height;
@@ -137,7 +136,7 @@ namespace Babylon::Polyfills::Internal
         JsRuntimeScheduler m_runtimeScheduler;
 
         std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
-        void BindFillStyle(const Napi::CallbackInfo& info, float left, float top, float width, float height);
+        void BindFillStyle(const Napi::CallbackInfo& info);
         void FlushGraphicResources() override;
         void PlayPath2D(const NativeCanvasPath2D* path);
         void SetFilterStack();

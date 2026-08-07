@@ -72,6 +72,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("fill", &Context::Fill),
                 InstanceMethod("drawImage", &Context::DrawImage),
                 InstanceMethod("getImageData", &Context::GetImageData),
+                InstanceMethod("createImageData", &Context::CreateImageData),
                 InstanceMethod("setLineDash", &Context::SetLineDash),
                 InstanceMethod("fillText", &Context::FillText),
                 InstanceMethod("strokeText", &Context::StrokeText),
@@ -150,11 +151,9 @@ namespace Babylon::Polyfills::Internal
             nvgDelete(*m_nvg);
             m_nvg = nullptr;
         }
-
-        m_isClipped = false;
     }
 
-    void Context::BindFillStyle(const Napi::CallbackInfo& info, float left, float top, float width, float height)
+    void Context::BindFillStyle(const Napi::CallbackInfo& info)
     {
         if (std::holds_alternative<std::string>(m_fillStyle))
         {
@@ -168,10 +167,7 @@ namespace Babylon::Polyfills::Internal
         else if (std::holds_alternative<CanvasGradient*>(m_fillStyle))
         {
             CanvasGradient* gradient = std::get<CanvasGradient*>(m_fillStyle);
-            gradient->UpdateCache();
-            // TODO: replace left/lop/width/height by context bounds
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, width + left, height, 0.f, gradient->CachedImage(), 1.f);
-            nvgFillPaint(*m_nvg, imagePaint);
+            nvgFillPaint(*m_nvg, gradient->Paint());
         }
         else
         {
@@ -196,14 +192,17 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        if (!m_isClipped)
-        {
-            nvgBeginPath(*m_nvg);
-        }
+        // Unconditional: Clip() is implemented with nvgScissor, which is path-independent
+        // rather than consuming a path, so suppressing beginPath once a clip
+        // was set only made every later call append to one ever-growing path:
+        // each fill then repainted the union of every rect added since the
+        // clip using the newest paint, which is how a GUI ColorPicker ended up
+        // smearing its saturation gradient over its own colour wheel.
+        nvgBeginPath(*m_nvg);
 
         nvgRect(*m_nvg, left, top, width, height);
 
-        BindFillStyle(info, left, top, width, height);
+        BindFillStyle(info);
 
         SetFilterStack();
         nvgFill(*m_nvg);
@@ -297,7 +296,6 @@ namespace Babylon::Polyfills::Internal
             m_strokeStyle = saved.strokeStyle;
             m_savedStyles.pop_back();
         }
-        m_isClipped = false;
     }
 
     void Context::ClearRect(const Napi::CallbackInfo& info)
@@ -310,17 +308,12 @@ namespace Babylon::Polyfills::Internal
         nvgSave(*m_nvg);
         nvgGlobalCompositeOperation(*m_nvg, NVG_COPY);
 
-        if (!m_isClipped)
-        {
-            nvgBeginPath(*m_nvg);
-        }
+        // See FillRect: clipping is a scissor, so the path must always be reset.
+        nvgBeginPath(*m_nvg);
 
         nvgRect(*m_nvg, x, y, width, height);
 
-        if (!m_isClipped)
-        {
-            nvgClosePath(*m_nvg);
-        }
+        nvgClosePath(*m_nvg);
 
         nvgFillColor(*m_nvg, TRANSPARENT_BLACK);
         nvgFill(*m_nvg);
@@ -438,8 +431,6 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Clip(const Napi::CallbackInfo& /*info*/)
     {
-        m_isClipped = true;
-
         //By default m_rectangleClipping is not set, in this case we use the canvas width and height.
         auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetWidth();
         auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
@@ -641,7 +632,7 @@ namespace Babylon::Polyfills::Internal
 
         if (SetFontFaceId())
         {
-            BindFillStyle(info, 0.f, 0.f, x, y);
+            BindFillStyle(info);
 
             if (m_filter.length())
             {
@@ -1006,12 +997,14 @@ namespace Babylon::Polyfills::Internal
             const auto dx = static_cast<float>(info[1].As<Napi::Number>().Int32Value());
             const auto dy = static_cast<float>(info[2].As<Napi::Number>().Int32Value());
 
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, imgWidth, imgHeight, 0.f, imageIndex, 1.f);
+            // Anchor the pattern at the destination, not the canvas origin: the
+            // rect below is drawn at (dx,dy), so a pattern based at (0,0) makes
+            // it sample from outside the image and clamp to the edge texels,
+            // which silently draws nothing for any dx/dy other than (0,0).
+            NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, imgWidth, imgHeight, 0.f, imageIndex, 1.f);
 
-            if (!m_isClipped)
-            {
-                nvgBeginPath(*m_nvg);
-            }
+            // See FillRect: clipping is a scissor, so the path must always be reset.
+            nvgBeginPath(*m_nvg);
 
             nvgRect(*m_nvg, dx, dy, imgWidth, imgHeight);
             nvgFillPaint(*m_nvg, imagePaint);
@@ -1042,10 +1035,8 @@ namespace Babylon::Polyfills::Internal
 
             NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
 
-            if (!m_isClipped)
-            {
-                nvgBeginPath(*m_nvg);
-            }
+            // See FillRect: clipping is a scissor, so the path must always be reset.
+            nvgBeginPath(*m_nvg);
 
             nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(*m_nvg, imagePaint);
@@ -1080,10 +1071,8 @@ namespace Babylon::Polyfills::Internal
 
             NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
 
-            if (!m_isClipped)
-            {
-                nvgBeginPath(*m_nvg);
-            }
+            // See FillRect: clipping is a scissor, so the path must always be reset.
+            nvgBeginPath(*m_nvg);
 
             nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(*m_nvg, imagePaint);
@@ -1097,6 +1086,61 @@ namespace Babylon::Polyfills::Internal
         {
             throw Napi::Error::New(info.Env(), "Invalid number of parameters for DrawImage");
         }
+    }
+
+    namespace
+    {
+        // createImageData has two overloads: (width, height) and (imagedata). Both produce a
+        // blank, transparent-black buffer -- only the dimensions differ in how they are sourced.
+        void ParseCreateImageDataArgs(const Napi::CallbackInfo& info, uint32_t& width, uint32_t& height)
+        {
+            if (info.Length() >= 2 && info[0].IsNumber() && info[1].IsNumber())
+            {
+                const auto wInt = info[0].As<Napi::Number>().Int32Value();
+                const auto hInt = info[1].As<Napi::Number>().Int32Value();
+
+                // The spec takes the magnitude of each extent, so a negative size is legal.
+                // INT32_MIN has no positive counterpart and would negate into itself, so it is
+                // rejected rather than wrapped into a huge unsigned extent.
+                if (wInt == std::numeric_limits<int32_t>::min() || hInt == std::numeric_limits<int32_t>::min())
+                {
+                    throw Napi::RangeError::New(info.Env(), "Context2D.createImageData: requested size is too large.");
+                }
+
+                width = static_cast<uint32_t>(wInt < 0 ? -wInt : wInt);
+                height = static_cast<uint32_t>(hInt < 0 ? -hInt : hInt);
+            }
+            else if (info.Length() >= 1 && info[0].IsObject())
+            {
+                const auto source = info[0].As<Napi::Object>();
+                width = source.Get("width").As<Napi::Number>().Uint32Value();
+                height = source.Get("height").As<Napi::Number>().Uint32Value();
+            }
+            else
+            {
+                throw Napi::TypeError::New(info.Env(), "Context2D.createImageData: invalid arguments");
+            }
+
+            if (width == 0 || height == 0)
+            {
+                throw Napi::RangeError::New(info.Env(), "Context2D.createImageData: width and height must be non-zero");
+            }
+
+            // Backs a width*height*4 allocation, so reject sizes that would overflow size_t.
+            if (static_cast<uint64_t>(width) * height > std::numeric_limits<size_t>::max() / 4)
+            {
+                throw Napi::RangeError::New(info.Env(), "Context2D.createImageData: requested size is too large.");
+            }
+        }
+    }
+
+    Napi::Value Context::CreateImageData(const Napi::CallbackInfo& info)
+    {
+        uint32_t width{}, height{};
+        ParseCreateImageDataArgs(info, width, height);
+        // A null context means "do not read back the framebuffer", so the ImageData is
+        // left as the transparent black the spec requires.
+        return ImageData::CreateInstance(info.Env(), nullptr, 0, 0, width, height);
     }
 
     Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)

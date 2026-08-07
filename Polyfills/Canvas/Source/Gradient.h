@@ -21,6 +21,12 @@ namespace Babylon::Polyfills::Internal
 
         void UpdateCache();
         int CachedImage() const { return cachedImage; }
+
+        // Builds the nanovg paint that maps the baked color ramp onto this gradient's own
+        // geometry. Callers must not derive the pattern from the shape being filled: per the
+        // Canvas2D spec a gradient is positioned by the coordinates given to
+        // createLinear/RadialGradient, in user space, independently of what it fills.
+        NVGpaint Paint();
         void Dispose();
 
     protected:
