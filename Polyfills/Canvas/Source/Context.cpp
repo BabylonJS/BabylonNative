@@ -192,13 +192,14 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        // Unconditional: Clip() is implemented with nvgScissor, which is path-independent
-        // rather than consuming a path, so suppressing beginPath once a clip
-        // was set only made every later call append to one ever-growing path:
-        // each fill then repainted the union of every rect added since the
-        // clip using the newest paint, which is how a GUI ColorPicker ended up
-        // smearing its saturation gradient over its own colour wheel.
-        nvgBeginPath(*m_nvg);
+        // fillRect neither reads nor modifies the current path per spec, so it
+        // would normally start its own. But Clip() can only express a rectangle
+        // (nvgScissor), so a non-rectangular clip path is emulated by leaving it
+        // in the current path and letting this fill render it. See Clip().
+        if (!m_isClipped)
+        {
+            nvgBeginPath(*m_nvg);
+        }
 
         nvgRect(*m_nvg, left, top, width, height);
 
@@ -289,6 +290,7 @@ namespace Babylon::Polyfills::Internal
     void Context::Restore(const Napi::CallbackInfo&)
     {
         nvgRestore(*m_nvg);
+        m_isClipped = false;
         if (!m_savedStyles.empty())
         {
             const auto& saved = m_savedStyles.back();
@@ -342,6 +344,8 @@ namespace Babylon::Polyfills::Internal
 
     void Context::BeginPath(const Napi::CallbackInfo&)
     {
+        m_isClipped = false;
+        m_pathHasNonRect = false;
         nvgBeginPath(*m_nvg);
     }
 
@@ -431,6 +435,18 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Clip(const Napi::CallbackInfo& /*info*/)
     {
+        // A non-rectangular clip path cannot be expressed as a scissor rectangle.
+        // Emulate it by leaving the path current so the next fill draws it, and
+        // leave any enclosing scissor untouched rather than clipping to a
+        // rectangle this path never described.
+        if (m_pathHasNonRect)
+        {
+            m_isClipped = true;
+            return;
+        }
+
+        m_isClipped = false;
+
         //By default m_rectangleClipping is not set, in this case we use the canvas width and height.
         auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetWidth();
         auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
@@ -453,6 +469,8 @@ namespace Babylon::Polyfills::Internal
 
     void Context::PlayPath2D(const NativeCanvasPath2D* path)
     {
+        m_isClipped = false;
+        m_pathHasNonRect = true;
         nvgBeginPath(*m_nvg);
         for (const auto& command : *path)
         {
@@ -544,6 +562,7 @@ namespace Babylon::Polyfills::Internal
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
 
+        m_pathHasNonRect = true;
         nvgMoveTo(*m_nvg, x, y);
     }
 
@@ -552,6 +571,7 @@ namespace Babylon::Polyfills::Internal
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
 
+        m_pathHasNonRect = true;
         nvgLineTo(*m_nvg, x, y);
     }
 
@@ -562,6 +582,7 @@ namespace Babylon::Polyfills::Internal
         const auto x = info[2].As<Napi::Number>().FloatValue();
         const auto y = info[3].As<Napi::Number>().FloatValue();
 
+        m_pathHasNonRect = true;
         nvgBezierTo(*m_nvg, cx, cy, cx, cy, x, y);
     }
 
@@ -778,6 +799,7 @@ namespace Babylon::Polyfills::Internal
         const auto startAngle = static_cast<float>(info[3].As<Napi::Number>().DoubleValue());
         const auto endAngle = static_cast<float>(info[4].As<Napi::Number>().DoubleValue());
         const NVGwinding winding = (info.Length() == 6 && info[5].As<Napi::Boolean>()) ? NVGwinding::NVG_CCW : NVGwinding::NVG_CW;
+        m_pathHasNonRect = true;
         nvgArc(*m_nvg, x, y, radius, startAngle, endAngle, winding);
     }
 
@@ -1113,8 +1135,15 @@ namespace Babylon::Polyfills::Internal
             else if (info.Length() >= 1 && info[0].IsObject())
             {
                 const auto source = info[0].As<Napi::Object>();
-                width = source.Get("width").As<Napi::Number>().Uint32Value();
-                height = source.Get("height").As<Napi::Number>().Uint32Value();
+                const auto w = source.Get("width");
+                const auto h = source.Get("height");
+                if (!w.IsNumber() || !h.IsNumber())
+                {
+                    throw Napi::TypeError::New(info.Env(), "Context2D.createImageData: argument is not an ImageData");
+                }
+
+                width = w.As<Napi::Number>().Uint32Value();
+                height = h.As<Napi::Number>().Uint32Value();
             }
             else
             {

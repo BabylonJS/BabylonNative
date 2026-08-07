@@ -354,6 +354,12 @@ namespace Babylon::Polyfills::Internal
         UpdateCache();
 
         auto nvg = context.lock();
+        if (!nvg)
+        {
+            // The owning context is gone; there is nothing sensible to paint with.
+            return NVGpaint{};
+        }
+
         if (gradientType == GradientType::Linear)
         {
             // The linear ramp is baked into a GRADIENT_SAMPLES_L x 1 image, so orient the
