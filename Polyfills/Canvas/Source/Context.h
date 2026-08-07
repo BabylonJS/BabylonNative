@@ -132,6 +132,11 @@ namespace Babylon::Polyfills::Internal
             float left, top, width, height;
         } m_rectangleClipping{};
 
+        // Set once the current path contains anything nvgScissor cannot express.
+        bool m_pathHasNonRect{false};
+        // Set when clip() had such a path and had to fall back to path emulation.
+        bool m_isClipped{false};
+
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
