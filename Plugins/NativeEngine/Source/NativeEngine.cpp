@@ -25,12 +25,14 @@
 #include <stb/stb_image_resize2.h>
 #include <bx/math.h>
 #include <bx/error.h>
+#include <algorithm>
 #endif
 
 #include <cassert>
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <array>
 
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
 #include <atomic>
@@ -253,6 +255,11 @@ namespace Babylon
             return image;
         }
 
+        // Returns a non-null image, or throws if any conversion step fails. Throwing rather than
+        // returning null keeps every caller safe by default: the async load paths run inside arcana
+        // tasks, which capture the exception and route it to their JavaScript onError callback,
+        // and the one synchronous caller translates it into a Napi::Error. Returning null instead
+        // would be silently dereferenced by LoadTextureFromImage / LoadCubeTextureFromImages.
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
             assert(
@@ -279,34 +286,65 @@ namespace Babylon
 
             if (srgb && !bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB))
             {
+                const bimg::TextureFormat::Enum srcFormat{image->m_format};
+
                 bimg::ImageContainer* oldImage{image};
                 image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
                 bimg::imageFree(oldImage);
+
+                if (image == nullptr)
+                {
+                    throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to RGBA8 for sRGB upload."};
+                }
 
                 assert(bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB));
             }
 
             if (generateMips)
             {
-                if (image->m_format == bimg::TextureFormat::RGB8)
+                // bimg::imageGenerateMips only supports RGBA8 and RGBA32F source data; for any
+                // other format it returns NULL. Convert first so mip generation (and the
+                // subsequent GPU upload) succeeds. High-precision / float formats are promoted to
+                // RGBA32F to preserve range; everything else - including single/dual-channel,
+                // RGB8/BGRA8 and block-compressed formats such as BC1/DXT1 - is decoded to RGBA8.
+                // Without this, e.g. a BC1 texture with generateMips produced a NULL image that the
+                // caller dereferenced, crashing the process.
+                if (image->m_format != bimg::TextureFormat::RGBA8 &&
+                    image->m_format != bimg::TextureFormat::RGBA32F)
                 {
+                    const bimg::TextureFormat::Enum dstFormat =
+                        (image->m_format == bimg::TextureFormat::R16 ||
+                         image->m_format == bimg::TextureFormat::R16F ||
+                         image->m_format == bimg::TextureFormat::RG16F ||
+                         image->m_format == bimg::TextureFormat::RG32F ||
+                         image->m_format == bimg::TextureFormat::RGBA16 ||
+                         image->m_format == bimg::TextureFormat::RGBA16F)
+                            ? bimg::TextureFormat::RGBA32F
+                            : bimg::TextureFormat::RGBA8;
+
+                    const bimg::TextureFormat::Enum srcFormat{image->m_format};
+
                     bimg::ImageContainer* oldImage{image};
-                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
+                    image = bimg::imageConvert(&allocator, dstFormat, *image, false);
                     bimg::imageFree(oldImage);
-                }
-                else if (image->m_format == bimg::TextureFormat::RG16F || image->m_format == bimg::TextureFormat::RGBA16F || image->m_format == bimg::TextureFormat::RGBA16 || image->m_format == bimg::TextureFormat::R16)
-                {
-                    bimg::ImageContainer* oldImage{image};
-                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false);
-                    bimg::imageFree(oldImage);
+
+                    if (image == nullptr)
+                    {
+                        throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to " +
+                            bimg::getName(dstFormat) + " for mip generation."};
+                    }
                 }
 
                 bimg::ImageContainer* oldImage{image};
                 image = bimg::imageGenerateMips(&allocator, *image);
                 bimg::imageFree(oldImage);
+
+                if (image == nullptr)
+                {
+                    throw std::runtime_error{"Failed to generate mips for image."};
+                }
             }
 
-            assert(image != nullptr);
             return image;
         }
 
@@ -415,6 +453,241 @@ namespace Babylon
                             const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
                             texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                         }
+                    }
+                }
+            }
+        }
+        // Parse a single self-contained cubemap container (e.g. .dds / .ktx /
+        // .ktx2) that already holds all six faces and their mip chain. bimg
+        // decodes these natively, so there is no need to split into six images
+        // on the JS side. Unlike ParseImage (which targets single-face 2D images
+        // and asserts !m_cubeMap), this keeps the container as-is.
+        bimg::ImageContainer* ParseCubeImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
+        {
+            bx::ErrorIgnore parseError;
+            bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()), bimg::TextureFormat::Count, &parseError)};
+            if (image == nullptr)
+            {
+                throw std::runtime_error{"Failed to parse cube image."};
+            }
+
+            if (!image->m_cubeMap)
+            {
+                bimg::imageFree(image);
+                throw std::runtime_error{"Image is not a cubemap."};
+            }
+
+            return image;
+        }
+
+        // Port of Babylon.js CubeMapToSphericalPolynomialTools.ConvertCubeMapToSphericalPolynomial.
+        // Prefiltered .dds environments need diffuse-IBL spherical harmonics, which Babylon's WebGL
+        // path computes on the CPU from the top-mip faces. The native engine cannot read cube faces
+        // back from the GPU (_readTexturePixels throws for cube faces), so we compute the harmonics
+        // here from the bimg-decoded top mip. Returns the 9x3 polynomial coefficients in
+        // SphericalPolynomial.FromArray order: x, y, z, xx, yy, zz, yz, zx, xy.
+        std::array<float, 27> ComputeCubeSphericalPolynomial(bx::AllocatorI& allocator, bimg::ImageContainer* image)
+        {
+            std::array<float, 27> result{};
+
+            bimg::ImageContainer* f32{bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false)};
+            if (f32 == nullptr)
+            {
+                return result;
+            }
+
+            const uint32_t size{f32->m_width};
+            constexpr double pi{3.14159265358979323846};
+
+            // Face orientations matching Babylon's _FileFaces, indexed by bimg cube side order
+            // (+X, -X, +Y, -Y, +Z, -Z): worldAxisForNormal, worldAxisForFileX, worldAxisForFileY.
+            struct FaceAxes
+            {
+                double n[3];
+                double fx[3];
+                double fy[3];
+            };
+            static const FaceAxes faces[6] = {
+                {{1, 0, 0}, {0, 0, -1}, {0, -1, 0}},  // +X right
+                {{-1, 0, 0}, {0, 0, 1}, {0, -1, 0}},  // -X left
+                {{0, 1, 0}, {1, 0, 0}, {0, 0, 1}},    // +Y up
+                {{0, -1, 0}, {1, 0, 0}, {0, 0, -1}},  // -Y down
+                {{0, 0, 1}, {1, 0, 0}, {0, -1, 0}},   // +Z front
+                {{0, 0, -1}, {-1, 0, 0}, {0, -1, 0}}, // -Z back
+            };
+
+            const double shConst[9] = {
+                std::sqrt(1.0 / (4.0 * pi)),
+                -std::sqrt(3.0 / (4.0 * pi)),
+                std::sqrt(3.0 / (4.0 * pi)),
+                -std::sqrt(3.0 / (4.0 * pi)),
+                std::sqrt(15.0 / (4.0 * pi)),
+                -std::sqrt(15.0 / (4.0 * pi)),
+                std::sqrt(5.0 / (16.0 * pi)),
+                -std::sqrt(15.0 / (4.0 * pi)),
+                std::sqrt(15.0 / (16.0 * pi)),
+            };
+            const double cosKernel[9] = {pi, 2.0 * pi / 3.0, 2.0 * pi / 3.0, 2.0 * pi / 3.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0};
+
+            const auto areaElement = [](double x, double y) { return std::atan2(x * y, std::sqrt(x * x + y * y + 1.0)); };
+
+            double sh[9][3] = {};
+            double totalSolidAngle{0.0};
+
+            const double du{2.0 / static_cast<double>(size)};
+            const double halfTexel{0.5 * du};
+            const double minUV{halfTexel - 1.0};
+            const double maxHdri{4096.0};
+
+            for (uint16_t side = 0; side < 6; ++side)
+            {
+                bimg::ImageMip mip{};
+                if (!bimg::imageGetRawData(*f32, side, 0, f32->m_data, f32->m_size, mip))
+                {
+                    continue;
+                }
+
+                const float* data{reinterpret_cast<const float*>(mip.m_data)};
+                const FaceAxes& f{faces[side]};
+
+                double v{minUV};
+                for (uint32_t y = 0; y < size; ++y)
+                {
+                    double u{minUV};
+                    for (uint32_t x = 0; x < size; ++x)
+                    {
+                        double dir[3] = {
+                            f.fx[0] * u + f.fy[0] * v + f.n[0],
+                            f.fx[1] * u + f.fy[1] * v + f.n[1],
+                            f.fx[2] * u + f.fy[2] * v + f.n[2],
+                        };
+                        const double len{std::sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2])};
+                        dir[0] /= len;
+                        dir[1] /= len;
+                        dir[2] /= len;
+
+                        const double deltaSolidAngle{
+                            areaElement(u - halfTexel, v - halfTexel) -
+                            areaElement(u - halfTexel, v + halfTexel) -
+                            areaElement(u + halfTexel, v - halfTexel) +
+                            areaElement(u + halfTexel, v + halfTexel)};
+
+                        const size_t idx{(static_cast<size_t>(y) * size + x) * 4};
+                        double rgb[3] = {data[idx + 0], data[idx + 1], data[idx + 2]};
+                        for (int c = 0; c < 3; ++c)
+                        {
+                            if (std::isnan(rgb[c]))
+                            {
+                                rgb[c] = 0.0;
+                            }
+                            rgb[c] = rgb[c] < 0.0 ? 0.0 : (rgb[c] > maxHdri ? maxHdri : rgb[c]);
+                        }
+
+                        const double trig[9] = {
+                            1.0,
+                            dir[1],
+                            dir[2],
+                            dir[0],
+                            dir[0] * dir[1],
+                            dir[1] * dir[2],
+                            3.0 * dir[2] * dir[2] - 1.0,
+                            dir[0] * dir[2],
+                            dir[0] * dir[0] - dir[1] * dir[1],
+                        };
+                        for (int lm = 0; lm < 9; ++lm)
+                        {
+                            const double basis{shConst[lm] * trig[lm] * deltaSolidAngle};
+                            sh[lm][0] += rgb[0] * basis;
+                            sh[lm][1] += rgb[1] * basis;
+                            sh[lm][2] += rgb[2] * basis;
+                        }
+                        totalSolidAngle += deltaSolidAngle;
+                        u += du;
+                    }
+                    v += du;
+                }
+            }
+
+            bimg::imageFree(f32);
+
+            if (totalSolidAngle <= 0.0)
+            {
+                return result;
+            }
+
+            // scaleInPlace(correction) + convertIncidentRadianceToIrradiance + convertIrradianceToLambertianRadiance.
+            const double correction{(4.0 * pi) / totalSolidAngle};
+            for (int lm = 0; lm < 9; ++lm)
+            {
+                const double scale{correction * cosKernel[lm] / pi};
+                sh[lm][0] *= scale;
+                sh[lm][1] *= scale;
+                sh[lm][2] *= scale;
+            }
+
+            // SphericalPolynomial.FromHarmonics (updateFromHarmonics then *1/pi).
+            for (int c = 0; c < 3; ++c)
+            {
+                const double l00{sh[0][c]}, l1_1{sh[1][c]}, l10{sh[2][c]}, l11{sh[3][c]};
+                const double l2_2{sh[4][c]}, l2_1{sh[5][c]}, l20{sh[6][c]}, l21{sh[7][c]}, l22{sh[8][c]};
+                const double invPi{1.0 / pi};
+                result[0 * 3 + c] = static_cast<float>(-1.02333 * l11 * invPi);                                     // x
+                result[1 * 3 + c] = static_cast<float>(-1.02333 * l1_1 * invPi);                                    // y
+                result[2 * 3 + c] = static_cast<float>(1.02333 * l10 * invPi);                                      // z
+                result[3 * 3 + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 + 0.429043 * l22) * invPi); // xx
+                result[4 * 3 + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 - 0.429043 * l22) * invPi); // yy
+                result[5 * 3 + c] = static_cast<float>((0.886277 * l00 + 0.495417 * l20) * invPi);                  // zz
+                result[6 * 3 + c] = static_cast<float>(-0.858086 * l2_1 * invPi);                                   // yz
+                result[7 * 3 + c] = static_cast<float>(-0.858086 * l21 * invPi);                                    // zx
+                result[8 * 3 + c] = static_cast<float>(0.858086 * l2_2 * invPi);                                    // xy
+            }
+
+            return result;
+        }
+
+        void LoadCubeTextureFromContainer(Graphics::Texture* texture, bimg::ImageContainer* image, bool srgb)
+        {
+            assert(image->m_cubeMap);
+            assert(image->m_width == image->m_height);
+            const uint32_t size{image->m_width};
+
+            if (texture->IsValid())
+            {
+                if (texture->Width() != size || texture->Height() != size)
+                {
+                    bimg::imageFree(image);
+                    throw std::runtime_error{"Cannot update texture from image of different size"};
+                }
+            }
+            else
+            {
+                const bool hasMips{image->m_numMips > 1};
+                const bgfx::TextureFormat::Enum format{Cast(image->m_format)};
+                const uint64_t flags{srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE};
+                texture->CreateCube(static_cast<uint16_t>(size), hasMips, 1, format, flags);
+            }
+
+            // Every (side, mip) view points into the single container's backing
+            // store, so the allocation is released exactly once, after bgfx has
+            // consumed the final upload.
+            const uint8_t numMips{static_cast<uint8_t>(image->m_numMips)};
+            for (uint8_t side = 0; side < 6; ++side)
+            {
+                for (uint8_t mip = 0; mip < numMips; ++mip)
+                {
+                    bimg::ImageMip imageMip{};
+                    if (bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip))
+                    {
+                        bgfx::ReleaseFn releaseFn{};
+                        if (side == 5 && mip == numMips - 1)
+                        {
+                            releaseFn = [](void*, void* userData) {
+                                bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
+                            };
+                        }
+
+                        const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
+                        texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                     }
                 }
             }
@@ -718,7 +991,9 @@ namespace Babylon
                 InstanceMethod("initializeTexture", &NativeEngine::InitializeTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
+                InstanceMethod("updateTextureData", &NativeEngine::UpdateTextureData),
                 InstanceMethod("loadRawTexture2DArray", &NativeEngine::LoadRawTexture2DArray),
+                InstanceMethod("loadRawTexture3D", &NativeEngine::LoadRawTexture3D),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
@@ -1459,9 +1734,125 @@ namespace Babylon
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, bytes)};
-        image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
+
+        // Unlike the async load paths, this one runs on the JavaScript thread, so a std::exception
+        // escaping here would not be routed to an onError callback. Surface it as a JS error.
+        try
+        {
+            image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
+        }
+        catch (const std::exception& exception)
+        {
+            throw Napi::Error::New(Env(), exception.what());
+        }
+
         LoadTextureFromImage(texture, image, false);
 #endif
+    }
+
+    void NativeEngine::UpdateTextureData(const Napi::CallbackInfo& info)
+    {
+        const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
+        const auto data{info[1].As<Napi::TypedArray>()};
+        const auto x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
+        const auto y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const auto width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
+        const auto height{static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value())};
+        const uint16_t layer{info.Length() > 6 && !info[6].IsUndefined() ? static_cast<uint16_t>(info[6].As<Napi::Number>().Uint32Value()) : static_cast<uint16_t>(0)};
+        const uint8_t mip{info.Length() > 7 && !info[7].IsUndefined() ? static_cast<uint8_t>(info[7].As<Napi::Number>().Uint32Value()) : static_cast<uint8_t>(0)};
+        const bool invertY{info.Length() > 8 && !info[8].IsUndefined() ? info[8].As<Napi::Boolean>().Value() : false};
+
+        if (texture == nullptr || !texture->IsValid())
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData called on an invalid texture");
+        }
+
+        // Validate the (JS-controlled) mip level against the texture's actual mip chain before it is used
+        // as a shift distance. A mip >= 32 would make the shifts below undefined behaviour, and any mip
+        // past the end of the chain would be forwarded to bgfx, which asserts on it. This also implicitly
+        // rejects mip > 0 on a texture created without mips, where numMips is 1. bgfx is always linked
+        // (bimg is not, in builds without image loading), so query the chain length through bgfx.
+        bgfx::TextureInfo mipChainInfo;
+        bgfx::calcTextureSize(mipChainInfo, texture->Width(), texture->Height(), 1, texture->IsCube(), texture->HasMips(), 1, texture->Format());
+        if (mip >= mipChainInfo.numMips)
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData mip level " + std::to_string(mip) +
+                " is out of range for a texture with " + std::to_string(mipChainInfo.numMips) + " mip level(s)");
+        }
+
+        // Validate the update rectangle against the mip-level extents before handing it to bgfx, so an
+        // out-of-range origin/size can't drive an out-of-bounds read of the source buffer below. Mip
+        // extents floor at 1, matching how bgfx sizes the tail of the chain for non-square textures.
+        const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mip)};
+        const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mip)};
+        const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
+        // A cube texture is addressed by 6 faces per array layer (bgfx side index 0-5). The JS side passes the
+        // face in the same "layer" argument used for 2D-array slices, so the valid range is 6*numLayers.
+        const uint16_t maxLayers{texture->IsCube() ? static_cast<uint16_t>(6 * numLayers) : numLayers};
+        if (width == 0 || height == 0 ||
+            static_cast<uint32_t>(x) + width > mipWidth ||
+            static_cast<uint32_t>(y) + height > mipHeight ||
+            layer >= maxLayers)
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData region is out of bounds");
+        }
+
+        // Size of the source rectangle in the texture's own format. bgfx is always linked (bimg is not, in
+        // builds without image loading), so size the upload with bgfx::calcTextureSize rather than bimg.
+        bgfx::TextureInfo textureInfo;
+        bgfx::calcTextureSize(textureInfo, width, height, 1, false, false, 1, texture->Format());
+        const uint32_t requiredSize{textureInfo.storageSize};
+        if (requiredSize == 0 || data.ByteLength() < requiredSize)
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData data size does not match width, height, and texture format");
+        }
+
+        // Block-compressed formats are rejected outright. Their payload is a grid of 4x4 (or larger)
+        // blocks, so the row-reversal below would be wrong twice over: the stride it derives is
+        // requiredSize / height, which is a fraction of a block row rather than a whole one (an 8-byte
+        // BC1 block at 4x4 yields 2), and even with the right stride, mirroring block rows cannot flip a
+        // texture vertically without re-encoding the texel rows packed inside each block. bgfx also
+        // requires block-aligned x/y/width/height for these formats. The base upload path
+        // (loadTexture -> PrepareImage) already handles compressed data, so this is not a capability loss.
+        // In bgfx's TextureFormat enum every block-compressed format sorts before Unknown, which lets
+        // this be checked without bimg.
+        if (texture->Format() < bgfx::TextureFormat::Unknown)
+        {
+            throw Napi::Error::New(info.Env(), "updateTextureData does not support block-compressed texture formats");
+        }
+
+        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
+
+        // Match the vertical orientation the base upload applies (PrepareImage flips the whole image when
+        // originBottomLeft ? invertY : !invertY). To land a sub-rectangle at the same place, flip it to the
+        // mirrored Y origin and reverse its rows so row 0 of the source lines up with the flipped base data.
+        const bool flip{bgfx::getCaps()->originBottomLeft ? invertY : !invertY};
+        const uint16_t targetY{flip ? static_cast<uint16_t>(mipHeight - y - height) : y};
+        const bgfx::Memory* mem{bgfx::alloc(requiredSize)};
+        if (flip)
+        {
+            const uint32_t rowBytes{requiredSize / height};
+            for (uint16_t row = 0; row < height; ++row)
+            {
+                std::memcpy(mem->data + static_cast<size_t>(row) * rowBytes, bytes + static_cast<size_t>(height - 1 - row) * rowBytes, rowBytes);
+            }
+        }
+        else
+        {
+            std::memcpy(mem->data, bytes, requiredSize);
+        }
+        if (texture->IsCube())
+        {
+            // bgfx addresses a cube texture by (array layer, side 0-5), but the JS side packs both into the
+            // single "layer" argument it also uses for 2D-array slices (6 consecutive faces per array layer,
+            // which is what the bounds check above allows). Decompose it, otherwise a cube-array face index
+            // above 5 would be forwarded as an out-of-range side and every update would land on array layer 0.
+            texture->UpdateCube(static_cast<uint16_t>(layer / 6), static_cast<uint8_t>(layer % 6), mip, x, targetY, width, height, mem);
+        }
+        else
+        {
+            texture->Update2D(layer, mip, x, targetY, width, height, mem);
+        }
     }
 
     void NativeEngine::LoadRawTexture2DArray(const Napi::CallbackInfo& info)
@@ -1556,6 +1947,78 @@ namespace Babylon
 #endif
     }
 
+    void NativeEngine::LoadRawTexture3D(const Napi::CallbackInfo& info)
+    {
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
+#else
+        const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
+        const auto data = info[1].As<Napi::TypedArray>();
+        const auto rawWidth{info[2].As<Napi::Number>().Uint32Value()};
+        const auto rawHeight{info[3].As<Napi::Number>().Uint32Value()};
+        const auto rawDepth{info[4].As<Napi::Number>().Uint32Value()};
+        const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
+        const auto generateMips = info[6].As<Napi::Boolean>().Value();
+        const auto invertY = info[7].As<Napi::Boolean>().Value();
+
+        if (generateMips)
+        {
+            throw Napi::Error::New(Env(), "Texture 3D currently do not support mipmaps.");
+        }
+
+        if (invertY)
+        {
+            throw Napi::Error::New(Env(), "Texture 3D currently do not support invert Y.");
+        }
+
+        // width/height/depth originate from JS. Validate the raw 32-bit values against the GPU limits
+        // before narrowing to uint16_t, otherwise an out-of-range value (e.g. 70000) would wrap into an
+        // in-range uint16_t and slip past this check, driving an oversized allocation or an out-of-bounds
+        // read in the renderer.
+        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        if (rawWidth == 0 || rawHeight == 0 || rawDepth == 0 ||
+            rawWidth > maxTextureSize ||
+            rawHeight > maxTextureSize ||
+            rawDepth > maxTextureSize)
+        {
+            throw Napi::Error::New(Env(), "Invalid width, height, or depth for the 3D texture.");
+        }
+
+        const auto width{static_cast<uint16_t>(rawWidth)};
+        const auto height{static_cast<uint16_t>(rawHeight)};
+        const auto depth{static_cast<uint16_t>(rawDepth)};
+
+        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
+        texture->Create3D(width, height, depth, false, Cast(format), flags);
+
+        if (!data.IsNull())
+        {
+            // imageGetSize returns the full size in 64-bit; compare against the 64-bit byte length so a
+            // crafted width/height/depth cannot wrap the expected size and slip an undersized buffer past
+            // this check. A 3D texture is a single volume (numLayers = 1) whose depth is the 3rd argument.
+            const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, depth, false, false, 1, format)};
+            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
+            {
+                throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
+            }
+
+            uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
+            const size_t dataSize = data.ByteLength();
+
+            // bgfx::Memory uses a 32-bit size; reject a payload that would be truncated by the bgfx::copy
+            // cast below.
+            if (dataSize > UINT32_MAX)
+            {
+                throw Napi::Error::New(Env(), "The 3D texture volume size is too large.");
+            }
+
+            // This is required since BGFX must manage the memory backing the update.
+            const bgfx::Memory* dataCopy = bgfx::copy(dataPtr, static_cast<uint32_t>(dataSize));
+            texture->Update3D(0, 0, 0, 0, width, height, depth, dataCopy);
+        }
+#endif
+    }
+
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
     {
 #ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
@@ -1568,6 +2031,44 @@ namespace Babylon
         const auto srgb{info[4].As<Napi::Boolean>().Value()};
         const auto onSuccess{info[5].As<Napi::Function>()};
         const auto onError{info[6].As<Napi::Function>()};
+
+        // A single buffer means a self-contained cubemap container (.dds / .ktx /
+        // .ktx2) that already holds all six faces and their mip chain; hand it to
+        // bimg directly instead of expecting six pre-split face images.
+        if (data.Length() == 1)
+        {
+            const auto typedArray{data[0u].As<Napi::TypedArray>()};
+            const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
+            auto dataRef{Napi::Persistent(typedArray)};
+            arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan]() {
+                return ParseCubeImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan);
+            })
+                .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](bimg::ImageContainer* image) {
+                    // Compute the spherical harmonics from the decoded top mip before the upload
+                    // hands the container's memory to bgfx.
+                    auto sphericalPolynomial = ComputeCubeSphericalPolynomial(Graphics::DeviceContext::GetDefaultAllocator(), image);
+                    LoadCubeTextureFromContainer(texture, image, srgb);
+                    return sphericalPolynomial;
+                })
+                .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{std::move(dataRef)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<std::array<float, 27>, std::exception_ptr> result) {
+                    if (result.has_error())
+                    {
+                        onErrorRef.Call({});
+                    }
+                    else
+                    {
+                        const auto& sphericalPolynomial{result.value()};
+                        auto array{Napi::Float32Array::New(onSuccessRef.Env(), sphericalPolynomial.size())};
+                        float* dst{array.Data()};
+                        for (size_t i = 0; i < sphericalPolynomial.size(); ++i)
+                        {
+                            dst[i] = sphericalPolynomial[i];
+                        }
+                        onSuccessRef.Call({array});
+                    }
+                });
+            return;
+        }
 
         std::array<Napi::Reference<Napi::TypedArray>, 6> dataRefs;
         std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
@@ -1769,6 +2270,10 @@ namespace Babylon
         auto buffer{info[6].As<Napi::ArrayBuffer>()};
         uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
         uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
+        // Optional cube-map face index (0-5). -1 (or absent) means a plain 2D read.
+        const int32_t faceIndex{(info.Length() > 9 && info[9].IsNumber()) ? info[9].As<Napi::Number>().Int32Value() : -1};
+        const bool isCubeFace{faceIndex >= 0};
+        const uint16_t srcZ{isCubeFace ? static_cast<uint16_t>(faceIndex) : static_cast<uint16_t>(0)};
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
 
@@ -1791,12 +2296,33 @@ namespace Babylon
             buffer = Napi::ArrayBuffer::New(env, bufferLength);
         }
 
+        // The face/layer index is JS-controlled and is forwarded to encoder->blit as srcZ, so validate it
+        // before it can drive an out-of-bounds read inside bgfx. Babylon.js passes this argument for both
+        // cube maps (face 0-5, six consecutive faces per array layer) and 2D arrays (slice index, which can
+        // legitimately exceed 5), and -1 for a plain 2D read -- so the bound is the texture's srcZ extent,
+        // not a flat 0-5.
+        const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
+        const uint32_t maxSrcZ{texture->IsCube() ? 6u * numLayers : numLayers};
+        // The mip level is JS-controlled and is both used as a shift distance below and forwarded to
+        // encoder->blit. Reject it before either happens: a mip >= 32 would make the shifts undefined
+        // behaviour, and any mip past the end of the chain would trip a bgfx assert. A texture created
+        // without mips has numMips == 1, so this also rejects mipLevel > 0 for that case.
+        bgfx::TextureInfo mipChainInfo;
+        bgfx::calcTextureSize(mipChainInfo, texture->Width(), texture->Height(), 1, texture->IsCube(), texture->HasMips(), 1, sourceTextureFormat);
+        if (mipLevel >= mipChainInfo.numMips)
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
+        }
+        else if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture face/layer index is out of range for this texture.").Value());
+        }
         // Make sure the buffer is big enough for the offset + length. Both
         // bufferOffset and bufferLength are JS-supplied uint32_t, so widen the
         // addition to 64-bit: computing it in 32-bit can wrap around (e.g. offset
         // 0xF0000000 + length 0x20000000), letting an out-of-range offset pass this
         // gate and overflow the ArrayBuffer backing store in the memcpy below.
-        if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
+        else if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
         }
@@ -1815,13 +2341,20 @@ namespace Babylon
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture = std::make_shared<bool>(false);
 
-            // If the image needs to be cropped or the texture lacks the READ_BACK flag, blit to a temp texture.
-            if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
+            // Extents of the requested mip. mipLevel was validated against the mip chain above, so the
+            // shifts are well defined here; they floor at 1 to match how bgfx sizes the tail of the chain.
+            const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel)};
+            const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
+
+            // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
+            // specific cube-map face, blit to a temp 2D texture. bgfx::readTexture cannot address an
+            // individual cube face, so a cube-face read always goes through the blit (srcZ = face index).
+            if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
                 bgfx::Encoder* encoder = GetEncoder();
-                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, srcZ, width, height, /*depth*/ 0);
 
                 sourceTextureHandle = blitTextureHandle;
                 *tempTexture = true;
