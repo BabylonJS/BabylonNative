@@ -60,6 +60,8 @@ var files = [
   ['node_modules/babylonjs-gui/babylon.gui.js.map', 'https://preview.babylonjs.com/gui/babylon.gui.js.map'],
   ['node_modules/babylonjs-serializers/babylonjs.serializers.js', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.js'],
   ['node_modules/babylonjs-serializers/babylonjs.serializers.js.map', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.js.map'],
+  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.js'],
+  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js.map', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.js.map'],
 ];
 
 console.log('Downloading babylon.js nightly');
