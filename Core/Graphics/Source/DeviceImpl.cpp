@@ -40,6 +40,20 @@ namespace Babylon::Graphics
         auto& init = m_state.Bgfx.InitState;
         init.callback = &m_bgfxCallback;
 
+        // bgfx reserves limits.numDrawCalls render-item slots (sort keys, RenderItem,
+        // RenderBind) up front for every Frame, and defaults to
+        // BGFX_CONFIG_MAX_DRAW_CALLS (65535) -- tens of megabytes.
+        //
+        // 0 asks for a single BGFX_CONFIG_DRAW_CALL_BLOCK instead (4096, set in
+        // Dependencies/CMakeLists.txt), and bgfx resizes in block steps up to that same
+        // ceiling. Growth is reactive -- the frame that overflows drops the draws past
+        // capacity -- so the block should sit above the expected peak.
+        //
+        // numDrawCallPeakFrames is the shrink delay in frames, ~1s at 60fps. Resizing
+        // is disabled entirely at 0.
+        init.limits.numDrawCalls = 0;
+        init.limits.numDrawCallPeakFrames = 60;
+
         // Use the noop renderer if the configuration has no window and no size.
         if (config.Window == WindowT{} && config.Width == 0 && config.Height == 0)
         {
