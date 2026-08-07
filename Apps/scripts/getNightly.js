@@ -1,5 +1,7 @@
 var https = require('https');
 var fs = require('fs');
+var path = require('path');
+var spawnSync = require('child_process').spawnSync;
 
 function download(filename, url) {
   return new Promise(function (resolve, reject) {
@@ -60,6 +62,8 @@ var files = [
   ['node_modules/babylonjs-gui/babylon.gui.js.map', 'https://preview.babylonjs.com/gui/babylon.gui.js.map'],
   ['node_modules/babylonjs-serializers/babylonjs.serializers.js', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.js'],
   ['node_modules/babylonjs-serializers/babylonjs.serializers.js.map', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.js.map'],
+  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.js'],
+  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js.map', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.js.map'],
 ];
 
 console.log('Downloading babylon.js nightly');
@@ -68,7 +72,31 @@ console.log('Downloading babylon.js nightly');
 // file in place, and so the down-level step that runs next cannot race an incomplete write.
 Promise.all(files.map(function (f) { return download(f[0], f[1]); })).then(function () {
   console.log('Downloaded ' + files.length + ' file(s)');
-}, function (err) {
+
+  // Every bundle we just replaced needs the ES5 down-level, not just babylon.max.js: they all end up
+  // in BABYLON_SCRIPTS and all have to run on Chakra. Deriving the list from `files` means adding a
+  // new download above can never again silently skip this step.
+  var scripts = files
+    .map(function (f) { return f[0]; })
+    .filter(function (p) { return /babylon.*\.js$/i.test(p); });
+
+  if (scripts.length === 0) {
+    return;
+  }
+
+  console.log('Down-leveling ' + scripts.length + ' script(s)');
+  var result = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'downlevelNativeScripts.mjs')].concat(scripts),
+    { stdio: 'inherit' });
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error('downlevelNativeScripts.mjs exited with code ' + result.status);
+  }
+}).catch(function (err) {
   console.error(err.message);
   process.exit(1);
 });
