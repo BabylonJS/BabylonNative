@@ -43,6 +43,16 @@ namespace Babylon::Polyfills::Internal
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_PATH2D_CONSTRUCTOR_NAME, func);
+
+        // Browsers expose Path2D as a global constructor, and Babylon.js relies on that: the generic
+        // engines call `new Path2D(d)` from AbstractEngine.createCanvasPath2D. Only NativeEngine
+        // overrides that method to use `_native.Path2D`, so without the global any portable browser
+        // code doing `new Path2D(...)` fails with "Path2D is not defined".
+        auto global = env.Global();
+        if (global.Get(JS_PATH2D_CONSTRUCTOR_NAME).IsUndefined())
+        {
+            global.Set(JS_PATH2D_CONSTRUCTOR_NAME, func);
+        }
     }
 
     NativeCanvasPath2D::NativeCanvasPath2D(const Napi::CallbackInfo& info)
