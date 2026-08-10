@@ -8,6 +8,7 @@
 #include <cstring>
 #include "Colors.h"
 #include "Gradient.h"
+#include "Font.h"
 
 namespace
 {
@@ -63,15 +64,17 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
     {
+        if (info.Length() < 1 || !info[0].IsString())
+        {
+            throw Napi::TypeError::New(info.Env(), "Canvas.loadTTF expects the font name as a string in argument 1.");
+        }
+
         // don't allow same font to be loaded more than once
         // why? because Context doesn't update nvgCreateFontMem when old fontBuffer released
         auto fontName = info[0].As<Napi::String>().Utf8Value();
         if (fontsInfos.find(fontName) == fontsInfos.end())
         {
-            const auto buffer = info[1].As<Napi::ArrayBuffer>();
-            std::vector<uint8_t> fontBuffer(buffer.ByteLength());
-            memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
-            fontsInfos[fontName] = std::move(fontBuffer);
+            fontsInfos[fontName] = GetFontDataArgument(info, 1, "Canvas.loadTTF");
         }
     }
 
