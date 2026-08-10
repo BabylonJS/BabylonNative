@@ -51,13 +51,29 @@ describe("ColorParsing", function () {
   expect(_native.Canvas.parseColor("#12345678")).to.equal(0x78563412);
   expect(_native.Canvas.parseColor("snow")).to.equal(0xfffafaff);
   expect(_native.Canvas.parseColor("rgb(16,32,48)")).to.equal(0xff302010);
-  expect(_native.Canvas.parseColor("rgba(16,32,48,64)")).to.equal(0x40302010);
+  // Alpha is a 0-1 number (or a percentage) per CSS Color, so any value above
+  // 1 clamps to fully opaque. It is not a 0-255 channel like r/g/b.
+  expect(_native.Canvas.parseColor("rgba(16,32,48,64)")).to.equal(0xff302010);
   expect(_native.Canvas.parseColor("rgb(16,     32   ,  48   )")).to.equal(
     0xff302010
   );
   expect(
     _native.Canvas.parseColor("rgba(    16,     32   ,  48 , 64  )")
-  ).to.equal(0x40302010);
+  ).to.equal(0xff302010);
+  expect(_native.Canvas.parseColor("rgba(16,32,48,1)")).to.equal(0xff302010);
+  expect(_native.Canvas.parseColor("rgba(16,32,48,0)")).to.equal(0x00302010);
+  // Fractional and percentage alpha, whitespace-separated components and the
+  // "/ alpha" form all used to fall through to the "unable to parse" throw.
+  expect(_native.Canvas.parseColor("rgba(16,32,48,0.5)")).to.equal(0x80302010);
+  expect(_native.Canvas.parseColor("rgba(16 32 48 / 50%)")).to.equal(
+    0x80302010
+  );
+  expect(_native.Canvas.parseColor("rgb(16 32 48)")).to.equal(0xff302010);
+  expect(_native.Canvas.parseColor("rgb(100%,0%,0%)")).to.equal(0xff0000ff);
+  expect(_native.Canvas.parseColor("hsl(0,100%,50%)")).to.equal(0xff0000ff);
+  expect(_native.Canvas.parseColor("hsla(0,100%,50%,0.5)")).to.equal(
+    0x800000ff
+  );
 
   it("should throw", function () {
     function incorrectColor() {
