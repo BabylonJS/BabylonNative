@@ -41,27 +41,16 @@ namespace Babylon::ShaderCompilerCommon
 
     std::string ProcessSamplerFlip(std::string_view source)
     {
-        static const std::string shaderNameDefineStr = "#define SHADER_NAME";
-        const auto shaderNameDefine = source.find(shaderNameDefineStr);
-        if (shaderNameDefine == std::string::npos)
-        {
-            throw std::runtime_error{"ProcessSamplerFlip: Could not find shader name define."};
-        }
-
-        // The vertical (V) flip applied to texture()/textureLod() sample coordinates is performed by
-        // the FlipSamplerCoordinates AST traverser, not by a preprocessor macro. A 2-argument
-        // function-like macro (`#define texture(x,y) texture(x, flip(y))`) cannot match the
-        // 3-argument bias form `texture(sampler, uv, bias)` emitted by some Babylon.js shaders (e.g.
-        // GreasedLine), and glslang's preprocessor has no variadic-macro support, so those shaders
-        // failed to compile. texelFetch keeps its macro because it takes integer texel coordinates,
-        // which the float-coordinate AST flip does not handle.
-        static const auto textureSamplerFunctions = R"(
-            #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2((uv).x, textureSize((tex), (lod)).y - 1 - (uv).y), (lod))
-            #define SHADER_NAME)";
-
-        std::string result{source};
-        result.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
-        return result;
+        // The vertical (V) flip for both float sample coordinates (texture()/textureLod()) and
+        // integer texel coordinates (texelFetch()) is now performed by the FlipSamplerCoordinates
+        // AST traverser, not by a preprocessor macro. The macro form
+        //   #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2(...), (lod))
+        // forced every coordinate through ivec2(...), so it could not compile against sampler3D /
+        // sampler2DArray ('no matching overloaded function'). The AST traverser knows the sampler
+        // dimensionality and only flips 2-component coordinates, leaving 3D/array fetches intact.
+        // This function is retained as an identity passthrough so the backend call sites don't need
+        // to change.
+        return std::string{source};
     }
 
     void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
