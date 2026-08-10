@@ -2,6 +2,8 @@
 #include <map>
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <optional>
@@ -74,6 +76,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("getImageData", &Context::GetImageData),
                 InstanceMethod("createImageData", &Context::CreateImageData),
                 InstanceMethod("setLineDash", &Context::SetLineDash),
+                InstanceMethod("getLineDash", &Context::GetLineDash),
                 InstanceMethod("fillText", &Context::FillText),
                 InstanceMethod("strokeText", &Context::StrokeText),
                 InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
@@ -786,9 +789,137 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Context::PutImageData(const Napi::CallbackInfo&)
+    void Context::PutImageData(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{"Context2D.putImageData: not implemented"};
+        Napi::Env env = info.Env();
+
+        if (info.Length() < 3 || !info[0].IsObject())
+        {
+            throw Napi::TypeError::New(env, "Context2D.putImageData requires at least 3 arguments (imageData, dx, dy).");
+        }
+
+        // Read width/height/data as ordinary properties rather than unwrapping an ImageData:
+        // napi_unwrap on an object that was never wrapped dereferences garbage, and callers
+        // legitimately pass plain {data,width,height} objects.
+        Napi::Object imageData = info[0].As<Napi::Object>();
+        Napi::Value dataValue = imageData.Get("data");
+        if (!dataValue.IsTypedArray())
+        {
+            throw Napi::TypeError::New(env, "Context2D.putImageData: the first argument is not an ImageData.");
+        }
+
+        const auto widthValue = imageData.Get("width");
+        const auto heightValue = imageData.Get("height");
+        if (!widthValue.IsNumber() || !heightValue.IsNumber())
+        {
+            throw Napi::TypeError::New(env, "Context2D.putImageData: the first argument is not an ImageData (missing numeric 'width'/'height').");
+        }
+
+        const auto srcWidthInt = widthValue.As<Napi::Number>().Int32Value();
+        const auto srcHeightInt = heightValue.As<Napi::Number>().Int32Value();
+        if (srcWidthInt <= 0 || srcHeightInt <= 0)
+        {
+            return;
+        }
+
+        const auto srcWidth = static_cast<uint32_t>(srcWidthInt);
+        const auto srcHeight = static_cast<uint32_t>(srcHeightInt);
+
+        const auto typedArray = dataValue.As<Napi::TypedArray>();
+        const uint64_t requiredBytes = static_cast<uint64_t>(srcWidth) * srcHeight * 4u;
+        if (typedArray.ByteLength() < requiredBytes)
+        {
+            throw Napi::TypeError::New(env, "Context2D.putImageData: the ImageData buffer is smaller than width*height*4.");
+        }
+        const auto* srcPixels = static_cast<const uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset();
+
+        const auto dx = info[1].ToNumber().Int32Value();
+        const auto dy = info[2].ToNumber().Int32Value();
+
+        // The dirty rectangle is optional and, per spec, may be given with
+        // negative extents, which flips it rather than drawing nothing.
+        int32_t dirtyX{0};
+        int32_t dirtyY{0};
+        int32_t dirtyWidth{srcWidthInt};
+        int32_t dirtyHeight{srcHeightInt};
+        if (info.Length() >= 7)
+        {
+            dirtyX = info[3].ToNumber().Int32Value();
+            dirtyY = info[4].ToNumber().Int32Value();
+            dirtyWidth = info[5].ToNumber().Int32Value();
+            dirtyHeight = info[6].ToNumber().Int32Value();
+
+            if (dirtyWidth < 0)
+            {
+                dirtyX += dirtyWidth;
+                dirtyWidth = -dirtyWidth;
+            }
+            if (dirtyHeight < 0)
+            {
+                dirtyY += dirtyHeight;
+                dirtyHeight = -dirtyHeight;
+            }
+        }
+
+        // Clip the dirty rectangle to the source bitmap.
+        int32_t x0 = std::max(0, dirtyX);
+        int32_t y0 = std::max(0, dirtyY);
+        int32_t x1 = std::min(srcWidthInt, dirtyX + dirtyWidth);
+        int32_t y1 = std::min(srcHeightInt, dirtyY + dirtyHeight);
+        if (x1 <= x0 || y1 <= y0)
+        {
+            return;
+        }
+
+        const auto copyWidth = static_cast<uint32_t>(x1 - x0);
+        const auto copyHeight = static_cast<uint32_t>(y1 - y0);
+
+        // nvgImagePattern needs a tightly packed image, so extract the dirty
+        // sub-rectangle into its own buffer.
+        std::vector<uint8_t> patch(static_cast<size_t>(copyWidth) * copyHeight * 4u);
+        for (uint32_t row = 0; row < copyHeight; ++row)
+        {
+            std::memcpy(
+                patch.data() + static_cast<size_t>(row) * copyWidth * 4u,
+                srcPixels + (static_cast<size_t>(y0 + row) * srcWidth + x0) * 4u,
+                static_cast<size_t>(copyWidth) * 4u);
+        }
+
+        const auto destX = static_cast<float>(dx + x0);
+        const auto destY = static_cast<float>(dy + y0);
+        const auto destWidth = static_cast<float>(copyWidth);
+        const auto destHeight = static_cast<float>(copyHeight);
+
+        const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(copyWidth), static_cast<int>(copyHeight), 0, patch.data());
+        if (imageIndex == 0)
+        {
+            throw Napi::Error::New(env, "Context2D.putImageData: failed to create the source image.");
+        }
+
+        // putImageData bypasses the transform, the clip region, globalAlpha and
+        // the composite operation, and replaces the destination pixels outright.
+        // nvgReset() clears exactly that state, and NVG_COPY gives the required
+        // replace (rather than blend) semantics.
+        nvgSave(*m_nvg);
+        nvgReset(*m_nvg);
+        nvgGlobalCompositeOperation(*m_nvg, NVG_COPY);
+
+        NVGpaint imagePaint = nvgImagePattern(*m_nvg, destX, destY, destWidth, destHeight, 0.f, imageIndex, 1.f);
+        nvgBeginPath(*m_nvg);
+        nvgRect(*m_nvg, destX, destY, destWidth, destHeight);
+        nvgFillPaint(*m_nvg, imagePaint);
+        nvgFill(*m_nvg);
+
+        nvgRestore(*m_nvg);
+        nvgDeleteImage(*m_nvg, imageIndex);
+
+        // Keep the CPU mirror that getImageData() reads from in sync.
+        BlitPixelsToCpu(patch.data(), copyWidth, copyHeight, 0, 0, copyWidth, copyHeight,
+            dx + x0, dy + y0, copyWidth, copyHeight);
+
+        // The path now holds just this rect, so clear the non-rect flag: a stale `true` left over
+        // from an earlier arc/curve would make a subsequent clip() take the emulated path branch.
+        m_pathHasNonRect = false;
     }
 
     void Context::Arc(const Napi::CallbackInfo& info)
@@ -1230,7 +1361,63 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetLineDash(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.setLineDash: not implemented");
+        // An empty (or absent) dash list means "solid", which is exactly what we
+        // already draw -- so accept it silently. Babylon GUI's Line and MultiLine
+        // controls call setLineDash(this._dash) unconditionally on every render,
+        // and _dash defaults to [], so throwing here aborted any scene containing
+        // a GUI line even though nothing was actually being asked for.
+        //
+        // A non-empty pattern we genuinely cannot honor: nanovg has no dashed
+        // stroke, and emulating one means splitting every path into segments.
+        // Draw solid and warn once rather than failing the whole scene, and keep
+        // the list so getLineDash() round-trips as the spec requires.
+        m_lineDash.clear();
+
+        if (info.Length() > 0 && info[0].IsArray())
+        {
+            const auto segments = info[0].As<Napi::Array>();
+            for (uint32_t index = 0; index < segments.Length(); ++index)
+            {
+                const auto segment = segments.Get(index);
+                if (!segment.IsNumber())
+                {
+                    // Per spec, a list containing a non-finite or negative value
+                    // is ignored entirely and the previous list is retained; a
+                    // non-numeric entry cannot be interpreted, so ignore it too.
+                    m_lineDash.clear();
+                    return;
+                }
+
+                const double value = segment.As<Napi::Number>().DoubleValue();
+                if (!std::isfinite(value) || value < 0.0)
+                {
+                    m_lineDash.clear();
+                    return;
+                }
+
+                m_lineDash.push_back(value);
+            }
+        }
+
+        if (!m_lineDash.empty())
+        {
+            static bool warned = false;
+            if (!warned)
+            {
+                warned = true;
+                fprintf(stderr, "Context2D.setLineDash: dashed strokes are not supported; drawing solid.\n");
+            }
+        }
+    }
+
+    Napi::Value Context::GetLineDash(const Napi::CallbackInfo& info)
+    {
+        auto segments = Napi::Array::New(info.Env(), m_lineDash.size());
+        for (size_t index = 0; index < m_lineDash.size(); ++index)
+        {
+            segments.Set(static_cast<uint32_t>(index), Napi::Number::New(info.Env(), m_lineDash[index]));
+        }
+        return segments;
     }
 
     void Context::StrokeText(const Napi::CallbackInfo& info)

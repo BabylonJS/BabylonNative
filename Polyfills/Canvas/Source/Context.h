@@ -58,6 +58,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetImageData(const Napi::CallbackInfo&);
         Napi::Value CreateImageData(const Napi::CallbackInfo&);
         void SetLineDash(const Napi::CallbackInfo&);
+        Napi::Value GetLineDash(const Napi::CallbackInfo&);
         void StrokeText(const Napi::CallbackInfo&);
         Napi::Value CreateLinearGradient(const Napi::CallbackInfo&);
         Napi::Value CreateRadialGradient(const Napi::CallbackInfo&);
@@ -108,6 +109,10 @@ namespace Babylon::Polyfills::Internal
         std::string m_strokeStyle{};
         std::string m_lineCap{};  // 'butt', 'round', 'square'
         std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
+
+        // Dash pattern from setLineDash. Retained only so getLineDash() round-trips;
+        // strokes are always drawn solid (nanovg has no dashed stroke).
+        std::vector<double> m_lineDash{};
         std::string m_filter{};
         std::string m_direction{"ltr"}; // 'ltr', 'rtl'
         float m_miterLimit{0.f};
