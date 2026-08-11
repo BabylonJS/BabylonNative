@@ -1644,43 +1644,103 @@ namespace Babylon::Polyfills::Internal
         nvgGlobalAlpha(*m_nvg, alpha);
     }
 
+    // nanovg has no shadow primitive, so the shadow attributes are stored and
+    // reported back but not rendered. Throwing was the wrong response: these are
+    // ordinary state attributes, and reading one, or writing the default, asks
+    // for nothing at all. Babylon GUI resets shadowBlur/shadowOffsetX/OffsetY to
+    // 0 after drawing a shadowed control, so the throw killed the scene on the
+    // *reset* path as well as the request path, and any control with a drop
+    // shadow aborted outright rather than drawing without one.
+    //
+    // Storing them keeps the spec-required round trip working and lets content
+    // that saves and restores canvas state continue to function; a shadow that
+    // is genuinely requested warns once instead of failing the scene.
+    void Context::WarnShadowUnsupported()
+    {
+        if (m_shadowBlur == 0.0 && m_shadowOffsetX == 0.0 && m_shadowOffsetY == 0.0)
+        {
+            // Nothing is being asked for: no offset and no blur draws no shadow.
+            return;
+        }
+
+        static bool warned = false;
+        if (!warned)
+        {
+            warned = true;
+            fprintf(stderr, "Context2D: shadows are not supported; drawing without a shadow.\n");
+        }
+    }
+
     Napi::Value Context::GetShadowColor(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowColor (get): not implemented");
+        return Napi::String::New(info.Env(), m_shadowColor);
     }
 
     void Context::SetShadowColor(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowColor (set): not implemented");
+        // Per spec an unparseable shadowColor is ignored, keeping the old value.
+        const auto color = value.As<Napi::String>().Utf8Value();
+        try
+        {
+            StringToColor(info.Env(), color);
+        }
+        catch (const Napi::Error&)
+        {
+            return;
+        }
+
+        m_shadowColor = color;
     }
 
     Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowBlur (get): not implemented");
+        return Napi::Number::New(info.Env(), m_shadowBlur);
     }
 
     void Context::SetShadowBlur(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowBlur (set): not implemented");
+        // Per spec, negative and non-finite values are ignored.
+        const double blur = value.As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(blur) || blur < 0.0)
+        {
+            return;
+        }
+
+        m_shadowBlur = blur;
+        WarnShadowUnsupported();
     }
 
     Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetX (get): not implemented");
+        return Napi::Number::New(info.Env(), m_shadowOffsetX);
     }
 
     void Context::SetShadowOffsetX(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetX (set): not implemented");
+        const double offset = value.As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(offset))
+        {
+            return;
+        }
+
+        m_shadowOffsetX = offset;
+        WarnShadowUnsupported();
     }
 
     Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetY (get): not implemented");
+        return Napi::Number::New(info.Env(), m_shadowOffsetY);
     }
 
     void Context::SetShadowOffsetY(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetY (set): not implemented");
+        const double offset = value.As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(offset))
+        {
+            return;
+        }
+
+        m_shadowOffsetY = offset;
+        WarnShadowUnsupported();
     }
 }

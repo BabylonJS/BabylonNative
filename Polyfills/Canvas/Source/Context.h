@@ -95,6 +95,7 @@ namespace Babylon::Polyfills::Internal
         void SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowOffsetY(const Napi::CallbackInfo&);
         void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
+        void WarnShadowUnsupported();
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         bool SetFontFaceId();
@@ -113,6 +114,14 @@ namespace Babylon::Polyfills::Internal
         // Dash pattern from setLineDash. Retained only so getLineDash() round-trips;
         // strokes are always drawn solid (nanovg has no dashed stroke).
         std::vector<double> m_lineDash{};
+
+        // Shadow attributes from shadowColor/shadowBlur/shadowOffsetX/shadowOffsetY.
+        // Retained only so the getters round-trip; nanovg has no shadow primitive,
+        // so nothing is ever drawn from them. Defaults are the spec's.
+        std::string m_shadowColor{"rgba(0, 0, 0, 0)"};
+        double m_shadowBlur{0.0};
+        double m_shadowOffsetX{0.0};
+        double m_shadowOffsetY{0.0};
         std::string m_filter{};
         std::string m_direction{"ltr"}; // 'ltr', 'rtl'
         float m_miterLimit{0.f};
