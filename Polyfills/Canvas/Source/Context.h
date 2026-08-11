@@ -107,7 +107,7 @@ namespace Babylon::Polyfills::Internal
 
         Font m_font;
         std::variant<std::string, CanvasGradient*> m_fillStyle{};
-        std::string m_strokeStyle{};
+        std::variant<std::string, CanvasGradient*> m_strokeStyle{};
         std::string m_lineCap{};  // 'butt', 'round', 'square'
         std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
 
@@ -135,7 +135,7 @@ namespace Babylon::Polyfills::Internal
         struct SavedStyle
         {
             std::variant<std::string, CanvasGradient*> fillStyle;
-            std::string strokeStyle;
+            std::variant<std::string, CanvasGradient*> strokeStyle;
         };
         std::vector<SavedStyle> m_savedStyles;
 
@@ -156,6 +156,7 @@ namespace Babylon::Polyfills::Internal
 
         std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
         void BindFillStyle(const Napi::CallbackInfo& info);
+        void BindStrokeStyle(const Napi::CallbackInfo& info);
         void FlushGraphicResources() override;
         void PlayPath2D(const NativeCanvasPath2D* path);
         void SetFilterStack();

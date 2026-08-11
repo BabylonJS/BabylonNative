@@ -32,6 +32,8 @@ namespace Babylon::Polyfills::Internal
     protected:
         float x0, y0, x1, y1;
         float r0, r1;
+        // User-space box the radial ramp image is baked over and mapped back onto.
+        float imageX{}, imageY{}, imageW{1e-4f}, imageH{1e-4f};
         std::map<float, NVGcolor> colors;
         int cachedImage{-1};
         std::weak_ptr< NVGcontext*> context;

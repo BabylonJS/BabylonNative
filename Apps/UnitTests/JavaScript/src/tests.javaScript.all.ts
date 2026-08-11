@@ -145,6 +145,70 @@ describe("ColorParsing", function () {
   });
 });
 
+describe("Canvas2D", function () {
+  function createContext(): any {
+    const canvas = new _native.Canvas();
+    canvas.width = 64;
+    canvas.height = 64;
+    return canvas.getContext("2d");
+  }
+
+  it("round-trips a string fillStyle and strokeStyle", function () {
+    const ctx = createContext();
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    expect(ctx.fillStyle).to.equal("#ff0000");
+    expect(ctx.strokeStyle).to.equal("#00ff00");
+  });
+
+  it("accepts a CanvasGradient as fillStyle", function () {
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    expect(function () {
+      ctx.fillStyle = gradient;
+    }).to.not.throw();
+    expect(ctx.fillStyle).to.not.equal("#ff0000");
+  });
+
+  it("accepts a CanvasGradient as strokeStyle", function () {
+    // strokeStyle used to be string-only and threw "A string was expected",
+    // which broke every GUI control that strokes with a gradient (Line, Button border).
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    expect(function () {
+      ctx.strokeStyle = gradient;
+    }).to.not.throw();
+  });
+
+  it("accepts a radial CanvasGradient defined by two independent circles", function () {
+    const ctx = createContext();
+    // Neither concentric nor r0 == 0: both circles have to be honored.
+    const gradient = ctx.createRadialGradient(10, 10, 5, 40, 32, 30);
+    gradient.addColorStop(0, "yellow");
+    gradient.addColorStop(0.5, "pink");
+    gradient.addColorStop(1, "green");
+    expect(function () {
+      ctx.fillStyle = gradient;
+      ctx.strokeStyle = gradient;
+    }).to.not.throw();
+  });
+
+  it("restores a gradient strokeStyle across save/restore", function () {
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    ctx.strokeStyle = "#0000ff";
+    ctx.save();
+    ctx.strokeStyle = gradient;
+    ctx.restore();
+    expect(ctx.strokeStyle).to.equal("#0000ff");
+  });
+});
+
 function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {
   const engine = new NativeEngine();
   const scene = new Scene(engine);

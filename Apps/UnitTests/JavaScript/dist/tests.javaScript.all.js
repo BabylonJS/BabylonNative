@@ -28376,6 +28376,70 @@ describe("ColorParsing", function () {
   });
 });
 
+describe("Canvas2D", function () {
+  function createContext() {
+    var canvas = new _native.Canvas();
+    canvas.width = 64;
+    canvas.height = 64;
+    return canvas.getContext("2d");
+  }
+
+  it("round-trips a string fillStyle and strokeStyle", function () {
+    var ctx = createContext();
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.equal("#ff0000");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#00ff00");
+  });
+
+  it("accepts a CanvasGradient as fillStyle", function () {
+    var ctx = createContext();
+    var gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.fillStyle = gradient;
+    }).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.not.equal("#ff0000");
+  });
+
+  it("accepts a CanvasGradient as strokeStyle", function () {
+    // strokeStyle used to be string-only and threw "A string was expected",
+    // which broke every GUI control that strokes with a gradient (Line, Button border).
+    var ctx = createContext();
+    var gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.strokeStyle = gradient;
+    }).to.not.throw();
+  });
+
+  it("accepts a radial CanvasGradient defined by two independent circles", function () {
+    var ctx = createContext();
+    // Neither concentric nor r0 == 0: both circles have to be honored.
+    var gradient = ctx.createRadialGradient(10, 10, 5, 40, 32, 30);
+    gradient.addColorStop(0, "yellow");
+    gradient.addColorStop(0.5, "pink");
+    gradient.addColorStop(1, "green");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.fillStyle = gradient;
+      ctx.strokeStyle = gradient;
+    }).to.not.throw();
+  });
+
+  it("restores a gradient strokeStyle across save/restore", function () {
+    var ctx = createContext();
+    var gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    ctx.strokeStyle = "#0000ff";
+    ctx.save();
+    ctx.strokeStyle = gradient;
+    ctx.restore();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#0000ff");
+  });
+});
+
 function createSceneAndWait(callback, done) {
   var engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.NativeEngine();
   var scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Scene(engine);
