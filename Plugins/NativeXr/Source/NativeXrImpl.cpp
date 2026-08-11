@@ -279,6 +279,27 @@ namespace Babylon
                           const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
                           // TODO (rgerd): Remove old framebuffers from resource table?
                           viewConfig.FrameBuffers.resize(eyeCount);
+
+                          // This continuation runs on the runtime thread, and the task it is chained from ran on
+                          // AfterRenderScheduler, i.e. after FinishRenderingCurrentFrame already ended the frame
+                          // encoder and submitted the frame. The FrameCompletionScope held by ScheduleFrame belongs
+                          // to that earlier task and has been released by now, so there is normally no frame in
+                          // flight here and GetActiveEncoder() returns null.
+                          //
+                          // Unconditionally acquire a scope so the implicit clears below always run against a live,
+                          // lifetime-protected frame:
+                          //   - between frames, acquisition blocks until StartRenderingCurrentFrame has published
+                          //     an encoder;
+                          //   - during a frame, acquisition does not block, but holding the scope keeps
+                          //     FinishRenderingCurrentFrame from ending the encoder underneath us.
+                          // Acquiring only when the encoder is null would leave the second case unsynchronized:
+                          // FinishRenderingCurrentFrame only waits for outstanding scopes, so with none held it can
+                          // call bgfx::end() concurrently with the clear. Without any scope the clear dereferenced a
+                          // null encoder and crashed (#1767).
+                          Graphics::FrameCompletionScope clearScope{m_sessionState->GraphicsContext.AcquireFrameCompletionScope()};
+
+                          bgfx::Encoder* clearEncoder = m_sessionState->GraphicsContext.GetActiveEncoder();
+
                           for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
                           {
                               // See NativeEngine::CreateFrameBuffer: gate BGFX_RESOLVE_AUTO_GEN_MIPS on format caps and
@@ -307,7 +328,12 @@ namespace Babylon
 
                               // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                               // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                              frameBuffer.Clear(*m_sessionState->GraphicsContext.GetActiveEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                              // clearEncoder is only null if the scope above could not produce a frame (shutdown, or
+                              // bgfx::begin failing); skip the clear rather than dereference it.
+                              if (clearEncoder != nullptr)
+                              {
+                                  frameBuffer.Clear(*clearEncoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                              }
 
                               viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
 
