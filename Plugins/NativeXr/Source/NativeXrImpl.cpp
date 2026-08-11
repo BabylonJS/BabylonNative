@@ -12,8 +12,6 @@
 #include <arcana/tracing/trace_region.h>
 #include "NativeXrImpl.h"
 
-#include <optional>
-
 namespace Babylon
 {
     namespace
@@ -288,17 +286,17 @@ namespace Babylon
                           // to that earlier task and has been released by now, so there is normally no frame in
                           // flight here and GetActiveEncoder() returns null.
                           //
-                          // Acquire a scope (as Canvas::Flush does) so the implicit clears below run against a live
-                          // frame: acquisition blocks until StartRenderingCurrentFrame has published an encoder, and
-                          // holding it keeps FinishRenderingCurrentFrame from ending that encoder underneath us.
-                          // Without this the clear dereferenced a null encoder and crashed (#1767); on the runs where
-                          // an encoder happened to be present it was used unsynchronized, so the clear could be
-                          // submitted into a frame that was concurrently being ended.
-                          std::optional<Graphics::FrameCompletionScope> clearScope;
-                          if (m_sessionState->GraphicsContext.GetActiveEncoder() == nullptr)
-                          {
-                              clearScope.emplace(m_sessionState->GraphicsContext.AcquireFrameCompletionScope());
-                          }
+                          // Unconditionally acquire a scope so the implicit clears below always run against a live,
+                          // lifetime-protected frame:
+                          //   - between frames, acquisition blocks until StartRenderingCurrentFrame has published
+                          //     an encoder;
+                          //   - during a frame, acquisition does not block, but holding the scope keeps
+                          //     FinishRenderingCurrentFrame from ending the encoder underneath us.
+                          // Acquiring only when the encoder is null would leave the second case unsynchronized:
+                          // FinishRenderingCurrentFrame only waits for outstanding scopes, so with none held it can
+                          // call bgfx::end() concurrently with the clear. Without any scope the clear dereferenced a
+                          // null encoder and crashed (#1767).
+                          Graphics::FrameCompletionScope clearScope{m_sessionState->GraphicsContext.AcquireFrameCompletionScope()};
 
                           bgfx::Encoder* clearEncoder = m_sessionState->GraphicsContext.GetActiveEncoder();
 
