@@ -66,7 +66,7 @@ set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CA
 # below the size the Canvas sweeps need.
 #
 # 512 was sufficient only because the validation runner exited on the first
-# failing test. With --keep-going a full 720-test sweep keeps allocating past
+# failing test. With --keep-going a full validation sweep keeps allocating past
 # that point and exhausts the pool around the FrameGraph tests, so the floor
 # has to cover a complete uninterrupted run.
 if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 2048)
