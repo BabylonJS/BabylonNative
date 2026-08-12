@@ -373,6 +373,20 @@ if(MSVC)
 
     # Enable multiprocessor compilation for faster builds
     add_compile_options(/MP)
+
+    # Strip unreferenced code from RelWithDebInfo binaries.
+    #
+    # MSVC turns /OPT:REF and /OPT:ICF off whenever /DEBUG is passed, and CMake's
+    # default RelWithDebInfo link flags are "/debug /INCREMENTAL". The effect is that
+    # RelWithDebInfo keeps every unreferenced COMDAT that made it into the static
+    # libraries.
+    #
+    # /OPT:REF alone captures the entire win (/OPT:ICF measured zero additional
+    # bytes), so identical functions are left unfolded and stack traces stay
+    # unambiguous. Incremental linking must be off because it is incompatible with
+    # /OPT:REF. Debug is left untouched, and Release/MinSizeRel already get /OPT:REF
+    # implicitly because they do not link with /DEBUG.
+    add_link_options($<$<CONFIG:RelWithDebInfo>:/INCREMENTAL:NO> $<$<CONFIG:RelWithDebInfo>:/OPT:REF>)
 endif()
 
 if(NOT ENABLE_RTTI)
