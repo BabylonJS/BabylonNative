@@ -163,9 +163,11 @@ namespace Babylon::Polyfills::Internal
     {
         if (cachedImage >= 0)
         {
-            if (context.lock())
+            // Lock once and keep the result: calling context.lock() a second time could observe
+            // an expired context and dereference an empty shared_ptr.
+            if (auto nvg = context.lock(); nvg && *nvg != nullptr)
             {
-                nvgDeleteImage(*context.lock(), cachedImage);
+                nvgDeleteImage(*nvg, cachedImage);
             }
             cachedImage = -1;
         }
@@ -181,7 +183,7 @@ namespace Babylon::Polyfills::Internal
         dirty = true;
     }
 
-    int CanvasGradient::LinearGradientStops(LVGColorTransform* x)
+    int CanvasGradient::LinearGradientStops(NVGcontext& nvg, LVGColorTransform* x)
     {
         size_t nstops = colors.size();
         if (!nstops)
@@ -214,7 +216,7 @@ namespace Babylon::Polyfills::Internal
             NVGcolor s0 = transformColor(colorStops[nstops - 1].color, x);
             gradientSpan(data, s0, s0, colorStops[nstops - 1].offset, 1.0f);
         }
-        return nvgCreateImageRGBA(*context.lock(), GRADIENT_SAMPLES_L, 1, 0, (unsigned char*)data);
+        return nvgCreateImageRGBA(&nvg, GRADIENT_SAMPLES_L, 1, 0, (unsigned char*)data);
     }
 
     NVGcolor lerpColor(NVGcolor color0, NVGcolor color1, float offset0, float offset1, float g)
@@ -318,7 +320,7 @@ namespace Babylon::Polyfills::Internal
         return false;
     }
 
-    int CanvasGradient::RadialGradientStops(LVGColorTransform* cxform)
+    int CanvasGradient::RadialGradientStops(NVGcontext& nvg, LVGColorTransform* cxform)
     {
         const size_t nstops = colors.size();
         if (!nstops)
@@ -383,7 +385,7 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        return nvgCreateImageRGBA(*context.lock(), width, height, 0, (unsigned char*)image.data());
+        return nvgCreateImageRGBA(&nvg, width, height, 0, (unsigned char*)image.data());
     }
 
     NVGpaint CanvasGradient::Paint()
@@ -391,9 +393,10 @@ namespace Babylon::Polyfills::Internal
         UpdateCache();
 
         auto nvg = context.lock();
-        if (!nvg)
+        if (!nvg || *nvg == nullptr || cachedImage < 0)
         {
-            // The owning context is gone; there is nothing sensible to paint with.
+            // The owning context is gone, or the ramp could not be baked; there is nothing
+            // sensible to paint with.
             return NVGpaint{};
         }
 
@@ -430,11 +433,25 @@ namespace Babylon::Polyfills::Internal
         {
             return;
         }
+
+        // Lock the context once and hold it for the whole update. Baking a ramp deletes the old
+        // nanovg image and creates a new one, so re-locking inside each step would let the
+        // context expire between them and leave a dangling dereference behind.
+        auto nvg = context.lock();
+        if (!nvg || *nvg == nullptr)
+        {
+            // The owning context is gone. Stay dirty and leave cachedImage alone: Dispose()
+            // already skips deleting images whose context has expired, and Paint() returns an
+            // empty paint in this state.
+            return;
+        }
+
         if (cachedImage >= 0)
         {
-            nvgDeleteImage(*context.lock(), cachedImage);
+            nvgDeleteImage(*nvg, cachedImage);
+            cachedImage = -1;
         }
-        cachedImage = gradientType == GradientType::Linear ? LinearGradientStops(nullptr) : RadialGradientStops(nullptr);
+        cachedImage = gradientType == GradientType::Linear ? LinearGradientStops(**nvg, nullptr) : RadialGradientStops(**nvg, nullptr);
         dirty = false;
     }
 }

@@ -207,6 +207,42 @@ describe("Canvas2D", function () {
     ctx.restore();
     expect(ctx.strokeStyle).to.equal("#0000ff");
   });
+
+  // The three parsers below all used to reach std::stof/std::stoi with a value the regex
+  // admits but the target type cannot hold. The resulting std::out_of_range is not a
+  // Napi::Error, so it escaped the N-API callback and terminated the host process outright
+  // rather than surfacing as a JS exception. Reaching the assertion at all is the test.
+  it("survives an out-of-range rgb() component", function () {
+    const ctx = createContext();
+    const huge = "9".repeat(400);
+    expect(function () {
+      ctx.fillStyle = `rgb(${huge}, 0, 0)`;
+    }).to.not.throw();
+    expect(function () {
+      ctx.fillStyle = `rgba(0, 0, 0, ${huge})`;
+    }).to.not.throw();
+  });
+
+  it("survives an out-of-range font size and weight", function () {
+    const ctx = createContext();
+    ctx.font = "18px Arial";
+    // The size regex accepts an exponent, so this parses but does not fit a float.
+    expect(function () {
+      ctx.font = "18e999px Arial";
+    }).to.not.throw();
+    expect(function () {
+      ctx.font = `${"9".repeat(400)} 18px Arial`;
+    }).to.not.throw();
+    // An unparseable font is ignored, so the previous one stays in effect.
+    expect(ctx.font).to.contain("18px");
+  });
+
+  it("survives an out-of-range letterSpacing", function () {
+    const ctx = createContext();
+    expect(function () {
+      ctx.letterSpacing = `${"9".repeat(400)}px`;
+    }).to.not.throw();
+  });
 });
 
 function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {

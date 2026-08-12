@@ -890,10 +890,14 @@ namespace Babylon::Polyfills::Internal
 
         // The dirty rectangle is optional and, per spec, may be given with
         // negative extents, which flips it rather than drawing nothing.
-        int32_t dirtyX{0};
-        int32_t dirtyY{0};
-        int32_t dirtyWidth{srcWidthInt};
-        int32_t dirtyHeight{srcHeightInt};
+        // Normalized in int64_t: the values arrive from JS as arbitrary int32s, and negating
+        // INT32_MIN or adding two INT32_MINs together is signed overflow (undefined behavior).
+        // Every input fits comfortably in int64_t, and the result is clipped to the source
+        // bitmap below, so the values are back in int32 range before they are used.
+        int64_t dirtyX{0};
+        int64_t dirtyY{0};
+        int64_t dirtyWidth{srcWidthInt};
+        int64_t dirtyHeight{srcHeightInt};
         if (info.Length() >= 7)
         {
             dirtyX = info[3].ToNumber().Int32Value();
@@ -914,10 +918,10 @@ namespace Babylon::Polyfills::Internal
         }
 
         // Clip the dirty rectangle to the source bitmap.
-        int32_t x0 = std::max(0, dirtyX);
-        int32_t y0 = std::max(0, dirtyY);
-        int32_t x1 = std::min(srcWidthInt, dirtyX + dirtyWidth);
-        int32_t y1 = std::min(srcHeightInt, dirtyY + dirtyHeight);
+        const int64_t x0 = std::max<int64_t>(0, dirtyX);
+        const int64_t y0 = std::max<int64_t>(0, dirtyY);
+        const int64_t x1 = std::min<int64_t>(srcWidthInt, dirtyX + dirtyWidth);
+        const int64_t y1 = std::min<int64_t>(srcHeightInt, dirtyY + dirtyHeight);
         if (x1 <= x0 || y1 <= y0)
         {
             return;
@@ -933,12 +937,21 @@ namespace Babylon::Polyfills::Internal
         {
             std::memcpy(
                 patch.data() + static_cast<size_t>(row) * copyWidth * 4u,
-                srcPixels + (static_cast<size_t>(y0 + row) * srcWidth + x0) * 4u,
+                srcPixels + (static_cast<size_t>(y0 + row) * srcWidth + static_cast<size_t>(x0)) * 4u,
                 static_cast<size_t>(copyWidth) * 4u);
         }
 
-        const auto destX = static_cast<float>(dx + x0);
-        const auto destY = static_cast<float>(dy + y0);
+        // dx/dy are arbitrary int32s from JS, so offsetting them by the clipped origin is done in
+        // int64_t and saturated back. Anything that saturates is far enough off-canvas that it
+        // clips to nothing downstream regardless.
+        const auto toInt32 = [](int64_t value) {
+            return static_cast<int32_t>(std::clamp<int64_t>(value, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max()));
+        };
+        const int32_t destLeft = toInt32(static_cast<int64_t>(dx) + x0);
+        const int32_t destTop = toInt32(static_cast<int64_t>(dy) + y0);
+
+        const auto destX = static_cast<float>(destLeft);
+        const auto destY = static_cast<float>(destTop);
         const auto destWidth = static_cast<float>(copyWidth);
         const auto destHeight = static_cast<float>(copyHeight);
 
@@ -967,7 +980,7 @@ namespace Babylon::Polyfills::Internal
 
         // Keep the CPU mirror that getImageData() reads from in sync.
         BlitPixelsToCpu(patch.data(), copyWidth, copyHeight, 0, 0, copyWidth, copyHeight,
-            dx + x0, dy + y0, copyWidth, copyHeight);
+            destLeft, destTop, copyWidth, copyHeight);
 
         // The path now holds just this rect, so clear the non-rect flag: a stale `true` left over
         // from an earlier arc/curve would make a subsequent clip() take the emulated path branch.
@@ -1686,7 +1699,15 @@ namespace Babylon::Polyfills::Internal
         std::smatch letterSpacingMatch;
         if (std::regex_match(letterSpacingOption, letterSpacingMatch, letterSpacingRegex))
         {
-            m_letterSpacing = std::stof(letterSpacingMatch[1]);
+            // std::stof throws a fatal std::out_of_range for a digit run too long for a float,
+            // and the regex bounds neither the length nor the magnitude. strtof cannot throw;
+            // ignore a non-finite result rather than handing it to nanovg.
+            const std::string letterSpacingText{letterSpacingMatch[1].str()};
+            const float letterSpacing = std::strtof(letterSpacingText.c_str(), nullptr);
+            if (std::isfinite(letterSpacing))
+            {
+                m_letterSpacing = letterSpacing;
+            }
         }
         nvgTextLetterSpacing(*m_nvg, m_letterSpacing);
     }

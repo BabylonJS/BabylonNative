@@ -45,7 +45,9 @@ namespace Babylon::Polyfills::Internal
         };
         GradientType gradientType;
         void AddColorStop(const Napi::CallbackInfo& info);
-        int LinearGradientStops(LVGColorTransform* x);
-        int RadialGradientStops(LVGColorTransform* cxform);
+        // Both take the context by reference rather than re-locking `context` themselves: the
+        // caller owns the lock for the whole bake, so it cannot expire midway through.
+        int LinearGradientStops(NVGcontext& nvg, LVGColorTransform* x);
+        int RadialGradientStops(NVGcontext& nvg, LVGColorTransform* cxform);
     };
 }
