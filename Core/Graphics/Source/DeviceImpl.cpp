@@ -7,6 +7,7 @@
 #include <arcana/tracing/trace_region.h>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -25,6 +26,14 @@ namespace
     bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
     {
         return std::abs(a - b) < epsilon;
+    }
+
+    // An environment variable counts as set unless it is absent, empty, or exactly "0".
+    // Compared in full rather than by first character so that values like "01" or "0x1"
+    // enable rather than disable.
+    bool IsEnvironmentFlagSet(const char* value)
+    {
+        return value != nullptr && value[0] != '\0' && std::strcmp(value, "0") != 0;
     }
 }
 
@@ -50,14 +59,13 @@ namespace Babylon::Graphics
             char* renderDocEnv = nullptr;
             size_t renderDocEnvLen = 0;
             if (_dupenv_s(&renderDocEnv, &renderDocEnvLen, "BABYLON_NATIVE_RENDERDOC") == 0 &&
-                renderDocEnv != nullptr && renderDocEnv[0] != '\0' && renderDocEnv[0] != '0')
+                IsEnvironmentFlagSet(renderDocEnv))
             {
                 init.debug = true;
             }
             free(renderDocEnv);
 #else
-            if (const char* renderDocEnv = std::getenv("BABYLON_NATIVE_RENDERDOC");
-                renderDocEnv != nullptr && renderDocEnv[0] != '\0' && renderDocEnv[0] != '0')
+            if (IsEnvironmentFlagSet(std::getenv("BABYLON_NATIVE_RENDERDOC")))
             {
                 init.debug = true;
             }
