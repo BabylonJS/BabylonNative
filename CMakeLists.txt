@@ -386,16 +386,7 @@ if(MSVC)
     # unambiguous. Incremental linking must be off because it is incompatible with
     # /OPT:REF. Debug is left untouched, and Release/MinSizeRel already get /OPT:REF
     # implicitly because they do not link with /DEBUG.
-    foreach(BABYLON_NATIVE_LINKER_FLAGS
-        CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO
-        CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO
-        CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO)
-        set(BABYLON_NATIVE_FLAGS "${${BABYLON_NATIVE_LINKER_FLAGS}}")
-        string(REPLACE "/INCREMENTAL:NO" "" BABYLON_NATIVE_FLAGS "${BABYLON_NATIVE_FLAGS}")
-        string(REPLACE "/INCREMENTAL" "" BABYLON_NATIVE_FLAGS "${BABYLON_NATIVE_FLAGS}")
-        string(REPLACE "/OPT:REF" "" BABYLON_NATIVE_FLAGS "${BABYLON_NATIVE_FLAGS}")
-        set(${BABYLON_NATIVE_LINKER_FLAGS} "${BABYLON_NATIVE_FLAGS} /INCREMENTAL:NO /OPT:REF")
-    endforeach()
+    add_link_options($<$<CONFIG:RelWithDebInfo>:/INCREMENTAL:NO> $<$<CONFIG:RelWithDebInfo>:/OPT:REF>)
 endif()
 
 if(NOT ENABLE_RTTI)
