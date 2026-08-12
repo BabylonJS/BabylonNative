@@ -13,6 +13,7 @@ struct PlaygroundOptions
     bool ListTests = false;
     bool Headless = false;
     bool BreakOnFail = false;
+    bool KeepGoing = false;
     bool GenerateReferences = false;
     bool RunOnce = false;
     bool IncludeExcluded = false;
