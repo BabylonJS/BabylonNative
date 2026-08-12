@@ -373,6 +373,29 @@ if(MSVC)
 
     # Enable multiprocessor compilation for faster builds
     add_compile_options(/MP)
+
+    # Strip unreferenced code from RelWithDebInfo binaries.
+    #
+    # MSVC turns /OPT:REF and /OPT:ICF off whenever /DEBUG is passed, and CMake's
+    # default RelWithDebInfo link flags are "/debug /INCREMENTAL". The effect is that
+    # RelWithDebInfo keeps every unreferenced COMDAT that made it into the static
+    # libraries.
+    #
+    # /OPT:REF alone captures the entire win (/OPT:ICF measured zero additional
+    # bytes), so identical functions are left unfolded and stack traces stay
+    # unambiguous. Incremental linking must be off because it is incompatible with
+    # /OPT:REF. Debug is left untouched, and Release/MinSizeRel already get /OPT:REF
+    # implicitly because they do not link with /DEBUG.
+    foreach(BABYLON_NATIVE_LINKER_FLAGS
+        CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO
+        CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO
+        CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO)
+        set(BABYLON_NATIVE_FLAGS "${${BABYLON_NATIVE_LINKER_FLAGS}}")
+        string(REPLACE "/INCREMENTAL:NO" "" BABYLON_NATIVE_FLAGS "${BABYLON_NATIVE_FLAGS}")
+        string(REPLACE "/INCREMENTAL" "" BABYLON_NATIVE_FLAGS "${BABYLON_NATIVE_FLAGS}")
+        string(REPLACE "/OPT:REF" "" BABYLON_NATIVE_FLAGS "${BABYLON_NATIVE_FLAGS}")
+        set(${BABYLON_NATIVE_LINKER_FLAGS} "${BABYLON_NATIVE_FLAGS} /INCREMENTAL:NO /OPT:REF")
+    endforeach()
 endif()
 
 if(NOT ENABLE_RTTI)
