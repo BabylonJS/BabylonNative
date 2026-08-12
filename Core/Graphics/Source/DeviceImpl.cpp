@@ -6,6 +6,7 @@
 #include <Babylon/JsRuntime.h>
 #include <arcana/tracing/trace_region.h>
 #include <cmath>
+#include <cstdlib>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -39,6 +40,29 @@ namespace Babylon::Graphics
 
         auto& init = m_state.Bgfx.InitState;
         init.callback = &m_bgfxCallback;
+
+        // Opt-in debug device: bgfx only loads RenderDoc (enabling the
+        // BGFX_FRAME_DEBUG_CAPTURE trigger used by --capture) when init.debug
+        // is set. Release builds default this to false, so gate it behind an
+        // env var that is only set when a GPU capture is requested.
+        {
+#if defined(_WIN32)
+            char* renderDocEnv = nullptr;
+            size_t renderDocEnvLen = 0;
+            if (_dupenv_s(&renderDocEnv, &renderDocEnvLen, "BABYLON_NATIVE_RENDERDOC") == 0 &&
+                renderDocEnv != nullptr && renderDocEnv[0] != '\0' && renderDocEnv[0] != '0')
+            {
+                init.debug = true;
+            }
+            free(renderDocEnv);
+#else
+            if (const char* renderDocEnv = std::getenv("BABYLON_NATIVE_RENDERDOC");
+                renderDocEnv != nullptr && renderDocEnv[0] != '\0' && renderDocEnv[0] != '0')
+            {
+                init.debug = true;
+            }
+#endif
+        }
 
         // Use the noop renderer if the configuration has no window and no size.
         if (config.Window == WindowT{} && config.Width == 0 && config.Height == 0)
