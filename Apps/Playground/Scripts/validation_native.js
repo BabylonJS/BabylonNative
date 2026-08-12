@@ -440,13 +440,15 @@
                             // load callback. Deep scenes otherwise pile onto the
                             // native XHR dispatch frames and can overflow engines
                             // with a small C stack (e.g. QuickJS).
-                            setTimeout(function () {
+                            setTimeout(async function () {
                                 // eslint-disable-next-line no-unused-vars
                                 var name = ""; // see the note on the scriptToRun eval below
                                 try {
+                                    // Runs before the first await, so the eval still happens at the
+                                    // shallow stack depth this setTimeout exists to provide.
                                     currentScene = eval(pgCode);
 
-                                    if (currentScene.then) {
+                                    if (currentScene && currentScene.then) {
                                         // Handle if createScene returns a promise. Guard against a
                                         // snippet whose promise never resolves (e.g. a scene whose
                                         // utility-layer executeWhenReady never fires on Native): the
@@ -457,32 +459,28 @@
                                         // Note: this only fires if the JS event loop keeps running; a
                                         // snippet that blocks the JS thread natively (e.g. manual
                                         // setInterval frame-driving) is not rescued by this.
-                                        let sceneSettled = false;
                                         const createSceneTimeoutMs = 10 * 60 * 1000;
-                                        const createSceneTimeoutId = setTimeout(function () {
-                                            if (sceneSettled) { return; }
-                                            sceneSettled = true;
-                                            console.error("createScene promise for " + test.playgroundId +
-                                                " did not resolve within " + (createSceneTimeoutMs / 1000) + "s.");
-                                            failTest(done);
-                                        }, createSceneTimeoutMs);
-                                        currentScene.then(function (scene) {
-                                            if (sceneSettled) { return; }
-                                            sceneSettled = true;
+                                        let createSceneTimeoutId;
+                                        try {
+                                            currentScene = await Promise.race([
+                                                currentScene,
+                                                new Promise(function (resolve, reject) {
+                                                    createSceneTimeoutId = setTimeout(function () {
+                                                        reject(new Error("createScene promise for " + test.playgroundId +
+                                                            " did not resolve within " + (createSceneTimeoutMs / 1000) + "s."));
+                                                    }, createSceneTimeoutMs);
+                                                })
+                                            ]);
+                                        }
+                                        finally {
+                                            // Always clear it: a pending timer would otherwise keep the
+                                            // event loop alive for the full timeout after a scene that
+                                            // resolved normally.
                                             clearTimeout(createSceneTimeoutId);
-                                            currentScene = scene;
-                                            processCurrentScene(test, referenceImage, done, compareFunction);
-                                        }).catch(function (e) {
-                                            if (sceneSettled) { return; }
-                                            sceneSettled = true;
-                                            clearTimeout(createSceneTimeoutId);
-                                            console.error(e);
-                                            failTest(done);
-                                        });
-                                    } else {
-                                        // Handle if createScene returns a scene
-                                        processCurrentScene(test, referenceImage, done, compareFunction);
+                                        }
                                     }
+
+                                    processCurrentScene(test, referenceImage, done, compareFunction);
                                 }
                                 catch (e) {
                                     console.error("Failed to evaluate playground snippet " + test.playgroundId + ": " + e);
