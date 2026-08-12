@@ -228,6 +228,15 @@
 
         currentScene.dispose();
         currentScene = null;
+
+        // A test can leave extra scenes behind (an async load that created its own scene, a scene
+        // whose creation promise resolved after validation, ...). They stay registered on the
+        // reused engine and keep their resources alive, so dispose them here.
+        const strayScenes = engine.scenes.slice();
+        for (let i = 0; i < strayScenes.length; ++i) {
+            strayScenes[i].dispose();
+        }
+
         engine.setHardwareScalingLevel(1);
 
         // Reset render state that persists on the reused engine so each test starts fresh.
@@ -238,6 +247,25 @@
 
         // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
         engine.releaseEffects();
+
+        // Textures are cached on the engine by URL (BaseTexture._getFromCache), and the cache key
+        // covers only url/noMipmap/isCube -- not the load-time options. A test that leaves a
+        // reference behind (e.g. assigning one texture to both scene.environmentTexture and a
+        // material's reflectionTexture) keeps its internal texture in that cache across
+        // scene.dispose(), so a later test loading the same URL silently reuses the *previous*
+        // test's texture along with its prefiltering/irradiance settings. Release whatever is
+        // left so every test loads its own textures and results do not depend on run order.
+        const leakedTextures = engine.getLoadedTexturesCache();
+        for (let i = leakedTextures.length - 1; i >= 0; --i) {
+            engine._releaseTexture(leakedTextures[i]);
+        }
+        engine.clearInternalTexturesCache();
+
+        // SceneLoader.OnPluginActivatedObservable is global and outlives the scene. Snippets use it
+        // to configure the glTF loader (animationStartMode, compileMaterials, ...) and never
+        // unregister, so without this every later glTF test would inherit those settings. The
+        // browser harness reloads the page per test and never sees this; here the engine is reused.
+        BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
 
         done(testRes);
     }
@@ -419,11 +447,35 @@
                                     currentScene = eval(pgCode);
 
                                     if (currentScene.then) {
-                                        // Handle if createScene returns a promise
+                                        // Handle if createScene returns a promise. Guard against a
+                                        // snippet whose promise never resolves (e.g. a scene whose
+                                        // utility-layer executeWhenReady never fires on Native): the
+                                        // onReadyTimeout safety net lives inside processCurrentScene
+                                        // and only applies AFTER the promise resolves, so without this
+                                        // a pending createScene promise hangs the whole suite. Mirror
+                                        // onReadyTimeoutDuration and convert it to a fast failure.
+                                        // Note: this only fires if the JS event loop keeps running; a
+                                        // snippet that blocks the JS thread natively (e.g. manual
+                                        // setInterval frame-driving) is not rescued by this.
+                                        let sceneSettled = false;
+                                        const createSceneTimeoutMs = 10 * 60 * 1000;
+                                        const createSceneTimeoutId = setTimeout(function () {
+                                            if (sceneSettled) { return; }
+                                            sceneSettled = true;
+                                            console.error("createScene promise for " + test.playgroundId +
+                                                " did not resolve within " + (createSceneTimeoutMs / 1000) + "s.");
+                                            failTest(done);
+                                        }, createSceneTimeoutMs);
                                         currentScene.then(function (scene) {
+                                            if (sceneSettled) { return; }
+                                            sceneSettled = true;
+                                            clearTimeout(createSceneTimeoutId);
                                             currentScene = scene;
                                             processCurrentScene(test, referenceImage, done, compareFunction);
                                         }).catch(function (e) {
+                                            if (sceneSettled) { return; }
+                                            sceneSettled = true;
+                                            clearTimeout(createSceneTimeoutId);
                                             console.error(e);
                                             failTest(done);
                                         });
