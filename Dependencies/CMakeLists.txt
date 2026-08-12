@@ -60,12 +60,17 @@ set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CA
 
 # Canvas plugin allocates one bgfx framebuffer per JS Canvas object and per
 # text-rendering operation; combined with V8 GC pacing this can exceed the
-# default 128 limit during long playground sweeps. We enforce a floor of 512:
-# CI workflows pass -DBGFX_CONFIG_MAX_FRAME_BUFFERS, and any value below 512
+# default 128 limit during long playground sweeps. We enforce a floor of 2048:
+# CI workflows pass -DBGFX_CONFIG_MAX_FRAME_BUFFERS, and any value below 2048
 # (including a smaller CI override) is clamped up so the pool never regresses
 # below the size the Canvas sweeps need.
-if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 512)
-    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 512)
+#
+# 512 was sufficient only because the validation runner exited on the first
+# failing test. With --keep-going a full 720-test sweep keeps allocating past
+# that point and exhausts the pool around the FrameGraph tests, so the floor
+# has to cover a complete uninterrupted run.
+if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 2048)
+    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
 endif()
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
 

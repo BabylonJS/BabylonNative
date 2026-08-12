@@ -8,6 +8,7 @@
     const testHeight = 400;
     const generateReferences = !!opts.generateReferences;
     const breakOnFail = !!opts.breakOnFail;
+    const keepGoing = !!opts.keepGoing;
     const listTests = !!opts.listTests;
     const includeExcluded = !!opts.includeExcluded;
     const testFilters = Array.isArray(opts.testFilters) ? opts.testFilters.map(s => String(s).toLowerCase()) : [];
@@ -72,6 +73,7 @@
     let failedCount = 0;
     let skippedCount = 0;
     let missingRefCount = 0;
+    const failedTitles = [];
 
     function getExclusionReason(t) {
         if (t.onlyVisual) {
@@ -99,6 +101,12 @@
                     " failed=" + failedCount +
                     " missingRef=" + missingRefCount +
                     " skipped=" + skippedCount);
+        if (failedTitles.length > 0) {
+            console.log("Failed tests (" + failedTitles.length + "):");
+            for (let n = 0; n < failedTitles.length; n++) {
+                console.log("  - " + failedTitles[n]);
+            }
+        }
     }
 
     const engine = new BABYLON.NativeEngine();
@@ -663,18 +671,22 @@
                     ranCount++;
                     if (!status) {
                         failedCount++;
+                        failedTitles.push(currentTitle);
                         // failTest() already triggered the debugger before
                         // reaching this callback; no second `debugger` here.
-                        logRunSummary();
-                        TestUtils.exit(-1);
-                        return;
+                        if (!keepGoing) {
+                            logRunSummary();
+                            TestUtils.exit(-1);
+                            return;
+                        }
+                    } else {
+                        passedCount++;
                     }
-                    passedCount++;
                     i++;
                     if (justOnce || i >= config.tests.length) {
                         logRunSummary();
                         engine.dispose();
-                        TestUtils.exit(0);
+                        TestUtils.exit(failedCount > 0 ? -1 : 0);
                         return;
                     }
                     // Defer next iteration to avoid blowing Chakra's
