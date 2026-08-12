@@ -405,6 +405,8 @@
                             // native XHR dispatch frames and can overflow engines
                             // with a small C stack (e.g. QuickJS).
                             setTimeout(function () {
+                                // eslint-disable-next-line no-unused-vars
+                                var name = ""; // see the note on the scriptToRun eval below
                                 try {
                                     currentScene = eval(pgCode);
 
@@ -491,6 +493,15 @@
                         // the native XHR dispatch frames and can overflow engines
                         // with a small C stack (e.g. QuickJS).
                         setTimeout(function () {
+                            // Browser scripts sometimes reference `name` without declaring it. In a
+                            // page that silently resolves to window.name (""), so the mistake is
+                            // invisible there but throws "ReferenceError: name is not defined"
+                            // here. eval() below is a *direct* eval, so the evaluated script sees
+                            // this function's scope and finds this binding -- same as it would on
+                            // the web, without leaking an actual global. (A real global `name`
+                            // is not an option: it breaks the Babylon UMD bundles at load time.)
+                            // eslint-disable-next-line no-unused-vars
+                            var name = "";
                             try {
                                 currentScene = eval(scriptCode);
                                 processCurrentScene(test, referenceImage, done, compareFunction);
