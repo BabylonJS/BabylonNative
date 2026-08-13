@@ -28439,6 +28439,69 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#0000ff");
   });
 
+  it("restores the shadow attributes across save/restore", function () {
+    // These have no nanovg counterpart, so nvgRestore() never rewound them and a
+    // value assigned after save() survived restore().
+    var ctx = createContext();
+    ctx.shadowColor = "#00ff00";
+    ctx.shadowBlur = 1;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 3;
+    ctx.save();
+    ctx.shadowColor = "#ff0000";
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetX = 50;
+    ctx.shadowOffsetY = 60;
+    ctx.restore();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowColor).to.equal("#00ff00");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowBlur).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowOffsetX).to.equal(2);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.shadowOffsetY).to.equal(3);
+  });
+
+  it("restores the remaining drawing state across save/restore", function () {
+    // nvgRestore() rewinds nanovg's copy of these, but the wrapper kept its own
+    // mirror, so the getters reported the post-save() value forever after.
+    // globalAlpha is set but not asserted: it is declared write-only (nullptr
+    // getter), so it has no observable value to check.
+    var ctx = createContext();
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 1;
+    ctx.lineCap = "butt";
+    ctx.lineJoin = "miter";
+    ctx.miterLimit = 10;
+    ctx.setLineDash([1, 2]);
+    ctx.save();
+    ctx.lineWidth = 9;
+    ctx.globalAlpha = 0.25;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "bevel";
+    ctx.miterLimit = 3;
+    ctx.setLineDash([7, 8, 9]);
+    ctx.restore();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineWidth).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineCap).to.equal("butt");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineJoin).to.equal("miter");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.miterLimit).to.equal(10);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([1, 2]);
+  });
+
+  it("keeps two color stops at the same offset", function () {
+    // Stops were stored in a std::map keyed by offset, so the second stop at an
+    // identical offset was silently dropped and the hard transition it encodes -- a
+    // stripe pattern, for instance -- came out as a smooth fade instead.
+    var ctx = createContext();
+    var gradient = ctx.createLinearGradient(0, 0, 64, 0);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(0.5, "red");
+    gradient.addColorStop(0.5, "blue");
+    gradient.addColorStop(1, "blue");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 64, 64);
+    }).to.not.throw();
+  });
+
   // The three parsers below all used to reach std::stof/std::stoi with a value the regex
   // admits but the target type cannot hold. The resulting std::out_of_range is not a
   // Napi::Error, so it escaped the N-API callback and terminated the host process outright

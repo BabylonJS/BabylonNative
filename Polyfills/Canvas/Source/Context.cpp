@@ -334,10 +334,13 @@ namespace Babylon::Polyfills::Internal
     void Context::Save(const Napi::CallbackInfo&)
     {
         nvgSave(*m_nvg);
-        // Track our wrapper-side fillStyle/strokeStyle alongside the nvg state stack so that
-        // ctx.restore() correctly rewinds them — otherwise FillText/BindFillStyle would re-bind
-        // a stale color from after a fillStyle change that nvg has since popped.
-        m_savedStyles.push_back({m_fillStyle, m_strokeStyle});
+        // Track the wrapper-side drawing state alongside the nvg state stack so that
+        // ctx.restore() correctly rewinds it — otherwise FillText/BindFillStyle would re-bind
+        // a stale color from after a fillStyle change that nvg has since popped, and every
+        // attribute getter would keep reporting its post-save() value.
+        m_savedStyles.push_back({m_fillStyle, m_strokeStyle, m_lineCap, m_lineJoin, m_lineDash,
+            m_shadowColor, m_shadowBlur, m_shadowOffsetX, m_shadowOffsetY, m_filter, m_direction,
+            m_miterLimit, m_lineWidth, m_globalAlpha, m_letterSpacing});
     }
 
     void Context::Restore(const Napi::CallbackInfo&)
@@ -349,6 +352,19 @@ namespace Babylon::Polyfills::Internal
             const auto& saved = m_savedStyles.back();
             m_fillStyle = saved.fillStyle;
             m_strokeStyle = saved.strokeStyle;
+            m_lineCap = saved.lineCap;
+            m_lineJoin = saved.lineJoin;
+            m_lineDash = saved.lineDash;
+            m_shadowColor = saved.shadowColor;
+            m_shadowBlur = saved.shadowBlur;
+            m_shadowOffsetX = saved.shadowOffsetX;
+            m_shadowOffsetY = saved.shadowOffsetY;
+            m_filter = saved.filter;
+            m_direction = saved.direction;
+            m_miterLimit = saved.miterLimit;
+            m_lineWidth = saved.lineWidth;
+            m_globalAlpha = saved.globalAlpha;
+            m_letterSpacing = saved.letterSpacing;
             m_savedStyles.pop_back();
         }
     }

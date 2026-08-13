@@ -34,7 +34,11 @@ namespace Babylon::Polyfills::Internal
         float r0, r1;
         // User-space box the radial ramp image is baked over and mapped back onto.
         float imageX{}, imageY{}, imageW{1e-4f}, imageH{1e-4f};
-        std::map<float, NVGcolor> colors;
+        // multimap, not map: the Canvas2D spec allows two stops at the same offset, and
+        // uses that to express a hard color transition. std::map::insert() would silently
+        // drop the second one. Equivalent keys keep insertion order, which is the order
+        // the spec resolves them in, and both consumers below just walk this in order.
+        std::multimap<float, NVGcolor> colors;
         int cachedImage{-1};
         std::weak_ptr< NVGcontext*> context;
         bool dirty{};

@@ -136,6 +136,25 @@ namespace Babylon::Polyfills::Internal
         {
             std::variant<std::string, CanvasGradient*> fillStyle;
             std::variant<std::string, CanvasGradient*> strokeStyle;
+
+            // The rest of the wrapper-side drawing state. nvgSave/nvgRestore rewinds
+            // nanovg's own copy of the attributes it knows about, but never these C++
+            // mirrors, so without them a getter keeps reporting the post-save() value
+            // after restore(). The shadow/dash/filter/direction fields have no nanovg
+            // counterpart at all, so they would otherwise never be rewound.
+            std::string lineCap;
+            std::string lineJoin;
+            std::vector<double> lineDash;
+            std::string shadowColor;
+            double shadowBlur;
+            double shadowOffsetX;
+            double shadowOffsetY;
+            std::string filter;
+            std::string direction;
+            float miterLimit;
+            float lineWidth;
+            float globalAlpha;
+            float letterSpacing;
         };
         std::vector<SavedStyle> m_savedStyles;
 
