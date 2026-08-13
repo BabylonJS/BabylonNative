@@ -1452,7 +1452,11 @@ namespace Babylon::Polyfills::Internal
         // stroke, and emulating one means splitting every path into segments.
         // Draw solid and warn once rather than failing the whole scene, and keep
         // the list so getLineDash() round-trips as the spec requires.
-        m_lineDash.clear();
+        //
+        // Parsed into a temporary and committed only once every segment
+        // validates, because the spec keeps the previous list when the argument
+        // is rejected -- clearing m_lineDash up front would destroy it first.
+        std::vector<double> parsed;
 
         if (info.Length() > 0 && info[0].IsArray())
         {
@@ -1465,20 +1469,20 @@ namespace Babylon::Polyfills::Internal
                     // Per spec, a list containing a non-finite or negative value
                     // is ignored entirely and the previous list is retained; a
                     // non-numeric entry cannot be interpreted, so ignore it too.
-                    m_lineDash.clear();
                     return;
                 }
 
                 const double value = segment.As<Napi::Number>().DoubleValue();
                 if (!std::isfinite(value) || value < 0.0)
                 {
-                    m_lineDash.clear();
                     return;
                 }
 
-                m_lineDash.push_back(value);
+                parsed.push_back(value);
             }
         }
+
+        m_lineDash = std::move(parsed);
 
         if (!m_lineDash.empty())
         {

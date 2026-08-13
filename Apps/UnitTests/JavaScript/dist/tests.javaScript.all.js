@@ -28486,6 +28486,24 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([1, 2]);
   });
 
+  it("keeps the previous dash list when a new one is rejected", function () {
+    // The list was cleared before validation, so a rejected argument -- which the
+    // spec says must leave the previous list untouched -- wiped it instead.
+    var ctx = createContext();
+    ctx.setLineDash([5, 10]);
+    ctx.setLineDash([-1]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash([2, "x"]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash([Number.NaN]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    // A valid list still replaces it, and an empty list still means "solid".
+    ctx.setLineDash([3, 4]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([3, 4]);
+    ctx.setLineDash([]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([]);
+  });
+
   it("keeps two color stops at the same offset", function () {
     // Stops were stored in a std::map keyed by offset, so the second stop at an
     // identical offset was silently dropped and the hard transition it encodes -- a
