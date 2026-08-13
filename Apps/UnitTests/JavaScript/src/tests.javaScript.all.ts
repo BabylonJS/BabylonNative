@@ -513,8 +513,18 @@ function hexToBytes(hex: string): Uint8Array {
   });
 
   it("encodes an unindexed mesh", function () {
+    // Without an index buffer the vertices are taken as a flat triangle list, so the
+    // vertex count itself has to be a multiple of three. The shared quad fixture is
+    // four vertices, so use a single triangle here.
+    const triangle = new Float32Array([
+      0, 0, 0,
+      1, 0, 0,
+      0, 1, 0,
+    ]);
+
     const encoded = _native.DracoCodec.Encode(
-      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }]);
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: triangle }]);
+    expect(encoded.data).to.be.an.instanceOf(Uint8Array);
     expect(encoded.data.length).to.be.greaterThan(0);
   });
 

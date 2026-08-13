@@ -462,7 +462,7 @@ namespace Babylon::Plugins
                 throw Napi::Error::New(env, std::string("Draco: Failed to encode: ") + status.error_msg());
             }
 
-            auto encodedData = Napi::Int8Array::New(env, buffer.size());
+            auto encodedData = Napi::Uint8Array::New(env, buffer.size());
             std::memcpy(encodedData.Data(), buffer.data(), buffer.size());
 
             auto result = Napi::Object::New(env);

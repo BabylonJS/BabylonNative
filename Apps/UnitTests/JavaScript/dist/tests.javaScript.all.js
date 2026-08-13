@@ -28744,8 +28744,18 @@ function hexToBytes(hex) {
   });
 
   it("encodes an unindexed mesh", function () {
+    // Without an index buffer the vertices are taken as a flat triangle list, so the
+    // vertex count itself has to be a multiple of three. The shared quad fixture is
+    // four vertices, so use a single triangle here.
+    var triangle = new Float32Array([
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0]
+    );
+
     var encoded = _native.DracoCodec.Encode(
-      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }]);
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: triangle }]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data).to.be.an.instanceOf(Uint8Array);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
   });
 
