@@ -29074,8 +29074,78 @@ function hexToBytes(hex) {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(new Uint8Array(0));}).to.throw();
   });
 
-  it("does not expose an encoder", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Encode).to.equal(undefined);
+  it("exposes an encoder", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Encode).to.be.a("function");
+  });
+
+  it("round trips a mesh through the encoder and back", function () {
+    // Quantization is left off so the exact-half coordinates above survive bit for bit.
+    var encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices);
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data).to.be.an.instanceOf(Uint8Array);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.attributeIds.position).to.be.a("number");
+
+    var decoded = _native.DracoCodec.Decode(encoded.data, { position: encoded.attributeIds.position });
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+
+    // Same set-of-corners comparison as the decode tests: Draco is free to reorder points.
+    var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    var corner = function corner(buffer, i) {return (
+        [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
+        map(function (v) {return v.toFixed(2);}).
+        join(","));};
+
+    var expectedCorners = [];
+    var actualCorners = [];
+    for (var i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  });
+
+  it("encodes an unindexed mesh", function () {
+    var encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+  });
+
+  it("accepts 32 bit indices", function () {
+    var encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      new Uint32Array(indices));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+  });
+
+  it("rejects an index buffer that is neither 16 nor 32 bit", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+        new Int32Array([0, 1, 2, 1, 3, 2]));}).to.throw();
+  });
+
+  it("rejects an index count that is not a multiple of 3", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+        new Uint16Array([0, 1, 2, 1]));}).to.throw();
+  });
+
+  it("rejects an attribute length that is not a multiple of its size", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: new Float32Array([0, 0, 0, 1]) }],
+        indices);}).to.throw();
+  });
+
+  it("rejects a mesh with no position attribute", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "normal", dracoName: "NORMAL", size: 3, data: positions }],
+        indices);}).to.throw();
   });
 });
 

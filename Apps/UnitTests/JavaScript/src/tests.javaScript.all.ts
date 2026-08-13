@@ -843,8 +843,78 @@ function hexToBytes(hex: string): Uint8Array {
     expect(() => _native.DracoCodec.Decode(new Uint8Array(0))).to.throw();
   });
 
-  it("does not expose an encoder", function () {
-    expect(_native.DracoCodec.Encode).to.equal(undefined);
+  it("exposes an encoder", function () {
+    expect(_native.DracoCodec.Encode).to.be.a("function");
+  });
+
+  it("round trips a mesh through the encoder and back", function () {
+    // Quantization is left off so the exact-half coordinates above survive bit for bit.
+    const encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices);
+
+    expect(encoded.data).to.be.an.instanceOf(Uint8Array);
+    expect(encoded.data.length).to.be.greaterThan(0);
+    expect(encoded.attributeIds.position).to.be.a("number");
+
+    const decoded = _native.DracoCodec.Decode(encoded.data, { position: encoded.attributeIds.position });
+
+    expect(decoded.totalVertices).to.equal(positions.length / 3);
+    expect(decoded.indices.length).to.equal(indices.length);
+
+    // Same set-of-corners comparison as the decode tests: Draco is free to reorder points.
+    const attribute = decoded.attributes.find((a: any) => a.kind === "position");
+    expect(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    const corner = (buffer: any, i: number) =>
+      [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]]
+        .map((v: number) => v.toFixed(2))
+        .join(",");
+
+    const expectedCorners: string[] = [];
+    const actualCorners: string[] = [];
+    for (let i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    expect(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  });
+
+  it("encodes an unindexed mesh", function () {
+    const encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }]);
+    expect(encoded.data.length).to.be.greaterThan(0);
+  });
+
+  it("accepts 32 bit indices", function () {
+    const encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      new Uint32Array(indices));
+    expect(encoded.data.length).to.be.greaterThan(0);
+  });
+
+  it("rejects an index buffer that is neither 16 nor 32 bit", function () {
+    expect(() => _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      new Int32Array([0, 1, 2, 1, 3, 2]))).to.throw();
+  });
+
+  it("rejects an index count that is not a multiple of 3", function () {
+    expect(() => _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      new Uint16Array([0, 1, 2, 1]))).to.throw();
+  });
+
+  it("rejects an attribute length that is not a multiple of its size", function () {
+    expect(() => _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: new Float32Array([0, 0, 0, 1]) }],
+      indices)).to.throw();
+  });
+
+  it("rejects a mesh with no position attribute", function () {
+    expect(() => _native.DracoCodec.Encode(
+      [{ kind: "normal", dracoName: "NORMAL", size: 3, data: positions }],
+      indices)).to.throw();
   });
 });
 
