@@ -13,6 +13,7 @@
 #include <draco/attributes/point_attribute.h>
 #include <draco/core/draco_version.h>
 
+#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -252,6 +253,10 @@ namespace Babylon::Plugins
             att->Init(type, numComponents, dataType, /* normalized */ false, numVertices);
             const int attId = mesh.AddAttribute(std::move(att));
             draco::PointAttribute* attPtr = mesh.attribute(attId);
+            // PointAttribute::Init ends with SetIdentityMapping(), so mapped_index(i) is
+            // AttributeValueIndex(i) here. Asserted so a future Draco change cannot silently
+            // start folding distinct points onto the same attribute value.
+            assert(attPtr->is_mapping_identity());
             for (draco::PointIndex i(0); i < numVertices; ++i)
             {
                 attPtr->SetAttributeValue(attPtr->mapped_index(i), &values[static_cast<size_t>(i.value()) * numComponents]);
@@ -271,7 +276,17 @@ namespace Babylon::Plugins
         // encoder's addAttributeMap.
         int AddTypedAttributeToMesh(Napi::Env env, draco::Mesh& mesh, draco::GeometryAttribute::Type type, const Napi::TypedArray& data, int8_t numComponents)
         {
-            const uint32_t numVertices = static_cast<uint32_t>(data.ElementLength() / numComponents);
+            if (numComponents <= 0)
+            {
+                throw Napi::TypeError::New(env, "Draco: Attribute component count must be greater than zero");
+            }
+            if (data.ElementLength() % static_cast<size_t>(numComponents) != 0)
+            {
+                throw Napi::TypeError::New(env, "Draco: Attribute length " + std::to_string(data.ElementLength()) +
+                                                    " is not a multiple of its component count " + std::to_string(numComponents));
+            }
+
+            const uint32_t numVertices = static_cast<uint32_t>(data.ElementLength() / static_cast<size_t>(numComponents));
             switch (data.TypedArrayType())
             {
                 case napi_float32_array: return AddAttributeToMesh<float>(mesh, type, draco::DT_FLOAT32, numVertices, numComponents, TypedArrayData<float>(data));
@@ -287,20 +302,30 @@ namespace Babylon::Plugins
             }
         }
 
-        // Reads an index typed array (Uint16Array or Uint32Array) into a flat int vector.
-        std::vector<int> ReadIndices(const Napi::TypedArray& data)
+        // Reads an index typed array into a flat vector. Only Uint16Array and Uint32Array are
+        // accepted: any other element type would be reinterpreted and silently produce a
+        // corrupt mesh. Indices stay unsigned end to end so a value above INT_MAX cannot wrap
+        // negative before it reaches draco::PointIndex.
+        std::vector<uint32_t> ReadIndices(Napi::Env env, const Napi::TypedArray& data)
         {
             const size_t count = data.ElementLength();
-            std::vector<int> out(count);
-            if (data.TypedArrayType() == napi_uint32_array)
+            std::vector<uint32_t> out(count);
+            switch (data.TypedArrayType())
             {
-                const uint32_t* src = TypedArrayData<uint32_t>(data);
-                for (size_t i = 0; i < count; ++i) { out[i] = static_cast<int>(src[i]); }
-            }
-            else
-            {
-                const uint16_t* src = TypedArrayData<uint16_t>(data);
-                for (size_t i = 0; i < count; ++i) { out[i] = static_cast<int>(src[i]); }
+                case napi_uint32_array:
+                {
+                    const uint32_t* src = TypedArrayData<uint32_t>(data);
+                    for (size_t i = 0; i < count; ++i) { out[i] = src[i]; }
+                    break;
+                }
+                case napi_uint16_array:
+                {
+                    const uint16_t* src = TypedArrayData<uint16_t>(data);
+                    for (size_t i = 0; i < count; ++i) { out[i] = src[i]; }
+                    break;
+                }
+                default:
+                    throw Napi::TypeError::New(env, "Draco: Indices must be a Uint16Array or a Uint32Array");
             }
             return out;
         }
@@ -338,15 +363,23 @@ namespace Babylon::Plugins
             }
 
             // Indices: use the provided buffer, or synthesize an identity list for unindexed meshes.
-            std::vector<int> indices;
+            std::vector<uint32_t> indices;
             if (info.Length() > 1 && info[1].IsTypedArray())
             {
-                indices = ReadIndices(info[1].As<Napi::TypedArray>());
+                indices = ReadIndices(env, info[1].As<Napi::TypedArray>());
             }
             else
             {
                 indices.resize(positionVerticesCount);
-                for (uint32_t i = 0; i < positionVerticesCount; ++i) { indices[i] = static_cast<int>(i); }
+                for (uint32_t i = 0; i < positionVerticesCount; ++i) { indices[i] = i; }
+            }
+
+            // This path builds triangle faces, so a trailing partial triangle is a caller error
+            // rather than something to silently drop.
+            if (indices.size() % 3 != 0)
+            {
+                throw Napi::TypeError::New(env, "Draco: Index count " + std::to_string(indices.size()) +
+                                                    " is not a multiple of 3");
             }
 
             draco::Mesh mesh;
