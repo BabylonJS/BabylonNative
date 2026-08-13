@@ -235,12 +235,14 @@ namespace Babylon::Plugins
             return draco::GeometryAttribute::GENERIC;
         }
 
-        // Returns a typed pointer to the start of the typed array's data, honoring its byte offset.
+        // Returns a typed pointer to the start of the typed array's data. napi_get_typedarray_info
+        // already accounts for the view's byte offset, so this is the address of the first element
+        // rather than the start of the backing ArrayBuffer. Going through TypedArrayOf<T>::Data()
+        // also avoids materializing a temporary ArrayBuffer handle just to read the pointer.
         template<typename T>
         const T* TypedArrayData(const Napi::TypedArray& array)
         {
-            const auto* base = static_cast<const uint8_t*>(array.ArrayBuffer().Data()) + array.ByteOffset();
-            return reinterpret_cast<const T*>(base);
+            return array.As<Napi::TypedArrayOf<T>>().Data();
         }
 
         // Replicates draco's emscripten PointCloudBuilder::AddAttribute<T>: creates a de-interleaved
@@ -352,6 +354,10 @@ namespace Babylon::Plugins
                 {
                     const auto data = attr.Get("data").As<Napi::TypedArray>();
                     const int8_t size = static_cast<int8_t>(attr.Get("size").As<Napi::Number>().Int32Value());
+                    if (size <= 0)
+                    {
+                        throw Napi::TypeError::New(env, "Draco: Position component count must be greater than zero");
+                    }
                     positionVerticesCount = static_cast<uint32_t>(data.ElementLength() / size);
                     hasPosition = true;
                     break;
@@ -380,6 +386,19 @@ namespace Babylon::Plugins
             {
                 throw Napi::TypeError::New(env, "Draco: Index count " + std::to_string(indices.size()) +
                                                     " is not a multiple of 3");
+            }
+
+            // Every index has to address a real vertex. Without this an out of range index would
+            // be stored in a face and later dereferenced by the deduplication passes and the
+            // encoder, reading past the end of the attribute buffers.
+            for (const uint32_t index : indices)
+            {
+                if (index >= positionVerticesCount)
+                {
+                    throw Napi::TypeError::New(env, "Draco: Index " + std::to_string(index) +
+                                                        " is out of range for " + std::to_string(positionVerticesCount) +
+                                                        " vertices");
+                }
             }
 
             draco::Mesh mesh;

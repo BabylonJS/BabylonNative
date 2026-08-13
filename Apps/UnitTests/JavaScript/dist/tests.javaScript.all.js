@@ -29146,6 +29146,12 @@ function hexToBytes(hex) {
         new Uint16Array([0, 1, 2, 1]));}).to.throw();
   });
 
+  it("rejects an index that is out of range for the vertex count", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+        new Uint16Array([0, 1, 9999]));}).to.throw();
+  });
+
   it("rejects an attribute length that is not a multiple of its size", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
         [{ kind: "position", dracoName: "POSITION", size: 3, data: new Float32Array([0, 0, 0, 1]) }],
