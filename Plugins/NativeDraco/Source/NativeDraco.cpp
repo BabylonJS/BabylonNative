@@ -456,10 +456,11 @@ namespace Babylon::Plugins
                 encoder.SetSpeedOptions(options.Get("encodeSpeed").As<Napi::Number>().Int32Value(), options.Get("decodeSpeed").As<Napi::Number>().Int32Value());
             }
 
-            // Mirror Encoder::EncodeMeshToDracoBuffer. The deduplication passes are compiled out by
-            // DRACO_GLTF_BITSTREAM (the glTF bitstream subset the decoder is built with does not need
-            // them), so guard them on the feature macros draco publishes. They only shrink the encoded
-            // output; skipping them still produces a valid stream.
+            // Mirror Encoder::EncodeMeshToDracoBuffer. The deduplication passes are compiled out of
+            // the glTF bitstream subset (DRACO_GLTF_BITSTREAM), which this plugin does not enable but
+            // an externally supplied draco target may, so guard them on the feature macros draco
+            // publishes. They only shrink the encoded output; skipping them still produces a valid
+            // stream.
             if (mesh.GetNamedAttributeId(draco::GeometryAttribute::POSITION) == -1)
             {
                 throw Napi::Error::New(env, "Draco: Missing position attribute for encoding.");
@@ -481,7 +482,12 @@ namespace Babylon::Plugins
                 throw Napi::Error::New(env, std::string("Draco: Failed to encode: ") + status.error_msg());
             }
 
-            auto encodedData = Napi::Uint8Array::New(env, buffer.size());
+            // Int8Array rather than Uint8Array: Babylon.js's IDracoEncodedMeshData declares
+            // `data: Int8Array`, because the WASM encoder hands back a view onto emscripten's
+            // signed HEAP8. The bytes are identical either way, but this entry point is meant to
+            // be a drop-in for that path, so the view type has to match what callers type-check
+            // against and declare.
+            auto encodedData = Napi::Int8Array::New(env, buffer.size());
             std::memcpy(encodedData.Data(), buffer.data(), buffer.size());
 
             auto result = Napi::Object::New(env);
