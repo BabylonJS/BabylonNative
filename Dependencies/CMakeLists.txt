@@ -190,7 +190,7 @@ function(group_directory_targets DIR FOLDER_NAME)
 endfunction()
 
 # --------------------------------------------------
-# draco (mesh decompression, native replacement for the WASM decoder)
+# draco (mesh compression/decompression, native replacement for the WASM modules)
 # --------------------------------------------------
 if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_static)
     set(DRACO_TESTS OFF CACHE BOOL "" FORCE)

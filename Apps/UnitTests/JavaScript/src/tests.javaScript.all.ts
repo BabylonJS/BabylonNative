@@ -485,7 +485,9 @@ function hexToBytes(hex: string): Uint8Array {
       [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
       indices);
 
-    expect(encoded.data).to.be.an.instanceOf(Uint8Array);
+    // Int8Array, matching Babylon.js's IDracoEncodedMeshData contract and the WASM
+    // encoder it stands in for.
+    expect(encoded.data).to.be.an.instanceOf(Int8Array);
     expect(encoded.data.length).to.be.greaterThan(0);
     expect(encoded.attributeIds.position).to.be.a("number");
 
@@ -524,7 +526,7 @@ function hexToBytes(hex: string): Uint8Array {
 
     const encoded = _native.DracoCodec.Encode(
       [{ kind: "position", dracoName: "POSITION", size: 3, data: triangle }]);
-    expect(encoded.data).to.be.an.instanceOf(Uint8Array);
+    expect(encoded.data).to.be.an.instanceOf(Int8Array);
     expect(encoded.data.length).to.be.greaterThan(0);
   });
 
@@ -533,6 +535,51 @@ function hexToBytes(hex: string): Uint8Array {
       [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
       new Uint32Array(indices));
     expect(encoded.data.length).to.be.greaterThan(0);
+  });
+
+  it("encodes typed array views with a non-zero byteOffset", function () {
+    // Both the attribute and the index buffer are subviews sitting partway into a larger
+    // ArrayBuffer, preceded by deliberately wrong data. Reading via ArrayBuffer().Data()
+    // instead of the typed view would silently encode that padding, so the round trip
+    // below is what catches it -- the decoded corners would not match.
+    const padFloats = 5;
+    const positionStorage = new Float32Array(padFloats + positions.length);
+    positionStorage.fill(-999);
+    positionStorage.set(positions, padFloats);
+    const positionView = positionStorage.subarray(padFloats);
+
+    const padIndices = 3;
+    const indexStorage = new Uint16Array(padIndices + indices.length);
+    indexStorage.fill(0xdead & 0xffff);
+    indexStorage.set(indices, padIndices);
+    const indexView = indexStorage.subarray(padIndices);
+
+    expect(positionView.byteOffset).to.be.greaterThan(0);
+    expect(indexView.byteOffset).to.be.greaterThan(0);
+
+    const encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positionView }],
+      indexView);
+
+    const decoded = _native.DracoCodec.Decode(encoded.data, { position: encoded.attributeIds.position });
+    expect(decoded.totalVertices).to.equal(positions.length / 3);
+    expect(decoded.indices.length).to.equal(indices.length);
+
+    const attribute = decoded.attributes.find((a: any) => a.kind === "position");
+    expect(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    const corner = (buffer: any, i: number) =>
+      [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]]
+        .map((v: number) => v.toFixed(2))
+        .join(",");
+
+    const expectedCorners: string[] = [];
+    const actualCorners: string[] = [];
+    for (let i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    expect(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
   });
 
   it("rejects an index buffer that is neither 16 nor 32 bit", function () {

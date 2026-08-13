@@ -2,14 +2,13 @@
 
 > ⚠️ **This plugin is experimental and subject to change.**
 
-The NativeDraco plugin provides native [Draco](https://github.com/google/draco) geometry decompression to Babylon, so `KHR_draco_mesh_compression` glTF assets can be decoded without shipping and instantiating the Draco WebAssembly module.
+The NativeDraco plugin provides native [Draco](https://github.com/google/draco) geometry compression and decompression to Babylon, so `KHR_draco_mesh_compression` glTF assets can be decoded — and meshes encoded — without shipping and instantiating the Draco WebAssembly modules.
 
 The plugin is **off by default**. Enable it with `-D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON`.
 
 ## Limitations
 
-- **Decode only.** There is no encoder. This mirrors Babylon.js, whose default configuration loads `draco_decoder_gltf.wasm`; its encoder lives in a separate module (`draco_encoder.wasm`) that `DracoEncoder` fetches on demand. Linking Draco's encoder here would add roughly 1.2 MB to every binary to serve an authoring path Babylon Native does not exercise.
-- **glTF bitstream only.** Draco is built with `DRACO_GLTF_BITSTREAM=ON`, matching the `draco3dgltf` package Babylon.js decodes with. That enables mesh compression, normal encoding and the standard edgebreaker, and excludes point clouds, the predictive edgebreaker, backwards compatibility with pre-1.0 streams, and attribute deduplication. A point-cloud stream decodes to an error rather than geometry.
+- **Full bitstream, not the glTF subset.** Draco is built with `DRACO_GLTF_BITSTREAM=OFF`. The subset drops pre-glTF backwards compatibility, so it rejects streams from older or full encoders with "Unsupported major version", and it compiles out the attribute deduplication passes the encoder relies on. Building the full codec costs binary size, but it is what lets one Draco target serve both directions.
 - **No consumer yet.** Nothing in the pinned `babylonjs` package calls `_native.DracoCodec`. The grouping and the entry-point names have therefore not faced a real consumer and may still move.
 
 ## Design
@@ -37,6 +36,24 @@ interface INative {
       }>;
       totalVertices: number;
     };
+    Encode: (
+      attributes: Array<{
+        kind: string;
+        dracoName: string;
+        size: number;
+        data: ArrayBufferView;
+      }>,
+      indices?: Uint16Array | Uint32Array,
+      options?: {
+        method?: "MESH_EDGEBREAKER_ENCODING" | "MESH_SEQUENTIAL_ENCODING";
+        quantizationBits?: { [kind: string]: number };
+        encodeSpeed?: number;
+        decodeSpeed?: number;
+      }
+    ) => {
+      data: Int8Array;
+      attributeIds: { [kind: string]: number };
+    };
     Version: string;
   };
 }
@@ -45,6 +62,8 @@ interface INative {
 `attributeIds` is the glTF path: a map of Babylon vertex-buffer kind to Draco unique attribute id, taken from the `KHR_draco_mesh_compression` extension. When it is omitted, attributes are identified by their Draco geometry type instead.
 
 `indices` is `null` for geometry that decodes to a point cloud rather than a triangular mesh.
+
+`Encode` requires a `POSITION` attribute. Omitting `indices` treats the vertices as a flat triangle list, so the vertex count must then be a multiple of three. It returns the `attributeIds` map the corresponding `Decode` call needs, and `data` as an `Int8Array` — matching Babylon.js's `IDracoEncodedMeshData`, which is typed that way because the WASM encoder returns a view onto emscripten's signed `HEAP8`.
 
 ## Notes
 
