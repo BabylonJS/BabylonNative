@@ -1758,6 +1758,305 @@ namespace Babylon::ShaderCompilerTraversers
             };
         };
 
+        /// Flattens narrow inter-stage varying arrays into one varying per array element.
+        ///
+        /// SPIRV-Cross emits an array-typed member in the HLSL interface struct for an
+        /// array-typed varying, e.g. `float vDepthMetric0[4] : TEXCOORD5;`. fxc turns that
+        /// into an indexable input register range, and rejects the range when the per-register
+        /// write masks differ -- which is always the case for a scalar element type, since each
+        /// register only uses `.x`:
+        ///
+        ///     error X8000: masks on all input registers in an index range must be identical
+        ///
+        /// In practice fxc does not merely fail here, it hangs, which is how this surfaced:
+        /// D3D11 shader compilation for Babylon.js cascaded shadow maps never returns.
+        /// `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]` in lightFragmentDeclaration.fx
+        /// is the trigger. Its companion `varying vec4 vPositionFromLight{X}[...]` is fine,
+        /// because a 4-component element type gives every register the same full mask.
+        ///
+        /// Each such array is replaced by:
+        ///   - one scalar/narrow varying per element (`v_0`, `v_1`, ...), so the interface
+        ///     contains no array and fxc emits no indexable range, and
+        ///   - a plain global array that keeps the original array type, which every existing
+        ///     reference is repointed at.
+        ///
+        /// The global is what preserves dynamic indexing. The cascade index in
+        /// `vDepthMetric{X}[index{X}]` is computed at runtime (lightFragment.fx picks the
+        /// cascade per fragment), so the accesses cannot simply be rewritten to the per-element
+        /// varyings. Copies between the two forms are inserted in `main`: element-wise reads at
+        /// the top of the fragment entry point, element-wise writes at the end of the vertex one.
+        /// Routing through a global also keeps writes performed by non-inlined helper functions
+        /// working, since they observe the global rather than a local copy.
+        ///
+        /// Only literally-sized, single-dimension, non-struct, non-matrix arrays with fewer than
+        /// four components per element are flattened. Everything else keeps its existing form.
+        class NarrowVaryingArrayFlattenerTraverser final : private TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids)
+            {
+                // Inter-stage varyings only: vertex outputs and fragment inputs. Vertex inputs
+                // are handled by AssignLocationsAndNamesToVertexVaryings*, and fragment outputs
+                // are render targets; neither may be touched here.
+                FlattenStage(program.getIntermediate(EShLangVertex), ids, EvqVaryingOut);
+                FlattenStage(program.getIntermediate(EShLangFragment), ids, EvqVaryingIn);
+            }
+
+        private:
+            explicit NarrowVaryingArrayFlattenerTraverser(TStorageQualifier storage)
+                : m_storage{storage}
+            {
+            }
+
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                if (!IsFlattenable(symbol, m_storage))
+                {
+                    return;
+                }
+
+                if (IsLinkerObject(this->path))
+                {
+                    m_varyingNameToSymbol[symbol->getName().c_str()] = symbol;
+                }
+
+                m_symbolsToParents.emplace_back(symbol, this->getParentNode());
+            }
+
+            static bool IsFlattenable(const TIntermSymbol* symbol, TStorageQualifier storage)
+            {
+                const TType& type = symbol->getType();
+                const TQualifier& qualifier = type.getQualifier();
+
+                if (qualifier.storage != storage || qualifier.builtIn != EbvNone)
+                {
+                    return false;
+                }
+
+                // A struct or matrix element has no single write mask to reason about, and
+                // glslang would need a different construction path for each; neither appears
+                // as an array-typed varying in Babylon.js shaders.
+                if (type.isStruct() || type.isMatrix())
+                {
+                    return false;
+                }
+
+                // Four-component elements already give every register an identical full mask,
+                // so they are legal as an indexable range and are left alone.
+                if (type.getVectorSize() >= 4)
+                {
+                    return false;
+                }
+
+                // An unsized or specialization-constant-sized array has no element count to
+                // expand at this point, and multi-dimensional arrays are not emitted by
+                // Babylon.js, so both keep their existing form.
+                return type.isSizedArray() && type.getArraySizes()->getNumDims() == 1 && type.getOuterArraySize() > 0;
+            }
+
+            static void FlattenStage(TIntermediate* intermediate, IdGenerator& ids, TStorageQualifier storage)
+            {
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                auto* root = intermediate->getTreeRoot() != nullptr ? intermediate->getTreeRoot()->getAsAggregate() : nullptr;
+                if (root == nullptr)
+                {
+                    return;
+                }
+
+                NarrowVaryingArrayFlattenerTraverser traverser{storage};
+                root->traverse(&traverser);
+
+                if (traverser.m_varyingNameToSymbol.empty())
+                {
+                    return;
+                }
+
+                auto* linkerObjects = FindLinkerObjects(root);
+                auto* mainBody = FindMainBody(root);
+                if (linkerObjects == nullptr || mainBody == nullptr)
+                {
+                    throw std::runtime_error{"Cannot flatten varying arrays: shader has no linker objects or no main()"};
+                }
+
+                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
+                std::vector<TIntermNode*> copyStatements{};
+
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                {
+                    FlattenVarying(intermediate, ids, storage, name, symbol, linkerObjects->getSequence(), originalNameToReplacement, copyStatements);
+                }
+
+                // Every reference to the varying -- including the linker object entry, which is
+                // how the global gets declared -- now points at the global array.
+                MakeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
+
+                auto& bodySequence = mainBody->getSequence();
+                if (storage == EvqVaryingIn)
+                {
+                    // Fragment: fill the global from the incoming per-element varyings before
+                    // any shader code can read it.
+                    bodySequence.insert(bodySequence.begin(), copyStatements.begin(), copyStatements.end());
+                }
+                else
+                {
+                    // Vertex: publish the global to the outgoing per-element varyings once the
+                    // shader body has finished writing it. An early return would jump over these
+                    // copies and silently emit stale varyings, so refuse to transform rather than
+                    // mis-render. Babylon.js vertex shaders do not return early today; this is
+                    // here so that if one ever does, it surfaces as a build failure.
+                    if (HasEarlyReturn(mainBody))
+                    {
+                        throw std::runtime_error{"Cannot flatten varying arrays: vertex main() returns early"};
+                    }
+                    bodySequence.insert(bodySequence.end(), copyStatements.begin(), copyStatements.end());
+                }
+            }
+
+            /// True when main() can return before reaching the end of its body. A return that is
+            /// the final top-level statement is equivalent to falling off the end, so it does not
+            /// count; anything nested or earlier does.
+            static bool HasEarlyReturn(TIntermAggregate* mainBody)
+            {
+                class ReturnFinder final : public TIntermTraverser
+                {
+                public:
+                    bool Found{false};
+
+                    bool visitBranch(TVisit, TIntermBranch* branch) override
+                    {
+                        if (branch->getFlowOp() == EOpReturn)
+                        {
+                            Found = true;
+                        }
+                        return true;
+                    }
+                };
+
+                auto& sequence = mainBody->getSequence();
+                for (size_t i = 0; i < sequence.size(); ++i)
+                {
+                    if (sequence[i] == nullptr)
+                    {
+                        continue;
+                    }
+
+                    auto* branch = sequence[i]->getAsBranchNode();
+                    const bool isTrailingReturn = branch != nullptr && branch->getFlowOp() == EOpReturn && i + 1 == sequence.size();
+                    if (isTrailingReturn)
+                    {
+                        continue;
+                    }
+
+                    ReturnFinder finder{};
+                    sequence[i]->traverse(&finder);
+                    if (finder.Found)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            static void FlattenVarying(
+                TIntermediate* intermediate,
+                IdGenerator& ids,
+                TStorageQualifier storage,
+                const std::string& name,
+                TIntermSymbol* symbol,
+                TIntermSequence& linkerObjects,
+                std::map<std::string, TIntermTyped*>& originalNameToReplacement,
+                std::vector<TIntermNode*>& copyStatements)
+            {
+                const TType& varyingType = symbol->getType();
+                const TSourceLoc& loc = symbol->getLoc();
+                const int arraySize = varyingType.getOuterArraySize();
+
+                // The global keeps the original array type so dynamic indexing is unaffected.
+                TType globalType{};
+                globalType.shallowCopy(varyingType);
+                globalType.getQualifier().clearLayout();
+                globalType.getQualifier().clearInterpolation();
+                globalType.getQualifier().storage = EvqGlobal;
+
+                TIntermSymbol globalPrototype{ids.Next(), symbol->getName(), globalType};
+                originalNameToReplacement[name] = intermediate->addSymbol(globalPrototype);
+
+                // Element type for the flattened varyings. The dereference constructor keeps the
+                // original storage and interpolation qualifiers, which is what these need.
+                const TType elementType{varyingType, 0};
+
+                for (int i = 0; i < arraySize; ++i)
+                {
+                    TIntermSymbol elementPrototype{ids.Next(), TString{(name + "_" + std::to_string(i)).c_str()}, elementType};
+                    auto* elementDeclaration = intermediate->addSymbol(elementPrototype);
+                    linkerObjects.push_back(elementDeclaration);
+
+                    auto* indexedGlobal = intermediate->addIndex(EOpIndexDirect,
+                        intermediate->addSymbol(globalPrototype),
+                        intermediate->addConstantUnion(i, loc, true),
+                        loc);
+                    if (indexedGlobal == nullptr)
+                    {
+                        throw std::runtime_error{"Cannot flatten varying array '" + name + "': failed to build element access"};
+                    }
+                    // addIndex leaves the result type to the caller.
+                    indexedGlobal->setType(TType{globalType, 0});
+
+                    auto* elementReference = intermediate->addSymbol(elementPrototype);
+                    auto* copy = storage == EvqVaryingIn
+                        ? intermediate->addAssign(EOpAssign, indexedGlobal, elementReference, loc)
+                        : intermediate->addAssign(EOpAssign, elementReference, indexedGlobal, loc);
+                    if (copy == nullptr)
+                    {
+                        throw std::runtime_error{"Cannot flatten varying array '" + name + "': failed to build element copy"};
+                    }
+                    copyStatements.push_back(copy);
+                }
+            }
+
+            static TIntermAggregate* FindLinkerObjects(TIntermAggregate* root)
+            {
+                for (auto* node : root->getSequence())
+                {
+                    auto* aggregate = node != nullptr ? node->getAsAggregate() : nullptr;
+                    if (aggregate != nullptr && aggregate->getOp() == EOpLinkerObjects)
+                    {
+                        return aggregate;
+                    }
+                }
+                return nullptr;
+            }
+
+            static TIntermAggregate* FindMainBody(TIntermAggregate* root)
+            {
+                for (auto* node : root->getSequence())
+                {
+                    auto* function = node != nullptr ? node->getAsAggregate() : nullptr;
+                    if (function == nullptr || function->getOp() != EOpFunction)
+                    {
+                        continue;
+                    }
+                    // glslang mangles function names as "name(argtypes"; main takes no arguments.
+                    if (function->getName().compare(0, 5, "main(") != 0)
+                    {
+                        continue;
+                    }
+                    auto& sequence = function->getSequence();
+                    // [0] is the parameter list, [1] is the body.
+                    return sequence.size() >= 2 && sequence[1] != nullptr ? sequence[1]->getAsAggregate() : nullptr;
+                }
+                return nullptr;
+            }
+
+            const TStorageQualifier m_storage;
+            std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+        };
+
         class InvertYDerivativeOperandsTraverser : public TIntermTraverser
         {
         public:
@@ -2067,6 +2366,11 @@ namespace Babylon::ShaderCompilerTraversers
     void ZeroInitializeStructLocals(TProgram& program)
     {
         StructLocalZeroInitializerTraverser::Traverse(program);
+    }
+
+    void FlattenNarrowVaryingArrays(TProgram& program, IdGenerator& ids)
+    {
+        NarrowVaryingArrayFlattenerTraverser::Traverse(program, ids);
     }
 
     void InvertYDerivativeOperands(TProgram& program)
