@@ -53,19 +53,35 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESH
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
+# bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
+# directory, and Windows has no system copy the way Linux and Android do.
+# Expose the path so the OpenGL backends of our own targets can use it.
+set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
+
 # Canvas plugin allocates one bgfx framebuffer per JS Canvas object and per
 # text-rendering operation; combined with V8 GC pacing this can exceed the
-# default 128 limit during long playground sweeps. We enforce a floor of 512:
-# CI workflows pass -DBGFX_CONFIG_MAX_FRAME_BUFFERS, and any value below 512
+# default 128 limit during long playground sweeps. We enforce a floor of 2048:
+# CI workflows pass -DBGFX_CONFIG_MAX_FRAME_BUFFERS, and any value below 2048
 # (including a smaller CI override) is clamped up so the pool never regresses
 # below the size the Canvas sweeps need.
-if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 512)
-    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 512)
+#
+# 512 was sufficient only because the validation runner exited on the first
+# failing test. With --keep-going a full validation sweep keeps allocating past
+# that point and exhausts the pool around the FrameGraph tests, so the floor
+# has to cover a complete uninterrupted run.
+if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 2048)
+    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
 endif()
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
 
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
+
+# Disable video decoding support (not used by Babylon Native).
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_VIDEO=0)
+
+# Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_C99_API=0)
 
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
@@ -109,13 +125,14 @@ if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP AND TARGET bimg_decode)
     target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_WEBP=0)
 endif()
 
-if(UNIX AND NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
+if(NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # The new bx requires SSE4.2 on x86_64 (see bx scripts/toolchain.lua and
     # include/bx/inline/simd128_sse.inl which uses _mm_round_ps / _mm_blendv_ps
     # under "SSE4.1 - always available with SSE4.2 minspec"). bgfx.cmake does
-    # not propagate this flag, so add it explicitly on Linux x86_64 where
-    # GCC/Clang don't enable SSE4.x by default. MSVC and Apple Silicon are
-    # unaffected.
+    # not propagate this flag, so add it explicitly for any GCC/Clang frontend on
+    # x86_64 (e.g. Linux, or Clang targeting Windows), none of which enable SSE4.x
+    # by default. MSVC (cl.exe) allows the intrinsics regardless and Apple Silicon
+    # is unaffected.
     foreach(_bx_target IN ITEMS bx bgfx bimg bimg_decode bimg_encode)
         if(TARGET ${_bx_target})
             target_compile_options(${_bx_target} PRIVATE -msse4.2)
@@ -160,6 +177,82 @@ if(NOT TARGET glslang)
     set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 endif()
 
+# Assigns an IDE folder to every target a dependency declares, including those in
+# nested directories. draco alone contributes ~25 internal object libraries; listing
+# them by name would silently go stale whenever the dependency reorganizes its build,
+# leaving targets ungrouped at the solution root.
+function(group_directory_targets DIR FOLDER_NAME)
+    get_property(_targets DIRECTORY "${DIR}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_target IN LISTS _targets)
+        # INTERFACE libraries have no build output and cannot carry a FOLDER.
+        get_target_property(_type ${_target} TYPE)
+        if(NOT _type STREQUAL "INTERFACE_LIBRARY")
+            set_property(TARGET ${_target} PROPERTY FOLDER "${FOLDER_NAME}")
+        endif()
+    endforeach()
+
+    get_property(_subdirs DIRECTORY "${DIR}" PROPERTY SUBDIRECTORIES)
+    foreach(_subdir IN LISTS _subdirs)
+        group_directory_targets("${_subdir}" "${FOLDER_NAME}")
+    endforeach()
+endfunction()
+
+# --------------------------------------------------
+# draco (mesh decompression, native replacement for the WASM decoder)
+# --------------------------------------------------
+if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_static)
+    set(DRACO_TESTS OFF CACHE BOOL "" FORCE)
+    set(DRACO_INSTALL OFF CACHE BOOL "" FORCE)
+    set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
+    set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
+
+    # Build only the features in the Draco glTF bitstream spec: mesh compression, normal
+    # encoding and the standard edgebreaker. This is the same subset Babylon.js decodes
+    # with, since its default configuration loads draco_decoder_gltf.wasm rather than the
+    # full decoder, so it costs no capability the JavaScript path has. It drops point cloud
+    # compression, the predictive edgebreaker and pre-glTF backwards compatibility.
+    set(DRACO_GLTF_BITSTREAM ON CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable_With_Message(draco)
+
+    # The combined draco library target is named `draco` for MSVC and
+    # `draco_static` for other toolchains (static build); `draco::draco` aliases
+    # whichever exists.
+    if(TARGET draco)
+        set(_draco_lib draco)
+    else()
+        set(_draco_lib draco_static)
+    endif()
+
+    # draco adds its include paths as PRIVATE (see cmake/draco_targets.cmake
+    # draco_add_library), so linking draco::draco does not expose the draco/*
+    # headers to consumers. Re-export them as PUBLIC on the combined target.
+    # The generated draco/draco_features.h is emitted under CMAKE_BINARY_DIR
+    # (draco uses ${CMAKE_BINARY_DIR} as its generated-sources root).
+    target_include_directories(${_draco_lib} SYSTEM PUBLIC
+        "${draco_SOURCE_DIR}"
+        "${draco_SOURCE_DIR}/src"
+        "${draco_BINARY_DIR}"
+        "${CMAKE_BINARY_DIR}")
+
+    # Assign IDE folders for every draco target, not just the combined library.
+    group_directory_targets("${draco_SOURCE_DIR}" Dependencies/draco)
+endif()
+
+# --------------------------------------------------
+# meshoptimizer (mesh decompression, native replacement for the WASM decoder)
+# --------------------------------------------------
+if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT AND NOT TARGET meshoptimizer)
+    set(MESHOPT_BUILD_DEMO OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_BUILD_GLTFPACK OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(MESHOPT_WERROR OFF CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable_With_Message(meshoptimizer)
+
+    group_directory_targets("${meshoptimizer_SOURCE_DIR}" Dependencies/meshoptimizer)
+endif()
+
 # --------------------------------------------------
 # googletest
 # --------------------------------------------------
@@ -184,6 +277,27 @@ endif()
 # JsRuntimeHost
 # --------------------------------------------------
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+
+# Two JsRuntimeHost targets cannot be built without RTTI:
+#   v8inspector - includes asio, whose headers use typeid() unconditionally
+#                 (any_executor.hpp, service_registry.hpp, handler_work.hpp).
+#                 Clang and GCC reject this outright; MSVC only warns.
+#                 Only defined for V8 with the inspector enabled
+#                 (JsRuntimeHost Core/AppRuntime/CMakeLists.txt).
+#   jsi         - Hermes (fetched by JsRuntimeHost) builds its API/hermes
+#                 targets with RTTI, and their vtables reference "typeinfo for
+#                 facebook::jsi::*" which only jsi.cpp emits. Compiling jsi
+#                 without RTTI drops those definitions and the link fails.
+#                 The same target name is used by Node-API-JSI for V8JSI.
+# Each call is gated on the engine that defines the target, so a target that
+# stops existing upstream fails configuration instead of silently going by.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+    babylon_native_force_rtti(v8inspector)
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI" OR NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    babylon_native_force_rtti(jsi)
+endif()
 
 # --------------------------------------------------
 # metal-cpp

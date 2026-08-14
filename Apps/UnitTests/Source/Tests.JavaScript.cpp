@@ -9,6 +9,12 @@
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeEncoding.h>
+#ifdef HAS_NATIVE_DRACO
+#include <Babylon/Plugins/NativeDraco.h>
+#endif
+#ifdef HAS_NATIVE_MESHOPT
+#include <Babylon/Plugins/NativeMeshopt.h>
+#endif
 #include <Babylon/ScriptLoader.h>
 
 #include <cstdlib>
@@ -78,6 +84,12 @@ TEST(JavaScript, All)
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
         Babylon::Plugins::NativeEncoding::Initialize(env);
+#ifdef HAS_NATIVE_DRACO
+        Babylon::Plugins::NativeDraco::Initialize(env);
+#endif
+#ifdef HAS_NATIVE_MESHOPT
+        Babylon::Plugins::NativeMeshopt::Initialize(env);
+#endif
 
         auto setExitCodeCallback = Napi::Function::New(
             env, [&exitCodePromise](const Napi::CallbackInfo& info) {

@@ -5,7 +5,6 @@
 #import <MetalKit/MetalKit.h>
 #include <napi/napi.h>
 #include <bgfx/bgfx.h>
-#include <bgfx/platform.h>
 #include <arcana/macros.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/dispatcher.h>

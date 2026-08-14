@@ -153,6 +153,14 @@ namespace
             "Trigger debugger break on a failing test.", "",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.BreakOnFail = true; }},
 
+        FlagSpec{"--keep-going", "-k", FlagKind::Boolean, "",
+            "Continue after a failing test instead of",
+            "                              exiting on the first failure. The run still\n"
+            "                              exits non-zero if anything failed. Use this\n"
+            "                              for full sweeps where you want the complete\n"
+            "                              pass/fail tally rather than the first error.\n",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.KeepGoing = true; }},
+
         FlagSpec{"--generate-references", "", FlagKind::Boolean, "",
             "Save rendered images as new reference PNGs.", "",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.GenerateReferences = true; }},

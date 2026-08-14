@@ -5,6 +5,12 @@
 #if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
 #include <Babylon/Plugins/NativeEngine.h>
 #endif
+#if BABYLON_NATIVE_PLUGIN_NATIVEDRACO
+#include <Babylon/Plugins/NativeDraco.h>
+#endif
+#if BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT
+#include <Babylon/Plugins/NativeMeshopt.h>
+#endif
 #if BABYLON_NATIVE_PLUGIN_NATIVECAMERA
 #include <Babylon/Plugins/NativeCamera.h>
 #endif
@@ -182,6 +188,13 @@ namespace Babylon::Embedding
 #endif
 
         m_appRuntime->Dispatch([implPtr = this, window](Napi::Env env) {
+            // 0. Install the ES2020 `globalThis` self-reference. V8/JSC/Chakra
+            //    provide it intrinsically, but the embedded Hermes runtime does
+            //    not, and Hermes evaluates eval()'d code as indirect (global
+            //    scope) eval -- so browser-style snippets can only reach host
+            //    state through properties of the global object.
+            env.Global().Set("globalThis", env.Global());
+
             // 1. Make the Device available to JS.
             implPtr->m_device->AddToJavaScript(env);
 
@@ -225,6 +238,10 @@ namespace Babylon::Embedding
 
 #if BABYLON_NATIVE_POLYFILL_WINDOW
             Babylon::Polyfills::Window::Initialize(env);
+            // Alias `canvas` to the global object so playground snippets that
+            // reference a bare `canvas` global resolve under Hermes indirect
+            // eval (mirrors the `window` polyfill).
+            env.Global().Set("canvas", env.Global());
 #endif
 
             Babylon::Polyfills::TextDecoder::Initialize(env);
@@ -258,6 +275,12 @@ namespace Babylon::Embedding
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
             Babylon::Plugins::NativeEngine::Initialize(env);
+#endif
+#if BABYLON_NATIVE_PLUGIN_NATIVEDRACO
+            Babylon::Plugins::NativeDraco::Initialize(env);
+#endif
+#if BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT
+            Babylon::Plugins::NativeMeshopt::Initialize(env);
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS
             Babylon::Plugins::NativeOptimizations::Initialize(env);

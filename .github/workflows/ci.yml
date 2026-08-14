@@ -10,41 +10,44 @@ jobs:
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
     uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: "26.4"
+      runs-on: macos-26
 
   MacOS_Ninja:
     uses: ./.github/workflows/build-macos.yml
     with:
-      generator: 'Ninja Multi-Config'
+      generator: "Ninja Multi-Config"
+      xcode-version: "26.4"
+      runs-on: macos-26
 
   MacOS_Sanitizers:
     uses: ./.github/workflows/build-macos.yml
     with:
       enable-sanitizers: true
-
-  # ── Apple: iOS ────────────────────────────────────────────────
-  iOS_iOS180:
-    uses: ./.github/workflows/build-ios.yml
-    with:
-      deployment-target: '18.0'
-
-  iOS_iOS175:
-    uses: ./.github/workflows/build-ios.yml
-    with:
-      deployment-target: '17.5'
+      xcode-version: "26.4"
+      runs-on: macos-26
 
   # ── Apple: Xcode 26 ──────────────────────────────────────────
   MacOS_Xcode26:
     uses: ./.github/workflows/build-macos.yml
     with:
-      xcode-version: '26.4'
+      xcode-version: "26.4"
       runs-on: macos-26
 
   iOS_Xcode26:
     uses: ./.github/workflows/build-ios.yml
     with:
-      deployment-target: '26.0'
-      xcode-version: '26.4'
+      deployment-target: "26.0"
+      xcode-version: "26.4"
       runs-on: macos-26
+
+  MacOS_QuickJS:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: "26.4"
+      runs-on: macos-26
+      js-engine: QuickJS
 
   # ── Win32─────────────────────────────────────────────────────
   Win32_x64_D3D11:
@@ -63,6 +66,19 @@ jobs:
     with:
       platform: x64
       napi-type: V8
+
+  Win32_x64_Hermes_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      napi-type: Hermes
+
+  Win32_x64_QuickJS_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      napi-type: QuickJS
+      graphics-api: D3D11
 
   Win32_x64_D3D11_Sanitizers:
     uses: ./.github/workflows/build-win32.yml
@@ -104,12 +120,26 @@ jobs:
       cxx: clang++
       js-engine: JavaScriptCore
 
+  Ubuntu_Clang_Hermes:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      js-engine: Hermes
+
   Ubuntu_GCC_JSC:
     uses: ./.github/workflows/build-linux.yml
     with:
       cc: gcc
       cxx: g++
       js-engine: JavaScriptCore
+
+  Ubuntu_Clang_QuickJS:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      js-engine: QuickJS
 
   # ── Android ───────────────────────────────────────────────────
   Android_Ubuntu_JSC:
@@ -124,23 +154,41 @@ jobs:
       runs-on: ubuntu-latest
       js-engine: V8
 
+  Android_Ubuntu_Hermes:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: ubuntu-latest
+      js-engine: Hermes
+
+  Android_Ubuntu_QuickJS:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: ubuntu-latest
+      js-engine: QuickJS
+
   Android_MacOS_JSC:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: macos-latest
+      runs-on: macos-26
       js-engine: JavaScriptCore
 
   Android_MacOS_V8:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: macos-latest
+      runs-on: macos-26
       js-engine: V8
+
+  Android_MacOS_QuickJS:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: macos-26
+      js-engine: QuickJS
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
     uses: ./.github/workflows/test-install-ios.yml
     with:
-      deployment-target: '17.2'
+      deployment-target: "17.2"
 
   Linux_Installation:
     uses: ./.github/workflows/test-install-linux.yml

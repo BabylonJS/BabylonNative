@@ -62,6 +62,11 @@ namespace Babylon::Graphics
 
         std::optional<bgfx::ViewId> m_viewId{};
 
+        // Generation that m_viewId was acquired in. A mid-frame view flush resets the device's
+        // view counter, which makes a retained id sort after freshly acquired ones; comparing
+        // against DeviceContext::ViewIdGeneration() detects that and forces a re-acquire.
+        uint32_t m_viewIdGeneration{0};
+
         Rect m_bgfxViewPort{0.0f, 0.0f, 1.0f, 1.0f};
         Rect m_desiredViewPort{0.0f, 0.0f, 1.0f, 1.0f};
 

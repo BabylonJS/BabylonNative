@@ -7,6 +7,8 @@
 #include <bgfx/bgfx.h>
 #include <bx/bx.h>
 
+#include <Babylon/Graphics/BgfxShaderInfo.h>
+
 #include <arcana/experimental/array.h>
 
 #include <gsl/gsl>
@@ -313,10 +315,13 @@ namespace Babylon::ShaderCompilerTraversers
                 // We only care about loose scalar/vector uniforms. Excluding matrices, samplers,
                 // UBO blocks (EbtBlock) and uniform struct instances (EbtStruct) prevents the
                 // traverser from rewriting whole blocks/structs to vec4, which destroys their
-                // member layout and member names.
+                // member layout and member names. Uniforms that are already vec4 need no widening,
+                // so they are skipped as a fast path: retyping them is a no-op and addShapeConversion
+                // would return the node unchanged, leaving only pointless AST churn.
                 const auto basic = type.getBasicType();
                 if (type.getQualifier().isUniformOrBuffer()
                     && !type.isMatrix()
+                    && type.getVectorSize() < 4
                     && (basic == EbtFloat || basic == EbtInt || basic == EbtUint || basic == EbtBool))
                 {
                     // At present, this may end up creating layered swizzles; i.e., if a vec3 was already being projected
@@ -388,6 +393,12 @@ namespace Babylon::ShaderCompilerTraversers
                             {
                                 selection->setFalseBlock(shapeConversion);
                             }
+                        }
+                        else if (auto* branch = parent->getAsBranchNode())
+                        {
+                            // A uniform returned directly (`return someUniform;`) is the branch's
+                            // expression, so the conversion replaces that expression in place.
+                            branch->setExpression(shapeConversion);
                         }
                         else
                         {
@@ -589,6 +600,28 @@ namespace Babylon::ShaderCompilerTraversers
                        strcmp(name, "splatIndex3") != 0;
             }
 
+            // The shader attribute location assigned to a varying must be stable regardless
+            // of how many attributes are instanced -- i.e. identical between the base program
+            // compile and any instanced variant. Vertex buffers are bound using the base
+            // program's attribute locations (VertexAttributeLocations), so if a variant
+            // reassigns a per-vertex attribute to a different location (as the instance/
+            // non-instance 2-pass ordering would), that buffer's data no longer reaches the
+            // shader and reads zero. The attribute's ordinal position in the name-sorted
+            // varying map is independent of the 2-pass ordering and therefore stable.
+            unsigned int GetStableLocation(const char* name) const
+            {
+                unsigned int index = 0;
+                for (const auto& entry : m_varyingNameToSymbol)
+                {
+                    if (entry.first == name)
+                    {
+                        break;
+                    }
+                    ++index;
+                }
+                return index;
+            }
+
             unsigned int m_genericAttributesRunningCount{0};
             const std::map<std::string, uint32_t>* m_instancedAttributes{nullptr};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
@@ -616,6 +649,14 @@ namespace Babylon::ShaderCompilerTraversers
                     "a_texcoord5",
                     "a_texcoord6",
                     "a_texcoord7",
+                    "a_texcoord8",
+                    "a_texcoord9",
+                    "a_texcoord10",
+                    "a_texcoord11",
+                    "a_texcoord12",
+                    "a_texcoord13",
+                    "a_texcoord14",
+                    "a_texcoord15",
                 };
             static_assert(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
             constexpr static const char* s_attribInstanceName[] =
@@ -625,6 +666,17 @@ namespace Babylon::ShaderCompilerTraversers
                     "i_data2",
                     "i_data3",
                     "i_data4",
+                    "i_data5",
+                    "i_data6",
+                    "i_data7",
+                    "i_data8",
+                    "i_data9",
+                    "i_data10",
+                    "i_data11",
+                    "i_data12",
+                    "i_data13",
+                    "i_data14",
+                    "i_data15",
                 };
         };
 
@@ -662,28 +714,27 @@ namespace Babylon::ShaderCompilerTraversers
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (TEXCOORD7 ==
-                    // i_data0, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
+                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
-                    // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD7),
+                    // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD31),
                     // so the first instance attribute gets the highest i_data index.
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
@@ -748,26 +799,25 @@ namespace Babylon::ShaderCompilerTraversers
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
 
-                m_genericAttributesRunningCount++;
+                const unsigned int stableLocation = GetStableLocation(name);
+                if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
                 if (IsGenericInstance(name))
                 {
                     // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (TEXCOORD7 ==
-                    // i_data0, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
+                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                    return {stableLocation, s_attribInstanceName[slot]};
                 }
                 if (IsInstance(name))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
                 }
-                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
-
-                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
+                return {stableLocation, s_attribName[stableLocation]};
             }
             unsigned int m_instanceAttributeCount{0};
         };
@@ -801,12 +851,13 @@ namespace Babylon::ShaderCompilerTraversers
                 // Consumer-declared instanced attributes with no built-in mapping (e.g. the
                 // fluid renderer's `position` or an instanced `color`) are routed to the bgfx
                 // per-instance i_data location supplied by the caller. That location is derived
-                // from the draw-time instance packing order (TEXCOORD7 == i_data0, descending),
-                // so per-instance data reaches the shader instead of the per-vertex input.
+                // from the draw-time instance packing order (INSTANCE_DATA_FIRST_LOCATION == i_data0
+                // == TEXCOORD31, descending), so per-instance data reaches the shader instead of the
+                // per-vertex input.
                 if (IsGenericInstance(name))
                 {
                     const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
                     return {location, s_attribInstanceName[slot]};
@@ -826,19 +877,26 @@ namespace Babylon::ShaderCompilerTraversers
                 IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
                 IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
                 IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
-                IF_NAME_RETURN_ATTRIB("instanceColor", bgfx::Attrib::TexCoord3, "i_data5")
-                IF_NAME_RETURN_ATTRIB("world0", bgfx::Attrib::TexCoord4, "i_data0")
-                IF_NAME_RETURN_ATTRIB("world1", bgfx::Attrib::TexCoord5, "i_data1")
-                IF_NAME_RETURN_ATTRIB("world2", bgfx::Attrib::TexCoord6, "i_data2")
-                IF_NAME_RETURN_ATTRIB("world3", bgfx::Attrib::TexCoord7, "i_data3")
-                IF_NAME_RETURN_ATTRIB("splatIndex0", bgfx::Attrib::TexCoord4, "i_data0")
-                IF_NAME_RETURN_ATTRIB("splatIndex1", bgfx::Attrib::TexCoord5, "i_data1")
-                IF_NAME_RETURN_ATTRIB("splatIndex2", bgfx::Attrib::TexCoord6, "i_data2")
-                IF_NAME_RETURN_ATTRIB("splatIndex3", bgfx::Attrib::TexCoord7, "i_data3")
+                // Built-in instanced attributes: each occupies a fixed synthetic instance-data location.
+                // world0..world3 (and splatIndex0..3) pack lowest-location -> highest i_data slot so that,
+                // combined with BuildInstanceDataBuffer's descending-key packing, world3 lands on i_data0
+                // (TEXCOORD31) and world0 on i_data3. instanceColor follows at i_data4. The i_data name is
+                // cosmetic on D3D (binding is by TEXCOORD semantic, resolved from the location via the
+                // HLSLVertexAttributeRemap table). Adding one on a lower slot means bumping
+                // BUILTIN_INSTANCE_DATA_SLOT_COUNT in BgfxShaderInfo.h.
+                IF_NAME_RETURN_ATTRIB("instanceColor", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 4, "i_data4")
+                IF_NAME_RETURN_ATTRIB("world0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
+                IF_NAME_RETURN_ATTRIB("world1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
+                IF_NAME_RETURN_ATTRIB("world2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
+                IF_NAME_RETURN_ATTRIB("world3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
+                IF_NAME_RETURN_ATTRIB("splatIndex0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
+                IF_NAME_RETURN_ATTRIB("splatIndex1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
+                IF_NAME_RETURN_ATTRIB("splatIndex2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
+                IF_NAME_RETURN_ATTRIB("splatIndex3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
 #undef IF_NAME_RETURN_ATTRIB
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
-                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
+                    throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
                 return {attributeLocation, name};
             }
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
@@ -1711,13 +1769,42 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                     }
                 }
+                else if (visit == EvPostVisit && node->getOp() == EOpTextureFetch)
+                {
+                    // texelFetch(sampler, ivec coord, lod). The vertical flip that used to be applied
+                    // by a preprocessor macro in ProcessSamplerFlip is done here instead so that the
+                    // sampler dimensionality is known: only 2-component integer coordinates
+                    // (sampler2D-style) are flipped. sampler3D / sampler2DArray coordinates (ivec3)
+                    // are left untouched — the old macro forced every coordinate through ivec2(...),
+                    // which failed to compile against sampler3D ('no matching overloaded function').
+                    auto& sequence = node->getSequence();
+                    if (sequence.size() >= 3)
+                    {
+                        auto* sampler = sequence[0]->getAsTyped();
+                        auto* coordinate = sequence[1]->getAsTyped();
+                        auto* lod = sequence[2]->getAsTyped();
+                        if (sampler != nullptr && coordinate != nullptr && lod != nullptr &&
+                            coordinate->getType().getBasicType() == EbtInt &&
+                            !coordinate->getType().isArray() &&
+                            coordinate->getType().getVectorSize() == 2)
+                        {
+                            sequence[1] = FlipVerticalTexelCoordinate(coordinate, sampler, lod);
+                        }
+                    }
+                }
 
                 return true;
             }
 
         private:
+            // Post-visit is enabled so that texelFetch coordinates can be rewritten after their
+            // children have been traversed. The rewrite copies the coordinate subtree, and doing
+            // that on the way down would leave the copy unvisited while the original still got
+            // flipped, so a nested texture() call inside the coordinate would be flipped in one
+            // reference but not the other.
             FlipSamplerCoordinatesTraverser(TIntermediate* intermediate)
-                : m_intermediate{intermediate}
+                : TIntermTraverser{true, false, true}
+                , m_intermediate{intermediate}
             {
             }
 
@@ -1739,6 +1826,142 @@ namespace Babylon::ShaderCompilerTraversers
 
                 TIntermTyped* scaled{m_intermediate->addBinaryMath(EOpMul, coordinate, scale, loc)};
                 return m_intermediate->addBinaryMath(EOpAdd, scaled, offset, loc);
+            }
+
+            // Builds `ivec2(coordinate.x, textureSize(sampler, lod).y - 1 - coordinate.y)`, the
+            // integer-texel-coordinate equivalent of FlipVerticalCoordinate. This is exactly the
+            // expression the former ProcessSamplerFlip texelFetch macro expanded to, including its
+            // double evaluation of the coordinate operand.
+            //
+            // The obvious vector form `coordinate * ivec2(1, -1) + ivec2(0, size.y - 1)` must NOT
+            // be used: it emits SPIR-V OpIMul, which SPIRV-Cross omits entirely when built with
+            // SPIRV_CROSS_WEBMIN (the configuration Babylon Native ships). The multiply then
+            // silently produces no HLSL/MSL expression and the whole shader fails to cross-compile
+            // with "Cannot resolve expression type". Integer subtract and vector construction are
+            // both retained by that build, so express the flip with those only.
+            TIntermTyped* FlipVerticalTexelCoordinate(TIntermTyped* coordinate, TIntermTyped* sampler, TIntermTyped* lod)
+            {
+                const TSourceLoc& loc{coordinate->getLoc()};
+
+                // Every operand referenced more than once below has to be an independent subtree.
+                // Reusing a node pointer would give it two parents in the AST, which later traversers
+                // (sampler splitting, SPIR-V generation) do not expect. The sampler and lod are each
+                // referenced twice because textureSize repeats them, and the coordinate is referenced
+                // twice because the flip reads both .x and .y, so all three need a copy. The original
+                // node is kept for one reference and the clone used for the other, leaving every node
+                // with exactly one parent.
+                TIntermTyped* samplerClone{CloneExpression(sampler)};
+                TIntermTyped* lodClone{CloneExpression(lod)};
+                TIntermTyped* coordinateClone{CloneExpression(coordinate)};
+
+                TType ivec2Type{EbtInt, EvqTemporary, 2};
+                TType intType{EbtInt, EvqTemporary, 1};
+
+                // textureSize(sampler, lod) -> ivec2
+                TIntermAggregate* sizeArgs{m_intermediate->makeAggregate(samplerClone, loc)};
+                sizeArgs = m_intermediate->growAggregate(sizeArgs, lodClone, loc);
+                TIntermTyped* size{m_intermediate->addBuiltInFunctionCall(loc, EOpTextureQuerySize, false, sizeArgs, ivec2Type)};
+
+                // textureSize(sampler, lod).y - 1
+                TIntermTyped* sizeY{m_intermediate->addIndex(EOpIndexDirect, size, m_intermediate->addConstantUnion(1, loc), loc)};
+                sizeY->setType(intType);
+                TIntermTyped* maxY{m_intermediate->addBinaryMath(EOpSub, sizeY, m_intermediate->addConstantUnion(1, loc), loc)};
+
+                // coordinate.x and coordinate.y. The clone supplies the second reference so that
+                // neither subtree ends up with two parents.
+                TIntermTyped* coordinateX{m_intermediate->addIndex(EOpIndexDirect, coordinate, m_intermediate->addConstantUnion(0, loc), loc)};
+                coordinateX->setType(intType);
+                TIntermTyped* coordinateY{m_intermediate->addIndex(EOpIndexDirect, coordinateClone, m_intermediate->addConstantUnion(1, loc), loc)};
+                coordinateY->setType(intType);
+
+                // ivec2(coordinate.x, (textureSize(sampler, lod).y - 1) - coordinate.y)
+                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, maxY, coordinateY, loc)};
+                TIntermAggregate* flipped{m_intermediate->makeAggregate(coordinateX, loc)};
+                flipped = m_intermediate->growAggregate(flipped, flippedY, loc);
+                return m_intermediate->setAggregateOperator(flipped, EOpConstructIVec2, ivec2Type, loc);
+            }
+
+            // Produces an independent copy of an expression subtree so it can be referenced from a
+            // second call site without giving any original node two parents in the AST.
+            //
+            // The clone is structural: each node's operator, type and source location are copied
+            // verbatim rather than rebuilt through TIntermediate::add*, so no constant folding,
+            // type promotion or precision inference can make the copy diverge from the original.
+            //
+            // Anything not reachable in a texel coordinate expression (ternaries, array methods)
+            // is reported rather than silently skipped -- returning the coordinate unflipped would
+            // sample with an un-flipped Y and produce a wrong image with no diagnostic at all.
+            TIntermTyped* CloneExpression(TIntermTyped* node)
+            {
+                if (node == nullptr)
+                {
+                    throw std::runtime_error{"FlipSamplerCoordinates: missing operand in texelFetch."};
+                }
+
+                if (TIntermSymbol* symbol = node->getAsSymbolNode())
+                {
+                    return m_intermediate->addSymbol(*symbol);
+                }
+
+                if (TIntermConstantUnion* constant = node->getAsConstantUnion())
+                {
+                    return m_intermediate->addConstantUnion(constant->getConstArray(), constant->getType(), node->getLoc());
+                }
+
+                if (TIntermBinary* binary = node->getAsBinaryNode())
+                {
+                    auto* clone = new TIntermBinary{binary->getOp()};
+                    clone->setLeft(CloneExpression(binary->getLeft()));
+                    clone->setRight(CloneExpression(binary->getRight()));
+                    clone->setType(binary->getType());
+                    clone->setLoc(binary->getLoc());
+                    clone->setOperationPrecision(binary->getOperationPrecision());
+                    return clone;
+                }
+
+                if (TIntermUnary* unary = node->getAsUnaryNode())
+                {
+                    auto* clone = new TIntermUnary{unary->getOp()};
+                    clone->setOperand(CloneExpression(unary->getOperand()));
+                    clone->setType(unary->getType());
+                    clone->setLoc(unary->getLoc());
+                    clone->setOperationPrecision(unary->getOperationPrecision());
+                    return clone;
+                }
+
+                if (TIntermAggregate* aggregate = node->getAsAggregate())
+                {
+                    // TIntermAggregate's operator-taking constructor leaves the userDefined flag
+                    // uninitialized; only the default constructor sets it. Building the clone with
+                    // the default constructor and assigning the operator afterwards is therefore the
+                    // only way to get a node whose flag is well defined. Constructing it any other
+                    // way would leave a texelFetch nested inside another texelFetch's coordinate
+                    // reading indeterminate memory: post-order traversal rewrites the inner call
+                    // first, so the outer rewrite clones a subtree that this function produced.
+                    auto* clone = new TIntermAggregate{};
+                    clone->setOperator(aggregate->getOp());
+                    for (TIntermNode* child : aggregate->getSequence())
+                    {
+                        clone->getSequence().push_back(CloneExpression(child == nullptr ? nullptr : child->getAsTyped()));
+                    }
+                    clone->setType(aggregate->getType());
+                    clone->setLoc(aggregate->getLoc());
+                    clone->setName(aggregate->getName());
+                    clone->setOperationPrecision(aggregate->getOperationPrecision());
+                    clone->getQualifierList() = aggregate->getQualifierList();
+
+                    // userDefined distinguishes a call to a user-declared function from a call to a
+                    // built-in, so it is only meaningful on -- and only ever initialized by glslang
+                    // on -- an EOpFunctionCall node. Reading it for any other operator would be the
+                    // same uninitialized read described above, just on a node glslang built.
+                    if (aggregate->getOp() == EOpFunctionCall && aggregate->isUserDefined())
+                    {
+                        clone->setUserDefined();
+                    }
+                    return clone;
+                }
+
+                throw std::runtime_error{"FlipSamplerCoordinates: unsupported expression in a texelFetch operand; cannot flip the texel coordinate."};
             }
 
             TIntermediate* m_intermediate{};

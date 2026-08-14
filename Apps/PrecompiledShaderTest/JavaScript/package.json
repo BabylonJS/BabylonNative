@@ -20,7 +20,7 @@
         "rimraf": "^6.0.1",
         "terser-webpack-plugin": "^5.3.10",
         "ts-loader": "^9.5.4",
-        "tsx": "^4.20.6",
+        "tsx": "^4.23.1",
         "typescript": "^5.5.4",
         "webpack": "^5.101.3",
         "webpack-cli": "^6.0.1"

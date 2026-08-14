@@ -51,6 +51,7 @@ namespace
 	constexpr MTL::PixelFormat kMtlPixelFormatBGRA8Unorm            = MTL::PixelFormat(80);
 	constexpr MTL::PixelFormat kMtlPixelFormatBGRA8Unorm_sRGB       = MTL::PixelFormat(81);
 	constexpr MTL::PixelFormat kMtlPixelFormatRGB10A2Unorm          = MTL::PixelFormat(90);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGB10A2Uint           = MTL::PixelFormat(91);
 	constexpr MTL::PixelFormat kMtlPixelFormatRG11B10Float          = MTL::PixelFormat(92);
 	constexpr MTL::PixelFormat kMtlPixelFormatRGB9E5Float           = MTL::PixelFormat(93);
 	constexpr MTL::PixelFormat kMtlPixelFormatRG32Uint              = MTL::PixelFormat(103);
@@ -71,8 +72,11 @@ namespace
 	constexpr MTL::PixelFormat kMtlPixelFormatBC3_RGBA              = MTL::PixelFormat(134);
 	constexpr MTL::PixelFormat kMtlPixelFormatBC3_RGBA_sRGB         = MTL::PixelFormat(135);
 	constexpr MTL::PixelFormat kMtlPixelFormatBC4_RUnorm            = MTL::PixelFormat(140);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC4_RSnorm            = MTL::PixelFormat(141);
 	constexpr MTL::PixelFormat kMtlPixelFormatBC5_RGUnorm           = MTL::PixelFormat(142);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC5_RGSnorm           = MTL::PixelFormat(143);
 	constexpr MTL::PixelFormat kMtlPixelFormatBC6H_RGBFloat         = MTL::PixelFormat(150);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC6H_RGBUfloat        = MTL::PixelFormat(151);
 	constexpr MTL::PixelFormat kMtlPixelFormatBC7_RGBAUnorm         = MTL::PixelFormat(152);
 	constexpr MTL::PixelFormat kMtlPixelFormatBC7_RGBAUnorm_sRGB    = MTL::PixelFormat(153);
 	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGB_2BPP        = MTL::PixelFormat(160);
@@ -125,6 +129,7 @@ namespace
 	constexpr MTL::PixelFormat kMtlPixelFormatDepth32Float          = MTL::PixelFormat(252);
 	constexpr MTL::PixelFormat kMtlPixelFormatStencil8              = MTL::PixelFormat(253);
 	constexpr MTL::PixelFormat kMtlPixelFormatDepth24Unorm_Stencil8 = MTL::PixelFormat(255);
+	constexpr MTL::PixelFormat kMtlPixelFormatDepth32Float_Stencil8 = MTL::PixelFormat(260);
 }
 
 // Copied from renderer_mtl.cpp
@@ -142,8 +147,11 @@ namespace
 		{ kMtlPixelFormatBC2_RGBA,              kMtlPixelFormatBC2_RGBA_sRGB,        }, // BC2
 		{ kMtlPixelFormatBC3_RGBA,              kMtlPixelFormatBC3_RGBA_sRGB,        }, // BC3
 		{ kMtlPixelFormatBC4_RUnorm,            kMtlPixelFormatInvalid,              }, // BC4
+		{ kMtlPixelFormatBC4_RSnorm,            kMtlPixelFormatInvalid,              }, // BC4S
 		{ kMtlPixelFormatBC5_RGUnorm,           kMtlPixelFormatInvalid,              }, // BC5
+		{ kMtlPixelFormatBC5_RGSnorm,           kMtlPixelFormatInvalid,              }, // BC5S
 		{ kMtlPixelFormatBC6H_RGBFloat,         kMtlPixelFormatInvalid,              }, // BC6H
+		{ kMtlPixelFormatBC6H_RGBUfloat,        kMtlPixelFormatInvalid,              }, // BC6HU
 		{ kMtlPixelFormatBC7_RGBAUnorm,         kMtlPixelFormatBC7_RGBAUnorm_sRGB,   }, // BC7
 		{ kMtlPixelFormatInvalid,               kMtlPixelFormatInvalid,              }, // ETC1
 		{ kMtlPixelFormatETC2_RGB8,             kMtlPixelFormatETC2_RGB8_sRGB,       }, // ETC2
@@ -228,6 +236,7 @@ namespace
 		{ kMtlPixelFormatBGR5A1Unorm,           kMtlPixelFormatInvalid,              }, // BGR5A1
 		{ kMtlPixelFormatBGR5A1Unorm,           kMtlPixelFormatInvalid,              }, // RGB5A1
 		{ kMtlPixelFormatRGB10A2Unorm,          kMtlPixelFormatInvalid,              }, // RGB10A2
+		{ kMtlPixelFormatRGB10A2Uint,           kMtlPixelFormatInvalid,              }, // RGB10A2U
 		{ kMtlPixelFormatRG11B10Float,          kMtlPixelFormatInvalid,              }, // RG11B10F
 		{ kMtlPixelFormatInvalid,               kMtlPixelFormatInvalid,              }, // UnknownDepth
 		{ kMtlPixelFormatDepth16Unorm,          kMtlPixelFormatInvalid,              }, // D16
@@ -237,6 +246,7 @@ namespace
 		{ kMtlPixelFormatDepth32Float,          kMtlPixelFormatInvalid,              }, // D16F
 		{ kMtlPixelFormatDepth32Float,          kMtlPixelFormatInvalid,              }, // D24F
 		{ kMtlPixelFormatDepth32Float,          kMtlPixelFormatInvalid,              }, // D32F
+		{ kMtlPixelFormatDepth32Float_Stencil8, kMtlPixelFormatInvalid,              }, // D32FS8
 		{ kMtlPixelFormatStencil8,              kMtlPixelFormatInvalid,              }, // D0S8
 	};
 	static_assert(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat) );
@@ -246,6 +256,11 @@ namespace
 
 namespace Babylon::Plugins
 {
+    uintptr_t NativeTextureHandle(Graphics::TextureT ptr)
+    {
+        return reinterpret_cast<uintptr_t>(ptr);
+    }
+
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
