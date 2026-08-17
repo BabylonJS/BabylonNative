@@ -33,6 +33,17 @@ namespace Babylon::Graphics
     inline constexpr uint32_t BUILTIN_INSTANCE_DATA_SLOT_COUNT{5};
     inline constexpr uint32_t BUILTIN_INSTANCE_DATA_LAST_LOCATION{INSTANCE_DATA_FIRST_LOCATION - (BUILTIN_INSTANCE_DATA_SLOT_COUNT - 1)};
 
+    /// Name of the uniform the shader compiler declares in any fragment shader that reads
+    /// gl_FragCoord, so FragCoordYFlipTraverser can convert the hardware's top-left-origin value
+    /// into the bottom-left-origin one Babylon.js shaders are written against. Its .x/.y hold the
+    /// width/height of the bound framebuffer, which NativeEngine writes before each draw.
+    ///
+    /// This cannot be bgfx's predefined u_viewRect: that is the view rect, which
+    /// FrameBuffer::SetBgfxViewPortAndScissor narrows to the viewport whenever one is set, whereas
+    /// gl_FragCoord is relative to the whole render target. The name is deliberately outside the
+    /// u_ namespace Babylon.js uses for its own uniforms so it cannot collide with a shader uniform.
+    inline constexpr const char* FRAGCOORD_TARGET_SIZE_UNIFORM_NAME{"bnFragCoordTargetSize"};
+
     struct BgfxShaderInfo
     {
         std::vector<uint8_t> VertexBytes{};
