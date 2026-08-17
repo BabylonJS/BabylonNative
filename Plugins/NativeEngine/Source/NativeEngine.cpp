@@ -3025,10 +3025,10 @@ namespace Babylon
                 {
                     const bgfx::Attrib::Enum attrib = instance.first;
                     // "Real per-vertex slot" means Position..TexCoord15, i.e. < Attrib::Count. The
-                    // built-in instanced attributes (world0-3, splatIndex0-3, instanceColor) are
-                    // assigned synthetic locations at/above INSTANCE_DATA_FIRST_LOCATION - 4, which
-                    // is >= Attrib::Count, so they compare false here and are correctly skipped:
-                    // they already arrive as instance data.
+                    // built-in instanced attributes (world0-3, splatIndex0-3, previousWorld0-3,
+                    // instanceColor) are assigned synthetic locations at or above
+                    // BUILTIN_INSTANCE_DATA_LAST_LOCATION, which is >= Attrib::Count, so they compare
+                    // false here and are correctly skipped: they already arrive as instance data.
                     // The previous TexCoord3 boundary silently dropped generic instanced attributes
                     // landing on TexCoord3..TexCoord15 (e.g. sprite cellInfo -> TexCoord3), leaving
                     // them reading per-vertex garbage even though BuildInstanceDataBuffer had
