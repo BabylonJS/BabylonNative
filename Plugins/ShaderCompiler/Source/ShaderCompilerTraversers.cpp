@@ -594,18 +594,22 @@ namespace Babylon::ShaderCompilerTraversers
                         !strcmp(name, "splatIndex3"));
             }
 
-            // True when the name has no built-in instance mapping and must be assigned a
-            // generic per-instance i_data slot (top TEXCOORD semantics).
-            bool IsGenericInstance(const char* name) const
+            // True when the caller routed this attribute explicitly. NativeEngine::Draw derives the
+            // supplied location from the draw-time packing rank over *every* recorded instanced
+            // attribute, built-in or not, so it already accounts for attributes this shader also
+            // maps by name. It therefore wins over the built-in slot map: on OpenGL/Metal the
+            // built-ins are recorded at their stable, name-sorted locations, which puts them in the
+            // same location range as consumer-declared ones, so a generic attribute sorting after a
+            // built-in (e.g. `zOffset` after `world3`) shifts the packing and only the caller-supplied
+            // locations reflect it. On D3D the built-ins carry synthetic locations at or above
+            // BUILTIN_INSTANCE_DATA_LAST_LOCATION, are never rerouted, and so never reach this map.
+            bool HasCallerSuppliedInstanceLocation(const char* name) const
             {
-                if (m_instancedAttributes == nullptr || m_instancedAttributes->count(name) == 0)
-                {
-                    return false;
-                }
-                return !IsBuiltInInstance(name);
+                return m_instancedAttributes != nullptr && m_instancedAttributes->count(name) != 0;
             }
 
-            // Assign an i_data slot to every built-in per-instance attribute this shader declares.
+            // Assign an i_data slot to every built-in per-instance attribute this shader declares
+            // and the caller did not route explicitly.
             //
             // The slots cannot come from a fixed per-name table because bgfx requires the used
             // i_data slots to form a contiguous run starting at i_data0: the D3D11 input layout
@@ -626,7 +630,7 @@ namespace Babylon::ShaderCompilerTraversers
                 unsigned int slot{};
                 for (const auto& [name, symbol] : m_varyingNameToSymbol)
                 {
-                    if (IsInstance(name.c_str()) && !IsGenericInstance(name.c_str()))
+                    if (IsBuiltInInstance(name.c_str()) && !HasCallerSuppliedInstanceLocation(name.c_str()))
                     {
                         ++slot;
                     }
@@ -639,7 +643,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                 for (const auto& [name, symbol] : m_varyingNameToSymbol)
                 {
-                    if (IsInstance(name.c_str()) && !IsGenericInstance(name.c_str()))
+                    if (IsBuiltInInstance(name.c_str()) && !HasCallerSuppliedInstanceLocation(name.c_str()))
                     {
                         m_builtInInstanceSlots[name] = --slot;
                     }
@@ -760,11 +764,12 @@ namespace Babylon::ShaderCompilerTraversers
                 const unsigned int stableLocation = GetStableLocation(name);
                 if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
-                if (IsGenericInstance(name))
+                if (HasCallerSuppliedInstanceLocation(name))
                 {
-                    // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
-                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // Explicitly routed instanced attribute: use the caller-supplied per-instance
+                    // location (INSTANCE_DATA_FIRST_LOCATION == i_data0 == TEXCOORD31, descending).
+                    // It is derived from the packing rank over every recorded instanced attribute,
+                    // so it stays correct when built-in and consumer-declared ones are mixed.
                     const unsigned int location = m_instancedAttributes->at(name);
                     const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
@@ -838,11 +843,12 @@ namespace Babylon::ShaderCompilerTraversers
                 const unsigned int stableLocation = GetStableLocation(name);
                 if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
-                if (IsGenericInstance(name))
+                if (HasCallerSuppliedInstanceLocation(name))
                 {
-                    // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
-                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // Explicitly routed instanced attribute: use the caller-supplied per-instance
+                    // location (INSTANCE_DATA_FIRST_LOCATION == i_data0 == TEXCOORD31, descending).
+                    // It is derived from the packing rank over every recorded instanced attribute,
+                    // so it stays correct when built-in and consumer-declared ones are mixed.
                     const unsigned int location = m_instancedAttributes->at(name);
                     const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
@@ -885,13 +891,14 @@ namespace Babylon::ShaderCompilerTraversers
         private:
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
-                // Consumer-declared instanced attributes with no built-in mapping (e.g. the
-                // fluid renderer's `position` or an instanced `color`) are routed to the bgfx
-                // per-instance i_data location supplied by the caller. That location is derived
-                // from the draw-time instance packing order (INSTANCE_DATA_FIRST_LOCATION == i_data0
+                // Instanced attributes the caller routed explicitly (e.g. the fluid renderer's
+                // `position` or an instanced `color`) are bound to the bgfx per-instance i_data
+                // location it supplied. That location is derived from the draw-time packing rank
+                // over every recorded instanced attribute (INSTANCE_DATA_FIRST_LOCATION == i_data0
                 // == TEXCOORD31, descending), so per-instance data reaches the shader instead of the
-                // per-vertex input.
-                if (IsGenericInstance(name))
+                // per-vertex input, and the mapping stays correct when built-in and consumer-declared
+                // instanced attributes are mixed.
+                if (HasCallerSuppliedInstanceLocation(name))
                 {
                     const unsigned int location = m_instancedAttributes->at(name);
                     const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
