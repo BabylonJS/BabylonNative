@@ -51,10 +51,10 @@
     // snippet server it also notes that assets/fonts arrive over the network, so
     // async load timing is one possible cause -- but it is only one of several,
     // and it is cheap to rule out: a timing flake varies run to run, while a real
-    // regression reproduces with a byte-identical diff. Say that explicitly. The
-    // previous wording called such diffs "often a transient flake", which led to
-    // a genuine, perfectly reproducible motion-blur regression being waved off
-    // for two weeks of nightlies.
+    // regression reproduces with an identical pixel-difference count. Say that
+    // explicitly. The previous wording called such diffs "often a transient flake",
+    // which led to a genuine, perfectly reproducible motion-blur regression being
+    // waved off for two weeks of nightlies.
     function logFailureDiagnostics(test) {
         const outDir = TestUtils.getOutputDirectory();
         if (test.referenceImage) {
