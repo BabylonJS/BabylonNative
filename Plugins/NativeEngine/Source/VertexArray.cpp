@@ -51,9 +51,12 @@ namespace Babylon
             }
 
             // Instance data is packed into the top i_data slots, of which bgfx has
-            // MAX_INSTANCE_DATA_SLOT_COUNT. The check runs before the insert, so
-            // `size() >= max` is the entry that would overflow.
-            if (m_vertexBufferInstances.size() >= Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT)
+            // MAX_INSTANCE_DATA_SLOT_COUNT. Only a new attribute can overflow: re-recording
+            // one that is already present overwrites its entry and needs no extra slot.
+            // The check runs before the insert, so `size() >= max` is the entry that would
+            // overflow.
+            if (m_vertexBufferInstances.find(attrib) == m_vertexBufferInstances.end() &&
+                m_vertexBufferInstances.size() >= Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT)
             {
                 throw std::runtime_error{"Number of vertex buffer instances greater than " + std::to_string(Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT) + " is not supported"};
             }

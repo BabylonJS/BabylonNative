@@ -27,7 +27,7 @@ namespace Babylon::Graphics
     /// the number of 16-byte per-instance slots (i_data0..i_data15) bgfx can bind in one draw.
     inline constexpr uint32_t MAX_INSTANCE_DATA_SLOT_COUNT{16};
 
-
+    /// The built-in per-instance attributes occupy the top BUILTIN_INSTANCE_DATA_SLOT_COUNT i_data
     /// slots. Which slot each one gets is decided per shader, from the set the shader actually
     /// declares (see ShaderCompilerTraversers.cpp), because bgfx requires the used i_data slots to
     /// be a contiguous run starting at i_data0. The count is the size of the largest possible set:
