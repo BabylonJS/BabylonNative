@@ -62,6 +62,10 @@ namespace Babylon::Graphics
         }
         return false;
     }
+    /// Uniform declared in fragment shaders that read gl_FragCoord, holding the bound
+    /// framebuffer's width/height in .x/.y. Deliberately outside the u_ namespace Babylon.js
+    /// uses so it cannot collide with a shader uniform.
+    inline constexpr const char* FRAGCOORD_TARGET_SIZE_UNIFORM_NAME{"bnFragCoordTargetSize"};
 
     struct BgfxShaderInfo
     {

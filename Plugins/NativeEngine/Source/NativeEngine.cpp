@@ -3066,6 +3066,20 @@ namespace Babylon
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
+        // Resolves the gl_FragCoord Y flip injected by ShaderCompilerTraversers::FlipFragCoordY.
+        // Must be the framebuffer's height, not the bgfx view rect's, which
+        // SetBgfxViewPortAndScissor narrows to the viewport when one is set.
+        if (const UniformInfo* fragCoordTargetSize = m_currentProgram->FragCoordTargetSizeUniform())
+        {
+            const Graphics::FrameBuffer& frameBuffer = GetBoundFrameBuffer();
+            const float targetSize[4]{
+                static_cast<float>(frameBuffer.Width()),
+                static_cast<float>(frameBuffer.Height()),
+                0.0f,
+                0.0f};
+            encoder->setUniform(fragCoordTargetSize->Handle, targetSize, 1);
+        }
+
         // Generic divisor-driven attributes are per-vertex inputs in the base shader. Recompile a
         // variant that routes each one to the exact i_data slot used by the instance buffer.
         // Built-ins keep the compiler-assigned base slots carried by Program.
