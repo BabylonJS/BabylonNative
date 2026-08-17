@@ -8,7 +8,7 @@
     const testHeight = 400;
     const generateReferences = !!opts.generateReferences;
     const breakOnFail = !!opts.breakOnFail;
-    const keepGoing = !!opts.keepGoing;
+    const stopOnFirstFailure = !!opts.stopOnFirstFailure;
     const listTests = !!opts.listTests;
     const includeExcluded = !!opts.includeExcluded;
     const testFilters = Array.isArray(opts.testFilters) ? opts.testFilters.map(s => String(s).toLowerCase()) : [];
@@ -47,13 +47,14 @@
     }
 
     // Emitted after a pixel-comparison failure to make triage faster. Prints the
-    // rendered/diff PNG paths and, for scenes fetched from the Babylon snippet
-    // server, a transient-flake hint: those tests pull the GUI library, textures
-    // and web fonts over the network/CDN, so their output depends on async
-    // asset/font-load timing. A pixel diff there is frequently a transient flake
-    // rather than a real regression -- the 'Parse GUI json with unicode' snippet
-    // test is the canonical example (its GUI text renders with the fallback font
-    // until 'droidsans' finishes loading, shifting thousands of glyph pixels).
+    // rendered/diff PNG paths plus a re-run command. For scenes fetched from the
+    // snippet server it also notes that assets/fonts arrive over the network, so
+    // async load timing is one possible cause -- but it is only one of several,
+    // and it is cheap to rule out: a timing flake varies run to run, while a real
+    // regression reproduces with a byte-identical diff. Say that explicitly. The
+    // previous wording called such diffs "often a transient flake", which led to
+    // a genuine, perfectly reproducible motion-blur regression being waved off
+    // for two weeks of nightlies.
     function logFailureDiagnostics(test) {
         const outDir = TestUtils.getOutputDirectory();
         if (test.referenceImage) {
@@ -61,10 +62,10 @@
             console.log(`  Diff overlay:    ${outDir}/Errors/${test.referenceImage}`);
         }
         if (test.playgroundId) {
-            console.log(`  Note: this test loads playgroundId ${test.playgroundId} from the snippet server and pulls GUI/assets/fonts over the network, so a pixel diff is often a transient async asset/font-load timing flake.`);
-            console.log("  Re-run in isolation to confirm a real regression:");
-            console.log(`    Playground --headless --once --test "${test.title || ""}" app:///Scripts/validation_native.js`);
+            console.log(`  Note: this test loads playgroundId ${test.playgroundId} from the snippet server and pulls GUI/assets/fonts over the network, so async asset/font-load timing is one possible cause of a pixel diff.`);
         }
+        console.log("  Re-run in isolation; an identical pixel count on repeat runs means a real regression, not a timing flake:");
+        console.log(`    Playground --headless --once --test "${test.title || ""}" app:///Scripts/validation_native.js`);
     }
 
     // Per-run counters surfaced as a final summary line on exit.
@@ -724,7 +725,7 @@
                         failedTitles.push(currentTitle);
                         // failTest() already triggered the debugger before
                         // reaching this callback; no second `debugger` here.
-                        if (!keepGoing) {
+                        if (stopOnFirstFailure) {
                             logRunSummary();
                             TestUtils.exit(-1);
                             return;
