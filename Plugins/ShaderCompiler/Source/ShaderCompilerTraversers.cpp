@@ -406,6 +406,36 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                     };
 
+                    // Restores both the shape and the basic type that the consuming code expects.
+                    // addShapeConversion only reconciles vector size: given a vec4 source and an int
+                    // target it produces an EOpConstructInt aggregate whose operand is still a float,
+                    // so the AST claims "int" while holding a float. glslang then emits SPIR-V in which
+                    // the integer operation reads a float, and SPIRV-Cross renders it verbatim as
+                    // `int i = -samples.x;`, which ESSL rejects. Shaping to float first and then asking
+                    // glslang for a real conversion node yields the expected `int(...)`.
+                    auto restoreOldType = [this](TIntermTyped* node, const TType& oldType) -> TIntermTyped* {
+                        TPublicType shapeType{};
+                        shapeType.qualifier = oldType.getQualifier();
+                        shapeType.basicType = EbtFloat;
+                        shapeType.setVector(oldType.getVectorSize());
+                        shapeType.arraySizes = nullptr;
+
+                        TType floatShape{shapeType};
+                        auto* converted = m_intermediate->addShapeConversion(floatShape, node);
+
+                        if (oldType.getBasicType() != EbtFloat)
+                        {
+                            auto* retyped = m_intermediate->addConversion(oldType.getBasicType(), converted);
+                            if (retyped == nullptr)
+                            {
+                                throw std::runtime_error{"Cannot replace symbol: unsupported uniform basic type conversion"};
+                            }
+                            converted = retyped;
+                        }
+
+                        return converted;
+                    };
+
                     // Because we modified the original symbol, we don't need to do anything to linker objects.
                     // The only further work we need to do is to handle reshaping.
                     if (!IsLinkerObject(this->path))
@@ -438,7 +468,7 @@ namespace Babylon::ShaderCompilerTraversers
                                 auto* binType = newType.clone();
                                 binType->clearArraySizes();
                                 binary->setType(*binType);
-                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, binary);
+                                auto shapeConversion = restoreOldType(binary, *oldType);
 
                                 assert(this->path.size() > 1);
                                 auto* grandparent = this->path[this->path.size() - 2];
@@ -451,7 +481,7 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                         else
                         {
-                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
+                            auto shapeConversion = restoreOldType(symbol, *oldType);
                             injectShapeConversion(symbol, parent, shapeConversion);
                         }
                     }
