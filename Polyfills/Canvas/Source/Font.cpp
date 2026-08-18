@@ -87,9 +87,8 @@ namespace Babylon::Polyfills::Internal
         else
         {
             throw Napi::TypeError::New(env, std::string{methodName} + " expects the font data to be an ArrayBuffer or "
-                "an ArrayBuffer view, but got " + DescribeValue(value) + ". If the font was fetched with "
-                "Tools.LoadFileAsync, request it as binary -- the signature is LoadFileAsync(url, useArrayBuffer), "
-                "and a text response decodes the font to an unusable string.");
+                "an ArrayBuffer view, but got " + DescribeValue(value) + ". A font fetched as text rather than "
+                "binary decodes to an unusable string and arrives this way.");
         }
 
         if (byteLength == 0)

@@ -64,9 +64,14 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
     {
+        LoadTTFCore(info, "Canvas.loadTTF");
+    }
+
+    void NativeCanvas::LoadTTFCore(const Napi::CallbackInfo& info, const char* methodName)
+    {
         if (info.Length() < 1 || !info[0].IsString())
         {
-            throw Napi::TypeError::New(info.Env(), "Canvas.loadTTF expects the font name as a string in argument 1.");
+            throw Napi::TypeError::New(info.Env(), std::string{methodName} + " expects the font name as a string in argument 1.");
         }
 
         // don't allow same font to be loaded more than once
@@ -74,14 +79,14 @@ namespace Babylon::Polyfills::Internal
         auto fontName = info[0].As<Napi::String>().Utf8Value();
         if (fontsInfos.find(fontName) == fontsInfos.end())
         {
-            fontsInfos[fontName] = GetFontDataArgument(info, 1, "Canvas.loadTTF");
+            fontsInfos[fontName] = GetFontDataArgument(info, 1, methodName);
         }
     }
 
     // @deprecated: LoadTTFAsync is always synchronous, use LoadTTF instead
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
-        LoadTTF(info);
+        LoadTTFCore(info, "Canvas.loadTTFAsync");
 
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
         deferred.Resolve(info.Env().Undefined());
