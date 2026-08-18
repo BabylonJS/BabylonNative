@@ -12,6 +12,7 @@
 #include <thread>
 #include <cassert>
 #include <memory>
+#include <map>
 #include <vector>
 
 // Reference info for preventing GC. Defined in the header so that both
@@ -32,6 +33,22 @@ struct napi_env__ {
   // Handle scope storage
   std::vector<std::unique_ptr<JSValue>> handle_scope_stack;
   size_t current_scope_start = 0;
+
+  // One record per open escapable scope, keyed by the opaque token handed to the
+  // caller. The token is a monotonic counter rather than a position in
+  // handle_scope_stack: two scopes opened with no handle allocated between them
+  // occupy the same position, so a position-derived token cannot tell them apart.
+  // The escaped handle is held here rather than on handle_scope_stack because
+  // inserting into the middle of the stack would shift every entry above it and
+  // invalidate the recorded start of any nested scope that is still open.
+  // napi_close_escapable_handle_scope pushes it onto the stack once the scope's own
+  // handles are gone, at which point it lands in the parent scope and is freed with it.
+  struct EscapableScope {
+    size_t scope_start;
+    std::unique_ptr<JSValue> escaped;
+  };
+  std::map<size_t, EscapableScope> escapable_scopes;
+  size_t next_escapable_scope_token = 0;
 
   // Tracks every RefInfo* created by napi_create_reference so that
   // pending strong references can be released during Detach. Without

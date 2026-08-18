@@ -7,6 +7,7 @@
 #include <list>
 #include <thread>
 #include <cassert>
+#include <map>
 
 struct napi_env__ {
   JSGlobalContextRef context{};
@@ -19,6 +20,14 @@ struct napi_env__ {
   JSValueRef function_info_symbol{};
   JSValueRef reference_info_symbol{};
   JSValueRef wrapper_info_symbol{};
+
+  // Escapable scope bookkeeping: token -> whether that scope has escaped. Values
+  // are rooted by the engine rather than by a scope here, so this exists only to
+  // honour the one-escape-per-scope rule and to reject tokens that are not open.
+  // The token is a monotonic counter, never an index into anything, so two scopes
+  // can never share one.
+  size_t next_escapable_scope_token{0};
+  std::map<size_t, bool> open_escapable_scopes{};
 
   const std::thread::id thread_id{std::this_thread::get_id()};
 
