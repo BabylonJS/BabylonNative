@@ -1,5 +1,6 @@
 #include "VertexBuffer.h"
 #include "Babylon/Graphics/DeviceContext.h"
+#include <algorithm>
 #include <cassert>
 
 namespace Babylon
@@ -124,7 +125,7 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount)
+    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount, uint32_t minSlotCount)
     {
         // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
         static constexpr uint16_t kSlotSize = 16;
@@ -145,15 +146,25 @@ namespace Babylon
             return;
         }
 
-        const uint16_t instanceStride = static_cast<uint16_t>(instances.size() * kSlotSize);
+        // The buffer must cover every i_data slot the vertex shader reads, not just the ones the
+        // draw supplied data for: bgfx derives the number of instance-data inputs it declares from
+        // this buffer's stride, and D3D11's CreateInputLayout fails outright when the vertex
+        // shader's input signature reads a semantic the layout does not declare. Babylon.js can
+        // legitimately draw with fewer: _renderWithThinInstances creates the previousWorld buffer
+        // only *after* the first draw, so that draw binds world0-3 while the effect already
+        // declares previousWorld0-3. The padded slots stay zeroed, matching what WebGL feeds a
+        // vertex attribute whose array is disabled.
+        const size_t slotCount = std::max(static_cast<size_t>(minSlotCount), instances.size());
+        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
 
         // Create instance datas. Instance Data Buffer is transient.
         bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
 
         uint8_t* data{instanceDataBuffer.data};
 
-        // Zero the buffer so any unused bytes within a 16-byte slot (when ElementSize < 16) read as
-        // zero in the shader instead of leaking transient ring-buffer garbage.
+        // Zero the buffer so any unused bytes within a 16-byte slot (when ElementSize < 16), and any
+        // slot the draw supplied no data for at all, read as zero in the shader instead of leaking
+        // transient ring-buffer garbage.
         std::memset(data, 0, static_cast<size_t>(instanceStride) * instanceCount);
 
         // Reverse because bgfx maps instance data in reverse attrib order:

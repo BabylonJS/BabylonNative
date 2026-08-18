@@ -2553,6 +2553,29 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
+    // The number of contiguous i_data slots the current program's vertex shader reads for its
+    // built-in per-instance attributes. ShaderCompilerTraversers assigns those attributes a dense
+    // run of slots starting at i_data0, one per declared attribute, so the count of built-in names
+    // in the program's attribute table is that run's length. The instance data buffer must cover it
+    // even when the draw supplied fewer attributes, or D3D11 rejects the input layout.
+    uint32_t NativeEngine::GetBuiltInInstanceDataSlotCount() const
+    {
+        if (m_currentProgram == nullptr)
+        {
+            return 0;
+        }
+
+        uint32_t count{};
+        for (const auto& [name, location] : m_currentProgram->VertexAttributeLocations())
+        {
+            if (Babylon::Graphics::IsBuiltInInstanceAttributeName(name))
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
     // Note: For legacy reasons JS might call this function for instance drawing.
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
@@ -2565,7 +2588,7 @@ namespace Babylon
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max());
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), 0, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }
@@ -2581,7 +2604,7 @@ namespace Babylon
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }
@@ -2597,7 +2620,7 @@ namespace Babylon
         bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, 0, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }
@@ -2612,7 +2635,7 @@ namespace Babylon
         bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }

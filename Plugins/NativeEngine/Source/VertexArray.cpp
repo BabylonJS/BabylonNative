@@ -89,14 +89,14 @@ namespace Babylon
         }
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, uint32_t minInstanceDataSlotCount)
     {
         // Check if instancing is supported.
         const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
         if (!m_vertexBufferInstances.empty() && instancingSupported)
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
-            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount);
+            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, minInstanceDataSlotCount);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 

@@ -579,19 +579,7 @@ namespace Babylon::ShaderCompilerTraversers
             // effect needs motion vectors (object based motion blur, prepass velocity).
             static bool IsBuiltInInstance(const char* name)
             {
-                return (!strcmp(name, "world0") ||
-                        !strcmp(name, "world1") ||
-                        !strcmp(name, "world2") ||
-                        !strcmp(name, "world3") ||
-                        !strcmp(name, "previousWorld0") ||
-                        !strcmp(name, "previousWorld1") ||
-                        !strcmp(name, "previousWorld2") ||
-                        !strcmp(name, "previousWorld3") ||
-                        !strcmp(name, "instanceColor") ||
-                        !strcmp(name, "splatIndex0") ||
-                        !strcmp(name, "splatIndex1") ||
-                        !strcmp(name, "splatIndex2") ||
-                        !strcmp(name, "splatIndex3"));
+                return Babylon::Graphics::IsBuiltInInstanceAttributeName(name);
             }
 
             // True when the caller routed this attribute explicitly. NativeEngine::Draw derives the

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <map>
+#include <string_view>
 #include <vector>
 
 namespace Babylon::Graphics
@@ -38,6 +40,38 @@ namespace Babylon::Graphics
     /// -- must stay >= bgfx::Attrib::Count. Keep in sync when adding a built-in per-instance attribute.
     inline constexpr uint32_t BUILTIN_INSTANCE_DATA_SLOT_COUNT{9};
     inline constexpr uint32_t BUILTIN_INSTANCE_DATA_LAST_LOCATION{INSTANCE_DATA_FIRST_LOCATION - (BUILTIN_INSTANCE_DATA_SLOT_COUNT - 1)};
+
+    /// The names Babylon.js uses for those built-in per-instance attributes. The shader compiler
+    /// recognizes them by name (ShaderCompilerTraversers.cpp) and NativeEngine counts how many of
+    /// them a program declares to size the instance data buffer, so both must read the same table.
+    inline constexpr std::array<std::string_view, 13> BUILTIN_INSTANCE_ATTRIBUTE_NAMES{
+        "world0",
+        "world1",
+        "world2",
+        "world3",
+        "previousWorld0",
+        "previousWorld1",
+        "previousWorld2",
+        "previousWorld3",
+        "instanceColor",
+        "splatIndex0",
+        "splatIndex1",
+        "splatIndex2",
+        "splatIndex3",
+    };
+
+    /// True when `name` is one of BUILTIN_INSTANCE_ATTRIBUTE_NAMES.
+    inline constexpr bool IsBuiltInInstanceAttributeName(std::string_view name)
+    {
+        for (const std::string_view builtIn : BUILTIN_INSTANCE_ATTRIBUTE_NAMES)
+        {
+            if (builtIn == name)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
     struct BgfxShaderInfo
     {
