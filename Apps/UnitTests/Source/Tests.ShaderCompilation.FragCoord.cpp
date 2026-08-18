@@ -86,7 +86,7 @@ namespace
 
                 globalThis.startup = function (outputNativeTexture, width, height) {
                     var engine = new BABYLON.NativeEngine();
-                    delete engine.getCaps().parallelShaderCompile;
+                    engine.getCaps().parallelShaderCompile = null;
                     var scene = new BABYLON.Scene(engine);
                     scene.autoClear = true;
                     scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
