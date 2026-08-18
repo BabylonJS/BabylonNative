@@ -28504,6 +28504,55 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([]);
   });
 
+  it("keeps a gradient assigned to fillStyle alive across a collection", function () {
+    var ctx = createContext();
+    var global = Function("return this")();
+
+    // Create and assign the gradient inside a scope that keeps no reference to it, so
+    // the only thing left pointing at it is whatever fillStyle stored. CanvasGradient is
+    // an ObjectWrap, so if the style does not root the JavaScript wrapper the finalizer
+    // deletes the native gradient and the next fill dereferences freed memory.
+    (function () {
+      var gradient = ctx.createLinearGradient(0, 0, 64, 0);
+      gradient.addColorStop(0, "red");
+      gradient.addColorStop(1, "blue");
+      gradient.tag = "kept";
+      ctx.fillStyle = gradient;
+    })();
+
+    // Not every engine the polyfill runs on exposes a collection hook; the assertions
+    // below are worth making either way.
+    if (typeof global.CollectGarbage === "function") {
+      global.CollectGarbage();
+    }
+
+    // The getter has to hand back the object that was assigned. The expando proves it is
+    // that same JavaScript object rather than a fresh wrapper.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle.tag).to.equal("kept");
+    // ...and the native gradient behind it has to still be there.
+    ctx.fillStyle.addColorStop(0.5, "green");
+    ctx.fillRect(0, 0, 64, 64);
+  });
+  it("keeps a gradient assigned to strokeStyle alive across a collection", function () {
+    var ctx = createContext();
+    var global = Function("return this")();
+
+    (function () {
+      var gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0, "red");
+      gradient.addColorStop(1, "blue");
+      gradient.tag = "kept";
+      ctx.strokeStyle = gradient;
+    })();
+
+    if (typeof global.CollectGarbage === "function") {
+      global.CollectGarbage();
+    }
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle.tag).to.equal("kept");
+    ctx.strokeStyle.addColorStop(0.5, "green");
+    ctx.strokeRect(0, 0, 64, 64);
+  });
   it("keeps the previous dash list when the argument is not a list", function () {
     // A present-but-rejected argument skipped the parse loop and then committed the
     // empty temporary, so setLineDash("x") cleared the list where setLineDash([-1])

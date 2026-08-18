@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 #include <cstdint>
+#include <memory>
 
 struct NVGcontext;
 
@@ -106,8 +107,15 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<NVGcontext*> m_nvg;
 
         Font m_font;
-        std::variant<std::string, CanvasGradient*> m_fillStyle{};
-        std::variant<std::string, CanvasGradient*> m_strokeStyle{};
+        // A gradient style holds the assigned JavaScript object, not a bare CanvasGradient*.
+        // CanvasGradient is an ObjectWrap, so its native instance is deleted by the wrapper's
+        // finalizer; `ctx.fillStyle = ctx.createLinearGradient(...)` leaves no other reference,
+        // and the pointer dangles as soon as the collector runs. shared_ptr rather than a bare
+        // Napi::ObjectReference because SavedStyle copies these on save()/restore() and a
+        // reference is move-only -- the copies share one strong reference to the same object.
+        using GradientStyle = std::shared_ptr<Napi::ObjectReference>;
+        std::variant<std::string, GradientStyle> m_fillStyle{};
+        std::variant<std::string, GradientStyle> m_strokeStyle{};
         std::string m_lineCap{};  // 'butt', 'round', 'square'
         std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
 
@@ -134,8 +142,8 @@ namespace Babylon::Polyfills::Internal
 
         struct SavedStyle
         {
-            std::variant<std::string, CanvasGradient*> fillStyle;
-            std::variant<std::string, CanvasGradient*> strokeStyle;
+            std::variant<std::string, GradientStyle> fillStyle;
+            std::variant<std::string, GradientStyle> strokeStyle;
 
             // The rest of the wrapper-side drawing state. nvgSave/nvgRestore rewinds
             // nanovg's own copy of the attributes it knows about, but never these C++

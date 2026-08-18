@@ -167,9 +167,9 @@ namespace Babylon::Polyfills::Internal
             const auto color = str.empty() ? nvgRGBA(255, 255, 255, 255) : StringToColor(info.Env(), str);
             nvgFillColor(*m_nvg, color);
         }
-        else if (std::holds_alternative<CanvasGradient*>(m_fillStyle))
+        else if (std::holds_alternative<GradientStyle>(m_fillStyle))
         {
-            CanvasGradient* gradient = std::get<CanvasGradient*>(m_fillStyle);
+            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_fillStyle)->Value());
             nvgFillPaint(*m_nvg, gradient->Paint());
         }
         else
@@ -189,9 +189,9 @@ namespace Babylon::Polyfills::Internal
             const auto color = str.empty() ? nvgRGBA(0, 0, 0, 255) : StringToColor(info.Env(), str);
             nvgStrokeColor(*m_nvg, color);
         }
-        else if (std::holds_alternative<CanvasGradient*>(m_strokeStyle))
+        else if (std::holds_alternative<GradientStyle>(m_strokeStyle))
         {
-            CanvasGradient* gradient = std::get<CanvasGradient*>(m_strokeStyle);
+            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_strokeStyle)->Value());
             nvgStrokePaint(*m_nvg, gradient->Paint());
         }
         else
@@ -242,7 +242,9 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
-            return Napi::External<CanvasGradient>::New(Env(), std::get<CanvasGradient*>(m_fillStyle));
+            // Return the gradient object that was assigned, as the spec requires, so that
+            // `otherCtx.fillStyle = ctx.fillStyle` round-trips.
+            return std::get<GradientStyle>(m_fillStyle)->Value();
         }
     }
 
@@ -260,7 +262,7 @@ namespace Babylon::Polyfills::Internal
         }
         else if (CanvasGradient::IsInstance(info.Env(), value))
         {
-            m_fillStyle = CanvasGradient::Unwrap(value.As<Napi::Object>());
+            m_fillStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
         }
         // Anything else leaves fillStyle unchanged, as the spec requires.
     }
@@ -273,7 +275,7 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
-            return Napi::External<CanvasGradient>::New(Env(), std::get<CanvasGradient*>(m_strokeStyle));
+            return std::get<GradientStyle>(m_strokeStyle)->Value();
         }
     }
 
@@ -290,7 +292,7 @@ namespace Babylon::Polyfills::Internal
         }
         else if (CanvasGradient::IsInstance(info.Env(), value))
         {
-            m_strokeStyle = CanvasGradient::Unwrap(value.As<Napi::Object>());
+            m_strokeStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
         }
         // Per spec, assigning anything that is neither a color string nor a
         // gradient/pattern leaves strokeStyle unchanged.
