@@ -16,6 +16,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -276,10 +277,20 @@ namespace
     }
 }
 
-// gl_FragCoord.y must follow the GL convention of increasing upwards, so the top
-// row of the image (row 0 in memory) has to hold the largest value. Without the
-// gl_FragCoord correction the ramp comes out upside down on D3D/Metal/Vulkan.
-TEST(ShaderCompilation, FragCoordYIncreasesUpwards)
+// gl_FragCoord.y must follow the GL convention of increasing towards +Y in clip
+// space. The quad maps uv.y = 0 to clip y = -1 and uv.y = 1 to clip y = +1, so
+// the interpolated vUV.y is a ground-truth ramp running in that same direction
+// and normalized gl_FragCoord.y has to agree with it everywhere. Without the
+// correction gl_FragCoord.y runs the other way on D3D/Metal/Vulkan and the two
+// ramps become mirror images.
+//
+// The comparison is made between two channels of a single render rather than
+// against absolute row indices on purpose: Helpers::ReadPixels is a plain
+// glReadPixels on OpenGL, which returns the bottom scanline first, while the
+// D3D11 path returns the top scanline first. An absolute check would therefore
+// encode the readback convention of one backend rather than the shading
+// language rule under test.
+TEST(ShaderCompilation, FragCoordYMatchesInterpolatedUV)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
     GTEST_SKIP();
@@ -290,36 +301,49 @@ TEST(ShaderCompilation, FragCoordYIncreasesUpwards)
     const std::string vertexShader =
         "precision highp float;\n"
         "attribute vec3 position;\n"
-        "void main(void) { gl_Position = vec4(position, 1.0); }\n";
+        "attribute vec2 uv;\n"
+        "varying vec2 vUV;\n"
+        "void main(void) { vUV = uv; gl_Position = vec4(position, 1.0); }\n";
 
     const std::string fragmentShader =
         "precision highp float;\n"
         "uniform vec2 targetSize;\n"
+        "varying vec2 vUV;\n"
         "void main(void) {\n"
-        "    gl_FragColor = vec4(gl_FragCoord.y / targetSize.y, 0.0, 0.0, 1.0);\n"
+        "    gl_FragColor = vec4(gl_FragCoord.y / targetSize.y, vUV.y, 0.0, 1.0);\n"
         "}\n";
 
     auto pixels = RenderFullScreenQuad(WIDTH, HEIGHT, vertexShader, fragmentShader, false);
     ASSERT_EQ(pixels.size(), static_cast<size_t>(WIDTH) * HEIGHT * 4);
 
-    const auto red = [&pixels](uint32_t row) {
-        return static_cast<int>(pixels[static_cast<size_t>(row) * WIDTH * 4]);
+    const auto texel = [&pixels](uint32_t row) {
+        const size_t offset = static_cast<size_t>(row) * WIDTH * 4;
+        return std::make_pair(static_cast<int>(pixels[offset]), static_cast<int>(pixels[offset + 1]));
     };
 
-    std::cout << "row 0 red=" << red(0)
-              << ", row " << (HEIGHT / 2) << " red=" << red(HEIGHT / 2)
-              << ", row " << (HEIGHT - 1) << " red=" << red(HEIGHT - 1) << std::endl;
+    const auto first = texel(0);
+    const auto middle = texel(HEIGHT / 2);
+    const auto last = texel(HEIGHT - 1);
+    std::cout << "row 0 fragCoord=" << first.first << " uv=" << first.second
+              << ", row " << (HEIGHT / 2) << " fragCoord=" << middle.first << " uv=" << middle.second
+              << ", row " << (HEIGHT - 1) << " fragCoord=" << last.first << " uv=" << last.second
+              << std::endl;
 
-    // The ramp must run bright at the top to dark at the bottom.
-    EXPECT_GT(red(0), 200) << "top row should hold the largest gl_FragCoord.y";
-    EXPECT_LT(red(HEIGHT - 1), 55) << "bottom row should hold the smallest gl_FragCoord.y";
+    // Guard against the whole comparison passing vacuously: the reference ramp
+    // has to actually sweep the range rather than sitting at a constant.
+    ASSERT_GT(std::abs(first.second - last.second), 200)
+        << "vUV.y reference ramp did not vary across the target";
 
-    // Monotonicity is checked instead of exact values so the test stays valid
-    // under any monotonic transfer function the backend may apply.
-    for (uint32_t row = 1; row < HEIGHT; ++row)
+    // Both channels are produced by the same fragment invocation, so they must
+    // agree row by row no matter which end of the image the readback starts at.
+    // The tolerance absorbs interpolation and 8-bit quantization only; a flipped
+    // gl_FragCoord.y misses by the full range of the ramp.
+    for (uint32_t row = 0; row < HEIGHT; ++row)
     {
-        ASSERT_LE(red(row), red(row - 1))
-            << "gl_FragCoord.y ramp is not monotonically decreasing at row " << row;
+        const auto values = texel(row);
+        ASSERT_LE(std::abs(values.first - values.second), 6)
+            << "gl_FragCoord.y disagrees with the interpolated vUV.y at row " << row
+            << " (gl_FragCoord=" << values.first << ", vUV=" << values.second << ")";
     }
 #endif
 }
