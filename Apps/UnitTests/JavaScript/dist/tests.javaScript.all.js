@@ -28663,6 +28663,32 @@ describe("Canvas2D", function () {
       ctx.letterSpacing = "".concat("9".repeat(400), "px");
     }).to.not.throw();
   });
+
+  it("rejects a createImageData source whose dimensions are not valid extents", function () {
+    var ctx = createContext();
+    // The ImageData overload is duck-typed, so these never went through WebIDL's
+    // unsigned long conversion. A negative width used to wrap to 4294967295 and ask
+    // for a ~17 GB allocation instead of being rejected.
+    var bad = [
+    { width: -1, height: 1 },
+    { width: 1, height: -1 },
+    { width: 1.5, height: 1 },
+    { width: 5e9, height: 1 },
+    { width: Infinity, height: 1 }];
+
+    bad.forEach(function (source) {
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+        ctx.createImageData(source);
+      }, JSON.stringify(source)).to.throw();
+    });
+  });
+
+  it("creates image data from a valid source object", function () {
+    var ctx = createContext();
+    var data = ctx.createImageData({ width: 4, height: 3 });
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(data.width).to.equal(4);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(data.height).to.equal(3);
+  });
 });
 
 function createSceneAndWait(callback, done) {

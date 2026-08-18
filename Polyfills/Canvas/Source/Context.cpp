@@ -43,6 +43,20 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONTEXT_CONSTRUCTOR_NAME = "Context";
 
+    namespace
+    {
+        // True only for a finite, non-negative integer that fits in a uint32_t. Used where a
+        // dimension arrives from a duck-typed object and so has not been through WebIDL's
+        // unsigned long conversion; Uint32Value() would silently wrap -1 into 4294967295.
+        bool IsValidExtent(double value)
+        {
+            return std::isfinite(value) &&
+                value >= 0.0 &&
+                value <= static_cast<double>(std::numeric_limits<uint32_t>::max()) &&
+                value == std::trunc(value);
+        }
+    }
+
     void Context::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
@@ -1367,8 +1381,20 @@ namespace Babylon::Polyfills::Internal
                 throw Napi::TypeError::New(info.Env(), "Context2D.createImageData: argument is not an ImageData");
             }
 
-            width = w.As<Napi::Number>().Uint32Value();
-            height = h.As<Napi::Number>().Uint32Value();
+            // This overload is duck-typed rather than restricted to a real ImageData, so the
+            // dimensions have not been through WebIDL's unsigned long conversion. Uint32Value()
+            // would wrap a negative width to 4294967295, which clears the overflow check below
+            // on 64-bit and turns an invalid source into a ~17 GB allocation. The drawImage and
+            // putImageData extents guard against the same wrap.
+            const auto wNum = w.As<Napi::Number>().DoubleValue();
+            const auto hNum = h.As<Napi::Number>().DoubleValue();
+            if (!IsValidExtent(wNum) || !IsValidExtent(hNum))
+            {
+                throw Napi::RangeError::New(info.Env(), "Context2D.createImageData: source width and height are not valid extents");
+            }
+
+            width = static_cast<uint32_t>(wNum);
+            height = static_cast<uint32_t>(hNum);
         }
         else
         {
