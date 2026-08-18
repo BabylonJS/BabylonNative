@@ -273,10 +273,69 @@ describe("Canvas2D", function () {
     expect(ctx.getLineDash()).to.deep.equal([]);
   });
 
-  it("keeps two color stops at the same offset", function () {
-    // Stops were stored in a std::map keyed by offset, so the second stop at an
-    // identical offset was silently dropped and the hard transition it encodes -- a
-    // stripe pattern, for instance -- came out as a smooth fade instead.
+  it("keeps the previous dash list when the argument is not a list", function () {
+    // A present-but-rejected argument skipped the parse loop and then committed the
+    // empty temporary, so setLineDash("x") cleared the list where setLineDash([-1])
+    // correctly kept it. An absent argument still means "solid".
+    const ctx = createContext();
+    ctx.setLineDash([5, 10]);
+    ctx.setLineDash("x" as any);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash(null as any);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash(7 as any);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (ctx.setLineDash as any)();
+    expect(ctx.getLineDash()).to.deep.equal([]);
+  });
+
+  it("restores font", function () {
+    // font was the one exposed attribute left out of the saved state. It is worse than
+    // the getter-only cases: the font id resolved here is what the text draw path binds,
+    // so the wrong face actually rendered after a restore().
+    const ctx = createContext();
+    ctx.font = "18px Arial";
+    // The getter reports a normalized serialization, so compare against the round-tripped
+    // value rather than the literal that was assigned.
+    const saved = ctx.font;
+    ctx.save();
+    ctx.font = "40px Times";
+    expect(ctx.font).to.not.equal(saved);
+    ctx.restore();
+    expect(ctx.font).to.equal(saved);
+    expect(function () {
+      ctx.fillText("after restore", 0, 20);
+    }).to.not.throw();
+  });
+
+  it("ignores a fillStyle or strokeStyle that is neither a color string nor a gradient", function () {
+    // Both setters reached napi_unwrap for any object, so `ctx.strokeStyle = {}` unwrapped
+    // an object that was never wrapped and dereferenced whatever the slot held. Per spec
+    // an unusable value leaves the attribute unchanged.
+    const ctx = createContext();
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    expect(function () {
+      ctx.fillStyle = {} as any;
+      ctx.strokeStyle = {} as any;
+      ctx.fillStyle = [] as any;
+      ctx.strokeStyle = (function () {}) as any;
+    }).to.not.throw();
+    expect(ctx.fillStyle).to.equal("#ff0000");
+    expect(ctx.strokeStyle).to.equal("#00ff00");
+    // A real gradient is still accepted.
+    const gradient = ctx.createLinearGradient(0, 0, 64, 0);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    ctx.fillStyle = gradient;
+    expect(ctx.fillStyle).to.not.equal("#ff0000");
+  });
+
+  it("accepts two color stops at the same offset", function () {
+    // Only checks that the insertion path accepts the duplicate offset the spec allows;
+    // std::map::insert() dropped it by returning {it, false} rather than throwing, so this
+    // does not by itself prove the stop survives. Asserting that needs the rendered ramp,
+    // and gradient fills are not read back by getImageData.
     const ctx = createContext();
     const gradient = ctx.createLinearGradient(0, 0, 64, 0);
     gradient.addColorStop(0, "red");

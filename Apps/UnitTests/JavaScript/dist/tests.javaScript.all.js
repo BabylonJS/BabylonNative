@@ -28504,10 +28504,69 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([]);
   });
 
-  it("keeps two color stops at the same offset", function () {
-    // Stops were stored in a std::map keyed by offset, so the second stop at an
-    // identical offset was silently dropped and the hard transition it encodes -- a
-    // stripe pattern, for instance -- came out as a smooth fade instead.
+  it("keeps the previous dash list when the argument is not a list", function () {
+    // A present-but-rejected argument skipped the parse loop and then committed the
+    // empty temporary, so setLineDash("x") cleared the list where setLineDash([-1])
+    // correctly kept it. An absent argument still means "solid".
+    var ctx = createContext();
+    ctx.setLineDash([5, 10]);
+    ctx.setLineDash("x");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash(null);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash(7);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([]);
+  });
+
+  it("restores font", function () {
+    // font was the one exposed attribute left out of the saved state. It is worse than
+    // the getter-only cases: the font id resolved here is what the text draw path binds,
+    // so the wrong face actually rendered after a restore().
+    var ctx = createContext();
+    ctx.font = "18px Arial";
+    // The getter reports a normalized serialization, so compare against the round-tripped
+    // value rather than the literal that was assigned.
+    var saved = ctx.font;
+    ctx.save();
+    ctx.font = "40px Times";
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.font).to.not.equal(saved);
+    ctx.restore();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.font).to.equal(saved);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.fillText("after restore", 0, 20);
+    }).to.not.throw();
+  });
+
+  it("ignores a fillStyle or strokeStyle that is neither a color string nor a gradient", function () {
+    // Both setters reached napi_unwrap for any object, so `ctx.strokeStyle = {}` unwrapped
+    // an object that was never wrapped and dereferenced whatever the slot held. Per spec
+    // an unusable value leaves the attribute unchanged.
+    var ctx = createContext();
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.fillStyle = {};
+      ctx.strokeStyle = {};
+      ctx.fillStyle = [];
+      ctx.strokeStyle = function () {};
+    }).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.equal("#ff0000");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#00ff00");
+    // A real gradient is still accepted.
+    var gradient = ctx.createLinearGradient(0, 0, 64, 0);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    ctx.fillStyle = gradient;
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.not.equal("#ff0000");
+  });
+
+  it("accepts two color stops at the same offset", function () {
+    // Only checks that the insertion path accepts the duplicate offset the spec allows;
+    // std::map::insert() dropped it by returning {it, false} rather than throwing, so this
+    // does not by itself prove the stop survives. Asserting that needs the rendered ramp,
+    // and gradient fills are not read back by getImageData.
     var ctx = createContext();
     var gradient = ctx.createLinearGradient(0, 0, 64, 0);
     gradient.addColorStop(0, "red");

@@ -41,10 +41,6 @@ namespace Babylon::Polyfills::Internal
 
     float clampf(float a, float mn, float mx) { return a < mn ? mn : (a > mx ? mx : a); }
 
-    // Canvas2D interpolates gradient stops in premultiplied sRGBA space. Interpolating the
-    // straight (unpremultiplied) components instead bleeds a transparent stop's RGB into the
-    // ramp: "#ff0000ff" -> "#00000000" darkens through maroon to black rather than staying red
-    // and only losing alpha.
     NVGcolor premultiply(NVGcolor c)
     {
         return nvgRGBAf(c.r * c.a, c.g * c.a, c.b * c.a, c.a);
@@ -72,6 +68,10 @@ namespace Babylon::Polyfills::Internal
         {
             return;
         }
+        // Canvas2D interpolates gradient stops in premultiplied sRGBA space. Interpolating the
+        // straight (unpremultiplied) components instead bleeds a transparent stop's RGB into the
+        // ramp: "#ff0000ff" -> "#00000000" darkens through maroon to black rather than staying red
+        // and only losing alpha.
         const NVGcolor p0 = premultiply(color0);
         const NVGcolor p1 = premultiply(color1);
         float r = p0.rgba[0];
@@ -116,6 +116,17 @@ namespace Babylon::Polyfills::Internal
                 
             });
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME, func);
+    }
+
+    bool CanvasGradient::IsInstance(Napi::Env env, const Napi::Value& value)
+    {
+        if (!value.IsObject())
+        {
+            return false;
+        }
+
+        const auto constructor = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME);
+        return constructor.IsFunction() && value.As<Napi::Object>().InstanceOf(constructor.As<Napi::Function>());
     }
 
     Napi::Object CanvasGradient::CreateLinear(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float x1, float y1)

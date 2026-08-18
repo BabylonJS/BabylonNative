@@ -155,6 +155,12 @@ namespace Babylon::Polyfills::Internal
             float lineWidth;
             float globalAlpha;
             float letterSpacing;
+
+            // font is worse than the getter-only cases above: m_currentFontId is what the
+            // text draw path binds, so without it the wrong face actually renders after a
+            // restore(). nvgRestore rewinds the size it set, but not either of these.
+            Font font;
+            int currentFontId;
         };
         std::vector<SavedStyle> m_savedStyles;
 
@@ -179,6 +185,14 @@ namespace Babylon::Polyfills::Internal
         void FlushGraphicResources() override;
         void PlayPath2D(const NativeCanvasPath2D* path);
         void SetFilterStack();
+
+        // Start a fresh nanovg path and drop the clip state that described the old one.
+        // clip() emulates a non-rectangular path by leaving it current and letting the next
+        // fill draw it, so any operation that resets the path invalidates that emulation:
+        // leaving m_isClipped set makes FillRect skip its own nvgBeginPath and append to a
+        // path that no longer exists, and leaving m_pathHasNonRect set makes a later clip()
+        // take the emulated branch on what is now a plain rect.
+        void ResetPathState();
 
         // CPU-side RGBA8 mirror of the canvas, sized to the canvas, populated by DrawImage so that
         // getImageData can return the exact decoded pixels (the GPU nanovg framebuffer is not read back).
