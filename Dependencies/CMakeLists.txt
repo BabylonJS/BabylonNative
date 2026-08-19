@@ -48,9 +48,16 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE=4096)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE=256)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
+
+# The uniform buffer sizing knobs are deliberately left at the bgfx defaults.
+# UniformBuffer::update reserves BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE
+# of head room before every write, so the threshold must be at least as large as
+# the largest single uniform record. The opcode encoding caps that record at
+# 4 + 1023 * sizeof(Mat4) = 65476 bytes, and bgfx now static_asserts both that
+# bound and BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE > the threshold. The old
+# 4096 / 256 / 1024 overrides violated the first assert, which means a shader
+# with a large enough uniform array (e.g. bone matrices) could overrun the
+# buffer. Do not re-add them without satisfying both asserts.
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
 # bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
