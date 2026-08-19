@@ -235,7 +235,12 @@ function(add_bgfx_shader FILE FOLDER)
         # essl
         if(NOT "${TYPE}" STREQUAL "COMPUTE")
             set(ESSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/essl/${FILENAME}.h)
-            _bn_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 100_es OUTPUT ${ESSL_OUTPUT} BIN2C "${FILENAME}_essl")
+            # ESSL 1.00 is no longer usable: bgfx dropped glsl-optimizer and its GLSL
+            # fixup pass, and now unconditionally prepends `#version 300 es` to shaders
+            # that don't carry a version directive. Legacy `attribute`/`varying` sources
+            # fail to compile against that header, so target ESSL 3.00 directly, which is
+            # also what bgfx uses for its own embedded shaders.
+            _bn_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 300_es OUTPUT ${ESSL_OUTPUT} BIN2C "${FILENAME}_essl")
             list(APPEND OUTPUTS "ESSL")
             set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, ")
         endif()
