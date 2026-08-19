@@ -1841,7 +1841,9 @@
             "title": "Prepass SSAO + particles",
             "playgroundId": "#65MUMZ#47",
             "renderCount": 50,
-            "referenceImage": "prepass-ssao-particles.png"
+            "referenceImage": "prepass-ssao-particles.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "llvmpipe on the Ubuntu CI runner aborts with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the particle shader (Mesa/LLVM bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + instances",
