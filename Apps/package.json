@@ -7,7 +7,8 @@
   ],
   "scripts": {
     "getNightly": "node scripts/getNightly.js",
-    "downlevel:native-scripts": "node scripts/downlevelNativeScripts.mjs"
+    "downlevel:native-scripts": "node scripts/downlevelNativeScripts.mjs",
+    "postinstall": "node scripts/downlevelNativeScripts.mjs node_modules"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
