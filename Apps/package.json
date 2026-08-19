@@ -7,10 +7,8 @@
   ],
   "scripts": {
     "getNightly": "node scripts/getNightly.js",
-    "downlevel:native-scripts": "node scripts/downlevelNativeScripts.mjs"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.3"
+    "downlevel:native-scripts": "node scripts/downlevelNativeScripts.mjs",
+    "postinstall": "node scripts/downlevelNativeScripts.mjs node_modules"
   },
   "dependencies": {
     "babylonjs": "^9.21.2",
@@ -23,6 +21,7 @@
     "babylonjs-serializers": "^9.21.2",
     "earcut": "^2.2.4",
     "jsc-android": "^241213.1.0",
+    "typescript": "^5.9.3",
     "v8-android": "^7.8.2"
   }
 }
