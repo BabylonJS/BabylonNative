@@ -87,6 +87,7 @@ namespace Babylon::Polyfills::Internal
         void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLetterSpacing(const Napi::CallbackInfo&);
         void SetLetterSpacing(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetGlobalAlpha(const Napi::CallbackInfo&);
         void SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowColor(const Napi::CallbackInfo&);
         void SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value);

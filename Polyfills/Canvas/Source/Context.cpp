@@ -109,7 +109,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("letterSpacing", &Context::GetLetterSpacing, &Context::SetLetterSpacing),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
                 InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
-                InstanceAccessor("globalAlpha", nullptr, &Context::SetGlobalAlpha),
+                InstanceAccessor("globalAlpha", &Context::GetGlobalAlpha, &Context::SetGlobalAlpha),
                 InstanceAccessor("shadowColor", &Context::GetShadowColor, &Context::SetShadowColor),
                 InstanceAccessor("shadowBlur", &Context::GetShadowBlur, &Context::SetShadowBlur),
                 InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
@@ -1755,10 +1755,23 @@ namespace Babylon::Polyfills::Internal
         nvgTextLetterSpacing(*m_nvg, m_state.letterSpacing);
     }
 
+    Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo& info)
+    {
+        return Napi::Number::New(info.Env(), m_state.globalAlpha);
+    }
+
     void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        const float alpha = value.As<Napi::Number>().FloatValue();
-        nvgGlobalAlpha(*m_nvg, alpha);
+        const double alpha = value.As<Napi::Number>().DoubleValue();
+        // Per spec a value that is not finite, or outside [0, 1], is ignored rather than
+        // clamped or thrown, and leaves the previous value in place.
+        if (!std::isfinite(alpha) || alpha < 0.0 || alpha > 1.0)
+        {
+            return;
+        }
+
+        m_state.globalAlpha = static_cast<float>(alpha);
+        nvgGlobalAlpha(*m_nvg, m_state.globalAlpha);
     }
 
     // nanovg has no shadow primitive, so the shadow attributes are stored and
