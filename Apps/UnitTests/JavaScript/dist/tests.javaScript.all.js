@@ -28392,6 +28392,60 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#00ff00");
   });
 
+  it("rejects a non-Path2D argument to fill and stroke", function () {
+    // Neither call type-checked the argument before handing it to ObjectWrap::Unwrap,
+    // which does no checking of its own, so an unrelated object was reinterpreted as a
+    // NativeCanvasPath2D. stroke() was the worse of the two: it had no gate at all, so
+    // even a string got there.
+    var ctx = createContext();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke("x");}).to.throw(TypeError);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke({});}).to.throw(TypeError);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke(5);}).to.throw(TypeError);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill({});}).to.throw(TypeError);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(5);}).to.throw(TypeError);
+  });
+
+  it("still accepts the valid fill and stroke argument forms", function () {
+    var ctx = createContext();
+    var path = new Path2D("M0 0 L10 10");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill();}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke();}).to.not.throw();
+    // undefined selects the no-argument overload rather than being a bad Path2D.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(undefined);}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke(undefined);}).to.not.throw();
+    // fill() also takes a fill rule string.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill("evenodd");}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path);}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path, "nonzero");}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke(path);}).to.not.throw();
+  });
+
+  it("rejects a non-Path2D argument to Path2D.addPath", function () {
+    // addPath had neither a type check nor an arity check, so addPath() unwrapped a
+    // missing argument and addPath("x") unwrapped a string.
+    var path = new Path2D();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {path.addPath();}).to.throw(TypeError);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {path.addPath("x");}).to.throw(TypeError);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {path.addPath({});}).to.throw(TypeError);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {path.addPath(new Path2D("M0 0 L5 5"));}).to.not.throw();
+  });
+
+  it("treats a non-Path2D Path2D() argument as path data", function () {
+    // The constructor routed on IsObject(), so any object was unwrapped as a Path2D.
+    // Per the (Path2D or DOMString) union a non-Path2D is stringified instead.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {new Path2D({});}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {new Path2D(5);}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {new Path2D();}).to.not.throw();
+    // A copy of a real Path2D still copies, and an object that stringifies to path
+    // data is still parsed as such.
+    var source = new Path2D("M0 0 L10 10");
+    var ctx = createContext();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(new Path2D(source));}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.fill(new Path2D({ toString: function toString() {return "M0 0 L10 10";} }));
+    }).to.not.throw();
+  });
+
   it("accepts a CanvasGradient as fillStyle", function () {
     var ctx = createContext();
     var gradient = ctx.createLinearGradient(0, 0, 64, 64);
