@@ -169,7 +169,12 @@ namespace Babylon::Polyfills::Internal
         // addPath requires a Path2D. There was no type check and no arity check, so
         // addPath() read a missing argument and addPath("x") cast a string, both of
         // which reached Unwrap.
-        if (info.Length() < 1 || !NativeCanvasPath2D::IsInstance(info.Env(), info[0]))
+        if (info.Length() < 1)
+        {
+            throw Napi::TypeError::New(info.Env(), "Path2D.addPath: requires at least 1 argument (path).");
+        }
+
+        if (!NativeCanvasPath2D::IsInstance(info.Env(), info[0]))
         {
             throw Napi::TypeError::New(info.Env(), "Path2D.addPath: the first argument is not a Path2D.");
         }
