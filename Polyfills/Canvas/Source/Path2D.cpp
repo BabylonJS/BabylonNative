@@ -135,9 +135,8 @@ namespace Babylon::Polyfills::Internal
             nsvg__deleteParser(parser);
         }
 
-        // Registered last: everything above can throw, and a constructor that throws never
-        // reaches the destructor, which would leave a dangling address in the registry.
-        NativeInstanceRegistry<NativeCanvasPath2D>::Add(this);
+        // Registered last: a constructor that throws never reaches the destructor.
+        NativeInstanceRegistry<NativeCanvasPath2D>::Add(info, this);
     }
 
     NativeCanvasPath2D::~NativeCanvasPath2D()
