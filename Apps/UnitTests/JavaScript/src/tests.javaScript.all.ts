@@ -161,6 +161,60 @@ describe("Canvas2D", function () {
     expect(ctx.strokeStyle).to.equal("#00ff00");
   });
 
+  it("rejects a non-Path2D argument to fill and stroke", function () {
+    // Neither call type-checked the argument before handing it to ObjectWrap::Unwrap,
+    // which does no checking of its own, so an unrelated object was reinterpreted as a
+    // NativeCanvasPath2D. stroke() was the worse of the two: it had no gate at all, so
+    // even a string got there.
+    const ctx = createContext();
+    expect(function () { ctx.stroke("x"); }).to.throw(TypeError);
+    expect(function () { ctx.stroke({}); }).to.throw(TypeError);
+    expect(function () { ctx.stroke(5); }).to.throw(TypeError);
+    expect(function () { ctx.fill({}); }).to.throw(TypeError);
+    expect(function () { ctx.fill(5); }).to.throw(TypeError);
+  });
+
+  it("still accepts the valid fill and stroke argument forms", function () {
+    const ctx = createContext();
+    const path = new Path2D("M0 0 L10 10");
+    expect(function () { ctx.fill(); }).to.not.throw();
+    expect(function () { ctx.stroke(); }).to.not.throw();
+    // undefined selects the no-argument overload rather than being a bad Path2D.
+    expect(function () { ctx.fill(undefined); }).to.not.throw();
+    expect(function () { ctx.stroke(undefined); }).to.not.throw();
+    // fill() also takes a fill rule string.
+    expect(function () { ctx.fill("evenodd"); }).to.not.throw();
+    expect(function () { ctx.fill(path); }).to.not.throw();
+    expect(function () { ctx.fill(path, "nonzero"); }).to.not.throw();
+    expect(function () { ctx.stroke(path); }).to.not.throw();
+  });
+
+  it("rejects a non-Path2D argument to Path2D.addPath", function () {
+    // addPath had neither a type check nor an arity check, so addPath() unwrapped a
+    // missing argument and addPath("x") unwrapped a string.
+    const path = new Path2D();
+    expect(function () { path.addPath(); }).to.throw(TypeError);
+    expect(function () { path.addPath("x"); }).to.throw(TypeError);
+    expect(function () { path.addPath({}); }).to.throw(TypeError);
+    expect(function () { path.addPath(new Path2D("M0 0 L5 5")); }).to.not.throw();
+  });
+
+  it("treats a non-Path2D Path2D() argument as path data", function () {
+    // The constructor routed on IsObject(), so any object was unwrapped as a Path2D.
+    // Per the (Path2D or DOMString) union a non-Path2D is stringified instead.
+    expect(function () { new Path2D({}); }).to.not.throw();
+    expect(function () { new Path2D(5); }).to.not.throw();
+    expect(function () { new Path2D(); }).to.not.throw();
+    // A copy of a real Path2D still copies, and an object that stringifies to path
+    // data is still parsed as such.
+    const source = new Path2D("M0 0 L10 10");
+    const ctx = createContext();
+    expect(function () { ctx.fill(new Path2D(source)); }).to.not.throw();
+    expect(function () {
+      ctx.fill(new Path2D({ toString: function () { return "M0 0 L10 10"; } }));
+    }).to.not.throw();
+  });
+
   it("accepts a CanvasGradient as fillStyle", function () {
     const ctx = createContext();
     const gradient = ctx.createLinearGradient(0, 0, 64, 64);

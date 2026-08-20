@@ -58,14 +58,34 @@ namespace Babylon::Polyfills::Internal
         global.Set(JS_PATH2D_CONSTRUCTOR_NAME, func);
     }
 
+    bool NativeCanvasPath2D::IsInstance(Napi::Env env, const Napi::Value& value)
+    {
+        if (!value.IsObject())
+        {
+            return false;
+        }
+
+        // Tested against the constructor kept on the native object rather than the global one:
+        // the global is writable, so script can replace it, and this has to answer whether the
+        // object is safe to Unwrap, not whether it matches whatever Path2D currently names.
+        const auto constructor = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_PATH2D_CONSTRUCTOR_NAME);
+        return constructor.IsFunction() && value.As<Napi::Object>().InstanceOf(constructor.As<Napi::Function>());
+    }
+
     NativeCanvasPath2D::NativeCanvasPath2D(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
         , m_commands{std::deque<Path2DCommand>()}
     {
-        const NativeCanvasPath2D* path = info.Length() == 1 && info[0].IsObject()
+        // new Path2D(path) copies another Path2D; new Path2D(d) parses SVG path data. The
+        // argument used to be routed by IsObject(), so any object at all was fed to Unwrap and
+        // reinterpreted as a NativeCanvasPath2D. Per the (Path2D or DOMString) union, a value
+        // that is not a Path2D is converted to a string instead.
+        const NativeCanvasPath2D* path = info.Length() >= 1 && NativeCanvasPath2D::IsInstance(info.Env(), info[0])
             ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
             : nullptr;
-        const std::string d = info.Length() == 1 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
+        const std::string d = path == nullptr && info.Length() >= 1 && !info[0].IsUndefined()
+            ? info[0].ToString().Utf8Value()
+            : "";
 
         if (path != nullptr)
         {
@@ -146,6 +166,14 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvasPath2D::AddPath(const Napi::CallbackInfo& info)
     {
+        // addPath requires a Path2D. There was no type check and no arity check, so
+        // addPath() read a missing argument and addPath("x") cast a string, both of
+        // which reached Unwrap.
+        if (info.Length() < 1 || !NativeCanvasPath2D::IsInstance(info.Env(), info[0]))
+        {
+            throw Napi::TypeError::New(info.Env(), "Path2D.addPath: the first argument is not a Path2D.");
+        }
+
         const NativeCanvasPath2D* path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>());
 
         // optional transform arg
