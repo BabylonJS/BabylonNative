@@ -70,8 +70,13 @@ namespace Babylon::Polyfills::Internal
         // it any other object reinterprets unrelated memory as a NativeCanvasPath2D.
         static bool IsInstance(Napi::Env env, const Napi::Value& value);
 
+        // Returns the wrapped path, or nullptr when `value` is not one of ours. Prefer this to
+        // IsInstance + Unwrap: it answers the question and hands back the pointer in one step,
+        // and unlike ObjectWrap::Unwrap it never throws for an object that was never wrapped.
+        static NativeCanvasPath2D* TryUnwrap(Napi::Env env, const Napi::Value& value);
+
         explicit NativeCanvasPath2D(const Napi::CallbackInfo& info);
-        // virtual ~NativeCanvasPath2D(); // TODO: destructor? empty queue?
+        ~NativeCanvasPath2D();
 
         typename std::deque<Path2DCommand>::iterator begin();
         typename std::deque<Path2DCommand>::iterator end();
