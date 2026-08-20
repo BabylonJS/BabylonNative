@@ -28512,6 +28512,17 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0);
   });
 
+  it("reports the spec defaults on a fresh context", function () {
+    // These four mirror state nanovg also keeps, and nvgReset installs butt/miter/1/10.
+    // The C++ mirrors were value-initialized to ""/""/0/0 instead, so a fresh context
+    // reported a default it was not actually drawing with.
+    var ctx = createContext();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineCap).to.equal("butt");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineJoin).to.equal("miter");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineWidth).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.miterLimit).to.equal(10);
+  });
+
   it("keeps the previous dash list when a new one is rejected", function () {
     // The list was cleared before validation, so a rejected argument -- which the
     // spec says must leave the previous list untouched -- wiped it instead.

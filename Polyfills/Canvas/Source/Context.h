@@ -130,8 +130,12 @@ namespace Babylon::Polyfills::Internal
         {
             std::variant<std::string, GradientStyle> fillStyle{};
             std::variant<std::string, GradientStyle> strokeStyle{};
-            std::string lineCap{};  // 'butt', 'round', 'square'
-            std::string lineJoin{}; // 'round', 'bevel', 'miter'
+            // These four mirror state nanovg also holds. Their initial values must match what
+            // nvgReset actually installs (NVG_BUTT, NVG_MITER, strokeWidth 1, miterLimit 10),
+            // which is also what the spec requires, or a fresh context reports a default it is
+            // not drawing with.
+            std::string lineCap{"butt"};   // 'butt', 'round', 'square'
+            std::string lineJoin{"miter"}; // 'round', 'bevel', 'miter'
 
             // Dash pattern from setLineDash. Retained only so getLineDash() round-trips;
             // strokes are always drawn solid (nanovg has no dashed stroke).
@@ -146,8 +150,8 @@ namespace Babylon::Polyfills::Internal
             double shadowOffsetY{0.0};
             std::string filter{};
             std::string direction{"ltr"}; // 'ltr', 'rtl'
-            float miterLimit{0.f};
-            float lineWidth{0.f};
+            float miterLimit{10.f};
+            float lineWidth{1.f};
             float globalAlpha{1.f};
             float letterSpacing{0.f};
 
