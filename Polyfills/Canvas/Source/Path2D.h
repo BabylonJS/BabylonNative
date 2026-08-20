@@ -65,14 +65,11 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
 
-        // True only for objects actually produced by this class's constructor. Callers must
-        // check before Unwrap: ObjectWrap::Unwrap does no type checking of its own, so handing
-        // it any other object reinterprets unrelated memory as a NativeCanvasPath2D.
+        // True only for objects actually produced by this class's constructor. Never use
+        // ObjectWrap::Unwrap on an unchecked object; see NativeInstanceRegistry.
         static bool IsInstance(Napi::Env env, const Napi::Value& value);
 
-        // Returns the wrapped path, or nullptr when `value` is not one of ours. Prefer this to
-        // IsInstance + Unwrap: it answers the question and hands back the pointer in one step,
-        // and unlike ObjectWrap::Unwrap it never throws for an object that was never wrapped.
+        // Returns the wrapped path, or nullptr when `value` is not one of ours.
         static NativeCanvasPath2D* TryUnwrap(Napi::Env env, const Napi::Value& value);
 
         explicit NativeCanvasPath2D(const Napi::CallbackInfo& info);
