@@ -2,6 +2,7 @@
 #include <cassert>
 #include <map>
 #include "Canvas.h"
+#include "NativeInstanceRegistry.h"
 #include "Path2D.h"
 #include <napi/pointer.h>
 
@@ -60,16 +61,12 @@ namespace Babylon::Polyfills::Internal
 
     bool NativeCanvasPath2D::IsInstance(Napi::Env env, const Napi::Value& value)
     {
-        if (!value.IsObject())
-        {
-            return false;
-        }
+        return TryUnwrap(env, value) != nullptr;
+    }
 
-        // Tested against the constructor kept on the native object rather than the global one:
-        // the global is writable, so script can replace it, and this has to answer whether the
-        // object is safe to Unwrap, not whether it matches whatever Path2D currently names.
-        const auto constructor = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_PATH2D_CONSTRUCTOR_NAME);
-        return constructor.IsFunction() && value.As<Napi::Object>().InstanceOf(constructor.As<Napi::Function>());
+    NativeCanvasPath2D* NativeCanvasPath2D::TryUnwrap(Napi::Env env, const Napi::Value& value)
+    {
+        return NativeInstanceRegistry<NativeCanvasPath2D>::TryUnwrap(env, value);
     }
 
     NativeCanvasPath2D::NativeCanvasPath2D(const Napi::CallbackInfo& info)
@@ -80,8 +77,8 @@ namespace Babylon::Polyfills::Internal
         // argument used to be routed by IsObject(), so any object at all was fed to Unwrap and
         // reinterpreted as a NativeCanvasPath2D. Per the (Path2D or DOMString) union, a value
         // that is not a Path2D is converted to a string instead.
-        const NativeCanvasPath2D* path = info.Length() >= 1 && NativeCanvasPath2D::IsInstance(info.Env(), info[0])
-            ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
+        const NativeCanvasPath2D* path = info.Length() >= 1
+            ? NativeCanvasPath2D::TryUnwrap(info.Env(), info[0])
             : nullptr;
         const std::string d = path == nullptr && info.Length() >= 1 && !info[0].IsUndefined()
             ? info[0].ToString().Utf8Value()
@@ -137,6 +134,15 @@ namespace Babylon::Polyfills::Internal
 
             nsvg__deleteParser(parser);
         }
+
+        // Registered last: everything above can throw, and a constructor that throws never
+        // reaches the destructor, which would leave a dangling address in the registry.
+        NativeInstanceRegistry<NativeCanvasPath2D>::Add(this);
+    }
+
+    NativeCanvasPath2D::~NativeCanvasPath2D()
+    {
+        NativeInstanceRegistry<NativeCanvasPath2D>::Remove(this);
     }
 
     typename std::deque<Path2DCommand>::iterator NativeCanvasPath2D::begin()
@@ -174,12 +180,11 @@ namespace Babylon::Polyfills::Internal
             throw Napi::TypeError::New(info.Env(), "Path2D.addPath: requires at least 1 argument (path).");
         }
 
-        if (!NativeCanvasPath2D::IsInstance(info.Env(), info[0]))
+        NativeCanvasPath2D* const path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
+        if (path == nullptr)
         {
             throw Napi::TypeError::New(info.Env(), "Path2D.addPath: the first argument is not a Path2D.");
         }
-
-        const NativeCanvasPath2D* path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>());
 
         // optional transform arg
         bool xformInvReady{false};

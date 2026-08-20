@@ -22,6 +22,11 @@ namespace Babylon::Polyfills::Internal
         // script and would otherwise unwrap an object that was never wrapped.
         static bool IsInstance(Napi::Env env, const Napi::Value& value);
 
+        // Returns the wrapped gradient, or nullptr when `value` is not one. Prefer this to
+        // IsInstance + Unwrap; see NativeInstanceRegistry for why neither `instanceof` nor a
+        // brand property can answer this safely.
+        static CanvasGradient* TryUnwrap(Napi::Env env, const Napi::Value& value);
+
         explicit CanvasGradient(const Napi::CallbackInfo& info);
         virtual ~CanvasGradient();
 
