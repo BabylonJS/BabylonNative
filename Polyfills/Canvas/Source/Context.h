@@ -152,7 +152,7 @@ namespace Babylon::Polyfills::Internal
             std::string direction{"ltr"}; // 'ltr', 'rtl'
             float miterLimit{10.f};
             float lineWidth{1.f};
-            float globalAlpha{1.f};
+            double globalAlpha{1.0};
             float letterSpacing{0.f};
 
             // font is worse than the getter-only cases above: currentFontId is what the text
