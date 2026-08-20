@@ -1586,7 +1586,14 @@ napi_status napi_throw(napi_env env, napi_value error) {
   JSContext* targetCtx = env->current_context ? env->current_context : env->context;
   JS_Throw(targetCtx, JS_DupValue(targetCtx, jsError));
   
-  return napi_set_last_error(env, napi_pending_exception);
+  // Returning napi_pending_exception here would report that the throw itself
+  // failed. node-addon-api's Error::ThrowAsJavaScriptException reacts to that by
+  // re-throwing `Error::New(env)`, which clears the exception it just set and
+  // lets the C++ exception escape the callback wrapper. The escaped error is
+  // then stringified by ExternalCallback::Callback after its handle scope is
+  // gone, which reads freed memory.
+  napi_clear_last_error(env);
+  return napi_ok;
 }
 
 // Throw error
@@ -1602,7 +1609,8 @@ napi_status napi_throw_error(napi_env env, const char* code, const char* msg) {
   }
 
   JS_Throw(env->context, error);
-  return napi_set_last_error(env, napi_pending_exception);
+  napi_clear_last_error(env);
+  return napi_ok;
 }
 
 // Throw type error
@@ -1610,7 +1618,8 @@ napi_status napi_throw_type_error(napi_env env, const char* code, const char* ms
   CHECK_ENV(env);
 
   JS_ThrowTypeError(env->context, "%s", msg ? msg : "");
-  return napi_set_last_error(env, napi_pending_exception);
+  napi_clear_last_error(env);
+  return napi_ok;
 }
 
 // Throw range error
@@ -1618,7 +1627,8 @@ napi_status napi_throw_range_error(napi_env env, const char* code, const char* m
   CHECK_ENV(env);
 
   JS_ThrowRangeError(env->context, "%s", msg ? msg : "");
-  return napi_set_last_error(env, napi_pending_exception);
+  napi_clear_last_error(env);
+  return napi_ok;
 }
 
 // Create error

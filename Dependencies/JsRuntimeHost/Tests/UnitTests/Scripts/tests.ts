@@ -1359,6 +1359,26 @@ describe("URLSearchParams", function () {
         expect(() => paramsSet.set()).to.throw();
     });
 
+    it("should preserve the type and message of an error thrown from native code", function () {
+        // A native throw must reach JS unchanged. When napi_throw reported failure, the
+        // error was replaced by an InternalError reading "Uncaught C++ exception: ...",
+        // built by stringifying an error whose handle scope had already closed.
+        let caught: any;
+        try {
+            // @ts-expect-error
+            paramsSet.set();
+        } catch (e) {
+            caught = e;
+        }
+        expect(caught).to.be.an.instanceOf(Error);
+        expect(caught.name).to.equal("Error");
+        // Not an equality check: the JSI backend prefixes "Exception in HostFunction: ".
+        expect(caught.message).to.contain(
+            "Failed to execute 'set' on 'URLSearchParams': 2 arguments required, but only 0 present"
+        );
+        expect(caught.message).to.not.contain("Uncaught C++ exception");
+    });
+
     it("should add a number and retrieve it as a string from searchParams", function () {
         // Set Number
         paramsSet.set("foo", 400 as any);
