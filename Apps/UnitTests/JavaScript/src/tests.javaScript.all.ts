@@ -161,6 +161,52 @@ describe("Canvas2D", function () {
     expect(ctx.strokeStyle).to.equal("#00ff00");
   });
 
+  it("rejects a prototype-spoofed object in place of a Path2D", function () {
+    // instanceof only walks the prototype chain, and a prototype is assignable, so an
+    // InstanceOf gate accepted any object wearing Path2D.prototype and then unwrapped it.
+    // Handing fill() a CanvasGradient this way was an access violation, not a wrong answer.
+    // Object.create(Path2D.prototype) is the same hole with no native wrap behind it at all.
+    const ctx = createContext();
+    const spoofedGradient: any = ctx.createLinearGradient(0, 0, 10, 10);
+    Object.setPrototypeOf(spoofedGradient, Path2D.prototype);
+    expect(spoofedGradient instanceof Path2D).to.equal(true);
+
+    const bare: any = Object.create(Path2D.prototype);
+    expect(bare instanceof Path2D).to.equal(true);
+
+    const realPath = new Path2D();
+    for (const impostor of [spoofedGradient, bare]) {
+      expect(function () { ctx.fill(impostor); }).to.throw();
+      expect(function () { ctx.stroke(impostor); }).to.throw();
+      expect(function () { realPath.addPath(impostor); }).to.throw();
+      // The Path2D() argument is a (Path2D or DOMString) union, so a non-Path2D is string
+      // data rather than an error. It must not be unwrapped on the way there.
+      expect(function () { new Path2D(impostor); }).to.not.throw();
+    }
+  });
+
+  it("ignores a prototype-spoofed object assigned to fillStyle or strokeStyle", function () {
+    // Same defect on the gradient side: the assignment gate accepted anything wearing the
+    // gradient prototype and stored it, and the next fill unwrapped it as a CanvasGradient.
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 10, 10);
+    const spoofedPath: any = new Path2D();
+    Object.setPrototypeOf(spoofedPath, Object.getPrototypeOf(gradient));
+
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    ctx.fillStyle = spoofedPath;
+    ctx.strokeStyle = spoofedPath;
+
+    // Per spec an unusable assignment leaves the previous value in place.
+    expect(ctx.fillStyle).to.equal("#ff0000");
+    expect(ctx.strokeStyle).to.equal("#00ff00");
+
+    // The drawing path must stay usable rather than unwrapping the impostor.
+    expect(function () { ctx.fillRect(0, 0, 10, 10); }).to.not.throw();
+    expect(function () { ctx.strokeRect(0, 0, 10, 10); }).to.not.throw();
+  });
+
   it("rejects a non-Path2D argument to fill and stroke", function () {
     // Neither call type-checked the argument before handing it to ObjectWrap::Unwrap,
     // which does no checking of its own, so an unrelated object was reinterpreted as a
