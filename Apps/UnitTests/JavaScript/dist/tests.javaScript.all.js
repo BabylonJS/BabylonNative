@@ -28392,6 +28392,52 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#00ff00");
   });
 
+  it("rejects a prototype-spoofed object in place of a Path2D", function () {
+    // instanceof only walks the prototype chain, and a prototype is assignable, so an
+    // InstanceOf gate accepted any object wearing Path2D.prototype and then unwrapped it.
+    // Handing fill() a CanvasGradient this way was an access violation, not a wrong answer.
+    // Object.create(Path2D.prototype) is the same hole with no native wrap behind it at all.
+    var ctx = createContext();
+    var spoofedGradient = ctx.createLinearGradient(0, 0, 10, 10);
+    Object.setPrototypeOf(spoofedGradient, Path2D.prototype);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(spoofedGradient instanceof Path2D).to.equal(true);
+
+    var bare = Object.create(Path2D.prototype);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bare instanceof Path2D).to.equal(true);
+
+    var realPath = new Path2D();var _loop = function _loop()
+    {var impostor = _arr[_i];
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(impostor);}).to.throw();
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke(impostor);}).to.throw();
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {realPath.addPath(impostor);}).to.throw();
+      // The Path2D() argument is a (Path2D or DOMString) union, so a non-Path2D is string
+      // data rather than an error. It must not be unwrapped on the way there.
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {new Path2D(impostor);}).to.not.throw();
+    };for (var _i = 0, _arr = [spoofedGradient, bare]; _i < _arr.length; _i++) {_loop();}
+  });
+
+  it("ignores a prototype-spoofed object assigned to fillStyle or strokeStyle", function () {
+    // Same defect on the gradient side: the assignment gate accepted anything wearing the
+    // gradient prototype and stored it, and the next fill unwrapped it as a CanvasGradient.
+    var ctx = createContext();
+    var gradient = ctx.createLinearGradient(0, 0, 10, 10);
+    var spoofedPath = new Path2D();
+    Object.setPrototypeOf(spoofedPath, Object.getPrototypeOf(gradient));
+
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    ctx.fillStyle = spoofedPath;
+    ctx.strokeStyle = spoofedPath;
+
+    // Per spec an unusable assignment leaves the previous value in place.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.fillStyle).to.equal("#ff0000");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.strokeStyle).to.equal("#00ff00");
+
+    // The drawing path must stay usable rather than unwrapping the impostor.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fillRect(0, 0, 10, 10);}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.strokeRect(0, 0, 10, 10);}).to.not.throw();
+  });
+
   it("rejects a non-Path2D argument to fill and stroke", function () {
     // Neither call type-checked the argument before handing it to ObjectWrap::Unwrap,
     // which does no checking of its own, so an unrelated object was reinterpreted as a
