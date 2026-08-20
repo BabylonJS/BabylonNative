@@ -1,4 +1,4 @@
-﻿import * as Mocha from "mocha";
+import * as Mocha from "mocha";
 import { expect } from "chai";
 import {
   RequestFile,
@@ -51,13 +51,29 @@ describe("ColorParsing", function () {
   expect(_native.Canvas.parseColor("#12345678")).to.equal(0x78563412);
   expect(_native.Canvas.parseColor("snow")).to.equal(0xfffafaff);
   expect(_native.Canvas.parseColor("rgb(16,32,48)")).to.equal(0xff302010);
-  expect(_native.Canvas.parseColor("rgba(16,32,48,64)")).to.equal(0x40302010);
+  // Alpha is a 0-1 number (or a percentage) per CSS Color, so any value above
+  // 1 clamps to fully opaque. It is not a 0-255 channel like r/g/b.
+  expect(_native.Canvas.parseColor("rgba(16,32,48,64)")).to.equal(0xff302010);
   expect(_native.Canvas.parseColor("rgb(16,     32   ,  48   )")).to.equal(
     0xff302010
   );
   expect(
     _native.Canvas.parseColor("rgba(    16,     32   ,  48 , 64  )")
-  ).to.equal(0x40302010);
+  ).to.equal(0xff302010);
+  expect(_native.Canvas.parseColor("rgba(16,32,48,1)")).to.equal(0xff302010);
+  expect(_native.Canvas.parseColor("rgba(16,32,48,0)")).to.equal(0x00302010);
+  // Fractional and percentage alpha, whitespace-separated components and the
+  // "/ alpha" form all used to fall through to the "unable to parse" throw.
+  expect(_native.Canvas.parseColor("rgba(16,32,48,0.5)")).to.equal(0x80302010);
+  expect(_native.Canvas.parseColor("rgba(16 32 48 / 50%)")).to.equal(
+    0x80302010
+  );
+  expect(_native.Canvas.parseColor("rgb(16 32 48)")).to.equal(0xff302010);
+  expect(_native.Canvas.parseColor("rgb(100%,0%,0%)")).to.equal(0xff0000ff);
+  expect(_native.Canvas.parseColor("hsl(0,100%,50%)")).to.equal(0xff0000ff);
+  expect(_native.Canvas.parseColor("hsla(0,100%,50%,0.5)")).to.equal(
+    0x800000ff
+  );
 
   it("should throw", function () {
     function incorrectColor() {
@@ -126,6 +142,321 @@ describe("ColorParsing", function () {
       _native.Canvas.parseColor("rgba");
     }
     expect(incorrectColor).to.throw();
+  });
+});
+
+describe("Canvas2D", function () {
+  function createContext(): any {
+    const canvas = new _native.Canvas();
+    canvas.width = 64;
+    canvas.height = 64;
+    return canvas.getContext("2d");
+  }
+
+  it("round-trips a string fillStyle and strokeStyle", function () {
+    const ctx = createContext();
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    expect(ctx.fillStyle).to.equal("#ff0000");
+    expect(ctx.strokeStyle).to.equal("#00ff00");
+  });
+
+  it("accepts a CanvasGradient as fillStyle", function () {
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    expect(function () {
+      ctx.fillStyle = gradient;
+    }).to.not.throw();
+    expect(ctx.fillStyle).to.not.equal("#ff0000");
+  });
+
+  it("accepts a CanvasGradient as strokeStyle", function () {
+    // strokeStyle used to be string-only and threw "A string was expected",
+    // which broke every GUI control that strokes with a gradient (Line, Button border).
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    expect(function () {
+      ctx.strokeStyle = gradient;
+    }).to.not.throw();
+  });
+
+  it("accepts a radial CanvasGradient defined by two independent circles", function () {
+    const ctx = createContext();
+    // Neither concentric nor r0 == 0: both circles have to be honored.
+    const gradient = ctx.createRadialGradient(10, 10, 5, 40, 32, 30);
+    gradient.addColorStop(0, "yellow");
+    gradient.addColorStop(0.5, "pink");
+    gradient.addColorStop(1, "green");
+    expect(function () {
+      ctx.fillStyle = gradient;
+      ctx.strokeStyle = gradient;
+    }).to.not.throw();
+  });
+
+  it("restores a gradient strokeStyle across save/restore", function () {
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, "red");
+    ctx.strokeStyle = "#0000ff";
+    ctx.save();
+    ctx.strokeStyle = gradient;
+    ctx.restore();
+    expect(ctx.strokeStyle).to.equal("#0000ff");
+  });
+
+  it("restores the shadow attributes across save/restore", function () {
+    // These have no nanovg counterpart, so nvgRestore() never rewound them and a
+    // value assigned after save() survived restore().
+    const ctx = createContext();
+    ctx.shadowColor = "#00ff00";
+    ctx.shadowBlur = 1;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 3;
+    ctx.save();
+    ctx.shadowColor = "#ff0000";
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetX = 50;
+    ctx.shadowOffsetY = 60;
+    ctx.restore();
+    expect(ctx.shadowColor).to.equal("#00ff00");
+    expect(ctx.shadowBlur).to.equal(1);
+    expect(ctx.shadowOffsetX).to.equal(2);
+    expect(ctx.shadowOffsetY).to.equal(3);
+  });
+
+  it("restores the remaining drawing state across save/restore", function () {
+    // nvgRestore() rewinds nanovg's copy of these, but the wrapper kept its own
+    // mirror, so the getters reported the post-save() value forever after.
+    // globalAlpha is set but not asserted: it is declared write-only (nullptr
+    // getter), so it has no observable value to check.
+    const ctx = createContext();
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 1;
+    ctx.lineCap = "butt";
+    ctx.lineJoin = "miter";
+    ctx.miterLimit = 10;
+    ctx.setLineDash([1, 2]);
+    ctx.save();
+    ctx.lineWidth = 9;
+    ctx.globalAlpha = 0.25;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "bevel";
+    ctx.miterLimit = 3;
+    ctx.setLineDash([7, 8, 9]);
+    ctx.restore();
+    expect(ctx.lineWidth).to.equal(1);
+    expect(ctx.lineCap).to.equal("butt");
+    expect(ctx.lineJoin).to.equal("miter");
+    expect(ctx.miterLimit).to.equal(10);
+    expect(ctx.getLineDash()).to.deep.equal([1, 2]);
+  });
+
+  it("keeps the previous dash list when a new one is rejected", function () {
+    // The list was cleared before validation, so a rejected argument -- which the
+    // spec says must leave the previous list untouched -- wiped it instead.
+    const ctx = createContext();
+    ctx.setLineDash([5, 10]);
+    ctx.setLineDash([-1]);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash([2, "x"]);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash([Number.NaN]);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    // A valid list still replaces it, and an empty list still means "solid".
+    ctx.setLineDash([3, 4]);
+    expect(ctx.getLineDash()).to.deep.equal([3, 4]);
+    ctx.setLineDash([]);
+    expect(ctx.getLineDash()).to.deep.equal([]);
+  });
+
+  it("keeps a gradient assigned to fillStyle alive across a collection", function () {
+    const ctx = createContext();
+    const global: any = Function("return this")();
+
+    // Create and assign the gradient inside a scope that keeps no reference to it, so
+    // the only thing left pointing at it is whatever fillStyle stored. CanvasGradient is
+    // an ObjectWrap, so if the style does not root the JavaScript wrapper the finalizer
+    // deletes the native gradient and the next fill dereferences freed memory.
+    (function () {
+      const gradient: any = ctx.createLinearGradient(0, 0, 64, 0);
+      gradient.addColorStop(0, "red");
+      gradient.addColorStop(1, "blue");
+      gradient.tag = "kept";
+      ctx.fillStyle = gradient;
+    })();
+
+    // Not every engine the polyfill runs on exposes a collection hook; the assertions
+    // below are worth making either way.
+    if (typeof global.CollectGarbage === "function") {
+      global.CollectGarbage();
+    }
+
+    // The getter has to hand back the object that was assigned. The expando proves it is
+    // that same JavaScript object rather than a fresh wrapper.
+    expect(ctx.fillStyle.tag).to.equal("kept");
+    // ...and the native gradient behind it has to still be there.
+    ctx.fillStyle.addColorStop(0.5, "green");
+    ctx.fillRect(0, 0, 64, 64);
+  });
+  it("keeps a gradient assigned to strokeStyle alive across a collection", function () {
+    const ctx = createContext();
+    const global: any = Function("return this")();
+
+    (function () {
+      const gradient: any = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0, "red");
+      gradient.addColorStop(1, "blue");
+      gradient.tag = "kept";
+      ctx.strokeStyle = gradient;
+    })();
+
+    if (typeof global.CollectGarbage === "function") {
+      global.CollectGarbage();
+    }
+
+    expect(ctx.strokeStyle.tag).to.equal("kept");
+    ctx.strokeStyle.addColorStop(0.5, "green");
+    ctx.strokeRect(0, 0, 64, 64);
+  });
+  it("keeps the previous dash list when the argument is not a list", function () {
+    // A present-but-rejected argument skipped the parse loop and then committed the
+    // empty temporary, so setLineDash("x") cleared the list where setLineDash([-1])
+    // correctly kept it. An absent argument still means "solid".
+    const ctx = createContext();
+    ctx.setLineDash([5, 10]);
+    ctx.setLineDash("x" as any);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash(null as any);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    ctx.setLineDash(7 as any);
+    expect(ctx.getLineDash()).to.deep.equal([5, 10]);
+    (ctx.setLineDash as any)();
+    expect(ctx.getLineDash()).to.deep.equal([]);
+  });
+
+  it("restores font", function () {
+    // font was the one exposed attribute left out of the saved state. It is worse than
+    // the getter-only cases: the font id resolved here is what the text draw path binds,
+    // so the wrong face actually rendered after a restore().
+    const ctx = createContext();
+    ctx.font = "18px Arial";
+    // The getter reports a normalized serialization, so compare against the round-tripped
+    // value rather than the literal that was assigned.
+    const saved = ctx.font;
+    ctx.save();
+    ctx.font = "40px Times";
+    expect(ctx.font).to.not.equal(saved);
+    ctx.restore();
+    expect(ctx.font).to.equal(saved);
+    expect(function () {
+      ctx.fillText("after restore", 0, 20);
+    }).to.not.throw();
+  });
+
+  it("ignores a fillStyle or strokeStyle that is neither a color string nor a gradient", function () {
+    // Both setters reached napi_unwrap for any object, so `ctx.strokeStyle = {}` unwrapped
+    // an object that was never wrapped and dereferenced whatever the slot held. Per spec
+    // an unusable value leaves the attribute unchanged.
+    const ctx = createContext();
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    expect(function () {
+      ctx.fillStyle = {} as any;
+      ctx.strokeStyle = {} as any;
+      ctx.fillStyle = [] as any;
+      ctx.strokeStyle = (function () {}) as any;
+    }).to.not.throw();
+    expect(ctx.fillStyle).to.equal("#ff0000");
+    expect(ctx.strokeStyle).to.equal("#00ff00");
+    // A real gradient is still accepted.
+    const gradient = ctx.createLinearGradient(0, 0, 64, 0);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(1, "blue");
+    ctx.fillStyle = gradient;
+    expect(ctx.fillStyle).to.not.equal("#ff0000");
+  });
+
+  it("accepts two color stops at the same offset", function () {
+    // Only checks that the insertion path accepts the duplicate offset the spec allows;
+    // std::map::insert() dropped it by returning {it, false} rather than throwing, so this
+    // does not by itself prove the stop survives. Asserting that needs the rendered ramp,
+    // and gradient fills are not read back by getImageData.
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 64, 0);
+    gradient.addColorStop(0, "red");
+    gradient.addColorStop(0.5, "red");
+    gradient.addColorStop(0.5, "blue");
+    gradient.addColorStop(1, "blue");
+    expect(function () {
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 64, 64);
+    }).to.not.throw();
+  });
+
+  // The three parsers below all used to reach std::stof/std::stoi with a value the regex
+  // admits but the target type cannot hold. The resulting std::out_of_range is not a
+  // Napi::Error, so it escaped the N-API callback and terminated the host process outright
+  // rather than surfacing as a JS exception. Reaching the assertion at all is the test.
+  it("survives an out-of-range rgb() component", function () {
+    const ctx = createContext();
+    const huge = "9".repeat(400);
+    expect(function () {
+      ctx.fillStyle = `rgb(${huge}, 0, 0)`;
+    }).to.not.throw();
+    expect(function () {
+      ctx.fillStyle = `rgba(0, 0, 0, ${huge})`;
+    }).to.not.throw();
+  });
+
+  it("survives an out-of-range font size and weight", function () {
+    const ctx = createContext();
+    ctx.font = "18px Arial";
+    // The size regex accepts an exponent, so this parses but does not fit a float.
+    expect(function () {
+      ctx.font = "18e999px Arial";
+    }).to.not.throw();
+    expect(function () {
+      ctx.font = `${"9".repeat(400)} 18px Arial`;
+    }).to.not.throw();
+    // An unparseable font is ignored, so the previous one stays in effect.
+    expect(ctx.font).to.contain("18px");
+  });
+
+  it("survives an out-of-range letterSpacing", function () {
+    const ctx = createContext();
+    expect(function () {
+      ctx.letterSpacing = `${"9".repeat(400)}px`;
+    }).to.not.throw();
+  });
+
+  it("rejects a createImageData source whose dimensions are not valid extents", function () {
+    const ctx = createContext();
+    // The ImageData overload is duck-typed, so these never went through WebIDL's
+    // unsigned long conversion. A negative width used to wrap to 4294967295 and ask
+    // for a ~17 GB allocation instead of being rejected.
+    const bad = [
+      { width: -1, height: 1 },
+      { width: 1, height: -1 },
+      { width: 1.5, height: 1 },
+      { width: 5e9, height: 1 },
+      { width: Infinity, height: 1 },
+    ];
+    bad.forEach(function (source) {
+      expect(function () {
+        ctx.createImageData(source);
+      }, JSON.stringify(source)).to.throw();
+    });
+  });
+
+  it("creates image data from a valid source object", function () {
+    const ctx = createContext();
+    const data = ctx.createImageData({ width: 4, height: 3 });
+    expect(data.width).to.equal(4);
+    expect(data.height).to.equal(3);
   });
 });
 

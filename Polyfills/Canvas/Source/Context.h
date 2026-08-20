@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 #include <cstdint>
+#include <memory>
 
 struct NVGcontext;
 
@@ -56,7 +57,9 @@ namespace Babylon::Polyfills::Internal
         void Arc(const Napi::CallbackInfo&);
         void DrawImage(const Napi::CallbackInfo&);
         Napi::Value GetImageData(const Napi::CallbackInfo&);
+        Napi::Value CreateImageData(const Napi::CallbackInfo&);
         void SetLineDash(const Napi::CallbackInfo&);
+        Napi::Value GetLineDash(const Napi::CallbackInfo&);
         void StrokeText(const Napi::CallbackInfo&);
         Napi::Value CreateLinearGradient(const Napi::CallbackInfo&);
         Napi::Value CreateRadialGradient(const Napi::CallbackInfo&);
@@ -93,6 +96,7 @@ namespace Babylon::Polyfills::Internal
         void SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowOffsetY(const Napi::CallbackInfo&);
         void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
+        void WarnShadowUnsupported();
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         bool SetFontFaceId();
@@ -103,10 +107,29 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<NVGcontext*> m_nvg;
 
         Font m_font;
-        std::variant<std::string, CanvasGradient*> m_fillStyle{};
-        std::string m_strokeStyle{};
+        // A gradient style holds the assigned JavaScript object, not a bare CanvasGradient*.
+        // CanvasGradient is an ObjectWrap, so its native instance is deleted by the wrapper's
+        // finalizer; `ctx.fillStyle = ctx.createLinearGradient(...)` leaves no other reference,
+        // and the pointer dangles as soon as the collector runs. shared_ptr rather than a bare
+        // Napi::ObjectReference because SavedStyle copies these on save()/restore() and a
+        // reference is move-only -- the copies share one strong reference to the same object.
+        using GradientStyle = std::shared_ptr<Napi::ObjectReference>;
+        std::variant<std::string, GradientStyle> m_fillStyle{};
+        std::variant<std::string, GradientStyle> m_strokeStyle{};
         std::string m_lineCap{};  // 'butt', 'round', 'square'
         std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
+
+        // Dash pattern from setLineDash. Retained only so getLineDash() round-trips;
+        // strokes are always drawn solid (nanovg has no dashed stroke).
+        std::vector<double> m_lineDash{};
+
+        // Shadow attributes from shadowColor/shadowBlur/shadowOffsetX/shadowOffsetY.
+        // Retained only so the getters round-trip; nanovg has no shadow primitive,
+        // so nothing is ever drawn from them. Defaults are the spec's.
+        std::string m_shadowColor{"rgba(0, 0, 0, 0)"};
+        double m_shadowBlur{0.0};
+        double m_shadowOffsetX{0.0};
+        double m_shadowOffsetY{0.0};
         std::string m_filter{};
         std::string m_direction{"ltr"}; // 'ltr', 'rtl'
         float m_miterLimit{0.f};
@@ -119,28 +142,65 @@ namespace Babylon::Polyfills::Internal
 
         struct SavedStyle
         {
-            std::variant<std::string, CanvasGradient*> fillStyle;
-            std::string strokeStyle;
+            std::variant<std::string, GradientStyle> fillStyle;
+            std::variant<std::string, GradientStyle> strokeStyle;
+
+            // The rest of the wrapper-side drawing state. nvgSave/nvgRestore rewinds
+            // nanovg's own copy of the attributes it knows about, but never these C++
+            // mirrors, so without them a getter keeps reporting the post-save() value
+            // after restore(). The shadow/dash/filter/direction fields have no nanovg
+            // counterpart at all, so they would otherwise never be rewound.
+            std::string lineCap;
+            std::string lineJoin;
+            std::vector<double> lineDash;
+            std::string shadowColor;
+            double shadowBlur;
+            double shadowOffsetX;
+            double shadowOffsetY;
+            std::string filter;
+            std::string direction;
+            float miterLimit;
+            float lineWidth;
+            float globalAlpha;
+            float letterSpacing;
+
+            // font is worse than the getter-only cases above: m_currentFontId is what the
+            // text draw path binds, so without it the wrong face actually renders after a
+            // restore(). nvgRestore rewinds the size it set, but not either of these.
+            Font font;
+            int currentFontId;
         };
         std::vector<SavedStyle> m_savedStyles;
 
         Graphics::DeviceContext& m_graphicsContext;
-
-        bool m_isClipped{false};
 
         struct RectangleClipping
         {
             float left, top, width, height;
         } m_rectangleClipping{};
 
+        // Set once the current path contains anything nvgScissor cannot express.
+        bool m_pathHasNonRect{false};
+        // Set when clip() had such a path and had to fall back to path emulation.
+        bool m_isClipped{false};
+
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
         std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
-        void BindFillStyle(const Napi::CallbackInfo& info, float left, float top, float width, float height);
+        void BindFillStyle(const Napi::CallbackInfo& info);
+        void BindStrokeStyle(const Napi::CallbackInfo& info);
         void FlushGraphicResources() override;
         void PlayPath2D(const NativeCanvasPath2D* path);
         void SetFilterStack();
+
+        // Start a fresh nanovg path and drop the clip state that described the old one.
+        // clip() emulates a non-rectangular path by leaving it current and letting the next
+        // fill draw it, so any operation that resets the path invalidates that emulation:
+        // leaving m_isClipped set makes FillRect skip its own nvgBeginPath and append to a
+        // path that no longer exists, and leaving m_pathHasNonRect set makes a later clip()
+        // take the emulated branch on what is now a plain rect.
+        void ResetPathState();
 
         // CPU-side RGBA8 mirror of the canvas, sized to the canvas, populated by DrawImage so that
         // getImageData can return the exact decoded pixels (the GPU nanovg framebuffer is not read back).
