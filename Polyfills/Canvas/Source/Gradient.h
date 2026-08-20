@@ -16,15 +16,11 @@ namespace Babylon::Polyfills::Internal
         static Napi::Object CreateLinear(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float x1, float y1);
         static Napi::Object CreateRadial(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float r0, float x1, float y1, float r1);
 
-        // True only for objects this polyfill's own constructor produced. Unwrap() is a
-        // napi_unwrap, which dereferences whatever the object's slot happens to hold, so
-        // callers must establish the type first: `ctx.strokeStyle = {}` is reachable from
-        // script and would otherwise unwrap an object that was never wrapped.
+        // True only for objects this polyfill's own constructor produced. Never use
+        // ObjectWrap::Unwrap on an unchecked object; see NativeInstanceRegistry.
         static bool IsInstance(Napi::Env env, const Napi::Value& value);
 
-        // Returns the wrapped gradient, or nullptr when `value` is not one. Prefer this to
-        // IsInstance + Unwrap; see NativeInstanceRegistry for why neither `instanceof` nor a
-        // brand property can answer this safely.
+        // Returns the wrapped gradient, or nullptr when `value` is not one.
         static CanvasGradient* TryUnwrap(Napi::Env env, const Napi::Value& value);
 
         explicit CanvasGradient(const Napi::CallbackInfo& info);
