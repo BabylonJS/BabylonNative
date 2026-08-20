@@ -201,7 +201,11 @@ namespace Babylon::Polyfills::Internal
         }
         else if (std::holds_alternative<GradientStyle>(m_state.fillStyle))
         {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.fillStyle)->Value());
+            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(m_state.fillStyle)->Value());
+            if (gradient == nullptr)
+            {
+                throw Napi::Error::New(info.Env(), "Fillstyle is not a color string or a gradient.");
+            }
             nvgFillPaint(*m_nvg, gradient->Paint());
         }
         else
@@ -223,7 +227,11 @@ namespace Babylon::Polyfills::Internal
         }
         else if (std::holds_alternative<GradientStyle>(m_state.strokeStyle))
         {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.strokeStyle)->Value());
+            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(m_state.strokeStyle)->Value());
+            if (gradient == nullptr)
+            {
+                throw Napi::Error::New(info.Env(), "Strokestyle is not a color string or a gradient.");
+            }
             nvgStrokePaint(*m_nvg, gradient->Paint());
         }
         else
@@ -352,11 +360,8 @@ namespace Babylon::Polyfills::Internal
         const NativeCanvasPath2D* path = nullptr;
         if (info.Length() >= 1 && !info[0].IsUndefined())
         {
-            if (NativeCanvasPath2D::IsInstance(info.Env(), info[0]))
-            {
-                path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>());
-            }
-            else if (!info[0].IsString())
+            path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
+            if (path == nullptr && !info[0].IsString())
             {
                 throw Napi::TypeError::New(info.Env(), "Context2D.fill: the first argument is neither a Path2D nor a fill rule.");
             }
@@ -671,12 +676,11 @@ namespace Babylon::Polyfills::Internal
         const NativeCanvasPath2D* path = nullptr;
         if (info.Length() >= 1 && !info[0].IsUndefined())
         {
-            if (!NativeCanvasPath2D::IsInstance(info.Env(), info[0]))
+            path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
+            if (path == nullptr)
             {
                 throw Napi::TypeError::New(info.Env(), "Context2D.stroke: the first argument is not a Path2D.");
             }
-
-            path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>());
         }
 
         // draw Path2D if exists

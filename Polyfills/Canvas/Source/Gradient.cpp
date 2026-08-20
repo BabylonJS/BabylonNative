@@ -3,6 +3,7 @@
 #include "Context.h"
 #include "Gradient.h"
 #include "Colors.h"
+#include "NativeInstanceRegistry.h"
 
 #include <algorithm>
 #include <cmath>
@@ -120,13 +121,12 @@ namespace Babylon::Polyfills::Internal
 
     bool CanvasGradient::IsInstance(Napi::Env env, const Napi::Value& value)
     {
-        if (!value.IsObject())
-        {
-            return false;
-        }
+        return TryUnwrap(env, value) != nullptr;
+    }
 
-        const auto constructor = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME);
-        return constructor.IsFunction() && value.As<Napi::Object>().InstanceOf(constructor.As<Napi::Function>());
+    CanvasGradient* CanvasGradient::TryUnwrap(Napi::Env env, const Napi::Value& value)
+    {
+        return NativeInstanceRegistry<CanvasGradient>::TryUnwrap(env, value);
     }
 
     Napi::Object CanvasGradient::CreateLinear(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float x1, float y1)
@@ -163,10 +163,15 @@ namespace Babylon::Polyfills::Internal
             r0 = info[4].As<Napi::Number>().FloatValue();
             r1 = info[5].As<Napi::Number>().FloatValue();
         }
+
+        // Registered last: a constructor that throws never reaches the destructor, which
+        // would leave a dangling address in the registry.
+        NativeInstanceRegistry<CanvasGradient>::Add(this);
     }
 
     CanvasGradient::~CanvasGradient()
     {
+        NativeInstanceRegistry<CanvasGradient>::Remove(this);
         Dispose();
     }
 
