@@ -28462,8 +28462,6 @@ describe("Canvas2D", function () {
   it("restores the remaining drawing state across save/restore", function () {
     // nvgRestore() rewinds nanovg's copy of these, but the wrapper kept its own
     // mirror, so the getters reported the post-save() value forever after.
-    // globalAlpha is set but not asserted: it is declared write-only (nullptr
-    // getter), so it has no observable value to check.
     var ctx = createContext();
     ctx.lineWidth = 1;
     ctx.globalAlpha = 1;
@@ -28480,10 +28478,49 @@ describe("Canvas2D", function () {
     ctx.setLineDash([7, 8, 9]);
     ctx.restore();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineWidth).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(1);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineCap).to.equal("butt");
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineJoin).to.equal("miter");
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.miterLimit).to.equal(10);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.getLineDash()).to.deep.equal([1, 2]);
+  });
+
+  it("reads back globalAlpha", function () {
+    // globalAlpha was registered with a nullptr getter, so it was write-only and
+    // reading it gave undefined. The value was never mirrored either, so the
+    // save/restore stack carried a field nothing could observe.
+    var ctx = createContext();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(1);
+    ctx.globalAlpha = 0.5;
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+  });
+
+  it("ignores an out-of-range or non-finite globalAlpha", function () {
+    // The spec says values outside [0, 1] and non-finite values are ignored,
+    // leaving the previous value in place, rather than clamped or thrown.
+    var ctx = createContext();
+    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = -1;
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    ctx.globalAlpha = 2;
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    ctx.globalAlpha = Infinity;
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    ctx.globalAlpha = NaN;
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0.5);
+    ctx.globalAlpha = 0;
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.globalAlpha).to.equal(0);
+  });
+
+  it("reports the spec defaults on a fresh context", function () {
+    // These four mirror state nanovg also keeps, and nvgReset installs butt/miter/1/10.
+    // The C++ mirrors were value-initialized to ""/""/0/0 instead, so a fresh context
+    // reported a default it was not actually drawing with.
+    var ctx = createContext();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineCap).to.equal("butt");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineJoin).to.equal("miter");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.lineWidth).to.equal(1);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ctx.miterLimit).to.equal(10);
   });
 
   it("keeps the previous dash list when a new one is rejected", function () {

@@ -87,6 +87,7 @@ namespace Babylon::Polyfills::Internal
         void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLetterSpacing(const Napi::CallbackInfo&);
         void SetLetterSpacing(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetGlobalAlpha(const Napi::CallbackInfo&);
         void SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowColor(const Napi::CallbackInfo&);
         void SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -106,71 +107,66 @@ namespace Babylon::Polyfills::Internal
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 
-        Font m_font;
         // A gradient style holds the assigned JavaScript object, not a bare CanvasGradient*.
         // CanvasGradient is an ObjectWrap, so its native instance is deleted by the wrapper's
         // finalizer; `ctx.fillStyle = ctx.createLinearGradient(...)` leaves no other reference,
         // and the pointer dangles as soon as the collector runs. shared_ptr rather than a bare
-        // Napi::ObjectReference because SavedStyle copies these on save()/restore() and a
-        // reference is move-only -- the copies share one strong reference to the same object.
+        // Napi::ObjectReference because State is copied on save()/restore() and a reference is
+        // move-only -- the copies share one strong reference to the same object.
         using GradientStyle = std::shared_ptr<Napi::ObjectReference>;
-        std::variant<std::string, GradientStyle> m_fillStyle{};
-        std::variant<std::string, GradientStyle> m_strokeStyle{};
-        std::string m_lineCap{};  // 'butt', 'round', 'square'
-        std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
 
-        // Dash pattern from setLineDash. Retained only so getLineDash() round-trips;
-        // strokes are always drawn solid (nanovg has no dashed stroke).
-        std::vector<double> m_lineDash{};
-
-        // Shadow attributes from shadowColor/shadowBlur/shadowOffsetX/shadowOffsetY.
-        // Retained only so the getters round-trip; nanovg has no shadow primitive,
-        // so nothing is ever drawn from them. Defaults are the spec's.
-        std::string m_shadowColor{"rgba(0, 0, 0, 0)"};
-        double m_shadowBlur{0.0};
-        double m_shadowOffsetX{0.0};
-        double m_shadowOffsetY{0.0};
-        std::string m_filter{};
-        std::string m_direction{"ltr"}; // 'ltr', 'rtl'
-        float m_miterLimit{0.f};
-        float m_lineWidth{0.f};
-        float m_globalAlpha{1.f};
-        float m_letterSpacing{0.f};
-
-        std::map<std::string, int> m_fonts;
-        int m_currentFontId{-1};
-
-        struct SavedStyle
+        // The wrapper-side drawing state: every attribute save()/restore() has to rewind.
+        // These are kept together, and pushed/popped as a whole, so that adding an attribute
+        // cannot silently miss save()/restore() the way a hand-written field list allows.
+        //
+        // They exist because nvgSave/nvgRestore rewinds nanovg's own copy of the attributes it
+        // knows about but never these C++ mirrors, so without rewinding them a getter keeps
+        // reporting its post-save() value after restore(). The shadow/dash/filter/direction
+        // fields have no nanovg counterpart at all, so nothing else would ever rewind them.
+        //
+        // The current path is deliberately not here: per the spec save() does not save it, so
+        // the path-tracking members below stay outside the stack.
+        struct State
         {
-            std::variant<std::string, GradientStyle> fillStyle;
-            std::variant<std::string, GradientStyle> strokeStyle;
+            std::variant<std::string, GradientStyle> fillStyle{};
+            std::variant<std::string, GradientStyle> strokeStyle{};
+            // These four mirror state nanovg also holds. Their initial values must match what
+            // nvgReset actually installs (NVG_BUTT, NVG_MITER, strokeWidth 1, miterLimit 10),
+            // which is also what the spec requires, or a fresh context reports a default it is
+            // not drawing with.
+            std::string lineCap{"butt"};   // 'butt', 'round', 'square'
+            std::string lineJoin{"miter"}; // 'round', 'bevel', 'miter'
 
-            // The rest of the wrapper-side drawing state. nvgSave/nvgRestore rewinds
-            // nanovg's own copy of the attributes it knows about, but never these C++
-            // mirrors, so without them a getter keeps reporting the post-save() value
-            // after restore(). The shadow/dash/filter/direction fields have no nanovg
-            // counterpart at all, so they would otherwise never be rewound.
-            std::string lineCap;
-            std::string lineJoin;
-            std::vector<double> lineDash;
-            std::string shadowColor;
-            double shadowBlur;
-            double shadowOffsetX;
-            double shadowOffsetY;
-            std::string filter;
-            std::string direction;
-            float miterLimit;
-            float lineWidth;
-            float globalAlpha;
-            float letterSpacing;
+            // Dash pattern from setLineDash. Retained only so getLineDash() round-trips;
+            // strokes are always drawn solid (nanovg has no dashed stroke).
+            std::vector<double> lineDash{};
 
-            // font is worse than the getter-only cases above: m_currentFontId is what the
-            // text draw path binds, so without it the wrong face actually renders after a
+            // Shadow attributes from shadowColor/shadowBlur/shadowOffsetX/shadowOffsetY.
+            // Retained only so the getters round-trip; nanovg has no shadow primitive,
+            // so nothing is ever drawn from them. Defaults are the spec's.
+            std::string shadowColor{"rgba(0, 0, 0, 0)"};
+            double shadowBlur{0.0};
+            double shadowOffsetX{0.0};
+            double shadowOffsetY{0.0};
+            std::string filter{};
+            std::string direction{"ltr"}; // 'ltr', 'rtl'
+            float miterLimit{10.f};
+            float lineWidth{1.f};
+            double globalAlpha{1.0};
+            float letterSpacing{0.f};
+
+            // font is worse than the getter-only cases above: currentFontId is what the text
+            // draw path binds, so without rewinding it the wrong face actually renders after a
             // restore(). nvgRestore rewinds the size it set, but not either of these.
-            Font font;
-            int currentFontId;
+            Font font{};
+            int currentFontId{-1};
         };
-        std::vector<SavedStyle> m_savedStyles;
+        State m_state{};
+        std::vector<State> m_savedStates;
+
+        // Registry of font faces loaded into nanovg, keyed by family. Not part of State:
+        // it is a resource cache for the whole context, not an attribute save() rewinds.
+        std::map<std::string, int> m_fonts;
 
         Graphics::DeviceContext& m_graphicsContext;
 

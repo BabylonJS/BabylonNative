@@ -109,7 +109,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("letterSpacing", &Context::GetLetterSpacing, &Context::SetLetterSpacing),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
                 InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
-                InstanceAccessor("globalAlpha", nullptr, &Context::SetGlobalAlpha),
+                InstanceAccessor("globalAlpha", &Context::GetGlobalAlpha, &Context::SetGlobalAlpha),
                 InstanceAccessor("shadowColor", &Context::GetShadowColor, &Context::SetShadowColor),
                 InstanceAccessor("shadowBlur", &Context::GetShadowBlur, &Context::SetShadowBlur),
                 InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
@@ -172,18 +172,18 @@ namespace Babylon::Polyfills::Internal
 
     void Context::BindFillStyle(const Napi::CallbackInfo& info)
     {
-        if (std::holds_alternative<std::string>(m_fillStyle))
+        if (std::holds_alternative<std::string>(m_state.fillStyle))
         {
-            const auto& str = std::get<std::string>(m_fillStyle);
+            const auto& str = std::get<std::string>(m_state.fillStyle);
             // Treat unset/empty fillStyle as opaque white (nvg's default fill color) instead of
             // the transparent black returned by StringToColor("") — this matches how fillStyle
             // behaves before any explicit assignment via SetFillStyle.
             const auto color = str.empty() ? nvgRGBA(255, 255, 255, 255) : StringToColor(info.Env(), str);
             nvgFillColor(*m_nvg, color);
         }
-        else if (std::holds_alternative<GradientStyle>(m_fillStyle))
+        else if (std::holds_alternative<GradientStyle>(m_state.fillStyle))
         {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_fillStyle)->Value());
+            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.fillStyle)->Value());
             nvgFillPaint(*m_nvg, gradient->Paint());
         }
         else
@@ -194,18 +194,18 @@ namespace Babylon::Polyfills::Internal
 
     void Context::BindStrokeStyle(const Napi::CallbackInfo& info)
     {
-        if (std::holds_alternative<std::string>(m_strokeStyle))
+        if (std::holds_alternative<std::string>(m_state.strokeStyle))
         {
-            const auto& str = std::get<std::string>(m_strokeStyle);
+            const auto& str = std::get<std::string>(m_state.strokeStyle);
             // Treat unset/empty strokeStyle as opaque black -- both the Canvas2D default
             // ("#000000") and nvg's default stroke color -- instead of the transparent black
             // StringToColor("") would return.
             const auto color = str.empty() ? nvgRGBA(0, 0, 0, 255) : StringToColor(info.Env(), str);
             nvgStrokeColor(*m_nvg, color);
         }
-        else if (std::holds_alternative<GradientStyle>(m_strokeStyle))
+        else if (std::holds_alternative<GradientStyle>(m_state.strokeStyle))
         {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_strokeStyle)->Value());
+            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.strokeStyle)->Value());
             nvgStrokePaint(*m_nvg, gradient->Paint());
         }
         else
@@ -216,10 +216,10 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetFilterStack()
     {
-        if (m_filter.length())
+        if (m_state.filter.length())
         {
             nanovg_filterstack filterStack;
-            filterStack.ParseString(m_filter);
+            filterStack.ParseString(m_state.filter);
             nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
         }
     }
@@ -250,15 +250,15 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
     {
-        if (std::holds_alternative<std::string>(m_fillStyle))
+        if (std::holds_alternative<std::string>(m_state.fillStyle))
         {
-            return Napi::Value::From(Env(), std::get<std::string>(m_fillStyle));
+            return Napi::Value::From(Env(), std::get<std::string>(m_state.fillStyle));
         }
         else
         {
             // Return the gradient object that was assigned, as the spec requires, so that
             // `otherCtx.fillStyle = ctx.fillStyle` round-trips.
-            return std::get<GradientStyle>(m_fillStyle)->Value();
+            return std::get<GradientStyle>(m_state.fillStyle)->Value();
         }
     }
 
@@ -271,25 +271,25 @@ namespace Babylon::Polyfills::Internal
         {
             auto string = value.As<Napi::String>().Utf8Value();
             const auto color = StringToColor(info.Env(), string);
-            m_fillStyle = string;
+            m_state.fillStyle = string;
             nvgFillColor(*m_nvg, color);
         }
         else if (CanvasGradient::IsInstance(info.Env(), value))
         {
-            m_fillStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
+            m_state.fillStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
         }
         // Anything else leaves fillStyle unchanged, as the spec requires.
     }
 
     Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
     {
-        if (std::holds_alternative<std::string>(m_strokeStyle))
+        if (std::holds_alternative<std::string>(m_state.strokeStyle))
         {
-            return Napi::Value::From(Env(), std::get<std::string>(m_strokeStyle));
+            return Napi::Value::From(Env(), std::get<std::string>(m_state.strokeStyle));
         }
         else
         {
-            return std::get<GradientStyle>(m_strokeStyle)->Value();
+            return std::get<GradientStyle>(m_state.strokeStyle)->Value();
         }
     }
 
@@ -301,12 +301,12 @@ namespace Babylon::Polyfills::Internal
         {
             auto string = value.As<Napi::String>().Utf8Value();
             const auto color = StringToColor(info.Env(), string);
-            m_strokeStyle = string;
+            m_state.strokeStyle = string;
             nvgStrokeColor(*m_nvg, color);
         }
         else if (CanvasGradient::IsInstance(info.Env(), value))
         {
-            m_strokeStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
+            m_state.strokeStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
         }
         // Per spec, assigning anything that is neither a color string nor a
         // gradient/pattern leaves strokeStyle unchanged.
@@ -314,13 +314,13 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetLineWidth(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), m_lineWidth);
+        return Napi::Value::From(Env(), m_state.lineWidth);
     }
 
     void Context::SetLineWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        m_lineWidth = value.As<Napi::Number>().FloatValue();
-        nvgStrokeWidth(*m_nvg, m_lineWidth);
+        m_state.lineWidth = value.As<Napi::Number>().FloatValue();
+        nvgStrokeWidth(*m_nvg, m_state.lineWidth);
     }
 
     void Context::Fill(const Napi::CallbackInfo& info)
@@ -353,36 +353,17 @@ namespace Babylon::Polyfills::Internal
         // ctx.restore() correctly rewinds it — otherwise FillText/BindFillStyle would re-bind
         // a stale color from after a fillStyle change that nvg has since popped, and every
         // attribute getter would keep reporting its post-save() value.
-        m_savedStyles.push_back({m_fillStyle, m_strokeStyle, m_lineCap, m_lineJoin, m_lineDash,
-            m_shadowColor, m_shadowBlur, m_shadowOffsetX, m_shadowOffsetY, m_filter, m_direction,
-            m_miterLimit, m_lineWidth, m_globalAlpha, m_letterSpacing, m_font, m_currentFontId});
+        m_savedStates.push_back(m_state);
     }
 
     void Context::Restore(const Napi::CallbackInfo&)
     {
         nvgRestore(*m_nvg);
         m_isClipped = false;
-        if (!m_savedStyles.empty())
+        if (!m_savedStates.empty())
         {
-            const auto& saved = m_savedStyles.back();
-            m_fillStyle = saved.fillStyle;
-            m_strokeStyle = saved.strokeStyle;
-            m_lineCap = saved.lineCap;
-            m_lineJoin = saved.lineJoin;
-            m_lineDash = saved.lineDash;
-            m_shadowColor = saved.shadowColor;
-            m_shadowBlur = saved.shadowBlur;
-            m_shadowOffsetX = saved.shadowOffsetX;
-            m_shadowOffsetY = saved.shadowOffsetY;
-            m_filter = saved.filter;
-            m_direction = saved.direction;
-            m_miterLimit = saved.miterLimit;
-            m_lineWidth = saved.lineWidth;
-            m_globalAlpha = saved.globalAlpha;
-            m_letterSpacing = saved.letterSpacing;
-            m_font = saved.font;
-            m_currentFontId = saved.currentFontId;
-            m_savedStyles.pop_back();
+            m_state = std::move(m_savedStates.back());
+            m_savedStates.pop_back();
         }
     }
 
@@ -699,13 +680,13 @@ namespace Babylon::Polyfills::Internal
         // DynamicTexture.drawText center text via t = (canvas - measureText.width)/2 to a
         // negative x and clip the text off-canvas. Arial-ish synthesised metrics keep the
         // centering on-canvas, while the actual FillText still substitutes our loaded font.
-        const bool familyAvailable = !m_font.Familiy().empty()
-            && m_fonts.find(m_font.Familiy()) != m_fonts.end();
+        const bool familyAvailable = !m_state.font.Familiy().empty()
+            && m_fonts.find(m_state.font.Familiy()) != m_fonts.end();
 
-        if (!familyAvailable && m_font.Size() > 0.f)
+        if (!familyAvailable && m_state.font.Size() > 0.f)
         {
             // Approximate Arial proportional metrics: average advance ~ 0.55 em.
-            const float fontSize = m_font.Size();
+            const float fontSize = m_state.font.Size();
             const float advance = fontSize * 0.55f;
             const float width = advance * static_cast<float>(text.length());
             const float ascent = fontSize * 0.75f;
@@ -731,9 +712,9 @@ namespace Babylon::Polyfills::Internal
         {
             return false;
         }
-        else if (m_currentFontId >= 0)
+        else if (m_state.currentFontId >= 0)
         {
-            nvgFontFaceId(*m_nvg, m_currentFontId);
+            nvgFontFaceId(*m_nvg, m_state.currentFontId);
         }
         else
         {
@@ -749,7 +730,7 @@ namespace Babylon::Polyfills::Internal
         auto y = info[2].As<Napi::Number>().FloatValue();
 
         // TODO: support ligatures, etc.
-        if (m_direction.compare("rtl") == 0) {
+        if (m_state.direction.compare("rtl") == 0) {
             std::reverse(text.begin(), text.end());
         }
 
@@ -757,10 +738,10 @@ namespace Babylon::Polyfills::Internal
         {
             BindFillStyle(info);
 
-            if (m_filter.length())
+            if (m_state.filter.length())
             {
                 nanovg_filterstack filterStack;
-                filterStack.ParseString(m_filter);
+                filterStack.ParseString(m_state.filter);
                 nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
             }
 
@@ -1488,7 +1469,7 @@ namespace Babylon::Polyfills::Internal
         //
         // Parsed into a temporary and committed only once every segment
         // validates, because the spec keeps the previous list when the argument
-        // is rejected -- clearing m_lineDash up front would destroy it first.
+        // is rejected -- clearing m_state.lineDash up front would destroy it first.
         std::vector<double> parsed;
 
         if (info.Length() > 0)
@@ -1524,9 +1505,9 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        m_lineDash = std::move(parsed);
+        m_state.lineDash = std::move(parsed);
 
-        if (!m_lineDash.empty())
+        if (!m_state.lineDash.empty())
         {
             static bool warned = false;
             if (!warned)
@@ -1539,10 +1520,10 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetLineDash(const Napi::CallbackInfo& info)
     {
-        auto segments = Napi::Array::New(info.Env(), m_lineDash.size());
-        for (size_t index = 0; index < m_lineDash.size(); ++index)
+        auto segments = Napi::Array::New(info.Env(), m_state.lineDash.size());
+        for (size_t index = 0; index < m_state.lineDash.size(); ++index)
         {
-            segments.Set(static_cast<uint32_t>(index), Napi::Number::New(info.Env(), m_lineDash[index]));
+            segments.Set(static_cast<uint32_t>(index), Napi::Number::New(info.Env(), m_state.lineDash[index]));
         }
         return segments;
     }
@@ -1554,7 +1535,7 @@ namespace Babylon::Polyfills::Internal
         auto y = info[2].As<Napi::Number>().FloatValue();
 
         // TODO: support ligatures, etc.
-        if (m_direction.compare("rtl") == 0) {
+        if (m_state.direction.compare("rtl") == 0) {
             std::reverse(text.begin(), text.end());
         }
 
@@ -1648,42 +1629,42 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetLineCap(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_lineCap);
+        return Napi::Value::From(Env(), m_state.lineCap);
     }
 
     void Context::SetLineCap(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_lineCap = value.As<Napi::String>().Utf8Value();
-        const auto lineCap = StringToLineCap(info.Env(), m_lineCap);
+        m_state.lineCap = value.As<Napi::String>().Utf8Value();
+        const auto lineCap = StringToLineCap(info.Env(), m_state.lineCap);
         nvgLineCap(*m_nvg, lineCap);
     }
 
     Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_lineJoin);
+        return Napi::Value::From(Env(), m_state.lineJoin);
     }
 
     void Context::SetLineJoin(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_lineJoin = value.As<Napi::String>().Utf8Value();
-        const auto lineJoin = StringToLineJoin(info.Env(), m_lineJoin);
+        m_state.lineJoin = value.As<Napi::String>().Utf8Value();
+        const auto lineJoin = StringToLineJoin(info.Env(), m_state.lineJoin);
         nvgLineJoin(*m_nvg, lineJoin);
     }
 
     Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_miterLimit);
+        return Napi::Value::From(Env(), m_state.miterLimit);
     }
 
     void Context::SetMiterLimit(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_miterLimit = value.As<Napi::Number>().FloatValue();
-        nvgMiterLimit(*m_nvg, m_miterLimit);
+        m_state.miterLimit = value.As<Napi::Number>().FloatValue();
+        nvgMiterLimit(*m_nvg, m_state.miterLimit);
     }
 
     Napi::Value Context::GetFilter(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_filter);
+        return Napi::Value::From(Env(), m_state.filter);
     }
 
     void Context::SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -1692,13 +1673,13 @@ namespace Babylon::Polyfills::Internal
         // Keep existing filter if the new one is invalid
         if (nanovg_filterstack::ValidString(filterString))
         {
-            m_filter = filterString;
+            m_state.filter = filterString;
         }
     }
 
     Napi::Value Context::GetDirection(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_direction);
+        return Napi::Value::From(Env(), m_state.direction);
     }
 
     void Context::SetDirection(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -1707,13 +1688,13 @@ namespace Babylon::Polyfills::Internal
         const bool valid = !(direction.compare("ltr") && direction.compare("rtl"));
         if (valid)
         {
-            m_direction = direction;
+            m_state.direction = direction;
         }
     }
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), static_cast<std::string>(m_font));
+        return Napi::Value::From(Env(), static_cast<std::string>(m_state.font));
     }
 
     void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -1734,19 +1715,19 @@ namespace Babylon::Polyfills::Internal
         if (m_fonts.find(font->Familiy()) == m_fonts.end())
         {
             // TODO: handle finding font face for a specific weight and style
-            m_currentFontId = -1;
+            m_state.currentFontId = -1;
         }
         else
         {
-            m_currentFontId = m_fonts.at(font->Familiy());
+            m_state.currentFontId = m_fonts.at(font->Familiy());
         }
 
-        m_font = std::move(*font);
+        m_state.font = std::move(*font);
     }
 
     Napi::Value Context::GetLetterSpacing(const Napi::CallbackInfo& info)
     {
-        std::string letterSpacingStr = std::to_string(m_letterSpacing);
+        std::string letterSpacingStr = std::to_string(m_state.letterSpacing);
         letterSpacingStr.erase(letterSpacingStr.find_last_not_of('0') + 1, std::string::npos);
         letterSpacingStr.erase(letterSpacingStr.find_last_not_of('.') + 1, std::string::npos);
         return Napi::Value::From(Env(), letterSpacingStr + "px");
@@ -1768,16 +1749,29 @@ namespace Babylon::Polyfills::Internal
             const float letterSpacing = std::strtof(letterSpacingText.c_str(), nullptr);
             if (std::isfinite(letterSpacing))
             {
-                m_letterSpacing = letterSpacing;
+                m_state.letterSpacing = letterSpacing;
             }
         }
-        nvgTextLetterSpacing(*m_nvg, m_letterSpacing);
+        nvgTextLetterSpacing(*m_nvg, m_state.letterSpacing);
+    }
+
+    Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo& info)
+    {
+        return Napi::Number::New(info.Env(), m_state.globalAlpha);
     }
 
     void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        const float alpha = value.As<Napi::Number>().FloatValue();
-        nvgGlobalAlpha(*m_nvg, alpha);
+        const double alpha = value.As<Napi::Number>().DoubleValue();
+        // Per spec a value that is not finite, or outside [0, 1], is ignored rather than
+        // clamped or thrown, and leaves the previous value in place.
+        if (!std::isfinite(alpha) || alpha < 0.0 || alpha > 1.0)
+        {
+            return;
+        }
+
+        m_state.globalAlpha = static_cast<float>(alpha);
+        nvgGlobalAlpha(*m_nvg, m_state.globalAlpha);
     }
 
     // nanovg has no shadow primitive, so the shadow attributes are stored and
@@ -1793,7 +1787,7 @@ namespace Babylon::Polyfills::Internal
     // is genuinely requested warns once instead of failing the scene.
     void Context::WarnShadowUnsupported()
     {
-        if (m_shadowBlur == 0.0 && m_shadowOffsetX == 0.0 && m_shadowOffsetY == 0.0)
+        if (m_state.shadowBlur == 0.0 && m_state.shadowOffsetX == 0.0 && m_state.shadowOffsetY == 0.0)
         {
             // Nothing is being asked for: no offset and no blur draws no shadow.
             return;
@@ -1809,7 +1803,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetShadowColor(const Napi::CallbackInfo& info)
     {
-        return Napi::String::New(info.Env(), m_shadowColor);
+        return Napi::String::New(info.Env(), m_state.shadowColor);
     }
 
     void Context::SetShadowColor(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -1825,12 +1819,12 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        m_shadowColor = color;
+        m_state.shadowColor = color;
     }
 
     Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo& info)
     {
-        return Napi::Number::New(info.Env(), m_shadowBlur);
+        return Napi::Number::New(info.Env(), m_state.shadowBlur);
     }
 
     void Context::SetShadowBlur(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -1842,13 +1836,13 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        m_shadowBlur = blur;
+        m_state.shadowBlur = blur;
         WarnShadowUnsupported();
     }
 
     Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo& info)
     {
-        return Napi::Number::New(info.Env(), m_shadowOffsetX);
+        return Napi::Number::New(info.Env(), m_state.shadowOffsetX);
     }
 
     void Context::SetShadowOffsetX(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -1859,13 +1853,13 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        m_shadowOffsetX = offset;
+        m_state.shadowOffsetX = offset;
         WarnShadowUnsupported();
     }
 
     Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo& info)
     {
-        return Napi::Number::New(info.Env(), m_shadowOffsetY);
+        return Napi::Number::New(info.Env(), m_state.shadowOffsetY);
     }
 
     void Context::SetShadowOffsetY(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -1876,7 +1870,7 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        m_shadowOffsetY = offset;
+        m_state.shadowOffsetY = offset;
         WarnShadowUnsupported();
     }
 }
