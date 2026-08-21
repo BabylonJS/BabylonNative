@@ -24,6 +24,7 @@ set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
+    "Source/Tests.Device.FrameEncoder.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
@@ -72,6 +73,7 @@ target_link_libraries(UnitTests
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE GraphicsDevice
+    PRIVATE GraphicsDeviceContext
     PRIVATE ExternalTexture
     PRIVATE NativeEngine
     PRIVATE NativeEncoding

@@ -1,5 +1,9 @@
 #include <regex>
 #include <sstream>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 
 #include "Font.h"
 
@@ -10,10 +14,94 @@ namespace
     auto SIZE_REGEX = std::regex(R"(^\s*((?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)px\s)");
     auto FAMILY_IDENT_REGEX = std::regex(R"(^\s*((?:[\w-]|\\.)+))");
     auto FAMILY_STRING_REGEX = std::regex(R"(^\s*(["'])((?:[^\\]|\\.)*?)\1)");
+
+    std::string DescribeValue(const Napi::Value& value)
+    {
+        if (value.IsUndefined()) return "undefined";
+        if (value.IsNull()) return "null";
+        if (value.IsString()) return "a string";
+        if (value.IsNumber()) return "a number";
+        if (value.IsBoolean()) return "a boolean";
+        if (value.IsArray()) return "an array";
+        if (value.IsFunction()) return "a function";
+        if (value.IsPromise()) return "a promise";
+        if (value.IsObject()) return "an object";
+        return "an unsupported value";
+    }
 }
 
 namespace Babylon::Polyfills::Internal
 {
+    std::vector<uint8_t> GetFontDataArgument(const Napi::CallbackInfo& info, size_t index, const char* methodName)
+    {
+        const auto env = info.Env();
+
+        if (info.Length() <= index)
+        {
+            throw Napi::TypeError::New(env, std::string{methodName} + " expects the font data as argument " +
+                std::to_string(index + 1) + ", but only " + std::to_string(info.Length()) + " argument(s) were passed.");
+        }
+
+        const auto value = info[index];
+
+        const uint8_t* data{};
+        size_t byteLength{};
+
+        if (value.IsArrayBuffer())
+        {
+            const auto buffer = value.As<Napi::ArrayBuffer>();
+            data = static_cast<const uint8_t*>(buffer.Data());
+            byteLength = buffer.ByteLength();
+        }
+        else if (value.IsTypedArray())
+        {
+            const auto view = value.As<Napi::TypedArray>();
+            data = static_cast<const uint8_t*>(view.ArrayBuffer().Data()) + view.ByteOffset();
+            byteLength = view.ByteLength();
+        }
+        else if (value.IsDataView())
+        {
+            // Deliberately NOT via Napi::DataView: the Chakra Node-API implementation backs
+            // napi_get_dataview_info with JsGetExternalData, which only succeeds for DataViews
+            // created natively through napi_create_dataview. A DataView constructed in JS fails
+            // with napi_invalid_arg even though napi_is_dataview reports true. Reading the
+            // standard buffer/byteOffset/byteLength properties works on every engine.
+            const auto view = value.As<Napi::Object>();
+            const auto bufferValue = view.Get("buffer");
+            if (!bufferValue.IsArrayBuffer())
+            {
+                throw Napi::TypeError::New(env, std::string{methodName} + " was given a DataView whose 'buffer' is not an ArrayBuffer.");
+            }
+
+            const auto buffer = bufferValue.As<Napi::ArrayBuffer>();
+            const auto byteOffset = static_cast<size_t>(view.Get("byteOffset").As<Napi::Number>().Int64Value());
+            byteLength = static_cast<size_t>(view.Get("byteLength").As<Napi::Number>().Int64Value());
+
+            if (byteOffset > buffer.ByteLength() || byteLength > buffer.ByteLength() - byteOffset)
+            {
+                throw Napi::RangeError::New(env, std::string{methodName} + " was given a DataView that extends past the end of its buffer.");
+            }
+
+            data = static_cast<const uint8_t*>(buffer.Data()) + byteOffset;
+        }
+        else
+        {
+            throw Napi::TypeError::New(env, std::string{methodName} + " expects the font data to be an ArrayBuffer or "
+                "an ArrayBuffer view, but got " + DescribeValue(value) + ". A font fetched as text rather than "
+                "binary decodes to an unusable string and arrives this way.");
+        }
+
+        if (byteLength == 0)
+        {
+            throw Napi::TypeError::New(env, std::string{methodName} + " was given an empty font buffer. The font file "
+                "was most likely fetched as text rather than binary, or the request returned no data.");
+        }
+
+        std::vector<uint8_t> fontBuffer(byteLength);
+        std::memcpy(fontBuffer.data(), data, byteLength);
+        return fontBuffer;
+    }
+
     std::optional<Font> Font::Parse(const std::string& fontString)
     {
         Font font;
@@ -43,9 +131,22 @@ namespace Babylon::Polyfills::Internal
                 {
                     font.m_weight = BOLD_WEIGHT;
                 }
-                else
+                else if (match[1] != "normal")
                 {
-                    font.m_weight = std::stoi(match[1]);
+                    // WEIGHT_REGEX also accepts the "normal" keyword, which is
+                    // simply the default weight. Passing it to std::stoi throws
+                    // std::invalid_argument, and because that is not a
+                    // Napi::Error it escapes the N-API callback and terminates
+                    // the process instead of surfacing as a JS exception.
+                    // Babylon GUI composes exactly this string
+                    // ("normal normal 18px Arial") from its default font style
+                    // and weight.
+                    //
+                    // std::stoi throws std::out_of_range just as fatally for a digit run too
+                    // long for an int, and WEIGHT_REGEX bounds neither the length nor the
+                    // magnitude, so parse without exceptions and clamp to the CSS 1-1000 range.
+                    const std::string weightText{match[1].str()};
+                    font.m_weight = static_cast<int>(std::clamp(std::strtol(weightText.c_str(), nullptr, 10), 1L, 1000L));
                 }
             }
             else
@@ -59,7 +160,16 @@ namespace Babylon::Polyfills::Internal
             return std::nullopt;
         }
         begin = match[0].second;
-        font.m_size = std::stof(match[1]);
+        // SIZE_REGEX accepts an exponent, so "18e999px" parses as a valid size that std::stof
+        // would reject with a fatal std::out_of_range. strtof saturates to infinity instead;
+        // reject a non-finite size outright rather than handing it to nanovg.
+        const std::string sizeText{match[1].str()};
+        const float size = std::strtof(sizeText.c_str(), nullptr);
+        if (!std::isfinite(size))
+        {
+            return std::nullopt;
+        }
+        font.m_size = size;
 
         if (std::regex_search(begin, end, match, FAMILY_IDENT_REGEX))
         {

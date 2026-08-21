@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG f7333d92a0ca19ad9a6bd2efb34548e8a8d8a792
+    GIT_TAG 9e56bab41272eda16460539465f97724eec94a23
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -62,7 +62,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 8cd142951018de07c89c23f726fb7dc9c8374599)
+    GIT_TAG 9271f13b654665e343aa0e80ad872b4674534163)
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
@@ -164,8 +164,20 @@ option(BABYLON_NATIVE_EMBEDDING_APPLE "Build the Apple (iOS / macOS / visionOS) 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
+# RTTI
+# Babylon Native does not use dynamic_cast or typeid anywhere in Core, Plugins,
+# Polyfills, Embedding or Apps, but compilers emit RTTI records for every
+# polymorphic class by default. Disabling it is a pure size win. UBSan's vptr
+# check is the only thing that needs RTTI, so it is derived from the sanitizer
+# switch rather than exposed as an option of its own.
+#
+# Deliberately a plain variable and not a cache entry: a cached ENABLE_RTTI
+# would persist ON in any build directory that was configured with
+# -DENABLE_SANITIZERS=ON even once, so re-configuring that directory without
+# sanitizers would silently keep emitting RTTI and lose the size win.
+set(ENABLE_RTTI ${ENABLE_SANITIZERS})
+
 if(ENABLE_SANITIZERS)
-    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         set(SANITIZERS "address,undefined")
         # Check for Clang since vptr and fdsan are Clang-specific
@@ -361,7 +373,44 @@ if(MSVC)
 
     # Enable multiprocessor compilation for faster builds
     add_compile_options(/MP)
+
+    # Strip unreferenced code from RelWithDebInfo binaries.
+    #
+    # MSVC turns /OPT:REF and /OPT:ICF off whenever /DEBUG is passed, and CMake's
+    # default RelWithDebInfo link flags are "/debug /INCREMENTAL". The effect is that
+    # RelWithDebInfo keeps every unreferenced COMDAT that made it into the static
+    # libraries.
+    #
+    # /OPT:REF alone captures the entire win (/OPT:ICF measured zero additional
+    # bytes), so identical functions are left unfolded and stack traces stay
+    # unambiguous. Incremental linking must be off because it is incompatible with
+    # /OPT:REF. Debug is left untouched, and Release/MinSizeRel already get /OPT:REF
+    # implicitly because they do not link with /DEBUG.
+    add_link_options($<$<CONFIG:RelWithDebInfo>:/INCREMENTAL:NO> $<$<CONFIG:RelWithDebInfo>:/OPT:REF>)
 endif()
+
+if(NOT ENABLE_RTTI)
+    # Applied to C++ only: /GR- and -fno-rtti are not valid for C sources.
+    # OBJCXX is listed explicitly so Objective-C++ (.mm) sources are covered on
+    # Apple regardless of whether CMake classifies them as CXX or OBJCXX.
+    if(MSVC)
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR->)
+    else()
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-fno-rtti>)
+    endif()
+endif()
+
+# Re-enables RTTI for a single target. Needed by dependencies that genuinely
+# require it; see the call sites for the specific reason in each case.
+# Call sites gate on the configuration that provides the target, so an
+# unresolved name is a mistake and target_compile_options reports it.
+function(babylon_native_force_rtti target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR>)
+    else()
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-frtti>)
+    endif()
+endfunction()
 
 if(APPLE)
     # Create scheme for installation and other targets

@@ -826,6 +826,25 @@ void main() {
     // ── Texture sampling: texelFetch() ──────────────────────────────
     ivec2 texCoord = ivec2(gl_FragCoord.xy);
     vec4  fetched  = texelFetch(uSampler2D, texCoord, 0);
+
+    // texelFetch coordinates are flipped vertically by the shader compiler, which has to clone
+    // the coordinate expression to reference it twice. Cover the operand shapes that appear in
+    // Babylon shaders beyond a plain symbol: a constructor, a binary expression, a nested
+    // constructor over a float expression, a nested constructor over integer binaries, built-in
+    // calls, and a non-constant lod. Integer multiply, divide, modulo and bitwise operators are
+    // deliberately avoided: Babylon Native builds glslang and SPIRV-Cross in their WEBMIN
+    // configurations, which do not support them, so they would fail for reasons that have nothing
+    // to do with texel coordinates.
+    int   fetchIndex = int(gl_FragCoord.x) + int(gl_FragCoord.y);
+    int   fetchLod = fetchIndex - fetchIndex;
+    ivec2 fetchSize = textureSize(uSampler2D, 0);
+    vec4  fetchedCtor   = texelFetch(uSampler2D, ivec2(gl_FragCoord.xy), 0);
+    vec4  fetchedOffset = texelFetch(uSampler2D, texCoord + ivec2(1, 1), 0);
+    vec4  fetchedScaled = texelFetch(uSampler2D, ivec2(vUV * vec2(fetchSize)), 0);
+    vec4  fetchedNested = texelFetch(uSampler2D, ivec2(fetchSize.x - texCoord.x, fetchSize.y - texCoord.y), 0);
+    vec4  fetchedCall   = texelFetch(uSampler2D, ivec2(abs(texCoord.x), abs(texCoord.y)), 0);
+    vec4  fetchedLod    = texelFetch(uSampler2D, texCoord.yx, fetchLod);
+    vec4  fetchedComplex = fetchedCtor + fetchedOffset + fetchedScaled + fetchedNested + fetchedCall + fetchedLod;
     
     // ── Texture sampling: textureSize() ─────────────────────────────
     ivec2 size2d    = textureSize(uSampler2D, 0);
@@ -951,7 +970,7 @@ void main() {
     gl_FragDepth = fragDepth;
 
     // ── Output (blend in splat color contribution) ────────────────────
-    fragColor = finalColor + vSplatColor * 0.001;
+    fragColor = finalColor + vSplatColor * 0.001 + fetchedComplex * 0.0001;
 }
 `;
 

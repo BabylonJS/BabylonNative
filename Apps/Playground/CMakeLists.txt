@@ -6,7 +6,9 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
     "../node_modules/babylonjs-gui/babylon.gui.js"
-    "../node_modules/babylonjs-serializers/babylonjs.serializers.js")
+    "../node_modules/babylonjs-serializers/babylonjs.serializers.js"
+    "../node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js"
+    "../node_modules/earcut/dist/earcut.min.js")
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"

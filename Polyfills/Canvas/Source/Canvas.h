@@ -94,6 +94,9 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
+        // Both entry points share this; each passes its own name so the diagnostics name the
+        // method the caller actually invoked rather than the one it happens to delegate to.
+        static void LoadTTFCore(const Napi::CallbackInfo& info, const char* methodName);
         static Napi::Value ParseColor(const Napi::CallbackInfo& info);
         void Remove(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);

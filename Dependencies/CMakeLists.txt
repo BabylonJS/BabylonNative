@@ -50,9 +50,16 @@ endmacro()
 babylon_native_bgfx_config(DEFAULT_MAX_ENCODERS 2)
 babylon_native_bgfx_config(MAX_VERTEX_STREAMS 18)
 babylon_native_bgfx_config(MIN_RESOURCE_COMMAND_BUFFER_SIZE 16)
-babylon_native_bgfx_config(MIN_UNIFORM_BUFFER_SIZE 4096)
-babylon_native_bgfx_config(UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE 256)
-babylon_native_bgfx_config(UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE 1024)
+
+# The uniform buffer sizing knobs are deliberately left at the bgfx defaults.
+# UniformBuffer::update reserves BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE
+# of head room before every write, so the threshold must be at least as large as
+# the largest single uniform record. The opcode encoding caps that record at
+# 4 + 1023 * sizeof(Mat4) = 65476 bytes, and bgfx now static_asserts both that
+# bound and BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE > the threshold. The old
+# 4096 / 256 / 1024 overrides violated the first assert, which means a shader
+# with a large enough uniform array (e.g. bone matrices) could overrun the
+# buffer. Do not re-add them without satisfying both asserts.
 
 # Temporary disable uniform debug.
 babylon_native_bgfx_config(DEBUG_UNIFORM 0)
@@ -63,13 +70,10 @@ babylon_native_bgfx_config(VIDEO 0)
 # Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
 babylon_native_bgfx_config(C99_API 0)
 
-# The Canvas polyfill allocates one bgfx framebuffer per JS Canvas object and per
-# text-rendering operation; combined with V8 GC pacing this can exceed the bgfx default
-# of 128 during long playground sweeps. An embedder that disables the polyfill draws
-# into a handful of framebuffers and has no reason to pay for the larger pool.
-if(BABYLON_NATIVE_POLYFILL_CANVAS)
-    babylon_native_bgfx_config(MAX_FRAME_BUFFERS 512)
-endif()
+# The Canvas polyfill holds a bgfx framebuffer per JS Canvas object and per
+# text-rendering operation, releasing them only on GC finalize, so a long
+# playground sweep exceeds bgfx's default of 128.
+babylon_native_bgfx_config(MAX_FRAME_BUFFERS 2048)
 
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
@@ -110,10 +114,6 @@ set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
 
-# The updated tinyexr (vendored by bimg) uses fopen in its file I/O helpers,
-# which MSVC flags as C4996 and fails the warnings-as-errors UWP build. Mirror
-# the bx workaround above and silence the deprecation for the bimg targets that
-# compile the tinyexr implementation.
 foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
     if(TARGET ${_bimg_target})
         target_compile_definitions(${_bimg_target} PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -128,13 +128,6 @@ if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP AND TARGET bimg_decode)
 endif()
 
 if(NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    # The new bx requires SSE4.2 on x86_64 (see bx scripts/toolchain.lua and
-    # include/bx/inline/simd128_sse.inl which uses _mm_round_ps / _mm_blendv_ps
-    # under "SSE4.1 - always available with SSE4.2 minspec"). bgfx.cmake does
-    # not propagate this flag, so add it explicitly for any GCC/Clang frontend on
-    # x86_64 (e.g. Linux, or Clang targeting Windows), none of which enable SSE4.x
-    # by default. MSVC (cl.exe) allows the intrinsics regardless and Apple Silicon
-    # is unaffected.
     foreach(_bx_target IN ITEMS bx bgfx bimg bimg_decode bimg_encode)
         if(TARGET ${_bx_target})
             target_compile_options(${_bx_target} PRIVATE -msse4.2)
@@ -279,6 +272,27 @@ endif()
 # JsRuntimeHost
 # --------------------------------------------------
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+
+# Two JsRuntimeHost targets cannot be built without RTTI:
+#   v8inspector - includes asio, whose headers use typeid() unconditionally
+#                 (any_executor.hpp, service_registry.hpp, handler_work.hpp).
+#                 Clang and GCC reject this outright; MSVC only warns.
+#                 Only defined for V8 with the inspector enabled
+#                 (JsRuntimeHost Core/AppRuntime/CMakeLists.txt).
+#   jsi         - Hermes (fetched by JsRuntimeHost) builds its API/hermes
+#                 targets with RTTI, and their vtables reference "typeinfo for
+#                 facebook::jsi::*" which only jsi.cpp emits. Compiling jsi
+#                 without RTTI drops those definitions and the link fails.
+#                 The same target name is used by Node-API-JSI for V8JSI.
+# Each call is gated on the engine that defines the target, so a target that
+# stops existing upstream fails configuration instead of silently going by.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+    babylon_native_force_rtti(v8inspector)
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI" OR NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    babylon_native_force_rtti(jsi)
+endif()
 
 # --------------------------------------------------
 # metal-cpp
