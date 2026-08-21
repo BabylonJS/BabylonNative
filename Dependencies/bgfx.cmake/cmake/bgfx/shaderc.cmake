@@ -24,9 +24,7 @@ target_link_libraries(
 	PRIVATE bx
 			bimg
 			bgfx-vertexlayout
-			fcpp
 			glslang
-			glsl-optimizer
 			spirv-opt
 			spirv-cross
 			webgpu
