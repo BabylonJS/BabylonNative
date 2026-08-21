@@ -58,6 +58,16 @@ namespace
                 // Using rfind ensures the correct "Texture" is removed from WebGL uniforms with "texture" in their original name. (e.g., "shadowTexture1")
                 imageName.replace(imageName.rfind("Texture"), std::string::npos, "");
                 compiler->set_name(resource.id, imageName);
+
+                // Apply the same rename to the parser's IR. The Compiler transpiles a private
+                // copy, and AppendSamplers reads the app-facing sampler name back from the
+                // parser's IR so that a name SPIRV-Cross mangled for a target-language keyword
+                // collision can be recovered. Without this the parser still holds "<name>Texture",
+                // that is the name written into the bgfx uniform table, and Babylon.js -- which
+                // looks the sampler up by "<name>" -- gets null from getUniforms and never calls
+                // setTexture. Every textured material then samples bgfx's default texture and
+                // renders black, with no error anywhere.
+                parser->get_parsed_ir().set_name(resource.id, imageName);
             }
         }
 
