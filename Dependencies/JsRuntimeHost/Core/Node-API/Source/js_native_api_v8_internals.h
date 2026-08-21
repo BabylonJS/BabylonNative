@@ -50,7 +50,7 @@ inline v8::Local<v8::String> OneByteString(v8::Isolate* isolate,
 namespace v8impl {
 
 template <typename T>
-using Persistent = v8::Persistent<T>;
+using Persistent = v8::Global<T>;
 
 class PersistentToLocal {
 public:
