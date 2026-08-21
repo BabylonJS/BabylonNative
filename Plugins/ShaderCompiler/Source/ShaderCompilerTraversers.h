@@ -130,6 +130,31 @@ namespace Babylon::ShaderCompilerTraversers
     /// accumulators in BabylonJS-generated GLSL).
     void ZeroInitializeStructLocals(glslang::TProgram& program);
 
+    /// Flatten narrow inter-stage varying arrays into one varying per array element, e.g.
+    /// `varying float vDepthMetric0[4]` becomes `vDepthMetric0_0 .. vDepthMetric0_3` plus a
+    /// plain global array that every existing reference is repointed at.
+    ///
+    /// SPIRV-Cross emits an array-typed member in the HLSL interface struct for an array-typed
+    /// varying (`float vDepthMetric0[4] : TEXCOORD5;`). fxc turns that into an indexable input
+    /// register range and rejects the range unless all its registers share a write mask, which
+    /// a narrow element type never satisfies -- each register uses only `.x`:
+    ///
+    ///     error X8000: masks on all input registers in an index range must be identical
+    ///
+    /// fxc does not simply fail on this, it hangs, so D3D11 compilation of Babylon.js cascaded
+    /// shadow map shaders never completes. `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]`
+    /// in lightFragmentDeclaration.fx is the trigger; the companion `vec4` array is unaffected
+    /// because 4-component elements do give every register an identical mask.
+    ///
+    /// The global array is what preserves dynamic indexing -- the cascade index is computed per
+    /// fragment at runtime, so accesses cannot just be rewritten to the per-element varyings.
+    /// Element-wise copies are inserted at the top of the fragment `main` and the end of the
+    /// vertex `main`. Only literally-sized, single-dimension, non-struct, non-matrix arrays with
+    /// fewer than four components per element are affected.
+    ///
+    /// Only needed for the fxc (DXBC) backend; dxc accepts the indexable range.
+    void FlattenNarrowVaryingArrays(glslang::TProgram& program, IdGenerator& ids);
+
     /// Invert dFdy operands similar to bgfx_shader.sh
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L62-L65

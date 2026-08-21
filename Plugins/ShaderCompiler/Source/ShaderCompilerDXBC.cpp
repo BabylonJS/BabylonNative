@@ -108,6 +108,7 @@ namespace Babylon::Plugins
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::map<std::string, std::string> vertexAttributeRenaming = {};
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming, instancedAttributes);
+        ShaderCompilerTraversers::FlattenNarrowVaryingArrays(program, ids);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
