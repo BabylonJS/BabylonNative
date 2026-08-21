@@ -1,5 +1,7 @@
 #include "VertexArray.h"
 #include <cassert>
+#include <string>
+#include "Babylon/Graphics/BgfxShaderInfo.h"
 #include "Babylon/Graphics/DeviceContext.h"
 
 namespace Babylon
@@ -48,10 +50,15 @@ namespace Babylon
                 throw std::runtime_error{"Instancing is not supported"};
             }
 
-            // bgfx allows instancing on at most 4 vec4 attributes
-            if (m_vertexBufferInstances.size() > 4)
+            // Instance data is packed into the top i_data slots, of which bgfx has
+            // MAX_INSTANCE_DATA_SLOT_COUNT. Only a new attribute can overflow: re-recording
+            // one that is already present overwrites its entry and needs no extra slot.
+            // The check runs before the insert, so `size() >= max` is the entry that would
+            // overflow.
+            if (m_vertexBufferInstances.find(attrib) == m_vertexBufferInstances.end() &&
+                m_vertexBufferInstances.size() >= Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT)
             {
-                throw std::runtime_error{"Number of vertex buffer instances greater than 4 is not supported"};
+                throw std::runtime_error{"Number of vertex buffer instances greater than " + std::to_string(Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT) + " is not supported"};
             }
 
             m_vertexBufferInstances[attrib] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
@@ -82,14 +89,14 @@ namespace Babylon
         }
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, uint32_t minInstanceDataSlotCount)
     {
         // Check if instancing is supported.
         const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
         if (!m_vertexBufferInstances.empty() && instancingSupported)
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
-            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount);
+            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, minInstanceDataSlotCount);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 
