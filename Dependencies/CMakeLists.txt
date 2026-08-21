@@ -38,6 +38,43 @@ set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 
+# Babylon Native's bgfx settings are defaults. A value already supplied, on the command
+# line or by a project embedding Babylon Native, is left alone. bgfx.cmake forwards
+# whichever value survives, so each setting reaches the compiler exactly once.
+macro(babylon_native_bgfx_config NAME DEFAULT)
+    if("${BGFX_CONFIG_${NAME}}" STREQUAL "")
+        set(BGFX_CONFIG_${NAME} "${DEFAULT}")
+    endif()
+endmacro()
+
+babylon_native_bgfx_config(DEFAULT_MAX_ENCODERS 2)
+babylon_native_bgfx_config(MAX_VERTEX_STREAMS 18)
+babylon_native_bgfx_config(MIN_RESOURCE_COMMAND_BUFFER_SIZE 16)
+
+# The uniform buffer sizing knobs are deliberately left at the bgfx defaults.
+# UniformBuffer::update reserves BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE
+# of head room before every write, so the threshold must be at least as large as
+# the largest single uniform record. The opcode encoding caps that record at
+# 4 + 1023 * sizeof(Mat4) = 65476 bytes, and bgfx now static_asserts both that
+# bound and BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE > the threshold. The old
+# 4096 / 256 / 1024 overrides violated the first assert, which means a shader
+# with a large enough uniform array (e.g. bone matrices) could overrun the
+# buffer. Do not re-add them without satisfying both asserts.
+
+# Temporary disable uniform debug.
+babylon_native_bgfx_config(DEBUG_UNIFORM 0)
+
+# Disable video decoding support (not used by Babylon Native).
+babylon_native_bgfx_config(VIDEO 0)
+
+# Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
+babylon_native_bgfx_config(C99_API 0)
+
+# The Canvas polyfill holds a bgfx framebuffer per JS Canvas object and per
+# text-rendering operation, releasing them only on GC finalize, so a long
+# playground sweep exceeds bgfx's default of 128.
+babylon_native_bgfx_config(MAX_FRAME_BUFFERS 2048)
+
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
@@ -45,33 +82,12 @@ FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 # See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
 
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
-
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
 # bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
 # directory, and Windows has no system copy the way Linux and Android do.
 # Expose the path so the OpenGL backends of our own targets can use it.
 set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
-
-# The Canvas polyfill holds a bgfx framebuffer per JS Canvas object and per
-# text-rendering operation, releasing them only on GC finalize, so a long
-# playground sweep exceeds bgfx's default of 128.
-if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
-    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
-endif()
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
-
-# Temporary disable uniform debug.
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
-
-# Disable video decoding support (not used by Babylon Native).
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_VIDEO=0)
-
-# Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_C99_API=0)
 
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
