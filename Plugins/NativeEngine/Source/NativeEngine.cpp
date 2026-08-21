@@ -3005,6 +3005,21 @@ namespace Babylon
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
+        // Resolve the gl_FragCoord Y flip the shader compiler injected (see
+        // ShaderCompilerTraversers::FlipFragCoordY). The height must be the bound framebuffer's,
+        // not the bgfx view rect's: FrameBuffer::SetBgfxViewPortAndScissor narrows the view rect to
+        // the viewport whenever one is set, while gl_FragCoord is relative to the whole target.
+        if (const UniformInfo* fragCoordTargetSize = m_currentProgram->FragCoordTargetSizeUniform())
+        {
+            const Graphics::FrameBuffer& frameBuffer = GetBoundFrameBuffer();
+            const float targetSize[4]{
+                static_cast<float>(frameBuffer.Width()),
+                static_cast<float>(frameBuffer.Height()),
+                0.0f,
+                0.0f};
+            encoder->setUniform(fragCoordTargetSize->Handle, targetSize, 1);
+        }
+
         // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
         // real per-vertex bgfx location was compiled to a per-vertex slot. bgfx can only feed
         // per-instance data into i_data slots (the top TEXCOORD semantics), so route those attributes

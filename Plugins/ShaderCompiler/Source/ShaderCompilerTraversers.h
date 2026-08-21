@@ -149,4 +149,23 @@ namespace Babylon::ShaderCompilerTraversers
     /// Must only be used on the backends that apply ProcessSamplerFlip (D3D, Metal, Vulkan); the
     /// OpenGL backend shares bgfx's V-orientation and must not flip.
     void FlipSamplerCoordinates(glslang::TProgram& program);
+
+    /// Rewrite every read of gl_FragCoord in the fragment shader to
+    /// `vec4(gl_FragCoord.x, targetHeight - gl_FragCoord.y, gl_FragCoord.z, gl_FragCoord.w)`,
+    /// presenting it in OpenGL's bottom-left-origin space.
+    ///
+    /// The backends that need FlipSamplerCoordinates also rasterize with a top-left origin, so
+    /// gl_FragCoord arrives mirrored relative to what a WebGL-authored shader expects. Because the
+    /// sampler coordinate flip is already applied on top of it, `texelFetch(tex,
+    /// ivec2(gl_FragCoord.xy), 0)` reads the mirrored row, and any use that depends on the row
+    /// index rather than merely sampling at it (prefix sums, neighbour offsets, copies into a
+    /// differently-oriented target) comes out inverted.
+    ///
+    /// The target height is read from the Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME uniform,
+    /// which this traverser declares -- only in shaders that actually read gl_FragCoord -- and
+    /// NativeEngine fills with the bound framebuffer's dimensions. Must run before
+    /// MoveNonSamplerUniformsIntoStruct so the new uniform is collected with all the others, and
+    /// only on the backends that apply FlipSamplerCoordinates (D3D, Metal, Vulkan); the OpenGL
+    /// backend already matches WebGL's origin and must not flip.
+    void FlipFragCoordY(glslang::TProgram& program, IdGenerator& ids);
 }

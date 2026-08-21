@@ -406,6 +406,36 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                     };
 
+                    // Restores both the shape and the basic type that the consuming code expects.
+                    // addShapeConversion only reconciles vector size: given a vec4 source and an int
+                    // target it produces an EOpConstructInt aggregate whose operand is still a float,
+                    // so the AST claims "int" while holding a float. glslang then emits SPIR-V in which
+                    // the integer operation reads a float, and SPIRV-Cross renders it verbatim as
+                    // `int i = -samples.x;`, which ESSL rejects. Shaping to float first and then asking
+                    // glslang for a real conversion node yields the expected `int(...)`.
+                    auto restoreOldType = [this](TIntermTyped* node, const TType& oldType) -> TIntermTyped* {
+                        TPublicType shapeType{};
+                        shapeType.qualifier = oldType.getQualifier();
+                        shapeType.basicType = EbtFloat;
+                        shapeType.setVector(oldType.getVectorSize());
+                        shapeType.arraySizes = nullptr;
+
+                        TType floatShape{shapeType};
+                        auto* converted = m_intermediate->addShapeConversion(floatShape, node);
+
+                        if (oldType.getBasicType() != EbtFloat)
+                        {
+                            auto* retyped = m_intermediate->addConversion(oldType.getBasicType(), converted);
+                            if (retyped == nullptr)
+                            {
+                                throw std::runtime_error{"Cannot replace symbol: unsupported uniform basic type conversion"};
+                            }
+                            converted = retyped;
+                        }
+
+                        return converted;
+                    };
+
                     // Because we modified the original symbol, we don't need to do anything to linker objects.
                     // The only further work we need to do is to handle reshaping.
                     if (!IsLinkerObject(this->path))
@@ -438,7 +468,7 @@ namespace Babylon::ShaderCompilerTraversers
                                 auto* binType = newType.clone();
                                 binType->clearArraySizes();
                                 binary->setType(*binType);
-                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, binary);
+                                auto shapeConversion = restoreOldType(binary, *oldType);
 
                                 assert(this->path.size() > 1);
                                 auto* grandparent = this->path[this->path.size() - 2];
@@ -451,7 +481,7 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                         else
                         {
-                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
+                            auto shapeConversion = restoreOldType(symbol, *oldType);
                             injectShapeConversion(symbol, parent, shapeConversion);
                         }
                     }
@@ -1966,6 +1996,151 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
         };
+
+        /// Presents gl_FragCoord to the shader in OpenGL's coordinate space on the backends that
+        /// render with a top-left origin (D3D, Metal, Vulkan).
+        ///
+        /// Babylon Native already normalizes the rest of that convention: FlipSamplerCoordinates
+        /// rewrites every texture()/texelFetch coordinate and InvertYDerivativeOperands negates
+        /// dFdy, so shader-visible coordinates are GL-space and the conversion to the physical
+        /// layout happens at each access. gl_FragCoord was the one input left in physical space,
+        /// which is why `texelFetch(tex, ivec2(gl_FragCoord.xy), 0)` read the vertically mirrored
+        /// row: the fetch coordinate was flipped by FlipSamplerCoordinates but the value feeding it
+        /// was not. Anything order-dependent on the row index -- a prefix sum, a neighbour offset,
+        /// a copy into a differently-oriented target -- came out inverted for the same reason.
+        ///
+        /// The flip is `targetHeight - gl_FragCoord.y`, with no -1 term: for physical row p the
+        /// hardware yields p + 0.5, and p == height - 1 - y for GL row y, so the incoming value is
+        /// height - y - 0.5 and the GL value y + 0.5 is exactly height minus that.
+        ///
+        /// The height cannot come from bgfx's predefined u_viewRect: that is the view *rect*, which
+        /// FrameBuffer::SetBgfxViewPortAndScissor narrows to the viewport whenever one is set, while
+        /// gl_FragCoord is relative to the whole render target. It is instead read from a uniform
+        /// that NativeEngine fills with the bound framebuffer's dimensions.
+        ///
+        /// The uniform is only declared in shaders that actually read gl_FragCoord, so shaders that
+        /// do not are left byte-for-byte unchanged.
+        class FragCoordYFlipTraverser final : private TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids)
+            {
+                auto* intermediate{program.getIntermediate(EShLangFragment)};
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                FragCoordYFlipTraverser traverser{intermediate};
+                intermediate->getTreeRoot()->traverse(&traverser);
+
+                if (traverser.m_symbolsToParents.empty())
+                {
+                    return;
+                }
+
+                // Declared as a linker object before MoveNonSamplerUniformsIntoStruct runs, so the
+                // uniform is swept into the "Frame" struct with every other non-sampler uniform and
+                // is emitted under its own name in the bgfx uniform table like the rest.
+                TType targetSizeType{EbtFloat, EvqUniform, 4};
+                TIntermSymbol* targetSize{intermediate->addSymbol(TIntermSymbol{ids.Next(), Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME, targetSizeType})};
+
+                auto* linkerObjects = FindLinkerObjects(intermediate->getTreeRoot()->getAsAggregate());
+                if (linkerObjects == nullptr)
+                {
+                    throw std::runtime_error{"FragCoordYFlip: fragment stage has no linker objects sequence."};
+                }
+                linkerObjects->getSequence().push_back(targetSize);
+
+                traverser.ApplyReplacements(targetSize);
+            }
+
+        protected:
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                // Linker object references declare gl_FragCoord rather than read it, so rewriting
+                // them would replace the declaration itself with an expression.
+                if (symbol->getName() != "gl_FragCoord" || IsLinkerObject(path))
+                {
+                    return;
+                }
+
+                m_symbolsToParents.emplace_back(symbol, getParentNode());
+            }
+
+        private:
+            FragCoordYFlipTraverser(TIntermediate* intermediate)
+                : TIntermTraverser{true, false, false}
+                , m_intermediate{intermediate}
+            {
+            }
+
+            static TIntermAggregate* FindLinkerObjects(TIntermAggregate* root)
+            {
+                if (root == nullptr)
+                {
+                    return nullptr;
+                }
+
+                for (auto* node : root->getSequence())
+                {
+                    auto* aggregate = node != nullptr ? node->getAsAggregate() : nullptr;
+                    if (aggregate != nullptr && aggregate->getOp() == EOpLinkerObjects)
+                    {
+                        return aggregate;
+                    }
+                }
+
+                return nullptr;
+            }
+
+            void ApplyReplacements(TIntermSymbol* targetSize)
+            {
+                for (const auto& [symbol, parent] : m_symbolsToParents)
+                {
+                    // MakeReplacements is deliberately not reused here: it maps one replacement node
+                    // per symbol *name*, so every gl_FragCoord reference in the shader would share a
+                    // single subtree and that node would end up with as many parents as there are
+                    // references. A fresh subtree is built for each occurrence instead.
+                    MakeReplacements({{"gl_FragCoord", BuildFlippedFragCoord(symbol, targetSize)}}, {{symbol, parent}});
+                }
+            }
+
+            /// Builds `vec4(gl_FragCoord.x, u_targetSize.y - gl_FragCoord.y, gl_FragCoord.z, gl_FragCoord.w)`.
+            ///
+            /// The whole vector is reconstructed rather than just patching .y because a reference may
+            /// be swizzled (.xy), indexed, or passed along whole, and the parent node is not
+            /// inspected here; rebuilding a vec4 keeps every one of those forms valid.
+            TIntermTyped* BuildFlippedFragCoord(TIntermSymbol* fragCoord, TIntermSymbol* targetSize)
+            {
+                const TSourceLoc& loc{fragCoord->getLoc()};
+                TType floatType{EbtFloat, EvqTemporary, 1};
+                TType vec4Type{EbtFloat, EvqTemporary, 4};
+
+                // Each component reads through its own copy of the symbol so that no node in the
+                // finished tree has more than one parent.
+                auto component = [&](int index) {
+                    TIntermTyped* copy{m_intermediate->addSymbol(*fragCoord)};
+                    TIntermTyped* element{m_intermediate->addIndex(EOpIndexDirect, copy, m_intermediate->addConstantUnion(index, loc), loc)};
+                    element->setType(floatType);
+                    return element;
+                };
+
+                TIntermTyped* height{m_intermediate->addIndex(EOpIndexDirect, m_intermediate->addSymbol(*targetSize), m_intermediate->addConstantUnion(1, loc), loc)};
+                height->setType(floatType);
+
+                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, height, component(1), loc)};
+
+                TIntermAggregate* constructed{m_intermediate->makeAggregate(component(0), loc)};
+                constructed = m_intermediate->growAggregate(constructed, flippedY, loc);
+                constructed = m_intermediate->growAggregate(constructed, component(2), loc);
+                constructed = m_intermediate->growAggregate(constructed, component(3), loc);
+                return m_intermediate->setAggregateOperator(constructed, EOpConstructVec4, vec4Type, loc);
+            }
+
+            TIntermediate* m_intermediate{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -2016,5 +2191,10 @@ namespace Babylon::ShaderCompilerTraversers
     void FlipSamplerCoordinates(TProgram& program)
     {
         FlipSamplerCoordinatesTraverser::Traverse(program);
+    }
+
+    void FlipFragCoordY(TProgram& program, IdGenerator& ids)
+    {
+        FragCoordYFlipTraverser::Traverse(program, ids);
     }
 }

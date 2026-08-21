@@ -66,6 +66,9 @@ namespace Babylon
 
         m_handle = bgfx::createProgram(vertexShader, fragmentShader, true);
         m_vertexAttributeLocations = shaderInfo->VertexAttributeLocations;
+        // Cached rather than looked up per draw: DrawInternal consults this on every single draw,
+        // and m_uniformInfos is stable for the lifetime of the program.
+        m_fragCoordTargetSizeUniform = GetUniformInfo(Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME);
     }
 
     void Program::SetSources(std::string vertexSource, std::string fragmentSource)
