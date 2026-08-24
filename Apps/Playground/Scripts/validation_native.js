@@ -170,6 +170,9 @@
     let missingRefCount = 0;
     const failedTitles = [];
 
+    // BABYLON classes exposing a static ForceGLSL, discovered lazily once.
+    let forceGlslOwners;
+
     function getExclusionReason(t) {
         if (t.onlyVisual) {
             return "onlyVisual";
@@ -204,9 +207,28 @@
         }
     }
 
-    const engine = new BABYLON.NativeEngine();
+    // Backend detection: the NativeDawn (WebGPU) backend pre-creates a
+    // WebGPUEngine (aliased as BABYLON.NativeEngine) and drives its render loop
+    // from the host frame pump, promoting it to globalThis.__dawnEngine once
+    // initAsync (async, driven by host frames) completes. Reuse that same
+    // instance so runRenderLoop targets the engine the host actually presents,
+    // rather than constructing a second one.
+    //
+    // Detect the backend via the plugin-specific `_nativeDawnClear` global (the
+    // bgfx NativeEngine backend has neither it nor navigator.gpu). Note `_native`
+    // exists on BOTH backends here -- the Canvas polyfill provides it -- so it
+    // can't be used to tell them apart.
+    const isDawn = (typeof globalThis._nativeDawnClear === "function");
+    const engine = isDawn
+        ? (globalThis.__dawnEngine || globalThis.__dawnPendingEngine || new BABYLON.NativeEngine())
+        : new BABYLON.NativeEngine();
     globalThis.engine = engine;
-    engine.getCaps().parallelShaderCompile = undefined;
+    // parallelShaderCompile is a WebGL2 (KHR_parallel_shader_compile) cap; on
+    // Dawn the caps table isn't populated until initAsync completes, so this is
+    // applied in the Dawn start path below once the engine is ready.
+    if (!isDawn) {
+        engine.getCaps().parallelShaderCompile = undefined;
+    }
 
     // The default HTML loading screen pokes at DOM nodes (document head, an
     // <img> logo with a network fetch) that don't meaningfully exist in this
@@ -854,13 +876,28 @@
             const request = new XMLHttpRequest();
             request.open('GET', config.root + test.scriptToRun, true);
 
-            request.onreadystatechange = function () {
+            // Babylon Native's XMLHttpRequest polyfill only dispatches to
+            // addEventListener; assigning the DOM on<event> properties silently
+            // does nothing and the load hangs forever.
+            let handled = false;
+            request.addEventListener('readystatechange', function () {
                 if (request.readyState === 4) {
                     if (finished) {
                         return;
                     }
                     try {
-                        request.onreadystatechange = null;
+                        if (handled) {
+                            return;
+                        }
+                        handled = true;
+
+                        // The polyfill sets readyState=4 before raising 'error',
+                        // so a failed fetch reaches here first.
+                        if (request.status < 200 || request.status >= 300) {
+                            console.error("Failed to load " + test.scriptToRun + ": status " + request.status);
+                            failTest(done);
+                            return;
+                        }
 
                         let scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
@@ -919,11 +956,15 @@
                         failTest(done);
                     }
                 }
-            };
-            request.onerror = function () {
+            });
+            request.addEventListener('error', function () {
+                if (handled) {
+                    return;
+                }
+                handled = true;
                 console.error("Network error during test load.");
                 failTest(done);
-            }
+            });
 
             request.send(null);
         }
@@ -975,6 +1016,37 @@
         // that needs snapshot mode re-enables it in its own createScene.
         if (typeof engine.snapshotRendering !== "undefined") {
             engine.snapshotRendering = false;
+        }
+
+        // Reset the per-class ForceGLSL statics. "Test code inlining" (#YG3BBF#51)
+        // sets BABYLON.PBRBaseMaterial.ForceGLSL = true and never restores it. On
+        // bgfx that is a no-op (GLSL is the only path), but on WebGPU it pushes
+        // every later PBR material onto the GLSL transpiler, which then rejects
+        // shader includes that rely on the WGSL path -- the Atmosphere scenes fail
+        // to compile ("unexpected SAMPLER2D") and never become ready. Collect the
+        // classes once, then restore the default before each test; a test that
+        // wants GLSL sets it again in its own createScene.
+        if (forceGlslOwners === undefined) {
+            forceGlslOwners = [];
+            for (const key of Object.keys(BABYLON)) {
+                let value;
+                try {
+                    value = BABYLON[key];
+                } catch (e) {
+                    continue;
+                }
+                if ((typeof value === "function" || (value && typeof value === "object")) &&
+                    Object.getOwnPropertyDescriptor(value, "ForceGLSL")) {
+                    forceGlslOwners.push(value);
+                }
+            }
+        }
+        for (const owner of forceGlslOwners) {
+            try {
+                owner.ForceGLSL = false;
+            } catch (e) {
+                // Read-only on some classes; nothing to restore in that case.
+            }
         }
 
         if (generateReferences) {
@@ -1139,13 +1211,68 @@
     }, false);
 
 
-    BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-        _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
-            _native.RootUrl = "https://playground.babylonjs.com";
-            console.log("Starting");
-            TestUtils.setTitle("Starting Native Validation Tests");
-            TestUtils.updateSize(testWidth, testHeight);
-            xhr.send();
+    function startValidation() {
+        console.log("Starting");
+        TestUtils.setTitle("Starting Native Validation Tests");
+        TestUtils.updateSize(testWidth, testHeight);
+        xhr.send();
+    }
+
+    // The canvas font is registered globally (NativeCanvas::loadTTF populates a
+    // static font table that every 2D context reads), so both rendering paths
+    // need it before any GUI/DynamicTexture text can rasterize.
+    const loadFontThen = function (next) {
+        BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
+            _native.Canvas.loadTTFAsync("droidsans", data).then(next, next);
+        }, undefined, undefined, true);
+    };
+
+    // The WebGPU engine loads its GLSL -> SPIR-V -> WGSL transpilers (the glslang
+    // and twgsl WASM modules) lazily, on the first effect that is authored in
+    // GLSL: _preparePipelineContextAsync awaits prepareGlslangAndTintAsync()
+    // whenever shaderLanguage is GLSL and _glslangAndTintAreFullyLoaded is false.
+    // That await makes the *first* GLSL effect compile asynchronously no matter
+    // what, even with disableParallelShaderCompilation, so a scene that probes
+    // effect.isReady() right after createEffect sees false and takes its "not
+    // ready" branch. Whether it sees true then depends purely on whether some
+    // earlier test already warmed the modules, which makes results depend on test
+    // ordering (a test can pass in a full run and fail in isolation). Warm the
+    // transpilers once up front so every test starts from the same state.
+    const warmShaderTranspilersThen = function (engine, next) {
+        if (typeof engine.prepareGlslangAndTintAsync !== "function") {
+            next();
+            return;
+        }
+        engine.prepareGlslangAndTintAsync().then(next, function (e) {
+            // Non-fatal: only GLSL-authored shaders need these, and they will
+            // retry the load on first use.
+            console.error("Failed to preload glslang/twgsl: " + e);
+            next();
         });
-    }, undefined, undefined, true);
+    };
+
+    if (isDawn) {
+        // The WebGPU engine completes initAsync asynchronously, pumped by the
+        // host frame loop (RenderFrame -> frame() -> requestAnimationFrame).
+        // Wait until the NativeDawn plugin promotes it to __dawnEngine before
+        // starting: runRenderLoop needs a fully initialized engine and getCaps()
+        // is only populated post-init. Playground assets load via absolute https
+        // URLs (see loadPG), so _native.RootUrl is left alone here.
+        const waitForEngine = function () {
+            if (globalThis.__dawnEngine) {
+                globalThis.__dawnEngine.getCaps().parallelShaderCompile = undefined;
+                warmShaderTranspilersThen(globalThis.__dawnEngine, function () {
+                    loadFontThen(startValidation);
+                });
+            } else {
+                setTimeout(waitForEngine, 16);
+            }
+        };
+        waitForEngine();
+    } else {
+        loadFontThen(function () {
+            _native.RootUrl = "https://playground.babylonjs.com";
+            startValidation();
+        });
+    }
 })();

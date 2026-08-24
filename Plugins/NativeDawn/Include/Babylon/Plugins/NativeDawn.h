@@ -15,6 +15,10 @@ namespace Babylon::Plugins::NativeDawn
     // HWND).
     void Initialize(Napi::Env env, void* window, uint32_t width, uint32_t height);
 
+    // Releases JS references and Dawn objects while the N-API environment is
+    // still alive. Must run on the JS thread before AppRuntime is destroyed.
+    void Deinitialize(Napi::Env env);
+
     // Reconfigures the Dawn surface (and cached drawing-buffer size) to the given
     // dimensions. Must be called on the JS thread (where the Dawn device lives),
     // e.g. from the app's per-frame dispatch when the native window has resized.

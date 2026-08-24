@@ -172,6 +172,20 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
         message(STATUS "BABYLON_NATIVE_PLUGIN_NATIVEDAWN is ON: forcing BABYLON_NATIVE_PLUGIN_NATIVEENGINE OFF (mutually exclusive backends).")
     endif()
     set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE OFF CACHE BOOL "Include Babylon Native Plugin NativeEngine." FORCE)
+
+    # NativeDawn's WebGPU shader pipeline transpiles GLSL -> SPIR-V -> WGSL at
+    # runtime through Babylon's glslang and twgsl WebAssembly modules. Windows'
+    # in-box Chakra engine (the Node-API default here) has a WASM compiler limit
+    # that rejects glslang.wasm ("Maximum supported nested blocks reached"), so
+    # every GLSL-authored shader (NodeMaterial GLSL mode, ShaderMaterial,
+    # ProceduralTexture, custom post-processes, ...) fails to compile and its
+    # scene hangs forever on executeWhenReady. V8 runs the exact same modules the
+    # browser uses, so default Node-API to V8 whenever NativeDawn is enabled
+    # (unless the caller explicitly picked an engine via -D NAPI_JAVASCRIPT_ENGINE).
+    if(WIN32 AND NOT WINDOWS_STORE AND NOT DEFINED NAPI_JAVASCRIPT_ENGINE)
+        set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for Node-API")
+        message(STATUS "BABYLON_NATIVE_PLUGIN_NATIVEDAWN is ON: defaulting NAPI_JAVASCRIPT_ENGINE to V8 (Chakra cannot compile the glslang/twgsl WASM modules).")
+    endif()
 endif()
 
 # Embedding
@@ -462,6 +476,25 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
     set(DAWN_USE_WAYLAND OFF CACHE BOOL "" FORCE)
     set(TINT_BUILD_TESTS     OFF CACHE BOOL "" FORCE)
     set(TINT_BUILD_CMD_TOOLS OFF CACHE BOOL "" FORCE)
+
+    # protobuf (and libprotobuf-mutator) are only needed by Dawn's fuzzers and by
+    # Tint's IR binary format, both of which are off here. Turning this off avoids
+    # fetching and building protobuf entirely; it contributes no linked code.
+    set(DAWN_BUILD_PROTOBUF  OFF CACHE BOOL "" FORCE)
+    set(DAWN_BUILD_FUZZERS   OFF CACHE BOOL "" FORCE)
+    set(DAWN_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+
+    # SPIR-V validation runs SPIRV-Tools over every generated shader. It only
+    # applies to the OpenGL/Vulkan backends, so it is inert on D3D12/Metal but
+    # links the SPIRV-Tools validator into dawn_native on the Vulkan
+    # (Android/Linux) path. Tint already validates the WGSL it consumes, and Dawn
+    # generates the SPIR-V itself, so this is a debugging aid rather than a
+    # correctness requirement.
+    set(DAWN_ENABLE_SPIRV_VALIDATION OFF CACHE BOOL "" FORCE)
+
+    # Assertions and RTTI stay off in shipping builds.
+    set(DAWN_ALWAYS_ASSERT OFF CACHE BOOL "" FORCE)
+    set(DAWN_ENABLE_RTTI   OFF CACHE BOOL "" FORCE)
 
     # Build exactly one GPU backend per platform, with the matching Tint shader
     # writer. The WGSL reader (input) is always required; the SPIR-V/GLSL readers,
