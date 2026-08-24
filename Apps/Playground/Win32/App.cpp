@@ -31,6 +31,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -60,11 +61,63 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
+    // Narrow a filesystem path to UTF-8 std::string (path::u8string() yields
+    // std::u8string under C++20).
+    std::string ToUtf8(const std::filesystem::path& path)
+    {
+        const auto u8 = path.u8string();
+        return {reinterpret_cast<const char*>(u8.data()), u8.size()};
+    }
+
+    // Resolves a command line script argument to an absolute path. Relative
+    // paths are probed against the current working directory first, then the
+    // executable directory, so `Playground.exe Scripts/foo.js` works no matter
+    // where it is launched from.
+    std::filesystem::path ResolveScriptPath(const std::filesystem::path& path)
+    {
+        std::error_code ec{};
+
+        if (path.is_absolute())
+        {
+            return path.lexically_normal();
+        }
+
+        auto fromCwd = std::filesystem::absolute(path, ec);
+        if (!ec && std::filesystem::exists(fromCwd, ec))
+        {
+            return fromCwd.lexically_normal();
+        }
+
+        wchar_t exePath[MAX_PATH]{};
+        if (::GetModuleFileNameW(nullptr, exePath, ARRAYSIZE(exePath)) != 0)
+        {
+            auto fromExeDir = std::filesystem::path{exePath}.parent_path() / path;
+            if (std::filesystem::exists(fromExeDir, ec))
+            {
+                return fromExeDir.lexically_normal();
+            }
+        }
+
+        // Nothing on disk matched. Fail loudly instead of handing the loader a
+        // malformed relative `file:` URL that silently never resolves.
+        throw std::runtime_error{"Script not found: " + ToUtf8(path)};
+    }
+
     std::string GetUrlFromPath(const std::filesystem::path& path)
     {
+        // Arguments that are already URLs (app:///, file://, http(s)://) are
+        // passed through untouched.
+        auto raw = ToUtf8(path);
+        if (raw.find("://") != std::string::npos)
+        {
+            return raw;
+        }
+
+        const auto resolved = ToUtf8(ResolveScriptPath(path));
+
         char url[1024];
         DWORD length = ARRAYSIZE(url);
-        HRESULT hr = UrlCreateFromPathA(reinterpret_cast<const char*>(path.u8string().data()), url, &length, 0);
+        HRESULT hr = UrlCreateFromPathA(resolved.c_str(), url, &length, 0);
         if (FAILED(hr))
         {
             throw std::exception("Failed to create url from path", hr);
@@ -116,6 +169,7 @@ namespace
             js.Set("listTests",          Napi::Boolean::New(env, playgroundOptions.ListTests));
             js.Set("headless",           Napi::Boolean::New(env, playgroundOptions.Headless));
             js.Set("breakOnFail",        Napi::Boolean::New(env, playgroundOptions.BreakOnFail));
+            js.Set("stopOnFirstFailure", Napi::Boolean::New(env, playgroundOptions.StopOnFirstFailure));
             js.Set("generateReferences", Napi::Boolean::New(env, playgroundOptions.GenerateReferences));
             js.Set("runOnce",            Napi::Boolean::New(env, playgroundOptions.RunOnce));
             js.Set("includeExcluded",    Napi::Boolean::New(env, playgroundOptions.IncludeExcluded));
@@ -248,6 +302,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
         Diagnostics::SetExitCode(0);
         return 0;
+    }
+
+    // Resolve positional script arguments up front so a bad path is reported
+    // as a clean CLI error instead of a window that renders nothing.
+    for (const auto& script : options.Scripts)
+    {
+        try
+        {
+            GetUrlFromPath(script);
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "Error: " << e.what() << "\n\n";
+            CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
+            Diagnostics::SetExitCode(2);
+            return 2;
+        }
     }
 
     // Initialize global strings

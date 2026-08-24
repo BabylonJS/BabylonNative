@@ -35,7 +35,10 @@ namespace
 
 namespace Babylon::Plugins::ShaderCache
 {
-    static const uint32_t CACHE_VERSION = 2;
+    // 3: sampler uniforms are stored under their original GLSL name rather than the
+    //    SPIRV-Cross-renamed identifier, which changes both the bgfx uniform table in
+    //    Vertex/FragmentBytes and the keys of UniformStages.
+    static const uint32_t CACHE_VERSION = 3;
 
     void ShaderCacheImpl::Clear()
     {

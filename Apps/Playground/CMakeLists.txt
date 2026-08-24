@@ -6,7 +6,9 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
     "../node_modules/babylonjs-gui/babylon.gui.js"
-    "../node_modules/babylonjs-serializers/babylonjs.serializers.js")
+    "../node_modules/babylonjs-serializers/babylonjs.serializers.js"
+    "../node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js"
+    "../node_modules/earcut/dist/earcut.min.js")
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"
@@ -16,6 +18,7 @@ set(DEPENDENCIES
 set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
+    "Scripts/run_snippet.js"
     "Scripts/validation_native.js"
     "Scripts/lite_native.js"
     "Scripts/config.json")
@@ -138,6 +141,13 @@ endif()
 warnings_as_errors(Playground)
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
+
+# Emit a PDB for Release builds. Without it every frame of a crash callstack
+# resolves to the nearest exported symbol (or "<Unknown?>"), which makes CI
+# crash reports impossible to triage; /DEBUG does not affect code generation.
+if(MSVC)
+    target_link_options(Playground PRIVATE $<$<CONFIG:Release>:/DEBUG>)
+endif()
 
 if(WINDOWS_STORE)
     target_link_libraries(Playground PRIVATE windowsapp)

@@ -72,8 +72,13 @@ namespace Babylon::Polyfills::Internal
         FrameBufferPool m_frameBufferPool;
 
         // View id reserved by Context::Flush (right after this canvas' draws) for the
-        // canvas->texture blit issued from NativeEngine::CopyTexture. See Context::Flush.
-        void SetBlitViewId(bgfx::ViewId viewId) { m_blitViewId = viewId; }
+        // canvas->texture blit issued from NativeEngine::CopyTexture, plus the view-id
+        // generation it was reserved in so a mid-frame flush can invalidate it. See Context::Flush.
+        void SetBlitViewId(bgfx::ViewId viewId, uint32_t generation)
+        {
+            m_blitViewId = viewId;
+            m_blitViewIdGeneration = generation;
+        }
 
         Graphics::DeviceContext& GetGraphicsContext()
         {
@@ -89,6 +94,9 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
+        // Both entry points share this; each passes its own name so the diagnostics name the
+        // method the caller actually invoked rather than the one it happens to delegate to.
+        static void LoadTTFCore(const Napi::CallbackInfo& info, const char* methodName);
         static Napi::Value ParseColor(const Napi::CallbackInfo& info);
         void Remove(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
@@ -104,6 +112,7 @@ namespace Babylon::Polyfills::Internal
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
         std::unique_ptr<Graphics::Texture> m_texture{};
         bgfx::ViewId m_blitViewId{UINT16_MAX};
+        uint32_t m_blitViewIdGeneration{0};
         bool m_dirty{};
         bool m_clear{};
 

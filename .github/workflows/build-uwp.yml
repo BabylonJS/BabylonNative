@@ -45,6 +45,8 @@ jobs:
             -D CMAKE_SYSTEM_VERSION=10.0 ^
             ${{ steps.napi.outputs.define }} ^
             -A ${{ inputs.platform }} ^
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
+            -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
             -D BABYLON_DEBUG_TRACE=ON
 
       - name: Build UWP

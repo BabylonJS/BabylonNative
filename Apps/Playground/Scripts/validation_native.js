@@ -8,6 +8,7 @@
     const testHeight = 400;
     const generateReferences = !!opts.generateReferences;
     const breakOnFail = !!opts.breakOnFail;
+    const stopOnFirstFailure = !!opts.stopOnFirstFailure;
     const listTests = !!opts.listTests;
     const includeExcluded = !!opts.includeExcluded;
     const testFilters = Array.isArray(opts.testFilters) ? opts.testFilters.map(s => String(s).toLowerCase()) : [];
@@ -46,13 +47,14 @@
     }
 
     // Emitted after a pixel-comparison failure to make triage faster. Prints the
-    // rendered/diff PNG paths and, for scenes fetched from the Babylon snippet
-    // server, a transient-flake hint: those tests pull the GUI library, textures
-    // and web fonts over the network/CDN, so their output depends on async
-    // asset/font-load timing. A pixel diff there is frequently a transient flake
-    // rather than a real regression -- the 'Parse GUI json with unicode' snippet
-    // test is the canonical example (its GUI text renders with the fallback font
-    // until 'droidsans' finishes loading, shifting thousands of glyph pixels).
+    // rendered/diff PNG paths plus a re-run command. For scenes fetched from the
+    // snippet server it also notes that assets/fonts arrive over the network, so
+    // async load timing is one possible cause -- but it is only one of several,
+    // and it is cheap to rule out: a timing flake varies run to run, while a real
+    // regression reproduces with an identical pixel-difference count. Say that
+    // explicitly. The previous wording called such diffs "often a transient flake",
+    // which led to a genuine, perfectly reproducible motion-blur regression being
+    // waved off for two weeks of nightlies.
     function logFailureDiagnostics(test) {
         const outDir = TestUtils.getOutputDirectory();
         if (test.referenceImage) {
@@ -60,10 +62,10 @@
             console.log(`  Diff overlay:    ${outDir}/Errors/${test.referenceImage}`);
         }
         if (test.playgroundId) {
-            console.log(`  Note: this test loads playgroundId ${test.playgroundId} from the snippet server and pulls GUI/assets/fonts over the network, so a pixel diff is often a transient async asset/font-load timing flake.`);
-            console.log("  Re-run in isolation to confirm a real regression:");
-            console.log(`    Playground --headless --once --test "${test.title || ""}" app:///Scripts/validation_native.js`);
+            console.log(`  Note: this test loads playgroundId ${test.playgroundId} from the snippet server and pulls GUI/assets/fonts over the network, so async asset/font-load timing is one possible cause of a pixel diff.`);
         }
+        console.log("  Re-run in isolation; an identical pixel count on repeat runs means a real regression, not a timing flake:");
+        console.log(`    Playground --headless --once --test "${test.title || ""}" app:///Scripts/validation_native.js`);
     }
 
     // Per-run counters surfaced as a final summary line on exit.
@@ -72,6 +74,10 @@
     let failedCount = 0;
     let skippedCount = 0;
     let missingRefCount = 0;
+    const failedTitles = [];
+
+    // BABYLON classes exposing a static ForceGLSL, discovered lazily once.
+    let forceGlslOwners;
 
     function getExclusionReason(t) {
         if (t.onlyVisual) {
@@ -99,11 +105,36 @@
                     " failed=" + failedCount +
                     " missingRef=" + missingRefCount +
                     " skipped=" + skippedCount);
+        if (failedTitles.length > 0) {
+            console.log("Failed tests (" + failedTitles.length + "):");
+            for (let n = 0; n < failedTitles.length; n++) {
+                console.log("  - " + failedTitles[n]);
+            }
+        }
     }
 
-    const engine = new BABYLON.NativeEngine();
+    // Backend detection: the NativeDawn (WebGPU) backend pre-creates a
+    // WebGPUEngine (aliased as BABYLON.NativeEngine) and drives its render loop
+    // from the host frame pump, promoting it to globalThis.__dawnEngine once
+    // initAsync (async, driven by host frames) completes. Reuse that same
+    // instance so runRenderLoop targets the engine the host actually presents,
+    // rather than constructing a second one.
+    //
+    // Detect the backend via the plugin-specific `_nativeDawnClear` global (the
+    // bgfx NativeEngine backend has neither it nor navigator.gpu). Note `_native`
+    // exists on BOTH backends here -- the Canvas polyfill provides it -- so it
+    // can't be used to tell them apart.
+    const isDawn = (typeof globalThis._nativeDawnClear === "function");
+    const engine = isDawn
+        ? (globalThis.__dawnEngine || globalThis.__dawnPendingEngine || new BABYLON.NativeEngine())
+        : new BABYLON.NativeEngine();
     globalThis.engine = engine;
-    engine.getCaps().parallelShaderCompile = undefined;
+    // parallelShaderCompile is a WebGL2 (KHR_parallel_shader_compile) cap; on
+    // Dawn the caps table isn't populated until initAsync completes, so this is
+    // applied in the Dawn start path below once the engine is ready.
+    if (!isDawn) {
+        engine.getCaps().parallelShaderCompile = undefined;
+    }
 
     // The default HTML loading screen pokes at DOM nodes (document head, an
     // <img> logo with a network fetch) that don't meaningfully exist in this
@@ -239,6 +270,15 @@
 
         currentScene.dispose();
         currentScene = null;
+
+        // A test can leave extra scenes behind (an async load that created its own scene, a scene
+        // whose creation promise resolved after validation, ...). They stay registered on the
+        // reused engine and keep their resources alive, so dispose them here.
+        const strayScenes = engine.scenes.slice();
+        for (let i = 0; i < strayScenes.length; ++i) {
+            strayScenes[i].dispose();
+        }
+
         engine.setHardwareScalingLevel(1);
 
         // Reset render state that persists on the reused engine so each test starts fresh.
@@ -249,6 +289,25 @@
 
         // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
         engine.releaseEffects();
+
+        // Textures are cached on the engine by URL (BaseTexture._getFromCache), and the cache key
+        // covers only url/noMipmap/isCube -- not the load-time options. A test that leaves a
+        // reference behind (e.g. assigning one texture to both scene.environmentTexture and a
+        // material's reflectionTexture) keeps its internal texture in that cache across
+        // scene.dispose(), so a later test loading the same URL silently reuses the *previous*
+        // test's texture along with its prefiltering/irradiance settings. Release whatever is
+        // left so every test loads its own textures and results do not depend on run order.
+        const leakedTextures = engine.getLoadedTexturesCache();
+        for (let i = leakedTextures.length - 1; i >= 0; --i) {
+            engine._releaseTexture(leakedTextures[i]);
+        }
+        engine.clearInternalTexturesCache();
+
+        // SceneLoader.OnPluginActivatedObservable is global and outlives the scene. Snippets use it
+        // to configure the glTF loader (animationStartMode, compileMaterials, ...) and never
+        // unregister, so without this every later glTF test would inherit those settings. The
+        // browser harness reloads the page per test and never sees this; here the engine is reused.
+        BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
 
         done(testRes);
     }
@@ -423,23 +482,47 @@
                             // load callback. Deep scenes otherwise pile onto the
                             // native XHR dispatch frames and can overflow engines
                             // with a small C stack (e.g. QuickJS).
-                            setTimeout(function () {
+                            setTimeout(async function () {
+                                // eslint-disable-next-line no-unused-vars
+                                var name = ""; // see the note on the scriptToRun eval below
                                 try {
+                                    // Runs before the first await, so the eval still happens at the
+                                    // shallow stack depth this setTimeout exists to provide.
                                     currentScene = eval(pgCode);
 
-                                    if (currentScene.then) {
-                                        // Handle if createScene returns a promise
-                                        currentScene.then(function (scene) {
-                                            currentScene = scene;
-                                            processCurrentScene(test, referenceImage, done, compareFunction);
-                                        }).catch(function (e) {
-                                            console.error(e);
-                                            failTest(done);
-                                        });
-                                    } else {
-                                        // Handle if createScene returns a scene
-                                        processCurrentScene(test, referenceImage, done, compareFunction);
+                                    if (currentScene && currentScene.then) {
+                                        // Handle if createScene returns a promise. Guard against a
+                                        // snippet whose promise never resolves (e.g. a scene whose
+                                        // utility-layer executeWhenReady never fires on Native): the
+                                        // onReadyTimeout safety net lives inside processCurrentScene
+                                        // and only applies AFTER the promise resolves, so without this
+                                        // a pending createScene promise hangs the whole suite. Mirror
+                                        // onReadyTimeoutDuration and convert it to a fast failure.
+                                        // Note: this only fires if the JS event loop keeps running; a
+                                        // snippet that blocks the JS thread natively (e.g. manual
+                                        // setInterval frame-driving) is not rescued by this.
+                                        const createSceneTimeoutMs = 10 * 60 * 1000;
+                                        let createSceneTimeoutId;
+                                        try {
+                                            currentScene = await Promise.race([
+                                                currentScene,
+                                                new Promise(function (resolve, reject) {
+                                                    createSceneTimeoutId = setTimeout(function () {
+                                                        reject(new Error("createScene promise for " + test.playgroundId +
+                                                            " did not resolve within " + (createSceneTimeoutMs / 1000) + "s."));
+                                                    }, createSceneTimeoutMs);
+                                                })
+                                            ]);
+                                        }
+                                        finally {
+                                            // Always clear it: a pending timer would otherwise keep the
+                                            // event loop alive for the full timeout after a scene that
+                                            // resolved normally.
+                                            clearTimeout(createSceneTimeoutId);
+                                        }
                                     }
+
+                                    processCurrentScene(test, referenceImage, done, compareFunction);
                                 }
                                 catch (e) {
                                     console.error("Failed to evaluate playground snippet " + test.playgroundId + ": " + e);
@@ -475,10 +558,25 @@
             const request = new XMLHttpRequest();
             request.open('GET', config.root + test.scriptToRun, true);
 
-            request.onreadystatechange = function () {
+            // Babylon Native's XMLHttpRequest polyfill only dispatches to
+            // addEventListener; assigning the DOM on<event> properties silently
+            // does nothing and the load hangs forever.
+            let handled = false;
+            request.addEventListener('readystatechange', function () {
                 if (request.readyState === 4) {
                     try {
-                        request.onreadystatechange = null;
+                        if (handled) {
+                            return;
+                        }
+                        handled = true;
+
+                        // The polyfill sets readyState=4 before raising 'error',
+                        // so a failed fetch reaches here first.
+                        if (request.status < 200 || request.status >= 300) {
+                            console.error("Failed to load " + test.scriptToRun + ": status " + request.status);
+                            failTest(done);
+                            return;
+                        }
 
                         let scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
@@ -510,9 +608,18 @@
                         // the native XHR dispatch frames and can overflow engines
                         // with a small C stack (e.g. QuickJS).
                         setTimeout(function () {
+                            // Browser scripts sometimes reference `name` without declaring it. In a
+                            // page that silently resolves to window.name (""), so the mistake is
+                            // invisible there but throws "ReferenceError: name is not defined"
+                            // here. eval() below is a *direct* eval, so the evaluated script sees
+                            // this function's scope and finds this binding -- same as it would on
+                            // the web, without leaking an actual global. (A real global `name`
+                            // is not an option: it breaks the Babylon UMD bundles at load time.)
+                            // eslint-disable-next-line no-unused-vars
+                            var name = "";
                             try {
                                 currentScene = eval(scriptCode);
-                                processCurrentScene(test, renderImage, done, compareFunction);
+                                processCurrentScene(test, referenceImage, done, compareFunction);
                             }
                             catch (e) {
                                 console.error(e);
@@ -525,11 +632,15 @@
                         failTest(done);
                     }
                 }
-            };
-            request.onerror = function () {
+            });
+            request.addEventListener('error', function () {
+                if (handled) {
+                    return;
+                }
+                handled = true;
                 console.error("Network error during test load.");
                 failTest(done);
-            }
+            });
 
             request.send(null);
         }
@@ -582,6 +693,37 @@
         // that needs snapshot mode re-enables it in its own createScene.
         if (typeof engine.snapshotRendering !== "undefined") {
             engine.snapshotRendering = false;
+        }
+
+        // Reset the per-class ForceGLSL statics. "Test code inlining" (#YG3BBF#51)
+        // sets BABYLON.PBRBaseMaterial.ForceGLSL = true and never restores it. On
+        // bgfx that is a no-op (GLSL is the only path), but on WebGPU it pushes
+        // every later PBR material onto the GLSL transpiler, which then rejects
+        // shader includes that rely on the WGSL path -- the Atmosphere scenes fail
+        // to compile ("unexpected SAMPLER2D") and never become ready. Collect the
+        // classes once, then restore the default before each test; a test that
+        // wants GLSL sets it again in its own createScene.
+        if (forceGlslOwners === undefined) {
+            forceGlslOwners = [];
+            for (const key of Object.keys(BABYLON)) {
+                let value;
+                try {
+                    value = BABYLON[key];
+                } catch (e) {
+                    continue;
+                }
+                if ((typeof value === "function" || (value && typeof value === "object")) &&
+                    Object.getOwnPropertyDescriptor(value, "ForceGLSL")) {
+                    forceGlslOwners.push(value);
+                }
+            }
+        }
+        for (const owner of forceGlslOwners) {
+            try {
+                owner.ForceGLSL = false;
+            } catch (e) {
+                // Read-only on some classes; nothing to restore in that case.
+            }
         }
 
         if (generateReferences) {
@@ -717,23 +859,17 @@
                     ranCount++;
                     if (!status) {
                         failedCount++;
-                        // ENUMERATION MODE (temporary): continue-on-failure so a
-                        // single run surfaces every failing test index/title.
-                        // Grep this token in CI logs to collect the full failure
-                        // set, then restore fail-fast (exit(-1) here) once the
-                        // config exclusions are in place.
-                        console.log("INPROC_FAIL_IDX " + i + " " + currentTitle);
-                        i++;
-                        if (justOnce || i >= config.tests.length) {
+                        failedTitles.push(currentTitle);
+                        // failTest() already triggered the debugger before
+                        // reaching this callback; no second `debugger` here.
+                        if (stopOnFirstFailure) {
                             logRunSummary();
-                            engine.dispose();
-                            TestUtils.exit(failedCount > 0 ? -1 : 0);
+                            TestUtils.exit(-1);
                             return;
                         }
-                        setTimeout(function () { recursiveRunTest(i); }, 0);
-                        return;
+                    } else {
+                        passedCount++;
                     }
-                    passedCount++;
                     i++;
                     if (justOnce || i >= config.tests.length) {
                         logRunSummary();
@@ -752,13 +888,68 @@
     }, false);
 
 
-    BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-        _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
-            _native.RootUrl = "https://playground.babylonjs.com";
-            console.log("Starting");
-            TestUtils.setTitle("Starting Native Validation Tests");
-            TestUtils.updateSize(testWidth, testHeight);
-            xhr.send();
+    function startValidation() {
+        console.log("Starting");
+        TestUtils.setTitle("Starting Native Validation Tests");
+        TestUtils.updateSize(testWidth, testHeight);
+        xhr.send();
+    }
+
+    // The canvas font is registered globally (NativeCanvas::loadTTF populates a
+    // static font table that every 2D context reads), so both rendering paths
+    // need it before any GUI/DynamicTexture text can rasterize.
+    const loadFontThen = function (next) {
+        BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
+            _native.Canvas.loadTTFAsync("droidsans", data).then(next, next);
+        }, undefined, undefined, true);
+    };
+
+    // The WebGPU engine loads its GLSL -> SPIR-V -> WGSL transpilers (the glslang
+    // and twgsl WASM modules) lazily, on the first effect that is authored in
+    // GLSL: _preparePipelineContextAsync awaits prepareGlslangAndTintAsync()
+    // whenever shaderLanguage is GLSL and _glslangAndTintAreFullyLoaded is false.
+    // That await makes the *first* GLSL effect compile asynchronously no matter
+    // what, even with disableParallelShaderCompilation, so a scene that probes
+    // effect.isReady() right after createEffect sees false and takes its "not
+    // ready" branch. Whether it sees true then depends purely on whether some
+    // earlier test already warmed the modules, which makes results depend on test
+    // ordering (a test can pass in a full run and fail in isolation). Warm the
+    // transpilers once up front so every test starts from the same state.
+    const warmShaderTranspilersThen = function (engine, next) {
+        if (typeof engine.prepareGlslangAndTintAsync !== "function") {
+            next();
+            return;
+        }
+        engine.prepareGlslangAndTintAsync().then(next, function (e) {
+            // Non-fatal: only GLSL-authored shaders need these, and they will
+            // retry the load on first use.
+            console.error("Failed to preload glslang/twgsl: " + e);
+            next();
         });
-    }, undefined, undefined, true);
+    };
+
+    if (isDawn) {
+        // The WebGPU engine completes initAsync asynchronously, pumped by the
+        // host frame loop (RenderFrame -> frame() -> requestAnimationFrame).
+        // Wait until the NativeDawn plugin promotes it to __dawnEngine before
+        // starting: runRenderLoop needs a fully initialized engine and getCaps()
+        // is only populated post-init. Playground assets load via absolute https
+        // URLs (see loadPG), so _native.RootUrl is left alone here.
+        const waitForEngine = function () {
+            if (globalThis.__dawnEngine) {
+                globalThis.__dawnEngine.getCaps().parallelShaderCompile = undefined;
+                warmShaderTranspilersThen(globalThis.__dawnEngine, function () {
+                    loadFontThen(startValidation);
+                });
+            } else {
+                setTimeout(waitForEngine, 16);
+            }
+        };
+        waitForEngine();
+    } else {
+        loadFontThen(function () {
+            _native.RootUrl = "https://playground.babylonjs.com";
+            startValidation();
+        });
+    }
 })();

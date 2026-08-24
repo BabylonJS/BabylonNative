@@ -58,6 +58,8 @@ jobs:
             -D BX_CONFIG_DEBUG=ON \
             -D OpenGL_GL_PREFERENCE=GLVND \
             -D BABYLON_DEBUG_TRACE=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             ${{ inputs.js-engine == 'Hermes' && '-D HERMES_UNICODE_LITE=ON -D HERMES_ALLOW_BOOST_CONTEXT=0' || '' }} \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux

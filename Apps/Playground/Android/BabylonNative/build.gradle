@@ -46,6 +46,15 @@ if (nativeDawn) {
     cmakeArguments.add("-DBABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON")
 }
 
+// The experimental codec plugins default to OFF in CMake. Allow the caller (CI) to
+// turn them on so the NDK toolchain gets build coverage for their third-party
+// dependencies, without changing the default for local Android builds.
+["BABYLON_NATIVE_PLUGIN_NATIVEDRACO", "BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT"].each { option ->
+    if (project.hasProperty(option)) {
+        cmakeArguments.add("-D${option}=${project.property(option)}")
+    }
+}
+
 configurations { natives }
 
 android {

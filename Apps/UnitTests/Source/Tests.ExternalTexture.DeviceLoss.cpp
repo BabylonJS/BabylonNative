@@ -71,7 +71,7 @@ namespace
 //      wrapper at the new handle, render blue, readback → expect blue.
 TEST(ExternalTexture, RestoreAfterDeviceLoss)
 {
-#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_DEVICE_LOSS_TESTS)
     GTEST_SKIP();
 #else
     Babylon::Graphics::DeviceT deviceA = Helpers::CreateDevice();

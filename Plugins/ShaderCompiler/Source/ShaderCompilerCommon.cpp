@@ -19,6 +19,12 @@ namespace Babylon::ShaderCompilerCommon
     // attribute table below).
     static_assert(Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION == static_cast<uint32_t>(bgfx::Attrib::TexCoord0));
     static_assert(Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION >= static_cast<uint32_t>(bgfx::Attrib::Count));
+    // The assert above only covers i_data0, the *highest* instance-data location. NativeEngine::Draw
+    // reroutes any attribute whose location is < bgfx::Attrib::Count, so what that guard actually
+    // depends on is the *lowest* built-in one (instanceColor, on i_data4). Were bgfx::Attrib::Count
+    // to grow past it, the assert above would still pass while instanceColor started being rerouted
+    // as if it were per-vertex data -- the same silent-garbage failure the guard exists to prevent.
+    static_assert(Babylon::Graphics::BUILTIN_INSTANCE_DATA_LAST_LOCATION >= static_cast<uint32_t>(bgfx::Attrib::Count));
 
     // Patching shader code to append clip space coordinates for the current rendering API.
     // Can be done with glslang shader traversal. Done with string patching for now.
@@ -35,27 +41,16 @@ namespace Babylon::ShaderCompilerCommon
 
     std::string ProcessSamplerFlip(std::string_view source)
     {
-        static const std::string shaderNameDefineStr = "#define SHADER_NAME";
-        const auto shaderNameDefine = source.find(shaderNameDefineStr);
-        if (shaderNameDefine == std::string::npos)
-        {
-            throw std::runtime_error{"ProcessSamplerFlip: Could not find shader name define."};
-        }
-
-        // The vertical (V) flip applied to texture()/textureLod() sample coordinates is performed by
-        // the FlipSamplerCoordinates AST traverser, not by a preprocessor macro. A 2-argument
-        // function-like macro (`#define texture(x,y) texture(x, flip(y))`) cannot match the
-        // 3-argument bias form `texture(sampler, uv, bias)` emitted by some Babylon.js shaders (e.g.
-        // GreasedLine), and glslang's preprocessor has no variadic-macro support, so those shaders
-        // failed to compile. texelFetch keeps its macro because it takes integer texel coordinates,
-        // which the float-coordinate AST flip does not handle.
-        static const auto textureSamplerFunctions = R"(
-            #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2((uv).x, textureSize((tex), (lod)).y - 1 - (uv).y), (lod))
-            #define SHADER_NAME)";
-
-        std::string result{source};
-        result.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
-        return result;
+        // The vertical (V) flip for both float sample coordinates (texture()/textureLod()) and
+        // integer texel coordinates (texelFetch()) is now performed by the FlipSamplerCoordinates
+        // AST traverser, not by a preprocessor macro. The macro form
+        //   #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2(...), (lod))
+        // forced every coordinate through ivec2(...), so it could not compile against sampler3D /
+        // sampler2DArray ('no matching overloaded function'). The AST traverser knows the sampler
+        // dimensionality and only flips 2-component coordinates, leaving 3D/array fetches intact.
+        // This function is retained as an identity passthrough so the backend call sites don't need
+        // to change.
+        return std::string{source};
     }
 
     void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
@@ -90,12 +85,21 @@ namespace Babylon::ShaderCompilerCommon
         }
     }
 
-    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages)
+    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::ParsedIR& originalIr, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages)
     {
         for (const spirv_cross::Resource& sampler : samplers)
         {
-            AppendBytes(bytes, static_cast<uint8_t>(sampler.name.size()));
-            AppendBytes(bytes, sampler.name);
+            // SPIRV-Cross's HLSL/MSL backends rename resources whose name collides with a reserved
+            // keyword of the target language (e.g. a GLSL sampler named "Texture2D" or "Texture2DArray"
+            // becomes "_Texture2D" because those are HLSL built-in object types). bgfx's uniform table
+            // and Babylon.js look samplers up by their original GLSL name, so the renamed identifier would
+            // never bind (the sampler silently samples nothing). Recover the pre-transpile name from the
+            // parser's ParsedIR (the Compiler transpiles a private copy, leaving the parser's names intact).
+            const std::string& originalName = originalIr.get_name(sampler.id);
+            const std::string& name = originalName.empty() ? sampler.name : originalName;
+
+            AppendBytes(bytes, static_cast<uint8_t>(name.size()));
+            AppendBytes(bytes, name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
 
             // TODO : These values (num, regIndex, regCount) are only used by Vulkan and should be set for that API
@@ -113,13 +117,14 @@ namespace Babylon::ShaderCompilerCommon
             // That produced multiple sampler2D uniforms and a samplerCube all pointing at one unit,
             // which GLES/ANGLE rejects at draw time with GL_INVALID_OPERATION (D3D11/Metal don't
             // validate this, so the bug was GL-only). Each sampler now gets its own distinct unit,
-            // mirroring WebGL's Effect._bindSamplerUniformToChannel.
-            if (stages.find(sampler.name) == stages.end())
+            // mirroring WebGL's Effect._bindSamplerUniformToChannel. Keyed on the recovered
+            // pre-transpile name (see above) so both stages agree on the same identifier.
+            if (stages.find(name) == stages.end())
             {
-                stages[sampler.name] = static_cast<uint8_t>(stages.size());
+                stages[name] = static_cast<uint8_t>(stages.size());
             }
 #else
-            stages[sampler.name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
+            stages[name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
 #endif
         }
     }
@@ -298,7 +303,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-            AppendSamplers(vertexBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
+            AppendSamplers(vertexBytes, compiler, vertexShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
 
             AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
             AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
@@ -359,7 +364,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-            AppendSamplers(fragmentBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
+            AppendSamplers(fragmentBytes, compiler, fragmentShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
 
             AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
             AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);

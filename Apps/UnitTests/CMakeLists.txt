@@ -24,6 +24,7 @@ set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
+    "Source/Tests.Device.FrameEncoder.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
@@ -57,7 +58,6 @@ if(APPLE)
     set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
 elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App.X11.cpp")
-    set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
 elseif(WIN32)
     set(SOURCES ${SOURCES}
         "Source/App.Win32.cpp"
@@ -73,6 +73,7 @@ target_link_libraries(UnitTests
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE GraphicsDevice
+    PRIVATE GraphicsDeviceContext
     PRIVATE ExternalTexture
     PRIVATE NativeEngine
     PRIVATE NativeEncoding
@@ -85,8 +86,36 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
+# NativeDraco and NativeMeshopt default to OFF, so link and exercise them only when the
+# consuming build opted in. CI turns both on for the jobs that run UnitTests.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)
+    target_link_libraries(UnitTests PRIVATE NativeDraco)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_DRACO)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT)
+    target_link_libraries(UnitTests PRIVATE NativeMeshopt)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_MESHOPT)
+endif()
+
 if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
+endif()
+
+if(GRAPHICS_API STREQUAL "OpenGL")
+    # Multisample: bgfx backs an MSAA render target with a renderbuffer it allocates itself,
+    # so an imported texture never receives the resolved pixels. Rendering into the caller's
+    # texture instead needs GL_TEXTURE_2D_MULTISAMPLE, which is ES 3.1, while Babylon Native
+    # pins bgfx to ES 3.0 (BGFX_CONFIG_RENDERER_OPENGLES=30).
+    # See https://github.com/BabylonJS/BabylonNative/issues/1809.
+    #
+    # Device loss: the test creates textures on a device handle while bgfx is torn down. On
+    # OpenGL the "device" is a context bgfx created, and a bare context carries no display or
+    # surface, so Helpers::CreateDevice cannot make one current to allocate against.
+    # See https://github.com/BabylonJS/BabylonNative/issues/1810.
+    target_compile_definitions(UnitTests PRIVATE
+        SKIP_MULTISAMPLE_TESTS
+        SKIP_DEVICE_LOSS_TESTS)
 endif()
 
 add_test(NAME UnitTests COMMAND UnitTests)

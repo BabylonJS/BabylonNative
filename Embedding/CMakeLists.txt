@@ -116,6 +116,16 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
     target_link_libraries(Embedding PRIVATE NativeEncoding)
 endif()
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)
+    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEDRACO=1)
+    target_link_libraries(Embedding PRIVATE NativeDraco)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT)
+    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=1)
+    target_link_libraries(Embedding PRIVATE NativeMeshopt)
+endif()
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
     target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS=1)
     target_link_libraries(Embedding PRIVATE NativeOptimizations)

@@ -14,10 +14,10 @@
             "referenceImage": "gsplat-update-data.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#8",
-            "referenceImage": "native-canvas.png"
+            "referenceImage": "native-canvas.png",
+            "replace": "dynamicTexture.clear();,dynamicTexture.clear(); dynamicTexture.update();"
         },
         {
             "title": "EXR Loader",
@@ -140,7 +140,6 @@
             "referenceImage": "nested_BBG.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Dynamic Texture context clip",
             "playgroundId": "#FU0ES5#47",
             "referenceImage": "dynamicTextureClip.png"
@@ -240,7 +239,8 @@
             "excludedGraphicsApis": ["WebGPU"],
             "title": "LightFalloff",
             "playgroundId": "#20OAV9#11218",
-            "referenceImage": "lightFalloff.png"
+            "referenceImage": "lightFalloff.png",
+            "reason": "not a Dawn bug: the scene sets maxSimultaneousLights=10, and Babylon.js declares one uniform buffer per light in the vertex shader, so the PBR vertex stage needs 10 light UBOs + Scene + Mesh + Material = 13. WebGPU's maxUniformBuffersPerShaderStage is 12 and D3D12 adapters report 12 as their maximum, so CreateBindGroupLayout is rejected and nothing draws. Fails the same way in a browser on WebGPU."
         },
         {
             "title": "Chromatic aberration",
@@ -302,7 +302,6 @@
             "referenceImage": "multiCameraRenderingWithScissors.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png"
@@ -312,24 +311,21 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
+            "excludedGraphicsApis": ["OpenGL"],
             "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); pixel diff fail on Linux OpenGL (56223 px) under 0.9 hardware scaling; passes on Win32 D3D11."
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with 1.5 hardware scaling",
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with negative x and y",
             "playgroundId": "#3L5BCD#2",
             "referenceImage": "scissorTestNegativeXandY.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with out of bounds width and height",
             "playgroundId": "#3L5BCD#3",
             "referenceImage": "scissorTestOobWidthAndHeight.png"
@@ -456,7 +452,8 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode0.png",
-            "errorRatio": 8.0
+            "errorRatio": 8.0,
+            "reason": "upstream Babylon.js gap, not Dawn: the Mesh_PrimitiveMode asset uses glTF LINE_LOOP/TRIANGLE_FAN, which WebGPU has no topology for, so WebGPUCacheRenderPipeline._GetTopology throws (see the TODO WEBGPU Line Loop Mode Fallback in webgpuCacheRenderPipeline.ts). Affects browser WebGPU identically. Emulating the topologies makes both tests pass on Dawn (2.740% and 2.667% against the 8% errorRatio), so the fix belongs in the Babylon.js loader/mesh layer as an index rewrite (LINE_LOOP to line-strip with the first index repeated, TRIANGLE_FAN to triangle-list)"
         },
         {
             "excludedGraphicsApis": ["WebGPU"],
@@ -464,7 +461,8 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode1.png",
-            "errorRatio": 8.0
+            "errorRatio": 8.0,
+            "reason": "upstream Babylon.js gap, not Dawn: the Mesh_PrimitiveMode asset uses glTF LINE_LOOP/TRIANGLE_FAN, which WebGPU has no topology for, so WebGPUCacheRenderPipeline._GetTopology throws (see the TODO WEBGPU Line Loop Mode Fallback in webgpuCacheRenderPipeline.ts). Affects browser WebGPU identically. Emulating the topologies makes both tests pass on Dawn (2.740% and 2.667% against the 8% errorRatio), so the fix belongs in the Babylon.js loader/mesh layer as an index rewrite (LINE_LOOP to line-strip with the first index repeated, TRIANGLE_FAN to triangle-list)"
         },
         {
             "title": "GLTF Mesh Primitives",
@@ -631,19 +629,18 @@
             "playgroundId": "#QA2662#13",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Crashes or hangs on legacy NativeEngine; passes on WebGPU/Dawn in isolation but fails with a 73.478% pixel diff after earlier splat tests in the normal 100-199 chunk",
             "referenceImage": "gsplat-sogs-sh.png"
         },
         {
             "title": "Gaussian Splatting Part Test",
             "playgroundId": "#BTS11N#0",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; crashes or hangs on legacy NativeEngine",
             "referenceImage": "gsplat-part-test.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "RH billboard",
             "playgroundId": "#PDO1L6#1",
             "referenceImage": "rh-billboard.png"
@@ -1237,23 +1234,23 @@
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
             "playgroundId": "#22MFU2#77",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; crashes or hangs on legacy NativeEngine",
             "referenceImage": "draco.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 0)",
             "playgroundId": "#22MFU2#78",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; crashes or hangs on legacy NativeEngine",
             "referenceImage": "draco.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 1)",
             "playgroundId": "#22MFU2#78",
             "replace": "numWorkers = 0, numWorkers = 1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; crashes or hangs on legacy NativeEngine",
             "referenceImage": "draco.png"
         },
         {
@@ -1261,21 +1258,21 @@
             "playgroundId": "#22MFU2#75",
             "replace": "numWorkers = 0, numWorkers = 1",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Crashes or hangs on legacy NativeEngine; passes on WebGPU/Dawn in isolation but aborts after the preceding Draco tests in the normal 200-299 chunk",
             "referenceImage": "draco.png"
         },
         {
             "title": "Draco Decoder",
             "playgroundId": "#22MFU2#82",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; crashes or hangs on legacy NativeEngine",
             "referenceImage": "draco.png"
         },
         {
             "title": "Draco Decoder/Encoder roundtrip",
             "playgroundId": "#JNW207#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; crashes or hangs on legacy NativeEngine",
             "referenceImage": "dracoRoundtrip.png"
         },
         {
@@ -1332,8 +1329,8 @@
         {
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Draco loader passes 'utf8' label; BN TextDecoder only accepts 'utf-8' (WHATWG label normalization not implemented)",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; legacy NativeEngine TextDecoder rejects the Draco loader's 'utf8' label (only 'utf-8' is accepted)",
             "referenceImage": "glTFSerializerKhrDracoMeshCompression.png"
         },
         {
@@ -1436,8 +1433,8 @@
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
             "playgroundId": "#JNW207#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 (heap corruption)",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; legacy Win32 NativeEngine crashes with heap corruption",
             "referenceImage": "gltfBuggyDraco.png"
         },
         {
@@ -1951,11 +1948,10 @@
             "playgroundId": "#W7E7CF#38",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
+            "excludedGraphicsApis": ["OpenGL"],
             "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); pixel diff fail on Linux OpenGL (56223 px) under 0.9 hardware scaling; passes on Win32 D3D11."
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Scissor test with 1.5 hardware scaling",
             "playgroundId": "#W7E7CF#38",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
@@ -2113,8 +2109,7 @@
         {
             "title": "Test updateTextureData",
             "playgroundId": "#EVX1DH#80",
-            "referenceImage": "testUpdateTextureData.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "testUpdateTextureData.png"
         },
         {
             "title": "Material Plugin",
@@ -2165,13 +2160,11 @@
             "referenceImage": "billboardParentScale.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Load GUI snippet with unicode",
             "playgroundId": "#YS93KY#1",
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Parse GUI json with unicode",
             "playgroundId": "#ERVGT5#1",
             "referenceImage": "parseGuiJsonWithUnicode.png"
@@ -2227,22 +2220,16 @@
         {
             "title": "GUI Gradient Linear",
             "playgroundId": "#XCPP9Y#17227",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "GUI-Gradient-Linear.png"
         },
         {
             "title": "GUI Gradient Radial",
             "playgroundId": "#4Z7EK3",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "GUI-Gradient-Radial.png"
         },
         {
             "title": "GUI Gradient Linear with transparency",
             "playgroundId": "#PFK1Z5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "GUI-Gradient-Linear-with-transparency.png"
         },
         {
@@ -2997,7 +2984,6 @@
             "referenceImage": "IBL-radiance-roughness.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Synchronous Effect",
             "playgroundId": "#D9XXL3#1",
             "referenceImage": "Synchronous-Effect.png"
@@ -3105,19 +3091,18 @@
         {
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; pixel comparison fails on legacy NativeEngine",
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
             "title": "Sponza Clustered Lighting (2 viewports)",
             "playgroundId": "#CSCJO2#20",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn; pixel comparison fails on legacy NativeEngine",
             "referenceImage": "sponza-clustered-lighting-viewports.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Test code inlining",
             "playgroundId": "#YG3BBF#51",
             "referenceImage": "Test-code-inlining.png"
@@ -3125,71 +3110,71 @@
         {
             "title": "Sponza Clustered Lighting (node material std)",
             "playgroundId": "#QY98Z3#16",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Sponza-Clustered-Lighting-node-material-std-.png"
         },
         {
             "title": "Sponza Clustered Lighting (node material pbr)",
             "playgroundId": "#QY98Z3#17",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Sponza-Clustered-Lighting-node-material-pbr-.png"
         },
         {
             "title": "Clustered Lighting (lhs std material)",
             "playgroundId": "#CSCJO2#59",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
             "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "reason": "Chakra cannot parse the modern JS syntax; passes on WebGPU/Dawn (the order-dependent pixel diff was a leaked PBRBaseMaterial.ForceGLSL, now reset between tests)",
             "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
             "title": "Clustered Lighting (lhs std nodematerial)",
             "playgroundId": "#CSCJO2#64",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#62",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-pbr-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (rhs std material)",
             "playgroundId": "#CSCJO2#69",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {
             "title": "Clustered Lighting (rhs std nodematerial)",
             "playgroundId": "#CSCJO2#71",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#72",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-pbr-nodematerial-.png"
         },
         {
@@ -4257,8 +4242,6 @@
         {
             "title": "Vertex Pulling - Normals UVs Colors Tangents",
             "playgroundId": "#664OF3#6",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "vertexPullingNormalsUVsColors.png"
         },
         {
@@ -4277,7 +4260,6 @@
             "referenceImage": "vertexPullingIsUnIndexed.png"
         },
         {
-            "excludedGraphicsApis": ["WebGPU"],
             "title": "Vertex Pulling - UV Channels 1-6",
             "playgroundId": "#0SA2NH#4",
             "referenceImage": "vertexPullingUVChannels.png"
@@ -4592,7 +4574,7 @@
             "playgroundId": "#WSAFDA#0",
             "referenceImage": "gsplat-splat-gltf.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (36.513%\r)"
+            "reason": "not Dawn-specific -- Dawn passes this test; bgfx/D3D11 is the one that fails. Excluded on every API"
         },
         {
             "title": "Gaussian Splatting LOD",
@@ -4600,7 +4582,7 @@
             "referenceImage": "gsplat-lod.png",
             "renderCount": 15,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "Error: Invalid argument\r\r"
+            "reason": "shared failure, not Dawn-specific: bgfx/D3D11 fails too, with 'Error compiling effect' followed by runaway memory growth. Dawn renders but selects a lower LOD than the reference (29.2% pixel diff). Previously failed outright with 'Error: Invalid argument' because NativeDawn requested a device with WebGPU default limits, so this scene's G-buffer exceeded maxColorAttachmentBytesPerSample (40 needed vs 32 default); that is fixed, the remaining diff is LOD selection/streaming"
         },
         {
             "title": "MSAA RTT samples=4 (magnified)",
@@ -4622,49 +4604,49 @@
             "playgroundId": "##XSNFXP#12",
             "referenceImage": "gsplat-spz-sh.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "requires ReadableStream (streaming load) not implemented"
+            "reason": "ReadableStream is not defined: the non-WASM SPZ decode path streams the response body, and JsRuntimeHost has no ReadableStream. Fails identically on bgfx/D3D11, so this is a shared Babylon Native gap rather than a Dawn one"
         },
         {
             "title": "Gaussian Splatting SPZ Extensions",
             "playgroundId": "#XSNFXP#8",
             "referenceImage": "gsplat-spz-extensions.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting SPZ V4 Extensions",
             "playgroundId": "#XSNFXP#25",
             "referenceImage": "gsplat-spz-v4-extensions.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4",
             "playgroundId": "#XSNFXP#5",
             "referenceImage": "gsplat-spz-sh-order-4.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4 No WASM",
             "playgroundId": "#XSNFXP#13",
             "referenceImage": "gsplat-spz-sh-order-4.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "requires ReadableStream (streaming load) not implemented"
+            "reason": "ReadableStream is not defined: the non-WASM SPZ decode path streams the response body, and JsRuntimeHost has no ReadableStream. Fails identically on bgfx/D3D11, so this is a shared Babylon Native gap rather than a Dawn one"
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat",
             "playgroundId": "#XSNFXP#6",
             "referenceImage": "gsplat-spz-detailed-splat.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat No WASM",
             "playgroundId": "#XSNFXP#14",
             "referenceImage": "gsplat-spz-detailed-splat.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "requires ReadableStream (streaming load) not implemented"
+            "reason": "ReadableStream is not defined: the non-WASM SPZ decode path streams the response body, and JsRuntimeHost has no ReadableStream. Fails identically on bgfx/D3D11, so this is a shared Babylon Native gap rather than a Dawn one"
         },
         {
             "title": "Gaussian Splatting PLY SH Order 4",
@@ -4677,63 +4659,63 @@
             "playgroundId": "#XSNFXP#16",
             "referenceImage": "gsplat-debug-opacity-scale.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Debug Opacity Saturate",
             "playgroundId": "#XSNFXP#17",
             "referenceImage": "gsplat-debug-opacity-saturate.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Debug Size Culling",
             "playgroundId": "#XSNFXP#19",
             "referenceImage": "gsplat-debug-size-culling.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Debug Opacity Culling",
             "playgroundId": "#XSNFXP#20",
             "referenceImage": "gsplat-debug-opacity-culling.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Debug Clipping Box",
             "playgroundId": "#XSNFXP#21",
             "referenceImage": "gsplat-debug-clipping-box.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Debug Diffuse Only",
             "playgroundId": "#XSNFXP#22",
             "referenceImage": "gsplat-debug-diffuse-only.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Debug SH4 Only",
             "playgroundId": "#XSNFXP#24",
             "referenceImage": "gsplat-debug-sh4-only.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Compound Incremental Update",
             "playgroundId": "#DAID4Q#7",
             "referenceImage": "gsplat-compound-incremental-update.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Compound No SH then Full SH",
             "playgroundId": "#DAID4Q#8",
             "referenceImage": "gsplat-compound-no-sh-then-full-sh.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting IBL Shadows",
@@ -4741,7 +4723,7 @@
             "referenceImage": "gsplat-ibl-shadows.png",
             "renderCount": 15,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting IBL Shadows Camera Switch",
@@ -4749,7 +4731,7 @@
             "referenceImage": "gsplat-ibl-shadows-camera-switch.png",
             "renderCount": 15,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Single Part",
@@ -4757,7 +4739,7 @@
             "referenceImage": "gsplat-compound-ibl-shadows-single-part.png",
             "renderCount": 15,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts",
@@ -4765,7 +4747,7 @@
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts.png",
             "renderCount": 15,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts Mixed Visibility",
@@ -4773,7 +4755,7 @@
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts-mixed-visibility.png",
             "renderCount": 15,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "SOGS with SH no texture lookup",
@@ -4781,7 +4763,7 @@
             "referenceImage": "gsplat-sogs-sh-nolookup.png",
             "errorRatio": 5,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "crashes on WebGPU/Dawn"
+            "reason": "not Dawn-specific -- Dawn passes this test. bgfx/D3D11 fails to compile the splat effect ('Error compiling effect' / 'Unable to compile effect') and then hangs without ever completing. Excluded on every API"
         },
         {
             "title": "Gaussian Splatting Debug Part Test",
@@ -4790,7 +4772,7 @@
             "renderCount": 5,
             "errorRatio": 5,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "fails on WebGPU/Dawn"
+            "reason": "not Dawn-specific -- Dawn passes this test; bgfx/D3D11 is the one that fails. Excluded on every API"
         },
         {
             "title": "Gaussian Splatting Debug Part Auto Tracking Test",
@@ -4799,7 +4781,7 @@
             "renderCount": 5,
             "errorRatio": 5,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "fails on WebGPU/Dawn"
+            "reason": "not Dawn-specific -- Dawn passes this test; bgfx/D3D11 is the one that fails. Excluded on every API"
         },
         {
             "title": "Gaussian Splatting Part Serialize Test",
@@ -4807,14 +4789,14 @@
             "referenceImage": "gsplat-part-test.png",
             "errorRatio": 5,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "fails on WebGPU/Dawn"
+            "reason": "not Dawn-specific -- Dawn passes this test; bgfx/D3D11 is the one that fails. Excluded on every API"
         },
         {
             "title": "Gaussian Splatting Loading RH",
             "playgroundId": "#CID4NN#398",
             "referenceImage": "gsplat-loading-rh.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (7.797%\r)"
+            "reason": "shared failure, both backends fail but for different reasons: bgfx/D3D11 throws 'Reference data length (720000) must match render data length (960000)' -- the reference PNG decodes to 3 channels there while the readback is 4, so no comparison ever runs. Dawn compares normally and is 7.797% off the reference"
         },
         {
             "title": "needDepthPrePass material plugin variants",
@@ -4831,7 +4813,7 @@
             "renderCount": 60,
             "errorRatio": 0.1,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (10.243%\r)"
+            "reason": "not Dawn-specific -- Dawn passes this test; bgfx/D3D11 is the one that fails. Excluded on every API"
         },
         {
             "title": "GPUPicker Depth Point and Normal",
@@ -4845,7 +4827,7 @@
             "playgroundId": "#AYZY4Q#34",
             "referenceImage": "procedural-textures-3d.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (48.472%\r)"
+            "reason": "shared failure, not Dawn-specific: both backends miss the reference by a wide margin (bgfx/D3D11 34.228%, Dawn 48.472%, allowed 2.5%)"
         },
         {
             "title": "Iridescence NME",
@@ -4858,7 +4840,7 @@
             "playgroundId": "#ARLADE#23",
             "referenceImage": "sprite-maps.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (96.170%\r)"
+            "reason": "not Dawn-specific -- Dawn passes this test. bgfx/D3D11 crashes with an access violation (c0000005). Excluded on every API"
         },
         {
             "title": "Spotlight shadows",
@@ -4871,14 +4853,14 @@
             "playgroundId": "#HATGQZ#3",
             "referenceImage": "Sliders.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (5.491%\r)"
+            "reason": "shared failure, not Dawn-specific: both backends are off by nearly the same amount (bgfx/D3D11 6.414%, Dawn 6.242%, allowed 2.5%)"
         },
         {
             "title": "Pointers",
             "playgroundId": "#1GLEJK#5",
             "referenceImage": "pointers.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (4.690%\r)"
+            "reason": "shared failure, both backends fail but for different reasons: bgfx/D3D11 throws 'ReferenceError: PointerEvent is not defined' -- the PointerEvent constructor is not polyfilled -- while Dawn runs the scene and is 6.350% off the reference (allowed 2.5%)"
         },
         {
             "title": "FAST snapshot CPU particles",
@@ -4900,7 +4882,7 @@
             "sceneFilename": "WCafe.babylon",
             "referenceImage": "WCafe.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (34.653%\r)"
+            "reason": "shared failure, not Dawn-specific: both backends are off by nearly the same amount (bgfx/D3D11 36.415%, Dawn 34.653%, allowed 2.5%)"
         },
         {
             "title": "Espilit",
@@ -4916,7 +4898,7 @@
             "referenceImage": "TheCar.png",
             "errorRatio": 5,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (90.795%\r)"
+            "reason": "shared failure, not Dawn-specific: both backends produce the identical 90.795% pixel difference (allowed 5%), so the cause is upstream of the graphics API"
         },
         {
             "title": "Viper",
@@ -4931,7 +4913,7 @@
             "sceneFilename": "Retail.babylon",
             "referenceImage": "retail.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (21.276%\r)"
+            "reason": "shared failure, both backends fail but for different reasons: bgfx/D3D11 throws 'Reference data length (720000) must match render data length (960000)' -- the reference PNG decodes to 3 channels there while the readback is 4, so no comparison ever runs. Dawn compares normally and is 21.276% off the reference"
         },
         {
             "title": "Hill Valley",
@@ -4939,7 +4921,7 @@
             "sceneFilename": "HillValley.incremental.babylon",
             "referenceImage": "Hillvalley.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (93.177%\r)"
+            "reason": "shared failure, both backends fail but for different reasons: bgfx/D3D11 throws 'Reference data length (720000) must match render data length (960000)' -- the reference PNG decodes to 3 channels there while the readback is 4, so no comparison ever runs. Dawn compares normally and is 93.177% off the reference"
         },
         {
             "title": "Heart",
@@ -4975,33 +4957,27 @@
             "playgroundId": "#FX57Z1#0",
             "referenceImage": "charting.png",
             "errorRatio": 3,
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (16.629%\r)"
+            "excludedGraphicsApis": ["D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "verified passing on D3D11 (2.004%) and WebGPU/Dawn (allowed 3%) and re-enabled there; still excluded on the APIs that were not measured. Previously excluded everywhere and blamed on Dawn: the Dawn canvas cleared itself on every texture upload, so the first of the scene's two drawText calls was discarded"
         },
         {
             "title": "Fog",
             "scriptToRun": "/Demos/Fog/fog.js",
             "functionToCall": "CreateFogScene",
-            "referenceImage": "fog.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "referenceImage": "fog.png"
         },
         {
             "title": "Polygon",
             "scriptToRun": "/Demos/Polygon/polygon.js",
             "functionToCall": "CreatePolygonScene",
-            "referenceImage": "polygon.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "referenceImage": "polygon.png"
         },
         {
             "title": "Lines",
             "scriptToRun": "/Demos/Lines/lines.js",
             "functionToCall": "CreateLinesTestScene",
             "referenceImage": "lines.png",
-            "replace": "updateVerticesDataDirectly, updateVerticesData",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "replace": "updateVerticesDataDirectly, updateVerticesData"
         },
         {
             "title": "Lens",
@@ -5009,17 +4985,13 @@
             "functionToCall": "CreateLensFlaresTestScene",
             "replaceUrl": "lens4.png, lens5.png",
             "rootPath": "/Demos/Lens/",
-            "referenceImage": "lens.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "referenceImage": "lens.png"
         },
         {
             "title": "Self shadowing",
             "scriptToRun": "/Demos/SelfShadowing/shadows.js",
             "functionToCall": "CreateShadowsTestScene",
-            "referenceImage": "selfShadowing.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "referenceImage": "selfShadowing.png"
         },
         {
             "title": "Reflection probes",
@@ -5034,7 +5006,7 @@
             "referenceImage": "GUI.png",
             "errorRatio": 4,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "reason": "not Dawn-specific -- Dawn passes this test. bgfx/D3D11 is the one that never becomes ready: it prints 'Running GUI' and then hangs indefinitely (still hung after 300s). Excluded on every API"
         },
         {
             "title": "Procedural textures",
@@ -5043,7 +5015,7 @@
             "referenceImage": "procedural.png",
             "replace": "./land, https://cdn.rawgit.com/BabylonJS/Website/06ecbea7/Demos/Procedural/land",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "reason": "renders, but pixel comparison fails (~24% of pixels differ)"
         },
         {
             "title": "SSAO2",
@@ -5062,7 +5034,7 @@
             "playgroundId": "#EIJH8L#27",
             "referenceImage": "ktx2decoder.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "scene never becomes ready on WebGPU/Dawn (shader/asset)"
+            "reason": "shared failure, not Dawn-specific: bgfx/D3D11 fails too with 'Loading textures from IInternalTextureLoader not yet implemented' -- KTX2 texture loading is unimplemented on Babylon Native. On Dawn the same gap presents as the scene never becoming ready (timeout) instead of a thrown error."
         },
         {
             "title": "Screen space reflections",
@@ -5087,7 +5059,7 @@
             "playgroundId": "#4N0QRP#1",
             "referenceImage": "allProcTextures.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "\r"
+            "reason": "renders, but pixel comparison fails (~7% of pixels differ)"
         },
         {
             "title": "Loading glTF model with KTX2 textures",
@@ -5367,7 +5339,7 @@
             "referenceImage": "arc-legacy-inertia-comparison.png",
             "renderCount": 30,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "pixel diff vs reference on WebGPU/Dawn (99.990%\r)"
+            "reason": "shared failure, not Dawn-specific: bgfx/D3D11 fails too. The rendered frame is 4x the reference (render 3840000 bytes vs reference 960000), so validation throws 'Reference data length must match render data length' before any pixel comparison happens"
         },
         {
             "title": "ArcRotate legacy panningInertia glide",
@@ -5538,7 +5510,7 @@
             "referenceImage": "csg2-righthanded-gltf-winding.png",
             "errorRatio": 1.5,
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "gaussian-splat/asset stream load unsupported on host XHR"
+            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
         },
         {
             "title": "FreeCamera framerate-independent movement",
