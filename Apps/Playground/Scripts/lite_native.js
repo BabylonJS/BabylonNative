@@ -45,6 +45,16 @@
     TestUtils.setTitle("Babylon-Lite scene1");
     TestUtils.updateSize(W, H);
 
+    const renderCanvas = getCanvas();
+    if (!renderCanvas || typeof renderCanvas.getContext !== "function") {
+        fail("document.getElementById(\"renderCanvas\") did not return a canvas");
+        return;
+    }
+    if (getCanvas() !== renderCanvas) {
+        fail("document.getElementById(\"renderCanvas\") did not return a stable canvas");
+        return;
+    }
+
     // Load + evaluate the self-executing scene bundle.
     const xhr = new XMLHttpRequest();
     xhr.open("GET", BUNDLE, true);
