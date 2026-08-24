@@ -58,11 +58,18 @@ namespace Babylon::Polyfills::Internal
             throw Napi::RangeError::New(info.Env(), "ImageData: requested region is too large.");
         }
 
-        m_pixels.resize(static_cast<size_t>(pixelCount) * 4);
-        if (context != nullptr && !m_pixels.empty())
+        // Uint8ClampedArray, not Uint8Array: the spec clamps out-of-range writes
+        // to 0..255, whereas a plain Uint8Array wraps them modulo 256, so
+        // saturating arithmetic in JS (`data[i] = value + 40`) silently produces
+        // a dark pixel instead of a bright one.
+        const auto byteLength{static_cast<size_t>(pixelCount) * 4};
+        auto data{Napi::Uint8Array::New(info.Env(), byteLength, napi_uint8_clamped_array)};
+        if (context != nullptr && byteLength > 0)
         {
-            context->ReadPixels(sx, sy, m_width, m_height, m_pixels.data());
+            context->ReadPixels(sx, sy, m_width, m_height, data.Data());
         }
+
+        m_data = Napi::Persistent(data);
     }
 
     Napi::Value ImageData::GetWidth(const Napi::CallbackInfo&)
@@ -75,14 +82,8 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_height);
     }
 
-    Napi::Value ImageData::GetData(const Napi::CallbackInfo& info)
+    Napi::Value ImageData::GetData(const Napi::CallbackInfo&)
     {
-        const auto size{m_pixels.size()};
-        auto data{Napi::Uint8Array::New(info.Env(), size)};
-        if (size > 0)
-        {
-            std::memcpy(data.Data(), m_pixels.data(), size);
-        }
-        return Napi::Value::From(info.Env(), data);
+        return m_data.Value();
     }
 }

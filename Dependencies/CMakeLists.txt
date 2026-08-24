@@ -48,9 +48,7 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE=4096)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE=256)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
+
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
 # bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
@@ -58,18 +56,10 @@ target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 # Expose the path so the OpenGL backends of our own targets can use it.
 set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
 
-# Canvas plugin allocates one bgfx framebuffer per JS Canvas object and per
-# text-rendering operation; combined with V8 GC pacing this can exceed the
-# default 128 limit during long playground sweeps. We enforce a floor of 2048:
-# CI workflows pass -DBGFX_CONFIG_MAX_FRAME_BUFFERS, and any value below 2048
-# (including a smaller CI override) is clamped up so the pool never regresses
-# below the size the Canvas sweeps need.
-#
-# 512 was sufficient only because the validation runner exited on the first
-# failing test. With --keep-going a full validation sweep keeps allocating past
-# that point and exhausts the pool around the FrameGraph tests, so the floor
-# has to cover a complete uninterrupted run.
-if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 2048)
+# The Canvas polyfill holds a bgfx framebuffer per JS Canvas object and per
+# text-rendering operation, releasing them only on GC finalize, so a long
+# playground sweep exceeds bgfx's default of 128.
+if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
     set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
 endif()
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
@@ -108,10 +98,6 @@ set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
 
-# The updated tinyexr (vendored by bimg) uses fopen in its file I/O helpers,
-# which MSVC flags as C4996 and fails the warnings-as-errors UWP build. Mirror
-# the bx workaround above and silence the deprecation for the bimg targets that
-# compile the tinyexr implementation.
 foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
     if(TARGET ${_bimg_target})
         target_compile_definitions(${_bimg_target} PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -126,13 +112,6 @@ if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP AND TARGET bimg_decode)
 endif()
 
 if(NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    # The new bx requires SSE4.2 on x86_64 (see bx scripts/toolchain.lua and
-    # include/bx/inline/simd128_sse.inl which uses _mm_round_ps / _mm_blendv_ps
-    # under "SSE4.1 - always available with SSE4.2 minspec"). bgfx.cmake does
-    # not propagate this flag, so add it explicitly for any GCC/Clang frontend on
-    # x86_64 (e.g. Linux, or Clang targeting Windows), none of which enable SSE4.x
-    # by default. MSVC (cl.exe) allows the intrinsics regardless and Apple Silicon
-    # is unaffected.
     foreach(_bx_target IN ITEMS bx bgfx bimg bimg_decode bimg_encode)
         if(TARGET ${_bx_target})
             target_compile_options(${_bx_target} PRIVATE -msse4.2)

@@ -20,6 +20,11 @@ namespace Babylon::Polyfills::Internal
 
         uint32_t m_width{};
         uint32_t m_height{};
-        std::vector<uint8_t> m_pixels;
+
+        // The spec requires `data` to be one live buffer that the caller can
+        // mutate in place; handing back a fresh copy per access silently drops
+        // every write, which breaks the standard getImageData/putImageData
+        // round trip. Hold the array itself so each read returns the same one.
+        Napi::Reference<Napi::Uint8Array> m_data;
     };
 }
