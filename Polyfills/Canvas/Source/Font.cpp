@@ -5,8 +5,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <cstring>
-
 #include "Font.h"
 
 namespace

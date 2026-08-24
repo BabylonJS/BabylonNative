@@ -65,4 +65,3 @@ endif()
 if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
     add_subdirectory(TestUtils)
 endif()
-
