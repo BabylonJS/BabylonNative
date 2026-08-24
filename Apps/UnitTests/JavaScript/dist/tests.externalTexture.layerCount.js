@@ -129,7 +129,7 @@ function getEngine() {
 
 
 // Wraps the given native texture and returns the layer-related InternalTexture fields, plus the raw
-// native layer count so C++ can tell "binding missing" / "BJS too old" from a real failure.
+// native layer count so a missing binding fails with a clearer message than a bad value would.
 function inspectWrappedTexture(nativeTexture) {
   var e = getEngine();
   // getTextureLayerCount is a binding on the raw native engine (_engine), which is private and not

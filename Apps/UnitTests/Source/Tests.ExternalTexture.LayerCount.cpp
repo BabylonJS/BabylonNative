@@ -43,8 +43,6 @@ namespace
 //       This mirrors a host wrapping one slice of an NV12 array per video plane, and guards
 //       against regressing a single array slice into a 2D array.
 //   (C) arraySize=1, no layerIndex -> single layer -> layerCount 1, is2DArray=false.
-// Skips cleanly when the native binding or the consuming BJS change is absent so it stays green
-// across the cross-repo landing order.
 TEST(ExternalTexture, WrapNativeTextureLayerCount)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -118,19 +116,9 @@ TEST(ExternalTexture, WrapNativeTextureLayerCount)
     // --- (A) Multi-layer texture wrapped as the whole array ---
     const WrappedTextureInfo arrayInfo = inspect(2, std::nullopt);
 
-    if (!arrayInfo.hasBinding)
-    {
-        GTEST_SKIP() << "engine.getTextureLayerCount is unavailable -- requires Babylon Native with "
-                        "BabylonJS/BabylonNative#1733.";
-    }
+    ASSERT_TRUE(arrayInfo.hasBinding) << "engine.getTextureLayerCount is missing from the native engine.";
 
     EXPECT_EQ(arrayInfo.rawLayerCount, 2) << "Whole-array wrap should report the native array size.";
-
-    if (arrayInfo.rawLayerCount == 2 && !arrayInfo.is2DArray)
-    {
-        GTEST_SKIP() << "wrapNativeTexture did not populate is2DArray from the layer count -- requires "
-                        "@babylonjs/core with BabylonJS/Babylon.js#18535.";
-    }
 
     EXPECT_TRUE(arrayInfo.is2DArray) << "Whole-array wrap should be is2DArray=true.";
     EXPECT_EQ(arrayInfo.depth, 2u) << "Whole-array depth should equal the native layer count.";

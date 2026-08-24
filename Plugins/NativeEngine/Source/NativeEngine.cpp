@@ -2162,6 +2162,10 @@ namespace Babylon
         return Napi::Value::From(info.Env(), texture->Height());
     }
 
+    // Meaningful for 2D and 2D-array textures. The reported value can change across
+    // ExternalTexture::Update, which rewrites the layer selection on already-created textures,
+    // while wrapNativeTexture resolves is2DArray/depth once at wrap time — so re-wrap if the
+    // layer selection changes, or the JS texture will describe a binding that no longer holds.
     Napi::Value NativeEngine::GetTextureLayerCount(const Napi::CallbackInfo& info)
     {
         const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
