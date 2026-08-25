@@ -212,7 +212,9 @@ namespace Babylon
             }
 
             assert(image->m_offset == 0);
-            assert(image->m_depth == 1);
+            // bimg encodes "not a volume texture" as zero depth, so a 2D image reports
+            // m_depth == 0 rather than 1. Use isVolume rather than comparing m_depth.
+            assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
             assert(image->m_numMips == 1);
             assert(!image->m_cubeMap);
@@ -226,7 +228,7 @@ namespace Babylon
                 // bimg loads grayscale textures with and without alpha as R8 and RG8 respectively.
                 // Unpack to RGB and RGBA such that RGB is the grayscale and the A is the alpha.
                 bimg::ImageContainer* oldImage{image};
-                image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), 1, 1, false, false);
+                image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), /*depth*/ 0, 1, false, false);
                 TransformImage(oldImage, image, oldImage->m_format == bimg::TextureFormat::R8 ? UnpackR8 : UnpackRG8);
                 bimg::imageFree(oldImage);
             }
@@ -274,7 +276,7 @@ namespace Babylon
                 image->m_format == bimg::TextureFormat::RGBA32F ||
                 image->m_format == bimg::TextureFormat::RGBA32U);
 
-            assert(image->m_depth == 1);
+            assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
             assert(image->m_numMips == 1);
             assert(image->m_cubeMap == false);
@@ -1734,7 +1736,7 @@ namespace Babylon
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
-        bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, bytes)};
+        bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, /*depth*/ 0, 1, false, false, bytes)};
 
         // Unlike the async load paths, this one runs on the JavaScript thread, so a std::exception
         // escaping here would not be routed to an onError callback. Surface it as a JS error.
@@ -2744,7 +2746,7 @@ namespace Babylon
         imageBitmap.Set("data", buffer);
         imageBitmap.Set("width", Napi::Value::From(env, image->m_width));
         imageBitmap.Set("height", Napi::Value::From(env, image->m_height));
-        imageBitmap.Set("depth", Napi::Value::From(env, image->m_depth));
+        imageBitmap.Set("depth", Napi::Value::From(env, bimg::imageGetNumSlices(*image)));
         imageBitmap.Set("numLayers", Napi::Value::From(env, image->m_numLayers));
         imageBitmap.Set("format", Napi::Value::From(env, static_cast<uint32_t>(image->m_format)));
 
@@ -2799,7 +2801,7 @@ namespace Babylon
             throw Napi::Error::New(env, "Invalid source image dimensions for ResizeImageBitmap.");
         }
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, data.Data());
+        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, /*depth*/ 0, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
