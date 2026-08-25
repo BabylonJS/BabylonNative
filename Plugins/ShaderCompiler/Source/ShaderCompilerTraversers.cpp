@@ -610,66 +610,70 @@ namespace Babylon::ShaderCompilerTraversers
                 return Babylon::Graphics::IsBuiltInInstanceAttributeName(name);
             }
 
-            // A caller-supplied location wins over the built-in slot map: it is the draw-time
-            // packing rank over *every* recorded instanced attribute, so it already accounts for
-            // built-ins. On GL/Metal the built-ins are recorded at real, name-sorted locations, so
-            // a generic attribute sorting after one (e.g. `zOffset` after `world3`) shifts the
-            // packing and only this location reflects it. D3D built-ins carry synthetic locations
-            // and never reach this map.
+            // Caller-supplied locations are reserved for generic divisor-driven attributes.
+            // Built-ins always use the compiler-assigned leading slot run.
             bool HasCallerSuppliedInstanceLocation(const char* name) const
             {
                 return m_instancedAttributes != nullptr && m_instancedAttributes->count(name) != 0;
             }
 
-            // The slots cannot come from a fixed per-name table because bgfx requires the used
-            // i_data slots to form a contiguous run starting at i_data0, and the declared set
-            // varies (world0-3 alone, plus instanceColor, plus previousWorld0-3). A fixed table
-            // would leave a hole, and attributes past it would read zero.
-            //
-            // Assigning in reverse name order -- alphabetically first name gets the highest slot --
-            // is dense by construction and matches BuildInstanceDataBuffer, which packs by
-            // descending attribute location. It also reproduces the old fixed assignment for the
-            // sets that predate previousWorld0-3 (world0-3 on i_data3..0, instanceColor on i_data4).
+            // bgfx requires the used i_data slots to form a contiguous run from i_data0. Reverse
+            // name order preserves the historical assignment; the resulting map is carried to
+            // NativeEngine so recorded buffers are copied to these exact slots.
             void AssignBuiltInInstanceSlots()
             {
-                unsigned int slot{};
+                unsigned int builtInCount{};
                 for (const auto& [name, symbol] : m_varyingNameToSymbol)
                 {
-                    if (IsBuiltInInstance(name.c_str()) && !HasCallerSuppliedInstanceLocation(name.c_str()))
+                    if (IsBuiltInInstance(name.c_str()))
                     {
-                        ++slot;
+                        ++builtInCount;
                     }
                 }
 
-                if (slot > Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT)
+                if (builtInCount > Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT)
                 {
-                    throw std::runtime_error("Shader declares " + std::to_string(slot) + " built-in per-instance attributes, but at most " + std::to_string(Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT) + " are supported.");
+                    throw std::runtime_error("Shader declares " + std::to_string(builtInCount) + " built-in per-instance attributes, but at most " + std::to_string(Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT) + " are supported.");
                 }
 
-                // The built-in run owns [0, builtInCount); caller slots are a separate numbering, so
-                // overlap has to be tested slot by slot. A caller slot landing inside the run means
-                // two symbols share one i_data slot -- e.g. a shader declaring world0-3 and
-                // previousWorld0-3 while the draw records only world0-3 would alias previousWorld
-                // onto world, silently zeroing the motion vectors this mapping exists to produce.
-                const unsigned int builtInCount{slot};
-                for (const auto& [name, symbol] : m_varyingNameToSymbol)
+                // Built-ins always occupy the leading dense run. Draw-time generic attributes are
+                // packed after that run, so the compiler and instance buffer share one stable
+                // name-to-slot mapping even when the draw omits an arbitrary built-in subset.
+                std::array<bool, Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT> taken{};
+                if (m_instancedAttributes != nullptr)
                 {
-                    if (!HasCallerSuppliedInstanceLocation(name.c_str()))
+                    for (const auto& [name, location] : *m_instancedAttributes)
                     {
-                        continue;
-                    }
+                        if (IsBuiltInInstance(name.c_str()))
+                        {
+                            throw std::runtime_error("Built-in per-instance attribute '" + name + "' cannot use a caller-supplied slot.");
+                        }
 
-                    const unsigned int location = m_instancedAttributes->at(name);
-                    const unsigned int callerSlot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
-                    if (callerSlot < builtInCount)
-                    {
-                        throw std::runtime_error("Instanced attribute '" + name + "' is routed to i_data" + std::to_string(callerSlot) + ", which the " + std::to_string(builtInCount) + " built-in per-instance attribute(s) this shader declares but the draw did not record already occupy. The two i_data assignments overlap.");
+                        if (location > Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION)
+                        {
+                            throw std::runtime_error("Instanced attribute '" + name + "' has an invalid location " + std::to_string(location) + ".");
+                        }
+                        const unsigned int callerSlot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
+                        if (callerSlot >= taken.size())
+                        {
+                            throw std::runtime_error("Instanced attribute '" + name + "' does not map to a supported i_data slot.");
+                        }
+                        if (callerSlot < builtInCount)
+                        {
+                            throw std::runtime_error("Instanced attribute '" + name + "' overlaps the shader's built-in per-instance slots.");
+                        }
+                        if (taken[callerSlot])
+                        {
+                            throw std::runtime_error("Multiple instanced attributes map to i_data" + std::to_string(callerSlot) + ".");
+                        }
+                        taken[callerSlot] = true;
                     }
                 }
 
+                unsigned int slot{builtInCount};
                 for (const auto& [name, symbol] : m_varyingNameToSymbol)
                 {
-                    if (IsBuiltInInstance(name.c_str()) && !HasCallerSuppliedInstanceLocation(name.c_str()))
+                    if (IsBuiltInInstance(name.c_str()))
                     {
                         m_builtInInstanceSlots[name] = --slot;
                     }
@@ -705,7 +709,11 @@ namespace Babylon::ShaderCompilerTraversers
 
             unsigned int m_genericAttributesRunningCount{0};
             const std::map<std::string, uint32_t>* m_instancedAttributes{nullptr};
+            // Must stay sorted: GetStableLocation derives an attribute's location from its ordinal
+            // position here, and that location must match across the base compile and every variant.
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
+            static_assert(std::is_same_v<decltype(m_varyingNameToSymbol), std::map<std::string, TIntermSymbol*>>,
+                "m_varyingNameToSymbol must remain sorted.");
             std::map<std::string, unsigned int> m_builtInInstanceSlots{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
 
@@ -767,7 +775,7 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserOpenGL final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
+            static std::map<std::string, uint32_t> Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserOpenGL traverser{};
@@ -777,6 +785,7 @@ namespace Babylon::ShaderCompilerTraversers
                 traverser.AssignBuiltInInstanceSlots();
 
                 VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
+                return traverser.m_builtInInstanceSlots;
             }
 
         private:
@@ -811,7 +820,7 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
+            static std::map<std::string, uint32_t> Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserMetal traverser{};
@@ -819,6 +828,7 @@ namespace Babylon::ShaderCompilerTraversers
                 intermediate->getTreeRoot()->traverse(&traverser);
                 traverser.AssignBuiltInInstanceSlots();
                 traverser.Traverse(intermediate, ids, replacementToOriginalName);
+                return traverser.m_builtInInstanceSlots;
             }
 
         private:
@@ -886,7 +896,7 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
+            static std::map<std::string, uint32_t> Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserD3D traverser{};
@@ -904,6 +914,7 @@ namespace Babylon::ShaderCompilerTraversers
                     }
                 }
                 VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
+                return traverser.m_builtInInstanceSlots;
             }
 
         private:
@@ -922,10 +933,9 @@ namespace Babylon::ShaderCompilerTraversers
                 }
                 if (IsInstance(name))
                 {
-                    // The synthetic location follows from the assigned slot; combined with
-                    // BuildInstanceDataBuffer's descending packing this lands on the slot bgfx
-                    // reads. The i_data name is cosmetic here -- D3D binds by TEXCOORD semantic,
-                    // resolved from the location via HLSLVertexAttributeRemap.
+                    // The synthetic location follows from the assigned slot. The i_data name is
+                    // cosmetic here -- D3D binds by TEXCOORD semantic, resolved from the location
+                    // via HLSLVertexAttributeRemap.
                     const unsigned int slot = GetBuiltInInstanceSlot(name);
                     return {Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - slot, s_attribInstanceName[slot]};
                 }
@@ -2029,19 +2039,19 @@ namespace Babylon::ShaderCompilerTraversers
         return UniformTypeChangeTraverser::Traverse(program, ids);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsOpenGL(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsOpenGL(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
     {
-        VertexVaryingInTraverserOpenGL::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
+        return VertexVaryingInTraverserOpenGL::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
     {
-        VertexVaryingInTraverserMetal::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
+        return VertexVaryingInTraverserMetal::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
     {
-        VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
+        return VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
     }
 
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)
