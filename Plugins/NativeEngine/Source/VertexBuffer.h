@@ -40,7 +40,9 @@ namespace Babylon
             uint32_t ElementSize{};
         };
 
-        static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount);
+        /// `minSlotCount` is the number of i_data slots the vertex shader reads; the buffer is
+        /// padded with zeroed slots when the draw supplied fewer instanced attributes than that.
+        static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount, uint32_t minSlotCount = 0);
 
     private:
         Graphics::DeviceContext& m_deviceContext;

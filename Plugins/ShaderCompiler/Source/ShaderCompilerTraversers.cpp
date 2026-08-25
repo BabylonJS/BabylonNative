@@ -570,34 +570,83 @@ namespace Babylon::ShaderCompilerTraversers
                 {
                     return true;
                 }
-                return (!strcmp(name, "world0") ||
-                        !strcmp(name, "world1") ||
-                        !strcmp(name, "world2") ||
-                        !strcmp(name, "world3") ||
-                        !strcmp(name, "instanceColor") ||
-                        !strcmp(name, "splatIndex0") ||
-                        !strcmp(name, "splatIndex1") ||
-                        !strcmp(name, "splatIndex2") ||
-                        !strcmp(name, "splatIndex3"));
+                return IsBuiltInInstance(name);
             }
 
-            // True when the name has no built-in instance mapping and must be assigned a
-            // generic per-instance i_data slot (top TEXCOORD semantics).
-            bool IsGenericInstance(const char* name) const
+            static bool IsBuiltInInstance(const char* name)
             {
-                if (m_instancedAttributes == nullptr || m_instancedAttributes->count(name) == 0)
+                return Babylon::Graphics::IsBuiltInInstanceAttributeName(name);
+            }
+
+            // A caller-supplied location wins over the built-in slot map: it is the draw-time
+            // packing rank over *every* recorded instanced attribute, so it already accounts for
+            // built-ins. On GL/Metal the built-ins are recorded at real, name-sorted locations, so
+            // a generic attribute sorting after one (e.g. `zOffset` after `world3`) shifts the
+            // packing and only this location reflects it. D3D built-ins carry synthetic locations
+            // and never reach this map.
+            bool HasCallerSuppliedInstanceLocation(const char* name) const
+            {
+                return m_instancedAttributes != nullptr && m_instancedAttributes->count(name) != 0;
+            }
+
+            // The slots cannot come from a fixed per-name table because bgfx requires the used
+            // i_data slots to form a contiguous run starting at i_data0, and the declared set
+            // varies (world0-3 alone, plus instanceColor, plus previousWorld0-3). A fixed table
+            // would leave a hole, and attributes past it would read zero.
+            //
+            // Assigning in reverse name order -- alphabetically first name gets the highest slot --
+            // is dense by construction and matches BuildInstanceDataBuffer, which packs by
+            // descending attribute location. It also reproduces the old fixed assignment for the
+            // sets that predate previousWorld0-3 (world0-3 on i_data3..0, instanceColor on i_data4).
+            void AssignBuiltInInstanceSlots()
+            {
+                unsigned int slot{};
+                for (const auto& [name, symbol] : m_varyingNameToSymbol)
                 {
-                    return false;
+                    if (IsBuiltInInstance(name.c_str()) && !HasCallerSuppliedInstanceLocation(name.c_str()))
+                    {
+                        ++slot;
+                    }
                 }
-                return strcmp(name, "world0") != 0 &&
-                       strcmp(name, "world1") != 0 &&
-                       strcmp(name, "world2") != 0 &&
-                       strcmp(name, "world3") != 0 &&
-                       strcmp(name, "instanceColor") != 0 &&
-                       strcmp(name, "splatIndex0") != 0 &&
-                       strcmp(name, "splatIndex1") != 0 &&
-                       strcmp(name, "splatIndex2") != 0 &&
-                       strcmp(name, "splatIndex3") != 0;
+
+                if (slot > Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT)
+                {
+                    throw std::runtime_error("Shader declares " + std::to_string(slot) + " built-in per-instance attributes, but at most " + std::to_string(Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT) + " are supported.");
+                }
+
+                // The built-in run owns [0, builtInCount); caller slots are a separate numbering, so
+                // overlap has to be tested slot by slot. A caller slot landing inside the run means
+                // two symbols share one i_data slot -- e.g. a shader declaring world0-3 and
+                // previousWorld0-3 while the draw records only world0-3 would alias previousWorld
+                // onto world, silently zeroing the motion vectors this mapping exists to produce.
+                const unsigned int builtInCount{slot};
+                for (const auto& [name, symbol] : m_varyingNameToSymbol)
+                {
+                    if (!HasCallerSuppliedInstanceLocation(name.c_str()))
+                    {
+                        continue;
+                    }
+
+                    const unsigned int location = m_instancedAttributes->at(name);
+                    const unsigned int callerSlot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
+                    if (callerSlot < builtInCount)
+                    {
+                        throw std::runtime_error("Instanced attribute '" + name + "' is routed to i_data" + std::to_string(callerSlot) + ", which the " + std::to_string(builtInCount) + " built-in per-instance attribute(s) this shader declares but the draw did not record already occupy. The two i_data assignments overlap.");
+                    }
+                }
+
+                for (const auto& [name, symbol] : m_varyingNameToSymbol)
+                {
+                    if (IsBuiltInInstance(name.c_str()) && !HasCallerSuppliedInstanceLocation(name.c_str()))
+                    {
+                        m_builtInInstanceSlots[name] = --slot;
+                    }
+                }
+            }
+
+            unsigned int GetBuiltInInstanceSlot(const char* name) const
+            {
+                return m_builtInInstanceSlots.at(name);
             }
 
             // The shader attribute location assigned to a varying must be stable regardless
@@ -625,6 +674,7 @@ namespace Babylon::ShaderCompilerTraversers
             unsigned int m_genericAttributesRunningCount{0};
             const std::map<std::string, uint32_t>* m_instancedAttributes{nullptr};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
+            std::map<std::string, unsigned int> m_builtInInstanceSlots{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
 
             // This table is a copy of the table bgfx uses for vertex attribute -> shader symbol association.
@@ -678,6 +728,7 @@ namespace Babylon::ShaderCompilerTraversers
                     "i_data14",
                     "i_data15",
                 };
+            static_assert(BX_COUNTOF(s_attribInstanceName) == Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT);
         };
 
         /// Implementation of VertexVaryingInTraverser for OpenGL and Metal
@@ -691,18 +742,7 @@ namespace Babylon::ShaderCompilerTraversers
                 traverser.m_instancedAttributes = &instancedAttributes;
                 intermediate->getTreeRoot()->traverse(&traverser);
 
-                // Pre-count instance attributes so i_data names can be assigned in reverse.
-                // bgfx maps i_data0 to the last attribute (TEXCOORD7), so instance names
-                // must be assigned in reverse order, matching the Metal traverser. Generic
-                // (consumer-declared) instanced attributes are excluded here because they are
-                // routed to an explicit i_data slot from their caller-supplied location.
-                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
-                {
-                    if (traverser.IsInstance(name.c_str()) && !traverser.IsGenericInstance(name.c_str()))
-                    {
-                        traverser.m_instanceAttributeCount++;
-                    }
-                }
+                traverser.AssignBuiltInInstanceSlots();
 
                 VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
@@ -717,11 +757,9 @@ namespace Babylon::ShaderCompilerTraversers
                 const unsigned int stableLocation = GetStableLocation(name);
                 if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
-                if (IsGenericInstance(name))
+                if (HasCallerSuppliedInstanceLocation(name))
                 {
-                    // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
-                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // INSTANCE_DATA_FIRST_LOCATION == i_data0 == TEXCOORD31, descending.
                     const unsigned int location = m_instancedAttributes->at(name);
                     const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
@@ -730,13 +768,12 @@ namespace Babylon::ShaderCompilerTraversers
                 }
                 if (IsInstance(name))
                 {
-                    // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD31),
-                    // so the first instance attribute gets the highest i_data index.
-                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
+                    // bgfx maps i_data0 to the highest instance-data semantic, so the slots run
+                    // in reverse: see AssignBuiltInInstanceSlots.
+                    return {stableLocation, s_attribInstanceName[GetBuiltInInstanceSlot(name)]};
                 }
                 return {stableLocation, s_attribName[stableLocation]};
             }
-            unsigned int m_instanceAttributeCount{0};
         };
 
         class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser
@@ -748,6 +785,7 @@ namespace Babylon::ShaderCompilerTraversers
                 VertexVaryingInTraverserMetal traverser{};
                 traverser.m_instancedAttributes = &instancedAttributes;
                 intermediate->getTreeRoot()->traverse(&traverser);
+                traverser.AssignBuiltInInstanceSlots();
                 traverser.Traverse(intermediate, ids, replacementToOriginalName);
             }
 
@@ -776,13 +814,6 @@ namespace Babylon::ShaderCompilerTraversers
                         const bool isInstance = IsInstance(name.c_str());
                         if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
                         {
-                            // Count only built-in instance attributes for the reverse i_data
-                            // assignment; generic (consumer-declared) instanced attributes are
-                            // routed to an explicit i_data slot from their caller-supplied location.
-                            if (pass == 0 && !IsGenericInstance(name.c_str()))
-                            {
-                                m_instanceAttributeCount++;
-                            }
                             continue;
                         }
                         HandleVarying(name, symbol, publicType, intermediate, ids, originalNameToReplacement, replacementToOriginalName, *this);
@@ -802,11 +833,9 @@ namespace Babylon::ShaderCompilerTraversers
                 const unsigned int stableLocation = GetStableLocation(name);
                 if (stableLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
-                if (IsGenericInstance(name))
+                if (HasCallerSuppliedInstanceLocation(name))
                 {
-                    // Consumer-declared instanced attribute: route to the explicit bgfx i_data
-                    // slot derived from its caller-supplied per-instance location (INSTANCE_DATA_FIRST_LOCATION
-                    // == i_data0 == TEXCOORD31, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    // INSTANCE_DATA_FIRST_LOCATION == i_data0 == TEXCOORD31, descending.
                     const unsigned int location = m_instancedAttributes->at(name);
                     const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
@@ -815,11 +844,10 @@ namespace Babylon::ShaderCompilerTraversers
                 }
                 if (IsInstance(name))
                 {
-                    return {stableLocation, s_attribInstanceName[--m_instanceAttributeCount]};
+                    return {stableLocation, s_attribInstanceName[GetBuiltInInstanceSlot(name)]};
                 }
                 return {stableLocation, s_attribName[stableLocation]};
             }
-            unsigned int m_instanceAttributeCount{0};
         };
 
         /// Implementation of VertexVaryingInTraverser for DirectX
@@ -832,6 +860,7 @@ namespace Babylon::ShaderCompilerTraversers
                 VertexVaryingInTraverserD3D traverser{};
                 traverser.m_instancedAttributes = &instancedAttributes;
                 intermediate->getTreeRoot()->traverse(&traverser);
+                traverser.AssignBuiltInInstanceSlots();
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
@@ -848,19 +877,25 @@ namespace Babylon::ShaderCompilerTraversers
         private:
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
-                // Consumer-declared instanced attributes with no built-in mapping (e.g. the
-                // fluid renderer's `position` or an instanced `color`) are routed to the bgfx
-                // per-instance i_data location supplied by the caller. That location is derived
-                // from the draw-time instance packing order (INSTANCE_DATA_FIRST_LOCATION == i_data0
-                // == TEXCOORD31, descending), so per-instance data reaches the shader instead of the
-                // per-vertex input.
-                if (IsGenericInstance(name))
+                // Caller-routed instanced attributes (e.g. the fluid renderer's `position` or an
+                // instanced `color`) bind to the supplied per-instance location, so per-instance
+                // data reaches the shader instead of the per-vertex input.
+                if (HasCallerSuppliedInstanceLocation(name))
                 {
                     const unsigned int location = m_instancedAttributes->at(name);
                     const unsigned int slot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
                     if (slot >= BX_COUNTOF(s_attribInstanceName))
                         throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
                     return {location, s_attribInstanceName[slot]};
+                }
+                if (IsInstance(name))
+                {
+                    // The synthetic location follows from the assigned slot; combined with
+                    // BuildInstanceDataBuffer's descending packing this lands on the slot bgfx
+                    // reads. The i_data name is cosmetic here -- D3D binds by TEXCOORD semantic,
+                    // resolved from the location via HLSLVertexAttributeRemap.
+                    const unsigned int slot = GetBuiltInInstanceSlot(name);
+                    return {Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - slot, s_attribInstanceName[slot]};
                 }
 #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
     if (std::strcmp(name, varyingName) == 0)                 \
@@ -877,22 +912,6 @@ namespace Babylon::ShaderCompilerTraversers
                 IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
                 IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
                 IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
-                // Built-in instanced attributes: each occupies a fixed synthetic instance-data location.
-                // world0..world3 (and splatIndex0..3) pack lowest-location -> highest i_data slot so that,
-                // combined with BuildInstanceDataBuffer's descending-key packing, world3 lands on i_data0
-                // (TEXCOORD31) and world0 on i_data3. instanceColor follows at i_data4. The i_data name is
-                // cosmetic on D3D (binding is by TEXCOORD semantic, resolved from the location via the
-                // HLSLVertexAttributeRemap table). Adding one on a lower slot means bumping
-                // BUILTIN_INSTANCE_DATA_SLOT_COUNT in BgfxShaderInfo.h.
-                IF_NAME_RETURN_ATTRIB("instanceColor", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 4, "i_data4")
-                IF_NAME_RETURN_ATTRIB("world0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
-                IF_NAME_RETURN_ATTRIB("world1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
-                IF_NAME_RETURN_ATTRIB("world2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
-                IF_NAME_RETURN_ATTRIB("world3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
-                IF_NAME_RETURN_ATTRIB("splatIndex0", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3, "i_data3")
-                IF_NAME_RETURN_ATTRIB("splatIndex1", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2, "i_data2")
-                IF_NAME_RETURN_ATTRIB("splatIndex2", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1, "i_data1")
-                IF_NAME_RETURN_ATTRIB("splatIndex3", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 0, "i_data0")
 #undef IF_NAME_RETURN_ATTRIB
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
