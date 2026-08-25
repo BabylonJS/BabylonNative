@@ -4545,6 +4545,55 @@ namespace Babylon::Plugins::NativeDawn
                 document.Set("documentElement", Napi::Object::New(env));
                 global.Set("document", document);
             }
+            // Canvas installs its own document before NativeDawn initializes, so
+            // augment that object even when the no-DOM shim above was not needed.
+            // Preserve its lookup for every id except the render-canvas aliases
+            // owned by the single Dawn surface.
+            {
+                Napi::Value documentValue = global.Get("document");
+                if (documentValue.IsObject())
+                {
+                    Napi::Object document = documentValue.As<Napi::Object>();
+                    constexpr auto OriginalLookup = "__nativeDawnOriginalGetElementById";
+                    if (document.Get(OriginalLookup).IsUndefined())
+                    {
+                        Napi::Value originalLookup = document.Get("getElementById");
+                        if (originalLookup.IsFunction())
+                        {
+                            document.Set(OriginalLookup, originalLookup);
+                        }
+
+                        SetMethod(document, "getElementById", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                            Napi::Env env = info.Env();
+                            const std::string id = info.Length() > 0 && info[0].IsString()
+                                ? info[0].As<Napi::String>().Utf8Value() : "";
+                            if (id == "renderCanvas" || id == "canvas" || id == "babylon-canvas")
+                            {
+                                Napi::Object global = env.Global();
+                                Napi::Value existing = global.Get("__dawnCanvas");
+                                if (existing.IsObject())
+                                {
+                                    return existing;
+                                }
+                                Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
+                                global.Set("__dawnCanvas", canvas);
+                                return canvas;
+                            }
+
+                            Napi::Object document = info.This().As<Napi::Object>();
+                            Napi::Value originalLookup = document.Get("__nativeDawnOriginalGetElementById");
+                            if (originalLookup.IsFunction())
+                            {
+                                Napi::Function lookup = originalLookup.As<Napi::Function>();
+                                return info.Length() > 0
+                                    ? lookup.Call(document, {info[0]})
+                                    : lookup.Call(document, {});
+                            }
+                            return env.Null();
+                        });
+                    }
+                }
+            }
             if (global.Get("OffscreenCanvas").IsUndefined())
             {
                 global.Set("OffscreenCanvas", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
