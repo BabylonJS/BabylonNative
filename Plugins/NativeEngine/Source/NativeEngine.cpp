@@ -2553,11 +2553,9 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
-    // The number of contiguous i_data slots the current program's vertex shader reads for its
-    // built-in per-instance attributes. ShaderCompilerTraversers assigns those attributes a dense
-    // run of slots starting at i_data0, one per declared attribute, so the count of built-in names
-    // in the program's attribute table is that run's length. The instance data buffer must cover it
-    // even when the draw supplied fewer attributes, or D3D11 rejects the input layout.
+    // The dense run of i_data slots the current program's vertex shader reads for its built-in
+    // per-instance attributes. The instance data buffer must cover it even when the draw supplied
+    // fewer attributes, or D3D11 rejects the input layout.
     uint32_t NativeEngine::GetBuiltInInstanceDataSlotCount() const
     {
         if (m_currentProgram == nullptr)

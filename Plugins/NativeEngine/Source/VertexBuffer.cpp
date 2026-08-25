@@ -146,24 +146,18 @@ namespace Babylon
             return;
         }
 
-        // The buffer must cover every i_data slot the vertex shader reads, not just the ones the
-        // draw supplied data for: bgfx derives the number of instance-data inputs it declares from
-        // this buffer's stride, and D3D11's CreateInputLayout fails outright when the vertex
-        // shader's input signature reads a semantic the layout does not declare. Babylon.js can
-        // legitimately draw with fewer: _renderWithThinInstances creates the previousWorld buffer
-        // only *after* the first draw, so that draw binds world0-3 while the effect already
-        // declares previousWorld0-3. The padded slots stay zeroed, matching what WebGL feeds a
-        // vertex attribute whose array is disabled.
+        // The buffer must cover every i_data slot the vertex shader reads, not just the ones this
+        // draw supplied: bgfx derives the instance-data input count from the stride, and D3D11's
+        // CreateInputLayout fails outright when the shader reads a semantic the layout omits.
+        // Babylon.js legitimately draws with fewer -- _renderWithThinInstances creates the
+        // previousWorld buffer only after the first draw, so that draw binds world0-3 while the
+        // effect already declares previousWorld0-3.
         //
-        // The padding lands in the *highest* i_data slots (the reverse walk below fills from
-        // i_data0 up), so this is correct only when the attributes the draw omitted are the ones
-        // holding those slots -- i.e. the alphabetically first names, since AssignBuiltInInstanceSlots
-        // gives the highest slot to the alphabetically first name. That holds for the case above
-        // (`previousWorld` sorts before `world`, so it both occupies the top slots and is what is
-        // missing) and for `instanceColor`, which sorts first of all. It is a coincidence between
-        // alphabetical order and Babylon.js's creation order rather than an invariant either side
-        // enforces: if it ever inverts, the data lands in the wrong slots silently instead of
-        // producing a padded run.
+        // Caveat: padding lands in the *highest* slots, so this is only correct when the omitted
+        // attributes are the alphabetically first names, which AssignBuiltInInstanceSlots puts
+        // there. True for `previousWorld` and `instanceColor`, but that is a coincidence between
+        // alphabetical order and Babylon.js's creation order, not an enforced invariant -- if it
+        // inverts, data lands in the wrong slots silently instead of producing a padded run.
         const size_t slotCount = std::max(static_cast<size_t>(minSlotCount), instances.size());
         const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
 

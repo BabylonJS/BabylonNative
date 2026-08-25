@@ -70,10 +70,9 @@ namespace Babylon
         const std::map<uint16_t, UniformValue>& Uniforms() const { return m_uniforms; }
         const std::map<std::string, uint32_t>& VertexAttributeLocations() const { return m_vertexAttributeLocations; }
 
-        // Number of built-in per-instance attributes (world0-3, previousWorld0-3, instanceColor,
-        // splatIndex0-3) this program declares. Computed once when m_vertexAttributeLocations is
-        // populated: that map is written only in Initialize and cleared only in Dispose, so the
-        // count is invariant for the program's lifetime and must not be recomputed per draw.
+        // Number of built-in per-instance attributes this program declares. Computed once when
+        // m_vertexAttributeLocations is populated -- that map is written only in Initialize and
+        // cleared only in Dispose, so this is invariant and must not be recomputed per draw.
         uint32_t BuiltInInstanceDataSlotCount() const { return m_builtInInstanceDataSlotCount; }
 
     private:

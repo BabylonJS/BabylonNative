@@ -51,16 +51,13 @@ namespace Babylon
                 throw std::runtime_error{"Instancing is not supported"};
             }
 
-            // Instance data is packed into the top i_data slots. Use the runtime cap rather than
-            // MAX_INSTANCE_DATA_SLOT_COUNT: every backend clamps maxInstanceData to the device's
-            // maxVertexAttributes during init, so the compile-time value is a ceiling a device need
-            // not honour, and it can also drift from a BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT override
-            // in Dependencies/CMakeLists.txt. The constant stays for the shader compiler's
+            // Use the runtime cap, not MAX_INSTANCE_DATA_SLOT_COUNT: backends clamp maxInstanceData
+            // to the device's maxVertexAttributes during init, so the compile-time value is a
+            // ceiling a device need not honour. The constant stays for the shader compiler's
             // static_asserts, which need a compile-time bound.
             //
-            // Only a new attribute can overflow: re-recording one that is already present
-            // overwrites its entry and needs no extra slot. The check runs before the insert, so
-            // `size() >= max` is the entry that would overflow.
+            // Only a new attribute can overflow -- re-recording an existing one overwrites its
+            // entry -- and the check runs before the insert, so `size() >= max` is the overflow.
             const uint32_t maxInstanceData = caps->limits.maxInstanceData;
             if (m_vertexBufferInstances.find(attrib) == m_vertexBufferInstances.end() &&
                 m_vertexBufferInstances.size() >= maxInstanceData)
