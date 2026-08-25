@@ -613,16 +613,24 @@ namespace Babylon::ShaderCompilerTraversers
             // sets that existed before previousWorld0-3 (world0-3 on i_data3..i_data0, instanceColor
             // on i_data4).
             //
-            // This run and the caller-supplied locations are two independent numberings over
-            // different denominators: this one counts the built-ins the caller did *not* route,
-            // while the caller-supplied locations are ranked over every recorded instanced
-            // attribute. They stay disjoint only while every declared built-in is also recorded.
-            // When they are not -- a shader declaring world0-3 and previousWorld0-3 while the draw
-            // records only world0-3 -- both runs reach i_data0 and the traverser would emit two
-            // symbols for the same slot. On D3D the built-ins carry synthetic locations that never
-            // enter the caller map, so it goes unnoticed there; on OpenGL/Metal they do, and
-            // previousWorld silently aliases world, zeroing the motion vectors this mapping exists
-            // to produce. Throw instead: a duplicate slot has no correct rendering.
+            // This run and the caller-supplied locations are two independent numberings: this one
+            // hands out the bottom of the range, [0, builtInCount), while a caller-routed attribute
+            // lands on INSTANCE_DATA_FIRST_LOCATION - location, its rank over every recorded
+            // instanced attribute. Whether they collide depends on which attributes the caller
+            // routed, so it has to be tested slot by slot rather than inferred from the counts.
+            //
+            // They do not collide merely because some declared built-in went unrouted. On D3D the
+            // built-ins sit at synthetic locations >= Attrib::Count, so NativeEngine::Draw drops
+            // them from genericInstancedAttributes while still counting them in the rank: a draw
+            // recording world0-3 plus one generic attribute routes only the generic one, at rank 4
+            // -> i_data4, directly above the built-in run [0, 4). Dense and correct.
+            //
+            // The real collision is a caller slot landing *inside* the built-in run -- a shader
+            // declaring world0-3 and previousWorld0-3 while the draw records only world0-3. On
+            // Metal/GL the built-ins are recorded at real locations, so world3 is routed to
+            // i_data0 while previousWorld3 also takes i_data0 from this run, and previousWorld
+            // silently aliases world, zeroing the motion vectors this mapping exists to produce.
+            // Throw instead: a duplicate slot has no correct rendering.
             void AssignBuiltInInstanceSlots()
             {
                 unsigned int slot{};
@@ -639,12 +647,23 @@ namespace Babylon::ShaderCompilerTraversers
                     throw std::runtime_error("Shader declares " + std::to_string(slot) + " built-in per-instance attributes, but at most " + std::to_string(Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT) + " are supported.");
                 }
 
-                // slot > 0 means at least one declared built-in was not routed by the caller. An
-                // empty instancedAttributes map is the base program compile, where nothing is
-                // routed and this run owns the whole range.
-                if (slot > 0 && m_instancedAttributes != nullptr && !m_instancedAttributes->empty())
+                // The built-in run owns [0, builtInCount). A caller-routed attribute whose slot
+                // falls in that window would have the traverser emit two symbols for one i_data
+                // slot; anything at or above it packs densely on top of the run.
+                const unsigned int builtInCount{slot};
+                for (const auto& [name, symbol] : m_varyingNameToSymbol)
                 {
-                    throw std::runtime_error("Shader declares " + std::to_string(slot) + " built-in per-instance attribute(s) that the draw did not record, alongside " + std::to_string(m_instancedAttributes->size()) + " recorded instanced attribute(s). The two i_data assignments would overlap.");
+                    if (!HasCallerSuppliedInstanceLocation(name.c_str()))
+                    {
+                        continue;
+                    }
+
+                    const unsigned int location = m_instancedAttributes->at(name);
+                    const unsigned int callerSlot = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
+                    if (callerSlot < builtInCount)
+                    {
+                        throw std::runtime_error("Instanced attribute '" + name + "' is routed to i_data" + std::to_string(callerSlot) + ", which the " + std::to_string(builtInCount) + " built-in per-instance attribute(s) this shader declares but the draw did not record already occupy. The two i_data assignments overlap.");
+                    }
                 }
 
                 for (const auto& [name, symbol] : m_varyingNameToSymbol)
