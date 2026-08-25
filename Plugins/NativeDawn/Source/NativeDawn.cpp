@@ -320,9 +320,33 @@ namespace Babylon::Plugins::NativeDawn
                 supportedLimits.nextInChain = nullptr;
             }
 
+            // Features are opt-in like limits, and this is the only device the JS
+            // layer ever gets (requestDevice hands back this one), so anything not
+            // requested here is permanently invisible to Babylon.js -- notably
+            // float32-filterable, without which sampling an r32float texture with a
+            // filtering sampler is a validation error.
+            // Dawn's own extensions start at 0x00050000; several change device
+            // semantics or need matching toggles, so keep to standard features.
+            std::vector<WGPUFeatureName> requiredFeatures;
+            {
+                WGPUSupportedFeatures adapterFeatures{WGPU_SUPPORTED_FEATURES_INIT};
+                wgpuAdapterGetFeatures(g_state.adapter, &adapterFeatures);
+                for (size_t i = 0; i < adapterFeatures.featureCount; ++i)
+                {
+                    const WGPUFeatureName feature = adapterFeatures.features[i];
+                    if (static_cast<uint32_t>(feature) < 0x00050000u)
+                    {
+                        requiredFeatures.push_back(feature);
+                    }
+                }
+                wgpuSupportedFeaturesFreeMembers(adapterFeatures);
+            }
+
             // Device.
             WGPUDeviceDescriptor devDesc{
                 .label = EmptyStringView(),
+                .requiredFeatureCount = requiredFeatures.size(),
+                .requiredFeatures = requiredFeatures.empty() ? nullptr : requiredFeatures.data(),
                 .requiredLimits = haveLimits ? &supportedLimits : nullptr,
                 .defaultQueue = {
                     .label = EmptyStringView(),
