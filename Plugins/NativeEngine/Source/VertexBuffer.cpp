@@ -154,6 +154,16 @@ namespace Babylon
         // only *after* the first draw, so that draw binds world0-3 while the effect already
         // declares previousWorld0-3. The padded slots stay zeroed, matching what WebGL feeds a
         // vertex attribute whose array is disabled.
+        //
+        // The padding lands in the *highest* i_data slots (the reverse walk below fills from
+        // i_data0 up), so this is correct only when the attributes the draw omitted are the ones
+        // holding those slots -- i.e. the alphabetically first names, since AssignBuiltInInstanceSlots
+        // gives the highest slot to the alphabetically first name. That holds for the case above
+        // (`previousWorld` sorts before `world`, so it both occupies the top slots and is what is
+        // missing) and for `instanceColor`, which sorts first of all. It is a coincidence between
+        // alphabetical order and Babylon.js's creation order rather than an invariant either side
+        // enforces: if it ever inverts, the data lands in the wrong slots silently instead of
+        // producing a padded run.
         const size_t slotCount = std::max(static_cast<size_t>(minSlotCount), instances.size());
         const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
 

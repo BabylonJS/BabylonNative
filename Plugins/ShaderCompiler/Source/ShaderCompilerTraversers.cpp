@@ -607,12 +607,22 @@ namespace Babylon::ShaderCompilerTraversers
             // leave a hole in the run and the attributes past the hole would read zero.
             //
             // Assigning in reverse name order -- the alphabetically first name gets the highest
-            // slot, the last gets i_data0 -- is dense by construction, is stable between the base
-            // program and any instanced variant (the declared set is identical), and matches
+            // slot, the last gets i_data0 -- is dense by construction and matches
             // BuildInstanceDataBuffer, which packs the recorded instance buffers by descending
             // attribute location. It also reproduces the previous fixed assignment exactly for the
             // sets that existed before previousWorld0-3 (world0-3 on i_data3..i_data0, instanceColor
             // on i_data4).
+            //
+            // This run and the caller-supplied locations are two independent numberings over
+            // different denominators: this one counts the built-ins the caller did *not* route,
+            // while the caller-supplied locations are ranked over every recorded instanced
+            // attribute. They stay disjoint only while every declared built-in is also recorded.
+            // When they are not -- a shader declaring world0-3 and previousWorld0-3 while the draw
+            // records only world0-3 -- both runs reach i_data0 and the traverser would emit two
+            // symbols for the same slot. On D3D the built-ins carry synthetic locations that never
+            // enter the caller map, so it goes unnoticed there; on OpenGL/Metal they do, and
+            // previousWorld silently aliases world, zeroing the motion vectors this mapping exists
+            // to produce. Throw instead: a duplicate slot has no correct rendering.
             void AssignBuiltInInstanceSlots()
             {
                 unsigned int slot{};
@@ -627,6 +637,14 @@ namespace Babylon::ShaderCompilerTraversers
                 if (slot > Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT)
                 {
                     throw std::runtime_error("Shader declares " + std::to_string(slot) + " built-in per-instance attributes, but at most " + std::to_string(Babylon::Graphics::BUILTIN_INSTANCE_DATA_SLOT_COUNT) + " are supported.");
+                }
+
+                // slot > 0 means at least one declared built-in was not routed by the caller. An
+                // empty instancedAttributes map is the base program compile, where nothing is
+                // routed and this run owns the whole range.
+                if (slot > 0 && m_instancedAttributes != nullptr && !m_instancedAttributes->empty())
+                {
+                    throw std::runtime_error("Shader declares " + std::to_string(slot) + " built-in per-instance attribute(s) that the draw did not record, alongside " + std::to_string(m_instancedAttributes->size()) + " recorded instanced attribute(s). The two i_data assignments would overlap.");
                 }
 
                 for (const auto& [name, symbol] : m_varyingNameToSymbol)

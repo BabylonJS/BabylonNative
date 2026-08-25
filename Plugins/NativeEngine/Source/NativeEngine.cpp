@@ -2565,15 +2565,7 @@ namespace Babylon
             return 0;
         }
 
-        uint32_t count{};
-        for (const auto& [name, location] : m_currentProgram->VertexAttributeLocations())
-        {
-            if (Babylon::Graphics::IsBuiltInInstanceAttributeName(name))
-            {
-                ++count;
-            }
-        }
-        return count;
+        return m_currentProgram->BuiltInInstanceDataSlotCount();
     }
 
     // Note: For legacy reasons JS might call this function for instance drawing.

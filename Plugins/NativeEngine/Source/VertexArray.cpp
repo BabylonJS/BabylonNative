@@ -44,21 +44,28 @@ namespace Babylon
             }
 
             // Check if instancing is supported.
-            const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
+            const bgfx::Caps* caps = bgfx::getCaps();
+            const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & caps->supported);
             if (!instancingSupported)
             {
                 throw std::runtime_error{"Instancing is not supported"};
             }
 
-            // Instance data is packed into the top i_data slots, of which bgfx has
-            // MAX_INSTANCE_DATA_SLOT_COUNT. Only a new attribute can overflow: re-recording
-            // one that is already present overwrites its entry and needs no extra slot.
-            // The check runs before the insert, so `size() >= max` is the entry that would
-            // overflow.
+            // Instance data is packed into the top i_data slots. Use the runtime cap rather than
+            // MAX_INSTANCE_DATA_SLOT_COUNT: every backend clamps maxInstanceData to the device's
+            // maxVertexAttributes during init, so the compile-time value is a ceiling a device need
+            // not honour, and it can also drift from a BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT override
+            // in Dependencies/CMakeLists.txt. The constant stays for the shader compiler's
+            // static_asserts, which need a compile-time bound.
+            //
+            // Only a new attribute can overflow: re-recording one that is already present
+            // overwrites its entry and needs no extra slot. The check runs before the insert, so
+            // `size() >= max` is the entry that would overflow.
+            const uint32_t maxInstanceData = caps->limits.maxInstanceData;
             if (m_vertexBufferInstances.find(attrib) == m_vertexBufferInstances.end() &&
-                m_vertexBufferInstances.size() >= Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT)
+                m_vertexBufferInstances.size() >= maxInstanceData)
             {
-                throw std::runtime_error{"Number of vertex buffer instances greater than " + std::to_string(Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT) + " is not supported"};
+                throw std::runtime_error{"Number of vertex buffer instances greater than " + std::to_string(maxInstanceData) + " is not supported"};
             }
 
             m_vertexBufferInstances[attrib] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
