@@ -1405,7 +1405,7 @@ namespace bimg
 		_imageContainer.m_offset      = UINT32_MAX;
 		_imageContainer.m_width       = _width;
 		_imageContainer.m_height      = _height;
-		_imageContainer.m_depth       = 1;
+		_imageContainer.m_depth       = 0;
 		_imageContainer.m_numLayers   = 1;
 		_imageContainer.m_numMips     = 1;
 		_imageContainer.m_hasAlpha    = false;

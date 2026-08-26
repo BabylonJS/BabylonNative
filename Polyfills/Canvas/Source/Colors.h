@@ -1,5 +1,10 @@
 #pragma once
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <limits>
 #include <regex>
+#include <string>
 #include "nanovg/nanovg.h"
 
 namespace Babylon::Polyfills::Internal
@@ -211,22 +216,71 @@ namespace Babylon::Polyfills::Internal
                 return nvgRGBA((color >> 16), (color >> 8) & 0xFF, (color & 0xFF), 0xFF);
             }
 
-            // matches strings of the form rgb(#,#,#) or rgba(#,#,#,#)
-            static const std::regex rgbRegex("rgba?\\(\\s*(-?\\d{1,3})\\s*,\\s*(-?\\d{1,3})\\s*,\\s*(-?\\d{1,3})\\s*(?:,\\s*(-?\\d{1,3}))?\\s*\\)");
+            // CSS colour functions. The components are matched as generic CSS
+            // numbers with an optional '%' suffix rather than as 1-3 digit
+            // integers: the old integer-only pattern silently failed to match
+            // any fractional value, so a perfectly ordinary rgba(0, 0, 0, 0.5)
+            // fell through to the "Unable to parse color" throw.
+            static const std::string number{R"((-?(?:\d+(?:\.\d*)?|\.\d+))(%?))"};
+            static const std::string separator{R"((?:\s*,\s*|\s+))"};
+            static const std::string alphaSeparator{R"((?:\s*,\s*|\s*/\s*))"};
+            static const std::string components{
+                R"(\(\s*)" + number + separator + number + separator + number +
+                "(?:" + alphaSeparator + number + R"()?\s*\))"};
+
+            // Component group indices: value/percent pairs at 1-2, 3-4, 5-6 and
+            // the optional alpha at 7-8.
+            //
+            // Parsed with strtof rather than std::stof: the regex above accepts a digit string of
+            // any length, and std::stof throws std::out_of_range for one that does not fit a
+            // float. That exception is not a Napi::Error, so it would escape this callback and
+            // terminate the host instead of producing a color. strtof cannot throw -- it
+            // saturates to +/-HUGE_VALF on overflow and returns zero on underflow -- and the
+            // infinities are folded back to finite extremes so the clamps below stay well
+            // defined (fmodf of an infinity, which nvgHSLA does to the hue, would be NaN).
+            const auto toFloat = [](const std::ssub_match& match) {
+                const std::string text{match.str()};
+                const float value = std::strtof(text.c_str(), nullptr);
+                if (std::isfinite(value))
+                {
+                    return value;
+                }
+                return value < 0.0f ? std::numeric_limits<float>::lowest() : std::numeric_limits<float>::max();
+            };
+            const auto channel = [&toFloat](const std::smatch& match, size_t index) {
+                const float value = toFloat(match[index]);
+                const float scaled = match[index + 1].matched && match[index + 1].length() > 0 ? value * 255.0f / 100.0f : value;
+                return static_cast<unsigned char>(std::clamp(scaled, 0.0f, 255.0f) + 0.5f);
+            };
+            const auto alpha = [&toFloat](const std::smatch& match, size_t index) {
+                if (!match[index].matched)
+                {
+                    return static_cast<unsigned char>(255);
+                }
+                const float value = toFloat(match[index]);
+                const float normalized = match[index + 1].matched && match[index + 1].length() > 0 ? value / 100.0f : value;
+                return static_cast<unsigned char>(std::clamp(normalized, 0.0f, 1.0f) * 255.0f + 0.5f);
+            };
+
+            static const std::regex rgbRegex("rgba?" + components);
             std::smatch rgbMatch;
             if (std::regex_match(str, rgbMatch, rgbRegex))
             {
-                if (rgbMatch.size() == 5)
-                {
-                    if (rgbMatch[4].matched)
-                    {
-                        return nvgRGBA(std::clamp(std::stoi(rgbMatch[1]), 0, 255), std::clamp(std::stoi(rgbMatch[2]), 0, 255), std::clamp(std::stoi(rgbMatch[3]), 0, 255), std::clamp(std::stoi(rgbMatch[4]), 0, 255));
-                    }
-                    else
-                    {
-                        return nvgRGB(std::clamp(std::stoi(rgbMatch[1]), 0, 255), std::clamp(std::stoi(rgbMatch[2]), 0, 255), std::clamp(std::stoi(rgbMatch[3]), 0, 255));
-                    }
-                }
+                return nvgRGBA(channel(rgbMatch, 1), channel(rgbMatch, 3), channel(rgbMatch, 5), alpha(rgbMatch, 7));
+            }
+
+            // hsl()/hsla(). Babylon GUI's ColorPicker emits these.
+            static const std::regex hslRegex("hsla?" + components);
+            std::smatch hslMatch;
+            if (std::regex_match(str, hslMatch, hslRegex))
+            {
+                // Hue is an angle in degrees; nvgHSLA wraps it internally but
+                // expects turns. Saturation and lightness are percentages
+                // whether or not the '%' is spelled out.
+                const float hue = toFloat(hslMatch[1]) / 360.0f;
+                const float saturation = std::clamp(toFloat(hslMatch[3]) / 100.0f, 0.0f, 1.0f);
+                const float lightness = std::clamp(toFloat(hslMatch[5]) / 100.0f, 0.0f, 1.0f);
+                return nvgHSLA(hue, saturation, lightness, alpha(hslMatch, 7));
             }
         }
         throw Napi::Error::New(env, std::string{"Unable to parse color: "} + str);

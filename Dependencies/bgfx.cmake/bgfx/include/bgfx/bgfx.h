@@ -66,8 +66,8 @@ namespace bgfx
 			Gnm,        //!< GNM
 			Metal,      //!< Metal
 			Nvn,        //!< NVN
-			OpenGLES,   //!< OpenGL ES 2.0+
-			OpenGL,     //!< OpenGL 2.1+
+			OpenGLES,   //!< OpenGL ES 3.0+
+			OpenGL,     //!< OpenGL 4.3+
 			Vulkan,     //!< Vulkan
 			WebGPU,     //!< WebGPU
 
@@ -182,8 +182,11 @@ namespace bgfx
 			BC2,          //!< Block Compression 2. 5-bit R, 6-bit G, 5-bit B, 4-bit explicit A. 8 BPP.
 			BC3,          //!< Block Compression 3. 5-bit R, 6-bit G, 5-bit B, 8-bit interpolated A. 8 BPP.
 			BC4,          //!< Block Compression 4. Single 8-bit red channel, unsigned normalized. 4 BPP.
+			BC4S,         //!< Block Compression 4. Single 8-bit red channel, signed normalized. 4 BPP.
 			BC5,          //!< Block Compression 5. Two 8-bit channels (RG), unsigned normalized. 8 BPP.
+			BC5S,         //!< Block Compression 5. Two 8-bit channels (RG), signed normalized. 8 BPP.
 			BC6H,         //!< Block Compression 6H. Three 16-bit floating-point channels (RGB), HDR. 8 BPP.
+			BC6HU,        //!< Block Compression 6H. Three 16-bit unsigned floating-point channels (RGB), HDR. 8 BPP.
 			BC7,          //!< RGB 4-7 bits per color channel, 0-8 bits alpha. Block Compression 7. High-quality RGBA, 4-7 bits per color, 0-8 bits alpha. 8 BPP.
 			ETC1,         //!< Ericsson Texture Compression 1. 8-bit per channel RGB. 4 BPP.
 			ETC2,         //!< Ericsson Texture Compression 2. 8-bit per channel RGB. 4 BPP.
@@ -268,6 +271,7 @@ namespace bgfx
 			BGR5A1,       //!< Packed 16-bit, 5-bit blue, 5-bit green, 5-bit red, 1-bit alpha. BGRA byte order, unsigned normalized. 16 BPP.
 			RGB5A1,       //!< Packed 16-bit, 5-bit red, 5-bit green, 5-bit blue, 1-bit alpha, unsigned normalized. 16 BPP.
 			RGB10A2,      //!< Packed 32-bit, 10-bit red, 10-bit green, 10-bit blue, 2-bit alpha, unsigned normalized. 32 BPP.
+			RGB10A2U,     //!< Packed 32-bit, 10-bit red, 10-bit green, 10-bit blue, 2-bit alpha, unsigned integer. 32 BPP.
 			RG11B10F,     //!< Packed 32-bit, 11-bit red, 11-bit green, 10-bit blue, unsigned floating point. No alpha. 32 BPP.
 			UnknownDepth, //!< Depth formats below.
 			D16,          //!< 16-bit depth, unsigned normalized. 16 BPP.
@@ -277,6 +281,7 @@ namespace bgfx
 			D16F,         //!< 16-bit depth, floating point. 16 BPP.
 			D24F,         //!< 24-bit depth, floating point (stored as 32-bit). 32 BPP.
 			D32F,         //!< 32-bit depth, floating point. 32 BPP.
+			D32FS8,       //!< 32-bit depth, floating point, with 8-bit stencil (stored as 64-bit). 64 BPP.
 			D0S8,         //!< 8-bit stencil only, no depth. 8 BPP.
 
 			Count
@@ -681,13 +686,20 @@ namespace bgfx
 			Limits();
 
 			uint16_t maxEncoders;           //!< Maximum number of encoder threads.
-			uint32_t numDrawCalls;          //!< Initial number of draw calls per frame. Rounded up to a
-			                                ///  multiple of 1024 (the minimum); 0 selects the default of 1024.
-			                                ///  The render-item buffers grow on demand up to
-			                                ///  `BGFX_CONFIG_MAX_DRAW_CALLS` and lazily shrink.
+			uint32_t numDrawCalls;          //!< Number of draw calls per frame to reserve storage for. Rounded
+			                                ///  up to a multiple of `BGFX_CONFIG_DRAW_CALL_BLOCK`, which is also
+			                                ///  the minimum. This is a reservation, not a limit: submitting more
+			                                ///  than this grows the storage during the frame, up to
+			                                ///  `BGFX_CONFIG_MAX_DRAW_CALLS`. With
+			                                ///  `BGFX_CONFIG_DYNAMIC_FRAME_STORAGE` disabled nothing grows, and
+			                                ///  this is a hard limit that `Caps::Limits::maxDrawCalls` reports
+			                                ///  back; submissions past it are dropped. See
+			                                ///  `Stats::numDrawCallsPeak` to size it.
 			uint32_t numDrawCallPeakFrames; //!< Number of frames the draw-call peak (high-water mark) is observed
-			                                ///  before the render-item buffers are shrunk. Set to 0 to disable
-			                                ///  dynamic resizing and keep the buffers fixed at `numDrawCalls`.
+			                                ///  before unused storage is released. Set to 0 to keep whatever has
+			                                ///  been allocated for the lifetime of the context. With
+			                                ///  `BGFX_CONFIG_DYNAMIC_FRAME_STORAGE` disabled nothing per frame is
+			                                ///  resized at all, and this only releases unused uniform buffer space.
 			uint32_t minResourceCbSize;     //!< Minimum resource command buffer size.
 			uint32_t maxTransientVbSize;    //!< Maximum transient vertex buffer size.
 			uint32_t maxTransientIbSize;    //!< Maximum transient index buffer size.

@@ -1515,6 +1515,13 @@ namespace bgfx
 			m_occlusionQuerySet.insert(_occlusionQuery.idx);
 		}
 
+		BX_ASSERT(m_draw.m_startMatrix + m_draw.m_numMatrices <= m_frame->m_frameCache.m_matrixCache.m_max+1
+			, "Draw names %d matrices from %d, but the matrix cache only holds %d."
+			, m_draw.m_numMatrices
+			, m_draw.m_startMatrix
+			, m_frame->m_frameCache.m_matrixCache.m_max+1
+			);
+
 		if (m_discard)
 		{
 			discard(_flags);
@@ -1654,12 +1661,14 @@ namespace bgfx
 
 	void EncoderImpl::blit(ViewId _id, TextureHandle _dst, uint8_t _dstMip, uint16_t _dstX, uint16_t _dstY, uint16_t _dstZ, TextureHandle _src, uint8_t _srcMip, uint16_t _srcX, uint16_t _srcY, uint16_t _srcZ, uint16_t _width, uint16_t _height, uint16_t _depth)
 	{
-		BX_WARN(m_frame->m_numBlitItems < BGFX_CONFIG_MAX_BLIT_ITEMS
-			, "Exceed number of available blit items per frame. BGFX_CONFIG_MAX_BLIT_ITEMS is %d. Skipping blit."
+		const uint32_t blitItemIdx = bx::atomicFetchAndAddsat<uint32_t>(&m_frame->m_numBlitItems, 1, BGFX_CONFIG_MAX_BLIT_ITEMS);
+
+		BX_WARN(blitItemIdx < BGFX_CONFIG_MAX_BLIT_ITEMS
+			, "Exceeded number of available blit items per frame. BGFX_CONFIG_MAX_BLIT_ITEMS is %d. Skipping blit."
 			, BGFX_CONFIG_MAX_BLIT_ITEMS
 			);
-		const uint32_t blitItemIdx = bx::atomicFetchAndAddsat<uint32_t>(&m_frame->m_numBlitItems, 1, BGFX_CONFIG_MAX_BLIT_ITEMS);
-		if (BGFX_CONFIG_MAX_BLIT_ITEMS-1 <= blitItemIdx)
+
+		if (blitItemIdx >= BGFX_CONFIG_MAX_BLIT_ITEMS)
 		{
 			return;
 		}
@@ -1678,21 +1687,16 @@ namespace bgfx
 		bi.m_dstMip = _dstMip;
 		bi.m_src    = _src;
 		bi.m_dst    = _dst;
-
-		BlitKey key;
-		key.m_view = _id;
-		key.m_item = bx::narrowCast<uint16_t>(blitItemIdx);
-		m_frame->m_blitKeys[blitItemIdx] = key.encode();
+		bi.m_view   = _id;
 	}
 
 	void Frame::sort()
 	{
 		BGFX_PROFILER_SCOPE("bgfx/Sort", kColorSubmit);
 
-		ViewId viewRemap[BGFX_CONFIG_MAX_VIEWS];
 		for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_VIEWS; ++ii)
 		{
-			viewRemap[m_viewRemap[ii] ] = ViewId(ii);
+			m_viewOrder[m_viewRemap[ii] ] = ViewId(ii);
 
 			View& view = m_view[ii];
 			Rect rect(0, 0, uint16_t(m_resolution.width), uint16_t(m_resolution.height) );
@@ -1725,9 +1729,11 @@ namespace bgfx
 			}
 		}
 
+		m_viewOrder[BGFX_CONFIG_MAX_VIEWS] = UINT16_MAX;
+
 		for (uint32_t ii = 0, num = m_numRenderItems; ii < num; ++ii)
 		{
-			m_sortKeys[ii] = SortKey::remapView(m_sortKeys[ii], viewRemap);
+			m_sortKeys[ii] = SortKey::remapView(m_sortKeys[ii], m_viewOrder);
 		}
 
 		s_ctx->reserveTemp(bx::max(
@@ -1739,14 +1745,19 @@ namespace bgfx
 
 		bx::radixSort(m_sortKeys, s_ctx->m_tempKeys, m_sortValues, s_ctx->m_tempValues, m_numRenderItems);
 
+		reserveBlitKeys(m_numBlitItems);
+
 		for (uint32_t ii = 0, num = m_numBlitItems; ii < num; ++ii)
 		{
-			m_blitKeys[ii] = BlitKey::remapView(m_blitKeys[ii], viewRemap);
+			BlitKey key;
+			key.m_view = m_viewOrder[m_blitItem[ii].m_view];
+			key.m_item = bx::narrowCast<uint16_t>(ii);
+			m_blitKeys[ii] = key.encode();
 		}
 
 		bx::radixSort(m_blitKeys, (uint32_t*)s_ctx->m_tempKeys, m_numBlitItems);
 
-		m_uniformCacheFrame.sort(viewRemap, s_ctx->m_tempKeys);
+		m_uniformCacheFrame.sort(m_viewOrder, s_ctx->m_tempKeys);
 
 		dedupBind();
 	}
@@ -2183,7 +2194,7 @@ namespace bgfx
 					&& 0 != (formatCaps & BGFX_CAPS_FORMAT_TEXTURE_CUBE_EMULATED)
 					;
 		}
-		else if (_imageContainer.m_depth > 1)
+		else if (isVolume(_imageContainer) )
 		{
 			convert |= 0 == (formatCaps & BGFX_CAPS_FORMAT_TEXTURE_3D)
 					&& 0 != (formatCaps & BGFX_CAPS_FORMAT_TEXTURE_3D_EMULATED)
@@ -2338,10 +2349,10 @@ namespace bgfx
 		m_frameTimeLast = bx::getHPCounter();
 		m_flipAfterRender = !!(m_init.resolution.reset & BGFX_RESET_FLIP_AFTER_RENDER);
 
-		m_submit->create(_init.limits.minResourceCbSize, _init.limits.numDrawCalls, _init.limits.numDrawCallPeakFrames);
+		m_submit->create(_init.limits.minResourceCbSize, _init.limits.numDrawCalls, g_caps.limits.maxDrawCalls, _init.limits.numDrawCallPeakFrames);
 
 #if BGFX_CONFIG_MULTITHREADED
-		m_render->create(_init.limits.minResourceCbSize, _init.limits.numDrawCalls, _init.limits.numDrawCallPeakFrames);
+		m_render->create(_init.limits.minResourceCbSize, _init.limits.numDrawCalls, g_caps.limits.maxDrawCalls, _init.limits.numDrawCallPeakFrames);
 
 		if (s_renderFrameCalled)
 		{
@@ -3963,17 +3974,18 @@ namespace bgfx
 				continue;
 			}
 
+			if (!s_rendererCreator[ii].supported)
+			{
+				continue;
+			}
+
 			if (NULL == _enum)
 			{
 				num++;
 			}
-			else
+			else if (num < _max)
 			{
-				if (num < _max
-				&&  s_rendererCreator[ii].supported)
-				{
-					_enum[num++] = RendererType::Enum(ii);
-				}
+				_enum[num++] = RendererType::Enum(ii);
 			}
 		}
 
@@ -4011,8 +4023,11 @@ namespace bgfx
 
 	Init::Limits::Limits()
 		: maxEncoders(BGFX_CONFIG_DEFAULT_MAX_ENCODERS)
-		, numDrawCalls(BGFX_CONFIG_MAX_DRAW_CALLS)
-		, numDrawCallPeakFrames(0)
+		, numDrawCalls(BX_ENABLED(BGFX_CONFIG_DYNAMIC_FRAME_STORAGE)
+				? BGFX_CONFIG_DRAW_CALL_BLOCK
+				: BGFX_CONFIG_MAX_DRAW_CALLS
+				)
+		, numDrawCallPeakFrames(60)
 		, minResourceCbSize(BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE)
 		, maxTransientVbSize(BGFX_CONFIG_MAX_TRANSIENT_VERTEX_BUFFER_SIZE)
 		, maxTransientIbSize(BGFX_CONFIG_MAX_TRANSIENT_INDEX_BUFFER_SIZE)
@@ -4091,9 +4106,9 @@ namespace bgfx
 		}
 
 		bx::memSet(&g_caps, 0, sizeof(g_caps) );
-		g_caps.limits.maxDrawCalls = 0 == init.limits.numDrawCallPeakFrames
-			? init.limits.numDrawCalls
-			: BGFX_CONFIG_MAX_DRAW_CALLS
+		g_caps.limits.maxDrawCalls = BX_ENABLED(BGFX_CONFIG_DYNAMIC_FRAME_STORAGE)
+			? BGFX_CONFIG_MAX_DRAW_CALLS
+			: init.limits.numDrawCalls
 			;
 		g_caps.limits.maxBlits                = BGFX_CONFIG_MAX_BLIT_ITEMS;
 		g_caps.limits.maxTextureSize          = 0;
@@ -4649,9 +4664,18 @@ namespace bgfx
 		dstHeight = bx::min<uint32_t>(dstHeight, _dstY + _height) - _dstY;
 		dstDepth  = bx::min<uint32_t>(dstDepth,  _dstZ + _depth ) - _dstZ;
 
-		const uint16_t width  = uint16_t(bx::min(srcWidth,  dstWidth ) );
-		const uint16_t height = uint16_t(bx::min(srcHeight, dstHeight) );
+		uint16_t width  = uint16_t(bx::min(srcWidth,  dstWidth ) );
+		uint16_t height = uint16_t(bx::min(srcHeight, dstHeight) );
 		const uint16_t depth  = uint16_t(bx::min(srcDepth,  dstDepth ) );
+
+		if (bimg::isCompressed(bimg::TextureFormat::Enum(src.m_format) ) )
+		{
+			const bimg::ImageBlockInfo& bi = bimg::getBlockInfo(bimg::TextureFormat::Enum(src.m_format) );
+			const uint32_t blockW = bx::max<uint32_t>(1, bi.blockWidth);
+			const uint32_t blockH = bx::max<uint32_t>(1, bi.blockHeight);
+			width  = uint16_t( (uint32_t(width  + blockW - 1) / blockW) * blockW);
+			height = uint16_t( (uint32_t(height + blockH - 1) / blockH) * blockH);
+		}
 
 		BGFX_ENCODER(blit(_id, _dst, _dstMip, _dstX, _dstY, _dstZ, _src, _srcMip, _srcX, _srcY, _srcZ, width, height, depth) );
 	}
@@ -5026,8 +5050,35 @@ namespace bgfx
 	{
 		BX_ERROR_SCOPE(_err, "Frame buffer validation");
 
+		BGFX_ERROR_CHECK(true
+			&& 0 < _num
+			, _err
+			, BGFX_ERROR_FRAME_BUFFER_VALIDATION
+			, "Invalid number of attachments."
+			, "Frame buffer must have at least one attachment."
+			);
+
 		uint8_t color = 0;
 		uint8_t depth = 0;
+
+		BGFX_ERROR_CHECK(true
+			&& 0 < _num
+			, _err
+			, BGFX_ERROR_FRAME_BUFFER_VALIDATION
+			, "Frame buffer must have at least one attachment."
+			, "Num attachments %d."
+			, _num
+			);
+
+		BGFX_ERROR_CHECK(true
+			&& isValid(_attachment[0].handle)
+			&& s_ctx->m_textureHandle.isValid(_attachment[0].handle.idx)
+			, _err
+			, BGFX_ERROR_FRAME_BUFFER_VALIDATION
+			, "Invalid texture attachment."
+			, "Attachment 0, texture handle %d."
+			, _attachment[0].handle.idx
+			);
 
 		const TextureRef& firstTexture = s_ctx->m_textureRef[_attachment[0].handle.idx];
 
@@ -5869,6 +5920,7 @@ namespace bgfx
 		BGFX_CHECK_HANDLE("clearTexture", s_ctx->m_textureHandle, _handle);
 
 		const TextureRef& ref = s_ctx->m_textureRef[_handle.idx];
+		BX_UNUSED(ref);
 
 		BX_ASSERT(!ref.isDepth()
 			, "Texture (handle %d, '%S') has a depth/stencil format and can't be cleared; use a view depth clear instead."
@@ -6496,8 +6548,11 @@ BGFX_TEXTURE_FORMAT_BIMG(BC1);
 BGFX_TEXTURE_FORMAT_BIMG(BC2);
 BGFX_TEXTURE_FORMAT_BIMG(BC3);
 BGFX_TEXTURE_FORMAT_BIMG(BC4);
+BGFX_TEXTURE_FORMAT_BIMG(BC4S);
 BGFX_TEXTURE_FORMAT_BIMG(BC5);
+BGFX_TEXTURE_FORMAT_BIMG(BC5S);
 BGFX_TEXTURE_FORMAT_BIMG(BC6H);
+BGFX_TEXTURE_FORMAT_BIMG(BC6HU);
 BGFX_TEXTURE_FORMAT_BIMG(BC7);
 BGFX_TEXTURE_FORMAT_BIMG(ETC1);
 BGFX_TEXTURE_FORMAT_BIMG(ETC2);
@@ -6578,6 +6633,7 @@ BGFX_TEXTURE_FORMAT_BIMG(RGBA4);
 BGFX_TEXTURE_FORMAT_BIMG(BGR5A1);
 BGFX_TEXTURE_FORMAT_BIMG(RGB5A1);
 BGFX_TEXTURE_FORMAT_BIMG(RGB10A2);
+BGFX_TEXTURE_FORMAT_BIMG(RGB10A2U);
 BGFX_TEXTURE_FORMAT_BIMG(RG11B10F);
 BGFX_TEXTURE_FORMAT_BIMG(UnknownDepth);
 BGFX_TEXTURE_FORMAT_BIMG(D16);
@@ -6587,6 +6643,7 @@ BGFX_TEXTURE_FORMAT_BIMG(D32);
 BGFX_TEXTURE_FORMAT_BIMG(D16F);
 BGFX_TEXTURE_FORMAT_BIMG(D24F);
 BGFX_TEXTURE_FORMAT_BIMG(D32F);
+BGFX_TEXTURE_FORMAT_BIMG(D32FS8);
 BGFX_TEXTURE_FORMAT_BIMG(D0S8);
 BGFX_TEXTURE_FORMAT_BIMG(Count);
 

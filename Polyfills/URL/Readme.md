@@ -18,10 +18,8 @@ Partial implementation for [`URL`](https://developer.mozilla.org/en-US/docs/Web/
 - [`toJSON`](https://developer.mozilla.org/en-US/docs/Web/API/URL/toJSON)
 - [`parse`](https://developer.mozilla.org/en-US/docs/Web/API/URL/parse_static)
 - [`canParse`](https://developer.mozilla.org/en-US/docs/Web/API/URL/canParse_static)
-
-## Not implemented
-- [`createObjectURL`](https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static)
-- [`revokeObjectURL`](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)
+- [`createObjectURL`](https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static) (Blob only; mints a `blob:` URL backed by an in-memory, process-global object-URL store)
+- [`revokeObjectURL`](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static) (releases the stored bytes for a `blob:` URL previously returned by `createObjectURL`; subsequent fetch/XMLHttpRequest against that URL fail as a network error)
 
 # URLSearchParams
 Partial implementatioin for [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)  

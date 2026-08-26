@@ -54,8 +54,11 @@ namespace
         { DXGI_FORMAT_BC2_UNORM,          DXGI_FORMAT_BC2_UNORM_SRGB       }, // BC2
         { DXGI_FORMAT_BC3_UNORM,          DXGI_FORMAT_BC3_UNORM_SRGB       }, // BC3
         { DXGI_FORMAT_BC4_UNORM,          DXGI_FORMAT_UNKNOWN              }, // BC4
+        { DXGI_FORMAT_BC4_SNORM,          DXGI_FORMAT_UNKNOWN              }, // BC4S
         { DXGI_FORMAT_BC5_UNORM,          DXGI_FORMAT_UNKNOWN              }, // BC5
+        { DXGI_FORMAT_BC5_SNORM,          DXGI_FORMAT_UNKNOWN              }, // BC5S
         { DXGI_FORMAT_BC6H_SF16,          DXGI_FORMAT_UNKNOWN              }, // BC6H
+        { DXGI_FORMAT_BC6H_UF16,          DXGI_FORMAT_UNKNOWN              }, // BC6HU
         { DXGI_FORMAT_BC7_UNORM,          DXGI_FORMAT_BC7_UNORM_SRGB       }, // BC7
         { DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN              }, // ETC1
         { DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN              }, // ETC2
@@ -140,6 +143,7 @@ namespace
         { DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_UNKNOWN              }, // BGR5A1
         { DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_UNKNOWN              }, // RGB5A1
         { DXGI_FORMAT_R10G10B10A2_UNORM,  DXGI_FORMAT_UNKNOWN              }, // RGB10A2
+        { DXGI_FORMAT_R10G10B10A2_UINT,   DXGI_FORMAT_UNKNOWN              }, // RGB10A2U
         { DXGI_FORMAT_R11G11B10_FLOAT,    DXGI_FORMAT_UNKNOWN              }, // RG11B10F
         { DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN              }, // UnknownDepth
         { DXGI_FORMAT_R16_TYPELESS,       DXGI_FORMAT_UNKNOWN              }, // D16
@@ -149,6 +153,7 @@ namespace
         { DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_UNKNOWN              }, // D16F
         { DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_UNKNOWN              }, // D24F
         { DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_UNKNOWN              }, // D32F
+        { DXGI_FORMAT_R32G8X24_TYPELESS,  DXGI_FORMAT_UNKNOWN              }, // D32FS8
         { DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_UNKNOWN              }, // D0S8
     };
     static_assert(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
@@ -158,6 +163,11 @@ namespace
 
 namespace Babylon::Plugins
 {
+    uintptr_t NativeTextureHandle(Graphics::TextureT ptr)
+    {
+        return reinterpret_cast<uintptr_t>(ptr);
+    }
+
     class ExternalTexture::Impl final : public ImplBase
     {
     public:

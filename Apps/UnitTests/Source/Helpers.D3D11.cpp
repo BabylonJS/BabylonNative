@@ -3,6 +3,7 @@
 
 #include <winrt/base.h>
 
+#include <algorithm>
 #include <cstring>
 
 namespace Helpers
@@ -36,25 +37,20 @@ namespace Helpers
     Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const Color* sliceColors, uint32_t sliceCount)
     {
         const uint32_t rowPitch = width * 4;
-        const uint32_t sliceSize = rowPitch * height;
+        const size_t texelsPerSlice = static_cast<size_t>(width) * height;
 
-        std::vector<uint8_t> pixels(sliceSize * sliceCount);
+        // Color is laid out exactly as DXGI_FORMAT_R8G8B8A8_UNORM expects, so the slices upload
+        // as they are.
+        std::vector<Color> pixels(texelsPerSlice * sliceCount);
         for (uint32_t s = 0; s < sliceCount; ++s)
         {
-            for (uint32_t i = 0; i < width * height; ++i)
-            {
-                uint8_t* p = pixels.data() + s * sliceSize + i * 4;
-                p[0] = sliceColors[s].R;
-                p[1] = sliceColors[s].G;
-                p[2] = sliceColors[s].B;
-                p[3] = sliceColors[s].A;
-            }
+            std::fill_n(pixels.data() + s * texelsPerSlice, texelsPerSlice, sliceColors[s]);
         }
 
         std::vector<D3D11_SUBRESOURCE_DATA> initData(sliceCount);
         for (uint32_t s = 0; s < sliceCount; ++s)
         {
-            initData[s].pSysMem = pixels.data() + s * sliceSize;
+            initData[s].pSysMem = pixels.data() + s * texelsPerSlice;
             initData[s].SysMemPitch = rowPitch;
             initData[s].SysMemSlicePitch = 0;
         }

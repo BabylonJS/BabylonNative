@@ -18,6 +18,12 @@ set(SOURCES
     "Source/DeviceImpl_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/Texture.cpp")
 
+if(GRAPHICS_API STREQUAL "OpenGL")
+    list(APPEND SOURCES
+        "Include/RendererType/OpenGL/Babylon/Graphics/GL/SharedPtr.h"
+        "Include/RendererType/OpenGL/Babylon/Graphics/GL/Texture.h")
+endif()
+
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
@@ -88,6 +94,18 @@ target_link_libraries(GraphicsDevice
 if(APPLE)
     target_link_libraries(GraphicsDevice
         INTERFACE metal-cpp)
+endif()
+
+if(ANGLE_GLESV2_IMPORT_LIB)
+    # Consumers of the OpenGL RendererType headers above may call GL ES directly.
+    target_link_libraries(GraphicsDevice
+        INTERFACE "${ANGLE_GLESV2_IMPORT_LIB}")
+
+    # Windows has no GL ES SDK, and the browser ships ANGLE's DLLs without headers, so those
+    # consumers also need somewhere to find <GLES3/gl3.h>. bgfx vendors the Khronos headers
+    # but keeps the directory PRIVATE, so name it here rather than relying on that target.
+    target_include_directories(GraphicsDevice
+        INTERFACE "${BGFX_KHRONOS_INCLUDE_DIR}")
 endif()
 
 # ---------------------

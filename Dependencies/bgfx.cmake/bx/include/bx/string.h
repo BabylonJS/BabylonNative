@@ -453,6 +453,14 @@ namespace bx
 	/// Returns StringView of word or empty.
 	StringView strWord(const StringView& _str);
 
+	/// Returns StringView of identifier or empty.
+	///
+	/// @remarks Unlike `strWord` the first character must be alphabetic or '_'; the rest
+	///   can additionally be numeric. `strWord` accepts a leading digit, so "123abc" is a
+	///   word but not an identifier.
+	///
+	StringView strIdentifier(const StringView& _str);
+
 	/// Returns substring in string.
 	StringView strSubstr(const StringView& _str, int32_t _start, int32_t _len = INT32_MAX);
 

@@ -46,12 +46,9 @@ Supported rendering backends:
  * Direct3D 12
  * GNM (only for licensed PS4 developers, search DevNet forums for source)
  * Metal
- * OpenGL 2.1
- * OpenGL 3.1+
- * OpenGL ES 2
- * OpenGL ES 3.1
+ * OpenGL 4.3+
+ * OpenGL ES 3.0+
  * Vulkan
- * WebGL 1.0
  * WebGL 2.0
  * WebGPU (Dawn Native only)
 
@@ -718,6 +715,15 @@ Unravel Engine is a cutting-edge, cross-platform game engine and WYSIWYG (What Y
 target="_blank"><img src="https://img.youtube.com/vi/t8XoT-HtUGo/hqdefault.jpg"
 alt="Video"
 width="640" height="480" border="0" /></a>
+
+## Harbi2
+
+https://harbi2.com - Harbi2 is a native cross-platform MMORPG for Windows,
+macOS, iOS, and Android. Its modern client uses bgfx to preserve the design and
+visual identity of the original Harbi2 while bringing the game to desktop and
+mobile platforms.
+
+![Harbi2 screenshot](https://h2mb.b-cdn.net/image.webp)
 
 [License (BSD 2-clause)](https://bkaradzic.github.io/bgfx/license.html)
 -----------------------------------------------------------------------

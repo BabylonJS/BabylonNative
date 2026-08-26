@@ -689,6 +689,26 @@ TEST_CASE("strWord", "[string]")
 {
 	REQUIRE(bx::strWord(" abvgd-1389.0").isEmpty() );
 	REQUIRE(0 == bx::strCmp(bx::strWord("abvgd-1389.0"), "abvgd") );
+
+	REQUIRE(0 == bx::strCmp(bx::strWord("1389.0"), "1389") );
+}
+
+TEST_CASE("strIdentifier", "[string]")
+{
+	REQUIRE(bx::strIdentifier("").isEmpty() );
+	REQUIRE(bx::strIdentifier(" abvgd").isEmpty() );
+	REQUIRE(bx::strIdentifier("-abc").isEmpty() );
+
+	REQUIRE(bx::strIdentifier("123abc").isEmpty() );
+	REQUIRE(bx::strIdentifier("5_0").isEmpty() );
+
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("abvgd-1389.0"), "abvgd") );
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("abc123 def"),   "abc123") );
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("_abc9"),        "_abc9") );
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("ps_5_0"),       "ps_5_0") );
+
+	const bx::StringView test("123abc");
+	REQUIRE(test.getPtr() == bx::strIdentifier(test).getPtr() );
 }
 
 TEST_CASE("strFindEol strFindNl", "[string]")

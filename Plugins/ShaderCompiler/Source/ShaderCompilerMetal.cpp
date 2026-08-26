@@ -58,6 +58,10 @@ namespace
                 // Using rfind ensures the correct "Texture" is removed from WebGL uniforms with "texture" in their original name. (e.g., "shadowTexture1")
                 imageName.replace(imageName.rfind("Texture"), std::string::npos, "");
                 compiler->set_name(resource.id, imageName);
+
+                // The Compiler transpiles a private copy of the IR, so rename the parser's copy
+                // too: AppendSamplers reads the sampler's app-facing name from there.
+                parser->get_parsed_ir().set_name(resource.id, imageName);
             }
         }
 

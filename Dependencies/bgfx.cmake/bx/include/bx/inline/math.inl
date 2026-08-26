@@ -67,8 +67,7 @@ namespace bx
 		const simd32_t signMask = simd32_splat(kFloatSignMask);
 		const simd32_t value    = simd32_splat(_value);
 		const simd32_t tmp0     = simd32_x32_sra(value, 31);
-		const simd32_t tmp1     = simd32_i32_neg(tmp0);
-		const simd32_t mask     = simd32_or(tmp1, signMask);
+		const simd32_t mask     = simd32_or(tmp0, signMask);
 		const simd32_t result   = simd32_xor(value, mask);
 
 		return result.u32;

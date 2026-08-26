@@ -76,8 +76,10 @@ namespace Babylon::ShaderCompilerTraversers
     /// to the bgfx per-instance i_data location (top TEXCOORD semantic) they must occupy.
     /// The location is computed from the draw-time instance packing order so the attribute
     /// is read from the slot bgfx actually fills. The built-in instanced names (`world0-3`,
-    /// `instanceColor`, `splatIndex0-3`) keep their fixed mapping; an empty map preserves
-    /// legacy behavior.
+    /// `previousWorld0-3`, `instanceColor`, `splatIndex0-3`) are not fixed to a per-name slot: each
+    /// shader's declared set is assigned a dense i_data run, since bgfx requires the used slots to
+    /// start at i_data0 with no holes. Names present in `instancedAttributes` are excluded from
+    /// that run and use the caller-supplied location instead; an empty map preserves legacy behavior.
     void AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
     void AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
     void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});

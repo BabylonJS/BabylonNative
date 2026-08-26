@@ -1,13 +1,15 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
+#include <cstdint>
+#include <vector>
 
 namespace Babylon::Polyfills::Internal
 {
     class ImageData final : public Napi::ObjectWrap<ImageData>
     {
     public:
-        static Napi::Value CreateInstance(Napi::Env env, Context* context, uint32_t width, uint32_t height);
+        static Napi::Value CreateInstance(Napi::Env env, Context* context, int32_t sx, int32_t sy, uint32_t width, uint32_t height);
 
         explicit ImageData(const Napi::CallbackInfo& info);
 
@@ -18,5 +20,11 @@ namespace Babylon::Polyfills::Internal
 
         uint32_t m_width{};
         uint32_t m_height{};
+
+        // The spec requires `data` to be one live buffer that the caller can
+        // mutate in place; handing back a fresh copy per access silently drops
+        // every write, which breaks the standard getImageData/putImageData
+        // round trip. Hold the array itself so each read returns the same one.
+        Napi::Reference<Napi::Uint8Array> m_data;
     };
 }

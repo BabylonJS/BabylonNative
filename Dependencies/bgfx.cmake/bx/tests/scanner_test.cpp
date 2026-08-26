@@ -144,6 +144,46 @@ TEST_CASE("Scanner.class accept", "[scanner]")
 	}
 }
 
+TEST_CASE("Scanner.class Identifier start", "[scanner]")
+{
+	{
+		bx::Scanner sc(bx::StringView("123abc") );
+		REQUIRE(sc.accept(bx::Scanner::Class::Identifier).isEmpty() );
+		REQUIRE(sc.peek(bx::Scanner::Class::Identifier).isEmpty() );
+		REQUIRE("123abc" == sc.acceptAll() );
+	}
+
+	{
+		bx::Scanner sc(bx::StringView("5_0") );
+		REQUIRE(sc.accept(bx::Scanner::Class::Identifier).isEmpty() );
+	}
+
+	{
+		bx::Scanner sc(bx::StringView("abc123 def") );
+		REQUIRE("abc123" == sc.accept(bx::Scanner::Class::Identifier) );
+	}
+
+	{
+		bx::Scanner sc(bx::StringView("_abc9") );
+		REQUIRE("_abc9" == sc.accept(bx::Scanner::Class::Identifier) );
+	}
+
+	{
+		bx::Scanner sc(bx::StringView("ps_5_0") );
+		REQUIRE("ps_5_0" == sc.accept(bx::Scanner::Class::Identifier) );
+	}
+
+	{
+		bx::Scanner sc(bx::StringView("-abc") );
+		REQUIRE(sc.accept(bx::Scanner::Class::Identifier).isEmpty() );
+	}
+
+	{
+		bx::Scanner sc(bx::StringView("") );
+		REQUIRE(sc.accept(bx::Scanner::Class::Identifier).isEmpty() );
+	}
+}
+
 TEST_CASE("Scanner.peek", "[scanner]")
 {
 	bx::Scanner sc(bx::StringView("abc def") );

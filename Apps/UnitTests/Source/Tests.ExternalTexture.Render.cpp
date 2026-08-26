@@ -23,7 +23,7 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 
 TEST(ExternalTexture, RenderTextureArray)
 {
-#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_EXTERNAL_TEXTURE_ARRAY_TESTS)
     GTEST_SKIP();
 #else
     constexpr uint32_t TEX_SIZE = 64;

@@ -88,7 +88,7 @@ namespace bgfx { namespace vk
 		{ VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,      VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA      }, // INV_DST_ALPHA
 		{ VK_BLEND_FACTOR_DST_COLOR,                VK_BLEND_FACTOR_DST_ALPHA                }, // DST_COLOR
 		{ VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,      VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA      }, // INV_DST_COLOR
-		{ VK_BLEND_FACTOR_SRC_ALPHA,                VK_BLEND_FACTOR_ONE                      }, // SRC_ALPHA_SAT
+		{ VK_BLEND_FACTOR_SRC_ALPHA_SATURATE,       VK_BLEND_FACTOR_ONE                      }, // SRC_ALPHA_SAT
 		{ VK_BLEND_FACTOR_CONSTANT_COLOR,           VK_BLEND_FACTOR_CONSTANT_COLOR           }, // FACTOR
 		{ VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR, VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR }, // INV_FACTOR
 	};
@@ -189,8 +189,11 @@ VK_IMPORT_DEVICE
 		{ VK_FORMAT_BC2_UNORM_BLOCK,           VK_FORMAT_BC2_UNORM_BLOCK,          VK_FORMAT_UNDEFINED,           VK_FORMAT_BC2_SRGB_BLOCK,           { $_, $_, $_, $_ } }, // BC2
 		{ VK_FORMAT_BC3_UNORM_BLOCK,           VK_FORMAT_BC3_UNORM_BLOCK,          VK_FORMAT_UNDEFINED,           VK_FORMAT_BC3_SRGB_BLOCK,           { $_, $_, $_, $_ } }, // BC3
 		{ VK_FORMAT_BC4_UNORM_BLOCK,           VK_FORMAT_BC4_UNORM_BLOCK,          VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // BC4
+		{ VK_FORMAT_BC4_SNORM_BLOCK,           VK_FORMAT_BC4_SNORM_BLOCK,          VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // BC4S
 		{ VK_FORMAT_BC5_UNORM_BLOCK,           VK_FORMAT_BC5_UNORM_BLOCK,          VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // BC5
+		{ VK_FORMAT_BC5_SNORM_BLOCK,           VK_FORMAT_BC5_SNORM_BLOCK,          VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // BC5S
 		{ VK_FORMAT_BC6H_SFLOAT_BLOCK,         VK_FORMAT_BC6H_SFLOAT_BLOCK,        VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // BC6H
+		{ VK_FORMAT_BC6H_UFLOAT_BLOCK,         VK_FORMAT_BC6H_UFLOAT_BLOCK,        VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // BC6HU
 		{ VK_FORMAT_BC7_UNORM_BLOCK,           VK_FORMAT_BC7_UNORM_BLOCK,          VK_FORMAT_UNDEFINED,           VK_FORMAT_BC7_SRGB_BLOCK,           { $_, $_, $_, $_ } }, // BC7
 		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_UNDEFINED,                VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // ETC1
 		{ VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK,   VK_FORMAT_UNDEFINED,                VK_FORMAT_UNDEFINED,           VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK,   { $_, $_, $_, $_ } }, // ETC2
@@ -275,6 +278,7 @@ VK_IMPORT_DEVICE
 		{ VK_FORMAT_A1R5G5B5_UNORM_PACK16,     VK_FORMAT_A1R5G5B5_UNORM_PACK16,    VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // BGR5A1
 		{ VK_FORMAT_A1R5G5B5_UNORM_PACK16,     VK_FORMAT_A1R5G5B5_UNORM_PACK16,    VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $B, $G, $R, $A } }, // RGB5A1
 		{ VK_FORMAT_A2B10G10R10_UNORM_PACK32,  VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // RGB10A2
+		{ VK_FORMAT_A2B10G10R10_UINT_PACK32,   VK_FORMAT_A2B10G10R10_UINT_PACK32,  VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // RGB10A2U
 		{ VK_FORMAT_B10G11R11_UFLOAT_PACK32,   VK_FORMAT_B10G11R11_UFLOAT_PACK32,  VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // RG11B10F
 		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_UNDEFINED,                VK_FORMAT_UNDEFINED,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // UnknownDepth
 		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_R16_UNORM,                VK_FORMAT_D16_UNORM,           VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // D16
@@ -284,6 +288,7 @@ VK_IMPORT_DEVICE
 		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_R32_SFLOAT,               VK_FORMAT_D32_SFLOAT,          VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // D16F
 		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_R32_SFLOAT,               VK_FORMAT_D32_SFLOAT,          VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // D24F
 		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_R32_SFLOAT,               VK_FORMAT_D32_SFLOAT,          VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // D32F
+		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_R32_SFLOAT,               VK_FORMAT_D32_SFLOAT_S8_UINT,  VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // D32FS8
 		{ VK_FORMAT_UNDEFINED,                 VK_FORMAT_R8_UINT,                  VK_FORMAT_S8_UINT,             VK_FORMAT_UNDEFINED,                { $_, $_, $_, $_ } }, // D0S8
 #undef $_
 #undef $0
@@ -525,10 +530,10 @@ VK_IMPORT_DEVICE
 			{ VK_FORMAT_R8G8B8A8_UINT,           VK_FORMAT_R8G8B8A8_UNORM           },
 		},
 		{ // Uint10
-			{ VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
-			{ VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
-			{ VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
-			{ VK_FORMAT_A2R10G10B10_UINT_PACK32, VK_FORMAT_A2R10G10B10_UNORM_PACK32 },
+			{ VK_FORMAT_A2B10G10R10_UINT_PACK32, VK_FORMAT_A2B10G10R10_UNORM_PACK32 },
+			{ VK_FORMAT_A2B10G10R10_UINT_PACK32, VK_FORMAT_A2B10G10R10_UNORM_PACK32 },
+			{ VK_FORMAT_A2B10G10R10_UINT_PACK32, VK_FORMAT_A2B10G10R10_UNORM_PACK32 },
+			{ VK_FORMAT_A2B10G10R10_UINT_PACK32, VK_FORMAT_A2B10G10R10_UNORM_PACK32 },
 		},
 		{ // Int16
 			{ VK_FORMAT_R16_SINT,                VK_FORMAT_R16_SNORM                },
@@ -1756,27 +1761,79 @@ VK_IMPORT_INSTANCE
 					}
 				}
 
-				bx::memSet(&m_deviceFeatures, 0, sizeof(m_deviceFeatures) );
-
-				m_deviceFeatures.fullDrawIndexUint32               = supportedFeatures.fullDrawIndexUint32;
-				m_deviceFeatures.imageCubeArray                    = supportedFeatures.imageCubeArray            && (_init.capabilities & BGFX_CAPS_TEXTURE_CUBE_ARRAY);
-				m_deviceFeatures.independentBlend                  = supportedFeatures.independentBlend          && (_init.capabilities & BGFX_CAPS_BLEND_INDEPENDENT);
-				m_deviceFeatures.multiDrawIndirect                 = supportedFeatures.multiDrawIndirect         && (_init.capabilities & BGFX_CAPS_DRAW_INDIRECT);
-				m_deviceFeatures.drawIndirectFirstInstance         = supportedFeatures.drawIndirectFirstInstance && (_init.capabilities & BGFX_CAPS_DRAW_INDIRECT);
-				m_deviceFeatures.depthClamp                        = supportedFeatures.depthClamp;
-				m_deviceFeatures.fillModeNonSolid                  = supportedFeatures.fillModeNonSolid;
-				m_deviceFeatures.largePoints                       = supportedFeatures.largePoints;
-				m_deviceFeatures.samplerAnisotropy                 = supportedFeatures.samplerAnisotropy;
-				m_deviceFeatures.textureCompressionETC2            = supportedFeatures.textureCompressionETC2;
-				m_deviceFeatures.textureCompressionBC              = supportedFeatures.textureCompressionBC;
-				m_deviceFeatures.vertexPipelineStoresAndAtomics    = supportedFeatures.vertexPipelineStoresAndAtomics;
-				m_deviceFeatures.fragmentStoresAndAtomics          = supportedFeatures.fragmentStoresAndAtomics;
-				m_deviceFeatures.shaderImageGatherExtended         = supportedFeatures.shaderImageGatherExtended;
-				m_deviceFeatures.shaderStorageImageExtendedFormats = supportedFeatures.shaderStorageImageExtendedFormats;
-				m_deviceFeatures.shaderClipDistance                = supportedFeatures.shaderClipDistance;
-				m_deviceFeatures.shaderCullDistance                = supportedFeatures.shaderCullDistance;
-				m_deviceFeatures.shaderResourceMinLod              = supportedFeatures.shaderResourceMinLod;
-				m_deviceFeatures.geometryShader                    = supportedFeatures.geometryShader;
+				m_deviceFeatures =
+				{
+					.robustBufferAccess                      = true
+						&& supportedFeatures.robustBufferAccess
+						&& BX_ENABLED(BGFX_CONFIG_RENDERER_VULKAN_ROBUST_BUFFER_ACCESS)
+						,
+					.fullDrawIndexUint32                     = supportedFeatures.fullDrawIndexUint32,
+					.imageCubeArray                          = true
+						&& supportedFeatures.imageCubeArray
+						&& (_init.capabilities & BGFX_CAPS_TEXTURE_CUBE_ARRAY)
+						,
+					.independentBlend                        = true
+						&& supportedFeatures.independentBlend
+						&& (_init.capabilities & BGFX_CAPS_BLEND_INDEPENDENT)
+						,
+					.geometryShader                          = supportedFeatures.geometryShader,
+					.tessellationShader                      = VK_FALSE,
+					.sampleRateShading                       = VK_FALSE,
+					.dualSrcBlend                            = VK_FALSE,
+					.logicOp                                 = VK_FALSE,
+					.multiDrawIndirect                       = true
+						&& supportedFeatures.multiDrawIndirect
+						&& (_init.capabilities & BGFX_CAPS_DRAW_INDIRECT)
+						,
+					.drawIndirectFirstInstance               = true
+						&& supportedFeatures.drawIndirectFirstInstance
+						&& (_init.capabilities & BGFX_CAPS_DRAW_INDIRECT)
+						,
+					.depthClamp                              = supportedFeatures.depthClamp,
+					.depthBiasClamp                          = VK_FALSE,
+					.fillModeNonSolid                        = supportedFeatures.fillModeNonSolid,
+					.depthBounds                             = VK_FALSE,
+					.wideLines                               = VK_FALSE,
+					.largePoints                             = supportedFeatures.largePoints,
+					.alphaToOne                              = VK_FALSE,
+					.multiViewport                           = VK_FALSE,
+					.samplerAnisotropy                       = supportedFeatures.samplerAnisotropy,
+					.textureCompressionETC2                  = supportedFeatures.textureCompressionETC2,
+					.textureCompressionASTC_LDR              = VK_FALSE,
+					.textureCompressionBC                    = supportedFeatures.textureCompressionBC,
+					.occlusionQueryPrecise                   = VK_FALSE,
+					.pipelineStatisticsQuery                 = VK_FALSE,
+					.vertexPipelineStoresAndAtomics          = supportedFeatures.vertexPipelineStoresAndAtomics,
+					.fragmentStoresAndAtomics                = supportedFeatures.fragmentStoresAndAtomics,
+					.shaderTessellationAndGeometryPointSize  = VK_FALSE,
+					.shaderImageGatherExtended               = supportedFeatures.shaderImageGatherExtended,
+					.shaderStorageImageExtendedFormats       = supportedFeatures.shaderStorageImageExtendedFormats,
+					.shaderStorageImageMultisample           = VK_FALSE,
+					.shaderStorageImageReadWithoutFormat     = VK_FALSE,
+					.shaderStorageImageWriteWithoutFormat    = VK_FALSE,
+					.shaderUniformBufferArrayDynamicIndexing = VK_FALSE,
+					.shaderSampledImageArrayDynamicIndexing  = VK_FALSE,
+					.shaderStorageBufferArrayDynamicIndexing = VK_FALSE,
+					.shaderStorageImageArrayDynamicIndexing  = VK_FALSE,
+					.shaderClipDistance                      = supportedFeatures.shaderClipDistance,
+					.shaderCullDistance                      = supportedFeatures.shaderCullDistance,
+					.shaderFloat64                           = VK_FALSE,
+					.shaderInt64                             = VK_FALSE,
+					.shaderInt16                             = VK_FALSE,
+					.shaderResourceResidency                 = VK_FALSE,
+					.shaderResourceMinLod                    = supportedFeatures.shaderResourceMinLod,
+					.sparseBinding                           = VK_FALSE,
+					.sparseResidencyBuffer                   = VK_FALSE,
+					.sparseResidencyImage2D                  = VK_FALSE,
+					.sparseResidencyImage3D                  = VK_FALSE,
+					.sparseResidency2Samples                 = VK_FALSE,
+					.sparseResidency4Samples                 = VK_FALSE,
+					.sparseResidency8Samples                 = VK_FALSE,
+					.sparseResidency16Samples                = VK_FALSE,
+					.sparseResidencyAliased                  = VK_FALSE,
+					.variableMultisampleRate                 = VK_FALSE,
+					.inheritedQueries                        = VK_FALSE,
+				};
 
 				m_lineAASupport = true
 					&& s_extension[Extension::EXT_line_rasterization].m_supported
@@ -2013,23 +2070,6 @@ VK_IMPORT_INSTANCE
 			}
 			else
 			{
-				uint32_t numEnabledLayers = 0;
-				const char* enabledLayer[Layer::Count];
-
-				BX_TRACE("Enabled device layers:");
-
-				for (uint32_t ii = 0; ii < Layer::Count; ++ii)
-				{
-					const Layer& layer = s_layer[ii];
-
-					if (layer.m_device.m_supported
-					&&  layer.m_device.m_initialize)
-					{
-						enabledLayer[numEnabledLayers++] = layer.m_name;
-						BX_TRACE("\t%s", layer.m_name);
-					}
-				}
-
 				uint32_t numEnabledExtensions = 0;
 				const char* enabledExtension[Extension::Count + 3];
 
@@ -2088,17 +2128,19 @@ VK_IMPORT_INSTANCE
 					numQueueCreateInfos = 2;
 				}
 
-				VkDeviceCreateInfo dci;
-				dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-				dci.pNext = nextFeatures;
-				dci.flags = 0;
-				dci.queueCreateInfoCount = numQueueCreateInfos;
-				dci.pQueueCreateInfos    = dcqi;
-				dci.enabledLayerCount    = numEnabledLayers;
-				dci.ppEnabledLayerNames  = enabledLayer;
-				dci.enabledExtensionCount   = numEnabledExtensions;
-				dci.ppEnabledExtensionNames = enabledExtension;
-				dci.pEnabledFeatures        = &m_deviceFeatures;
+				VkDeviceCreateInfo dci =
+				{
+					.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+					.pNext = nextFeatures,
+					.flags = 0,
+					.queueCreateInfoCount = numQueueCreateInfos,
+					.pQueueCreateInfos    = dcqi,
+					.enabledLayerCount    = 0,
+					.ppEnabledLayerNames  = NULL,
+					.enabledExtensionCount   = numEnabledExtensions,
+					.ppEnabledExtensionNames = enabledExtension,
+					.pEnabledFeatures        = &m_deviceFeatures,
+				};
 
 				result = vkCreateDevice(
 					  m_physicalDevice
@@ -2411,6 +2453,7 @@ VK_IMPORT_DEVICE
 			preReset();
 
 			m_pipelineStateCache.invalidate();
+			m_pipelineLayoutCache.invalidate();
 			m_descriptorSetLayoutCache.invalidate();
 			m_renderPassCache.invalidate();
 			m_samplerCache.invalidate();
@@ -2451,9 +2494,9 @@ VK_IMPORT_DEVICE
 
 			m_backBuffer.destroy();
 
-			m_memoryLru.evictAll();
-
 			m_cmd.shutdown();
+
+			m_memoryLru.evictAll();
 
 			vkDestroy(m_pipelineCache);
 
@@ -2889,6 +2932,7 @@ VK_IMPORT_DEVICE
 			m_cmd.recycleMemory(_alloc);
 		}
 
+		void submitBlitBatch(BlitState& _bs, uint16_t _view);
 		void submitBlit(BlitState& _bs, uint16_t _view);
 
 		void submitUniformCache(UniformCacheState& _ucs, uint16_t _view);
@@ -3617,7 +3661,6 @@ VK_IMPORT_DEVICE
 					ad[ii].storeOp        = 0 != (_clearFlags & BGFX_CLEAR_DISCARD_DEPTH)   ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE;
 					ad[ii].stencilLoadOp  = 0 != (_clearFlags & BGFX_CLEAR_STENCIL)         ? VK_ATTACHMENT_LOAD_OP_CLEAR      : VK_ATTACHMENT_LOAD_OP_LOAD;
 					ad[ii].stencilStoreOp = 0 != (_clearFlags & BGFX_CLEAR_DISCARD_STENCIL) ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE;
-					ad[ii].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 					ad[ii].initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 					ad[ii].finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
@@ -4052,6 +4095,7 @@ VK_IMPORT_DEVICE
 				VK_DYNAMIC_STATE_SCISSOR,
 				VK_DYNAMIC_STATE_BLEND_CONSTANTS,
 				VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+				VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
 				VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
 				VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR, // optional
 			};
@@ -4321,6 +4365,9 @@ VK_IMPORT_DEVICE
 								, bind.m_firstMip
 								, bind.m_numMips
 								, type
+								, false
+								, bind.m_firstLayer
+								, bind.m_numLayers
 								);
 							wds[wdsCount].pImageInfo = &imageInfo[imageCount];
 							++imageCount;
@@ -5006,6 +5053,7 @@ VK_IMPORT_DEVICE
 
 		StateCacheT<VkPipeline> m_pipelineStateCache;
 		StateCacheT<VkDescriptorSetLayout> m_descriptorSetLayoutCache;
+		StateCacheT<VkPipelineLayout> m_pipelineLayoutCache;
 		StateCacheT<VkRenderPass> m_renderPassCache;
 		StateCacheT<VkSampler> m_samplerCache;
 		StateCacheT<uint32_t> m_samplerBorderColorCache;
@@ -5158,13 +5206,13 @@ VK_DESTROY
 
 	void MemoryLruVK::recycle(DeviceMemoryAllocationVK& _alloc)
 	{
-		if (MAX_ENTRIES == lru.getNumHandles() )
+		if (kMaxEntries == lru.getNumHandles() )
 		{
 			// Evict LRU
 			uint16_t handle = lru.getBack();
 			DeviceMemoryAllocationVK& alloc = entries[handle];
 			totalSizeCached -= alloc.size;
-			release(alloc.mem);
+			vkDestroy(alloc.mem);
 
 			// Touch slot and overwrite
 			lru.touch(handle);
@@ -5184,7 +5232,7 @@ VK_DESTROY
 			uint16_t handle = lru.getBack();
 			DeviceMemoryAllocationVK& alloc = entries[handle];
 			totalSizeCached -= alloc.size;
-			release(alloc.mem);
+			vkDestroy(alloc.mem);
 			lru.free(handle);
 		}
 	}
@@ -5196,7 +5244,7 @@ VK_DESTROY
 		uint16_t slot;
 
 		{
-			int16_t  bestIdx   = MAX_ENTRIES;
+			int16_t  bestIdx   = kMaxEntries;
 			uint32_t bestWaste = 0xffff'ffff;
 
 			slot = lru.getFront();
@@ -5235,7 +5283,7 @@ VK_DESTROY
 			slot = bestIdx;
 		}
 
-		if (MAX_ENTRIES != slot)
+		if (kMaxEntries != slot)
 		{
 			*_alloc = entries[slot];
 			lru.free(slot);
@@ -5253,7 +5301,7 @@ VK_DESTROY
 
 		while (slot != UINT16_MAX)
 		{
-			release(entries[slot].mem);
+			vkDestroy(entries[slot].mem);
 			slot = lru.getNext(slot);
 		}
 
@@ -5988,24 +6036,23 @@ VK_DESTROY
 			}
 		}
 
-		// create exact pipeline layout
 		m_descriptorSetLayout = VK_NULL_HANDLE;
 
 		uint32_t numBindings = m_vsh->m_numBindings + (m_fsh ? m_fsh->m_numBindings : 0);
+
+		bx::HashMurmur2A murmur;
+		murmur.begin();
+		murmur.add(m_vsh->m_bindings, sizeof(VkDescriptorSetLayoutBinding) * m_vsh->m_numBindings);
+
+		if (NULL != m_fsh)
+		{
+			murmur.add(m_fsh->m_bindings, sizeof(VkDescriptorSetLayoutBinding) * m_fsh->m_numBindings);
+		}
+
+		const uint32_t descriptorSetLayoutHash = murmur.end();
+
 		if (0 < numBindings)
 		{
-			// generate descriptor set layout hash
-			bx::HashMurmur2A murmur;
-			murmur.begin();
-			murmur.add(m_vsh->m_bindings, sizeof(VkDescriptorSetLayoutBinding) * m_vsh->m_numBindings);
-
-			if (NULL != m_fsh)
-			{
-				murmur.add(m_fsh->m_bindings, sizeof(VkDescriptorSetLayoutBinding) * m_fsh->m_numBindings);
-			}
-
-			uint32_t descriptorSetLayoutHash = murmur.end();
-
 			m_descriptorSetLayout = s_renderVK->m_descriptorSetLayoutCache.find(descriptorSetLayoutHash);
 
 			if (VK_NULL_HANDLE == m_descriptorSetLayout)
@@ -6068,26 +6115,33 @@ VK_DESTROY
 			}
 		}
 
-		VkPipelineLayoutCreateInfo plci;
-		plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		plci.pNext = NULL;
-		plci.flags = 0;
-		plci.pushConstantRangeCount = 0;
-		plci.pPushConstantRanges = NULL;
-		plci.setLayoutCount = (m_descriptorSetLayout == VK_NULL_HANDLE ? 0 : 1);
-		plci.pSetLayouts = &m_descriptorSetLayout;
+		m_pipelineLayout = s_renderVK->m_pipelineLayoutCache.find(descriptorSetLayoutHash);
 
-		VK_CHECK(vkCreatePipelineLayout(
-			  s_renderVK->m_device
-			, &plci
-			, s_renderVK->m_allocatorCb
-			, &m_pipelineLayout
-			) );
+		if (VK_NULL_HANDLE == m_pipelineLayout)
+		{
+			VkPipelineLayoutCreateInfo plci;
+			plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+			plci.pNext = NULL;
+			plci.flags = 0;
+			plci.pushConstantRangeCount = 0;
+			plci.pPushConstantRanges = NULL;
+			plci.setLayoutCount = (m_descriptorSetLayout == VK_NULL_HANDLE ? 0 : 1);
+			plci.pSetLayouts = &m_descriptorSetLayout;
+
+			VK_CHECK(vkCreatePipelineLayout(
+				  s_renderVK->m_device
+				, &plci
+				, s_renderVK->m_allocatorCb
+				, &m_pipelineLayout
+				) );
+
+			s_renderVK->m_pipelineLayoutCache.add(descriptorSetLayoutHash, m_pipelineLayout);
+		}
 	}
 
 	void ProgramVK::destroy()
 	{
-		s_renderVK->release(m_pipelineLayout);
+		m_pipelineLayout = VK_NULL_HANDLE;
 		m_numPredefined = 0;
 		m_vsh = NULL;
 		m_fsh = NULL;
@@ -6755,7 +6809,7 @@ VK_DESTROY
 					: VK_IMAGE_VIEW_TYPE_CUBE
 					;
 			}
-			else if (imageContainer.m_depth > 1)
+			else if (isVolume(imageContainer) )
 			{
 				m_type = VK_IMAGE_VIEW_TYPE_3D;
 			}
@@ -7550,7 +7604,10 @@ VK_DESTROY
 			;
 		viewInfo.viewType   = _type;
 		viewInfo.format     = m_format;
-		viewInfo.components = m_components;
+		viewInfo.components = _renderTarget
+			? VkComponentMapping{ VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY }
+			: m_components
+			;
 		viewInfo.subresourceRange.aspectMask     = m_aspectFlags & _aspectMask;
 		viewInfo.subresourceRange.baseMipLevel   = _mip;
 		viewInfo.subresourceRange.levelCount     = _numMips;
@@ -8752,7 +8809,28 @@ VK_DESTROY
 		BGFX_PROFILER_SCOPE("FrameBufferVK::create", kColorFrame);
 
 		m_numTh = _num;
-		bx::memCopy(m_attachment, _attachment, sizeof(Attachment) * _num);
+
+		uint8_t num = 0;
+
+		for (uint8_t ii = 0; ii < _num; ++ii)
+		{
+			const TextureVK& texture = s_renderVK->m_textures[_attachment[ii].handle.idx];
+
+			if (0 == (texture.m_aspectFlags & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) ) )
+			{
+				m_attachment[num++] = _attachment[ii];
+			}
+		}
+
+		for (uint8_t ii = 0; ii < _num; ++ii)
+		{
+			const TextureVK& texture = s_renderVK->m_textures[_attachment[ii].handle.idx];
+
+			if (0 != (texture.m_aspectFlags & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) ) )
+			{
+				m_attachment[num++] = _attachment[ii];
+			}
+		}
 
 		postReset();
 	}
@@ -9001,7 +9079,7 @@ VK_DESTROY
 	bool FrameBufferVK::isRenderable() const
 	{
 		return false
-			|| (NULL == m_nwh)
+			|| (NULL == m_nwh && m_currentFramebuffer != VK_NULL_HANDLE)
 			|| m_swapChain.m_needPresent
 			;
 	}
@@ -9350,31 +9428,36 @@ VK_DESTROY
 		BX_ASSERT(false, "Removing external texture failed!");
 	}
 
-	void RendererContextVK::submitBlit(BlitState& _bs, uint16_t _view)
+	void RendererContextVK::submitBlitBatch(BlitState& _bs, uint16_t _view)
 	{
-		BGFX_PROFILER_SCOPE("RendererContextVK::submitBlit", kColorFrame);
+		constexpr uint32_t kMaxItems = 128;
+		VkImageLayout srcLayouts[kMaxItems];
+		VkImageLayout dstLayouts[kMaxItems];
 
-		VkImageLayout srcLayouts[BGFX_CONFIG_MAX_BLIT_ITEMS];
-		VkImageLayout dstLayouts[BGFX_CONFIG_MAX_BLIT_ITEMS];
+		uint32_t numItems = 0;
 
 		BlitState bs0 = _bs;
 
-		while (bs0.hasItem(_view) )
+		while (bs0.hasItem(_view)
+		&&     numItems < kMaxItems)
 		{
-			uint16_t item = bs0.m_item;
+			const uint32_t item = numItems++;
 
 			const BlitItem& blit = bs0.advance();
 
 			TextureVK& src = m_textures[blit.m_src.idx];
 			TextureVK& dst = m_textures[blit.m_dst.idx];
 
-			srcLayouts[item] = VK_NULL_HANDLE != src.m_singleMsaaImage ? src.m_currentSingleMsaaImageLayout : src.m_currentImageLayout;
+			srcLayouts[item] = VK_NULL_HANDLE != src.m_singleMsaaImage
+				? src.m_currentSingleMsaaImageLayout
+				: src.m_currentImageLayout
+				;
 			dstLayouts[item] = dst.m_currentImageLayout;
 		}
 
 		bs0 = _bs;
 
-		while (bs0.hasItem(_view) )
+		for (uint32_t item = 0; item < numItems; ++item)
 		{
 			const BlitItem& blit = bs0.advance();
 
@@ -9420,8 +9503,22 @@ VK_DESTROY
 			copyInfo.dstOffset.x = blit.m_dstX;
 			copyInfo.dstOffset.y = blit.m_dstY;
 			copyInfo.dstOffset.z = 0;
-			copyInfo.extent.width  = blit.m_width;
-			copyInfo.extent.height = blit.m_height;
+
+			const uint32_t srcMipWidth  = bx::max<uint32_t>(1, src.m_width  >> blit.m_srcMip);
+			const uint32_t srcMipHeight = bx::max<uint32_t>(1, src.m_height >> blit.m_srcMip);
+			const uint32_t dstMipWidth  = bx::max<uint32_t>(1, dst.m_width  >> blit.m_dstMip);
+			const uint32_t dstMipHeight = bx::max<uint32_t>(1, dst.m_height >> blit.m_dstMip);
+
+			copyInfo.extent.width = bx::min<uint32_t>(
+				  blit.m_width
+				, srcMipWidth - blit.m_srcX
+				, dstMipWidth - blit.m_dstX
+				);
+			copyInfo.extent.height = bx::min<uint32_t>(
+				  blit.m_height
+				, srcMipHeight - blit.m_srcY
+				, dstMipHeight - blit.m_dstY
+				);
 			copyInfo.extent.depth  = 1;
 
 			const uint32_t depth = bx::max<uint32_t>(1, blit.m_depth);
@@ -9459,10 +9556,8 @@ VK_DESTROY
 				);
 		}
 
-		while (_bs.hasItem(_view) )
+		for (uint32_t item = 0; item < numItems; ++item)
 		{
-			uint16_t item = _bs.m_item;
-
 			const BlitItem& blit = _bs.advance();
 
 			TextureVK& src = m_textures[blit.m_src.idx];
@@ -9470,6 +9565,16 @@ VK_DESTROY
 
 			src.setState(m_commandBuffer, srcLayouts[item], VK_NULL_HANDLE != src.m_singleMsaaImage);
 			dst.setState(m_commandBuffer, dstLayouts[item]);
+		}
+	}
+
+	void RendererContextVK::submitBlit(BlitState& _bs, uint16_t _view)
+	{
+		BGFX_PROFILER_SCOPE("RendererContextVK::submitBlit", kColorFrame);
+
+		while (_bs.hasItem(_view) )
+		{
+			submitBlitBatch(_bs, _view);
 		}
 	}
 
@@ -9721,8 +9826,18 @@ VK_DESTROY
 						VkRenderPass renderPass = fb.getRenderPass(_render->m_view[view].m_clear.m_flags);
 
 						viewState.m_rect = _render->m_view[view].m_rect;
-						const Rect& rect        = _render->m_view[view].m_rect;
-						const Rect& renderArea  = _render->m_view[view].m_clippedRect;
+						const Rect& rect = _render->m_view[view].m_rect;
+
+						const Rect framebufferRect(
+							  0
+							, 0
+							, bx::narrowCast<uint16_t>(fb.m_width)
+							, bx::narrowCast<uint16_t>(fb.m_height)
+							);
+
+						Rect renderArea;
+						renderArea.setIntersect(_render->m_view[view].m_clippedRect, framebufferRect);
+
 						Rect scissorRect = _render->m_view[view].m_scissor;
 						viewHasScissor  = !scissorRect.isZero();
 						viewScissorRect = viewHasScissor ? scissorRect : renderArea;
@@ -10173,7 +10288,9 @@ VK_DESTROY
 
 						const uint32_t fstencil = unpackStencil(0, draw.m_stencil);
 						const uint32_t ref = (fstencil&BGFX_STENCIL_FUNC_REF_MASK)>>BGFX_STENCIL_FUNC_REF_SHIFT;
+						const uint32_t rmask = (fstencil&BGFX_STENCIL_FUNC_RMASK_MASK)>>BGFX_STENCIL_FUNC_RMASK_SHIFT;
 						vkCmdSetStencilReference(m_commandBuffer, VK_STENCIL_FRONT_AND_BACK, ref);
+						vkCmdSetStencilCompareMask(m_commandBuffer, VK_STENCIL_FRONT_AND_BACK, rmask);
 						vkCmdSetStencilWriteMask(m_commandBuffer, VK_STENCIL_FRONT_AND_BACK, unpackStencilWriteMask(draw.m_stencil) );
 					}
 

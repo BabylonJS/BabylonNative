@@ -27,13 +27,9 @@ namespace Babylon::Polyfills::Internal
 
         // Require the native Blob polyfill: File delegates byte storage to
         // a Blob, so without it the constructor cannot produce useful
-        // instances. Use IsUndefined() rather than IsFunction() because
-        // some JavaScriptCore builds (notably libjavascriptcoregtk on
-        // Linux) classify constructors created via JSObjectMakeConstructor
-        // as typeof 'object', not 'function', so napi_typeof returns
-        // napi_object for them.
+        // instances.
         auto blob = global.Get(JS_BLOB_CONSTRUCTOR_NAME);
-        if (blob.IsUndefined() || blob.IsNull())
+        if (!blob.IsFunction())
         {
             throw Napi::Error::New(env,
                 "File polyfill requires the Blob polyfill to be installed first.");

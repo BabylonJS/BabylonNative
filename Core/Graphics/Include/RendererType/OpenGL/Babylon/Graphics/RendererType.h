@@ -1,10 +1,12 @@
 #pragma once
 
+#include <Babylon/Graphics/GL/Texture.h>
+
 namespace Babylon::Graphics
 {
     using DeviceT = void*;
-    using TextureT = unsigned int;
     using TextureFormatT = unsigned int;
+    using TextureT = GL::Texture*;
 
     struct PlatformInfo
     {

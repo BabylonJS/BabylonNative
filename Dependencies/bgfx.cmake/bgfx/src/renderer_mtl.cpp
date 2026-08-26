@@ -227,7 +227,7 @@ namespace bgfx { namespace mtl
 		MTL::SamplerAddressModeRepeat,
 		MTL::SamplerAddressModeMirrorRepeat,
 		MTL::SamplerAddressModeClampToEdge,
-		MTL::SamplerAddressModeClampToZero,
+		MTL::SamplerAddressModeClampToBorderColor,
 	};
 
 	static const MTL::SamplerMinMagFilter s_textureFilterMinMag[] =
@@ -245,11 +245,11 @@ namespace bgfx { namespace mtl
 
 	struct TextureFormatInfo
 	{
-		MTL::PixelFormat            m_fmt;
-		MTL::PixelFormat            m_fmtSrgb;
-		MTL::ReadWriteTextureTier   m_rwTier;
-		MTL::TextureSwizzleChannels m_mapping;
-		bool                      m_autoGetMipmap;
+		MTL::PixelFormat            fmt;
+		MTL::PixelFormat            fmtSrgb;
+		MTL::ReadWriteTextureTier   rwTier;
+		MTL::TextureSwizzleChannels mapping;
+		bool                        autoGetMipmap;
 	};
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();
@@ -267,8 +267,11 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunguarded-availability-new");
 		{ MTL::PixelFormatBC2_RGBA,              MTL::PixelFormatBC2_RGBA_sRGB,        MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC2
 		{ MTL::PixelFormatBC3_RGBA,              MTL::PixelFormatBC3_RGBA_sRGB,        MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC3
 		{ MTL::PixelFormatBC4_RUnorm,            MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC4
+		{ MTL::PixelFormatBC4_RSnorm,            MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC4S
 		{ MTL::PixelFormatBC5_RGUnorm,           MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC5
+		{ MTL::PixelFormatBC5_RGSnorm,           MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC5S
 		{ MTL::PixelFormatBC6H_RGBFloat,         MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC6H
+		{ MTL::PixelFormatBC6H_RGBUfloat,        MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC6HU
 		{ MTL::PixelFormatBC7_RGBAUnorm,         MTL::PixelFormatBC7_RGBAUnorm_sRGB,   MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BC7
 		{ MTL::PixelFormatInvalid,               MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // ETC1
 		{ MTL::PixelFormatETC2_RGB8,             MTL::PixelFormatETC2_RGB8_sRGB,       MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // ETC2
@@ -333,7 +336,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunguarded-availability-new");
 		{ MTL::PixelFormatInvalid,               MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // RGB8U
 		{ MTL::PixelFormatInvalid,               MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // RGB8S
 		{ MTL::PixelFormatRGB9E5Float,           MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // RGB9E5F
-		{ MTL::PixelFormatBGRA8Unorm,            MTL::PixelFormatBGRA8Unorm_sRGB,      MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // BGRA8
+		{ MTL::PixelFormatBGRA8Unorm,            MTL::PixelFormatBGRA8Unorm_sRGB,      MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, true  }, // BGRA8
 		{ MTL::PixelFormatRGBA8Unorm,            MTL::PixelFormatRGBA8Unorm_sRGB,      MTL::ReadWriteTextureTier2,    { $R, $G, $B, $A }, true  }, // RGBA8
 		{ MTL::PixelFormatRGBA8Sint,             MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTier2,    { $R, $G, $B, $A }, false }, // RGBA8I
 		{ MTL::PixelFormatRGBA8Uint,             MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTier2,    { $R, $G, $B, $A }, false }, // RGBA8U
@@ -353,6 +356,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunguarded-availability-new");
 		{ MTL::PixelFormatBGR5A1Unorm,           MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, true  }, // BGR5A1
 		{ MTL::PixelFormatBGR5A1Unorm,           MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $B, $G, $R, $A }, true  }, // RGB5A1
 		{ MTL::PixelFormatRGB10A2Unorm,          MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, true  }, // RGB10A2
+		{ MTL::PixelFormatRGB10A2Uint,           MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // RGB10A2U
 		{ MTL::PixelFormatRG11B10Float,          MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, true  }, // RG11B10F
 		{ MTL::PixelFormatInvalid,               MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // UnknownDepth
 		{ MTL::PixelFormatDepth16Unorm,          MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // D16
@@ -362,6 +366,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunguarded-availability-new");
 		{ MTL::PixelFormatDepth32Float,          MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // D16F
 		{ MTL::PixelFormatDepth32Float,          MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // D24F
 		{ MTL::PixelFormatDepth32Float,          MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // D32F
+		{ MTL::PixelFormatDepth32Float_Stencil8, MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // D32FS8
 		{ MTL::PixelFormatStencil8,              MTL::PixelFormatInvalid,              MTL::ReadWriteTextureTierNone, { $R, $G, $B, $A }, false }, // D0S8
 #undef $0
 #undef $1
@@ -374,6 +379,16 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wunguarded-availability-new");
 
 BX_PRAGMA_DIAGNOSTIC_POP();
 
+	static bool isIdentitySwizzle(const MTL::TextureSwizzleChannels& _mapping)
+	{
+		return true
+			&& MTL::TextureSwizzleRed   == _mapping.red
+			&& MTL::TextureSwizzleGreen == _mapping.green
+			&& MTL::TextureSwizzleBlue  == _mapping.blue
+			&& MTL::TextureSwizzleAlpha == _mapping.alpha
+			;
+	}
+
 	// Reference(s):
 	//
 	// - Metal feature set tables
@@ -384,7 +399,7 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 	//
 	struct TextureFormatCaps
 	{
-		TextureFormatCaps(MTL::Device* _device, bool _hasPacked16Formats)
+		TextureFormatCaps(MTL::Device* _device, bool _hasPacked16Formats, bool _hasDepth32FloatStencil8)
 		{
 			m_ios      = BX_ENABLED(BX_PLATFORM_IOS) || BX_ENABLED(BX_PLATFORM_VISIONOS);
 			m_osx      = BX_ENABLED(BX_PLATFORM_OSX);
@@ -394,6 +409,7 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 			m_mac2     = _device->supportsFamily(MTL::GPUFamilyMac2);
 			m_bc       = _device->supportsBCTextureCompression();
 			m_packed16 = _hasPacked16Formats;
+			m_d32fs8   = _hasDepth32FloatStencil8;
 			m_rwTier   = _device->readWriteTextureSupport();
 		}
 
@@ -401,7 +417,7 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 		{
 			const TextureFormatInfo& tfi = s_textureFormat[_fmt];
 
-			if (MTL::PixelFormatInvalid == tfi.m_fmt)
+			if (MTL::PixelFormatInvalid == tfi.fmt)
 			{
 				return BGFX_CAPS_FORMAT_TEXTURE_NONE;
 			}
@@ -418,8 +434,11 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 			case TextureFormat::BC2:
 			case TextureFormat::BC3:
 			case TextureFormat::BC4:
+			case TextureFormat::BC4S:
 			case TextureFormat::BC5:
+			case TextureFormat::BC5S:
 			case TextureFormat::BC6H:
+			case TextureFormat::BC6HU:
 			case TextureFormat::BC7:
 				supported = m_bc;
 				break;
@@ -554,6 +573,13 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 				supports3D  = true;
 				break;
 
+			case TextureFormat::RGB10A2U:
+				supported   = true;
+				framebuffer = true;
+				multisample = true;
+				supports3D  = true;
+				break;
+
 			case TextureFormat::RGB9E5F:
 				// Not color-renderable on Mac (non-Apple) GPUs.
 				supported   = true;
@@ -588,6 +614,12 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 				multisample = true;
 				break;
 
+			case TextureFormat::D32FS8:
+				supported   = m_d32fs8;
+				framebuffer = true;
+				multisample = true;
+				break;
+
 			default:
 				break;
 			}
@@ -597,6 +629,12 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 				return BGFX_CAPS_FORMAT_TEXTURE_NONE;
 			}
 
+			if (!isIdentitySwizzle(tfi.mapping) )
+			{
+				framebuffer = false;
+				multisample = false;
+			}
+
 			uint32_t caps = 0
 				| BGFX_CAPS_FORMAT_TEXTURE_2D
 				| BGFX_CAPS_FORMAT_TEXTURE_CUBE
@@ -604,7 +642,7 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 				| (supports3D ? BGFX_CAPS_FORMAT_TEXTURE_3D : 0)
 				;
 
-			if (MTL::PixelFormatInvalid != tfi.m_fmtSrgb)
+			if (MTL::PixelFormatInvalid != tfi.fmtSrgb)
 			{
 				caps |= 0
 					| BGFX_CAPS_FORMAT_TEXTURE_2D_SRGB
@@ -628,8 +666,8 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 
 			if (true
 			&&  storage
-			&&  MTL::ReadWriteTextureTierNone != tfi.m_rwTier
-			&&  tfi.m_rwTier <= m_rwTier
+			&&  MTL::ReadWriteTextureTierNone != tfi.rwTier
+			&&  tfi.rwTier <= m_rwTier
 			   )
 			{
 				caps |= 0
@@ -638,7 +676,7 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 					;
 			}
 
-			if (tfi.m_autoGetMipmap)
+			if (tfi.autoGetMipmap)
 			{
 				caps |= BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN;
 			}
@@ -663,6 +701,7 @@ BX_PRAGMA_DIAGNOSTIC_POP();
 		bool m_mac2;
 		bool m_bc;
 		bool m_packed16;
+		bool m_d32fs8;
 		MTL::ReadWriteTextureTier m_rwTier;
 	};
 
@@ -835,6 +874,8 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			, m_captureSize(0)
 			, m_variableRateShadingSupported(false)
 			, m_supportsDepthClipMode(false)
+			, m_borderColorSupport(false)
+			, m_colorPalette(NULL)
 			, m_depthClamp(false)
 			, m_screenshotBlitRenderPipelineState(NULL)
 			, m_commandBuffer(NULL)
@@ -941,8 +982,14 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 			m_variableRateShadingSupported = false; //m_device.supportsVariableRasterizationRate();
 
-			m_supportsDepthClipMode = m_device->supportsFamily(MTL::GPUFamilyMac2)
+			m_supportsDepthClipMode = false
+				|| m_device->supportsFamily(MTL::GPUFamilyMac2)
 				|| m_device->supportsFamily(MTL::GPUFamilyApple4);
+
+			m_borderColorSupport = false
+				|| m_device->supportsFamily(MTL::GPUFamilyMac2)
+				|| m_device->supportsFamily(MTL::GPUFamilyApple7)
+				;
 
 			g_caps.numGPUs = 1;
 			g_caps.gpu[0].vendorId = g_caps.vendorId;
@@ -1002,8 +1049,9 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 				: 0
 				;
 
+			bool hasPixelFormatDepth32Float_Stencil8;
 			CHECK_FEATURE_AVAILABLE(
-				  m_hasPixelFormatDepth32Float_Stencil8
+				  hasPixelFormatDepth32Float_Stencil8
 				, iOS 9.0
 				, macOS 10.11
 				, macCatalyst 13.1
@@ -1022,8 +1070,8 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			// R8Unorm_sRGB / RG8Unorm_sRGB are unsupported on Mac (non-Apple) GPUs.
 			if (!m_device->supportsFamily(MTL::GPUFamilyApple1) )
 			{
-				s_textureFormat[TextureFormat::R8 ].m_fmtSrgb = MTL::PixelFormatInvalid;
-				s_textureFormat[TextureFormat::RG8].m_fmtSrgb = MTL::PixelFormatInvalid;
+				s_textureFormat[TextureFormat::R8 ].fmtSrgb = MTL::PixelFormatInvalid;
+				s_textureFormat[TextureFormat::RG8].fmtSrgb = MTL::PixelFormatInvalid;
 			}
 
 			bool hasPacked16Formats;
@@ -1043,10 +1091,10 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 			if (!hasPacked16Formats)
 			{
-				s_textureFormat[bgfx::TextureFormat::R5G6B5].m_fmt = MTL::PixelFormatInvalid;
-				s_textureFormat[bgfx::TextureFormat::B5G6R5].m_fmt = MTL::PixelFormatInvalid;
-				s_textureFormat[bgfx::TextureFormat::BGRA4 ].m_fmt = MTL::PixelFormatInvalid;
-				s_textureFormat[bgfx::TextureFormat::RGBA4 ].m_fmt = MTL::PixelFormatInvalid;
+				s_textureFormat[bgfx::TextureFormat::R5G6B5].fmt = MTL::PixelFormatInvalid;
+				s_textureFormat[bgfx::TextureFormat::B5G6R5].fmt = MTL::PixelFormatInvalid;
+				s_textureFormat[bgfx::TextureFormat::BGRA4 ].fmt = MTL::PixelFormatInvalid;
+				s_textureFormat[bgfx::TextureFormat::RGBA4 ].fmt = MTL::PixelFormatInvalid;
 			}
 
 			const MTL::ReadWriteTextureTier rwTier = m_device->readWriteTextureSupport();
@@ -1067,15 +1115,15 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 			if (!hasD16Format)
 			{
-				s_textureFormat[TextureFormat::D16].m_fmt = MTL::PixelFormatDepth32Float;
+				s_textureFormat[TextureFormat::D16].fmt = MTL::PixelFormatDepth32Float;
 			}
 
-			s_textureFormat[TextureFormat::D24S8].m_fmt = BX_ENABLED(BX_PLATFORM_OSX) && m_device->isDepth24Stencil8PixelFormatSupported()
+			s_textureFormat[TextureFormat::D24S8].fmt = BX_ENABLED(BX_PLATFORM_OSX) && m_device->isDepth24Stencil8PixelFormatSupported()
 				? MTL::PixelFormatDepth24Unorm_Stencil8
 				: MTL::PixelFormatDepth32Float_Stencil8
 				;
 
-			TextureFormatCaps textureFormatCaps(m_device, hasPacked16Formats);
+			TextureFormatCaps textureFormatCaps(m_device, hasPacked16Formats, hasPixelFormatDepth32Float_Stencil8);
 
 			for (uint32_t ii = 0; ii < TextureFormat::Count; ++ii)
 			{
@@ -1086,8 +1134,8 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			{
 				if (BGFX_CAPS_FORMAT_TEXTURE_NONE == g_caps.formats[ii])
 				{
-					s_textureFormat[ii].m_fmt     = MTL::PixelFormatInvalid;
-					s_textureFormat[ii].m_fmtSrgb = MTL::PixelFormatInvalid;
+					s_textureFormat[ii].fmt     = MTL::PixelFormatInvalid;
+					s_textureFormat[ii].fmtSrgb = MTL::PixelFormatInvalid;
 				}
 			}
 
@@ -2132,18 +2180,20 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 		void clearQuad(const ClearQuad& _clearQuad, const Rect& /*_rect*/, const Clear& _clear, const float _palette[][4])
 		{
-			uint64_t state = 0;
-			state |= _clear.m_flags & BGFX_CLEAR_COLOR ? BGFX_STATE_WRITE_RGB|BGFX_STATE_WRITE_A         : 0;
-			state |= _clear.m_flags & BGFX_CLEAR_DEPTH ? BGFX_STATE_DEPTH_TEST_ALWAYS|BGFX_STATE_WRITE_Z : 0;
+			const uint64_t state = 0
+				| (_clear.m_flags & BGFX_CLEAR_COLOR ? BGFX_STATE_WRITE_RGB|BGFX_STATE_WRITE_A         : 0)
+				| (_clear.m_flags & BGFX_CLEAR_DEPTH ? BGFX_STATE_DEPTH_TEST_ALWAYS|BGFX_STATE_WRITE_Z : 0)
+				;
 
-			uint64_t stencil = 0;
-			stencil |= _clear.m_flags & BGFX_CLEAR_STENCIL ? 0
-				| BGFX_STENCIL_TEST_ALWAYS
-				| BGFX_STENCIL_FUNC_REF(_clear.m_stencil)
-				| BGFX_STENCIL_FUNC_RMASK(0xff)
-				| BGFX_STENCIL_OP_FAIL_S_REPLACE
-				| BGFX_STENCIL_OP_FAIL_Z_REPLACE
-				| BGFX_STENCIL_OP_PASS_Z_REPLACE
+			const uint64_t stencil = _clear.m_flags & BGFX_CLEAR_STENCIL
+				? packStencil(0
+					| BGFX_STENCIL_TEST_ALWAYS
+					| BGFX_STENCIL_FUNC_REF(_clear.m_stencil)
+					| BGFX_STENCIL_FUNC_RMASK(0xff)
+					| BGFX_STENCIL_OP_FAIL_S_REPLACE
+					| BGFX_STENCIL_OP_FAIL_Z_REPLACE
+					| BGFX_STENCIL_OP_PASS_Z_REPLACE
+					, BGFX_STENCIL_NONE)
 				: 0
 				;
 
@@ -2260,13 +2310,21 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			}
 		}
 
+		void resolveFrameBuffer()
+		{
+			if (isValid(m_fbh) )
+			{
+				m_frameBuffers[m_fbh.idx].resolve();
+				m_fbh = BGFX_INVALID_HANDLE;
+			}
+		}
+
 		void setFrameBuffer(MTL::RenderPassDescriptor* _renderPassDescriptor, FrameBufferHandle _fbh, bool _msaa = true)
 		{
 			// resolve framebuffer
 			if (isValid(m_fbh) && m_fbh.idx != _fbh.idx)
 			{
-				FrameBufferMtl& frameBuffer = m_frameBuffers[m_fbh.idx];
-				frameBuffer.resolve();
+				resolveFrameBuffer();
 			}
 
 			if (!isValid(_fbh)
@@ -2299,6 +2357,12 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 						_renderPassDescriptor->depthAttachment()->setTexture(swapChain->m_backBufferDepth);
 						_renderPassDescriptor->stencilAttachment()->setTexture(swapChain->m_backBufferStencil);
 					}
+				}
+				else
+				{
+					_renderPassDescriptor->setRenderTargetWidth( bx::max<uint32_t>(1, m_resolution.width) );
+					_renderPassDescriptor->setRenderTargetHeight(bx::max<uint32_t>(1, m_resolution.height) );
+					_renderPassDescriptor->setDefaultRasterSampleCount(1);
 				}
 			}
 			else
@@ -2347,22 +2411,19 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 					setAttachment( (MTL::RenderPassAttachmentDescriptor*)_renderPassDescriptor->depthAttachment(), frameBuffer.m_depthAttachment, texture.m_type, NULL != texture.m_ptrMsaa);
 					setAttachment( (MTL::RenderPassAttachmentDescriptor*)_renderPassDescriptor->stencilAttachment(), frameBuffer.m_depthAttachment, texture.m_type, NULL != texture.m_ptrMsaa);
 
-					if (texture.m_textureFormat == TextureFormat::D24S8)
-					{
-						const MTL::PixelFormat depthFormat = texture.m_ptr->pixelFormat();
+					const MTL::PixelFormat depthFormat = texture.m_ptr->pixelFormat();
 
-						if (MTL::PixelFormatDepth24Unorm_Stencil8 == depthFormat
-						||  MTL::PixelFormatDepth32Float_Stencil8 == depthFormat)
-						{
-							_renderPassDescriptor->stencilAttachment()->setTexture(_renderPassDescriptor->depthAttachment()->texture() );
-						}
-						else
-						{
-							_renderPassDescriptor->stencilAttachment()->setTexture(texture.m_ptrMsaa
-								? texture.m_ptrMsaa
-								: texture.m_ptrStencil
-								);
-						}
+					if (MTL::PixelFormatDepth24Unorm_Stencil8 == depthFormat
+					||  MTL::PixelFormatDepth32Float_Stencil8 == depthFormat)
+					{
+						_renderPassDescriptor->stencilAttachment()->setTexture(_renderPassDescriptor->depthAttachment()->texture() );
+					}
+					else if (NULL != texture.m_ptrStencil)
+					{
+						_renderPassDescriptor->stencilAttachment()->setTexture(texture.m_ptrMsaa
+							? texture.m_ptrMsaa
+							: texture.m_ptrStencil
+							);
 					}
 				}
 			}
@@ -2754,6 +2815,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 				murmur.add(frameBuffer.m_pixelFormatHash);
 			}
 
+			murmur.add(_program.idx);
 			murmur.add(program.m_vsh->m_hash);
 			if (NULL != program.m_fsh)
 			{
@@ -2832,13 +2894,16 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 							: 1
 							);
 
+						const MTL::PixelFormat depthFormat = depthStencilTexture.m_ptr->pixelFormat();
+
 						if (NULL != depthStencilTexture.m_ptrStencil)
 						{
 							pd->setStencilAttachmentPixelFormat(depthStencilTexture.m_ptrStencil->pixelFormat() );
 						}
-						else if (depthStencilTexture.m_textureFormat == TextureFormat::D24S8)
+						else if (MTL::PixelFormatDepth24Unorm_Stencil8 == depthFormat
+							 ||  MTL::PixelFormatDepth32Float_Stencil8 == depthFormat)
 						{
-							pd->setStencilAttachmentPixelFormat(depthStencilTexture.m_ptr->pixelFormat() );
+							pd->setStencilAttachmentPixelFormat(depthFormat);
 						}
 					}
 				}
@@ -3108,24 +3173,90 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			return program.m_computePS;
 		}
 
+		MTL::SamplerAddressMode getAddressMode(uint32_t _mode) const
+		{
+			return MTL::SamplerAddressModeClampToBorderColor == s_textureAddress[_mode] && !m_borderColorSupport
+				? MTL::SamplerAddressModeClampToZero
+				: s_textureAddress[_mode]
+				;
+		}
+
+		MTL::SamplerBorderColor getBorderColor(uint32_t _index) const
+		{
+			if (NULL == m_colorPalette)
+			{
+				return MTL::SamplerBorderColorOpaqueBlack;
+			}
+
+			static const float s_borderColor[][4] =
+			{
+				{ 0.0f, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, 0.0f, 0.0f, 1.0f },
+				{ 1.0f, 1.0f, 1.0f, 1.0f },
+			};
+
+			const float* rgba = m_colorPalette[_index];
+
+			MTL::SamplerBorderColor result = MTL::SamplerBorderColorOpaqueBlack;
+			float nearest = bx::kFloatLargest;
+
+			for (uint32_t ii = 0; ii < BX_COUNTOF(s_borderColor); ++ii)
+			{
+				float distSq = 0.0f;
+				for (uint32_t jj = 0; jj < 4; ++jj)
+				{
+					const float diff = rgba[jj] - s_borderColor[ii][jj];
+					distSq += diff*diff;
+				}
+
+				if (distSq < nearest)
+				{
+					nearest = distSq;
+					result  = MTL::SamplerBorderColor(ii);
+				}
+			}
+
+			return result;
+		}
+
 		MTL::SamplerState* getSamplerState(uint32_t _flags)
 		{
+			const uint32_t index = bx::min<uint32_t>(
+				  BGFX_CONFIG_MAX_COLOR_PALETTE-1
+				, (_flags & BGFX_SAMPLER_BORDER_COLOR_MASK) >> BGFX_SAMPLER_BORDER_COLOR_SHIFT
+				);
+
 			_flags &= BGFX_SAMPLER_BITS_MASK;
+
+			const bool needBorderColor = false
+				|| BGFX_SAMPLER_U_BORDER == (_flags & BGFX_SAMPLER_U_MASK)
+				|| BGFX_SAMPLER_V_BORDER == (_flags & BGFX_SAMPLER_V_MASK)
+				|| BGFX_SAMPLER_W_BORDER == (_flags & BGFX_SAMPLER_W_MASK)
+				;
+
+			const MTL::SamplerBorderColor borderColor = needBorderColor
+				? getBorderColor(index)
+				: MTL::SamplerBorderColorTransparentBlack
+				;
+
+			_flags |= uint32_t(borderColor) << BGFX_SAMPLER_BORDER_COLOR_SHIFT;
+
 			MTL::SamplerState* sampler = m_samplerStateCache.find(_flags);
 
 			if (NULL == sampler)
 			{
 				MTL::SamplerDescriptor* desc = m_samplerDescriptor;
 
-				desc->setSAddressMode(  s_textureAddress[(_flags & BGFX_SAMPLER_U_MASK  ) >> BGFX_SAMPLER_U_SHIFT  ]);
-				desc->setTAddressMode(  s_textureAddress[(_flags & BGFX_SAMPLER_V_MASK  ) >> BGFX_SAMPLER_V_SHIFT  ]);
-				desc->setRAddressMode(  s_textureAddress[(_flags & BGFX_SAMPLER_W_MASK  ) >> BGFX_SAMPLER_W_SHIFT  ]);
+				desc->setSAddressMode( getAddressMode( (_flags & BGFX_SAMPLER_U_MASK  ) >> BGFX_SAMPLER_U_SHIFT  ) );
+				desc->setTAddressMode( getAddressMode( (_flags & BGFX_SAMPLER_V_MASK  ) >> BGFX_SAMPLER_V_SHIFT  ) );
+				desc->setRAddressMode( getAddressMode( (_flags & BGFX_SAMPLER_W_MASK  ) >> BGFX_SAMPLER_W_SHIFT  ) );
 				desc->setMinFilter(s_textureFilterMinMag[(_flags & BGFX_SAMPLER_MIN_MASK) >> BGFX_SAMPLER_MIN_SHIFT]);
 				desc->setMagFilter(s_textureFilterMinMag[(_flags & BGFX_SAMPLER_MAG_MASK) >> BGFX_SAMPLER_MAG_SHIFT]);
 				desc->setMipFilter(   s_textureFilterMip[(_flags & BGFX_SAMPLER_MIP_MASK) >> BGFX_SAMPLER_MIP_SHIFT]);
 				desc->setLodMinClamp(0);
 				desc->setLodMaxClamp(FLT_MAX);
 				desc->setNormalizedCoordinates(TRUE);
+				desc->setBorderColor(borderColor);
 				desc->setMaxAnisotropy(true
 					&& NULL != m_mainFrameBuffer.m_swapChain
 					&& (0 != (_flags & (BGFX_SAMPLER_MIN_ANISOTROPIC|BGFX_SAMPLER_MAG_ANISOTROPIC) ) )
@@ -3268,7 +3399,6 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 		TimerQueryMtl     m_gpuTimer;
 		CommandQueueMtl   m_cmd;
 
-		bool m_hasPixelFormatDepth32Float_Stencil8;
 		bool m_hasStoreActionStoreAndMultisampleResolve;
 		bool m_hasCPUCacheModesAndStorageModes;
 		bool m_hasSynchronizeResource;
@@ -3340,6 +3470,9 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 		bool m_variableRateShadingSupported;
 		bool m_supportsDepthClipMode;
+		bool m_borderColorSupport;
+
+		const float (*m_colorPalette)[4];
 		bool m_depthClamp;
 
 		MTL::RenderPipelineDescriptor* m_renderPipelineDescriptor;
@@ -3670,11 +3803,12 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 	void TextureMtl::clear(uint8_t _baseMip, uint8_t _numMipsArg, uint16_t _baseLayer, uint16_t _numLayersArg)
 	{
-		const bimg::TextureFormat::Enum tf = bimg::TextureFormat::Enum(m_textureFormat);
 		if (NULL == m_ptr)
 		{
 			return;
 		}
+
+		const bimg::TextureFormat::Enum tf = bimg::TextureFormat::Enum(m_textureFormat);
 
 		const uint32_t bpp      = bimg::getBitsPerPixel(tf);
 		const bool     is3D     = MTL::TextureType3D == m_ptr->textureType();
@@ -3687,10 +3821,19 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 		const uint32_t sideBeg = is3D ? 0 : bx::min<uint32_t>(_baseLayer, numSides);
 		const uint32_t sideEnd = is3D ? 1 : ( (UINT16_MAX == _numLayersArg) ? numSides : bx::min<uint32_t>(numSides, uint32_t(_baseLayer) + _numLayersArg) );
 
+		if (mipBeg  >= mipEnd
+		||  sideBeg >= sideEnd)
+		{
+			return;
+		}
+
 		const uint32_t tile      = textureZeroInitTileDim(bpp);
 		const uint32_t zeroPitch = tile * bpp / 8;
-		uint8_t zeros[kTextureZeroInitBudget] = {};
-		BX_ASSERT(zeroPitch * tile <= sizeof(zeros), "Zero-init tile exceeds budget.");
+
+		MTL::Buffer* zeros = s_renderMtl->m_device->newBuffer(zeroPitch*tile, MTL::ResourceCPUCacheModeDefaultCache);
+		bx::memSet(zeros->contents(), 0, zeroPitch*tile);
+
+		MTL::BlitCommandEncoder* bce = s_renderMtl->getBlitCommandEncoder();
 
 		for (uint32_t side = sideBeg; side < sideEnd; ++side)
 		{
@@ -3705,16 +3848,30 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 					for (uint32_t yy = 0; yy < mipH; yy += tile)
 					{
 						const uint32_t th = bx::min<uint32_t>(tile, mipH - yy);
+
 						for (uint32_t xx = 0; xx < mipW; xx += tile)
 						{
-							const uint32_t tw = bx::min<uint32_t>(tile, mipW - xx);
-							MTL::Region region(xx, yy, zz, tw, th, 1);
-							m_ptr->replaceRegion(region, lod, side, zeros, tw * bpp / 8, 0);
+							const uint32_t tw    = bx::min<uint32_t>(tile, mipW - xx);
+							const uint32_t pitch = tw * bpp / 8;
+
+							bce->copyFromBuffer(
+								  zeros
+								, 0
+								, pitch
+								, is3D ? pitch*th : 0
+								, MTL::Size::Make(tw, th, 1)
+								, m_ptr
+								, side
+								, lod
+								, MTL::Origin::Make(xx, yy, zz)
+								);
 						}
 					}
 				}
 			}
 		}
+
+		s_renderMtl->m_cmd.release(zeros);
 	}
 
 	void TextureMtl::create(const Memory* _mem, uint64_t _flags, uint8_t _skip, uint64_t _external)
@@ -3770,7 +3927,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 				desc->setTextureType(MTL::TextureTypeCube);
 				m_type = TextureCube;
 			}
-			else if (1 < imageContainer.m_depth)
+			else if (isVolume(imageContainer) )
 			{
 				desc->setTextureType(MTL::TextureType3D);
 				m_type = Texture3D;
@@ -3813,7 +3970,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			MTL::PixelFormat format = MTL::PixelFormatInvalid;
 			if (srgb)
 			{
-				format = tfi.m_fmtSrgb;
+				format = tfi.fmtSrgb;
 				BX_WARN(format != MTL::PixelFormatInvalid
 					, "sRGB not supported for texture format %d"
 					, m_textureFormat
@@ -3823,7 +3980,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			if (format == MTL::PixelFormatInvalid)
 			{
 				// not swizzled and not sRGB, or sRGB unsupported
-				format = tfi.m_fmt;
+				format = tfi.fmt;
 			}
 
 			desc->setPixelFormat(format);
@@ -3833,7 +3990,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			desc->setMipmapLevelCount(ti.numMips);
 			desc->setSampleCount(1);
 			desc->setArrayLength(ti.numLayers);
-			desc->setSwizzle(*(MTL::TextureSwizzleChannels*)&tfi.m_mapping);
+			desc->setSwizzle(*(MTL::TextureSwizzleChannels*)&tfi.mapping);
 
 			if (s_renderMtl->m_hasCPUCacheModesAndStorageModes)
 			{
@@ -3848,11 +4005,17 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 						: MTL::StorageModeManaged
 					) );
 
+				const bool packedDepthStencil = false
+					|| TextureFormat::D24S8  == TextureFormat::Enum(m_textureFormat)
+					|| TextureFormat::D32FS8 == TextureFormat::Enum(m_textureFormat)
+					;
+
 				MTL::TextureUsage usage = 0
 					|                 MTL::TextureUsageShaderRead
-					| (computeWrite    ? MTL::TextureUsageShaderWrite  : 0)
-					| (isVideoDecodeDst? MTL::TextureUsageShaderWrite  : 0)
-					| (renderTarget    ? MTL::TextureUsageRenderTarget : 0)
+					| (computeWrite    ? MTL::TextureUsageShaderWrite     : 0)
+					| (isVideoDecodeDst? MTL::TextureUsageShaderWrite     : 0)
+					| (renderTarget    ? MTL::TextureUsageRenderTarget    : 0)
+					| (packedDepthStencil ? MTL::TextureUsagePixelFormatView : 0)
 					;
 
 				desc->setUsage(usage);
@@ -3870,7 +4033,10 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 			if (sampleCount > 1)
 			{
-				desc->setTextureType(MTL::TextureType2DMultisample);
+				desc->setTextureType(ti.numLayers > 1
+					? MTL::TextureType2DMultisampleArray
+					: MTL::TextureType2DMultisample
+					);
 				desc->setSampleCount(sampleCount);
 				desc->setMipmapLevelCount(1);
 
@@ -4012,11 +4178,6 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 		MTL_RELEASE_W(m_ptrMsaa, 0);
 		MTL_RELEASE_W(m_ptrStencil, 0);
-
-		for (uint32_t ii = 0; ii < m_numMips; ++ii)
-		{
-			MTL_RELEASE_W(m_ptrMips[ii], 0);
-		}
 
 		for (stl::unordered_map<uint64_t, MTL::Texture*>::iterator it = m_ptrViews.begin(), itEnd = m_ptrViews.end(); it != itEnd; ++it)
 		{
@@ -4162,10 +4323,26 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 	void TextureMtl::commit(uint8_t _stage, bool _vertex, bool _fragment, uint32_t _flags, uint8_t _mip, uint16_t _firstLayer, uint16_t _numLayers, uint8_t _firstMip, uint8_t _numMips)
 	{
+		if (!_vertex
+		&&  !_fragment)
+		{
+			return;
+		}
+
+		const uint32_t flags = 0 == (BGFX_SAMPLER_INTERNAL_DEFAULT & _flags)
+			? _flags
+			: uint32_t(m_flags)
+			;
+		const bool sampleStencil = 0 != (flags & BGFX_SAMPLER_SAMPLE_STENCIL);
+
+		MTL::Texture* ptr = _mip != UINT8_MAX
+			? getTextureImage(_mip, _firstLayer, _numLayers)
+			: getTextureView(_firstLayer, _numLayers, _firstMip, _numMips, sampleStencil)
+			;
+
 		if (_vertex)
 		{
-			MTL::Texture* p = _mip != UINT8_MAX ? getTextureMipLevel(_mip) : getTextureView(_firstLayer, _numLayers, _firstMip, _numMips);
-			s_renderMtl->m_renderCommandEncoder->setVertexTexture(p, _stage);
+			s_renderMtl->m_renderCommandEncoder->setVertexTexture(ptr, _stage);
 			s_renderMtl->m_renderCommandEncoder->setVertexSamplerState(
 				  0 == (BGFX_SAMPLER_INTERNAL_DEFAULT & _flags)
 					? s_renderMtl->getSamplerState(_flags)
@@ -4176,8 +4353,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 		if (_fragment)
 		{
-			MTL::Texture* p = _mip != UINT8_MAX ? getTextureMipLevel(_mip) : getTextureView(_firstLayer, _numLayers, _firstMip, _numMips);
-			s_renderMtl->m_renderCommandEncoder->setFragmentTexture(p, _stage);
+			s_renderMtl->m_renderCommandEncoder->setFragmentTexture(ptr, _stage);
 			s_renderMtl->m_renderCommandEncoder->setFragmentSamplerState(
 				  0 == (BGFX_SAMPLER_INTERNAL_DEFAULT & _flags)
 					? s_renderMtl->getSamplerState(_flags)
@@ -4187,14 +4363,34 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 		}
 	}
 
-	MTL::Texture* TextureMtl::getTextureView(uint16_t _firstLayer, uint16_t _numLayers, uint8_t _firstMip, uint8_t _numMips)
+	MTL::Texture* TextureMtl::getTextureView(uint16_t _firstLayer, uint16_t _numLayers, uint8_t _firstMip, uint8_t _numMips, bool _stencil)
 	{
-		if (NULL == m_ptr)
+		MTL::Texture* ptr = _stencil && NULL != m_ptrStencil
+			? m_ptrStencil
+			: m_ptr
+			;
+
+		if (NULL == ptr)
 		{
 			return NULL;
 		}
 
-		const uint32_t totalLayers = uint32_t(m_ptr->arrayLength() * (TextureCube == m_type ? 6 : 1) );
+		MTL::PixelFormat format = ptr->pixelFormat();
+
+		if (_stencil
+		&&  ptr == m_ptr)
+		{
+			if (MTL::PixelFormatDepth32Float_Stencil8 == format)
+			{
+				format = (MTL::PixelFormat)MTL::PixelFormatX32_Stencil8;
+			}
+			else if (MTL::PixelFormatDepth24Unorm_Stencil8 == format)
+			{
+				format = (MTL::PixelFormat)MTL::PixelFormatX24_Stencil8;
+			}
+		}
+
+		const uint32_t totalLayers = uint32_t(ptr->arrayLength() * (TextureCube == m_type ? 6 : 1) );
 
 		const uint8_t  firstMip   = bx::min<uint8_t>(_firstMip, uint8_t(m_numMips - 1) );
 		const uint8_t  numMips    = bx::min<uint8_t>(_numMips,  uint8_t(m_numMips - firstMip) );
@@ -4207,9 +4403,10 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			&& numLayers >= totalLayers
 			;
 
-		if (fullRange)
+		if (fullRange
+		&&  format == ptr->pixelFormat() )
 		{
-			return m_ptr;
+			return ptr;
 		}
 
 		const uint64_t key = 0
@@ -4217,6 +4414,69 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 			| (uint64_t(numMips)    <<  8)
 			| (uint64_t(firstLayer) << 16)
 			| (uint64_t(numLayers)  << 32)
+			| (uint64_t(_stencil)   << 63)
+			;
+
+		stl::unordered_map<uint64_t, MTL::Texture*>::iterator it = m_ptrViews.find(key);
+		if (it != m_ptrViews.end() )
+		{
+			return it->second;
+		}
+
+		MTL::TextureType type = ptr->textureType();
+
+		if (TextureCube == m_type)
+		{
+			type = (MTL::TextureType)MTL::TextureType2DArray;
+		}
+		else if (MTL::TextureType2DArray == type
+		     &&  1 == numLayers)
+		{
+			type = (MTL::TextureType)MTL::TextureType2D;
+		}
+
+		MTL::Texture* view = ptr->newTextureView(
+			  format
+			, type
+			, NS::Range::Make(firstMip, numMips)
+			, NS::Range::Make(firstLayer, numLayers)
+			);
+		m_ptrViews[key] = view;
+
+		return view;
+	}
+
+	MTL::Texture* TextureMtl::getTextureImage(uint8_t _mip, uint16_t _firstLayer, uint16_t _numLayers)
+	{
+		if (NULL == m_ptr)
+		{
+			return NULL;
+		}
+
+		const bool     isCube      = TextureCube == m_type;
+		const bool     is3D        = MTL::TextureType3D == m_ptr->textureType();
+		const uint32_t totalLayers = uint32_t(m_ptr->arrayLength() ) * (isCube ? 6 : 1);
+
+		const uint32_t firstMip   = bx::min<uint32_t>(_mip, bx::max<uint8_t>(m_numMips, 1) - 1);
+		const uint32_t firstLayer = bx::min<uint32_t>(_firstLayer, totalLayers - 1);
+		const uint32_t numLayers  = UINT16_MAX == _numLayers
+			? totalLayers - firstLayer
+			: bx::min<uint32_t>(_numLayers, totalLayers - firstLayer)
+			;
+
+		const MTL::TextureType type = is3D
+			? (MTL::TextureType)MTL::TextureType3D
+			: isCube || 1 < totalLayers || UINT16_MAX != _numLayers
+			? (MTL::TextureType)MTL::TextureType2DArray
+			: (MTL::TextureType)MTL::TextureType2D
+			;
+
+		const uint64_t key = 0
+			| uint64_t(firstMip)
+			| (uint64_t(1)          <<  8) // numMips
+			| (uint64_t(firstLayer) << 16)
+			| (uint64_t(numLayers)  << 32)
+			| (uint64_t(1)          << 62) // image, so it can't collide with a sampled view
 			;
 
 		stl::unordered_map<uint64_t, MTL::Texture*>::iterator it = m_ptrViews.find(key);
@@ -4227,64 +4487,13 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 		MTL::Texture* view = m_ptr->newTextureView(
 			  m_ptr->pixelFormat()
-			, TextureCube == m_type ? (MTL::TextureType)MTL::TextureType2DArray : m_ptr->textureType()
-			, NS::Range::Make(firstMip, numMips)
+			, type
+			, NS::Range::Make(firstMip, 1)
 			, NS::Range::Make(firstLayer, numLayers)
 			);
 		m_ptrViews[key] = view;
 
 		return view;
-	}
-
-	MTL::Texture* TextureMtl::getTextureMipLevel(uint8_t _mip, bool _array)
-	{
-		_mip = bx::clamp(_mip, 0, m_numMips);
-
-		if (NULL != m_ptr)
-		{
-			if (_array
-			&&  TextureCube != m_type
-			&&  MTL::TextureType2DArray != m_ptr->textureType() )
-			{
-				if (NULL == m_ptrMipsArray[_mip])
-				{
-					m_ptrMipsArray[_mip] = m_ptr->newTextureView(
-						  m_ptr->pixelFormat()
-						, (MTL::TextureType)MTL::TextureType2DArray
-						, NS::Range::Make(_mip, 1)
-						, NS::Range::Make(0, m_ptr->arrayLength() )
-						);
-				}
-
-				return m_ptrMipsArray[_mip];
-			}
-
-			if (NULL == m_ptrMips[_mip])
-			{
-				if (TextureCube == m_type)
-				{
-					m_ptrMips[_mip] = m_ptr->newTextureView(
-						  m_ptr->pixelFormat()
-						, (MTL::TextureType)MTL::TextureType2DArray
-						, NS::Range::Make(_mip, 1)
-						, NS::Range::Make(0, m_ptr->arrayLength() * 6)
-						);
-				}
-				else
-				{
-					m_ptrMips[_mip] = m_ptr->newTextureView(
-						  m_ptr->pixelFormat()
-						, m_ptr->textureType()
-						, NS::Range::Make(_mip, 1)
-						, NS::Range::Make(0, m_ptr->arrayLength() )
-						);
-				}
-			}
-
-			return m_ptrMips[_mip];
-		}
-
-		return NULL;
 	}
 
 	SwapChainMtl::~SwapChainMtl()
@@ -4448,8 +4657,8 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 			const Resolution& resolution = s_renderMtl->m_resolution;
 			m_metalLayer->setPixelFormat( (MTL::PixelFormat)( (resolution.reset & BGFX_RESET_SRGB_BACKBUFFER)
-				? s_textureFormat[resolution.formatColor].m_fmtSrgb
-				: s_textureFormat[resolution.formatColor].m_fmt) )
+				? s_textureFormat[resolution.formatColor].fmtSrgb
+				: s_textureFormat[resolution.formatColor].fmt) )
 				;
 
 			retain(m_metalLayer);
@@ -4507,8 +4716,8 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 		{
 			m_metalLayer->setDrawableSize(CGSizeMake(_width, _height) );
 			m_metalLayer->setPixelFormat( (MTL::PixelFormat)( (resetFlags & BGFX_RESET_SRGB_BACKBUFFER)
-				? s_textureFormat[formatColor].m_fmtSrgb
-				: s_textureFormat[formatColor].m_fmt) )
+				? s_textureFormat[formatColor].fmtSrgb
+				: s_textureFormat[formatColor].fmt) )
 				;
 
 			const CGSize actualSize = m_metalLayer->drawableSize();
@@ -4553,7 +4762,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 		if (bimg::isDepth(bimg::TextureFormat::Enum(formatDepthStencil) ) )
 		{
-			const MTL::PixelFormat depthFormat = s_textureFormat[formatDepthStencil].m_fmt;
+			const MTL::PixelFormat depthFormat = s_textureFormat[formatDepthStencil].fmt;
 
 			{
 				desc->setPixelFormat(depthFormat);
@@ -4666,8 +4875,8 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 
 				if (0 == m_width)
 				{
-					m_width = texture.m_width;
-					m_height = texture.m_height;
+					m_width  = bx::max<uint32_t>(texture.m_width  >> at.mip, 1);
+					m_height = bx::max<uint32_t>(texture.m_height >> at.mip, 1);
 				}
 
 				if (bimg::isDepth(bimg::TextureFormat::Enum(texture.m_textureFormat) ) )
@@ -5113,11 +5322,12 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 	{
 		m_cmd.finish(false);
 
+		m_colorPalette = _render->m_colorPalette;
+
 		if (NULL == m_commandBuffer)
 		{
 			m_commandBuffer = m_cmd.alloc();
 		}
-
 
 		if (_render->m_capture)
 		{
@@ -5331,13 +5541,43 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 					viewState.m_rect = _render->m_view[view].m_rect;
 
 					submitUniformCache(ucs, view);
+
+					if (isValid(m_fbh)
+					&&  m_fbh.idx != _render->m_view[view].m_fbh.idx)
+					{
+						resolveFrameBuffer();
+					}
+
 					submitBlit(bs, view);
 
 					if (!isCompute)
 					{
-						const Rect& clippedRect = _render->m_view[view].m_clippedRect;
-						const Rect& scissorRect = _render->m_view[view].m_scissor;
-						viewHasScissor = !scissorRect.isZero();
+						const FrameBufferHandle viewFbh = _render->m_view[view].m_fbh;
+
+						uint32_t width  = m_resolution.width;
+						uint32_t height = m_resolution.height;
+
+						if (isValid(viewFbh) )
+						{
+							const FrameBufferMtl& frameBuffer = m_frameBuffers[viewFbh.idx];
+							width  = frameBuffer.m_width;
+							height = frameBuffer.m_height;
+						}
+
+						const Rect framebufferRect(
+							  0
+							, 0
+							, bx::narrowCast<uint16_t>(width)
+							, bx::narrowCast<uint16_t>(height)
+							);
+
+						Rect clippedRect;
+						clippedRect.setIntersect(_render->m_view[view].m_clippedRect, framebufferRect);
+
+						Rect scissorRect;
+						scissorRect.setIntersect(_render->m_view[view].m_scissor, framebufferRect);
+
+						viewHasScissor = !_render->m_view[view].m_scissor.isZero();
 						viewScissorRect = viewHasScissor ? scissorRect : clippedRect;
 						Clear& clr = _render->m_view[view].m_clear;
 
@@ -5353,16 +5593,6 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 							renderPassDescriptor->setVisibilityResultBuffer(m_occlusionQuery.m_buffer);
 
 							fbh = _render->m_view[view].m_fbh;
-
-							uint32_t width  = m_resolution.width;
-							uint32_t height = m_resolution.height;
-
-							if (isValid(fbh) )
-							{
-								FrameBufferMtl& frameBuffer = m_frameBuffers[fbh.idx];
-								width  = frameBuffer.m_width;
-								height = frameBuffer.m_height;
-							}
 
 							clearWithRenderPass = true
 								&& 0      == viewRect.m_x
@@ -5621,7 +5851,7 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 								case Binding::Image:
 								{
 									TextureMtl& texture = m_textures[bind.m_idx];
-									m_computeCommandEncoder->setTexture(texture.getTextureMipLevel(bind.m_firstMip, UINT16_MAX != bind.m_numLayers), stage);
+									m_computeCommandEncoder->setTexture(texture.getTextureImage(bind.m_firstMip, bind.m_firstLayer, bind.m_numLayers), stage);
 								}
 								break;
 
@@ -5630,7 +5860,15 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 									TextureMtl& texture = m_textures[bind.m_idx];
 									uint32_t flags = bind.m_samplerFlags;
 
-									m_computeCommandEncoder->setTexture(texture.m_ptr, stage);
+									const uint32_t resolvedFlags = 0 == (BGFX_SAMPLER_INTERNAL_DEFAULT & flags)
+										? flags
+										: uint32_t(texture.m_flags)
+										;
+
+									m_computeCommandEncoder->setTexture(
+										  texture.getTextureView(bind.m_firstLayer, bind.m_numLayers, bind.m_firstMip, bind.m_numMips, 0 != (resolvedFlags & BGFX_SAMPLER_SAMPLE_STENCIL) )
+										, stage
+										);
 									m_computeCommandEncoder->setSamplerState(
 										0 == (BGFX_SAMPLER_INTERNAL_DEFAULT & flags)
 										? getSamplerState(flags)
@@ -6032,6 +6270,8 @@ static_assert(BX_COUNTOF(s_accessNames) == Access::Count, "Invalid s_accessNames
 											, 0 != (bindingTypes[stage] & PipelineStateMtl::BindToFragmentShader)
 											, bind.m_samplerFlags
 											, bind.m_firstMip
+											, bind.m_firstLayer
+											, bind.m_numLayers
 											);
 									}
 									break;

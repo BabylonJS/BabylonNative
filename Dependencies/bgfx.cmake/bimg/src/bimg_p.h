@@ -72,7 +72,7 @@ namespace bimg
 		TextureFormat::Enum m_format;
 		uint16_t m_width;
 		uint16_t m_height;
-		uint16_t m_depth;
+		uint16_t m_depth;      //!< Zero if this is not a volume (3D) texture.
 		uint16_t m_numLayers;
 		uint8_t m_numMips;
 		bool m_cubeMap;

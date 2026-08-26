@@ -53,6 +53,7 @@ namespace
             case CURLE_BAD_CONTENT_ENCODING: return "CURLE_BAD_CONTENT_ENCODING";
             case CURLE_SSL_CACERT_BADFILE: return "CURLE_SSL_CACERT_BADFILE";
             case CURLE_REMOTE_FILE_NOT_FOUND: return "CURLE_REMOTE_FILE_NOT_FOUND";
+            case CURLE_ABORTED_BY_CALLBACK: return "CURLE_ABORTED_BY_CALLBACK";
             default: return "CURLE_" + std::to_string(static_cast<int>(code));
         }
     }
@@ -146,7 +147,7 @@ namespace UrlLib
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, HeaderCallback));
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L));
                 // Request-specific failure detail (host/port/path specifics) lands here during
-                // curl_easy_perform; see the error handling in PerformAsync.
+                // the transfer; see the error handling in PerformAsync.
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_ERRORBUFFER, m_curlErrorBuffer.data()));
             }
         }
@@ -195,7 +196,6 @@ namespace UrlLib
             }
         }
 
-
         static void Append(std::string& string, char* buffer, size_t nitems)
         {
             string.insert(string.end(), buffer, buffer + nitems);
@@ -205,6 +205,65 @@ namespace UrlLib
         {
             auto bytes = reinterpret_cast<std::byte*>(buffer);
             byteVector.insert(byteVector.end(), bytes, bytes + nitems);   
+        }
+
+        // Drives the transfer through the libcurl *multi* interface rather than curl_easy_perform so
+        // that Abort() is observed promptly. curl_easy_perform blocks in an internal poll that, when
+        // a peer accepts the connection but sends nothing, can wait indefinitely without invoking any
+        // callback -- so a cancelled request would hang until the peer or OS gave up. Polling with a
+        // bounded timeout lets the loop re-check m_cancellationSource between waits, bounding abort
+        // latency to ~kPollTimeoutMs regardless of peer activity. Runs on the worker thread.
+        CURLcode PerformWithCancellation()
+        {
+            CURLM* multi = curl_multi_init();
+            if (multi == nullptr)
+            {
+                return CURLE_OUT_OF_MEMORY;
+            }
+            auto multiScope = gsl::finally([this, multi] {
+                curl_multi_remove_handle(multi, m_curl);
+                curl_multi_cleanup(multi);
+            });
+
+            if (curl_multi_add_handle(multi, m_curl) != CURLM_OK)
+            {
+                return CURLE_FAILED_INIT;
+            }
+
+            constexpr int kPollTimeoutMs = 100;
+            int runningHandles = 0;
+            do
+            {
+                if (m_cancellationSource.cancelled())
+                {
+                    return CURLE_ABORTED_BY_CALLBACK;
+                }
+
+                if (curl_multi_perform(multi, &runningHandles) != CURLM_OK)
+                {
+                    return CURLE_RECV_ERROR;
+                }
+
+                // Wait for socket activity but wake at least every kPollTimeoutMs so the cancellation
+                // check above runs even when the peer is idle (curl_multi_poll waits the full timeout
+                // even when there are no fds, so this never busy-loops during DNS resolution).
+                if (runningHandles != 0 && curl_multi_poll(multi, nullptr, 0, kPollTimeoutMs, nullptr) != CURLM_OK)
+                {
+                    return CURLE_RECV_ERROR;
+                }
+            } while (runningHandles != 0);
+
+            // The transfer finished; surface the per-easy-handle result code.
+            CURLcode result = CURLE_OK;
+            int messagesInQueue = 0;
+            while (CURLMsg* message = curl_multi_info_read(multi, &messagesInQueue))
+            {
+                if (message->msg == CURLMSG_DONE && message->easy_handle == m_curl)
+                {
+                    result = message->data.result;
+                }
+            }
+            return result;
         }
 
         template<typename DataT>
@@ -226,7 +285,7 @@ namespace UrlLib
             m_thread.emplace([this, taskCompletionSource]() mutable
             {
                 m_curlErrorBuffer[0] = '\0';
-                const CURLcode performResult = curl_easy_perform(m_curl);
+                const CURLcode performResult = PerformWithCancellation();
                 if (performResult != CURLE_OK)
                 {
                     // Retain the default status code of 0 to indicate a client side error,

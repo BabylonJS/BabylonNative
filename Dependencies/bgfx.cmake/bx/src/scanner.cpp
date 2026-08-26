@@ -92,7 +92,7 @@ namespace bx
 
 		case Class::Identifier:
 			{
-				const StringView word = strWord(m_tail);
+				const StringView word = strIdentifier(m_tail);
 				return word.isEmpty()
 					? m_tail
 					: StringView(word.getTerm(), m_tail.getTerm() )

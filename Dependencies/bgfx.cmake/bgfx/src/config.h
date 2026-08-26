@@ -75,7 +75,7 @@
 #	endif // BGFX_CONFIG_RENDERER_NVN
 
 #	ifndef BGFX_CONFIG_RENDERER_OPENGL_MIN_VERSION
-#		define BGFX_CONFIG_RENDERER_OPENGL_MIN_VERSION 1
+#		define BGFX_CONFIG_RENDERER_OPENGL_MIN_VERSION 43
 #	endif // BGFX_CONFIG_RENDERER_OPENGL_MIN_VERSION
 
 #	ifndef BGFX_CONFIG_RENDERER_OPENGL
@@ -86,9 +86,15 @@
 #	endif // BGFX_CONFIG_RENDERER_OPENGL
 
 #	ifndef BGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION
-#		define BGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION (0 \
-					|| BX_PLATFORM_ANDROID                  \
-					? 30 : 1)
+#		if BX_PLATFORM_EMSCRIPTEN \
+		|| BX_PLATFORM_ANDROID    \
+		|| BX_PLATFORM_BSD        \
+		|| BX_PLATFORM_LINUX      \
+		|| BX_PLATFORM_WINDOWS
+#			define BGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION 30
+#		else
+#			define BGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION 1
+#		endif //
 #	endif // BGFX_CONFIG_RENDERER_OPENGLES_MIN_VERSION
 
 #	ifndef BGFX_CONFIG_RENDERER_OPENGLES
@@ -161,19 +167,24 @@
 #	endif // BGFX_CONFIG_RENDERER_WEBGPU
 #endif // !defined...
 
-#if BGFX_CONFIG_RENDERER_OPENGL && BGFX_CONFIG_RENDERER_OPENGL < 21
+#if BGFX_CONFIG_RENDERER_OPENGL && BGFX_CONFIG_RENDERER_OPENGL < 43
 #	undef BGFX_CONFIG_RENDERER_OPENGL
-#	define BGFX_CONFIG_RENDERER_OPENGL 21
-#endif // BGFX_CONFIG_RENDERER_OPENGL && BGFX_CONFIG_RENDERER_OPENGL < 21
+#	define BGFX_CONFIG_RENDERER_OPENGL 43
+#endif // BGFX_CONFIG_RENDERER_OPENGL && BGFX_CONFIG_RENDERER_OPENGL < 43
 
-#if BGFX_CONFIG_RENDERER_OPENGLES && BGFX_CONFIG_RENDERER_OPENGLES < 20
+#if BGFX_CONFIG_RENDERER_OPENGLES && BGFX_CONFIG_RENDERER_OPENGLES < 30
 #	undef BGFX_CONFIG_RENDERER_OPENGLES
-#	define BGFX_CONFIG_RENDERER_OPENGLES 20
-#endif // BGFX_CONFIG_RENDERER_OPENGLES && BGFX_CONFIG_RENDERER_OPENGLES < 20
+#	define BGFX_CONFIG_RENDERER_OPENGLES 30
+#endif // BGFX_CONFIG_RENDERER_OPENGLES && BGFX_CONFIG_RENDERER_OPENGLES < 30
 
 #if BGFX_CONFIG_RENDERER_OPENGL && BGFX_CONFIG_RENDERER_OPENGLES
 #	error "Can't define both BGFX_CONFIG_RENDERER_OPENGL and BGFX_CONFIG_RENDERER_OPENGLES"
 #endif // BGFX_CONFIG_RENDERER_OPENGL && BGFX_CONFIG_RENDERER_OPENGLES
+
+// Hide OpenGL's NDC conventions from shaders and applications.
+#ifndef BGFX_CONFIG_GL_NORMALIZE_NDC_CONVENTIONS
+#	define BGFX_CONFIG_GL_NORMALIZE_NDC_CONVENTIONS 0
+#endif // BGFX_CONFIG_GL_NORMALIZE_NDC_CONVENTIONS
 
 // Enable hardware video decoder.
 #ifndef BGFX_CONFIG_VIDEO
@@ -221,6 +232,13 @@
 #ifndef BGFX_CONFIG_RENDERER_VULKAN_DESCRIPTOR_SETS_PER_POOL
 #	define BGFX_CONFIG_RENDERER_VULKAN_DESCRIPTOR_SETS_PER_POOL 1024
 #endif // BGFX_CONFIG_RENDERER_VULKAN_DESCRIPTOR_SETS_PER_POOL
+
+/// Enable Vulkan robustBufferAccess. Without it, an out of bounds buffer access
+/// from a shader is undefined behavior, and in practice faults the device. But it's generally
+/// slower than not having it set.
+#ifndef BGFX_CONFIG_RENDERER_VULKAN_ROBUST_BUFFER_ACCESS
+#	define BGFX_CONFIG_RENDERER_VULKAN_ROBUST_BUFFER_ACCESS 0
+#endif // BGFX_CONFIG_RENDERER_VULKAN_ROBUST_BUFFER_ACCESS
 
 /// Enable use of tinystl instead of std containers for internal data
 /// structures. Default is 1 (enabled). Reduces binary size and avoids
@@ -271,20 +289,69 @@
 #	define BGFX_CONFIG_MAX_DRAW_CALLS ( (64<<10)-1)
 #endif // BGFX_CONFIG_MAX_DRAW_CALLS
 
-/// Maximum number of blit items per frame. Default is 1024.
+/// Enable dynamic per frame storage. When enabled, storage for render items,
+/// binds, blit items, scissor rectangles, and transform matrices are allocated
+/// in blocks, on first touch, and grows during the frame instead of dropping
+/// submissions. Only what is actually used is allocated, so
+/// `Init::Limits::numDrawCalls` becomes the amount that is reserved up front
+/// rather than a hard limit.
+///
+/// When disabled, all of the above is allocated once, up front, at exactly the
+/// requested size, and submissions past it are dropped. Nothing is allocated in
+/// blocks, nothing is resized after init, and indexing has no indirection.
+/// Default is 1.
+#ifndef BGFX_CONFIG_DYNAMIC_FRAME_STORAGE
+#	define BGFX_CONFIG_DYNAMIC_FRAME_STORAGE 1
+#endif // BGFX_CONFIG_DYNAMIC_FRAME_STORAGE
+
+/// Granularity dynamic per frame storage grows by, in items. Reserving a
+/// multiple of it up front keeps growing off the common path. Must be power of
+/// two. Default is 1024.
+#ifndef BGFX_CONFIG_DRAW_CALL_BLOCK
+#	define BGFX_CONFIG_DRAW_CALL_BLOCK 1024
+#endif // BGFX_CONFIG_DRAW_CALL_BLOCK
+
+/// Maximum number of blit items per frame.
+///
+/// With BGFX_CONFIG_DYNAMIC_FRAME_STORAGE enabled nothing is reserved for blit
+/// items and blocks are allocated as they're used, so this is only a ceiling
+/// and costs a block pointer table. It's set to what the blit sort key can
+/// address. When disabled, all of it is allocated up front, so the default
+/// stays at 1024.
 #ifndef BGFX_CONFIG_MAX_BLIT_ITEMS
-#	define BGFX_CONFIG_MAX_BLIT_ITEMS (1<<10)
+#	if BGFX_CONFIG_DYNAMIC_FRAME_STORAGE
+#		define BGFX_CONFIG_MAX_BLIT_ITEMS (64<<10)
+#	else
+#		define BGFX_CONFIG_MAX_BLIT_ITEMS (1<<10)
+#	endif // BGFX_CONFIG_DYNAMIC_FRAME_STORAGE
 #endif // BGFX_CONFIG_MAX_BLIT_ITEMS
 
 /// Maximum number of cached transform matrices. Default is BGFX_CONFIG_MAX_DRAW_CALLS + 1.
 /// Each draw call may reference a transform matrix; this cache stores them for the frame.
+///
+/// A matrix cache index is handed out as a pointer that the caller writes
+/// through, so unlike the rest of the per frame storage this can't be sliced
+/// into blocks and has to stay one contiguous run. It is still only a ceiling
+/// with BGFX_CONFIG_DYNAMIC_FRAME_STORAGE enabled, but growing into it costs a
+/// reallocation and one frame of dropped transforms. When disabled, the whole
+/// thing is allocated up front and never resizes.
 #ifndef BGFX_CONFIG_MAX_MATRIX_CACHE
 #	define BGFX_CONFIG_MAX_MATRIX_CACHE (BGFX_CONFIG_MAX_DRAW_CALLS+1)
 #endif // BGFX_CONFIG_MAX_MATRIX_CACHE
 
-/// Maximum number of cached scissor rectangles per frame. Default is 4096.
+/// Maximum number of cached scissor rectangles per frame.
+///
+/// With BGFX_CONFIG_DYNAMIC_FRAME_STORAGE enabled nothing is reserved for
+/// scissor rectangles and blocks are allocated as they're used, so this is only
+/// a ceiling. It's set to what a draw call can address, one short of UINT16_MAX
+/// because that's reserved to mean no scissor. When disabled, all of it is
+/// allocated up front, so the default stays at 4096.
 #ifndef BGFX_CONFIG_MAX_RECT_CACHE
-#	define BGFX_CONFIG_MAX_RECT_CACHE (4<<10)
+#	if BGFX_CONFIG_DYNAMIC_FRAME_STORAGE
+#		define BGFX_CONFIG_MAX_RECT_CACHE ( (64<<10)-1)
+#	else
+#		define BGFX_CONFIG_MAX_RECT_CACHE (4<<10)
+#	endif // BGFX_CONFIG_DYNAMIC_FRAME_STORAGE
 #endif //  BGFX_CONFIG_MAX_RECT_CACHE
 
 /// Number of bits used for depth in the sort key. Default is 32.
@@ -422,18 +489,25 @@ static_assert(BGFX_CONFIG_MAX_VERTEX_STREAMS < 32, "Must be less than 32!");
 #endif // BGFX_CONFIG_MAX_TRANSIENT_INDEX_BUFFER_SIZE
 
 #ifndef BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE
-/// Mimumum uniform buffer size. This buffer will resize on demand.
-#	define BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE (1<<20)
+/// Mimumum uniform buffer size. This buffer will resize on demand. It's
+/// allocated per encoder, so this is the price of an encoder that submits
+/// only a handful of uniforms. Must be larger than
+/// BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE, otherwise the buffer
+/// resizes on first use.
+#	define BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE (128<<10)
 #endif // BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE
 
 #ifndef BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE
 /// Max amount of unused uniform buffer space before uniform buffer resize.
+/// Must be at least as large as the largest single uniform record, since
+/// UniformBuffer::update reserves this much head room before every write. A
+/// record is at most 4 + 1023*sizeof(Mat4) = 65476 bytes.
 #	define BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE (64<<10)
 #endif // BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE
 
 #ifndef BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE
 /// Increment of uniform buffer resize.
-#	define BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE (1<<20)
+#	define BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE (64<<10)
 #endif // BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE
 
 #ifndef BGFX_CONFIG_CACHED_DEVICE_MEMORY_ALLOCATIONS_SIZE

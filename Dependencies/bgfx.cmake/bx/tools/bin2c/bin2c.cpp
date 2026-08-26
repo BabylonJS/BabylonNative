@@ -184,6 +184,14 @@ void error(const char* _format, ...)
 	va_end(argList);
 }
 
+static const bx::CommandLineOption s_options[] =
+{
+	{ 'h',  "help",    0, NULL,          "Display this help and exit."     },
+	{ 'f',  NULL,      1, "<file path>", "Input file path."                },
+	{ 'o',  NULL,      1, "<file path>", "Output file path."               },
+	{ 'n',  NULL,      1, "<name>",      "Array name. Defaults to 'data'." },
+};
+
 void help(const char* _error = NULL)
 {
 	bx::WriterI* stdOut = bx::getStdOut();
@@ -202,19 +210,22 @@ void help(const char* _error = NULL)
 
 	bx::write(stdOut, &err
 		, "Usage: bin2c -f <in> -o <out> -n <name>\n"
+		  "       bin2c <in> <out> -n <name>\n"
 		  "\n"
 		  "Options:\n"
-		  "  -f <file path>    Input file path.\n"
-		  "  -o <file path>    Output file path.\n"
-		  "  -n <name>         Array name.\n"
-		  "\n"
+		);
+
+	bx::write(stdOut, s_options, BX_COUNTOF(s_options), &err);
+
+	bx::write(stdOut, &err
+		, "\n"
 		  "For additional information, see https://github.com/bkaradzic/bx\n"
 		);
 }
 
 int main(int _argc, const char* _argv[])
 {
-	bx::CommandLine cmdLine(_argc, _argv);
+	bx::CommandLine cmdLine(_argc, _argv, s_options, BX_COUNTOF(s_options) );
 
 	if (cmdLine.hasArg('h', "help") )
 	{
@@ -222,14 +233,31 @@ int main(int _argc, const char* _argv[])
 		return bx::kExitFailure;
 	}
 
-	bx::FilePath filePath = cmdLine.findOption('f');
+	const char* unknown = cmdLine.findUnknownOption();
+	if (NULL != unknown)
+	{
+		char msg[256];
+		bx::snprintf(msg, BX_COUNTOF(msg), "Unknown option '%s'.", unknown);
+		help(msg);
+		return bx::kExitFailure;
+	}
+
+	int32_t positional = 1;
+
+	const char* inFile = cmdLine.findOption('f');
+	inFile = NULL != inFile ? inFile : cmdLine.getPositional(positional++);
+
+	bx::FilePath filePath = NULL != inFile ? inFile : "";
 	if (filePath.isEmpty() )
 	{
 		help("Input file name must be specified.");
 		return bx::kExitFailure;
 	}
 
-	bx::FilePath outFilePath = cmdLine.findOption('o');
+	const char* outFile = cmdLine.findOption('o');
+	outFile = NULL != outFile ? outFile : cmdLine.getPositional(positional++);
+
+	bx::FilePath outFilePath = NULL != outFile ? outFile : "";
 	if (outFilePath.isEmpty() )
 	{
 		help("Output file name must be specified.");

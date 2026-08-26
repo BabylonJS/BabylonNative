@@ -7,25 +7,14 @@
 #include <set>
 #include <cassert>
 #include <cmath>
-#include <type_traits>
+#include <cstdint>
 
 namespace Babylon::Plugins
 {
-    namespace
-    {
-        template<typename T>
-        uintptr_t NativeHandleToUintPtr(T value)
-        {
-            if constexpr (std::is_pointer_v<T>)
-            {
-                return reinterpret_cast<uintptr_t>(value);
-            }
-            else
-            {
-                return static_cast<uintptr_t>(value);
-            }
-        }
-    }
+    // The value bgfx wants as this texture's native handle. Defined per backend in
+    // ExternalTexture_<API>.cpp: the pointer itself on D3D and Metal, and on OpenGL the GL
+    // name rather than the address of the wrapper holding it.
+    uintptr_t NativeTextureHandle(Graphics::TextureT ptr);
 
     class ExternalTexture::ImplBase
     {
@@ -86,7 +75,7 @@ namespace Babylon::Plugins
                     Format(),
                     Flags(),
                     0,
-                    NativeHandleToUintPtr(ptr)
+                    NativeTextureHandle(ptr)
                 );
 
                 if (!bgfx::isValid(handle))

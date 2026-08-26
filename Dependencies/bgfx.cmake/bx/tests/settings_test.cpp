@@ -7,39 +7,43 @@
 #include <bx/settings.h>
 #include <bx/file.h>
 
-class CountingAllocator : public bx::AllocatorI
+namespace
 {
-public:
-	CountingAllocator()
-		: m_live(0)
+	class CountingAllocator : public bx::AllocatorI
 	{
-	}
-
-	virtual ~CountingAllocator()
-	{
-	}
-
-	virtual void* realloc(void* _ptr, size_t _size, size_t _align, const char* _filePath, uint32_t _line) override
-	{
-		if (NULL == _ptr
-		&&  0    != _size)
+	public:
+		CountingAllocator()
+			: m_live(0)
 		{
-			++m_live;
-		}
-		else if (NULL != _ptr
-			 &&  0    == _size)
-		{
-			--m_live;
 		}
 
-		return m_allocator.realloc(_ptr, _size, _align, _filePath, _line);
-	}
+		virtual ~CountingAllocator()
+		{
+		}
 
-	int32_t m_live;
+		virtual void* realloc(void* _ptr, size_t _size, size_t _align, const char* _filePath, uint32_t _line) override
+		{
+			if (NULL == _ptr
+			&&  0    != _size)
+			{
+				++m_live;
+			}
+			else if (NULL != _ptr
+				 &&  0    == _size)
+			{
+				--m_live;
+			}
 
-private:
-	bx::DefaultAllocator m_allocator;
-};
+			return m_allocator.realloc(_ptr, _size, _align, _filePath, _line);
+		}
+
+		int32_t m_live;
+
+	private:
+		bx::DefaultAllocator m_allocator;
+	};
+
+} // namespace
 
 TEST_CASE("Settings", "")
 {

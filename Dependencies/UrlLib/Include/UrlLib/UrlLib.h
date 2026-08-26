@@ -1,12 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <arcana/threading/task.h>
 #include <unordered_map>
+#include <vector>
 
 namespace UrlLib
 {
@@ -28,6 +30,21 @@ namespace UrlLib
         Buffer,
     };
 
+    // Result returned by a custom URL scheme resolver (see UrlRequest::RegisterSchemeResolver).
+    // When `handled` is false the URL had no live entry (e.g. a revoked blob: URL) and the request
+    // surfaces as a network error (status stays 0/None), mirroring the transport-failure contract.
+    struct UrlSchemeResolverResult
+    {
+        bool handled{false};
+        UrlStatusCode statusCode{UrlStatusCode::None};
+        std::string statusText{};
+        std::string contentType{};
+        std::shared_ptr<const std::vector<std::byte>> body{};
+    };
+
+    // Resolves a URL of a registered non-transport scheme (e.g. "blob") to an in-memory response.
+    using UrlSchemeResolver = std::function<UrlSchemeResolverResult(const std::string& url)>;
+
     class UrlRequest final
     {
     public:
@@ -45,6 +62,27 @@ namespace UrlLib
         void Abort();
 
         void Open(UrlMethod method, const std::string& url);
+
+        // Registers a resolver for a non-transport URL scheme such as "blob". Registration is
+        // process-global. When a UrlRequest is opened with a URL whose scheme has a registered
+        // resolver, the platform transport is bypassed and the resolver supplies the response at
+        // SendAsync() time, so every consumer (fetch, XMLHttpRequest, image / video src, texture
+        // loaders, ...) resolves such URLs uniformly through UrlRequest instead of each carrying
+        // its own branch.
+        //
+        // A resolver that reports the URL as not handled -- or that throws -- surfaces as a
+        // transport-style failure (status stays None, with an error symbol recorded); an exception
+        // never escapes SendAsync().
+        //
+        // Throws std::invalid_argument if `scheme` is empty or `resolver` is null. Removal is the
+        // explicit UnregisterSchemeResolver call rather than registering an empty std::function, so
+        // a moved-from or default-constructed resolver cannot silently unregister a scheme.
+        static void RegisterSchemeResolver(std::string scheme, UrlSchemeResolver resolver);
+
+        // Removes the resolver registered for `scheme`, if any. Unknown schemes are ignored.
+        // In-flight requests already diverted to that resolver are unaffected: each request holds
+        // its own reference to the resolver from the time it was opened.
+        static void UnregisterSchemeResolver(std::string scheme);
 
         UrlResponseType ResponseType() const;
 

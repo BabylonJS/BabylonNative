@@ -538,6 +538,17 @@ namespace bx
 		return StringView(ptr, term);
 	}
 
+	StringView strIdentifier(const StringView& _str)
+	{
+		if (_str.isEmpty()
+		||  !(isAlpha(*_str.getPtr() ) || '_' == *_str.getPtr() ) )
+		{
+			return StringView(_str.getPtr(), _str.getPtr() );
+		}
+
+		return strWord(_str);
+	}
+
 	StringView strFindBlock(const StringView& _str, char _open, char _close)
 	{
 		const char* curr  = _str.getPtr();
@@ -925,11 +936,13 @@ namespace bx
 				char* fracBegin = &str[dot - str + min(prec + _param.spec, 1)];
 				const int32_t curPrec = int32_t(fracEnd - fracBegin);
 
+				const int32_t outPrec = 'g' == _param.fmt ? min(prec, curPrec) : prec;
+
 				// Move exponent to its final location after trimming or adding extra 0s.
 				if (fracEnd != strEnd)
 				{
 					const int32_t exponentLen = int32_t(strEnd - fracEnd);
-					char* finalExponentPtr = &fracBegin[prec];
+					char* finalExponentPtr = &fracBegin[outPrec];
 					memMove(finalExponentPtr, fracEnd, exponentLen);
 
 					finalExponentPtr[exponentLen] = '\0';
@@ -937,12 +950,12 @@ namespace bx
 				}
 				else
 				{
-					len = (int32_t)(fracBegin + prec - str);
+					len = (int32_t)(fracBegin + outPrec - str);
 				}
 
-				if (curPrec < prec)
+				if (curPrec < outPrec)
 				{
-					for (int32_t ii = curPrec; ii < prec; ++ii)
+					for (int32_t ii = curPrec; ii < outPrec; ++ii)
 					{
 						fracBegin[ii] = '0';
 					}

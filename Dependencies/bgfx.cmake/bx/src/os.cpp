@@ -153,7 +153,12 @@ namespace bx
 	void* dlopen(const FilePath& _filePath)
 	{
 #if BX_PLATFORM_WINDOWS
-		return (void*)::LoadLibraryA(_filePath.getCPtr() );
+		// LOAD_LIBRARY_SEARCH_DEFAULT_DIRS excludes CWD and %PATH% from the search order.
+		HMODULE handle = ::LoadLibraryExA(_filePath.getCPtr(), NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+
+		BX_WARN(NULL != handle, "dlopen failed: \"%s\" 0x%x.", _filePath.getCPtr(), ::GetLastError() );
+
+		return (void*)handle;
 #elif  BX_PLATFORM_EMSCRIPTEN \
 	|| BX_PLATFORM_PS4        \
 	|| BX_PLATFORM_XBOXONE    \
@@ -164,7 +169,7 @@ namespace bx
 		return NULL;
 #else
 		void* so = ::dlopen(_filePath.getCPtr(), RTLD_LOCAL|RTLD_LAZY);
-		BX_WARN(NULL != so, "dlopen failed: \"%s\".", ::dlerror() );
+		BX_WARN(NULL != so, "dlopen failed: \"%s\" %s.", _filePath.getCPtr(), ::dlerror() );
 		return so;
 #endif // BX_PLATFORM_
 	}

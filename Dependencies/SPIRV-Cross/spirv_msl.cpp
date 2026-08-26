@@ -27265,9 +27265,6 @@ uint32_t CompilerMSL::get_declared_member_location(const SPIRVariable &var, uint
 		return get_accumulated_member_location(var, mbr_idx, strip_array);
 }
 
-
-}
-
 void CompilerMSL::end_scope(const string &trailer)
 {
 	if (!indent)

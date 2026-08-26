@@ -259,9 +259,11 @@ WL_EGL_IMPORT
 			EGLNativeWindowType  nwh = (EGLNativeWindowType )g_platformData.nwh;
 
 #	if BX_PLATFORM_WINDOWS
-			if (NULL == g_platformData.ndt)
+			if (NULL == g_platformData.ndt
+			&&  NULL != nwh)
 			{
-				ndt = GetDC( (HWND)g_platformData.nwh);
+				m_hdc = GetDC( (HWND)nwh);
+				ndt   = m_hdc;
 			}
 #	endif // BX_PLATFORM_WINDOWS
 
@@ -417,7 +419,7 @@ WL_EGL_IMPORT
 				attrs[numAttrs++] = EGL_RENDERABLE_TYPE;
 				attrs[numAttrs++] = !!BGFX_CONFIG_RENDERER_OPENGL
 					? EGL_OPENGL_BIT
-					: (glVersion >= 30) ? EGL_OPENGL_ES3_BIT_KHR : EGL_OPENGL_ES2_BIT
+					: EGL_OPENGL_ES3_BIT_KHR
 					;
 
 				attrs[numAttrs++] = EGL_SURFACE_TYPE;
@@ -651,6 +653,14 @@ WL_EGL_IMPORT
 		EGL_CHECK(eglReleaseThread() );
 		eglClose(m_eglDll);
 		m_eglDll = NULL;
+
+#	if BX_PLATFORM_WINDOWS
+		if (NULL != m_hdc)
+		{
+			ReleaseDC( (HWND)g_platformData.nwh, m_hdc);
+			m_hdc = NULL;
+		}
+#	endif // BX_PLATFORM_WINDOWS
 
 #	if BX_PLATFORM_RPI
 		bcm_host_deinit();

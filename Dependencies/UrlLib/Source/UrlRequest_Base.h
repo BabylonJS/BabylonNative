@@ -2,9 +2,13 @@
 
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/cancellation.h>
-#include <string>
 #include <cctype>
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace UrlLib
 {
@@ -19,6 +23,151 @@ namespace UrlLib
         void Abort()
         {
             m_cancellationSource.cancel();
+        }
+
+        // ---- Custom scheme resolvers (e.g. blob:) ---------------------------------------------
+        // Resolution for registered schemes is handled entirely in the shared layer; the platform
+        // transport is never involved. RegisterSchemeResolver installs a process-global resolver;
+        // BeginSchemeResolution is called from Open() to divert a matching URL; ResolveScheme is
+        // called from SendAsync() so revoke-after-open is honored; ResolvedResponseBuffer backs
+        // ResponseBuffer() for the Buffer response type.
+        //
+        // A null resolver is rejected rather than treated as an implicit removal: a resolver can
+        // capture state that must outlive registration, so silently unregistering on a moved-from
+        // or default-constructed std::function would be an easy mistake to miss. Removal is the
+        // explicit UnregisterSchemeResolver call.
+        static void RegisterSchemeResolver(std::string scheme, UrlSchemeResolver resolver)
+        {
+            if (!resolver)
+            {
+                throw std::invalid_argument{"RegisterSchemeResolver: resolver must not be null (use UnregisterSchemeResolver to remove a scheme)"};
+            }
+
+            ToLower(scheme);
+            if (scheme.empty())
+            {
+                throw std::invalid_argument{"RegisterSchemeResolver: scheme must not be empty"};
+            }
+
+            auto& registry = Registry();
+            const std::lock_guard<std::mutex> lock{registry.mutex};
+            registry.resolvers[std::move(scheme)] = std::move(resolver);
+        }
+
+        // Removes the resolver registered for `scheme`, if any. Unknown schemes are ignored.
+        static void UnregisterSchemeResolver(std::string scheme)
+        {
+            ToLower(scheme);
+            auto& registry = Registry();
+            const std::lock_guard<std::mutex> lock{registry.mutex};
+            registry.resolvers.erase(scheme);
+        }
+
+        // Returns true (and defers the actual work to ResolveScheme()) when `url`'s scheme has a
+        // registered resolver, in which case the caller must not touch the platform transport.
+        bool BeginSchemeResolution(const std::string& url)
+        {
+            const std::string scheme = SchemeOf(url);
+            if (scheme.empty())
+            {
+                return false;
+            }
+
+            UrlSchemeResolver resolver{};
+            {
+                auto& registry = Registry();
+                const std::lock_guard<std::mutex> lock{registry.mutex};
+                const auto it = registry.resolvers.find(scheme);
+                if (it == registry.resolvers.end())
+                {
+                    return false;
+                }
+                resolver = it->second;
+            }
+
+            ResetForOpen();
+            m_pendingResolver = std::move(resolver);
+            m_pendingResolverUrl = url;
+            m_usingSchemeResolver = true;
+            return true;
+        }
+
+        bool IsSchemeResolution() const
+        {
+            return m_usingSchemeResolver;
+        }
+
+        // Invokes the registered resolver and populates the response state. A resolver that reports
+        // the URL as not handled (e.g. a revoked blob: URL) -- or that throws -- leaves the status at
+        // 0 (None) and records a transport-style error, mirroring how a genuine network failure
+        // surfaces. The pending resolver is consumed here so a second SendAsync() on the same request
+        // does not re-run the resolver (which could re-trigger side effects or clobber the response);
+        // the resolved response state is retained and IsSchemeResolution() stays true so
+        // ResponseBuffer() keeps serving the resolved bytes.
+        void ResolveScheme()
+        {
+            if (!m_pendingResolver)
+            {
+                return;
+            }
+
+            // Move the resolver/url out and clear them before invoking, so this runs exactly once.
+            const UrlSchemeResolver resolver = std::move(m_pendingResolver);
+            const std::string url = std::move(m_pendingResolverUrl);
+            m_pendingResolver = nullptr;
+            m_pendingResolverUrl.clear();
+
+            m_responseUrl = url;
+
+            // A throwing resolver is contained here and reported through the same error surface as
+            // any other failure, so it cannot escape SendAsync() synchronously -- callers observe a
+            // failed request (status 0 + error) exactly as they would for a transport failure.
+            UrlSchemeResolverResult result{};
+            try
+            {
+                result = resolver(url);
+            }
+            catch (const std::exception& e)
+            {
+                SetError("urllib", "SchemeResolverThrew", 0, e.what());
+                return;
+            }
+            catch (...)
+            {
+                SetError("urllib", "SchemeResolverThrew", 0, "unknown exception");
+                return;
+            }
+
+            if (!result.handled)
+            {
+                SetError("urllib", "SchemeResolverNotFound", 0, "no live entry for '" + url + "'");
+                return;
+            }
+
+            m_statusCode = result.statusCode;
+            if (!result.statusText.empty())
+            {
+                m_statusText = result.statusText;
+            }
+            if (!result.contentType.empty())
+            {
+                m_headers["content-type"] = result.contentType;
+            }
+
+            m_resolvedBuffer = result.body ? result.body : std::make_shared<const std::vector<std::byte>>();
+            if (m_responseType == UrlResponseType::String)
+            {
+                m_responseString.assign(reinterpret_cast<const char*>(m_resolvedBuffer->data()), m_resolvedBuffer->size());
+            }
+        }
+
+        gsl::span<const std::byte> ResolvedResponseBuffer() const
+        {
+            if (m_resolvedBuffer)
+            {
+                return {m_resolvedBuffer->data(), m_resolvedBuffer->size()};
+            }
+            return {};
         }
 
         void SetRequestBody(std::string requestBody) {
@@ -111,6 +260,20 @@ namespace UrlLib
         static void ToLower(std::string& s)
         {
             std::transform(s.cbegin(), s.cend(), s.begin(), [](auto c) { return static_cast<decltype(c)>(std::tolower(c)); });
+        }
+
+        // Returns the lower-cased scheme of `url` (the substring before the first ':'), or "" if
+        // the URL has no scheme.
+        static std::string SchemeOf(const std::string& url)
+        {
+            const auto pos = url.find(':');
+            if (pos == std::string::npos)
+            {
+                return {};
+            }
+            std::string scheme = url.substr(0, pos);
+            ToLower(scheme);
+            return scheme;
         }
 
         // Canonical HTTP reason phrases, used as a fallback when the transport does not carry
@@ -213,6 +376,10 @@ namespace UrlLib
             m_errorCode = 0;
             m_errorSymbol.clear();
             m_errorString.clear();
+            m_usingSchemeResolver = false;
+            m_pendingResolver = nullptr;
+            m_pendingResolverUrl.clear();
+            m_resolvedBuffer.reset();
         }
 
         arcana::cancellation_source m_cancellationSource{};
@@ -228,5 +395,28 @@ namespace UrlLib
         std::unordered_map<std::string, std::string> m_headers;
         std::string m_requestBody{};
         std::unordered_map<std::string, std::string> m_requestHeaders;
+
+        // Custom-scheme (e.g. blob:) resolution state. Populated by BeginSchemeResolution() /
+        // ResolveScheme(); inert for ordinary transport requests.
+        bool m_usingSchemeResolver{false};
+        UrlSchemeResolver m_pendingResolver{};
+        std::string m_pendingResolverUrl{};
+        std::shared_ptr<const std::vector<std::byte>> m_resolvedBuffer{};
+
+    private:
+        // Process-global registry of scheme resolvers, keyed by lower-cased scheme (no trailing
+        // ':'). Guarded by a mutex since RegisterSchemeResolver and request handling can run on
+        // different threads.
+        struct ResolverRegistry
+        {
+            std::mutex mutex;
+            std::unordered_map<std::string, UrlSchemeResolver> resolvers;
+        };
+
+        static ResolverRegistry& Registry()
+        {
+            static ResolverRegistry registry;
+            return registry;
+        }
     };
 }
