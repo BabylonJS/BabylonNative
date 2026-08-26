@@ -4009,6 +4009,20 @@ namespace Babylon::Plugins::NativeDawn
 
         // Build a no-DOM canvas whose getContext("webgpu") returns the Dawn context
         // and getContext("2d") returns the raster context above.
+        Napi::Object MakeDataset(Napi::Env env)
+        {
+            Napi::Object target = Napi::Object::New(env);
+            Napi::Object handler = Napi::Object::New(env);
+            SetMethod(handler, "set", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                if (info.Length() >= 3 && info[0].IsObject())
+                {
+                    info[0].As<Napi::Object>().Set(info[1], info[2].ToString());
+                }
+                return Napi::Boolean::New(info.Env(), true);
+            });
+            return env.Global().Get("Proxy").As<Napi::Function>().New({target, handler});
+        }
+
         Napi::Object MakeCanvas(Napi::Env env, uint32_t width, uint32_t height)
         {
             Napi::Object canvas = Napi::Object::New(env);
@@ -4017,10 +4031,9 @@ namespace Babylon::Plugins::NativeDawn
             canvas.Set("clientWidth", Napi::Number::New(env, width));
             canvas.Set("clientHeight", Napi::Number::New(env, height));
             canvas.Set("style", Napi::Object::New(env));
-            // Some scenes stash metadata on canvas.dataset (e.g. Babylon-Lite sets
-            // canvas.dataset.ready = "true"); provide a plain object so those
-            // assignments don't throw.
-            canvas.Set("dataset", Napi::Object::New(env));
+            // DOMStringMap stringifies assigned values (dataset.ready = true is
+            // observed as "true"). Babylon-Lite uses this contract for readiness.
+            canvas.Set("dataset", MakeDataset(env));
             SetMethod(canvas, "getContext", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 const std::string type = info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
@@ -4588,6 +4601,46 @@ namespace Babylon::Plugins::NativeDawn
                                 return info.Length() > 0
                                     ? lookup.Call(document, {info[0]})
                                     : lookup.Call(document, {});
+                            }
+                            return env.Null();
+                        });
+                    }
+
+                    constexpr auto OriginalQuerySelector = "__nativeDawnOriginalQuerySelector";
+                    if (document.Get(OriginalQuerySelector).IsUndefined())
+                    {
+                        Napi::Value originalQuerySelector = document.Get("querySelector");
+                        if (originalQuerySelector.IsFunction())
+                        {
+                            document.Set(OriginalQuerySelector, originalQuerySelector);
+                        }
+
+                        SetMethod(document, "querySelector", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                            Napi::Env env = info.Env();
+                            const std::string selector = info.Length() > 0 && info[0].IsString()
+                                ? info[0].As<Napi::String>().Utf8Value() : "";
+                            if (selector == "canvas" || selector == "#renderCanvas" ||
+                                selector == "#canvas" || selector == "#babylon-canvas")
+                            {
+                                Napi::Object global = env.Global();
+                                Napi::Value existing = global.Get("__dawnCanvas");
+                                if (existing.IsObject())
+                                {
+                                    return existing;
+                                }
+                                Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
+                                global.Set("__dawnCanvas", canvas);
+                                return canvas;
+                            }
+
+                            Napi::Object document = info.This().As<Napi::Object>();
+                            Napi::Value originalQuerySelector = document.Get("__nativeDawnOriginalQuerySelector");
+                            if (originalQuerySelector.IsFunction())
+                            {
+                                Napi::Function querySelector = originalQuerySelector.As<Napi::Function>();
+                                return info.Length() > 0
+                                    ? querySelector.Call(document, {info[0]})
+                                    : querySelector.Call(document, {});
                             }
                             return env.Null();
                         });
