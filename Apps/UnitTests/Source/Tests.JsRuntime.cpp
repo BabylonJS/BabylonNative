@@ -776,12 +776,3 @@ TEST(NodeApi, AdjacentEscapableScopesEscapeIndependently)
 
     EXPECT_TRUE(bothEscapesAccepted.get_future().get());
 }
-
-#endif
-
-int RunTests()
-{
-    testing::InitGoogleTest();
-    return RUN_ALL_TESTS();
-}
-
