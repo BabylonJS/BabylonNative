@@ -4978,7 +4978,9 @@
             "scriptToRun": "/Demos/Lines/lines.js",
             "functionToCall": "CreateLinesTestScene",
             "referenceImage": "lines.png",
-            "replace": "updateVerticesDataDirectly, updateVerticesData"
+            "errorRatio": 3.0,
+            "replace": "updateVerticesDataDirectly, updateVerticesData",
+            "reason": "OpenGL line rasterization differs deterministically by 2.840% on Ubuntu runners"
         },
         {
             "title": "Lens",
