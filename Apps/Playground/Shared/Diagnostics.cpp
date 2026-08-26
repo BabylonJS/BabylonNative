@@ -23,13 +23,19 @@
 #   endif // WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <crtdbg.h>
-#include <dbghelp.h>
 #include <stdlib.h>
 #include <io.h>
 #include <wchar.h>
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
+#define BN_PLAYGROUND_DESKTOP_WINDOWS 1
+#else
+#define BN_PLAYGROUND_DESKTOP_WINDOWS 0
+#endif
 #else
 #include <unistd.h>
+#define BN_PLAYGROUND_DESKTOP_WINDOWS 0
 #endif
 
 namespace
@@ -72,6 +78,7 @@ namespace
     }
 
 #if defined(_MSC_VER)
+#if BN_PLAYGROUND_DESKTOP_WINDOWS
     // bx::writeCallstack() prints "<Unknown?>" for every frame in a stock
     // Release build, which makes crash reports impossible to triage. Resolve
     // the frames with dbghelp (shipped with Windows) and always append
@@ -150,6 +157,7 @@ namespace
 
         return total;
     }
+#endif
 
     void __cdecl OnInvalidParameter(
         const wchar_t* expression,
@@ -280,7 +288,7 @@ namespace
             format,
             args);
 
-#if defined(_MSC_VER)
+#if BN_PLAYGROUND_DESKTOP_WINDOWS
         if (::IsDebuggerPresent())
         {
             bx::debugBreak();
@@ -486,7 +494,7 @@ namespace Diagnostics
         // +2 to skip this function and the public DumpFailure trampoline.
         uintptr_t stack[64];
         const uint32_t numFrames = bx::getCallStackExact(2 + skipFrames, BX_COUNTOF(stack), stack);
-#if defined(_MSC_VER)
+#if BN_PLAYGROUND_DESKTOP_WINDOWS
         // bx::writeCallstack() only resolves symbols when a debugger-quality
         // symbol handler is available, so in a plain Release run every frame
         // comes back as "<Unknown?>" with a raw address -- useless for triage.
