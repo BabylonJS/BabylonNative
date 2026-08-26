@@ -54,6 +54,10 @@
         fail("document.getElementById(\"renderCanvas\") did not return a stable canvas");
         return;
     }
+    if (document.querySelector("canvas") !== renderCanvas) {
+        fail("document.querySelector(\"canvas\") did not return the render canvas");
+        return;
+    }
 
     // Load + evaluate the self-executing scene bundle.
     const xhr = new XMLHttpRequest();
