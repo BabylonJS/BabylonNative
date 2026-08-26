@@ -56,9 +56,8 @@ jobs:
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO
 
-      # NativeDawn (WebGPU/Dawn, Metal backend) build: enabling the plugin
-      # force-disables NativeEngine. The iOS Playground host has no Dawn code
-      # path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
+      # NativeDawn (WebGPU/Dawn, Metal backend) build. The iOS Playground host
+      # has no Dawn code path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
       # compiles/links.
       - name: Generate iOS solution (NativeDawn)
         if: ${{ inputs.nativedawn }}

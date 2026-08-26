@@ -64,9 +64,8 @@ jobs:
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux
 
-      # NativeDawn (WebGPU/Dawn, Vulkan backend) build: enabling the plugin
-      # force-disables NativeEngine. The Linux Playground host has no Dawn code
-      # path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
+      # NativeDawn (WebGPU/Dawn, Vulkan backend) build. The Linux Playground host
+      # has no Dawn code path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
       # compiles/links; the bgfx validation/unit tests don't apply.
       - name: Build NativeDawn
         if: ${{ inputs.nativedawn }}

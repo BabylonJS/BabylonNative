@@ -200,10 +200,10 @@ jobs:
     uses: ./.github/workflows/test-install-win32.yml
 
   # ── NativeDawn (WebGPU / Dawn backend, replaces NativeEngine) ──
-  # These build with BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON, which force-disables
-  # NativeEngine. Dawn is fetched (git) only for these jobs. Win32 builds the
-  # full WebGPU Playground; the other platforms build the NativeDawn plugin
-  # target (plugin + Dawn) since only the Win32 host has a Dawn code path.
+  # These build with BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON. Dawn is fetched (git)
+  # only for these jobs. Win32 builds the full WebGPU Playground; the other
+  # platforms build the NativeDawn plugin target (plugin + Dawn) since only the
+  # Win32 host has a Dawn code path.
   #
   # The Win32 job runs the WebGPU validation tests, so it must use the V8 JS
   # engine: the NativeDawn bootstrap (navigator.gpu + WebGPUEngine init +

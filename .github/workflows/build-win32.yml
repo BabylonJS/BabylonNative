@@ -59,12 +59,11 @@ jobs:
           echo "js_define=$JS_DEFINE" >> "$GITHUB_OUTPUT"
           echo "solution_name=Win32_${{ inputs.platform }}${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "sanitizer_flag=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}" >> "$GITHUB_OUTPUT"
-          # NativeDawn (WebGPU/Dawn) build: enable the plugin (which force-disables
-          # NativeEngine) and build only the Playground target, since the
-          # bgfx-based validation/unit/module tests don't apply to this backend.
+          # NativeDawn drives the Playground while NativeEngine remains built for
+          # its standalone tools and unit tests.
           if [ "${{ inputs.nativedawn }}" = "true" ]; then
             echo "dawn_flag=-D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON" >> "$GITHUB_OUTPUT"
-            echo "build_target=--target Playground" >> "$GITHUB_OUTPUT"
+            echo "build_target=--target Playground UnitTests" >> "$GITHUB_OUTPUT"
           else
             echo "dawn_flag=" >> "$GITHUB_OUTPUT"
             echo "build_target=" >> "$GITHUB_OUTPUT"
@@ -176,16 +175,12 @@ jobs:
       # `excludedGraphicsApis: ["WebGPU"]` in config.json and are skipped, so
       # this gates on the currently-passing WebGPU subset. --headless routes
       # all logs to stdout for CI diagnostics.
-      - name: Validation Tests (NativeDawn)
+      - name: Validation Tests
         if: ${{ inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          rem [ISOLATION EXPERIMENT] run representative in-suite failures each in a
-          rem fresh process to distinguish cross-test state accumulation from a
-          rem genuine per-test failure. Results uploaded regardless of exit code.
-          for %%i in (479 504 533 606 670 761) do (echo ===ISOLATION_TEST %%i=== & Playground --headless --once --include-excluded --test-index=%%i app:///Scripts/validation_native.js)
-          exit /b 0
+          Playground --headless app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures (NativeDawn)
         if: ${{ inputs.nativedawn && !cancelled() }}
@@ -227,7 +222,7 @@ jobs:
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo\Playground.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Unit Tests
-        if: ${{ inputs.graphics-api != 'D3D12' && !inputs.nativedawn }}
+        if: ${{ inputs.graphics-api != 'D3D12' }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo

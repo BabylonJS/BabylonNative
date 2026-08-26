@@ -172,16 +172,10 @@ option(BABYLON_NATIVE_POLYFILL_URL "Include Babylon Native Polyfill URL." ON)
 option(BABYLON_NATIVE_POLYFILL_WEBSOCKET "Include Babylon Native Polyfill WebSocket." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 
-# NativeDawn (experimental WebGPU-via-Dawn backend) and NativeEngine (bgfx
-# backend) are mutually exclusive: they are two implementations of the same
-# rendering role. Enabling NativeDawn forces NativeEngine off so the Playground
-# (and Embedding layer) install exactly one graphics backend / _native engine.
+# NativeDawn and NativeEngine may both be built so NativeEngine-dependent tools
+# and tests remain available. The Embedding target selects NativeDawn when it is
+# enabled, ensuring the Playground installs only one graphics backend.
 if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
-    if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
-        message(STATUS "BABYLON_NATIVE_PLUGIN_NATIVEDAWN is ON: forcing BABYLON_NATIVE_PLUGIN_NATIVEENGINE OFF (mutually exclusive backends).")
-    endif()
-    set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE OFF CACHE BOOL "Include Babylon Native Plugin NativeEngine." FORCE)
-
     # NativeDawn's WebGPU shader pipeline transpiles GLSL -> SPIR-V -> WGSL at
     # runtime through Babylon's glslang and twgsl WebAssembly modules. Windows'
     # in-box Chakra engine (the Node-API default here) has a WASM compiler limit
