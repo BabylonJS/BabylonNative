@@ -212,7 +212,9 @@ namespace Babylon
             }
 
             assert(image->m_offset == 0);
-            assert(image->m_depth == 1);
+            // bimg encodes "not a volume texture" as zero depth, so a 2D image reports
+            // m_depth == 0 rather than 1. Use isVolume rather than comparing m_depth.
+            assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
             assert(image->m_numMips == 1);
             assert(!image->m_cubeMap);
@@ -226,7 +228,7 @@ namespace Babylon
                 // bimg loads grayscale textures with and without alpha as R8 and RG8 respectively.
                 // Unpack to RGB and RGBA such that RGB is the grayscale and the A is the alpha.
                 bimg::ImageContainer* oldImage{image};
-                image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), 1, 1, false, false);
+                image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), /*depth*/ 0, 1, false, false);
                 TransformImage(oldImage, image, oldImage->m_format == bimg::TextureFormat::R8 ? UnpackR8 : UnpackRG8);
                 bimg::imageFree(oldImage);
             }
@@ -274,7 +276,7 @@ namespace Babylon
                 image->m_format == bimg::TextureFormat::RGBA32F ||
                 image->m_format == bimg::TextureFormat::RGBA32U);
 
-            assert(image->m_depth == 1);
+            assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
             assert(image->m_numMips == 1);
             assert(image->m_cubeMap == false);
@@ -998,6 +1000,7 @@ namespace Babylon
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
+                InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
 
@@ -1733,7 +1736,7 @@ namespace Babylon
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
-        bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, bytes)};
+        bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, /*depth*/ 0, 1, false, false, bytes)};
 
         // Unlike the async load paths, this one runs on the JavaScript thread, so a std::exception
         // escaping here would not be routed to an onError callback. Surface it as a JS error.
@@ -2161,6 +2164,21 @@ namespace Babylon
         return Napi::Value::From(info.Env(), texture->Height());
     }
 
+    // Meaningful for 2D and 2D-array textures. The reported value can change across
+    // ExternalTexture::Update, which rewrites the layer selection on already-created textures,
+    // while wrapNativeTexture resolves is2DArray/depth once at wrap time — so re-wrap if the
+    // layer selection changes, or the JS texture will describe a binding that no longer holds.
+    Napi::Value NativeEngine::GetTextureLayerCount(const Napi::CallbackInfo& info)
+    {
+        const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        // When the texture is bound as a single-slice view (ViewNumLayers > 0, e.g. an
+        // ExternalTexture wrapped with a layerIndex), report the bound layer count rather
+        // than the underlying array size so consumers see a 2D texture, not an array.
+        const uint16_t viewNumLayers = texture->ViewNumLayers();
+        const uint16_t layerCount = viewNumLayers > 0 ? viewNumLayers : texture->NumLayers();
+        return Napi::Value::From(info.Env(), layerCount);
+    }
+
     void NativeEngine::SetTextureSampling(NativeDataStream::Reader& data)
     {
         auto& texture = *data.ReadPointer<Graphics::Texture>();
@@ -2553,6 +2571,19 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
+    // The dense run of i_data slots the current program's vertex shader reads for its built-in
+    // per-instance attributes. The instance data buffer must cover it even when the draw supplied
+    // fewer attributes, or D3D11 rejects the input layout.
+    uint32_t NativeEngine::GetBuiltInInstanceDataSlotCount() const
+    {
+        if (m_currentProgram == nullptr)
+        {
+            return 0;
+        }
+
+        return m_currentProgram->BuiltInInstanceDataSlotCount();
+    }
+
     // Note: For legacy reasons JS might call this function for instance drawing.
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
@@ -2565,7 +2596,7 @@ namespace Babylon
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max());
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), 0, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }
@@ -2581,7 +2612,7 @@ namespace Babylon
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }
@@ -2597,7 +2628,7 @@ namespace Babylon
         bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, 0, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }
@@ -2612,7 +2643,7 @@ namespace Babylon
         bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, GetBuiltInInstanceDataSlotCount());
         }
         DrawInternal(encoder, fillMode);
     }
@@ -2728,7 +2759,7 @@ namespace Babylon
         imageBitmap.Set("data", buffer);
         imageBitmap.Set("width", Napi::Value::From(env, image->m_width));
         imageBitmap.Set("height", Napi::Value::From(env, image->m_height));
-        imageBitmap.Set("depth", Napi::Value::From(env, image->m_depth));
+        imageBitmap.Set("depth", Napi::Value::From(env, bimg::imageGetNumSlices(*image)));
         imageBitmap.Set("numLayers", Napi::Value::From(env, image->m_numLayers));
         imageBitmap.Set("format", Napi::Value::From(env, static_cast<uint32_t>(image->m_format)));
 
@@ -2783,7 +2814,7 @@ namespace Babylon
             throw Napi::Error::New(env, "Invalid source image dimensions for ResizeImageBitmap.");
         }
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, data.Data());
+        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, /*depth*/ 0, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
@@ -3025,10 +3056,10 @@ namespace Babylon
                 {
                     const bgfx::Attrib::Enum attrib = instance.first;
                     // "Real per-vertex slot" means Position..TexCoord15, i.e. < Attrib::Count. The
-                    // built-in instanced attributes (world0-3, splatIndex0-3, instanceColor) are
-                    // assigned synthetic locations at/above INSTANCE_DATA_FIRST_LOCATION - 4, which
-                    // is >= Attrib::Count, so they compare false here and are correctly skipped:
-                    // they already arrive as instance data.
+                    // built-in instanced attributes (world0-3, splatIndex0-3, previousWorld0-3,
+                    // instanceColor) are assigned synthetic locations at or above
+                    // BUILTIN_INSTANCE_DATA_LAST_LOCATION, which is >= Attrib::Count, so they compare
+                    // false here and are correctly skipped: they already arrive as instance data.
                     // The previous TexCoord3 boundary silently dropped generic instanced attributes
                     // landing on TexCoord3..TexCoord15 (e.g. sprite cellInfo -> TexCoord3), leaving
                     // them reading per-vertex garbage even though BuildInstanceDataBuffer had
