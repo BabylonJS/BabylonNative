@@ -407,6 +407,10 @@ TEST(NodeApi, GetValueStringUtf16HandlesZeroBufsize)
     EXPECT_TRUE(normalWorks.get_future().get());
 }
 #endif
+
+// The V8JSI Node-API shim does not expose the C escapable-handle-scope API.
+#if !defined(JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+
 // Closes an escapable handle scope however the test leaves it. Without this, a
 // failing assertion returns with the scope still open, the enclosing
 // Napi::HandleScope then fails to close, and Napi::Error::Fatal throws out of its
@@ -776,3 +780,5 @@ TEST(NodeApi, AdjacentEscapableScopesEscapeIndependently)
 
     EXPECT_TRUE(bothEscapesAccepted.get_future().get());
 }
+
+#endif
