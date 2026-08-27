@@ -291,6 +291,14 @@ describe("XMLHTTPRequest", function () {
         const vertexCount = parseInt(/element vertex (\d+)\n/.exec(header)![1]);
         expect(vertexCount).to.equal(18713);
     });
+
+    it("should not truncate responseText or response at an embedded null byte", async function () {
+        const xhr = await createRequest("GET", "app:///Assets/embedded_nulls.txt");
+        expect(xhr.status).to.equal(200);
+        expect(xhr.responseText).to.equal("start\0middle\0end");
+        expect(xhr.responseText.length).to.equal(16);
+        expect(xhr.response).to.equal(xhr.responseText);
+    });
 });
 
 describe("fetch", function () {
