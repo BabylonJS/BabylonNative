@@ -1239,7 +1239,13 @@ namespace Babylon::Polyfills::Internal
 #endif
         }
 
-        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);
+        // Never ObjectWrap::Unwrap an unchecked argument: a Canvas, Path2D, or plain
+        // object here is an access violation on V8, not a TypeError. Brand-check first.
+        const NativeCanvasImage* const canvasImage = NativeCanvasImage::TryUnwrap(info.Env(), imageObj);
+        if (canvasImage == nullptr)
+        {
+            throw Napi::TypeError::New(info.Env(), "drawImage: first argument must be an Image or ImageBitmap-like object.");
+        }
 
         int imageIndex{-1};
         const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
