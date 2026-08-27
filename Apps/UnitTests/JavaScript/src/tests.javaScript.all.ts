@@ -250,9 +250,8 @@ describe("Canvas2D", function () {
   });
 
   it("rejects a non-Image argument to drawImage", function () {
-    // drawImage used ObjectWrap::Unwrap on whatever object it was handed, so a Canvas,
-    // Path2D, or plain {} was an access violation rather than a TypeError.
-    const ctx = createContext();
+    // Non-Image sources must throw, not AV via Unwrap.
+        const ctx = createContext();
     const otherCanvas = new _native.Canvas();
     expect(function () { ctx.drawImage({}, 0, 0); }).to.throw();
     expect(function () { ctx.drawImage(new Path2D(), 0, 0); }).to.throw();

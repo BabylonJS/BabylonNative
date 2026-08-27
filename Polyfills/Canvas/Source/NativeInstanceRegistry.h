@@ -6,35 +6,22 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    // Answers "is this JS object wrapping a T", and hands back the instance.
-    //
-    // `instanceof` cannot answer it: a prototype is assignable, so
-    // Object.setPrototypeOf(gradient, Path2D.prototype) makes a gradient pass a Path2D test,
-    // and Object.create(Path2D.prototype) passes with no native object behind it at all.
-    //
-    // Neither can ObjectWrap::Unwrap. Both JsRuntimeHost Node-API ports break the contract
-    // that it fails for an object that was never wrapped: the V8 port dereferences internal
-    // field 0 unconditionally, which access-violates, and the QuickJS port falls back to
-    // walking the prototype chain, which returns some other object's pointer.
-    //
-    // So each instance brands its own JS object with an External holding its address, and a
-    // candidate is accepted only if that address is still registered here. An External is
-    // opaque to script, and the address is compared, never dereferenced, before it is
-    // accepted, so both spoofs above are rejected instead of being misread as a T.
-    //
-    // Script can still copy a brand off a real instance onto another object. That is not a
-    // memory-safety hole: the result is the live instance the brand came from, which script
-    // had to already hold. A brand left over from a collected instance is rejected, since the
-    // destructor unregisters the address.
+    // Brands a native ObjectWrap instance so TryUnwrap can reject forgeable instanceof /
+    // unchecked ObjectWrap::Unwrap (V8 AV; QuickJS wrong pointer). Temporary until
+    // JsRuntimeHost type tags land on all ports; then swap to CheckTypeTag.
     template<typename T>
     class NativeInstanceRegistry
     {
     public:
-        // Call at the very end of the constructor: one that throws never reaches the
-        // destructor, which would leave a dangling address registered.
+        // Register at end of ctor only — a throwing ctor never reaches the dtor.
         static void Add(const Napi::CallbackInfo& info, T* instance)
         {
-            info.This().As<Napi::Object>().Set(BRAND_NAME, Napi::External<T>::New(info.Env(), instance));
+            // Non-enumerable brand so it does not show up in Object.keys / for..in.
+            info.This().As<Napi::Object>().DefineProperty(
+                Napi::PropertyDescriptor::Value(
+                    BRAND_NAME,
+                    Napi::External<T>::New(info.Env(), instance),
+                    napi_default));
 
             const std::scoped_lock lock{Mutex()};
             Instances().insert(instance);
@@ -46,7 +33,6 @@ namespace Babylon::Polyfills::Internal
             Instances().erase(instance);
         }
 
-        // Returns the wrapped instance, or nullptr when `value` is not one.
         static T* TryUnwrap(Napi::Env env, const Napi::Value& value)
         {
             if (!value.IsObject())
@@ -54,7 +40,6 @@ namespace Babylon::Polyfills::Internal
                 return nullptr;
             }
 
-            // `value` is arbitrary, so the read can run a script accessor that throws.
             Napi::Value brand{env.Undefined()};
             try
             {
@@ -81,12 +66,9 @@ namespace Babylon::Polyfills::Internal
         }
 
     private:
-        // Shared by every T: a brand read as the wrong type is still rejected, because each T
-        // registers into its own set.
         static constexpr const char* BRAND_NAME{"__nativeInstance"};
 
-        // Never destroyed, so that an instance finalized during static destruction cannot
-        // erase itself from an already-destroyed set.
+        // Heap-allocated so a late finalizer during static teardown cannot touch a dead set.
         static std::mutex& Mutex()
         {
             static auto* mutex{new std::mutex{}};

@@ -53,8 +53,8 @@ namespace Babylon::Polyfills::Internal
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
-        // Registered last: a constructor that throws never reaches the destructor.
-        NativeInstanceRegistry<NativeCanvasImage>::Add(info, this);
+        // Register after successful construction only.
+                NativeInstanceRegistry<NativeCanvasImage>::Add(info, this);
     }
 
     NativeCanvasImage::~NativeCanvasImage()
