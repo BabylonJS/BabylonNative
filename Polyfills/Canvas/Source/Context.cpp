@@ -1279,7 +1279,14 @@ namespace Babylon::Polyfills::Internal
         NativeCanvas* const srcCanvas = canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>())
             ? NativeCanvas::Unwrap(imageObj)
             : nullptr;
-        const bool isImageBitmap = srcCanvas == nullptr && imageObj.Has("data") && imageObj.Get("data").IsTypedArray();
+        const NativeCanvasImage* const canvasImage = srcCanvas == nullptr
+            ? NativeCanvasImage::TryUnwrap(info.Env(), imageObj)
+            : nullptr;
+        const bool isImageBitmap = srcCanvas == nullptr && canvasImage == nullptr && imageObj.Has("data") && imageObj.Get("data").IsTypedArray();
+        if (srcCanvas == nullptr && canvasImage == nullptr && !isImageBitmap)
+        {
+            throw Napi::TypeError::New(info.Env(), "drawImage: first argument must be a Canvas, Image, or ImageBitmap-like object.");
+        }
 
         // Coercion can also resize the source. Do it once, before reading dimensions
         // or creating any graphics resources.
@@ -1406,7 +1413,6 @@ namespace Babylon::Polyfills::Internal
 #endif
         }
 
-        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);
         const auto rectangles = ParseDrawImageRectangles(arguments, canvasImage->GetWidth(), canvasImage->GetHeight());
         if (!rectangles)
         {
