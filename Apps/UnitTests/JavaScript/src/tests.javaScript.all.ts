@@ -249,6 +249,16 @@ describe("Canvas2D", function () {
     expect(function () { path.addPath(new Path2D("M0 0 L5 5")); }).to.not.throw();
   });
 
+  it("rejects a non-Image argument to drawImage", function () {
+    // drawImage used ObjectWrap::Unwrap on whatever object it was handed, so a Canvas,
+    // Path2D, or plain {} was an access violation rather than a TypeError.
+    const ctx = createContext();
+    const otherCanvas = new _native.Canvas();
+    expect(function () { ctx.drawImage({}, 0, 0); }).to.throw();
+    expect(function () { ctx.drawImage(new Path2D(), 0, 0); }).to.throw();
+    expect(function () { ctx.drawImage(otherCanvas, 0, 0); }).to.throw();
+  });
+
   it("treats a non-Path2D Path2D() argument as path data", function () {
     // The constructor routed on IsObject(), so any object was unwrapped as a Path2D.
     // Per the (Path2D or DOMString) union a non-Path2D is stringified instead.
