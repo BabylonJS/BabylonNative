@@ -86,6 +86,7 @@ if(BABYLON_NATIVE_UNIT_TESTS_GRAPHICS)
         "Source/Tests.ExternalTexture.Msaa.cpp"
         "Source/Tests.ExternalTexture.Render.cpp"
         "Source/Tests.JavaScript.cpp"
+        "Source/Tests.NativeEngine.InstanceData.cpp"
         "Source/Tests.NativeEngine.Teardown.cpp"
         "Source/Tests.ShaderCache.cpp"
         "Source/Tests.ShaderCompilation.cpp"
@@ -157,6 +158,7 @@ else()
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${JSRUNTIME_ASSETS} ${JSRUNTIME_SCRIPTS} ${TEST_SCRIPTS} ${SOURCES})
+target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
 target_link_libraries(UnitTests ${LIBRARIES} ${ADDITIONAL_LIBRARIES})
 
 # The JsRuntimeHost suite reports its host platform to the JS bundle so that it

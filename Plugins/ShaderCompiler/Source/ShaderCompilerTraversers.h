@@ -71,18 +71,18 @@ namespace Babylon::ShaderCompilerTraversers
     /// Changes the names and locations of varying attributes in the vertex shader to
     /// match bgfx's expectations.
     ///
-    /// `instancedAttributes` maps vertex-attribute names that the consumer binds with a
+    /// `instancedAttributes` maps generic vertex-attribute names that the consumer binds with a
     /// per-instance divisor (e.g. the fluid renderer's `position` or an instanced `color`)
     /// to the bgfx per-instance i_data location (top TEXCOORD semantic) they must occupy.
     /// The location is computed from the draw-time instance packing order so the attribute
     /// is read from the slot bgfx actually fills. The built-in instanced names (`world0-3`,
     /// `previousWorld0-3`, `instanceColor`, `splatIndex0-3`) are not fixed to a per-name slot: each
     /// shader's declared set is assigned a dense i_data run, since bgfx requires the used slots to
-    /// start at i_data0 with no holes. Names present in `instancedAttributes` are excluded from
-    /// that run and use the caller-supplied location instead; an empty map preserves legacy behavior.
-    void AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
-    void AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
-    void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
+    /// start at i_data0 with no holes. Generic names present in `instancedAttributes` use slots
+    /// after that run; built-in names in the map are rejected.
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
 
     /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable.
     /// Native platforms expect them to be two separate variables -- a texture and a

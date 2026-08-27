@@ -107,7 +107,7 @@ namespace Babylon::Plugins
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::map<std::string, std::string> vertexAttributeRenaming = {};
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming, instancedAttributes);
+        auto builtInInstanceDataSlots = ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming, instancedAttributes);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
@@ -176,6 +176,6 @@ namespace Babylon::Plugins
             gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize()),
             {}};
 
-        return CreateBgfxShader(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
+        return CreateBgfxShader(std::move(vertexShaderInfo), std::move(fragmentShaderInfo), std::move(builtInInstanceDataSlots));
     }
 }

@@ -2,6 +2,7 @@
 #include "Babylon/Graphics/DeviceContext.h"
 #include <algorithm>
 #include <cassert>
+#include <string>
 
 namespace Babylon
 {
@@ -125,7 +126,58 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount, uint32_t minSlotCount)
+    VertexBuffer::InstanceDataLayout VertexBuffer::CreateInstanceDataLayout(
+        const std::map<uint32_t, InstanceInfo>& instances,
+        const std::map<uint32_t, uint32_t>& builtInSlots,
+        uint32_t maxSlotCount)
+    {
+        if (instances.empty())
+        {
+            return {};
+        }
+
+        if (builtInSlots.size() > maxSlotCount)
+        {
+            throw std::runtime_error{"Shader declares more built-in instance-data slots than the device supports."};
+        }
+
+        std::vector<bool> usedBuiltInSlots(builtInSlots.size());
+        InstanceDataLayout layout{};
+        for (const auto& [attrib, slot] : builtInSlots)
+        {
+            if (slot >= usedBuiltInSlots.size() || usedBuiltInSlots[slot])
+            {
+                throw std::runtime_error{"Shader has an invalid built-in instance-data layout."};
+            }
+            usedBuiltInSlots[slot] = true;
+            if (instances.count(attrib) != 0)
+            {
+                layout.Slots.emplace(attrib, slot);
+            }
+        }
+
+        uint32_t nextSlot = static_cast<uint32_t>(builtInSlots.size());
+        for (auto instance = instances.rbegin(); instance != instances.rend(); ++instance)
+        {
+            if (builtInSlots.count(instance->first) != 0)
+            {
+                continue;
+            }
+            if (nextSlot >= maxSlotCount)
+            {
+                throw std::runtime_error{"Number of vertex buffer instance slots greater than " + std::to_string(maxSlotCount) + " is not supported"};
+            }
+            layout.Slots.emplace(instance->first, nextSlot++);
+        }
+        layout.SlotCount = nextSlot;
+        return layout;
+    }
+
+    void VertexBuffer::BuildInstanceDataBuffer(
+        bgfx::InstanceDataBuffer& instanceDataBuffer,
+        const std::map<uint32_t, InstanceInfo>& instances,
+        uint32_t instanceCount,
+        const InstanceDataLayout& layout)
     {
         // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
         static constexpr uint16_t kSlotSize = 16;
@@ -146,19 +198,17 @@ namespace Babylon
             return;
         }
 
-        // The buffer must cover every i_data slot the vertex shader reads, not just the ones this
-        // draw supplied: bgfx derives the instance-data input count from the stride, and D3D11's
-        // CreateInputLayout fails outright when the shader reads a semantic the layout omits.
-        // Babylon.js legitimately draws with fewer -- _renderWithThinInstances creates the
-        // previousWorld buffer only after the first draw, so that draw binds world0-3 while the
-        // effect already declares previousWorld0-3.
-        //
-        // Caveat: padding lands in the *highest* slots, so this is only correct when the omitted
-        // attributes are the alphabetically first names, which AssignBuiltInInstanceSlots puts
-        // there. True for `previousWorld` and `instanceColor`, but that is a coincidence between
-        // alphabetical order and Babylon.js's creation order, not an enforced invariant -- if it
-        // inverts, data lands in the wrong slots silently instead of producing a padded run.
-        const size_t slotCount = std::max(static_cast<size_t>(minSlotCount), instances.size());
+        const size_t slotCount = layout.SlotCount;
+        const uint32_t maxInstanceData = bgfx::getCaps()->limits.maxInstanceData;
+        if (slotCount > maxInstanceData)
+        {
+            throw std::runtime_error{"Number of vertex buffer instance slots greater than " + std::to_string(maxInstanceData) + " is not supported"};
+        }
+        if (layout.Slots.size() != instances.size())
+        {
+            throw std::runtime_error{"Instance-data layout does not cover every recorded attribute."};
+        }
+
         const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
 
         // Create instance datas. Instance Data Buffer is transient.
@@ -171,21 +221,20 @@ namespace Babylon
         // transient ring-buffer garbage.
         std::memset(data, 0, static_cast<size_t>(instanceStride) * instanceCount);
 
-        // Reverse because bgfx maps instance data in reverse attrib order:
-        // i_data0 == the highest instance-data TEXCOORD semantic (TEXCOORD31 on D3D11),
-        // i_data1 == TEXCOORD30, etc. OpenGL/Metal expect this layout too since bgfx
-        // abstracts the mapping (binding by i_data name).
-        uint32_t slotOffset{};
-        for (auto iter = instances.rbegin(); iter != instances.rend(); ++iter)
+        for (const auto& [attrib, element] : instances)
         {
-            const auto& element{iter->second};
+            const uint32_t slot = layout.Slots.at(attrib);
+            if (slot >= layout.SlotCount)
+            {
+                throw std::runtime_error{"Instance-data attribute maps outside the allocated buffer."};
+            }
+            const uint32_t slotOffset = slot * kSlotSize;
             assert(element.ElementSize <= kSlotSize);
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {
                 std::memcpy(data + instance * instanceStride + slotOffset, source + instance * element.Stride + element.Offset, element.ElementSize);
             }
-            slotOffset += kSlotSize;
         }
     }
 }
