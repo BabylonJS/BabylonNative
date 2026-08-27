@@ -73,11 +73,8 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
         , m_commands{std::deque<Path2DCommand>()}
     {
-        // new Path2D(path) copies another Path2D; new Path2D(d) parses SVG path data. The
-        // argument used to be routed by IsObject(), so any object at all was fed to Unwrap and
-        // reinterpreted as a NativeCanvasPath2D. Per the (Path2D or DOMString) union, a value
-        // that is not a Path2D is converted to a string instead.
-        const NativeCanvasPath2D* path = info.Length() >= 1
+        // Path2D | DOMString union: only a real Path2D is copied; everything else stringifies.
+                const NativeCanvasPath2D* path = info.Length() >= 1
             ? NativeCanvasPath2D::TryUnwrap(info.Env(), info[0])
             : nullptr;
         const std::string d = path == nullptr && info.Length() >= 1 && !info[0].IsUndefined()
@@ -135,8 +132,8 @@ namespace Babylon::Polyfills::Internal
             nsvg__deleteParser(parser);
         }
 
-        // Registered last: a constructor that throws never reaches the destructor.
-        NativeInstanceRegistry<NativeCanvasPath2D>::Add(info, this);
+        // Register after successful construction only.
+                NativeInstanceRegistry<NativeCanvasPath2D>::Add(info, this);
     }
 
     NativeCanvasPath2D::~NativeCanvasPath2D()
@@ -171,10 +168,7 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvasPath2D::AddPath(const Napi::CallbackInfo& info)
     {
-        // addPath requires a Path2D. There was no type check and no arity check, so
-        // addPath() read a missing argument and addPath("x") cast a string, both of
-        // which reached Unwrap.
-        if (info.Length() < 1)
+                if (info.Length() < 1)
         {
             throw Napi::TypeError::New(info.Env(), "Path2D.addPath: requires at least 1 argument (path).");
         }

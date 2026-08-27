@@ -164,8 +164,8 @@ namespace Babylon::Polyfills::Internal
             r1 = info[5].As<Napi::Number>().FloatValue();
         }
 
-        // Registered last: a constructor that throws never reaches the destructor.
-        NativeInstanceRegistry<CanvasGradient>::Add(info, this);
+        // Register after successful construction only.
+                NativeInstanceRegistry<CanvasGradient>::Add(info, this);
     }
 
     CanvasGradient::~CanvasGradient()

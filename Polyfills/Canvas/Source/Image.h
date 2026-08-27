@@ -19,8 +19,7 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
 
-        // Safe brand check — never use ObjectWrap::Unwrap on an unchecked JS value.
-        static NativeCanvasImage* TryUnwrap(Napi::Env env, const Napi::Value& value);
+        // static NativeCanvasImage* TryUnwrap(Napi::Env env, const Napi::Value& value);
 
         explicit NativeCanvasImage(const Napi::CallbackInfo& info);
         virtual ~NativeCanvasImage();
