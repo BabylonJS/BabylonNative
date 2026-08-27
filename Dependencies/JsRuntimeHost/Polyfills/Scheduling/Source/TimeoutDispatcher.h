@@ -32,12 +32,14 @@ namespace Babylon::Polyfills::Internal
 
         TimeoutId NextTimeoutId();
         void ThreadFunction();
-        void CallFunction(TimeoutId id);
+        void CallFunction(TimeoutId id, uint64_t sequence);
+        void Rearm(TimeoutId id, uint64_t sequence, TimePoint scheduledTime, std::chrono::milliseconds interval);
 
         Babylon::JsRuntime& m_runtime;
         std::recursive_mutex m_mutex{};
         std::condition_variable_any m_condVariable{};
         TimeoutId m_lastTimeoutId{0};
+        uint64_t m_lastSequence{0};
         std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap;
         std::multimap<TimePoint, Timeout*> m_timeMap;
         std::atomic<bool> m_shutdown{false};

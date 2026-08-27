@@ -622,6 +622,52 @@ describe("setInterval", function () {
             }
         }, 10);
     });
+
+    it("should not starve other queued work when the interval has no delay", function (done) {
+        // Regression test: a repeating timeout used to be re-armed on the timer
+        // thread immediately, before its callback had run on the JS thread. With a
+        // zero delay that produced an unbounded backlog of queued callbacks which
+        // starved every other item on the JS dispatch queue, so this setTimeout
+        // would never fire.
+        let finished = false;
+        const intervalId = setInterval(() => { });
+
+        const timeoutId = setTimeout(() => {
+            finished = true;
+            clearInterval(intervalId);
+            done();
+        }, 100);
+
+        setTimeout(() => {
+            if (!finished) {
+                clearInterval(intervalId);
+                clearTimeout(timeoutId);
+                done(new Error("setTimeout was starved by a zero delay setInterval"));
+            }
+        }, 2000);
+    });
+
+    it("should stop when cleared from within its own callback", function (done) {
+        // Exercises the re-arm path: a repeating timeout is now re-armed only
+        // after its callback returns, so a clear from inside the callback must
+        // win and no further ticks may occur.
+        let ticks = 0;
+        let id = 0;
+        id = setInterval(() => {
+            ticks++;
+            clearInterval(id);
+        }, 10);
+
+        setTimeout(() => {
+            try {
+                expect(ticks).to.equal(1);
+                done();
+            }
+            catch (e) {
+                done(e);
+            }
+        }, 200);
+    });
 });
 
 describe("clearInterval", function () {

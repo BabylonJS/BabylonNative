@@ -19,6 +19,10 @@ namespace Babylon::Polyfills::Internal
     {
         TimeoutId id;
 
+        // Distinguishes this timeout from a later one that happens to reuse the
+        // same id, so an in-flight callback can never re-arm its replacement.
+        uint64_t sequence;
+
         // Make this non-shared when JsRuntime::Dispatch supports it.
         std::shared_ptr<Napi::FunctionReference> function;
 
@@ -26,8 +30,9 @@ namespace Babylon::Polyfills::Internal
 
         std::optional<std::chrono::milliseconds> interval;
 
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time, std::optional<std::chrono::milliseconds> interval)
+        Timeout(TimeoutId id, uint64_t sequence, std::shared_ptr<Napi::FunctionReference> function, TimePoint time, std::optional<std::chrono::milliseconds> interval)
             : id{id}
+            , sequence{sequence}
             , function{std::move(function)}
             , time{time}
             , interval{interval}
@@ -77,7 +82,7 @@ namespace Babylon::Polyfills::Internal
         }
         const auto earliestTime = m_timeMap.empty() ? TimePoint::max() : m_timeMap.cbegin()->second->time;
         const auto time = Now() + delay;
-        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time, repeat ? std::make_optional<std::chrono::milliseconds>(delay) : std::nullopt)});
+        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, ++m_lastSequence, std::move(function), time, repeat ? std::make_optional<std::chrono::milliseconds>(delay) : std::nullopt)});
         m_timeMap.insert({time, result.first->second.get()});
 
         if (time <= earliestTime)
@@ -150,14 +155,18 @@ namespace Babylon::Polyfills::Internal
             while (!m_timeMap.empty() && m_timeMap.begin()->second->time == nextTimePoint)
             {
                 const auto id = m_timeMap.begin()->second->id;
+                const auto sequence = m_timeMap.begin()->second->sequence;
                 m_timeMap.erase(m_timeMap.begin());
-                const auto repeat = m_idMap[id]->interval.has_value();
-                if (repeat)
-                {
-                    const auto timeout = std::move(m_idMap.extract(id).mapped());
-                    DispatchImpl(std::move(timeout->function), *timeout->interval, true, timeout->id);
-                }
-                CallFunction(id);
+
+                // Repeating timeouts are deliberately NOT re-armed here. They are
+                // re-armed on the JS thread once the callback has actually run, so
+                // that at most one invocation of a given interval is ever queued.
+                // Re-arming here instead would let this thread -- which never waits
+                // while a due timeout exists -- spin and enqueue callbacks far
+                // faster than the JS thread can drain them. The resulting unbounded
+                // backlog starves every other item on the JS dispatch queue: other
+                // timers, and native async completions such as shader compilation.
+                CallFunction(id, sequence);
             }
 
             while (!m_shutdown && m_timeMap.empty())
@@ -167,32 +176,99 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void TimeoutDispatcher::CallFunction(TimeoutId id)
+    void TimeoutDispatcher::CallFunction(TimeoutId id, uint64_t sequence)
     {
-        m_runtime.Dispatch([id, this](Napi::Env) {
+        m_runtime.Dispatch([id, sequence, this](Napi::Env) {
             std::shared_ptr<Napi::FunctionReference> function{};
+            std::optional<std::chrono::milliseconds> interval{};
+            TimePoint scheduledTime{};
             {
                 std::unique_lock<std::recursive_mutex> lk{m_mutex};
                 const auto it = m_idMap.find(id);
-                if (it != m_idMap.end())
+                if (it == m_idMap.end() || it->second->sequence != sequence)
                 {
-                    const auto repeat = it->second->interval.has_value();
-                    if (repeat)
-                    {
-                        function = it->second->function;
-                    }
-                    else
-                    {
-                        const auto timeout = std::move(m_idMap.extract(id).mapped());
-                        function = std::move(timeout->function);
-                    }
+                    // Cleared before the callback could run, or the id has since
+                    // been reused by an unrelated timeout.
+                    return;
+                }
+
+                interval = it->second->interval;
+                scheduledTime = it->second->time;
+
+                if (interval.has_value())
+                {
+                    function = it->second->function;
+                }
+                else
+                {
+                    const auto timeout = std::move(m_idMap.extract(id).mapped());
+                    function = std::move(timeout->function);
                 }
             }
 
             if (function)
             {
-                function->Call({});
+                try
+                {
+                    function->Call({});
+                }
+                catch (const Napi::Error& error)
+                {
+                    // A throwing tick must not silently stop the interval, which
+                    // is both the pre-existing behavior and what browsers do.
+                    // Re-arm first, then re-raise the error as a pending JS
+                    // exception so JsRuntime::Dispatch still surfaces it.
+                    if (interval.has_value())
+                    {
+                        Rearm(id, sequence, scheduledTime, *interval);
+                    }
+
+                    error.ThrowAsJavaScriptException();
+                    return;
+                }
+            }
+
+            if (interval.has_value())
+            {
+                Rearm(id, sequence, scheduledTime, *interval);
             }
         });
+    }
+
+    // Re-arms a repeating timeout. Called on the JS thread once the callback has
+    // returned, so a repeating timeout can never have more than one invocation
+    // queued at a time.
+    void TimeoutDispatcher::Rearm(TimeoutId id, uint64_t sequence, TimePoint scheduledTime, std::chrono::milliseconds interval)
+    {
+        std::unique_lock<std::recursive_mutex> lk{m_mutex};
+
+        const auto it = m_idMap.find(id);
+        if (it == m_idMap.end() || it->second->sequence != sequence)
+        {
+            // Cleared from within its own callback, or the id has since been
+            // reused by an unrelated timeout.
+            return;
+        }
+
+        // Anchor the next deadline to the previous scheduled time so that a long
+        // running callback does not accumulate drift, but never schedule into the
+        // past.
+        const auto now = Now();
+        auto nextTime = scheduledTime + interval;
+        if (nextTime < now)
+        {
+            nextTime = now;
+        }
+
+        const auto earliestTime = m_timeMap.empty() ? TimePoint::max() : m_timeMap.cbegin()->second->time;
+        it->second->time = nextTime;
+        m_timeMap.insert({nextTime, it->second.get()});
+
+        if (nextTime <= earliestTime)
+        {
+            // The timer thread parks while m_timeMap is empty, which is the case
+            // whenever this timeout was the only one pending.
+            m_condVariable.notify_one();
+        }
     }
 }
