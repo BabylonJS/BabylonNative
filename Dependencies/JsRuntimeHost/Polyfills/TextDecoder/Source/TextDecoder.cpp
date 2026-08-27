@@ -38,6 +38,16 @@ namespace
 
     class TextDecoder final : public Napi::ObjectWrap<TextDecoder>
     {
+        // Only the encodings the runtime actually needs. UTF-16 shows up in Emscripten output
+        // (UTF16ToString creates a `new TextDecoder('utf-16le')` at module scope), so refusing
+        // it makes whole WebAssembly modules unloadable.
+        enum class Encoding
+        {
+            Utf8,
+            Utf16LittleEndian,
+            Utf16BigEndian
+        };
+
     public:
         static void Initialize(Napi::Env env)
         {
@@ -67,19 +77,63 @@ namespace
                 // Several labels (e.g. "utf8", "unicode-1-1-utf-8") all map to UTF-8 after
                 // normalization; callers such as the glTF/Draco loader pass "utf8".
                 const std::string label = NormalizeEncodingLabel(encoding);
-                if (label != "utf-8" &&
-                    label != "utf8" &&
-                    label != "unicode-1-1-utf-8" &&
-                    label != "unicode11utf8" &&
-                    label != "unicode20utf8" &&
-                    label != "x-unicode20utf8")
+                if (label == "utf-8" ||
+                    label == "utf8" ||
+                    label == "unicode-1-1-utf-8" ||
+                    label == "unicode11utf8" ||
+                    label == "unicode20utf8" ||
+                    label == "x-unicode20utf8")
                 {
-                    throw Napi::Error::New(Env(), "TextDecoder: unsupported encoding '" + encoding + "', only UTF-8 is supported");
+                    m_encoding = Encoding::Utf8;
+                }
+                else if (label == "utf-16" ||
+                         label == "utf-16le" ||
+                         label == "ucs-2" ||
+                         label == "unicode" ||
+                         label == "unicodefeff" ||
+                         label == "csunicode" ||
+                         label == "iso-10646-ucs-2")
+                {
+                    m_encoding = Encoding::Utf16LittleEndian;
+                }
+                else if (label == "utf-16be" ||
+                         label == "unicodefffe")
+                {
+                    m_encoding = Encoding::Utf16BigEndian;
+                }
+                else
+                {
+                    throw Napi::Error::New(Env(), "TextDecoder: unsupported encoding '" + encoding + "', only UTF-8 and UTF-16 are supported");
                 }
             }
         }
 
     private:
+        Encoding m_encoding{Encoding::Utf8};
+
+        Napi::Value DecodeUtf16(Napi::Env env, const std::string& data) const
+        {
+            // Trailing odd byte is dropped: the WHATWG decoder would emit U+FFFD for it, but
+            // every producer we care about hands over whole code units.
+            const size_t unitCount = data.size() / 2;
+            std::u16string units(unitCount, u'\0');
+            for (size_t index = 0; index < unitCount; ++index)
+            {
+                const auto first = static_cast<unsigned char>(data[index * 2]);
+                const auto second = static_cast<unsigned char>(data[index * 2 + 1]);
+                units[index] = m_encoding == Encoding::Utf16LittleEndian
+                    ? static_cast<char16_t>(first | (second << 8))
+                    : static_cast<char16_t>(second | (first << 8));
+            }
+
+            if (!units.empty() && units.front() == u'\uFEFF')
+            {
+                units.erase(0, 1);
+            }
+
+            return Napi::String::New(env, units);
+        }
+
         Napi::Value Decode(const Napi::CallbackInfo& info)
         {
             if (info.Length() < 1 || info[0].IsUndefined())
@@ -116,7 +170,7 @@ namespace
                 throw Napi::TypeError::New(Env(), "TextDecoder.decode: input must be a BufferSource (ArrayBuffer or TypedArray)");
             }
 
-            return Napi::String::New(info.Env(), data);
+            return m_encoding == Encoding::Utf8 ? Napi::String::New(info.Env(), data) : DecodeUtf16(info.Env(), data);
         }
     };
 }
