@@ -81,5 +81,5 @@ namespace Babylon::ShaderCompilerCommon
         std::map<std::string, std::string> AttributeRenaming;
     };
 
-    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo);
+    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo, std::map<std::string, uint32_t> builtInInstanceDataSlots);
 }

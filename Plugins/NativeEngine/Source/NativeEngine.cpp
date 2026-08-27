@@ -2571,17 +2571,17 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
-    // The dense run of i_data slots the current program's vertex shader reads for its built-in
-    // per-instance attributes. The instance data buffer must cover it even when the draw supplied
-    // fewer attributes, or D3D11 rejects the input layout.
-    uint32_t NativeEngine::GetBuiltInInstanceDataSlotCount() const
+    VertexBuffer::InstanceDataLayout NativeEngine::GetInstanceDataLayout() const
     {
-        if (m_currentProgram == nullptr)
+        if (m_currentProgram == nullptr || m_boundVertexArray == nullptr)
         {
-            return 0;
+            return {};
         }
 
-        return m_currentProgram->BuiltInInstanceDataSlotCount();
+        return VertexBuffer::CreateInstanceDataLayout(
+            m_boundVertexArray->GetInstances(),
+            m_currentProgram->BuiltInInstanceDataSlots(),
+            bgfx::getCaps()->limits.maxInstanceData);
     }
 
     // Note: For legacy reasons JS might call this function for instance drawing.
@@ -2593,12 +2593,13 @@ namespace Babylon
         const uint32_t indexCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        const auto instanceDataLayout = GetInstanceDataLayout();
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), 0, GetBuiltInInstanceDataSlotCount());
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), 0, instanceDataLayout);
         }
-        DrawInternal(encoder, fillMode);
+        DrawInternal(encoder, fillMode, instanceDataLayout);
     }
 
     void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
@@ -2609,12 +2610,13 @@ namespace Babylon
         const uint32_t instanceCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        const auto instanceDataLayout = GetInstanceDataLayout();
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount, GetBuiltInInstanceDataSlotCount());
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount, instanceDataLayout);
         }
-        DrawInternal(encoder, fillMode);
+        DrawInternal(encoder, fillMode, instanceDataLayout);
     }
 
     // Note: For legacy reasons JS might call this function for instance drawing.
@@ -2626,11 +2628,12 @@ namespace Babylon
         const uint32_t verticesCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        const auto instanceDataLayout = GetInstanceDataLayout();
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, 0, GetBuiltInInstanceDataSlotCount());
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, 0, instanceDataLayout);
         }
-        DrawInternal(encoder, fillMode);
+        DrawInternal(encoder, fillMode, instanceDataLayout);
     }
 
     void NativeEngine::DrawInstanced(NativeDataStream::Reader& data)
@@ -2641,11 +2644,12 @@ namespace Babylon
         const uint32_t instanceCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        const auto instanceDataLayout = GetInstanceDataLayout();
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, GetBuiltInInstanceDataSlotCount());
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, instanceDataLayout);
         }
-        DrawInternal(encoder, fillMode);
+        DrawInternal(encoder, fillMode, instanceDataLayout);
     }
 
     void NativeEngine::Clear(NativeDataStream::Reader& data)
@@ -2986,7 +2990,7 @@ namespace Babylon
         // Nothing to do here.
     }
 
-    void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode)
+    void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
         uint64_t fillModeState{0}; // indexed triangle list
         switch (fillMode)
@@ -3036,12 +3040,9 @@ namespace Babylon
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
-        // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
-        // real per-vertex bgfx location was compiled to a per-vertex slot. bgfx can only feed
-        // per-instance data into i_data slots (the top TEXCOORD semantics), so route those attributes
-        // to the correct i_data slot via a lazily-compiled program variant. The target location mirrors
-        // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> i_data0 (TEXCOORD31),
-        // i.e. INSTANCE_DATA_FIRST_LOCATION - rank.
+        // Generic divisor-driven attributes are per-vertex inputs in the base shader. Recompile a
+        // variant that routes each one to the exact i_data slot used by the instance buffer.
+        // Built-ins keep the compiler-assigned base slots carried by Program.
         bgfx::ProgramHandle programHandle = m_currentProgram->Handle();
         if (m_boundVertexArray != nullptr)
         {
@@ -3050,34 +3051,24 @@ namespace Babylon
             {
                 std::map<std::string, uint32_t> genericInstancedAttributes;
                 const auto& attributeLocations = m_currentProgram->VertexAttributeLocations();
-                const size_t count = instances.size();
-                size_t ascendingIndex = 0;
                 for (const auto& instance : instances)
                 {
-                    const bgfx::Attrib::Enum attrib = instance.first;
-                    // "Real per-vertex slot" means Position..TexCoord15, i.e. < Attrib::Count. The
-                    // built-in instanced attributes (world0-3, splatIndex0-3, previousWorld0-3,
-                    // instanceColor) are assigned synthetic locations at or above
-                    // BUILTIN_INSTANCE_DATA_LAST_LOCATION, which is >= Attrib::Count, so they compare
-                    // false here and are correctly skipped: they already arrive as instance data.
-                    // The previous TexCoord3 boundary silently dropped generic instanced attributes
-                    // landing on TexCoord3..TexCoord15 (e.g. sprite cellInfo -> TexCoord3), leaving
-                    // them reading per-vertex garbage even though BuildInstanceDataBuffer had
-                    // already packed them into the instance data buffer.
-                    if (attrib < bgfx::Attrib::Count)
+                    const uint32_t location = instance.first;
+                    if (m_currentProgram->BuiltInInstanceDataSlots().count(location) != 0)
                     {
-                        const size_t rank = count - 1 - ascendingIndex;
-                        const uint32_t targetLocation = Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - static_cast<uint32_t>(rank);
-                        for (const auto& [name, location] : attributeLocations)
+                        continue;
+                    }
+
+                    const uint32_t targetLocation =
+                        Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - instanceDataLayout.Slots.at(location);
+                    for (const auto& [name, attributeLocation] : attributeLocations)
+                    {
+                        if (attributeLocation == location)
                         {
-                            if (location == static_cast<uint32_t>(attrib))
-                            {
-                                genericInstancedAttributes.emplace(name, targetLocation);
-                                break;
-                            }
+                            genericInstancedAttributes.emplace(name, targetLocation);
+                            break;
                         }
                     }
-                    ++ascendingIndex;
                 }
 
                 if (!genericInstancedAttributes.empty())
