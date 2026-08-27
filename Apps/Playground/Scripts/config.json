@@ -826,8 +826,7 @@
         {
             "title": "Volumetric Light Scattering Post Process with Morph Targets",
             "playgroundId": "#5E318S#7",
-            "referenceImage": "volumetricLightScatteringMorphTargets.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "volumetricLightScatteringMorphTargets.png"
         },
         {
             "title": "Color correction",
@@ -1067,8 +1066,6 @@
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
             "referenceImage": "guiNearMenu.png"
         },
         {
@@ -1773,7 +1770,8 @@
             "playgroundId": "#65MUMZ#47",
             "renderCount": 50,
             "referenceImage": "prepass-ssao-particles.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + instances",
@@ -1786,7 +1784,8 @@
             "playgroundId": "#0K8EYN#197",
             "renderCount": 50,
             "referenceImage": "prepass-ssao-instanced-bones.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + depth of field",
@@ -1856,10 +1855,10 @@
         {
             "title": "Prepass SSAO + GUI",
             "playgroundId": "#LLVZ90#4",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Order-dependent state leak: passes in isolation but produces ~6000-px diff (right at 2.5% errorRatio threshold, flaky in CI) when run after sibling Prepass-SSAO tests in the full sweep on Win32 D3D11. OpenGL also fails (BGFX FATAL 'mediump float' shader compile in PrePassRenderer fragment shader). Re-enable after the order-dependent SSAO state cleanup is investigated; Dawn/WebGPU renders it correctly, so WebGPU keeps the coverage",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-gui.png"
+            "referenceImage": "prepass-ssao-gui.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + LOD",
@@ -1881,7 +1880,8 @@
             "playgroundId": "#1KUJ0A#416",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-highlight-layer.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + point light",
@@ -1895,21 +1895,24 @@
             "playgroundId": "#1VI6WV#20",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-on-off-pp.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + thin instances",
             "playgroundId": "#V1JE4Z#25",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-thin-instances.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + depth renderer",
             "playgroundId": "#3HPMAA#1",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-depth-renderer.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + visibility",
@@ -2268,7 +2271,8 @@
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
             "referenceImage": "Screen-Space-Reflections-2.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL ES: bgfx FrameBufferGL::resolve calls glDrawBuffers(1, &GL_COLOR_ATTACHMENT0 + colorIdx), but GLES requires bufs[i] to be GL_NONE or GL_COLOR_ATTACHMENT0 + i, so resolving any attachment past the first raises GL_INVALID_OPERATION and asserts (bgfx bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11"
         },
         {
             "title": "MultiRenderTarget with different texture types",

@@ -33,7 +33,6 @@ namespace Babylon
 
     void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized, uint32_t divisor)
     {
-        auto attrib = static_cast<bgfx::Attrib::Enum>(location);
         auto attribType = static_cast<bgfx::AttribType::Enum>(type);
 
         if (divisor == 1)
@@ -59,16 +58,17 @@ namespace Babylon
             // Only a new attribute can overflow -- re-recording an existing one overwrites its
             // entry -- and the check runs before the insert, so `size() >= max` is the overflow.
             const uint32_t maxInstanceData = caps->limits.maxInstanceData;
-            if (m_vertexBufferInstances.find(attrib) == m_vertexBufferInstances.end() &&
+            if (m_vertexBufferInstances.find(location) == m_vertexBufferInstances.end() &&
                 m_vertexBufferInstances.size() >= maxInstanceData)
             {
                 throw std::runtime_error{"Number of vertex buffer instances greater than " + std::to_string(maxInstanceData) + " is not supported"};
             }
 
-            m_vertexBufferInstances[attrib] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
+            m_vertexBufferInstances[location] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
         }
         else
         {
+            auto attrib = static_cast<bgfx::Attrib::Enum>(location);
             vertexBuffer->Build(byteStride);
 
             bgfx::VertexLayout layout{};
@@ -93,14 +93,14 @@ namespace Babylon
         }
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, uint32_t minInstanceDataSlotCount)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
         // Check if instancing is supported.
         const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
         if (!m_vertexBufferInstances.empty() && instancingSupported)
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
-            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, minInstanceDataSlotCount);
+            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 
