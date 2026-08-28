@@ -1020,6 +1020,27 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
+        // NanoVG stores the RT as premultiplied (ONE / INV_SRC_ALPHA). Canvas APIs
+        // (getImageData, toDataURL, drawImage source) expose straight alpha, so undo
+        // premultiply before handing the buffer out. Without this, translucent RGB is
+        // written into PNG as-is and drawImage(canvas) multiplies by alpha a second time.
+        for (size_t i = 0; i + 3 < rgba.size(); i += 4)
+        {
+            const uint8_t a = rgba[i + 3];
+            if (a == 0)
+            {
+                rgba[i + 0] = 0;
+                rgba[i + 1] = 0;
+                rgba[i + 2] = 0;
+            }
+            else if (a < 255)
+            {
+                rgba[i + 0] = static_cast<uint8_t>(std::min(255, (static_cast<int>(rgba[i + 0]) * 255 + a / 2) / a));
+                rgba[i + 1] = static_cast<uint8_t>(std::min(255, (static_cast<int>(rgba[i + 1]) * 255 + a / 2) / a));
+                rgba[i + 2] = static_cast<uint8_t>(std::min(255, (static_cast<int>(rgba[i + 2]) * 255 + a / 2) / a));
+            }
+        }
+
         // Keep the CPU mirror in sync so getImageData after toDataURL/drawImage sees GPU content.
         EnsureCpuBuffer();
         if (!m_cpuPixels.empty() && m_cpuPixels.size() == rgba.size())

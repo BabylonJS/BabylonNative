@@ -2849,7 +2849,7 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 	return nrows;
 }
 
-float nvgTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds)
+static float nvg__textBoundsImpl(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds, int useLineBounds)
 {
 	NVGstate* state = nvg__getState(ctx);
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
@@ -2866,14 +2866,27 @@ float nvgTextBounds(NVGcontext* ctx, float x, float y, const char* string, const
 
 	width = fonsTextBounds(ctx->fs, x*scale, y*scale, string, end, bounds);
 	if (bounds != NULL) {
-		// Use line bounds for height.
-		fonsLineBounds(ctx->fs, y*scale, &bounds[1], &bounds[3]);
+		// Line box is what layout (nvgTextBounds callers) wants for height; ink extents
+		// are what canvas measureText actualBoundingBox* needs.
+		if (useLineBounds) {
+			fonsLineBounds(ctx->fs, y*scale, &bounds[1], &bounds[3]);
+		}
 		bounds[0] *= invscale;
 		bounds[1] *= invscale;
 		bounds[2] *= invscale;
 		bounds[3] *= invscale;
 	}
 	return width * invscale;
+}
+
+float nvgTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds)
+{
+	return nvg__textBoundsImpl(ctx, x, y, string, end, bounds, 1);
+}
+
+float nvgTextBoundsInk(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds)
+{
+	return nvg__textBoundsImpl(ctx, x, y, string, end, bounds, 0);
 }
 
 void nvgTextBoxBounds(NVGcontext* ctx, float x, float y, float breakRowWidth, const char* string, const char* end, float* bounds)
