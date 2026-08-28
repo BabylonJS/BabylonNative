@@ -5,22 +5,21 @@ if(POLICY CMP0135)
 endif()
 
 include(FetchContent)
+include(${CMAKE_CURRENT_SOURCE_DIR}/Scripts/extensions.cmake)
 
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
 
 # EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
-# targets to the ALL_BUILD target.  We do this for all dependencies except
-# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
-# that are part of the Babylon Native contract. When adding dependencies using
-# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
-# targets that are part of the Babylon Native contract.
+# targets to the ALL_BUILD target. When adding dependencies using FetchContent,
+# add the EXCLUDE_FROM_ALL option except where there are top-level targets that
+# are part of the Babylon Native contract.
+#
+# Most dependencies are now vendored directly in the monorepo (see Dependencies/,
+# and Core/ + Polyfills/ for what used to be the JsRuntimeHost repository), so
+# only the remaining externally fetched ones are declared here.
 
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 2e85a8d43b89246c460112c9e5546ad54b6e87b4
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
@@ -29,21 +28,9 @@ FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(base-n
-    GIT_REPOSITORY https://github.com/azawadzki/base-n.git
-    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 9e56bab41272eda16460539465f97724eec94a23
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(glslang
-    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
+FetchContent_Declare(asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG f693a3eb7fe72a5f19b975289afc4f437d373d9c
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(draco
     GIT_REPOSITORY https://github.com/google/draco.git
@@ -56,26 +43,19 @@ FetchContent_Declare(meshoptimizer
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(ios-cmake
-    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 4.5.0
+FetchContent_Declare(hermes
+    GIT_REPOSITORY https://github.com/facebook/hermes.git
+    GIT_TAG 348582831f50954895da8e80cc91112d51036c69
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 0d26362700edd52a48c38ab83b1090e53e7cfeba)
-FetchContent_Declare(metal-cpp
-    GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
-    GIT_TAG metal-cpp_26
+FetchContent_Declare(llhttp
+    URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz"
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(SPIRV-Cross
-    GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 7c8705749fc1e234119c20695f82179b30d90914
+FetchContent_Declare(quickjs-ng
+    GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
+    GIT_TAG 93d3f7df465027f487ed37e175a0bc3012fee79e
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
-
-FetchContent_MakeAvailable(CMakeExtensions)
-
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
 # which makes all dependencies to be fetched and packaged.
@@ -84,7 +64,7 @@ FetchContent_MakeAvailable(CMakeExtensions)
 # like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(ios-cmake_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/ios-cmake")
     if(NOT BABYLON_NATIVE_BUILD_SOURCETREE)
         set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     endif()
@@ -117,6 +97,18 @@ set(CMAKE_REQUIRED_QUIET TRUE)
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
+
+# Apps/UnitTests is built everywhere. Its JsRuntimeHost half is pure JavaScript
+# runtime coverage and needs nothing but a JS engine, so it runs on every
+# platform. Its Babylon Native half drives a real graphics device through a
+# platform window, which only exists on the desktop hosts, so those tests are
+# opt-out there and unavailable elsewhere.
+if((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE))
+    set(BABYLON_NATIVE_UNIT_TESTS_GRAPHICS_DEFAULT ON)
+else()
+    set(BABYLON_NATIVE_UNIT_TESTS_GRAPHICS_DEFAULT OFF)
+endif()
+option(BABYLON_NATIVE_UNIT_TESTS_GRAPHICS "Include the Babylon Native graphics tests in the UnitTests app." ${BABYLON_NATIVE_UNIT_TESTS_GRAPHICS_DEFAULT})
 
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
@@ -152,6 +144,29 @@ option(BABYLON_NATIVE_POLYFILL_SCHEDULING "Include Babylon Native Polyfill Sched
 option(BABYLON_NATIVE_POLYFILL_URL "Include Babylon Native Polyfill URL." ON)
 option(BABYLON_NATIVE_POLYFILL_WEBSOCKET "Include Babylon Native Polyfill WebSocket." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
+
+# JsRuntimeHost (vendored under Core/ and Polyfills/ since the monorepo merge)
+option(JSRUNTIMEHOST_TESTS "Include JsRuntimeHost Tests." OFF)
+option(NAPI_BUILD_ABI "Build the ABI layer." ON)
+
+# JsRuntimeHost - Core
+option(JSRUNTIMEHOST_CORE_APPRUNTIME "Include JsRuntimeHost Core AppRuntime" ON)
+option(JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR "Include the V8 inspector protocol required to debug JavaScript with a V8 debugger." ON)
+option(JSRUNTIMEHOST_CORE_SCRIPTLOADER "Include JsRuntimeHost Core ScriptLoader" ON)
+
+# JsRuntimeHost - Polyfills
+option(JSRUNTIMEHOST_POLYFILL_CONSOLE "Include JsRuntimeHost Polyfill Console." ON)
+option(JSRUNTIMEHOST_POLYFILL_SCHEDULING "Include JsRuntimeHost Polyfill Scheduling." ON)
+option(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST "Include JsRuntimeHost Polyfill XMLHttpRequest." ON)
+option(JSRUNTIMEHOST_POLYFILL_FETCH "Include JsRuntimeHost Polyfill fetch." ON)
+option(JSRUNTIMEHOST_POLYFILL_URL "Include JsRuntimeHost Polyfill URL and URLSearchParams." ON)
+option(JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER "Include JsRuntimeHost Polyfills AbortController and AbortSignal." ON)
+option(JSRUNTIMEHOST_POLYFILL_WEBSOCKET "Include JsRuntimeHost Polyfill WebSocket." ON)
+option(JSRUNTIMEHOST_POLYFILL_BLOB "Include JsRuntimeHost Polyfill Blob." ON)
+option(JSRUNTIMEHOST_POLYFILL_FILE "Include JsRuntimeHost Polyfill File and FileReader." ON)
+option(JSRUNTIMEHOST_POLYFILL_PERFORMANCE "Include JsRuntimeHost Polyfill Performance." ON)
+option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDecoder." ON)
+option(JSRUNTIMEHOST_POLYFILL_TEXTENCODER "Include JsRuntimeHost Polyfill TextEncoder." ON)
 
 # Embedding
 option(BABYLON_NATIVE_EMBEDDING "Build the cross-platform Babylon::Embedding facade (Runtime + View)." ON)
@@ -225,6 +240,22 @@ elseif(UNIX)
     set(BABYLON_NATIVE_PLATFORM "Unix")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+# JsRuntimeHost uses its own platform naming for its per-platform source files
+# (Core/AppRuntime/Source/AppRuntime_<platform>.*).
+if(ANDROID)
+    set(JSRUNTIMEHOST_PLATFORM "Android")
+elseif(IOS OR VISIONOS)
+    set(JSRUNTIMEHOST_PLATFORM "iOS")
+elseif(APPLE)
+    set(JSRUNTIMEHOST_PLATFORM "macOS")
+elseif(WINDOWS_STORE)
+    set(JSRUNTIMEHOST_PLATFORM "UWP")
+elseif(WIN32)
+    set(JSRUNTIMEHOST_PLATFORM "Win32")
+elseif(UNIX)
+    set(JSRUNTIMEHOST_PLATFORM "Unix")
 endif()
 
 if(APPLE)
@@ -421,8 +452,45 @@ if(BABYLON_DEBUG_TRACE)
     add_compile_definitions(BABYLON_DEBUG_TRACE)
 endif()
 
+# Select the Node-API JavaScript engine before descending into Dependencies:
+# the engine determines which engine-specific dependencies (QuickJS, Hermes,
+# asio/llhttp for the V8 inspector) have to be made available there. The same
+# per-platform defaults are repeated in Core/Node-API/CMakeLists.txt so that
+# directory still works standalone; `set(... CACHE ...)` makes that a no-op.
+if(WIN32)
+    set(NAPI_JAVASCRIPT_ENGINE "Chakra" CACHE STRING "JavaScript engine for Node-API")
+elseif(APPLE)
+    set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for Node-API")
+elseif(ANDROID)
+    set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for Node-API")
+elseif(UNIX)
+    set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore" CACHE STRING "JavaScript engine for Node-API")
+endif()
+
+# Apps/UnitTests drives arcana's blocking queue deterministically to reproduce
+# shutdown races (see AppRuntime.DestroyDoesNotDeadlock). The hook lives inside
+# arcana's header-only queue, so it has to be enabled for *every* translation
+# unit that instantiates one -- notably Core/AppRuntime -- not just the test
+# target, otherwise the test observes a queue that never calls the hook.
+if(BABYLON_NATIVE_BUILD_APPS OR JSRUNTIMEHOST_TESTS)
+    add_compile_definitions(ARCANA_TEST_HOOKS)
+endif()
+
 add_subdirectory(Dependencies)
 add_subdirectory(Core)
+
+# Two JsRuntimeHost targets cannot be built without RTTI:
+#   v8inspector - includes asio, whose headers use typeid() unconditionally.
+#   jsi         - Hermes and V8JSI require the type information emitted by
+#                 the shared Node-API-JSI target.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+    babylon_native_force_rtti(v8inspector)
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI" OR NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    babylon_native_force_rtti(jsi)
+endif()
+
 add_subdirectory(Plugins)
 add_subdirectory(Polyfills)
 

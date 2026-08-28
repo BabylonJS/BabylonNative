@@ -5,18 +5,10 @@ include(FetchContent)
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
-FetchContent_Declare(ios-cmake
-    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 4.4.1)
-# --------------------------------------------------
+include(${CMAKE_CURRENT_LIST_DIR}/../../Scripts/extensions.cmake)
 
-FetchContent_MakeAvailable(CMakeExtensions)
-
-if(IOS)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
+if(IOS AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(ios-cmake_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ios-cmake")
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")

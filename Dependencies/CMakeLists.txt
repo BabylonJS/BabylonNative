@@ -4,13 +4,14 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # AndroidExtensions
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/AndroidExtensions)
 endif()
 
 # --------------------------------------------------
 # arcana.cpp
 # --------------------------------------------------
 FetchContent_MakeAvailable_With_Message(arcana.cpp)
+set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 
 # --------------------------------------------------
 # arcore-android-sdk
@@ -20,12 +21,171 @@ if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
 endif()
 
 # --------------------------------------------------
+# UrlLib
+# --------------------------------------------------
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/UrlLib)
+set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
+
+# --------------------------------------------------
 # base-n
 # --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(base-n)
-
 add_library(base-n INTERFACE)
-target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
+target_include_directories(base-n INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/base-n/include")
+set_property(TARGET base-n PROPERTY FOLDER Dependencies)
+
+# --------------------------------------------------
+# JavaScript engine dependencies (JsRuntimeHost)
+# --------------------------------------------------
+# These are only needed for the non-default engines / the V8 inspector, so they
+# are still fetched on demand rather than vendored in the monorepo.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
+    option(QJS_BUILD_LIBC "Build QuickJS with libc support." ON)
+    FetchContent_MakeAvailable_With_Message(quickjs-ng)
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    # Hermes support is experimental and limited to Windows, Android and Linux.
+    # Bail out early rather than failing deep inside Hermes' Apple framework
+    # machinery.
+    if(APPLE OR IOS)
+        message(FATAL_ERROR
+            "NAPI_JAVASCRIPT_ENGINE=Hermes is not supported on Apple platforms.")
+    endif()
+
+    # HERMES_ENABLE_TOOLS must stay ON: even with HERMES_ENABLE_TEST_SUITE OFF,
+    # Hermes unconditionally adds external/node-api-cts and
+    # external/node-api-tests whenever HERMES_ENABLE_NAPI is on, and those refer
+    # to the `hermes` CLI target via $<TARGET_FILE:hermes>. Nothing ships in our
+    # binaries because Hermes is declared EXCLUDE_FROM_ALL.
+    set(HERMES_ENABLE_TOOLS ON CACHE BOOL "" FORCE)
+    set(HERMES_ENABLE_TEST_SUITE OFF CACHE BOOL "" FORCE)
+    set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL "" FORCE)
+    set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL "" FORCE)
+    set(HERMES_ENABLE_NAPI ON CACHE BOOL "" FORCE)
+    # Hermes defaults HERMES_SLOW_DEBUG=ON, which compiles internal sanity
+    # checks in even for optimized builds; they can SIGABRT during Runtime
+    # teardown. Embedders don't need them.
+    set(HERMES_SLOW_DEBUG OFF CACHE BOOL "" FORCE)
+    if(ANDROID)
+        # Hermes only skips its ICU lookup on Android when HERMES_IS_ANDROID is
+        # set, which is part of Hermes' React Native / fbjni packaging that we
+        # don't use. Unicode-lite avoids pulling ICU and fbjni into this
+        # standalone NDK build.
+        set(HERMES_UNICODE_LITE ON CACHE BOOL "" FORCE)
+    endif()
+    if(WIN32)
+        # The vendored Boost.Context assembler backend breaks under MSBuild; the
+        # Win32 Fiber implementation needs no assembler and is functionally
+        # equivalent for Hermes' usage.
+        set(BOOST_CONTEXT_IMPLEMENTATION "winfib" CACHE STRING "" FORCE)
+    endif()
+
+    # ------------------------------------------------------------------
+    # Cross-compilation: bootstrap the Hermes host compilers automatically.
+    #
+    # `hermesc`/`shermes` are HOST tools Hermes runs at build time. When
+    # cross-compiling (the Android NDK build) the in-tree tool targets are built
+    # for the *target* and can't run on the build host, so Hermes has to be
+    # handed prebuilt host compilers through IMPORT_HOST_COMPILERS.
+    #
+    # This has to happen at configure time, before Hermes itself is configured,
+    # because Hermes consumes IMPORT_HOST_COMPILERS during its own configure. An
+    # explicit -DIMPORT_HOST_COMPILERS=... still wins and skips the bootstrap.
+    set(_bn_hermes_populated_early FALSE)
+    if(CMAKE_CROSSCOMPILING AND NOT IMPORT_HOST_COMPILERS)
+        # Source-relative (not ${CMAKE_SOURCE_DIR}-relative: the Android build
+        # adds BabylonNative as a subdirectory of the Gradle project) and shared
+        # across target ABIs so the host tools are built once. /Build is
+        # git-ignored.
+        set(_bn_hermes_host_dir "${CMAKE_CURRENT_LIST_DIR}/../Build/HermesHostTools")
+        set(_bn_hermes_host_import "${_bn_hermes_host_dir}/ImportHostCompilers.cmake")
+
+        if(NOT EXISTS "${_bn_hermes_host_import}")
+            message(STATUS "Hermes: bootstrapping host compilers (hermesc/shermes) for cross-compilation")
+
+            # Download Hermes now so the host build can be configured from the
+            # same sources the target build will use.
+            FetchContent_GetProperties(hermes)
+            if(NOT hermes_POPULATED)
+                FetchContent_Populate(hermes)
+                set(_bn_hermes_populated_early TRUE)
+            endif()
+
+            find_program(_bn_host_ninja ninja)
+            if(_bn_host_ninja)
+                set(_bn_host_generator -G Ninja)
+            else()
+                set(_bn_host_generator "")
+            endif()
+
+            # No toolchain file is passed, so CMake picks the host compiler.
+            execute_process(
+                COMMAND "${CMAKE_COMMAND}"
+                    ${_bn_host_generator}
+                    -S "${hermes_SOURCE_DIR}"
+                    -B "${_bn_hermes_host_dir}"
+                    -D CMAKE_BUILD_TYPE=Release
+                    -D HERMES_UNICODE_LITE=ON
+                    -D HERMES_ENABLE_TEST_SUITE=OFF
+                    -D HERMES_ENABLE_NAPI=OFF
+                RESULT_VARIABLE _bn_host_cfg_result)
+            if(NOT _bn_host_cfg_result EQUAL 0)
+                message(FATAL_ERROR
+                    "Hermes host-compiler bootstrap: configure failed (${_bn_host_cfg_result}).")
+            endif()
+
+            execute_process(
+                COMMAND "${CMAKE_COMMAND}" --build "${_bn_hermes_host_dir}"
+                    --target hermesc shermes --config Release
+                RESULT_VARIABLE _bn_host_build_result)
+            if(NOT _bn_host_build_result EQUAL 0)
+                message(FATAL_ERROR
+                    "Hermes host-compiler bootstrap: build failed (${_bn_host_build_result}).")
+            endif()
+        endif()
+
+        if(NOT EXISTS "${_bn_hermes_host_import}")
+            message(FATAL_ERROR
+                "Hermes host-compiler bootstrap did not produce ${_bn_hermes_host_import}.")
+        endif()
+
+        set(IMPORT_HOST_COMPILERS "${_bn_hermes_host_import}" CACHE FILEPATH
+            "Imported Hermes host compilers (hermesc/shermes) for cross-compilation" FORCE)
+        message(STATUS "Hermes: using bootstrapped host compilers at ${IMPORT_HOST_COMPILERS}")
+    endif()
+
+    if(_bn_hermes_populated_early)
+        # FetchContent_MakeAvailable is a no-op once the content is populated,
+        # so add the subdirectory ourselves (mirroring the EXCLUDE_FROM_ALL on
+        # the declaration).
+        message(STATUS "Fetching hermes - done")
+        add_subdirectory("${hermes_SOURCE_DIR}" "${hermes_BINARY_DIR}" EXCLUDE_FROM_ALL)
+    else()
+        FetchContent_MakeAvailable_With_Message(hermes)
+    endif()
+
+    # FetchContent only defines `hermes_SOURCE_DIR` in this directory scope, but
+    # Core/Node-API needs it to reach Hermes' non-installed `API/napi` headers
+    # (upstream JsRuntimeHost fetched Hermes from its own root, where the
+    # variable propagated down automatically).
+    set(hermes_SOURCE_DIR "${hermes_SOURCE_DIR}" CACHE INTERNAL "Hermes source directory")
+endif()
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+    FetchContent_MakeAvailable_With_Message(asio)
+    add_library(asio INTERFACE)
+    target_include_directories(asio INTERFACE "${asio_SOURCE_DIR}/asio/include")
+    set_property(TARGET asio PROPERTY FOLDER Dependencies)
+
+    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+    set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
+    FetchContent_MakeAvailable_With_Message(llhttp)
+    set_property(TARGET llhttp_static PROPERTY FOLDER Dependencies)
+
+    # Core/AppRuntime/V8Inspector consumes `${llhttp_SOURCE_DIR}/include`, which
+    # FetchContent only defines in this directory scope.
+    set(llhttp_SOURCE_DIR "${llhttp_SOURCE_DIR}" CACHE INTERNAL "llhttp source directory")
+endif()
 
 # --------------------------------------------------
 # bgfx.cmake
@@ -38,7 +198,7 @@ set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 
-FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
 # This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
@@ -145,7 +305,7 @@ endif()
 set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF)
 
 if(NOT TARGET glslang)
-    FetchContent_MakeAvailable_With_Message(glslang)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/glslang)
 
     set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
     set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
@@ -235,7 +395,7 @@ endif()
 # --------------------------------------------------
 # googletest
 # --------------------------------------------------
-if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))
+if(BABYLON_NATIVE_BUILD_APPS AND NOT ANDROID AND NOT VISIONOS)
     if(WIN32)
         # For Windows: Prevent overriding the parent project's compiler/linker settings
         # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
@@ -253,65 +413,33 @@ if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) 
 endif()
 
 # --------------------------------------------------
-# JsRuntimeHost
-# --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
-
-# Two JsRuntimeHost targets cannot be built without RTTI:
-#   v8inspector - includes asio, whose headers use typeid() unconditionally
-#                 (any_executor.hpp, service_registry.hpp, handler_work.hpp).
-#                 Clang and GCC reject this outright; MSVC only warns.
-#                 Only defined for V8 with the inspector enabled
-#                 (JsRuntimeHost Core/AppRuntime/CMakeLists.txt).
-#   jsi         - Hermes (fetched by JsRuntimeHost) builds its API/hermes
-#                 targets with RTTI, and their vtables reference "typeinfo for
-#                 facebook::jsi::*" which only jsi.cpp emits. Compiling jsi
-#                 without RTTI drops those definitions and the link fails.
-#                 The same target name is used by Node-API-JSI for V8JSI.
-# Each call is gated on the engine that defines the target, so a target that
-# stops existing upstream fails configuration instead of silently going by.
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
-    babylon_native_force_rtti(v8inspector)
-endif()
-
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI" OR NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
-    babylon_native_force_rtti(jsi)
-endif()
-
-# --------------------------------------------------
 # metal-cpp
 # --------------------------------------------------
-if(APPLE OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(metal-cpp)
-endif()
-
 if(APPLE)
-    # Generate a single header.
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    # metal-cpp is consumed as a header-only library, and the header comes from
+    # bgfx rather than from a separate copy of the metal-cpp repo.
+    #
+    # The metal-cpp implementation (the NS / MTL / CA `*_PRIVATE_IMPLEMENTATION`
+    # globals) is already compiled into bgfx's Metal renderer, which embeds its
+    # own single-header copy of metal-cpp (see bgfx's renderer_mtl.cpp).
+    # Compiling a second copy here would define those globals in both
+    # libmetal-cpp.a and libbgfx.a; whether that produces ~1900 "duplicate
+    # symbol" link errors then depends purely on the (fragile) order in which
+    # the two static archives appear on the link line. So we expose headers
+    # only and let the single bgfx-provided implementation satisfy the symbols
+    # at link time. Graphics — the only consumer — always links bgfx on Apple,
+    # so the implementation symbols always resolve.
+    #
+    # Using bgfx's own header (instead of vendoring the metal-cpp repo and
+    # re-running its MakeSingleHeader.py) keeps declarations and implementation
+    # at the exact same metal-cpp version, and drops both the second copy of
+    # the sources and the configure-time Python dependency.
     set(METAL_CPP_GENERATED_DIR "${CMAKE_BINARY_DIR}/metal-cpp")
-    execute_process(
-        COMMAND ${Python3_EXECUTABLE}
-            "${metal-cpp_SOURCE_DIR}/SingleHeader/MakeSingleHeader.py"
-            "${metal-cpp_SOURCE_DIR}/Foundation/Foundation.hpp"
-            "${metal-cpp_SOURCE_DIR}/Metal/Metal.hpp"
-            "${metal-cpp_SOURCE_DIR}/QuartzCore/QuartzCore.hpp"
-            -o "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
-        RESULT_VARIABLE METAL_CPP_RESULT)
-    if(NOT METAL_CPP_RESULT EQUAL 0)
-        message(FATAL_ERROR "Failed to generate metal-cpp single header")
-    endif()
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/bgfx/3rdparty/metal-cpp/metal.hpp"
+        "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
+        COPYONLY)
 
-    # metal-cpp is consumed as a header-only library. The metal-cpp
-    # implementation (the NS / MTL / CA `*_PRIVATE_IMPLEMENTATION` globals) is
-    # already compiled into bgfx's Metal renderer, which embeds and builds its
-    # own copy of metal-cpp (see bgfx's renderer_mtl.cpp). Compiling a second
-    # copy here would define those globals in both libmetal-cpp.a and libbgfx.a;
-    # whether that produces ~1900 "duplicate symbol" link errors then depends
-    # purely on the (fragile) order in which the two static archives appear on
-    # the link line. We instead expose metal-cpp as headers only and let the
-    # single bgfx-provided implementation satisfy the symbols at link time.
-    # Graphics — the only consumer — always links bgfx on Apple, so the
-    # implementation symbols always resolve.
     add_library(metal-cpp INTERFACE)
     target_include_directories(metal-cpp SYSTEM INTERFACE "${METAL_CPP_GENERATED_DIR}/Include")
     target_link_libraries(metal-cpp
@@ -345,7 +473,7 @@ endif()
 if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
     set(SPIRV_CROSS_ENABLE_HLSL OFF)
 endif()
-FetchContent_MakeAvailable_With_Message(SPIRV-Cross)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 if(TARGET spirv-cross-glsl)
     set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)

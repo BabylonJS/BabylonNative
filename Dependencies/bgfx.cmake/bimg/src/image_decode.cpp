@@ -1,0 +1,2146 @@
+/*
+ * Copyright 2011-2026 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bimg/blob/master/LICENSE
+ */
+
+#include "bimg_p.h"
+
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function")
+
+#if BIMG_CONFIG_PARSE_EXR
+BX_PRAGMA_DIAGNOSTIC_PUSH()
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wtype-limits")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-value")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG("-Wdeprecated-declarations")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4018) // warning C4018:  '<': signed/unsigned mismatch
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // error C4100: '' : unreferenced formal parameter
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4245) // warning C4245: 'return': conversion from 'int' to 'size_t', signed/unsigned mismatch
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4389) // warning C4389 : '==' : signed / unsigned mismatch
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: 'tinyexr::miniz::def_realloc_func': unreferenced local function has been removed
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4702) // warning C4702: unreachable code
+#define MINIZ_NO_ARCHIVE_APIS
+#define MINIZ_NO_ARCHIVE_WRITING_APIS
+#define MINIZ_NO_STDIO
+#define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+#define TINYEXR_IMPLEMENTATION
+#include <miniz/miniz.c>
+#include <tinyexr/tinyexr.h>
+BX_PRAGMA_DIAGNOSTIC_POP()
+#endif // BIMG_CONFIG_PARSE_EXR
+
+#if BIMG_CONFIG_PARSE_PNG
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4127) // warning C4127: conditional expression is constant
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4267) // warning C4267: '=' : conversion from 'size_t' to 'unsigned short', possible loss of data
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4334) // warning C4334: '<<' : result of 32 - bit shift implicitly converted to 64 bits(was 64 - bit shift intended ? )
+#define LODEPNG_NO_COMPILE_ENCODER
+#define LODEPNG_NO_COMPILE_DISK
+#define LODEPNG_NO_COMPILE_ANCILLARY_CHUNKS
+#define LODEPNG_NO_COMPILE_ALLOCATORS
+#define LODEPNG_NO_COMPILE_CPP
+#include <lodepng/lodepng.cpp>
+BX_PRAGMA_DIAGNOSTIC_POP();
+
+void* lodepng_malloc(size_t _size)
+{
+	return ::malloc(_size);
+}
+
+void* lodepng_realloc(void* _ptr, size_t _size)
+{
+	return ::realloc(_ptr, _size);
+}
+
+void lodepng_free(void* _ptr)
+{
+	::free(_ptr);
+}
+#endif // BIMG_CONFIG_PARSE_PNG
+
+#if BIMG_CONFIG_PARSE_HEIF
+#	include <libheif/heif.h>
+#endif // BIMG_CONFIG_PARSE_HEIF
+
+#if BIMG_CONFIG_PARSE_AVIF
+#	include <avif/avif.h>
+#endif // BIMG_CONFIG_PARSE_AVIF
+
+#if BIMG_CONFIG_PARSE_WEBP
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-variable")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wsign-compare")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmissing-field-initializers")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wparentheses")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wimplicit-fallthrough")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wtype-limits")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // warning C4100: unreferenced formal parameter
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4127) // warning C4127: conditional expression is constant
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: conversion from 'X' to 'Y', possible loss of data
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4245) // warning C4245: conversion from 'X' to 'Y', signed/unsigned mismatch
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4267) // warning C4267: conversion from 'size_t' to 'X', possible loss of data
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // warning C4505: unreferenced function with internal linkage has been removed
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4701) // warning C4701: potentially uninitialized local variable used
+#define SIMPLEWEBP_IMPLEMENTATION
+#define SIMPLEWEBP_DISABLE_STDIO
+#include <simplewebp/simplewebp.h>
+BX_PRAGMA_DIAGNOSTIC_POP();
+#endif // BIMG_CONFIG_PARSE_WEBP
+
+#define BIMG_USE_STB_IMAGE 0   \
+	||  BIMG_CONFIG_PARSE_JPEG \
+	||  BIMG_CONFIG_PARSE_BMP  \
+	||  BIMG_CONFIG_PARSE_PSD  \
+	||  BIMG_CONFIG_PARSE_TGA  \
+	||  BIMG_CONFIG_PARSE_GIF  \
+	||  BIMG_CONFIG_PARSE_HDR  \
+	||  BIMG_CONFIG_PARSE_PIC  \
+	||  0
+
+#if BIMG_USE_STB_IMAGE
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wint-to-pointer-cast")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmissing-field-initializers");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wsign-compare");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wunused-but-set-variable");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Warray-bounds");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wmisleading-indentation");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wshift-negative-value");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wimplicit-fallthrough");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505); // unreferenced function with internal linkage has been removed
+#define STBI_MALLOC(_size)        lodepng_malloc(_size)
+#define STBI_REALLOC(_ptr, _size) lodepng_realloc(_ptr, _size)
+#define STBI_FREE(_ptr)           lodepng_free(_ptr)
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_STATIC
+#define STBI_NO_PNG // supported via LODEPNG
+
+#if !BIMG_CONFIG_PARSE_JPEG
+#	define STBI_NO_JPEG
+#endif // !BIMG_CONFIG_PARSE_JPEG
+
+#if !BIMG_CONFIG_PARSE_BMP
+#	define STBI_NO_BMP
+#endif // !BIMG_CONFIG_PARSE_BMP
+
+#if !BIMG_CONFIG_PARSE_PSD
+#	define STBI_NO_PSD
+#endif // !BIMG_CONFIG_PARSE_PSD
+
+#if !BIMG_CONFIG_PARSE_PSD
+#	define STBI_NO_PSD
+#endif // !BIMG_CONFIG_PARSE_PSD
+
+#if !BIMG_CONFIG_PARSE_TGA
+#	define STBI_NO_TGA
+#endif // !BIMG_CONFIG_PARSE_TGA
+
+#if !BIMG_CONFIG_PARSE_GIF
+#	define STBI_NO_GIF
+#endif // !BIMG_CONFIG_PARSE_GIF
+
+#if !BIMG_CONFIG_PARSE_HDR
+#	define STBI_NO_HDR
+#endif // !BIMG_CONFIG_PARSE_HDR
+
+#if !BIMG_CONFIG_PARSE_PIC
+#	define STBI_NO_PIC
+#endif // !BIMG_CONFIG_PARSE_PIC
+
+#if !BIMG_CONFIG_PARSE_PNM
+#	define STBI_NO_PNM
+#endif // !BIMG_CONFIG_PARSE_PNM
+
+#include <stb/stb_image.h>
+BX_PRAGMA_DIAGNOSTIC_POP();
+#endif // BIMG_USE_STB_IMAGE
+
+namespace bimg
+{
+	static ImageContainer* imageParseLodePng(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		static uint8_t pngMagic[] = { 0x89, 0x50, 0x4E, 0x47, 0x0d, 0x0a };
+
+		if (0 != bx::memCmp(_data, pngMagic, sizeof(pngMagic) ) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_PNG
+		ImageContainer* output = NULL;
+		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
+		uint32_t width  = 0;
+		uint32_t height = 0;
+
+		LodePNGState state;
+		lodepng_state_init(&state);
+		state.decoder.color_convert = 0;
+
+		uint8_t* data = NULL;
+		const uint32_t lodePngError = lodepng_decode(&data, &width, &height, &state, (uint8_t*)_data, _size);
+
+		if (0 != lodePngError)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "lodepng_decode failed.");
+		}
+		else
+		{
+			bool palette   = false;
+			bool supported = false;
+
+			switch (state.info_raw.bitdepth)
+			{
+				case 1:
+				case 2:
+				case 4:
+					palette   = LCT_PALETTE == state.info_raw.colortype;
+					format    = palette ? bimg::TextureFormat::RGBA8 : bimg::TextureFormat::R8;
+					supported = true;
+					break;
+
+				case 8:
+					switch (state.info_raw.colortype)
+					{
+						case LCT_GREY:
+							format = bimg::TextureFormat::R8;
+							supported = true;
+							break;
+
+						case LCT_GREY_ALPHA:
+							format = bimg::TextureFormat::RG8;
+							supported = true;
+							break;
+
+						case LCT_RGB:
+							format = bimg::TextureFormat::RGB8;
+							supported = true;
+							break;
+
+						case LCT_RGBA:
+							format = bimg::TextureFormat::RGBA8;
+							supported = true;
+							break;
+
+						case LCT_PALETTE:
+							format  = bimg::TextureFormat::RGBA8;
+							palette = true;
+							supported = true;
+							break;
+
+						case LCT_MAX_OCTET_VALUE:
+							break;
+					}
+					break;
+
+				case 16:
+					switch (state.info_raw.colortype)
+					{
+						case LCT_GREY:
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								uint16_t* rgba = (uint16_t*)data + ii;
+								rgba[0] = bx::toHostEndian(rgba[0], false);
+							}
+							format = bimg::TextureFormat::R16;
+							supported = true;
+							break;
+
+						case LCT_GREY_ALPHA:
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								uint16_t* rgba = (uint16_t*)data + ii*2;
+								rgba[0] = bx::toHostEndian(rgba[0], false);
+								rgba[1] = bx::toHostEndian(rgba[1], false);
+							}
+							format = bimg::TextureFormat::RG16;
+							supported = true;
+							break;
+
+						case LCT_RGB:
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								uint16_t* rgba = (uint16_t*)data + ii*3;
+								rgba[0] = bx::toHostEndian(rgba[0], false);
+								rgba[1] = bx::toHostEndian(rgba[1], false);
+								rgba[2] = bx::toHostEndian(rgba[2], false);
+							}
+							format = bimg::TextureFormat::RGBA16;
+							supported = true;
+							break;
+
+						case LCT_RGBA:
+							for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+							{
+								uint16_t* rgba = (uint16_t*)data + ii*4;
+								rgba[0] = bx::toHostEndian(rgba[0], false);
+								rgba[1] = bx::toHostEndian(rgba[1], false);
+								rgba[2] = bx::toHostEndian(rgba[2], false);
+								rgba[3] = bx::toHostEndian(rgba[3], false);
+							}
+							format = bimg::TextureFormat::RGBA16;
+							supported = true;
+							break;
+
+						case LCT_PALETTE:
+							break;
+
+						case LCT_MAX_OCTET_VALUE:
+							break;
+					}
+					break;
+
+				default:
+					break;
+			}
+
+			if (supported)
+			{
+				const uint8_t* copyData = data;
+
+				TextureFormat::Enum dstFormat = format;
+				if (palette) {
+					copyData = NULL;
+				}
+				else if (1 == state.info_raw.bitdepth
+				||  2 == state.info_raw.bitdepth
+				||  4 == state.info_raw.bitdepth)
+				{
+					copyData = NULL;
+				}
+				else if (16      == state.info_raw.bitdepth
+					 &&  LCT_RGB == state.info_raw.colortype)
+				{
+					dstFormat = bimg::TextureFormat::RGBA16;
+					copyData  = NULL;
+				}
+
+				output = imageAlloc(_allocator
+					, dstFormat
+					, width
+					, height
+					, 0
+					, 1
+					, false
+					, false
+					, copyData
+					);
+
+				if (NULL == output)
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "PNG: Unsupported dimensions.");
+				}
+				else
+				{
+				if (palette)
+				{
+					if (1 == state.info_raw.bitdepth)
+					{
+						for (uint32_t ii = 0, num = width*height/8; ii < num; ++ii)
+						{
+							uint8_t* dst = (uint8_t*)output->m_data + ii*32;
+							bx::memCopy(dst,      state.info_raw.palette + ( (data[ii]>>7)&0x1)*4, 4);
+							bx::memCopy(dst +  4, state.info_raw.palette + ( (data[ii]>>6)&0x1)*4, 4);
+							bx::memCopy(dst +  8, state.info_raw.palette + ( (data[ii]>>5)&0x1)*4, 4);
+							bx::memCopy(dst + 12, state.info_raw.palette + ( (data[ii]>>4)&0x1)*4, 4);
+							bx::memCopy(dst + 16, state.info_raw.palette + ( (data[ii]>>3)&0x1)*4, 4);
+							bx::memCopy(dst + 20, state.info_raw.palette + ( (data[ii]>>2)&0x1)*4, 4);
+							bx::memCopy(dst + 24, state.info_raw.palette + ( (data[ii]>>1)&0x1)*4, 4);
+							bx::memCopy(dst + 28, state.info_raw.palette + (  data[ii]    &0x1)*4, 4);
+						}
+					}
+					else if (2 == state.info_raw.bitdepth)
+					{
+						for (uint32_t ii = 0, num = width*height/4; ii < num; ++ii)
+						{
+							uint8_t* dst = (uint8_t*)output->m_data + ii*16;
+							bx::memCopy(dst,      state.info_raw.palette + ( (data[ii]>>6)&0x3)*4, 4);
+							bx::memCopy(dst +  4, state.info_raw.palette + ( (data[ii]>>4)&0x3)*4, 4);
+							bx::memCopy(dst +  8, state.info_raw.palette + ( (data[ii]>>2)&0x3)*4, 4);
+							bx::memCopy(dst + 12, state.info_raw.palette + (  data[ii]    &0x3)*4, 4);
+						}
+					}
+					else if (4 == state.info_raw.bitdepth)
+					{
+						for (uint32_t ii = 0, num = width*height/2; ii < num; ++ii)
+						{
+							uint8_t* dst = (uint8_t*)output->m_data + ii*8;
+							bx::memCopy(dst,      state.info_raw.palette + ( (data[ii]>>4)&0xf)*4, 4);
+							bx::memCopy(dst +  4, state.info_raw.palette + (  data[ii]    &0xf)*4, 4);
+						}
+					}
+					else
+					{
+						for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+						{
+							bx::memCopy( (uint8_t*)output->m_data + ii*4, state.info_raw.palette + data[ii]*4, 4);
+						}
+					}
+				}
+				else if (1 == state.info_raw.bitdepth)
+				{
+					for (uint32_t ii = 0, num = width*height/8; ii < num; ++ii)
+					{
+						uint8_t* src = (uint8_t*)data + ii;
+						uint8_t eightBits = src[0];
+
+						uint8_t* dst = (uint8_t*)output->m_data + ii*8;
+						dst[0] = uint8_t( (eightBits>>7)&0x1)*255;
+						dst[1] = uint8_t( (eightBits>>6)&0x1)*255;
+						dst[2] = uint8_t( (eightBits>>5)&0x1)*255;
+						dst[3] = uint8_t( (eightBits>>4)&0x1)*255;
+						dst[4] = uint8_t( (eightBits>>3)&0x1)*255;
+						dst[5] = uint8_t( (eightBits>>2)&0x1)*255;
+						dst[6] = uint8_t( (eightBits>>1)&0x1)*255;
+						dst[7] = uint8_t( (eightBits   )&0x1)*255;
+
+					}
+				}
+				else if (2 == state.info_raw.bitdepth)
+				{
+					for (uint32_t ii = 0, num = width*height/4; ii < num; ++ii)
+					{
+						uint8_t* src = (uint8_t*)data + ii;
+						uint8_t eightBits = src[0];
+
+						uint8_t* dst = (uint8_t*)output->m_data + ii*4;
+						// Note: not exactly precise.
+						// Correct way: dst[0] = uint8_t(float( (eightBits>>6)&0x3)*(255.0f/4.0f) );
+						dst[0] = uint8_t(uint32_t( ( (eightBits>>6)&0x3)*64)&0xff);
+						dst[1] = uint8_t(uint32_t( ( (eightBits>>4)&0x3)*64)&0xff);
+						dst[2] = uint8_t(uint32_t( ( (eightBits>>2)&0x3)*64)&0xff);
+						dst[3] = uint8_t(uint32_t( ( (eightBits   )&0x3)*64)&0xff);
+					}
+				}
+				else if (4 == state.info_raw.bitdepth)
+				{
+					for (uint32_t ii = 0, num = width*height/2; ii < num; ++ii)
+					{
+						uint8_t* src = (uint8_t*)data + ii;
+						uint8_t eightBits = src[0];
+
+						uint8_t* dst = (uint8_t*)output->m_data + ii*2;
+						// Note: not exactly precise.
+						// Correct way: dst[0] = uint8_t(float( (eightBits>>4)&0xf)*(255.0f/16.0f) );
+						dst[0] = uint8_t(uint32_t( ( (eightBits>>4)&0xf)*16)&0xff);
+						dst[1] = uint8_t(uint32_t( ( (eightBits   )&0xf)*16)&0xff);
+					}
+				}
+				else if (16      == state.info_raw.bitdepth
+					 &&  LCT_RGB == state.info_raw.colortype)
+				{
+					for (uint32_t ii = 0, num = width*height; ii < num; ++ii)
+					{
+						const uint16_t* src = (uint16_t*)data + ii*3;
+						      uint16_t* dst = (uint16_t*)output->m_data + ii*4;
+						dst[0] = src[0];
+						dst[1] = src[1];
+						dst[2] = src[2];
+						dst[3] = UINT16_MAX;
+					}
+				}
+
+				switch (state.info_raw.colortype) //Check for alpha values
+				{
+					case LCT_GREY:
+					case LCT_RGB:
+						break;
+
+					case LCT_GREY_ALPHA:
+						if (8 == state.info_raw.bitdepth)
+						{
+							for (uint32_t ii = 0, num = width * height; ii < num; ++ii)
+							{
+								const uint8_t* rgba = (uint8_t*)data + ii * 2;
+								bool has_alpha = rgba[1] < UINT8_MAX;
+								if (has_alpha)
+								{
+									output->m_hasAlpha = has_alpha;
+									break;
+								}
+							}
+						}
+						else if (16 == state.info_raw.bitdepth)
+						{
+							for (uint32_t ii = 0, num = width * height; ii < num; ++ii)
+							{
+								const uint16_t* rgba = (uint16_t*)data + ii * 2;
+								bool has_alpha = rgba[1] < UINT16_MAX;
+								if (has_alpha)
+								{
+									output->m_hasAlpha = has_alpha;
+									break;
+								}
+							}
+						}
+						break;
+
+					case LCT_RGBA:
+						if (8 == state.info_raw.bitdepth)
+						{
+							for (uint32_t ii = 0, num = width * height; ii < num; ++ii)
+							{
+								const uint8_t* dst = (uint8_t*)output->m_data + ii * 4;
+								bool has_alpha = dst[3] < UINT8_MAX;
+								if (has_alpha)
+								{
+									output->m_hasAlpha = has_alpha;
+									break;
+								}
+							}
+						}
+						else if (16 == state.info_raw.bitdepth)
+						{
+							for (uint32_t ii = 0, num = width * height; ii < num; ++ii)
+							{
+								const uint16_t* dst = (uint16_t*)output->m_data + ii * 4;
+								bool has_alpha = dst[3] < UINT16_MAX;
+								if (has_alpha)
+								{
+									output->m_hasAlpha = has_alpha;
+									break;
+								}
+							}
+						}
+						break;
+
+					case LCT_PALETTE:
+						output->m_hasAlpha = lodepng_has_palette_alpha(&state.info_raw);
+						break;
+
+					case LCT_MAX_OCTET_VALUE:
+						break;
+				}
+				}
+			}
+			else
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "PNG: Unsupported format.");
+			}
+		}
+
+		lodepng_state_cleanup(&state);
+		lodepng_free(data);
+
+		if (NULL != output)
+		{
+			output->m_parser = ImageParser::Png;
+		}
+
+		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "PNG parsing is disabled (BIMG_CONFIG_PARSE_PNG).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_PNG
+	}
+
+#if BIMG_CONFIG_PARSE_EXR
+	static void errorSetTinyExr(int _result, bx::Error* _err)
+	{
+		switch (_result)
+		{
+		case TINYEXR_ERROR_INVALID_MAGIC_NUMBER: BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid magic number."); break;
+		case TINYEXR_ERROR_INVALID_EXR_VERSION:	 BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid EXR version.");  break;
+		case TINYEXR_ERROR_INVALID_ARGUMENT:     BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid argument.");     break;
+		case TINYEXR_ERROR_INVALID_DATA:         BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid data.");         break;
+		case TINYEXR_ERROR_INVALID_FILE:         BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid file.");         break;
+//		case TINYEXR_ERROR_INVALID_PARAMETER:    BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid parameter.");    break;
+		case TINYEXR_ERROR_CANT_OPEN_FILE:       BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Can't open file.");      break;
+		case TINYEXR_ERROR_UNSUPPORTED_FORMAT:   BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Unsupported format.");   break;
+		case TINYEXR_ERROR_INVALID_HEADER:       BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Invalid header.");       break;
+		case TINYEXR_ERROR_UNSUPPORTED_FEATURE:  BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Unsupported feature.");  break;
+		case TINYEXR_ERROR_CANT_WRITE_FILE:      BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Can't write file.");     break;
+		case TINYEXR_ERROR_SERIALIZATION_FAILED: BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image. Serialization failed."); break;
+		default:                                 BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Failed to parse image.");                       break;
+		}
+	}
+#endif // BIMG_CONFIG_PARSE_EXR
+
+	static ImageContainer* imageParseTinyExr(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		static uint8_t exrMagic[] = { 0x76, 0x2f, 0x31, 0x01 };
+
+		if (0 != bx::memCmp(_data, exrMagic, sizeof(exrMagic) ) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_EXR
+		EXRVersion exrVersion;
+		int result = ParseEXRVersionFromMemory(&exrVersion, (uint8_t*)_data, _size);
+		if (TINYEXR_SUCCESS != result)
+		{
+			return NULL;
+		}
+
+		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
+		uint32_t width  = 0;
+		uint32_t height = 0;
+
+		bool hasAlpha = false;
+
+		uint8_t* data = NULL;
+		const char* err = NULL;
+		EXRHeader exrHeader;
+		result = ParseEXRHeaderFromMemory(&exrHeader, &exrVersion, (uint8_t*)_data, _size, &err);
+		if (TINYEXR_SUCCESS == result)
+		{
+			int uniformType = TINYEXR_PIXELTYPE_HALF;
+			for (int ii = 0; ii < exrHeader.num_channels; ++ii)
+			{
+				if (0 == bx::strCmp(exrHeader.channels[ii].name, "R") )
+				{
+					uniformType = TINYEXR_PIXELTYPE_FLOAT == exrHeader.pixel_types[ii]
+						? TINYEXR_PIXELTYPE_FLOAT
+						: TINYEXR_PIXELTYPE_HALF
+						;
+					break;
+				}
+			}
+
+			for (int ii = 0; ii < exrHeader.num_channels; ++ii)
+			{
+				const char* name = exrHeader.channels[ii].name;
+				if (0 == bx::strCmp(name, "R")
+				||  0 == bx::strCmp(name, "G")
+				||  0 == bx::strCmp(name, "B")
+				||  0 == bx::strCmp(name, "A") )
+				{
+					exrHeader.requested_pixel_types[ii] = uniformType;
+				}
+			}
+
+			EXRImage exrImage;
+			InitEXRImage(&exrImage);
+
+			result = LoadEXRImageFromMemory(&exrImage, &exrHeader, (uint8_t*)_data, _size, &err);
+			if (TINYEXR_SUCCESS == result)
+			{
+				uint8_t idxR = UINT8_MAX;
+				uint8_t idxG = UINT8_MAX;
+				uint8_t idxB = UINT8_MAX;
+				uint8_t idxA = UINT8_MAX;
+				for (uint8_t ii = 0, num = uint8_t(exrHeader.num_channels); ii < num; ++ii)
+				{
+					const EXRChannelInfo& channel = exrHeader.channels[ii];
+					if (UINT8_MAX == idxR
+					&&  0 == bx::strCmp(channel.name, "R") )
+					{
+						idxR = ii;
+					}
+					else if (UINT8_MAX == idxG
+					&&  0 == bx::strCmp(channel.name, "G") )
+					{
+						idxG = ii;
+					}
+					else if (UINT8_MAX == idxB
+					&&  0 == bx::strCmp(channel.name, "B") )
+					{
+						idxB = ii;
+					}
+					else if (UINT8_MAX == idxA
+					&&  0 == bx::strCmp(channel.name, "A") )
+					{
+						idxA = ii;
+					}
+				}
+
+				if (UINT8_MAX != idxR)
+				{
+					const bool asFloat = exrHeader.pixel_types[idxR] == TINYEXR_PIXELTYPE_FLOAT;
+					uint32_t dstBpp = asFloat ? 32 : 16;
+					format = asFloat ? TextureFormat::R32F : TextureFormat::R16F;
+					uint32_t stepR = 1;
+					uint32_t stepG = 0;
+					uint32_t stepB = 0;
+					uint32_t stepA = 0;
+
+					if (UINT8_MAX != idxG)
+					{
+						dstBpp = asFloat ? 64 : 32;
+						format = asFloat ? TextureFormat::RG32F : TextureFormat::RG16F;
+						stepG  = 1;
+					}
+
+					if (UINT8_MAX != idxB)
+					{
+						dstBpp = asFloat ? 128 : 64;
+						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
+						stepB  = 1;
+					}
+
+					if (UINT8_MAX != idxA)
+					{
+						dstBpp = asFloat ? 128 : 64;
+						format = asFloat ? TextureFormat::RGBA32F : TextureFormat::RGBA16F;
+						stepA  = 1;
+					}
+
+					data   = (uint8_t*)bx::alloc(_allocator, (size_t)exrImage.width * exrImage.height * dstBpp/8);
+					width  = exrImage.width;
+					height = exrImage.height;
+
+					if (asFloat)
+					{
+						const float  zero = 0.0f;
+						const float* srcR = UINT8_MAX == idxR ? &zero : (const float*)(exrImage.images)[idxR];
+						const float* srcG = UINT8_MAX == idxG ? &zero : (const float*)(exrImage.images)[idxG];
+						const float* srcB = UINT8_MAX == idxB ? &zero : (const float*)(exrImage.images)[idxB];
+						const float* srcA = UINT8_MAX == idxA ? &zero : (const float*)(exrImage.images)[idxA];
+
+						const uint32_t bytesPerPixel = dstBpp/8;
+						for (uint32_t ii = 0, num = exrImage.width * exrImage.height; ii < num; ++ii)
+						{
+							float rgba[4] =
+							{
+								*srcR,
+								*srcG,
+								*srcB,
+								*srcA,
+							};
+							bx::memCopy(&data[ii * bytesPerPixel], rgba, bytesPerPixel);
+
+							hasAlpha |= (hasAlpha || rgba[3] < 1.0f);
+
+							srcR += stepR;
+							srcG += stepG;
+							srcB += stepB;
+							srcA += stepA;
+						}
+					}
+					else
+					{
+						const uint16_t  zero = 0;
+						const uint16_t* srcR = UINT8_MAX == idxR ? &zero : (const uint16_t*)(exrImage.images)[idxR];
+						const uint16_t* srcG = UINT8_MAX == idxG ? &zero : (const uint16_t*)(exrImage.images)[idxG];
+						const uint16_t* srcB = UINT8_MAX == idxB ? &zero : (const uint16_t*)(exrImage.images)[idxB];
+						const uint16_t* srcA = UINT8_MAX == idxA ? &zero : (const uint16_t*)(exrImage.images)[idxA];
+
+						const uint32_t bytesPerPixel = dstBpp/8;
+						for (uint32_t ii = 0, num = exrImage.width * exrImage.height; ii < num; ++ii)
+						{
+							uint16_t rgba[4] =
+							{
+								*srcR,
+								*srcG,
+								*srcB,
+								*srcA,
+							};
+							bx::memCopy(&data[ii * bytesPerPixel], rgba, bytesPerPixel);
+
+							hasAlpha |= (hasAlpha || rgba[3] < UINT16_MAX);
+
+							srcR += stepR;
+							srcG += stepG;
+							srcB += stepB;
+							srcA += stepA;
+						}
+					}
+				}
+				else
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Couldn't find R channel.");
+				}
+
+				FreeEXRImage(&exrImage);
+			}
+			else
+			{
+				errorSetTinyExr(result, _err);
+			}
+
+			FreeEXRHeader(&exrHeader);
+		}
+		else
+		{
+			errorSetTinyExr(result, _err);
+		}
+
+		ImageContainer* output = NULL;
+		if (NULL != data)
+		{
+			output = imageAlloc(_allocator
+				, format
+				, width
+				, height
+				, 0
+				, 1
+				, false
+				, false
+				, data
+				);
+			bx::free(_allocator, data);
+
+			if (NULL == output)
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Unsupported dimensions.");
+				return NULL;
+			}
+
+			output->m_hasAlpha = hasAlpha;
+			output->m_parser = ImageParser::Exr;
+		}
+
+		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "EXR parsing is disabled (BIMG_CONFIG_PARSE_EXR).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_PNG
+	}
+
+#if BIMG_USE_STB_IMAGE
+	static ImageParser::Enum imageStbImageFormat(const void* _data, uint32_t _size)
+	{
+		const uint8_t* data = (const uint8_t*)_data;
+
+		if (_size >= 2
+		&&  'B' == data[0]
+		&&  'M' == data[1])
+		{
+			return ImageParser::Bmp;
+		}
+
+		if (_size >= 6
+		&&  0 == bx::memCmp(data, "GIF8", 4)
+		&&  ('7' == data[4] || '9' == data[4])
+		&&  'a' == data[5])
+		{
+			return ImageParser::Gif;
+		}
+
+		if (_size >= 4
+		&&  0 == bx::memCmp(data, "8BPS", 4) )
+		{
+			return ImageParser::Psd;
+		}
+
+		static const uint8_t picMagic[] = { 0x53, 0x80, 0xf6, 0x34 };
+		if (_size >= sizeof(picMagic)
+		&&  0 == bx::memCmp(data, picMagic, sizeof(picMagic) ) )
+		{
+			return ImageParser::Pic;
+		}
+
+		if (_size >= 2
+		&&  'P' == data[0]
+		&&  ('5' == data[1] || '6' == data[1]) )
+		{
+			return ImageParser::Pnm;
+		}
+
+		if ( (_size >= 11 && 0 == bx::memCmp(data, "#?RADIANCE\n", 11) )
+		||   (_size >=  7 && 0 == bx::memCmp(data, "#?RGBE\n",      7) ) )
+		{
+			return ImageParser::Hdr;
+		}
+
+		// TGA has no signature; stb_image probes it last.
+		return ImageParser::Tga;
+	}
+#endif // BIMG_USE_STB_IMAGE
+
+	static ImageContainer* imageParseStbImage(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+#if BIMG_USE_STB_IMAGE
+		const int isHdr = stbi_is_hdr_from_memory( (const uint8_t*)_data, (int)_size);
+
+		void* data;
+		uint32_t width  = 0;
+		uint32_t height = 0;
+		int comp = 0;
+		if (isHdr)
+		{
+			data = stbi_loadf_from_memory( (const uint8_t*)_data, (int)_size, (int*)&width, (int*)&height, &comp, 4);
+		}
+		else
+		{
+			data = stbi_load_from_memory ( (const uint8_t*)_data, (int)_size, (int*)&width, (int*)&height, &comp, 0);
+		}
+
+		if (NULL == data)
+		{
+			return NULL;
+		}
+
+		if (0 == width
+		||  0 == height)
+		{
+			stbi_image_free(data);
+			BX_ERROR_SET(_err, BIMG_ERROR, "stb_image: Invalid image dimensions.");
+			return NULL;
+		}
+
+		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
+
+		if (isHdr)
+		{
+			format = bimg::TextureFormat::RGBA32F;
+		}
+		else
+		{
+			switch (comp)
+			{
+				case 1:  format = bimg::TextureFormat::R8;   break;
+				case 2:  format = bimg::TextureFormat::RG8;  break;
+				case 3:  format = bimg::TextureFormat::RGB8; break;
+				default: break;
+			}
+		}
+
+		ImageContainer* output = imageAlloc(_allocator
+			, format
+			, width
+			, height
+			, 0
+			, 1
+			, false
+			, false
+			, data
+			);
+		stbi_image_free(data);
+
+		if (NULL == output)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "stb_image: Unsupported dimensions.");
+			return NULL;
+		}
+
+		output->m_parser = imageStbImageFormat(_data, _size);
+
+		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		return NULL;
+#endif
+	}
+
+	static ImageContainer* imageParseJpeg(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		bx::MemoryReader reader(_data, _size);
+
+		uint16_t magic = 0;
+		bx::readHE(&reader, magic, false, _err);
+
+		if (!_err->isOk()
+		||  0xffd8 != magic)
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_JPEG
+		Orientation::Enum orientation = Orientation::R0;
+
+		bx::Error exifErr;
+
+		while (exifErr.isOk() )
+		{
+			bx::readHE(&reader, magic, false, &exifErr);
+
+			uint16_t size;
+			bx::readHE(&reader, size, false, &exifErr);
+
+			if (!exifErr.isOk() )
+			{
+				break;
+			}
+
+			if (0xffe1 != magic)
+			{
+				bx::seek(&reader, size-2);
+				continue;
+			}
+
+			char exif00[6];
+			bx::read(&reader, exif00, 6, &exifErr);
+
+			if (0 == bx::memCmp(exif00, "Exif\0\0", 6) )
+			{
+				uint16_t iimm = 0;
+				bx::read(&reader, iimm, &exifErr);
+
+				const bool littleEndian = iimm == 0x4949; //II - Intel - little endian
+				if (!exifErr.isOk()
+				|| (!littleEndian && iimm != 0x4d4d) ) // MM - Motorola - big endian
+				{
+					break;
+				}
+
+				bx::readHE(&reader, magic, littleEndian, &exifErr);
+				if (!exifErr.isOk()
+				||  0x2a != magic)
+				{
+					break;
+				}
+
+				uint32_t ifd0;
+				bx::readHE(&reader, ifd0, littleEndian, &exifErr);
+
+				if (!exifErr.isOk()
+				||  8 > ifd0)
+				{
+					break;
+				}
+
+				bx::seek(&reader, ifd0-8);
+
+				uint16_t numEntries;
+				bx::readHE(&reader, numEntries, littleEndian, &exifErr);
+
+				for (uint32_t ii = 0; exifErr.isOk() && ii < numEntries; ++ii)
+				{
+					// Reference(s):
+					// - EXIF Tags
+					//   https://web.archive.org/web/20190218005249/https://sno.phy.queensu.ca/~phil/exiftool/TagNames/EXIF.html
+					//
+					uint16_t tag;
+					bx::readHE(&reader, tag, littleEndian, &exifErr);
+
+					uint16_t format;
+					bx::readHE(&reader, format, littleEndian, &exifErr);
+
+					uint32_t length;
+					bx::readHE(&reader, length, littleEndian, &exifErr);
+
+					uint32_t data;
+					bx::readHE(&reader, data, littleEndian, &exifErr);
+
+					switch (tag)
+					{
+					case 0x112: // orientation
+						if (3 == format)
+						{
+							bx::seek(&reader, -4);
+
+							uint16_t u16;
+							bx::readHE(&reader, u16, littleEndian, &exifErr);
+
+							uint16_t pad;
+							bx::read(&reader, pad, &exifErr);
+
+							switch (u16)
+							{
+							default:
+							case 1: orientation = Orientation::R0;        break; // Horizontal (normal)
+							case 2: orientation = Orientation::HFlip;     break; // Mirror horizontal
+							case 3: orientation = Orientation::R180;      break; // Rotate 180
+							case 4: orientation = Orientation::VFlip;     break; // Mirror vertical
+							case 5: orientation = Orientation::HFlipR270; break; // Mirror horizontal and rotate 270 CW
+							case 6: orientation = Orientation::R90;       break; // Rotate 90 CW
+							case 7: orientation = Orientation::HFlipR90;  break; // Mirror horizontal and rotate 90 CW
+							case 8: orientation = Orientation::R270;      break; // Rotate 270 CW
+							}
+						}
+						break;
+
+					default:
+						break;
+					}
+				}
+			}
+
+			break;
+		}
+
+		ImageContainer* image = imageParseStbImage(_allocator, _data, _size, _err);
+		if (NULL != image)
+		{
+			image->m_orientation = orientation;
+			image->m_parser      = ImageParser::Jpeg;
+		}
+
+		return image;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "JPEG parsing is disabled (BIMG_CONFIG_PARSE_JPEG).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_JPEG
+	}
+
+	static bool imageIsAvifBrand(const void* _data, uint32_t _size)
+	{
+		const uint8_t* data = (const uint8_t*)_data;
+
+		// ftyp box: [size:4]["ftyp":4][major_brand:4][minor_version:4][compatible_brands...]
+		const uint32_t boxSize = 0
+			| uint32_t(data[0])<<24
+			| uint32_t(data[1])<<16
+			| uint32_t(data[2])<< 8
+			| uint32_t(data[3])
+			;
+		const uint32_t end = bx::min(boxSize, _size);
+
+		for (uint32_t offset = 8; offset + 4 <= end; offset += 4)
+		{
+			if (0 == bx::memCmp(data + offset, "avif", 4)
+			||  0 == bx::memCmp(data + offset, "avis", 4) )
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	static ImageContainer* imageParseLibHeif(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		static uint8_t heifMagic[] = { 0x66, 0x74, 0x79, 0x70 }; // "ftyp" at offset 4
+
+		if (12 > _size
+		||  0 != bx::memCmp( (const uint8_t*)_data + 4, heifMagic, sizeof(heifMagic) ) )
+		{
+			return NULL;
+		}
+
+		if (imageIsAvifBrand(_data, _size) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_HEIF
+		heif_context* ctx = heif_context_alloc();
+
+		heif_context_read_from_memory_without_copy(ctx, _data, _size, NULL);
+
+		heif_image_handle* handle;
+		heif_context_get_primary_image_handle(ctx, &handle);
+
+		heif_image* image;
+		heif_decode_image(handle, &image, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, NULL);
+
+		int32_t srcStride;
+		const uint8_t* data = heif_image_get_plane_readonly(image, heif_channel_interleaved, &srcStride);
+
+		ImageContainer* output = NULL;
+		if (NULL != data)
+		{
+			const bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
+			const int32_t width  = heif_image_handle_get_width(handle);
+			const int32_t height = heif_image_handle_get_height(handle);
+			const int32_t dstStride = width*4;
+
+			output = imageAlloc(_allocator
+				, format
+				, width
+				, height
+				, 0
+				, 1
+				, false
+				, false
+				, NULL
+				);
+
+			if (NULL != output)
+			{
+				bx::memCopy(output->m_data, dstStride, data, srcStride, dstStride, height);
+				output->m_parser = ImageParser::Heif;
+			}
+		}
+
+		heif_image_release(image);
+		heif_image_handle_release(handle);
+
+		heif_context_free(ctx);
+
+		BX_UNUSED(_err);
+		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "HEIF parsing is disabled (BIMG_CONFIG_PARSE_HEIF).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_HEIF
+	}
+
+	static ImageContainer* imageParseLibAvif(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		static uint8_t ftypMagic[] = { 0x66, 0x74, 0x79, 0x70 }; // "ftyp" at offset 4
+
+		if (12 > _size
+		||  0 != bx::memCmp( (const uint8_t*)_data + 4, ftypMagic, sizeof(ftypMagic) ) )
+		{
+			return NULL;
+		}
+
+		if (!imageIsAvifBrand(_data, _size) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_AVIF
+		avifDecoder* decoder = avifDecoderCreate();
+		if (NULL == decoder)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to create decoder.");
+			return NULL;
+		}
+
+		avifResult result = avifDecoderSetIOMemory(decoder, (const uint8_t*)_data, _size);
+		if (AVIF_RESULT_OK == result)
+		{
+			result = avifDecoderParse(decoder);
+		}
+		if (AVIF_RESULT_OK == result)
+		{
+			result = avifDecoderNextImage(decoder);
+		}
+
+		if (AVIF_RESULT_OK != result)
+		{
+			avifDecoderDestroy(decoder);
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to decode image.");
+			return NULL;
+		}
+
+		const uint32_t width    = decoder->image->width;
+		const uint32_t height   = decoder->image->height;
+		const bool     hasAlpha = 0 != decoder->alphaPresent;
+
+		ImageContainer* output = imageAlloc(_allocator
+			, bimg::TextureFormat::RGBA8
+			, width
+			, height
+			, 0
+			, 1
+			, false
+			, false
+			, NULL
+			);
+
+		if (NULL == output)
+		{
+			avifDecoderDestroy(decoder);
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Unsupported dimensions.");
+			return NULL;
+		}
+
+		avifRGBImage rgb;
+		avifRGBImageSetDefaults(&rgb, decoder->image);
+		rgb.format   = AVIF_RGB_FORMAT_RGBA;
+		rgb.depth    = 8;
+		rgb.pixels   = (uint8_t*)output->m_data;
+		rgb.rowBytes = width*4;
+
+		result = avifImageYUVToRGB(decoder->image, &rgb);
+
+		avifDecoderDestroy(decoder);
+
+		if (AVIF_RESULT_OK != result)
+		{
+			imageFree(output);
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to convert to RGBA.");
+			return NULL;
+		}
+
+		output->m_hasAlpha = hasAlpha;
+		output->m_parser   = ImageParser::Avif;
+
+		return output;
+#else
+		BX_UNUSED(_allocator);
+		BX_ERROR_SET(_err, BIMG_ERROR, "AVIF parsing is disabled (BIMG_CONFIG_PARSE_AVIF).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_AVIF
+	}
+
+#if BIMG_CONFIG_PARSE_WEBP
+	static void* simpleWebpAlloc(void* _userdata, size_t _size)
+	{
+		bx::AllocatorI* allocator = (bx::AllocatorI*)_userdata;
+		return bx::alloc(allocator, _size);
+	}
+
+	static void simpleWebpFree(void* _userdata, void* _ptr)
+	{
+		bx::AllocatorI* allocator = (bx::AllocatorI*)_userdata;
+		bx::free(allocator, _ptr);
+	}
+
+	static void errorSetSimpleWebp(simplewebp_error _result, bx::Error* _err)
+	{
+		switch (_result)
+		{
+		case SIMPLEWEBP_ALLOC_ERROR:       BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Failed to allocate memory."); break;
+		case SIMPLEWEBP_IO_ERROR:          BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Input read error.");          break;
+		case SIMPLEWEBP_NOT_WEBP_ERROR:    BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Not a WebP image.");          break;
+		case SIMPLEWEBP_CORRUPT_ERROR:     BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Image corrupt.");             break;
+		case SIMPLEWEBP_UNSUPPORTED_ERROR: BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Image unsupported.");         break;
+		case SIMPLEWEBP_IS_LOSSLESS_ERROR: BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Image is lossless.");         break;
+		default:                           BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Failed to parse image.");     break;
+		}
+	}
+#endif // BIMG_CONFIG_PARSE_WEBP
+
+	static ImageContainer* imageParseSimpleWebp(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		// WebP file format:
+		//   bytes 0-3 : "RIFF"
+		//   bytes 4-7 : file size
+		//   bytes 8-11: "WEBP"
+		static uint8_t riffMagic[] = { 0x52, 0x49, 0x46, 0x46 }; // "RIFF"
+		static uint8_t webpMagic[] = { 0x57, 0x45, 0x42, 0x50 }; // "WEBP"
+
+		if (12 > _size
+		||  0 != bx::memCmp(_data, riffMagic, sizeof(riffMagic) )
+		||  0 != bx::memCmp( (const uint8_t*)_data + 8, webpMagic, sizeof(webpMagic) ) )
+		{
+			return NULL;
+		}
+
+#if BIMG_CONFIG_PARSE_WEBP
+		simplewebp_allocator allocator;
+		allocator.alloc    = simpleWebpAlloc;
+		allocator.free     = simpleWebpFree;
+		allocator.userdata = _allocator;
+
+		simplewebp* webp = NULL;
+		simplewebp_error err = simplewebp_load_from_memory( (void*)_data, _size, &allocator, &webp);
+
+		if (SIMPLEWEBP_NO_ERROR != err)
+		{
+			errorSetSimpleWebp(err, _err);
+			return NULL;
+		}
+
+		size_t width  = 0;
+		size_t height = 0;
+		simplewebp_get_dimensions(webp, &width, &height);
+
+		const uint32_t bufferSize = uint32_t(width * height * 4);
+		uint8_t* data = (uint8_t*)bx::alloc(_allocator, bufferSize);
+
+		err = simplewebp_decode(webp, data, NULL);
+		simplewebp_unload(webp);
+
+		if (SIMPLEWEBP_NO_ERROR != err)
+		{
+			bx::free(_allocator, data);
+			errorSetSimpleWebp(err, _err);
+			return NULL;
+		}
+
+		ImageContainer* output = imageAlloc(_allocator
+			, bimg::TextureFormat::RGBA8
+			, uint32_t(width)
+			, uint32_t(height)
+			, 0
+			, 1
+			, false
+			, false
+			, data
+			);
+
+		if (NULL == output)
+		{
+			bx::free(_allocator, data);
+			BX_ERROR_SET(_err, BIMG_ERROR, "WebP: Unsupported dimensions.");
+			return NULL;
+		}
+
+		bool hasAlpha = false;
+
+		for (uint32_t ii = 0, num = uint32_t(width * height); ii < num; ++ii)
+		{
+			if (data[ii * 4 + 3] < UINT8_MAX)
+			{
+				hasAlpha = true;
+				break;
+			}
+		}
+
+		output->m_hasAlpha = hasAlpha;
+		output->m_parser = ImageParser::Webp;
+
+		bx::free(_allocator, data);
+
+		return output;
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "WebP parsing is disabled (BIMG_CONFIG_PARSE_WEBP).");
+		return NULL;
+#endif // BIMG_CONFIG_PARSE_WEBP
+	}
+
+	static bool imageInfoFinalize(ImageContainer& _imageContainer, ImageParser::Enum _parser, TextureFormat::Enum _format, uint32_t _width, uint32_t _height, bx::Error* _err)
+	{
+		if (0 == _width
+		||  0 == _height
+		||  _width  > UINT16_MAX
+		||  _height > UINT16_MAX)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unsupported image dimensions.");
+			return false;
+		}
+
+		const uint64_t size = imageGetSize(NULL, _width, _height, 1, false, false, 1, _format);
+		if (size > UINT32_MAX)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Unsupported image dimensions.");
+			return false;
+		}
+
+		_imageContainer.m_allocator   = NULL;
+		_imageContainer.m_data        = NULL;
+		_imageContainer.m_format      = _format;
+		_imageContainer.m_orientation = Orientation::R0;
+		_imageContainer.m_parser      = _parser;
+		_imageContainer.m_size        = uint32_t(size);
+		_imageContainer.m_offset      = UINT32_MAX;
+		_imageContainer.m_width       = _width;
+		_imageContainer.m_height      = _height;
+		_imageContainer.m_depth       = 0;
+		_imageContainer.m_numLayers   = 1;
+		_imageContainer.m_numMips     = 1;
+		_imageContainer.m_hasAlpha    = false;
+		_imageContainer.m_cubeMap     = false;
+		_imageContainer.m_ktx         = false;
+		_imageContainer.m_ktx2        = false;
+		_imageContainer.m_pvr3        = false;
+		_imageContainer.m_srgb        = false;
+
+		return true;
+	}
+
+	static bool imageParseInfoLodePng(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+		static uint8_t pngMagic[] = { 0x89, 0x50, 0x4E, 0x47, 0x0d, 0x0a };
+
+		if (_size < sizeof(pngMagic)
+		||  0 != bx::memCmp(_data, pngMagic, sizeof(pngMagic) ) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_PNG
+		LodePNGState state;
+		lodepng_state_init(&state);
+
+		unsigned width  = 0;
+		unsigned height = 0;
+		const unsigned error = lodepng_inspect(&width, &height, &state, (const unsigned char*)_data, _size);
+
+		const LodePNGColorType colortype = state.info_png.color.colortype;
+		const unsigned         bitdepth  = state.info_png.color.bitdepth;
+		lodepng_state_cleanup(&state);
+
+		if (0 != error)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "lodepng_inspect failed.");
+			return false;
+		}
+
+		// Mirror the final container format selection in imageParseLodePng.
+		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
+		bool supported = false;
+
+		switch (bitdepth)
+		{
+			case 1:
+			case 2:
+			case 4:
+				format    = (LCT_PALETTE == colortype) ? bimg::TextureFormat::RGBA8 : bimg::TextureFormat::R8;
+				supported = true;
+				break;
+
+			case 8:
+				switch (colortype)
+				{
+					case LCT_GREY:       format = bimg::TextureFormat::R8;    supported = true; break;
+					case LCT_GREY_ALPHA: format = bimg::TextureFormat::RG8;   supported = true; break;
+					case LCT_RGB:        format = bimg::TextureFormat::RGB8;  supported = true; break;
+					case LCT_RGBA:       format = bimg::TextureFormat::RGBA8; supported = true; break;
+					case LCT_PALETTE:    format = bimg::TextureFormat::RGBA8; supported = true; break;
+					default: break;
+				}
+				break;
+
+			case 16:
+				switch (colortype)
+				{
+					case LCT_GREY:       format = bimg::TextureFormat::R16;    supported = true; break;
+					case LCT_GREY_ALPHA: format = bimg::TextureFormat::RG16;   supported = true; break;
+					case LCT_RGB:        format = bimg::TextureFormat::RGBA16; supported = true; break;
+					case LCT_RGBA:       format = bimg::TextureFormat::RGBA16; supported = true; break;
+					default: break;
+				}
+				break;
+
+			default:
+				break;
+		}
+
+		if (!supported)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "PNG: Unsupported color type/bit depth.");
+			return false;
+		}
+
+		return imageInfoFinalize(_imageContainer, ImageParser::Png, format, width, height, _err);
+#else
+		BX_UNUSED(_data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "PNG parsing is disabled (BIMG_CONFIG_PARSE_PNG).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_PNG
+	}
+
+	static bool imageParseInfoTinyExr(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+		static uint8_t exrMagic[] = { 0x76, 0x2f, 0x31, 0x01 };
+
+		if (_size < sizeof(exrMagic)
+		||  0 != bx::memCmp(_data, exrMagic, sizeof(exrMagic) ) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_EXR
+		EXRVersion exrVersion;
+		if (TINYEXR_SUCCESS != ParseEXRVersionFromMemory(&exrVersion, (const uint8_t*)_data, _size) )
+		{
+			return false;
+		}
+
+		EXRHeader exrHeader;
+		const char* err = NULL;
+		const int result = ParseEXRHeaderFromMemory(&exrHeader, &exrVersion, (const uint8_t*)_data, _size, &err);
+		if (TINYEXR_SUCCESS != result)
+		{
+			errorSetTinyExr(result, _err);
+			return false;
+		}
+
+		uint8_t idxR = UINT8_MAX;
+		uint8_t idxG = UINT8_MAX;
+		uint8_t idxB = UINT8_MAX;
+		uint8_t idxA = UINT8_MAX;
+		for (uint8_t ii = 0, num = uint8_t(exrHeader.num_channels); ii < num; ++ii)
+		{
+			const EXRChannelInfo& channel = exrHeader.channels[ii];
+			if      (UINT8_MAX == idxR && 0 == bx::strCmp(channel.name, "R") ) idxR = ii;
+			else if (UINT8_MAX == idxG && 0 == bx::strCmp(channel.name, "G") ) idxG = ii;
+			else if (UINT8_MAX == idxB && 0 == bx::strCmp(channel.name, "B") ) idxB = ii;
+			else if (UINT8_MAX == idxA && 0 == bx::strCmp(channel.name, "A") ) idxA = ii;
+		}
+
+		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA32F;
+		bool ok = false;
+		if (UINT8_MAX != idxR)
+		{
+			const bool asFloat = exrHeader.pixel_types[idxR] == TINYEXR_PIXELTYPE_FLOAT;
+			format = asFloat ? bimg::TextureFormat::R32F : bimg::TextureFormat::R16F;
+			if (UINT8_MAX != idxG) format = asFloat ? bimg::TextureFormat::RG32F   : bimg::TextureFormat::RG16F;
+			if (UINT8_MAX != idxB) format = asFloat ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA16F;
+			if (UINT8_MAX != idxA) format = asFloat ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA16F;
+			ok = true;
+		}
+
+		const int  width    = exrHeader.data_window.max_x - exrHeader.data_window.min_x + 1;
+		const int  height   = exrHeader.data_window.max_y - exrHeader.data_window.min_y + 1;
+		const bool hasAlpha = UINT8_MAX != idxA;
+
+		FreeEXRHeader(&exrHeader);
+
+		if (!ok)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Couldn't find R channel.");
+			return false;
+		}
+
+		if (0 >= width
+		||  0 >= height)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "EXR: Invalid data window.");
+			return false;
+		}
+
+		if (!imageInfoFinalize(_imageContainer, ImageParser::Exr, format, uint32_t(width), uint32_t(height), _err) )
+		{
+			return false;
+		}
+
+		_imageContainer.m_hasAlpha = hasAlpha;
+		return true;
+#else
+		BX_UNUSED(_data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "EXR parsing is disabled (BIMG_CONFIG_PARSE_EXR).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_EXR
+	}
+
+#if BIMG_CONFIG_PARSE_JPEG
+	static Orientation::Enum imageParseJpegOrientation(const void* _data, uint32_t _size)
+	{
+		Orientation::Enum orientation = Orientation::R0;
+
+		bx::MemoryReader reader(_data, _size);
+
+		bx::Error err;
+		uint16_t magic = 0;
+		bx::readHE(&reader, magic, false, &err);
+
+		if (!err.isOk()
+		||  0xffd8 != magic)
+		{
+			return orientation;
+		}
+
+		while (err.isOk() )
+		{
+			bx::readHE(&reader, magic, false, &err);
+
+			uint16_t size;
+			bx::readHE(&reader, size, false, &err);
+
+			if (!err.isOk() )
+			{
+				break;
+			}
+
+			if (0xffe1 != magic)
+			{
+				bx::seek(&reader, size-2);
+				continue;
+			}
+
+			char exif00[6];
+			bx::read(&reader, exif00, 6, &err);
+
+			if (0 != bx::memCmp(exif00, "Exif\0\0", 6) )
+			{
+				break;
+			}
+
+			uint16_t iimm = 0;
+			bx::read(&reader, iimm, &err);
+
+			const bool littleEndian = iimm == 0x4949; //II - Intel - little endian
+			if (!err.isOk()
+			|| (!littleEndian && iimm != 0x4d4d) ) // MM - Motorola - big endian
+			{
+				break;
+			}
+
+			bx::readHE(&reader, magic, littleEndian, &err);
+			if (!err.isOk()
+			||  0x2a != magic)
+			{
+				break;
+			}
+
+			uint32_t ifd0;
+			bx::readHE(&reader, ifd0, littleEndian, &err);
+
+			if (!err.isOk()
+			||  8 > ifd0)
+			{
+				break;
+			}
+
+			bx::seek(&reader, ifd0-8);
+
+			uint16_t numEntries;
+			bx::readHE(&reader, numEntries, littleEndian, &err);
+
+			for (uint32_t ii = 0; err.isOk() && ii < numEntries; ++ii)
+			{
+				uint16_t tag;
+				bx::readHE(&reader, tag, littleEndian, &err);
+
+				uint16_t format;
+				bx::readHE(&reader, format, littleEndian, &err);
+
+				uint32_t length;
+				bx::readHE(&reader, length, littleEndian, &err);
+
+				uint32_t data;
+				bx::readHE(&reader, data, littleEndian, &err);
+
+				BX_UNUSED(length, data);
+
+				if (0x112 == tag // orientation
+				&&  3 == format)
+				{
+					bx::seek(&reader, -4);
+
+					uint16_t u16;
+					bx::readHE(&reader, u16, littleEndian, &err);
+
+					uint16_t pad;
+					bx::read(&reader, pad, &err);
+
+					switch (u16)
+					{
+					default:
+					case 1: orientation = Orientation::R0;        break; // Horizontal (normal)
+					case 2: orientation = Orientation::HFlip;     break; // Mirror horizontal
+					case 3: orientation = Orientation::R180;      break; // Rotate 180
+					case 4: orientation = Orientation::VFlip;     break; // Mirror vertical
+					case 5: orientation = Orientation::HFlipR270; break; // Mirror horizontal and rotate 270 CW
+					case 6: orientation = Orientation::R90;       break; // Rotate 90 CW
+					case 7: orientation = Orientation::HFlipR90;  break; // Mirror horizontal and rotate 90 CW
+					case 8: orientation = Orientation::R270;      break; // Rotate 270 CW
+					}
+				}
+			}
+
+			break;
+		}
+
+		return orientation;
+	}
+#endif // BIMG_CONFIG_PARSE_JPEG
+
+	static bool imageParseInfoStbImage(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+#if BIMG_USE_STB_IMAGE
+		int width  = 0;
+		int height = 0;
+		int comp   = 0;
+		if (0 == stbi_info_from_memory( (const stbi_uc*)_data, (int)_size, &width, &height, &comp) )
+		{
+			return false;
+		}
+
+		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
+		if (0 != stbi_is_hdr_from_memory( (const stbi_uc*)_data, (int)_size) )
+		{
+			format = bimg::TextureFormat::RGBA32F;
+		}
+		else
+		{
+			switch (comp)
+			{
+				case 1:  format = bimg::TextureFormat::R8;   break;
+				case 2:  format = bimg::TextureFormat::RG8;  break;
+				case 3:  format = bimg::TextureFormat::RGB8; break;
+				default: break;
+			}
+		}
+
+		return imageInfoFinalize(_imageContainer, imageStbImageFormat(_data, _size), format, uint32_t(width), uint32_t(height), _err);
+#else
+		BX_UNUSED(_imageContainer, _data, _size, _err);
+		return false;
+#endif // BIMG_USE_STB_IMAGE
+	}
+
+	static bool imageParseInfoJpeg(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+		if (_size < 2
+		||  0xff != ( (const uint8_t*)_data)[0]
+		||  0xd8 != ( (const uint8_t*)_data)[1])
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_JPEG && BIMG_USE_STB_IMAGE
+		const Orientation::Enum orientation = imageParseJpegOrientation(_data, _size);
+
+		int width  = 0;
+		int height = 0;
+		int comp   = 0;
+		if (0 == stbi_info_from_memory( (const stbi_uc*)_data, (int)_size, &width, &height, &comp) )
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "JPEG: Failed to read header.");
+			return false;
+		}
+
+		bimg::TextureFormat::Enum format = bimg::TextureFormat::RGBA8;
+		switch (comp)
+		{
+			case 1:  format = bimg::TextureFormat::R8;   break;
+			case 2:  format = bimg::TextureFormat::RG8;  break;
+			case 3:  format = bimg::TextureFormat::RGB8; break;
+			default: break;
+		}
+
+		if (!imageInfoFinalize(_imageContainer, ImageParser::Jpeg, format, uint32_t(width), uint32_t(height), _err) )
+		{
+			return false;
+		}
+
+		_imageContainer.m_orientation = orientation;
+		return true;
+#else
+		BX_UNUSED(_data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "JPEG parsing is disabled (BIMG_CONFIG_PARSE_JPEG).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_JPEG && BIMG_USE_STB_IMAGE
+	}
+
+	static bool imageParseInfoSimpleWebp(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		static uint8_t riffMagic[] = { 0x52, 0x49, 0x46, 0x46 }; // "RIFF"
+		static uint8_t webpMagic[] = { 0x57, 0x45, 0x42, 0x50 }; // "WEBP"
+
+		if (_size < 12
+		||  0 != bx::memCmp(_data, riffMagic, sizeof(riffMagic) )
+		||  0 != bx::memCmp( (const uint8_t*)_data + 8, webpMagic, sizeof(webpMagic) ) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_WEBP
+		simplewebp_allocator allocator;
+		allocator.alloc    = simpleWebpAlloc;
+		allocator.free     = simpleWebpFree;
+		allocator.userdata = _allocator;
+
+		simplewebp* webp = NULL;
+		simplewebp_error err = simplewebp_load_from_memory( (void*)_data, _size, &allocator, &webp);
+
+		if (SIMPLEWEBP_NO_ERROR != err)
+		{
+			errorSetSimpleWebp(err, _err);
+			return false;
+		}
+
+		size_t width  = 0;
+		size_t height = 0;
+		simplewebp_get_dimensions(webp, &width, &height);
+		simplewebp_unload(webp);
+
+		return imageInfoFinalize(_imageContainer, ImageParser::Webp, bimg::TextureFormat::RGBA8, uint32_t(width), uint32_t(height), _err);
+#else
+		BX_UNUSED(_allocator, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "WebP parsing is disabled (BIMG_CONFIG_PARSE_WEBP).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_WEBP
+	}
+
+	static bool imageParseInfoLibHeif(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+		static uint8_t heifMagic[] = { 0x66, 0x74, 0x79, 0x70 }; // "ftyp" at offset 4
+
+		if (_size < 12
+		||  0 != bx::memCmp( (const uint8_t*)_data + 4, heifMagic, sizeof(heifMagic) ) )
+		{
+			return false;
+		}
+
+		if (imageIsAvifBrand(_data, _size) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_HEIF
+		heif_context* ctx = heif_context_alloc();
+
+		heif_context_read_from_memory_without_copy(ctx, _data, _size, NULL);
+
+		heif_image_handle* handle = NULL;
+		heif_context_get_primary_image_handle(ctx, &handle);
+
+		bool ok = false;
+		int width  = 0;
+		int height = 0;
+		if (NULL != handle)
+		{
+			width  = heif_image_handle_get_width(handle);
+			height = heif_image_handle_get_height(handle);
+			heif_image_handle_release(handle);
+			ok = true;
+		}
+
+		heif_context_free(ctx);
+
+		if (!ok)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "HEIF: Failed to read primary image.");
+			return false;
+		}
+
+		return imageInfoFinalize(_imageContainer, ImageParser::Heif, bimg::TextureFormat::RGBA8, uint32_t(width), uint32_t(height), _err);
+#else
+		BX_UNUSED(_imageContainer, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "HEIF parsing is disabled (BIMG_CONFIG_PARSE_HEIF).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_HEIF
+	}
+
+	static bool imageParseInfoLibAvif(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_UNUSED(_allocator);
+
+		static uint8_t ftypMagic[] = { 0x66, 0x74, 0x79, 0x70 }; // "ftyp" at offset 4
+
+		if (_size < 12
+		||  0 != bx::memCmp( (const uint8_t*)_data + 4, ftypMagic, sizeof(ftypMagic) ) )
+		{
+			return false;
+		}
+
+		if (!imageIsAvifBrand(_data, _size) )
+		{
+			return false;
+		}
+
+#if BIMG_CONFIG_PARSE_AVIF
+		avifDecoder* decoder = avifDecoderCreate();
+		if (NULL == decoder)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to create decoder.");
+			return false;
+		}
+
+		avifResult result = avifDecoderSetIOMemory(decoder, (const uint8_t*)_data, _size);
+		if (AVIF_RESULT_OK == result)
+		{
+			result = avifDecoderParse(decoder);
+		}
+
+		const uint32_t width    = AVIF_RESULT_OK == result ? decoder->image->width  : 0;
+		const uint32_t height   = AVIF_RESULT_OK == result ? decoder->image->height : 0;
+		const bool     hasAlpha = AVIF_RESULT_OK == result && 0 != decoder->alphaPresent;
+
+		avifDecoderDestroy(decoder);
+
+		if (AVIF_RESULT_OK != result)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "AVIF: Failed to read primary image.");
+			return false;
+		}
+
+		if (!imageInfoFinalize(_imageContainer, ImageParser::Avif, bimg::TextureFormat::RGBA8, width, height, _err) )
+		{
+			return false;
+		}
+
+		_imageContainer.m_hasAlpha = hasAlpha;
+		return true;
+#else
+		BX_UNUSED(_imageContainer, _data, _size);
+		BX_ERROR_SET(_err, BIMG_ERROR, "AVIF parsing is disabled (BIMG_CONFIG_PARSE_AVIF).");
+		return false;
+#endif // BIMG_CONFIG_PARSE_AVIF
+	}
+
+	bool imageParseInfo(bx::AllocatorI* _allocator, ImageContainer& _imageContainer, const void* _data, uint32_t _size, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		// KTX2 must be probed before the generic container parse because KTX1
+		// and KTX2 share the same first four bytes.
+		static const uint8_t ktx2Identifier[] = { 0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A };
+		if (_size >= sizeof(ktx2Identifier)
+		&&  0 == bx::memCmp(_data, ktx2Identifier, sizeof(ktx2Identifier) ) )
+		{
+			if (imageParseKtx2(_imageContainer, _data, _size, _err) )
+			{
+				_imageContainer.m_allocator = NULL;
+				_imageContainer.m_data      = NULL;
+				_imageContainer.m_offset    = UINT32_MAX;
+				return true;
+			}
+
+			if (!_err->isOk() )
+			{
+				return false;
+			}
+
+			BX_ERROR_SET(_err, BIMG_ERROR, "KTX2: Invalid or truncated header.");
+			return false;
+		}
+
+		// Container formats (DDS/KTX/PVR3/TEX) are parsed header-only.
+		{
+			bx::Error containerErr;
+			if (imageParse(_imageContainer, _data, _size, &containerErr) )
+			{
+				_imageContainer.m_allocator = NULL;
+				_imageContainer.m_data      = NULL;
+				_imageContainer.m_offset    = UINT32_MAX;
+				return true;
+			}
+		}
+
+		// Raster formats are inspected header-only (no pixel decode).
+		typedef bool (*ImageParseInfoFn)(bx::AllocatorI*, ImageContainer&, const void*, uint32_t, bx::Error*);
+		static const ImageParseInfoFn parsers[] =
+		{
+			imageParseInfoLodePng,
+			imageParseInfoTinyExr,
+			imageParseInfoJpeg,
+			imageParseInfoSimpleWebp,
+			imageParseInfoStbImage,
+			imageParseInfoLibAvif,
+			imageParseInfoLibHeif,
+		};
+
+		for (uint32_t ii = 0; ii < BX_COUNTOF(parsers); ++ii)
+		{
+			if (parsers[ii](_allocator, _imageContainer, _data, _size, _err) )
+			{
+				return true;
+			}
+
+			// A parser recognized the format but failed; surface its error.
+			if (!_err->isOk() )
+			{
+				return false;
+			}
+		}
+
+		BX_ERROR_SET(_err, BIMG_ERROR, "Unrecognized image format.");
+		return false;
+	}
+
+	ImageContainer* imageParse(bx::AllocatorI* _allocator, const void* _data, uint32_t _size, TextureFormat::Enum _dstFormat, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		typedef ImageContainer* (*ImageParseFn)(bx::AllocatorI*, const void*, uint32_t, bx::Error*);
+		static const ImageParseFn parsers[] =
+		{
+			imageParseDds,
+			imageParseKtx2,
+			imageParseKtx,
+			imageParsePvr3,
+			imageParseWic,
+			imageParseLodePng,
+			imageParseTinyExr,
+			imageParseJpeg,
+			imageParseSimpleWebp,
+			imageParseStbImage,
+			imageParseLibAvif,
+			imageParseLibHeif,
+		};
+
+		ImageContainer* input = NULL;
+		for (uint32_t ii = 0; ii < BX_COUNTOF(parsers); ++ii)
+		{
+			input = parsers[ii](_allocator, _data, _size, _err);
+			if (NULL != input)
+			{
+				break;
+			}
+
+			// If a parser recognized the format but failed, surface its specific
+			// error instead of letting the next parser overwrite it.
+			if (!_err->isOk() )
+			{
+				return NULL;
+			}
+		}
+
+		if (NULL == input)
+		{
+			if (_err->isOk() )
+			{
+				BX_ERROR_SET(_err, BIMG_ERROR, "Unrecognized image format.");
+			}
+
+			return NULL;
+		}
+
+		_dstFormat = TextureFormat::Count == _dstFormat
+			? input->m_format
+			: _dstFormat
+			;
+
+		if (_dstFormat == input->m_format)
+		{
+			return input;
+		}
+
+		ImageContainer* output = imageConvert(_allocator, _dstFormat, *input);
+		imageFree(input);
+
+		return output;
+	}
+
+	static const char* const s_supportedExt[] =
+	{
+#if BIMG_CONFIG_PARSE_AVIF
+		"avif",
+#endif // BIMG_CONFIG_PARSE_AVIF
+
+#if BIMG_CONFIG_PARSE_BMP
+		"bmp",
+#endif // BIMG_CONFIG_PARSE_BMP
+
+		"dds",
+#if BIMG_CONFIG_PARSE_EXR
+		"exr",
+#endif // BIMG_CONFIG_PARSE_EXR
+#if BIMG_CONFIG_PARSE_GIF
+		"gif",
+#endif // BIMG_CONFIG_PARSE_GIF
+#if BIMG_CONFIG_PARSE_HDR
+		"hdr",
+#endif // BIMG_CONFIG_PARSE_HDR
+
+#if BIMG_CONFIG_PARSE_HEIF
+		"heic",
+#endif // BIMG_CONFIG_PARSE_HEIF
+
+#if BIMG_CONFIG_PARSE_JPEG
+		"jpeg",
+		"jpg",
+#endif // BIMG_CONFIG_PARSE_JPEG
+
+		"ktx",
+		"ktx2",
+
+#if BIMG_CONFIG_PARSE_PNM
+		"pgm",
+#endif // BIMG_CONFIG_PARSE_PNM
+
+#if BIMG_CONFIG_PARSE_PNG
+		"png",
+#endif // BIMG_CONFIG_PARSE_PNG
+
+#if BIMG_CONFIG_PARSE_PNM
+		"ppm",
+#endif // BIMG_CONFIG_PARSE_PNM
+
+#if BIMG_CONFIG_PARSE_PSD
+		"psd",
+#endif // BIMG_CONFIG_PARSE_PSD
+
+		"pvr",
+
+#if BIMG_CONFIG_PARSE_TGA
+		"tga",
+#endif // BIMG_CONFIG_PARSE_TGA
+
+#if BIMG_CONFIG_PARSE_WEBP
+		"webp",
+#endif // BIMG_CONFIG_PARSE_WEBP
+
+		NULL,
+	};
+
+	const char* const* getSupportedExt()
+	{
+		return s_supportedExt;
+	}
+
+} // namespace bimg

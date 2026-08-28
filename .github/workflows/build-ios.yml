@@ -14,6 +14,10 @@ on:
         required: false
         type: string
         default: macos-latest
+      simulator:
+        required: false
+        type: string
+        default: 'iPhone 17'
 
 # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
 # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
@@ -49,3 +53,31 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO
+
+      # The UnitTests app contains the JsRuntimeHost suites only; the Babylon
+      # Native graphics suites need a desktop window/graphics host, so
+      # BABYLON_NATIVE_UNIT_TESTS_GRAPHICS defaults to OFF here.
+      #
+      # ARCHS is forced to arm64: ios-cmake's OS64COMBINED hardcodes
+      # ARCHS[sdk=iphonesimulator*]=x86_64, which is wrong on Apple silicon
+      # runners and makes the link fail against the arm64-only SDK stubs.
+      - name: Build UnitTests iOS
+        run: |
+          xcodebuild \
+            -project build/iOS/BabylonNative.xcodeproj \
+            -scheme UnitTests \
+            -sdk iphonesimulator \
+            -configuration Release \
+            ARCHS=arm64 \
+            VALID_ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Boot Simulator
+        run: xcrun simctl boot "${{ inputs.simulator }}"
+
+      - name: Run UnitTests iOS
+        run: |
+          xcrun simctl install booted "build/iOS/Apps/UnitTests/Release-iphonesimulator/UnitTests.app"
+          xcrun simctl launch --console booted "com.babylonnative.unittests" 2> /tmp/exitCode
+          (exit $(cat /tmp/exitCode))
