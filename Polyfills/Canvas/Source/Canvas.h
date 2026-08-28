@@ -73,6 +73,7 @@ namespace Babylon::Polyfills::Internal
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
 
         bool UpdateRenderTarget();
+        bool HasFrameBuffer() const { return m_frameBuffer != nullptr; }
         Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
         FrameBufferPool m_frameBufferPool;
 

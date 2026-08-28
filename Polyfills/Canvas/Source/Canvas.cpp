@@ -58,7 +58,13 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::~NativeCanvas()
     {
-        m_context = nullptr;
+        // Canvas and Context form a JS cycle; finalizer order is not guaranteed.
+        // Clear the reverse pointer first so Context::~Context cannot touch us.
+        if (m_context != nullptr)
+        {
+            m_context->DetachCanvas();
+            m_context = nullptr;
+        }
         Dispose();
     }
 
@@ -262,7 +268,15 @@ namespace Babylon::Polyfills::Internal
         std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
         if (m_context != nullptr && width > 0 && height > 0)
         {
-            m_context->ReadPixels(0, 0, width, height, rgba.data());
+            try
+            {
+                // GPU readback after flush so NanoVG content (fillRect/text/paths) is included.
+                rgba = m_context->CaptureRGBA();
+            }
+            catch (const std::exception& ex)
+            {
+                throw Napi::Error::New(info.Env(), ex.what());
+            }
         }
 
 #ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
