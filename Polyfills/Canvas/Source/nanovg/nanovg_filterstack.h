@@ -14,15 +14,17 @@ public:
     static void InitBgfx();
     static void DisposeBgfx();
 
+    // No default member initializers here: GCC rejects them when the nested type is
+    // used as an inline static member of the enclosing class (complete-type rule).
     struct Uniforms
     {
-        bgfx::UniformHandle u_strength = BGFX_INVALID_HANDLE;
-        bgfx::UniformHandle u_direction = BGFX_INVALID_HANDLE;
-        bgfx::UniformHandle u_weights = BGFX_INVALID_HANDLE;
+        bgfx::UniformHandle u_strength;
+        bgfx::UniformHandle u_direction;
+        bgfx::UniformHandle u_weights;
     };
 
-    inline static bgfx::ProgramHandle s_gaussBlurProg = BGFX_INVALID_HANDLE;
-    inline static bgfx::ProgramHandle s_boxBlurProg = BGFX_INVALID_HANDLE;
+    inline static bgfx::ProgramHandle s_gaussBlurProg;
+    inline static bgfx::ProgramHandle s_boxBlurProg;
     inline static int s_bgfxRefCount = 0;
     inline static Uniforms m_uniforms{};
 
