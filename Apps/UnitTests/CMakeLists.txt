@@ -23,6 +23,7 @@ set(TEST_ASSETS
 # Blob, File).
 set(JSRUNTIME_ASSETS
     "Assets/Halo_Believe.ply"
+    "Assets/embedded_nulls.txt"
     "Assets/sample.json")
 
 set(JSRUNTIME_SCRIPTS

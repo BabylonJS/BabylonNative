@@ -28527,102 +28527,110 @@ describe("XMLHTTPRequest", function () {
           vertexCount = parseInt(/element vertex (\d+)\n/.exec(header)[1]);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(vertexCount).to.equal(18713);case 2:case "end":return _context13.stop();}}, _callee13, this);}))
   );
+
+  it("should not truncate responseText or response at an embedded null byte", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee14() {var xhr;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context14) {while (1) switch (_context14.prev = _context14.next) {case 0:_context14.next = 1;return (
+            createRequest("GET", "app:///Assets/embedded_nulls.txt"));case 1:xhr = _context14.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.status).to.equal(200);
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.responseText).to.equal("start\0middle\0end");
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.responseText.length).to.equal(16);
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.response).to.equal(xhr.responseText);case 2:case "end":return _context14.stop();}}, _callee14);}))
+  );
 });
 
 describe("fetch", function () {
   this.timeout(30000);
 
-  it("should resolve with ok=true and status=200 for a resource that exists", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee14() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context14) {while (1) switch (_context14.prev = _context14.next) {case 0:_context14.next = 1;return (
-            fetch("https://github.com/"));case 1:response = _context14.sent;
+  it("should resolve with ok=true and status=200 for a resource that exists", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee15() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context15) {while (1) switch (_context15.prev = _context15.next) {case 0:_context15.next = 1;return (
+            fetch("https://github.com/"));case 1:response = _context15.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.ok).to.equal(true);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.status).to.equal(200);case 2:case "end":return _context14.stop();}}, _callee14);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.status).to.equal(200);case 2:case "end":return _context15.stop();}}, _callee15);}))
   );
 
-  it("should resolve (not reject) with ok=false and status=404 for a resource that does not exist", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee15() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context15) {while (1) switch (_context15.prev = _context15.next) {case 0:_context15.next = 1;return (
-            fetch("https://github.com/babylonJS/BabylonNative404"));case 1:response = _context15.sent;
+  it("should resolve (not reject) with ok=false and status=404 for a resource that does not exist", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee16() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context16) {while (1) switch (_context16.prev = _context16.next) {case 0:_context16.next = 1;return (
+            fetch("https://github.com/babylonJS/BabylonNative404"));case 1:response = _context16.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.ok).to.equal(false);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.status).to.equal(404);case 2:case "end":return _context15.stop();}}, _callee15);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.status).to.equal(404);case 2:case "end":return _context16.stop();}}, _callee16);}))
   );
 
-  it("should expose statusText", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee16() {var okResponse, notFoundResponse;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context16) {while (1) switch (_context16.prev = _context16.next) {case 0:_context16.next = 1;return (
-            fetch("https://github.com/"));case 1:okResponse = _context16.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(okResponse.statusText).to.equal("OK");_context16.next = 2;return (
-            fetch("https://github.com/babylonJS/BabylonNative404"));case 2:notFoundResponse = _context16.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(notFoundResponse.statusText).to.equal("Not Found");case 3:case "end":return _context16.stop();}}, _callee16);}))
+  it("should expose statusText", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee17() {var okResponse, notFoundResponse;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context17) {while (1) switch (_context17.prev = _context17.next) {case 0:_context17.next = 1;return (
+            fetch("https://github.com/"));case 1:okResponse = _context17.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(okResponse.statusText).to.equal("OK");_context17.next = 2;return (
+            fetch("https://github.com/babylonJS/BabylonNative404"));case 2:notFoundResponse = _context17.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(notFoundResponse.statusText).to.equal("Not Found");case 3:case "end":return _context17.stop();}}, _callee17);}))
   );
 
-  it("text() should return the body as a string", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee17() {var response, _t;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context17) {while (1) switch (_context17.prev = _context17.next) {case 0:_context17.next = 1;return (
-            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context17.sent;_t =
-          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context17.next = 2;return response.text();case 2:_t(_context17.sent).to.equal("var symlink_target_js = true;");case 3:case "end":return _context17.stop();}}, _callee17);}))
+  it("text() should return the body as a string", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee18() {var response, _t;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context18) {while (1) switch (_context18.prev = _context18.next) {case 0:_context18.next = 1;return (
+            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context18.sent;_t =
+          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context18.next = 2;return response.text();case 2:_t(_context18.sent).to.equal("var symlink_target_js = true;");case 3:case "end":return _context18.stop();}}, _callee18);}))
   );
 
-  it("arrayBuffer() should return the body as bytes", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee18() {var response, expected, _t2, _t3, _t4;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context18) {while (1) switch (_context18.prev = _context18.next) {case 0:_context18.next = 1;return (
-            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context18.sent;
+  it("arrayBuffer() should return the body as bytes", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee19() {var response, expected, _t2, _t3, _t4;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context19) {while (1) switch (_context19.prev = _context19.next) {case 0:_context19.next = 1;return (
+            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context19.sent;
           expected = new Uint8Array("var symlink_target_js = true;".split("").map(function (x) {return x.charCodeAt(0);}));_t2 =
-          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_t3 = Uint8Array;_context18.next = 2;return response.arrayBuffer();case 2:_t4 = _context18.sent;_t2(new _t3(_t4)).to.eql(expected);case 3:case "end":return _context18.stop();}}, _callee18);}))
+          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_t3 = Uint8Array;_context19.next = 2;return response.arrayBuffer();case 2:_t4 = _context19.sent;_t2(new _t3(_t4)).to.eql(expected);case 3:case "end":return _context19.stop();}}, _callee19);}))
   );
 
-  it("json() should parse a JSON body", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee19() {var response, json;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context19) {while (1) switch (_context19.prev = _context19.next) {case 0:_context19.next = 1;return (
-            fetch("app:///Assets/sample.json"));case 1:response = _context19.sent;_context19.next = 2;return (
-            response.json());case 2:json = _context19.sent;
+  it("json() should parse a JSON body", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee20() {var response, json;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context20) {while (1) switch (_context20.prev = _context20.next) {case 0:_context20.next = 1;return (
+            fetch("app:///Assets/sample.json"));case 1:response = _context20.sent;_context20.next = 2;return (
+            response.json());case 2:json = _context20.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(json.name).to.equal("fetch-polyfill-test");
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(json.value).to.equal(42);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(json.nested.items).to.eql([1, 2, 3]);case 3:case "end":return _context19.stop();}}, _callee19);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(json.nested.items).to.eql([1, 2, 3]);case 3:case "end":return _context20.stop();}}, _callee20);}))
   );
 
-  it("json() should reject when the body is not valid JSON", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee20() {var response, rejected, _t5;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context20) {while (1) switch (_context20.prev = _context20.next) {case 0:_context20.next = 1;return (
-            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context20.sent;
-          rejected = false;_context20.prev = 2;_context20.next = 3;return (
+  it("json() should reject when the body is not valid JSON", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee21() {var response, rejected, _t5;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context21) {while (1) switch (_context21.prev = _context21.next) {case 0:_context21.next = 1;return (
+            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context21.sent;
+          rejected = false;_context21.prev = 2;_context21.next = 3;return (
 
-            response.json());case 3:_context20.next = 5;break;case 4:_context20.prev = 4;_t5 = _context20["catch"](2);
+            response.json());case 3:_context21.next = 5;break;case 4:_context21.prev = 4;_t5 = _context21["catch"](2);
 
           rejected = true;case 5:
 
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(rejected).to.equal(true);case 6:case "end":return _context20.stop();}}, _callee20, null, [[2, 4]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(rejected).to.equal(true);case 6:case "end":return _context21.stop();}}, _callee21, null, [[2, 4]]);}))
   );
 
-  it("blob() should return a Blob with the body bytes", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee21() {var response, blob, _t6;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context21) {while (1) switch (_context21.prev = _context21.next) {case 0:_context21.next = 1;return (
-            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context21.sent;_context21.next = 2;return (
-            response.blob());case 2:blob = _context21.sent;
+  it("blob() should return a Blob with the body bytes", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee22() {var response, blob, _t6;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context22) {while (1) switch (_context22.prev = _context22.next) {case 0:_context22.next = 1;return (
+            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context22.sent;_context22.next = 2;return (
+            response.blob());case 2:blob = _context22.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blob.size).to.equal("var symlink_target_js = true;".length);_t6 =
-          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context21.next = 3;return blob.text();case 3:_t6(_context21.sent).to.equal("var symlink_target_js = true;");case 4:case "end":return _context21.stop();}}, _callee21);}))
+          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context22.next = 3;return blob.text();case 3:_t6(_context22.sent).to.equal("var symlink_target_js = true;");case 4:case "end":return _context22.stop();}}, _callee22);}))
   );
 
-  it("headers.get() should be case-insensitive and headers.has() should work", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee22() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context22) {while (1) switch (_context22.prev = _context22.next) {case 0:_context22.next = 1;return (
-            fetch("https://github.com/"));case 1:response = _context22.sent;
+  it("headers.get() should be case-insensitive and headers.has() should work", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee23() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context23) {while (1) switch (_context23.prev = _context23.next) {case 0:_context23.next = 1;return (
+            fetch("https://github.com/"));case 1:response = _context23.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.headers.has("Content-Type")).to.equal(true);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.headers.get("CONTENT-TYPE")).to.equal(response.headers.get("content-type"));case 2:case "end":return _context22.stop();}}, _callee22);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.headers.get("CONTENT-TYPE")).to.equal(response.headers.get("content-type"));case 2:case "end":return _context23.stop();}}, _callee23);}))
   );
 
-  it("clone() should produce an independently readable response", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee23() {var response, clone, _t7, _t8;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context23) {while (1) switch (_context23.prev = _context23.next) {case 0:_context23.next = 1;return (
-            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context23.sent;
+  it("clone() should produce an independently readable response", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee24() {var response, clone, _t7, _t8;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context24) {while (1) switch (_context24.prev = _context24.next) {case 0:_context24.next = 1;return (
+            fetch("app:///Scripts/symlink_target.js"));case 1:response = _context24.sent;
           clone = response.clone();_t7 =
-          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context23.next = 2;return response.text();case 2:_t7(_context23.sent).to.equal("var symlink_target_js = true;");_t8 =
-          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context23.next = 3;return clone.text();case 3:_t8(_context23.sent).to.equal("var symlink_target_js = true;");case 4:case "end":return _context23.stop();}}, _callee23);}))
+          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context24.next = 2;return response.text();case 2:_t7(_context24.sent).to.equal("var symlink_target_js = true;");_t8 =
+          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context24.next = 3;return clone.text();case 3:_t8(_context24.sent).to.equal("var symlink_target_js = true;");case 4:case "end":return _context24.stop();}}, _callee24);}))
   );
 
-  it("should accept a method in the init object", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee24() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context24) {while (1) switch (_context24.prev = _context24.next) {case 0:_context24.next = 1;return (
-            fetch("https://github.com/", { method: "GET" }));case 1:response = _context24.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.status).to.equal(200);case 2:case "end":return _context24.stop();}}, _callee24);}))
+  it("should accept a method in the init object", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee25() {var response;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context25) {while (1) switch (_context25.prev = _context25.next) {case 0:_context25.next = 1;return (
+            fetch("https://github.com/", { method: "GET" }));case 1:response = _context25.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.status).to.equal(200);case 2:case "end":return _context25.stop();}}, _callee25);}))
   );
 
-  it("should reject when no arguments are provided", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee25() {var rejected, _t9;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context25) {while (1) switch (_context25.prev = _context25.next) {case 0:
-          rejected = false;_context25.prev = 1;_context25.next = 2;return (
+  it("should reject when no arguments are provided", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee26() {var rejected, _t9;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context26) {while (1) switch (_context26.prev = _context26.next) {case 0:
+          rejected = false;_context26.prev = 1;_context26.next = 2;return (
 
-            fetch());case 2:_context25.next = 4;break;case 3:_context25.prev = 3;_t9 = _context25["catch"](1);
+            fetch());case 2:_context26.next = 4;break;case 3:_context26.prev = 3;_t9 = _context26["catch"](1);
 
           rejected = true;case 4:
 
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(rejected).to.equal(true);case 5:case "end":return _context25.stop();}}, _callee25, null, [[1, 3]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(rejected).to.equal(true);case 5:case "end":return _context26.stop();}}, _callee26, null, [[1, 3]]);}))
   );
 
-  it("should reject a transport failure with a TypeError carrying detail on cause", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee26() {var error, _t0;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context26) {while (1) switch (_context26.prev = _context26.next) {case 0:
-          this.timeout(30000);_context26.prev = 1;_context26.next = 2;return (
+  it("should reject a transport failure with a TypeError carrying detail on cause", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee27() {var error, _t0;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context27) {while (1) switch (_context27.prev = _context27.next) {case 0:
+          this.timeout(30000);_context27.prev = 1;_context27.next = 2;return (
 
 
 
 
-            fetch("http://127.0.0.1:1/"));case 2:_context26.next = 4;break;case 3:_context26.prev = 3;_t0 = _context26["catch"](1);
+            fetch("http://127.0.0.1:1/"));case 2:_context27.next = 4;break;case 3:_context27.prev = 3;_t0 = _context27["catch"](1);
 
           error = _t0;case 4:
 
@@ -28641,51 +28649,51 @@ describe("fetch", function () {
           if (error.cause.code !== undefined) {
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.cause.code).to.be.a("string").and.not.equal("");
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.cause.detail).to.be.a("string").and.not.equal("");
-          }case 5:case "end":return _context26.stop();}}, _callee26, this, [[1, 3]]);}))
+          }case 5:case "end":return _context27.stop();}}, _callee27, this, [[1, 3]]);}))
   );
 
-  it("should reject a missing app:// asset with a TypeError (distinct from a network failure)", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee27() {var error, _t1;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context27) {while (1) switch (_context27.prev = _context27.next) {case 0:_context27.prev = 0;_context27.next = 1;return (
+  it("should reject a missing app:// asset with a TypeError (distinct from a network failure)", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee28() {var error, _t1;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context28) {while (1) switch (_context28.prev = _context28.next) {case 0:_context28.prev = 0;_context28.next = 1;return (
 
 
-            fetch("app:///does_not_exist.js"));case 1:_context27.next = 3;break;case 2:_context27.prev = 2;_t1 = _context27["catch"](0);
+            fetch("app:///does_not_exist.js"));case 1:_context28.next = 3;break;case 2:_context28.prev = 2;_t1 = _context28["catch"](0);
 
           error = _t1;case 3:
 
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error, "fetch should have rejected").to.not.equal(undefined);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error).to.be.an.instanceof(TypeError);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.message).to.equal("fetch failed");
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.cause.url).to.contain("does_not_exist.js");case 4:case "end":return _context27.stop();}}, _callee27, null, [[0, 2]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.cause.url).to.contain("does_not_exist.js");case 4:case "end":return _context28.stop();}}, _callee28, null, [[0, 2]]);}))
   );
 
-  it("should reject immediately with an AbortError when the signal is already aborted", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee28() {var controller, error, _t10;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context28) {while (1) switch (_context28.prev = _context28.next) {case 0:
+  it("should reject immediately with an AbortError when the signal is already aborted", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee29() {var controller, error, _t10;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context29) {while (1) switch (_context29.prev = _context29.next) {case 0:
           controller = new AbortController();
-          controller.abort();_context28.prev = 1;_context28.next = 2;return (
-
-
-
-            fetch("https://github.com/", { signal: controller.signal }));case 2:_context28.next = 4;break;case 3:_context28.prev = 3;_t10 = _context28["catch"](1);
-
-          error = _t10;case 4:
-
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error, "fetch should have rejected").to.not.equal(undefined);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.name).to.equal("AbortError");case 5:case "end":return _context28.stop();}}, _callee28, null, [[1, 3]]);}))
-  );
-
-  it("should reject with an AbortError when aborted in-flight", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee29() {var controller, promise, error, _t11;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context29) {while (1) switch (_context29.prev = _context29.next) {case 0:
-          this.timeout(30000);
-          controller = new AbortController();
-          promise = fetch("https://github.com/", { signal: controller.signal });
-          // Abort before the response can arrive.
           controller.abort();_context29.prev = 1;_context29.next = 2;return (
 
 
 
-            promise);case 2:_context29.next = 4;break;case 3:_context29.prev = 3;_t11 = _context29["catch"](1);
+            fetch("https://github.com/", { signal: controller.signal }));case 2:_context29.next = 4;break;case 3:_context29.prev = 3;_t10 = _context29["catch"](1);
+
+          error = _t10;case 4:
+
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error, "fetch should have rejected").to.not.equal(undefined);
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.name).to.equal("AbortError");case 5:case "end":return _context29.stop();}}, _callee29, null, [[1, 3]]);}))
+  );
+
+  it("should reject with an AbortError when aborted in-flight", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee30() {var controller, promise, error, _t11;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context30) {while (1) switch (_context30.prev = _context30.next) {case 0:
+          this.timeout(30000);
+          controller = new AbortController();
+          promise = fetch("https://github.com/", { signal: controller.signal });
+          // Abort before the response can arrive.
+          controller.abort();_context30.prev = 1;_context30.next = 2;return (
+
+
+
+            promise);case 2:_context30.next = 4;break;case 3:_context30.prev = 3;_t11 = _context30["catch"](1);
 
           error = _t11;case 4:
 
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error, "fetch should have rejected").to.not.equal(undefined);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.name).to.equal("AbortError");case 5:case "end":return _context29.stop();}}, _callee29, this, [[1, 3]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(error.name).to.equal("AbortError");case 5:case "end":return _context30.stop();}}, _callee30, this, [[1, 3]]);}))
   );
 });
 
@@ -28849,6 +28857,52 @@ describe("setInterval", function () {
         done(e);
       }
     }, 10);
+  });
+
+  it("should not starve other queued work when the interval has no delay", function (done) {
+    // Regression test: a repeating timeout used to be re-armed on the timer
+    // thread immediately, before its callback had run on the JS thread. With a
+    // zero delay that produced an unbounded backlog of queued callbacks which
+    // starved every other item on the JS dispatch queue, so this setTimeout
+    // would never fire.
+    var finished = false;
+    var intervalId = setInterval(function () {});
+
+    var timeoutId = setTimeout(function () {
+      finished = true;
+      clearInterval(intervalId);
+      done();
+    }, 100);
+
+    setTimeout(function () {
+      if (!finished) {
+        clearInterval(intervalId);
+        clearTimeout(timeoutId);
+        done(new Error("setTimeout was starved by a zero delay setInterval"));
+      }
+    }, 2000);
+  });
+
+  it("should stop when cleared from within its own callback", function (done) {
+    // Exercises the re-arm path: a repeating timeout is now re-armed only
+    // after its callback returns, so a clear from inside the callback must
+    // win and no further ticks may occur.
+    var ticks = 0;
+    var id = 0;
+    id = setInterval(function () {
+      ticks++;
+      clearInterval(id);
+    }, 10);
+
+    setTimeout(function () {
+      try {
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(ticks).to.equal(1);
+        done();
+      }
+      catch (e) {
+        done(e);
+      }
+    }, 200);
   });
 });
 
@@ -29057,7 +29111,7 @@ describe("URL", function () {
 
 
 
-  function checkURL(url, _ref30) {var href = _ref30.href,hostname = _ref30.hostname,origin = _ref30.origin,pathname = _ref30.pathname,search = _ref30.search;
+  function checkURL(url, _ref31) {var href = _ref31.href,hostname = _ref31.hostname,origin = _ref31.origin,pathname = _ref31.pathname,search = _ref31.search;
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(url).to.have.property("hostname", hostname);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(url).to.have.property("href", href);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(url).to.have.property("origin", origin);
@@ -29487,55 +29541,55 @@ describe("URL.createObjectURL", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return URL.createObjectURL("not a blob");}).to.throw();
   });
 
-  it("resolves a blob: URL through fetch (text + content-type)", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee30() {var url, response, _t12;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context30) {while (1) switch (_context30.prev = _context30.next) {case 0:
-          url = URL.createObjectURL(new Blob(["hello blob"], { type: "text/plain" }));_context30.next = 1;return (
-            fetch(url));case 1:response = _context30.sent;
+  it("resolves a blob: URL through fetch (text + content-type)", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee31() {var url, response, _t12;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context31) {while (1) switch (_context31.prev = _context31.next) {case 0:
+          url = URL.createObjectURL(new Blob(["hello blob"], { type: "text/plain" }));_context31.next = 1;return (
+            fetch(url));case 1:response = _context31.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.ok).to.equal(true);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.status).to.equal(200);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(response.headers.get("content-type")).to.equal("text/plain");_t12 =
-          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context30.next = 2;return response.text();case 2:_t12(_context30.sent).to.equal("hello blob");
-          URL.revokeObjectURL(url);case 3:case "end":return _context30.stop();}}, _callee30);}))
-  );
-
-  it("resolves binary blob bytes through fetch", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee31() {var bytes, url, response, buffer, _t13, _t14;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context31) {while (1) switch (_context31.prev = _context31.next) {case 0:
-          bytes = new Uint8Array([1, 2, 3, 4, 250]);
-          url = URL.createObjectURL(new Blob([bytes]));_context31.next = 1;return (
-            fetch(url));case 1:response = _context31.sent;_t13 =
-          Uint8Array;_context31.next = 2;return response.arrayBuffer();case 2:_t14 = _context31.sent;buffer = new _t13(_t14);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(buffer)).to.deep.equal([1, 2, 3, 4, 250]);
+          chai__WEBPACK_IMPORTED_MODULE_3__.expect;_context31.next = 2;return response.text();case 2:_t12(_context31.sent).to.equal("hello blob");
           URL.revokeObjectURL(url);case 3:case "end":return _context31.stop();}}, _callee31);}))
   );
 
-  it("resolves a blob: URL through XMLHttpRequest", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee32() {var url, xhr;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context32) {while (1) switch (_context32.prev = _context32.next) {case 0:
-          url = URL.createObjectURL(new Blob(["xhr blob"], { type: "text/plain" }));_context32.next = 1;return (
+  it("resolves binary blob bytes through fetch", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee32() {var bytes, url, response, buffer, _t13, _t14;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context32) {while (1) switch (_context32.prev = _context32.next) {case 0:
+          bytes = new Uint8Array([1, 2, 3, 4, 250]);
+          url = URL.createObjectURL(new Blob([bytes]));_context32.next = 1;return (
+            fetch(url));case 1:response = _context32.sent;_t13 =
+          Uint8Array;_context32.next = 2;return response.arrayBuffer();case 2:_t14 = _context32.sent;buffer = new _t13(_t14);
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(buffer)).to.deep.equal([1, 2, 3, 4, 250]);
+          URL.revokeObjectURL(url);case 3:case "end":return _context32.stop();}}, _callee32);}))
+  );
+
+  it("resolves a blob: URL through XMLHttpRequest", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee33() {var url, xhr;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context33) {while (1) switch (_context33.prev = _context33.next) {case 0:
+          url = URL.createObjectURL(new Blob(["xhr blob"], { type: "text/plain" }));_context33.next = 1;return (
             new Promise(function (resolve) {
               var req = new XMLHttpRequest();
               req.open("GET", url);
               req.addEventListener("loadend", function () {return resolve(req);});
               req.send();
-            }));case 1:xhr = _context32.sent;
+            }));case 1:xhr = _context33.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.status).to.equal(200);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.statusText).to.equal("OK");
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.responseText).to.equal("xhr blob");
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.getResponseHeader("content-type")).to.equal("text/plain");
-          URL.revokeObjectURL(url);case 2:case "end":return _context32.stop();}}, _callee32);}))
+          URL.revokeObjectURL(url);case 2:case "end":return _context33.stop();}}, _callee33);}))
   );
 
-  it("fetch rejects after the blob: URL is revoked", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee33() {var url, rejected, _t15;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context33) {while (1) switch (_context33.prev = _context33.next) {case 0:
+  it("fetch rejects after the blob: URL is revoked", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee34() {var url, rejected, _t15;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context34) {while (1) switch (_context34.prev = _context34.next) {case 0:
           url = URL.createObjectURL(new Blob(["gone"]));
           URL.revokeObjectURL(url);
-          rejected = false;_context33.prev = 1;_context33.next = 2;return (
+          rejected = false;_context34.prev = 1;_context34.next = 2;return (
 
-            fetch(url));case 2:_context33.next = 4;break;case 3:_context33.prev = 3;_t15 = _context33["catch"](1);
+            fetch(url));case 2:_context34.next = 4;break;case 3:_context34.prev = 3;_t15 = _context34["catch"](1);
 
           rejected = true;case 4:
 
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(rejected).to.equal(true);case 5:case "end":return _context33.stop();}}, _callee33, null, [[1, 3]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(rejected).to.equal(true);case 5:case "end":return _context34.stop();}}, _callee34, null, [[1, 3]]);}))
   );
 
-  it("XMLHttpRequest reports status 0 and fires 'error' after revoke", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee34() {var url, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context34) {while (1) switch (_context34.prev = _context34.next) {case 0:
+  it("XMLHttpRequest reports status 0 and fires 'error' after revoke", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee35() {var url, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context35) {while (1) switch (_context35.prev = _context35.next) {case 0:
           url = URL.createObjectURL(new Blob(["gone"]));
-          URL.revokeObjectURL(url);_context34.next = 1;return (
+          URL.revokeObjectURL(url);_context35.next = 1;return (
             new Promise(function (resolve) {
               var req = new XMLHttpRequest();
               var errorFired = false;
@@ -29543,13 +29597,13 @@ describe("URL.createObjectURL", function () {
               req.addEventListener("loadend", function () {return resolve({ status: req.status, errorFired: errorFired });});
               req.open("GET", url);
               req.send();
-            }));case 1:result = _context34.sent;
+            }));case 1:result = _context35.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result.status).to.equal(0);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result.errorFired).to.equal(true);case 2:case "end":return _context34.stop();}}, _callee34);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result.errorFired).to.equal(true);case 2:case "end":return _context35.stop();}}, _callee35);}))
   );
 
-  it("XMLHttpRequest honors a revoke between open() and send()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee35() {var url, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context35) {while (1) switch (_context35.prev = _context35.next) {case 0:
-          url = URL.createObjectURL(new Blob(["late revoke"]));_context35.next = 1;return (
+  it("XMLHttpRequest honors a revoke between open() and send()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee36() {var url, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context36) {while (1) switch (_context36.prev = _context36.next) {case 0:
+          url = URL.createObjectURL(new Blob(["late revoke"]));_context36.next = 1;return (
             new Promise(function (resolve) {
               var req = new XMLHttpRequest();
               var errorFired = false;
@@ -29560,9 +29614,9 @@ describe("URL.createObjectURL", function () {
               // this must surface as a network error rather than serving stale bytes.
               URL.revokeObjectURL(url);
               req.send();
-            }));case 1:result = _context35.sent;
+            }));case 1:result = _context36.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result.status).to.equal(0);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result.errorFired).to.equal(true);case 2:case "end":return _context35.stop();}}, _callee35);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result.errorFired).to.equal(true);case 2:case "end":return _context36.stop();}}, _callee36);}))
   );
 });
 
@@ -29768,70 +29822,70 @@ describe("Blob", function () {
   });
 
   // -------------------------------- Blob.text() --------------------------------
-  it("returns empty string for empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee36() {var _iterator2, _step2, blob, text, _t16;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context36) {while (1) switch (_context36.prev = _context36.next) {case 0:_iterator2 = _createForOfIteratorHelper(
-            emptyBlobs);_context36.prev = 1;_iterator2.s();case 2:if ((_step2 = _iterator2.n()).done) {_context36.next = 5;break;}blob = _step2.value;_context36.next = 3;return (
-            blob.text());case 3:text = _context36.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("");case 4:_context36.next = 2;break;case 5:_context36.next = 7;break;case 6:_context36.prev = 6;_t16 = _context36["catch"](1);_iterator2.e(_t16);case 7:_context36.prev = 7;_iterator2.f();return _context36.finish(7);case 8:case "end":return _context36.stop();}}, _callee36, null, [[1, 6, 7, 8]]);}))
-
-  );
-
-  it("returns correct string content for non-empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee37() {var _iterator3, _step3, blob, text, _t17;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context37) {while (1) switch (_context37.prev = _context37.next) {case 0:_iterator3 = _createForOfIteratorHelper(
-            helloBlobs);_context37.prev = 1;_iterator3.s();case 2:if ((_step3 = _iterator3.n()).done) {_context37.next = 5;break;}blob = _step3.value;_context37.next = 3;return (
+  it("returns empty string for empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee37() {var _iterator2, _step2, blob, text, _t16;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context37) {while (1) switch (_context37.prev = _context37.next) {case 0:_iterator2 = _createForOfIteratorHelper(
+            emptyBlobs);_context37.prev = 1;_iterator2.s();case 2:if ((_step2 = _iterator2.n()).done) {_context37.next = 5;break;}blob = _step2.value;_context37.next = 3;return (
             blob.text());case 3:text = _context37.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("Hello");case 4:_context37.next = 2;break;case 5:_context37.next = 7;break;case 6:_context37.prev = 6;_t17 = _context37["catch"](1);_iterator3.e(_t17);case 7:_context37.prev = 7;_iterator3.f();return _context37.finish(7);case 8:case "end":return _context37.stop();}}, _callee37, null, [[1, 6, 7, 8]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("");case 4:_context37.next = 2;break;case 5:_context37.next = 7;break;case 6:_context37.prev = 6;_t16 = _context37["catch"](1);_iterator2.e(_t16);case 7:_context37.prev = 7;_iterator2.f();return _context37.finish(7);case 8:case "end":return _context37.stop();}}, _callee37, null, [[1, 6, 7, 8]]);}))
 
   );
 
-  it("handles multi-byte UTF-8 characters", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee38() {var utf8Blob, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context38) {while (1) switch (_context38.prev = _context38.next) {case 0:
-          utf8Blob = new Blob(["你好, 世界"]);_context38.next = 1;return (
-            utf8Blob.text());case 1:text = _context38.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("你好, 世界");case 2:case "end":return _context38.stop();}}, _callee38);}))
+  it("returns correct string content for non-empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee38() {var _iterator3, _step3, blob, text, _t17;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context38) {while (1) switch (_context38.prev = _context38.next) {case 0:_iterator3 = _createForOfIteratorHelper(
+            helloBlobs);_context38.prev = 1;_iterator3.s();case 2:if ((_step3 = _iterator3.n()).done) {_context38.next = 5;break;}blob = _step3.value;_context38.next = 3;return (
+            blob.text());case 3:text = _context38.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("Hello");case 4:_context38.next = 2;break;case 5:_context38.next = 7;break;case 6:_context38.prev = 6;_t17 = _context38["catch"](1);_iterator3.e(_t17);case 7:_context38.prev = 7;_iterator3.f();return _context38.finish(7);case 8:case "end":return _context38.stop();}}, _callee38, null, [[1, 6, 7, 8]]);}))
+
   );
 
-  it("preserves line endings like default transparent mode", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee39() {var lineEndingsBlob, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context39) {while (1) switch (_context39.prev = _context39.next) {case 0:
-          lineEndingsBlob = new Blob(["Hello\nWorld"]);_context39.next = 1;return (
-            lineEndingsBlob.text());case 1:text = _context39.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("Hello\nWorld");case 2:case "end":return _context39.stop();}}, _callee39);}))
+  it("handles multi-byte UTF-8 characters", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee39() {var utf8Blob, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context39) {while (1) switch (_context39.prev = _context39.next) {case 0:
+          utf8Blob = new Blob(["你好, 世界"]);_context39.next = 1;return (
+            utf8Blob.text());case 1:text = _context39.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("你好, 世界");case 2:case "end":return _context39.stop();}}, _callee39);}))
+  );
+
+  it("preserves line endings like default transparent mode", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee40() {var lineEndingsBlob, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context40) {while (1) switch (_context40.prev = _context40.next) {case 0:
+          lineEndingsBlob = new Blob(["Hello\nWorld"]);_context40.next = 1;return (
+            lineEndingsBlob.text());case 1:text = _context40.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("Hello\nWorld");case 2:case "end":return _context40.stop();}}, _callee40);}))
   );
 
   // -------------------------------- Blob.bytes() --------------------------------
-  it("returns empty Uint8Array for empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee40() {var _iterator4, _step4, blob, bytes, _t18;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context40) {while (1) switch (_context40.prev = _context40.next) {case 0:_iterator4 = _createForOfIteratorHelper(
-            emptyBlobs);_context40.prev = 1;_iterator4.s();case 2:if ((_step4 = _iterator4.n()).done) {_context40.next = 5;break;}blob = _step4.value;_context40.next = 3;return (
-            blob.bytes());case 3:bytes = _context40.sent;
+  it("returns empty Uint8Array for empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee41() {var _iterator4, _step4, blob, bytes, _t18;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context41) {while (1) switch (_context41.prev = _context41.next) {case 0:_iterator4 = _createForOfIteratorHelper(
+            emptyBlobs);_context41.prev = 1;_iterator4.s();case 2:if ((_step4 = _iterator4.n()).done) {_context41.next = 5;break;}blob = _step4.value;_context41.next = 3;return (
+            blob.bytes());case 3:bytes = _context41.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes).to.be.instanceOf(Uint8Array);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes.length).to.equal(0);case 4:_context40.next = 2;break;case 5:_context40.next = 7;break;case 6:_context40.prev = 6;_t18 = _context40["catch"](1);_iterator4.e(_t18);case 7:_context40.prev = 7;_iterator4.f();return _context40.finish(7);case 8:case "end":return _context40.stop();}}, _callee40, null, [[1, 6, 7, 8]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes.length).to.equal(0);case 4:_context41.next = 2;break;case 5:_context41.next = 7;break;case 6:_context41.prev = 6;_t18 = _context41["catch"](1);_iterator4.e(_t18);case 7:_context41.prev = 7;_iterator4.f();return _context41.finish(7);case 8:case "end":return _context41.stop();}}, _callee41, null, [[1, 6, 7, 8]]);}))
 
   );
 
-  it("returns correct byte content from non-empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee41() {var _iterator5, _step5, blob, bytes, _t19;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context41) {while (1) switch (_context41.prev = _context41.next) {case 0:_iterator5 = _createForOfIteratorHelper(
-            helloBlobs);_context41.prev = 1;_iterator5.s();case 2:if ((_step5 = _iterator5.n()).done) {_context41.next = 5;break;}blob = _step5.value;_context41.next = 3;return (
-            blob.bytes());case 3:bytes = _context41.sent;
+  it("returns correct byte content from non-empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee42() {var _iterator5, _step5, blob, bytes, _t19;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context42) {while (1) switch (_context42.prev = _context42.next) {case 0:_iterator5 = _createForOfIteratorHelper(
+            helloBlobs);_context42.prev = 1;_iterator5.s();case 2:if ((_step5 = _iterator5.n()).done) {_context42.next = 5;break;}blob = _step5.value;_context42.next = 3;return (
+            blob.bytes());case 3:bytes = _context42.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes).to.be.instanceOf(Uint8Array);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes.length).to.equal(5);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes[0]).to.equal(72); // 'H'
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes[4]).to.equal(111); // 'o'
-        case 4:_context41.next = 2;break;case 5:_context41.next = 7;break;case 6:_context41.prev = 6;_t19 = _context41["catch"](1);_iterator5.e(_t19);case 7:_context41.prev = 7;_iterator5.f();return _context41.finish(7);case 8:case "end":return _context41.stop();}}, _callee41, null, [[1, 6, 7, 8]]);}))
+        case 4:_context42.next = 2;break;case 5:_context42.next = 7;break;case 6:_context42.prev = 6;_t19 = _context42["catch"](1);_iterator5.e(_t19);case 7:_context42.prev = 7;_iterator5.f();return _context42.finish(7);case 8:case "end":return _context42.stop();}}, _callee42, null, [[1, 6, 7, 8]]);}))
   );
 
   // -------------------------------- Blob.arrayBuffer() --------------------------------
-  it("returns empty buffer for empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee42() {var _iterator6, _step6, blob, buffer, _t20;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context42) {while (1) switch (_context42.prev = _context42.next) {case 0:_iterator6 = _createForOfIteratorHelper(
-            emptyBlobs);_context42.prev = 1;_iterator6.s();case 2:if ((_step6 = _iterator6.n()).done) {_context42.next = 5;break;}blob = _step6.value;_context42.next = 3;return (
-            blob.arrayBuffer());case 3:buffer = _context42.sent;
+  it("returns empty buffer for empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee43() {var _iterator6, _step6, blob, buffer, _t20;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context43) {while (1) switch (_context43.prev = _context43.next) {case 0:_iterator6 = _createForOfIteratorHelper(
+            emptyBlobs);_context43.prev = 1;_iterator6.s();case 2:if ((_step6 = _iterator6.n()).done) {_context43.next = 5;break;}blob = _step6.value;_context43.next = 3;return (
+            blob.arrayBuffer());case 3:buffer = _context43.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer).to.be.instanceOf(ArrayBuffer);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer.byteLength).to.equal(0);case 4:_context42.next = 2;break;case 5:_context42.next = 7;break;case 6:_context42.prev = 6;_t20 = _context42["catch"](1);_iterator6.e(_t20);case 7:_context42.prev = 7;_iterator6.f();return _context42.finish(7);case 8:case "end":return _context42.stop();}}, _callee42, null, [[1, 6, 7, 8]]);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer.byteLength).to.equal(0);case 4:_context43.next = 2;break;case 5:_context43.next = 7;break;case 6:_context43.prev = 6;_t20 = _context43["catch"](1);_iterator6.e(_t20);case 7:_context43.prev = 7;_iterator6.f();return _context43.finish(7);case 8:case "end":return _context43.stop();}}, _callee43, null, [[1, 6, 7, 8]]);}))
 
   );
 
-  it("returns correct buffer content for non-empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee43() {var _iterator7, _step7, blob, buffer, view, _t21;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context43) {while (1) switch (_context43.prev = _context43.next) {case 0:_iterator7 = _createForOfIteratorHelper(
-            helloBlobs);_context43.prev = 1;_iterator7.s();case 2:if ((_step7 = _iterator7.n()).done) {_context43.next = 5;break;}blob = _step7.value;_context43.next = 3;return (
-            blob.arrayBuffer());case 3:buffer = _context43.sent;
+  it("returns correct buffer content for non-empty blobs", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee44() {var _iterator7, _step7, blob, buffer, view, _t21;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context44) {while (1) switch (_context44.prev = _context44.next) {case 0:_iterator7 = _createForOfIteratorHelper(
+            helloBlobs);_context44.prev = 1;_iterator7.s();case 2:if ((_step7 = _iterator7.n()).done) {_context44.next = 5;break;}blob = _step7.value;_context44.next = 3;return (
+            blob.arrayBuffer());case 3:buffer = _context44.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer).to.be.instanceOf(ArrayBuffer);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer.byteLength).to.equal(5);
 
           view = new Uint8Array(buffer);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(view[0]).to.equal(72); // 'H'
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(view[4]).to.equal(111); // 'o'
-        case 4:_context43.next = 2;break;case 5:_context43.next = 7;break;case 6:_context43.prev = 6;_t21 = _context43["catch"](1);_iterator7.e(_t21);case 7:_context43.prev = 7;_iterator7.f();return _context43.finish(7);case 8:case "end":return _context43.stop();}}, _callee43, null, [[1, 6, 7, 8]]);}))
+        case 4:_context44.next = 2;break;case 5:_context44.next = 7;break;case 6:_context44.prev = 6;_t21 = _context44["catch"](1);_iterator7.e(_t21);case 7:_context44.prev = 7;_iterator7.f();return _context44.finish(7);case 8:case "end":return _context44.stop();}}, _callee44, null, [[1, 6, 7, 8]]);}))
 
   );
 });
@@ -29972,7 +30026,7 @@ describe("TextDecoder", function () {
     // many times to create many dangling wraps, then allocate/decode to
     // exercise the heap and surface any corruption within this test run.
     for (var i = 0; i < 100; ++i) {
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return new TextDecoder("utf-16");}).to.throw();
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return new TextDecoder("iso-8859-2");}).to.throw();
     }
     var decoder = new TextDecoder("utf-8");
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoder.decode(new Uint8Array([79, 75]))).to.equal("OK");
@@ -29999,7 +30053,39 @@ describe("TextDecoder", function () {
   });
 
   it("should still throw for a genuinely unsupported encoding", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return new TextDecoder("utf-16");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return new TextDecoder("iso-8859-2");}).to.throw();
+  });
+
+  it("should decode utf-16le", function () {
+    var decoder = new TextDecoder("utf-16le");
+    // "Hi" as UTF-16LE code units.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoder.decode(new Uint8Array([0x48, 0x00, 0x69, 0x00]))).to.equal("Hi");
+  });
+
+  it("should decode utf-16be", function () {
+    var decoder = new TextDecoder("utf-16be");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoder.decode(new Uint8Array([0x00, 0x48, 0x00, 0x69]))).to.equal("Hi");
+  });
+
+  it("should accept the other WHATWG utf-16 aliases as little endian", function () {
+    for (var _i3 = 0, _arr3 = ["utf-16", "ucs-2", "unicode", "unicodeFEFF", "csunicode", "iso-10646-ucs-2"]; _i3 < _arr3.length; _i3++) {var label = _arr3[_i3];
+      var decoder = new TextDecoder(label);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoder.decode(new Uint8Array([0x4F, 0x00, 0x4B, 0x00]))).to.equal("OK");
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(new TextDecoder("unicodeFFFE").decode(new Uint8Array([0x00, 0x4F, 0x00, 0x4B]))).to.equal("OK");
+  });
+
+  it("should strip a leading byte order mark", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(new TextDecoder("utf-16le").decode(new Uint8Array([0xFF, 0xFE, 0x48, 0x00]))).to.equal("H");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(new TextDecoder("utf-16be").decode(new Uint8Array([0xFE, 0xFF, 0x00, 0x48]))).to.equal("H");
+  });
+
+  it("should decode utf-16 outside the BMP and preserve null code units", function () {
+    // U+1F600 as a surrogate pair, then U+0000, then "A".
+    var decoder = new TextDecoder("utf-16le");
+    var result = decoder.decode(new Uint8Array([0x3D, 0xD8, 0x00, 0xDE, 0x00, 0x00, 0x41, 0x00]));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result).to.equal("\uD83D\uDE00\0A");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(result.length).to.equal(4);
   });
 });
 
@@ -30127,32 +30213,32 @@ describe("File", function () {
   // });
 
   // -------------------------------- Read API --------------------------------
-  it("returns text via .text()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee44() {var file, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context44) {while (1) switch (_context44.prev = _context44.next) {case 0:
-          file = new File(["Hello"], "hello.txt");_context44.next = 1;return (
-            file.text());case 1:text = _context44.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("Hello");case 2:case "end":return _context44.stop();}}, _callee44);}))
+  it("returns text via .text()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee45() {var file, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context45) {while (1) switch (_context45.prev = _context45.next) {case 0:
+          file = new File(["Hello"], "hello.txt");_context45.next = 1;return (
+            file.text());case 1:text = _context45.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("Hello");case 2:case "end":return _context45.stop();}}, _callee45);}))
   );
 
-  it("returns bytes via .bytes()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee45() {var file, bytes;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context45) {while (1) switch (_context45.prev = _context45.next) {case 0:
-          file = new File(["Hello"], "hello.txt");_context45.next = 1;return (
-            file.bytes());case 1:bytes = _context45.sent;
+  it("returns bytes via .bytes()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee46() {var file, bytes;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context46) {while (1) switch (_context46.prev = _context46.next) {case 0:
+          file = new File(["Hello"], "hello.txt");_context46.next = 1;return (
+            file.bytes());case 1:bytes = _context46.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes).to.be.instanceOf(Uint8Array);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes.length).to.equal(5);
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes[0]).to.equal(72); // 'H'
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(bytes[4]).to.equal(111); // 'o'
-        case 2:case "end":return _context45.stop();}}, _callee45);})));
+        case 2:case "end":return _context46.stop();}}, _callee46);})));
 
-  it("returns an ArrayBuffer via .arrayBuffer()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee46() {var file, buffer;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context46) {while (1) switch (_context46.prev = _context46.next) {case 0:
-          file = new File(["Hello"], "hello.txt");_context46.next = 1;return (
-            file.arrayBuffer());case 1:buffer = _context46.sent;
+  it("returns an ArrayBuffer via .arrayBuffer()", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee47() {var file, buffer;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context47) {while (1) switch (_context47.prev = _context47.next) {case 0:
+          file = new File(["Hello"], "hello.txt");_context47.next = 1;return (
+            file.arrayBuffer());case 1:buffer = _context47.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer).to.be.instanceOf(ArrayBuffer);
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer.byteLength).to.equal(5);case 2:case "end":return _context46.stop();}}, _callee46);}))
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer.byteLength).to.equal(5);case 2:case "end":return _context47.stop();}}, _callee47);}))
   );
 
-  it("handles multi-byte UTF-8 content", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee47() {var file, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context47) {while (1) switch (_context47.prev = _context47.next) {case 0:
-          file = new File(["你好, 世界"], "utf8.txt");_context47.next = 1;return (
-            file.text());case 1:text = _context47.sent;
-          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("你好, 世界");case 2:case "end":return _context47.stop();}}, _callee47);}))
+  it("handles multi-byte UTF-8 content", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee48() {var file, text;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context48) {while (1) switch (_context48.prev = _context48.next) {case 0:
+          file = new File(["你好, 世界"], "utf8.txt");_context48.next = 1;return (
+            file.text());case 1:text = _context48.sent;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(text).to.equal("你好, 世界");case 2:case "end":return _context48.stop();}}, _callee48);}))
   );
 
   // -------------------------------- Blob inheritance --------------------------------

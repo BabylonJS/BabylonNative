@@ -291,6 +291,14 @@ describe("XMLHTTPRequest", function () {
         const vertexCount = parseInt(/element vertex (\d+)\n/.exec(header)![1]);
         expect(vertexCount).to.equal(18713);
     });
+
+    it("should not truncate responseText or response at an embedded null byte", async function () {
+        const xhr = await createRequest("GET", "app:///Assets/embedded_nulls.txt");
+        expect(xhr.status).to.equal(200);
+        expect(xhr.responseText).to.equal("start\0middle\0end");
+        expect(xhr.responseText.length).to.equal(16);
+        expect(xhr.response).to.equal(xhr.responseText);
+    });
 });
 
 describe("fetch", function () {
@@ -613,6 +621,52 @@ describe("setInterval", function () {
                 done(e);
             }
         }, 10);
+    });
+
+    it("should not starve other queued work when the interval has no delay", function (done) {
+        // Regression test: a repeating timeout used to be re-armed on the timer
+        // thread immediately, before its callback had run on the JS thread. With a
+        // zero delay that produced an unbounded backlog of queued callbacks which
+        // starved every other item on the JS dispatch queue, so this setTimeout
+        // would never fire.
+        let finished = false;
+        const intervalId = setInterval(() => { });
+
+        const timeoutId = setTimeout(() => {
+            finished = true;
+            clearInterval(intervalId);
+            done();
+        }, 100);
+
+        setTimeout(() => {
+            if (!finished) {
+                clearInterval(intervalId);
+                clearTimeout(timeoutId);
+                done(new Error("setTimeout was starved by a zero delay setInterval"));
+            }
+        }, 2000);
+    });
+
+    it("should stop when cleared from within its own callback", function (done) {
+        // Exercises the re-arm path: a repeating timeout is now re-armed only
+        // after its callback returns, so a clear from inside the callback must
+        // win and no further ticks may occur.
+        let ticks = 0;
+        let id = 0;
+        id = setInterval(() => {
+            ticks++;
+            clearInterval(id);
+        }, 10);
+
+        setTimeout(() => {
+            try {
+                expect(ticks).to.equal(1);
+                done();
+            }
+            catch (e) {
+                done(e);
+            }
+        }, 200);
     });
 });
 
@@ -1736,7 +1790,7 @@ describe("TextDecoder", function () {
         // many times to create many dangling wraps, then allocate/decode to
         // exercise the heap and surface any corruption within this test run.
         for (let i = 0; i < 100; ++i) {
-            expect(() => new TextDecoder("utf-16")).to.throw();
+            expect(() => new TextDecoder("iso-8859-2")).to.throw();
         }
         const decoder = new TextDecoder("utf-8");
         expect(decoder.decode(new Uint8Array([79, 75]))).to.equal("OK");
@@ -1763,7 +1817,39 @@ describe("TextDecoder", function () {
     });
 
     it("should still throw for a genuinely unsupported encoding", function () {
-        expect(() => new TextDecoder("utf-16")).to.throw();
+        expect(() => new TextDecoder("iso-8859-2")).to.throw();
+    });
+
+    it("should decode utf-16le", function () {
+        const decoder = new TextDecoder("utf-16le");
+        // "Hi" as UTF-16LE code units.
+        expect(decoder.decode(new Uint8Array([0x48, 0x00, 0x69, 0x00]))).to.equal("Hi");
+    });
+
+    it("should decode utf-16be", function () {
+        const decoder = new TextDecoder("utf-16be");
+        expect(decoder.decode(new Uint8Array([0x00, 0x48, 0x00, 0x69]))).to.equal("Hi");
+    });
+
+    it("should accept the other WHATWG utf-16 aliases as little endian", function () {
+        for (const label of ["utf-16", "ucs-2", "unicode", "unicodeFEFF", "csunicode", "iso-10646-ucs-2"]) {
+            const decoder = new TextDecoder(label);
+            expect(decoder.decode(new Uint8Array([0x4F, 0x00, 0x4B, 0x00]))).to.equal("OK");
+        }
+        expect(new TextDecoder("unicodeFFFE").decode(new Uint8Array([0x00, 0x4F, 0x00, 0x4B]))).to.equal("OK");
+    });
+
+    it("should strip a leading byte order mark", function () {
+        expect(new TextDecoder("utf-16le").decode(new Uint8Array([0xFF, 0xFE, 0x48, 0x00]))).to.equal("H");
+        expect(new TextDecoder("utf-16be").decode(new Uint8Array([0xFE, 0xFF, 0x00, 0x48]))).to.equal("H");
+    });
+
+    it("should decode utf-16 outside the BMP and preserve null code units", function () {
+        // U+1F600 as a surrogate pair, then U+0000, then "A".
+        const decoder = new TextDecoder("utf-16le");
+        const result = decoder.decode(new Uint8Array([0x3D, 0xD8, 0x00, 0xDE, 0x00, 0x00, 0x41, 0x00]));
+        expect(result).to.equal("\u{1F600}\0A");
+        expect(result.length).to.equal(4);
     });
 });
 
