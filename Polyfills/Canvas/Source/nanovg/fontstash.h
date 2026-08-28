@@ -220,7 +220,10 @@ int fons__tt_buildGlyphBitmap(FONSttFontImpl *font, int glyph, float size, float
 	FT_Fixed advFixed;
 	FONS_NOTUSED(scale);
 
-	ftError = FT_Set_Pixel_Sizes(font->font, 0, (FT_UInt)(size * (float)font->font->units_per_EM / (float)(font->font->ascender - font->font->descender)));
+	// `size` is already CSS/canvas em pixels (see fons__tt_getPixelHeightScale). Do not
+	// re-scale by units_per_EM/(ascender-descender) — that was the old line-height path and
+	// would desync FreeType raster size from em-scaled advances/metrics.
+	ftError = FT_Set_Pixel_Sizes(font->font, 0, (FT_UInt)(size > 0.0f ? size + 0.5f : 0.0f));
 	if (ftError) return 0;
 	ftError = FT_Load_Glyph(font->font, glyph, FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT);
 	if (ftError) return 0;
