@@ -1465,3 +1465,26 @@ bgfx::TextureHandle nvglImageHandle(NVGcontext* _ctx, int32_t _image)
     GLNVGtexture* tex = glnvg__findTexture(gl, _image);
     return tex->id;
 }
+
+int nvgCreateImageFromHandle(NVGcontext* _ctx, bgfx::TextureHandle _handle, int _width, int _height, int _flags)
+{
+    if (_ctx == nullptr || !bgfx::isValid(_handle) || _width <= 0 || _height <= 0)
+    {
+        return 0;
+    }
+
+    GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
+    GLNVGtexture* tex = glnvg__allocTexture(gl);
+    if (tex == nullptr)
+    {
+        return 0;
+    }
+
+    tex->width = _width;
+    tex->height = _height;
+    tex->type = NVG_TEXTURE_RGBA;
+    // Do not destroy the caller's texture when nvgDeleteImage runs.
+    tex->flags = _flags | NVG_IMAGE_NODELETE;
+    tex->id = _handle;
+    return static_cast<int>(tex->id.idx);
+}

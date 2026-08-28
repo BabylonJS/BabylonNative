@@ -129,6 +129,10 @@ namespace Babylon::Graphics
         // continue within the same logical frame. Call at draw/clear op boundaries.
         void FlushViewsIfNeeded();
 
+                // Force a mid-frame flush when a FrameCompletionScope is held so pending
+                // bgfx::readTexture requests can complete (Canvas toDataURL / drawImage).
+                void ForceMidFrameFlush();
+
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);

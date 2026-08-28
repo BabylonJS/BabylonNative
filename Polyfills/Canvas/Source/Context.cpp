@@ -1,13 +1,18 @@
 #include <bx/math.h>
+#include <arcana/threading/task.h>
 #include <map>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <mutex>
 #include <optional>
 #include <regex>
+#include <stdexcept>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -147,9 +152,15 @@ namespace Babylon::Polyfills::Internal
         {
             m_canvas->SetBoundContext(nullptr);
         }
-        Dispose();
-        m_cancellationSource->cancel();
-    }
+            m_canvas = nullptr;
+            Dispose();
+            m_cancellationSource->cancel();
+        }
+
+        void Context::DetachCanvas()
+        {
+            m_canvas = nullptr;
+        }
 
     void Context::Dispose(const Napi::CallbackInfo&)
     {
@@ -761,6 +772,23 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Flush(const Napi::CallbackInfo& info)
     {
+        try
+        {
+            FlushCore();
+        }
+        catch (const std::exception& ex)
+        {
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
+    }
+
+    void Context::FlushCore()
+    {
+        if (m_canvas == nullptr || m_nvg == nullptr || *m_nvg == nullptr)
+        {
+            return;
+        }
+
         // Pick up any fonts loaded after this Context was created (#1683).
         EnsureFontsLoaded();
 
@@ -803,67 +831,203 @@ namespace Babylon::Polyfills::Internal
         // now it shares the frame encoder with NativeEngine.
         encoder->discard(BGFX_DISCARD_ALL);
 
-        try
+        // bgfx framebuffer pool exhaustion can throw both from UpdateRenderTarget() and
+        // from FrameBufferPool::Acquire() reached via nvgEndFrame() below.
+        const bool needClear = m_canvas->UpdateRenderTarget();
+
+        Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+
+        frameBuffer.Bind();
+        if (needClear)
         {
-            // The entire flush is wrapped: bgfx framebuffer pool exhaustion can throw both from
-            // UpdateRenderTarget() and from FrameBufferPool::Acquire() reached via nvgEndFrame()
-            // below. Converting any such C++ failure into a catchable JS error lets the offending
-            // test fail cleanly instead of aborting the whole sweep.
-            const bool needClear = m_canvas->UpdateRenderTarget();
+            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+        }
+        frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
+        const auto width = m_canvas->GetWidth();
+        const auto height = m_canvas->GetHeight();
 
-            Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+        for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+        {
+            // sanity check no buffers should have been acquired yet
+            assert(buffer.isAvailable == true);
+        }
+        std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this]() -> Babylon::Graphics::FrameBuffer* {
+            Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
+            frameBuffer->Bind();
+            return frameBuffer;
+        };
+        std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
+            // clear framebuffer when released
+            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            this->m_canvas->m_frameBufferPool.Release(frameBuffer);
+            frameBuffer->Unbind();
+        };
 
-            frameBuffer.Bind();
-            if (needClear)
+        nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
+        nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
+        nvgSetFrameBufferPool(*m_nvg, { acquire, release });
+        nvgEndFrame(*m_nvg);
+        frameBuffer.Unbind();
+
+        // Reserve the view id for the eventual canvas->texture blit NOW, while we are
+        // sequenced immediately after this canvas' draws but before the scene/backbuffer
+        // render is recorded. bgfx processes blits in numeric view-id order, so the copy
+        // must land AFTER the canvas Flush (source ready) yet BEFORE the fullscreen ADT
+        // layer samples the destination texture. Deferring to CopyTexture's
+        // PeekNextViewId() would place the blit after the backbuffer view, so the layer
+        // would sample the previous frame's content (a one-frame GUI latency).
+        m_canvas->SetBlitViewId(m_graphicsContext.AcquireNewViewId(), m_graphicsContext.ViewIdGeneration());
+
+        for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+        {
+            // sanity check no unreleased buffers
+            assert(buffer.isAvailable == true);
+        }
+    }
+
+    std::vector<uint8_t> Context::CaptureRGBA()
+    {
+        const uint32_t width = m_canvas != nullptr ? m_canvas->GetWidth() : 0;
+        const uint32_t height = m_canvas != nullptr ? m_canvas->GetHeight() : 0;
+        std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
+        if (m_canvas == nullptr || width == 0 || height == 0)
+        {
+            return rgba;
+        }
+
+        // Push pending NanoVG draws into the canvas RT first.
+        FlushCore();
+        if (!m_canvas->HasFrameBuffer())
+        {
+            return rgba;
+        }
+
+        // Hold a frame scope so ForceMidFrameFlush can complete the readback even when
+        // the unit-test host (or RAF path) already has the frame encoder open without
+        // any JS-held scopes (pendingFrameScopes must be > 0 for the handshake).
+        std::optional<Graphics::FrameCompletionScope> scope{
+            m_graphicsContext.AcquireFrameCompletionScope()};
+
+        bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
+        if (encoder == nullptr)
+        {
+            return rgba;
+        }
+
+        const bgfx::TextureHandle srcTexture = bgfx::getTexture(m_canvas->GetFrameBuffer().Handle());
+        if (!bgfx::isValid(srcTexture))
+        {
+            return rgba;
+        }
+
+        const bgfx::TextureHandle blitTexture = bgfx::createTexture2D(
+            static_cast<uint16_t>(width),
+            static_cast<uint16_t>(height),
+            /*hasMips*/ false,
+            /*numLayers*/ 1,
+            bgfx::TextureFormat::RGBA8,
+            BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+
+        if (!bgfx::isValid(blitTexture))
+        {
+            throw std::runtime_error{"Canvas.CaptureRGBA: failed to create readback texture."};
+        }
+
+        // maxViews-1 is reserved for readback blits (see DeviceImpl::FlushViewsIfNeeded).
+        const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews - 1);
+        encoder->blit(
+            blitView,
+            blitTexture,
+            /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0,
+            srcTexture,
+            /*srcMip*/ 0, /*srcX*/ 0, /*srcY*/ 0, /*srcZ*/ 0,
+            static_cast<uint16_t>(width),
+            static_cast<uint16_t>(height),
+            /*depth*/ 0);
+
+        std::mutex mutex;
+        std::condition_variable cv;
+        bool done = false;
+        std::exception_ptr error;
+
+        m_graphicsContext.ReadTextureAsync(blitTexture, rgba)
+            .then(arcana::inline_scheduler, arcana::cancellation::none(),
+                [&](const arcana::expected<void, std::exception_ptr>& result) {
+                    {
+                        std::lock_guard lock{mutex};
+                        if (result.has_error())
+                        {
+                            error = result.error();
+                        }
+                        done = true;
+                    }
+                    cv.notify_one();
+                });
+
+        // Drive mid-frame flushes until the readback completes. Each flush ends the
+        // current encoder, runs bgfx::frame(FLUSH), completes ready readTexture
+        // requests, and opens a fresh encoder for the rest of the logical frame.
+        //
+        // Keep `scope` alive for the whole wait: releasing it while a parent RAF
+        // FrameCompletionScope is still held would leave FinishRendering blocked on
+        // that parent while we block on cv — deadlock. ForceMidFrameFlush is the
+        // path that advances bgfx while any scope remains.
+        for (;;)
+        {
             {
-                frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+                std::lock_guard lock{mutex};
+                if (done)
+                {
+                    break;
+                }
             }
-            frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
-            const auto width = m_canvas->GetWidth();
-            const auto height = m_canvas->GetHeight();
-
-            for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+            m_graphicsContext.ForceMidFrameFlush();
             {
-                // sanity check no buffers should have been acquired yet
-                assert(buffer.isAvailable == true);
-            }
-            std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this]() -> Babylon::Graphics::FrameBuffer* {
-                Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
-                frameBuffer->Bind();
-                return frameBuffer;
-            };
-            std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-                // clear framebuffer when released
-                frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
-                this->m_canvas->m_frameBufferPool.Release(frameBuffer);
-                frameBuffer->Unbind();
-            };
-
-            nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
-            nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
-            nvgSetFrameBufferPool(*m_nvg, { acquire, release });
-            nvgEndFrame(*m_nvg);
-            frameBuffer.Unbind();
-
-            // Reserve the view id for the eventual canvas->texture blit NOW, while we are
-            // sequenced immediately after this canvas' draws but before the scene/backbuffer
-            // render is recorded. bgfx processes blits in numeric view-id order, so the copy
-            // must land AFTER the canvas Flush (source ready) yet BEFORE the fullscreen ADT
-            // layer samples the destination texture. Deferring to CopyTexture's
-            // PeekNextViewId() would place the blit after the backbuffer view, so the layer
-            // would sample the previous frame's content (a one-frame GUI latency).
-            m_canvas->SetBlitViewId(m_graphicsContext.AcquireNewViewId(), m_graphicsContext.ViewIdGeneration());
-
-            for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
-            {
-                // sanity check no unreleased buffers
-                assert(buffer.isAvailable == true);
+                std::unique_lock lock{mutex};
+                if (done)
+                {
+                    break;
+                }
+                // Yield briefly so a render thread that is between Finish/Start
+                // (unit-test pump) can enter Finish and service flushRequested.
+                cv.wait_for(lock, std::chrono::milliseconds{1}, [&] { return done; });
             }
         }
-        catch (const std::exception& ex)
+
+        scope.reset();
+
+        if (bgfx::isValid(blitTexture))
         {
-            throw Napi::Error::New(info.Env(), ex.what());
+            bgfx::destroy(blitTexture);
         }
+
+        if (error)
+        {
+            std::rethrow_exception(error);
+        }
+
+        if (bgfx::getCaps()->originBottomLeft && height > 1)
+        {
+            const size_t rowPitch = static_cast<size_t>(width) * 4;
+            std::vector<uint8_t> row(rowPitch);
+            for (uint32_t y = 0; y < height / 2; ++y)
+            {
+                uint8_t* front = rgba.data() + static_cast<size_t>(y) * rowPitch;
+                uint8_t* back = rgba.data() + static_cast<size_t>(height - 1 - y) * rowPitch;
+                std::memcpy(row.data(), front, rowPitch);
+                std::memcpy(front, back, rowPitch);
+                std::memcpy(back, row.data(), rowPitch);
+            }
+        }
+
+        // Keep the CPU mirror in sync so getImageData after toDataURL/drawImage sees GPU content.
+        EnsureCpuBuffer();
+        if (!m_cpuPixels.empty() && m_cpuPixels.size() == rgba.size())
+        {
+            m_cpuPixels = rgba;
+        }
+
+        return rgba;
     }
 
     void Context::PutImageData(const Napi::CallbackInfo& info)
@@ -1221,11 +1385,19 @@ namespace Babylon::Polyfills::Internal
                 return;
             }
 
-            Context* const srcContext = srcCanvas->GetBoundContext();
+            // GPU readback of the source canvas (flush + RT blit + readTexture) so
+            // NanoVG draws (fillRect/text/paths) are included — not just the CPU mirror.
             std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
-            if (srcContext != nullptr)
+            if (Context* const srcContext = srcCanvas->GetBoundContext(); srcContext != nullptr)
             {
-                srcContext->ReadPixels(0, 0, width, height, rgba.data());
+                try
+                {
+                    rgba = srcContext->CaptureRGBA();
+                }
+                catch (const std::exception& ex)
+                {
+                    throw Napi::Error::New(info.Env(), ex.what());
+                }
             }
 
             const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
