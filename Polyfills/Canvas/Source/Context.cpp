@@ -143,6 +143,10 @@ namespace Babylon::Polyfills::Internal
 
     Context::~Context()
     {
+        if (m_canvas != nullptr && m_canvas->GetBoundContext() == this)
+        {
+            m_canvas->SetBoundContext(nullptr);
+        }
         Dispose();
         m_cancellationSource->cancel();
     }
@@ -673,17 +677,10 @@ namespace Babylon::Polyfills::Internal
     {
         std::string text{info[0].As<Napi::String>()};
 
-        // If the JS-requested font family hasn't been loaded, return Arial-equivalent metrics
-        // instead of measuring with whatever fallback font is bound. Browsers use the system
-        // Arial for "Arial"/"sans-serif"/etc.; here we have e.g. droidsans only, which is
-        // ~1.7x wider per em. Returning droidsans widths makes Babylon helpers like
-        // DynamicTexture.drawText center text via t = (canvas - measureText.width)/2 to a
-        // negative x and clip the text off-canvas. Arial-ish synthesised metrics keep the
-        // centering on-canvas, while the actual FillText still substitutes our loaded font.
-        const bool familyAvailable = !m_state.font.Familiy().empty()
-            && m_fonts.find(m_state.font.Familiy()) != m_fonts.end();
-
-        if (!familyAvailable && m_state.font.Size() > 0.f)
+        // Measure against the same face FillText will bind.
+        const bool fontBound = SetFontFaceId();
+        // No face available: synthesize Arial-ish metrics so callers still get a finite width.
+        if (!fontBound && m_state.font.Size() > 0.f)
         {
             // Approximate Arial proportional metrics: average advance ~ 0.55 em.
             const float fontSize = m_state.font.Size();
@@ -1209,6 +1206,32 @@ namespace Babylon::Polyfills::Internal
 #else
             throw Napi::Error::New(info.Env(), "drawImage: image loading disabled in this build.");
 #endif
+        }
+
+        // drawImage(canvas): InstanceOf gate then Unwrap (real canvases only; deliberate
+        // prototype spoofs are out of scope — see #1844 / JsRuntimeHost type tags).
+        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
+        if (canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>()))
+        {
+            NativeCanvas* const srcCanvas = NativeCanvas::Unwrap(imageObj);
+            const uint32_t width = srcCanvas->GetWidth();
+            const uint32_t height = srcCanvas->GetHeight();
+            if (width == 0 || height == 0)
+            {
+                return;
+            }
+
+            Context* const srcContext = srcCanvas->GetBoundContext();
+            std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
+            if (srcContext != nullptr)
+            {
+                srcContext->ReadPixels(0, 0, width, height, rgba.data());
+            }
+
+            const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
+            DrawImageCommon(info, imageIndex, rgba.data(), width, height);
+            nvgDeleteImage(*m_nvg, imageIndex);
+            return;
         }
 
         const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);
