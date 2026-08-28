@@ -48,12 +48,16 @@ nanovg_filterstack::nanovg_filterstack()
 
 void nanovg_filterstack::InitBgfx()
 {
+    if (s_bgfxRefCount++ > 0)
+    {
+        return;
+    }
+
     m_uniforms.u_strength = bgfx::createUniform("u_strength", bgfx::UniformType::Vec4);
     m_uniforms.u_direction = bgfx::createUniform("u_direction", bgfx::UniformType::Vec4);
     m_uniforms.u_weights = bgfx::createUniform("u_weights", bgfx::UniformType::Vec4, BLUR_UNIFORM_SIZE);
 
-    // create shaders used by the different elements
-    bgfx::RendererType::Enum type = bgfx::getRendererType();
+        bgfx::RendererType::Enum type = bgfx::getRendererType();
     s_gaussBlurProg = bgfx::createProgram(
         bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
         , bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_gaussblur")
@@ -67,17 +71,40 @@ void nanovg_filterstack::InitBgfx()
 
 void nanovg_filterstack::DisposeBgfx()
 {
-    // check if uniforms + programs are valid before destroying
-    if (m_uniforms.u_strength.idx != bgfx::kInvalidHandle)
+    if (s_bgfxRefCount <= 0)
+    {
+        return;
+    }
+    if (--s_bgfxRefCount > 0)
+    {
+        return;
+    }
+
+        if (bgfx::isValid(m_uniforms.u_strength))
+    {
         bgfx::destroy(m_uniforms.u_strength);
-    if (m_uniforms.u_direction.idx != bgfx::kInvalidHandle)
+        m_uniforms.u_strength = BGFX_INVALID_HANDLE;
+    }
+    if (bgfx::isValid(m_uniforms.u_direction))
+    {
         bgfx::destroy(m_uniforms.u_direction);
-    if (m_uniforms.u_weights.idx != bgfx::kInvalidHandle)
+        m_uniforms.u_direction = BGFX_INVALID_HANDLE;
+    }
+    if (bgfx::isValid(m_uniforms.u_weights))
+    {
         bgfx::destroy(m_uniforms.u_weights);
-    if (s_gaussBlurProg.idx != bgfx::kInvalidHandle)
+        m_uniforms.u_weights = BGFX_INVALID_HANDLE;
+    }
+    if (bgfx::isValid(s_gaussBlurProg))
+    {
         bgfx::destroy(s_gaussBlurProg);
-    if (s_boxBlurProg.idx != bgfx::kInvalidHandle)
+        s_gaussBlurProg = BGFX_INVALID_HANDLE;
+    }
+    if (bgfx::isValid(s_boxBlurProg))
+    {
         bgfx::destroy(s_boxBlurProg);
+        s_boxBlurProg = BGFX_INVALID_HANDLE;
+    }
 }
 
 bool nanovg_filterstack::ValidString(const std::string& string)

@@ -196,9 +196,15 @@ void fons__tt_getFontVMetrics(FONSttFontImpl *font, int *ascent, int *descent, i
 	*lineGap = font->font->height - (*ascent - *descent);
 }
 
+// CSS/canvas font-size is em size (map em square → pixels), not ascent+descent.
+float fons__tt_getEmUnits(FONSttFontImpl *font)
+{
+	return (float)font->font->units_per_EM;
+}
+
 float fons__tt_getPixelHeightScale(FONSttFontImpl *font, float size)
 {
-	return size / (font->font->ascender - font->font->descender);
+	return size / fons__tt_getEmUnits(font);
 }
 
 int fons__tt_getGlyphIndex(FONSttFontImpl *font, int codepoint)
@@ -304,9 +310,16 @@ void fons__tt_getFontVMetrics(FONSttFontImpl *font, int *ascent, int *descent, i
 	stbtt_GetFontVMetrics(&font->font, ascent, descent, lineGap);
 }
 
+// CSS/canvas font-size is em size (map em square → pixels).
+float fons__tt_getEmUnits(FONSttFontImpl *font)
+{
+	const float scale = stbtt_ScaleForMappingEmToPixels(&font->font, 1.0f);
+	return scale > 0.0f ? 1.0f / scale : 0.0f;
+}
+
 float fons__tt_getPixelHeightScale(FONSttFontImpl *font, float size)
 {
-	return stbtt_ScaleForPixelHeight(&font->font, size);
+	return stbtt_ScaleForMappingEmToPixels(&font->font, size);
 }
 
 int fons__tt_getGlyphIndex(FONSttFontImpl *font, int codepoint)
@@ -951,6 +964,7 @@ error:
 int fonsAddFontMem(FONScontext* stash, const char* name, unsigned char* data, int dataSize, int freeData)
 {
 	int i, ascent, descent, fh, lineGap;
+	float em;
 	FONSfont* font;
 
 	int idx = fons__allocFont(stash);
@@ -977,11 +991,14 @@ int fonsAddFontMem(FONScontext* stash, const char* name, unsigned char* data, in
 
 	// Store normalized line height. The real line height is got
 	// by multiplying the lineh by font size.
-	fons__tt_getFontVMetrics( &font->font, &ascent, &descent, &lineGap);
+	// Normalize metrics against em square (matches pixel height scale).
+		fons__tt_getFontVMetrics( &font->font, &ascent, &descent, &lineGap);
 	fh = ascent - descent;
-	font->ascender = (float)ascent / (float)fh;
-	font->descender = (float)descent / (float)fh;
-	font->lineh = (float)(fh + lineGap) / (float)fh;
+	em = fons__tt_getEmUnits(&font->font);
+	if (em <= 0.0f) em = (float)fh;
+	font->ascender = (float)ascent / em;
+	font->descender = (float)descent / em;
+	font->lineh = (float)(fh + lineGap) / em;
 
 	return idx;
 
@@ -1511,6 +1528,13 @@ void fonsDrawDebug(FONScontext* stash, float x, float y)
 	fons__flush(stash);
 }
 
+// Atlas SDF padding; subtracted from reported ink bounds.
+#ifdef FONS_SDF_PADDING
+#define FONS_TEXT_BOUNDS_PADDING ((float)FONS_SDF_PADDING)
+#else
+#define FONS_TEXT_BOUNDS_PADDING 0.0f
+#endif
+
 float fonsTextBounds(FONScontext* stash,
 					 float x, float y,
 					 const char* str, const char* end,
@@ -1528,6 +1552,7 @@ float fonsTextBounds(FONScontext* stash,
 	FONSfont* font;
 	float startx, advance;
 	float minx, miny, maxx, maxy;
+	int hasGlyph = 0;
 
 	if (stash == NULL) return 0;
 	if (state->font < 0 || state->font >= stash->nfonts) return 0;
@@ -1539,7 +1564,8 @@ float fonsTextBounds(FONScontext* stash,
 	// Align vertically.
 	y += fons__getVertAlign(stash, font, state->align, isize);
 
-	minx = maxx = x;
+	// Init bounds from pen only as empty-run fallback; extents come from glyphs (LSB).
+		minx = maxx = x;
 	miny = maxy = y;
 	startx = x;
 
@@ -1551,16 +1577,33 @@ float fonsTextBounds(FONScontext* stash,
 			continue;
 		glyph = fons__getGlyph(stash, font, codepoint, isize, iblur, FONS_GLYPH_BITMAP_OPTIONAL);
 		if (glyph != NULL) {
+			float qx0, qx1, qy0, qy1;
 			fons__getQuad(stash, font, prevGlyphIndex, glyph, scale, state->spacing, &x, &y, &q);
-			if (q.x0 < minx) minx = q.x0;
-			if (q.x1 > maxx) maxx = q.x1;
+			// Drop atlas SDF padding from ink extents.
+						qx0 = q.x0 + FONS_TEXT_BOUNDS_PADDING;
+			qx1 = q.x1 - FONS_TEXT_BOUNDS_PADDING;
+			if (qx1 < qx0) qx0 = qx1 = (q.x0 + q.x1) * 0.5f;
+			if (!hasGlyph) { minx = qx0; maxx = qx1; }
+			if (qx0 < minx) minx = qx0;
+			if (qx1 > maxx) maxx = qx1;
 			if (stash->params.flags & FONS_ZERO_TOPLEFT) {
-				if (q.y0 < miny) miny = q.y0;
-				if (q.y1 > maxy) maxy = q.y1;
+				// q.y0 is the top edge and q.y1 the bottom edge.
+				qy0 = q.y0 + FONS_TEXT_BOUNDS_PADDING;
+				qy1 = q.y1 - FONS_TEXT_BOUNDS_PADDING;
+				if (qy1 < qy0) qy0 = qy1 = (q.y0 + q.y1) * 0.5f;
+				if (!hasGlyph) { miny = qy0; maxy = qy1; }
+				if (qy0 < miny) miny = qy0;
+				if (qy1 > maxy) maxy = qy1;
 			} else {
-				if (q.y1 < miny) miny = q.y1;
-				if (q.y0 > maxy) maxy = q.y0;
+				// y grows upwards: q.y0 is the top edge and q.y1 the bottom edge.
+				qy0 = q.y0 - FONS_TEXT_BOUNDS_PADDING;
+				qy1 = q.y1 + FONS_TEXT_BOUNDS_PADDING;
+				if (qy0 < qy1) qy0 = qy1 = (q.y0 + q.y1) * 0.5f;
+				if (!hasGlyph) { miny = qy1; maxy = qy0; }
+				if (qy1 < miny) miny = qy1;
+				if (qy0 > maxy) maxy = qy0;
 			}
+			hasGlyph = 1;
 		}
 		prevGlyphIndex = glyph != NULL ? glyph->index : -1;
 	}

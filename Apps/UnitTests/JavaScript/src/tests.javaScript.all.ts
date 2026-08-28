@@ -495,7 +495,23 @@ describe("Canvas2D", function () {
     expect(data.width).to.equal(4);
     expect(data.height).to.equal(3);
   });
-});
+
+    it("accepts another Canvas as drawImage source and supports toDataURL png", function () {
+      const srcCanvas = new _native.Canvas();
+      srcCanvas.width = 32;
+      srcCanvas.height = 32;
+      const srcCtx = srcCanvas.getContext("2d");
+      srcCtx.fillStyle = "#ff0000";
+      srcCtx.fillRect(0, 0, 32, 32);
+
+      const dstCtx = createContext();
+      expect(function () { dstCtx.drawImage(srcCanvas, 0, 0); }).to.not.throw();
+
+      const url = srcCanvas.toDataURL("image/png");
+      expect(url.indexOf("data:image/png;base64,")).to.equal(0);
+      expect(url.length).to.be.greaterThan(32);
+    });
+  });
 
 function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {
   const engine = new NativeEngine();
