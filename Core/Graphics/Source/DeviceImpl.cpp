@@ -493,9 +493,12 @@ namespace Babylon::Graphics
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
         arcana::task_completion_source<void, std::exception_ptr> completionSource{};
-        m_readTextureRequests.emplace(bgfx::readTexture(handle, data.data(), mipLevel), completionSource);
-        return completionSource.as_task();
-    }
+            bgfx::TextureRegion region{};
+            region.init(handle);
+            region.mip = mipLevel;
+            m_readTextureRequests.emplace(bgfx::read(region, data.data()), completionSource);
+            return completionSource.as_task();
+        }
 
     DeviceImpl::CaptureCallbackTicketT DeviceImpl::AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback)
     {

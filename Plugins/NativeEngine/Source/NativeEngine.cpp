@@ -1714,8 +1714,12 @@ namespace Babylon
         {
             blitView = m_deviceContext.PeekNextViewId();
         }
-        encoder->blit(blitView, textureDestination->Handle(), 0, 0, textureSource->Handle());
-    }
+        bgfx::TextureRegion dstRegion{};
+                dstRegion.init(textureDestination->Handle());
+                bgfx::TextureRegion srcRegion{};
+                srcRegion.init(textureSource->Handle());
+                encoder->blit(blitView, dstRegion, srcRegion);
+            }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
@@ -2353,7 +2357,7 @@ namespace Babylon
         {
             // Acquire a FrameCompletionScope for the duration of the read operation.
             // This ensures the encoder is available for the blit (if needed) and that
-            // bgfx::readTexture lands in the same frame as the blit.
+            // bgfx::read lands in the same frame as the blit.
             Graphics::FrameCompletionScope scope{m_deviceContext.AcquireFrameCompletionScope()};
 
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
@@ -2365,19 +2369,26 @@ namespace Babylon
             const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
-            // specific cube-map face, blit to a temp 2D texture. bgfx::readTexture cannot address an
-            // individual cube face, so a cube-face read always goes through the blit (srcZ = face index).
-            if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
-            {
-                const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+                        // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
+                        // slice via TextureRegion::z, but a cropped sub-rect still needs the blit path. Cube-face
+                        // reads use srcZ = face index on the source region of that blit.
+                        if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
+                        {
+                            const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
-                bgfx::Encoder* encoder = GetEncoder();
-                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, srcZ, width, height, /*depth*/ 0);
+                            bgfx::Encoder* encoder = GetEncoder();
+                            bgfx::TextureRegion dstRegion{};
+                            dstRegion.init(blitTextureHandle, /*x*/ 0, /*y*/ 0, width, height);
+                            bgfx::TextureRegion srcRegion{};
+                            srcRegion.init(sourceTextureHandle, x, y, width, height);
+                            srcRegion.mip = mipLevel;
+                            srcRegion.z = srcZ;
+                            encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
 
-                sourceTextureHandle = blitTextureHandle;
-                *tempTexture = true;
-                mipLevel = 0;
-            }
+                            sourceTextureHandle = blitTextureHandle;
+                            *tempTexture = true;
+                            mipLevel = 0;
+                        }
 
             // Allocate a buffer to store the source pixel data.
             std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
