@@ -105,10 +105,10 @@ namespace
                 auto global = env.Global();
                 auto engine = global.Get("_externalEngine").As<Napi::Object>();
                 engine.Get("dispose").As<Napi::Function>().Call(engine, {});
-                global.Delete("_externalTextureOwner");
-                global.Delete("_externalInternalTexture");
-                global.Delete("_externalNativeTexture");
-                global.Delete("_externalEngine");
+                global.Set("_externalTextureOwner", env.Undefined());
+                global.Set("_externalInternalTexture", env.Undefined());
+                global.Set("_externalNativeTexture", env.Undefined());
+                global.Set("_externalEngine", env.Undefined());
                 cleanedUp.set_value();
             }
             catch (...)
