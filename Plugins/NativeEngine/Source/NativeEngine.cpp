@@ -1715,11 +1715,11 @@ namespace Babylon
             blitView = m_deviceContext.PeekNextViewId();
         }
         bgfx::TextureRegion dstRegion{};
-                dstRegion.init(textureDestination->Handle());
-                bgfx::TextureRegion srcRegion{};
-                srcRegion.init(textureSource->Handle());
-                encoder->blit(blitView, dstRegion, srcRegion);
-            }
+        dstRegion.init(textureDestination->Handle());
+        bgfx::TextureRegion srcRegion{};
+        srcRegion.init(textureSource->Handle());
+        encoder->blit(blitView, dstRegion, srcRegion);
+    }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
@@ -2369,26 +2369,26 @@ namespace Babylon
             const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
-                        // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
-                        // slice via TextureRegion::z, but a cropped sub-rect still needs the blit path. Cube-face
-                        // reads use srcZ = face index on the source region of that blit.
-                        if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
-                        {
-                            const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+            // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
+            // slice via TextureRegion::z, but a cropped sub-rect still needs the blit path. Cube-face
+            // reads use srcZ = face index on the source region of that blit.
+            if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
+            {
+                const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
-                            bgfx::Encoder* encoder = GetEncoder();
-                            bgfx::TextureRegion dstRegion{};
-                            dstRegion.init(blitTextureHandle, /*x*/ 0, /*y*/ 0, width, height);
-                            bgfx::TextureRegion srcRegion{};
-                            srcRegion.init(sourceTextureHandle, x, y, width, height);
-                            srcRegion.mip = mipLevel;
-                            srcRegion.z = srcZ;
-                            encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
+                bgfx::Encoder* encoder = GetEncoder();
+                bgfx::TextureRegion dstRegion{};
+                dstRegion.init(blitTextureHandle, /*x*/ 0, /*y*/ 0, width, height);
+                bgfx::TextureRegion srcRegion{};
+                srcRegion.init(sourceTextureHandle, x, y, width, height);
+                srcRegion.mip = mipLevel;
+                srcRegion.z = srcZ;
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
 
-                            sourceTextureHandle = blitTextureHandle;
-                            *tempTexture = true;
-                            mipLevel = 0;
-                        }
+                sourceTextureHandle = blitTextureHandle;
+                *tempTexture = true;
+                mipLevel = 0;
+            }
 
             // Allocate a buffer to store the source pixel data.
             std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
@@ -2520,16 +2520,31 @@ namespace Babylon
             }
 
             auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | RenderTargetSamplesToBgfxMsaaFlag(samples);
-#ifdef ANDROID
-            // On Android with Mali GPU (Oppo Find x5 lite, Google Pixel 8, Samsung Galaxy Tab Active 3, ...)
-            // D32 depth buffer gives glitches. Everything is fine with D24S8.
-            // see https://forum.babylonjs.com/t/post-processing-graphics-glitch/49523
-            // As 24bits should be enough for 99.99% cases, defaulting to that format on Android.
-            const auto depthStencilFormat{bgfx::TextureFormat::D24S8};
-#else
-            const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
+
+            // Pick a depth(/stencil) format the active renderer actually supports as an RT.
+            // Plain D32 is not a valid D3D11 depth RT (bgfx maps it to R24G8 with no DSV), and
+            // newer bgfx asserts in createTexture2D when isTextureValid fails. Prefer D32F for
+            // depth-only when available; otherwise fall back to D24S8. Android always uses
+            // D24S8 — D32/D32F has produced glitches on several Mali devices
+            // (https://forum.babylonjs.com/t/post-processing-graphics-glitch/49523).
+            bgfx::TextureFormat::Enum depthStencilFormat{bgfx::TextureFormat::D24S8};
+#ifndef ANDROID
+            if (!generateStencilBuffer)
+            {
+                if (bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D32F, flags))
+                {
+                    depthStencilFormat = bgfx::TextureFormat::D32F;
+                }
+                else if (bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24, flags))
+                {
+                    depthStencilFormat = bgfx::TextureFormat::D24;
+                }
+            }
 #endif
-            assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags));
+            if (!bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags))
+            {
+                throw Napi::Error::New(env, "No supported depth/stencil texture format for frame buffer");
+            }
             depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags);
 
             // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)

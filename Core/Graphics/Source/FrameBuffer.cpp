@@ -148,17 +148,17 @@ namespace Babylon::Graphics
         // In order for Blit to work properly we need to force the creation of a new ViewID.
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
 
-            // bgfx blit now takes TextureRegion pairs. UINT16_MAX was the old "whole texture"
-            // sentinel; zero width/height now means "rest of mip from x/y".
-            const uint16_t regionWidth{width == UINT16_MAX ? static_cast<uint16_t>(0) : width};
-            const uint16_t regionHeight{height == UINT16_MAX ? static_cast<uint16_t>(0) : height};
+        // bgfx blit now takes TextureRegion pairs. UINT16_MAX was the old "whole texture"
+        // sentinel; zero width/height now means "rest of mip from x/y".
+        const uint16_t regionWidth{width == UINT16_MAX ? static_cast<uint16_t>(0) : width};
+        const uint16_t regionHeight{height == UINT16_MAX ? static_cast<uint16_t>(0) : height};
 
-            bgfx::TextureRegion dstRegion{};
-            dstRegion.init(dst, dstX, dstY, regionWidth, regionHeight);
-            bgfx::TextureRegion srcRegion{};
-            srcRegion.init(src, srcX, srcY, regionWidth, regionHeight);
-            encoder.blit(m_viewId.value(), dstRegion, srcRegion);
-        }
+        bgfx::TextureRegion dstRegion{};
+        dstRegion.init(dst, dstX, dstY, regionWidth, regionHeight);
+        bgfx::TextureRegion srcRegion{};
+        srcRegion.init(src, srcX, srcY, regionWidth, regionHeight);
+        encoder.blit(m_viewId.value(), dstRegion, srcRegion);
+    }
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
     {
