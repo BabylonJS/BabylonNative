@@ -4,14 +4,129 @@
 #include "ShaderCompilerTraversers.h"
 #include <arcana/experimental/array.h>
 #include <glslang/Public/ShaderLang.h>
+#include <glslang/Include/intermediate.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_glsl.hpp>
 #include <bgfx/bgfx.h>
+#include <algorithm>
+#include <string>
+#include <vector>
+
 
 namespace
 {
+    // Match bgfx/src/shader.h binding layout used by the Vulkan backend for shader
+    // binary v11+ (m_oldBindingModel == false). UBOs occupy bindings 0/1; images
+    // start at kSpirvBindShift; separate samplers sit kSpirvSamplerShift above
+    // their paired image. See shaderc_spirv.cpp setShiftBinding(...) and
+    // renderer_vk.cpp (regIndex - kSpirvBindShift).
+    constexpr unsigned kSpirvVertexBinding = 0;
+    constexpr unsigned kSpirvFragmentBinding = 1;
+    constexpr unsigned kSpirvBindShift = 2;
+    constexpr unsigned kSpirvSamplerShift = 16;
+
+    void ApplyBgfxVulkanResourceBindings(glslang::TProgram& program)
+    {
+        auto applyStage = [](glslang::TIntermediate* intermediate, unsigned uboBinding) {
+            if (intermediate == nullptr)
+            {
+                return;
+            }
+
+            auto* root = intermediate->getTreeRoot()->getAsAggregate();
+            if (root == nullptr || root->getSequence().empty())
+            {
+                return;
+            }
+
+            auto* linkerObjects = root->getSequence().back()->getAsAggregate();
+            if (linkerObjects == nullptr)
+            {
+                return;
+            }
+
+            std::vector<glslang::TIntermSymbol*> textures;
+            std::vector<glslang::TIntermSymbol*> pureSamplers;
+            std::vector<glslang::TIntermSymbol*> ubos;
+
+            for (glslang::TIntermNode* node : linkerObjects->getSequence())
+            {
+                auto* symbol = node->getAsSymbolNode();
+                if (symbol == nullptr)
+                {
+                    continue;
+                }
+
+                const auto& type = symbol->getType();
+                if (type.getQualifier().storage != glslang::EvqUniform)
+                {
+                    continue;
+                }
+
+                if (type.getBasicType() == glslang::EbtSampler)
+                {
+                    const auto& sampler = type.getSampler();
+                    if (sampler.sampler)
+                    {
+                        pureSamplers.push_back(symbol);
+                    }
+                    else
+                    {
+                        textures.push_back(symbol);
+                    }
+                }
+                else
+                {
+                    ubos.push_back(symbol);
+                }
+            }
+
+            std::sort(textures.begin(), textures.end(), [](glslang::TIntermSymbol* a, glslang::TIntermSymbol* b) {
+                return a->getType().getQualifier().layoutBinding < b->getType().getQualifier().layoutBinding;
+            });
+
+            for (size_t i = 0; i < textures.size(); ++i)
+            {
+                const unsigned imageBinding = kSpirvBindShift + static_cast<unsigned>(i);
+                textures[i]->getWritableType().getQualifier().layoutBinding = imageBinding;
+
+                std::string texName = textures[i]->getName().c_str();
+                std::string baseName = texName;
+                constexpr char kSuffix[] = "Texture";
+                constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
+                if (baseName.size() > kSuffixLen && baseName.compare(baseName.size() - kSuffixLen, kSuffixLen, kSuffix) == 0)
+                {
+                    baseName.resize(baseName.size() - kSuffixLen);
+                }
+
+                for (auto* samplerSymbol : pureSamplers)
+                {
+                    if (std::string{samplerSymbol->getName().c_str()} == baseName)
+                    {
+                        samplerSymbol->getWritableType().getQualifier().layoutBinding = imageBinding + kSpirvSamplerShift;
+                        break;
+                    }
+                }
+            }
+
+            for (auto* ubo : ubos)
+            {
+                // Frame is the UBO synthesized by MoveNonSamplerUniformsIntoStruct.
+                // Extra user UBOs are rare on the Vulkan path; leave their existing
+                // bindings alone so we do not collide with the image range.
+                if (std::string{ubo->getName().c_str()} == "Frame" || ubos.size() == 1)
+                {
+                    ubo->getWritableType().getQualifier().layoutBinding = uboBinding;
+                }
+            }
+        };
+
+        applyStage(program.getIntermediate(EShLangVertex), kSpirvVertexBinding);
+        applyStage(program.getIntermediate(EShLangFragment), kSpirvFragmentBinding);
+    }
+
     void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
     {
         const std::array<const char*, 1> sources{source.data()};
@@ -86,6 +201,7 @@ namespace Babylon::Plugins
         auto builtInInstanceDataSlots = ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming, instancedAttributes);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
+        ApplyBgfxVulkanResourceBindings(program);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
         ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 

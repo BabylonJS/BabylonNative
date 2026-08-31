@@ -128,16 +128,37 @@ namespace Babylon::ShaderCompilerCommon
             // never bind (the sampler silently samples nothing). Recover the pre-transpile name from the
             // parser's ParsedIR (the Compiler transpiles a private copy, leaving the parser's names intact).
             const std::string& originalName = originalIr.get_name(sampler.id);
-            const std::string& name = originalName.empty() ? sampler.name : originalName;
+            std::string name = originalName.empty() ? sampler.name : originalName;
+
+#if VULKAN
+            // Separate images are named with a "Texture" suffix by SplitSamplersIntoSamplersAndTextures.
+            // bgfx/shaderc strip that suffix so the packaged uniform name matches the original GLSL
+            // sampler identifier (and therefore Babylon.js).
+            constexpr char kTextureSuffix[] = "Texture";
+            constexpr size_t kTextureSuffixLen = sizeof(kTextureSuffix) - 1;
+            if (name.size() > kTextureSuffixLen && name.compare(name.size() - kTextureSuffixLen, kTextureSuffixLen, kTextureSuffix) == 0)
+            {
+                name.resize(name.size() - kTextureSuffixLen);
+            }
+#endif
 
             AppendBytes(bytes, static_cast<uint8_t>(name.size()));
             AppendBytes(bytes, name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
 
-            // TODO : These values (num, regIndex, regCount) are only used by Vulkan and should be set for that API
-            AppendBytes(bytes, static_cast<uint8_t>(0));
-            AppendBytes(bytes, static_cast<uint16_t>(0));
-            AppendBytes(bytes, static_cast<uint16_t>(0));
+            // num / regIndex / regCount: only Vulkan (and WebGPU) consume these. For the v11+
+            // Vulkan binding model, regIndex is the image descriptor binding; createShader
+            // computes stage = regIndex - kSpirvBindShift (2). Writing 0 underflows to 65534.
+            uint8_t num{0};
+            uint16_t regIndex{0};
+            uint16_t regCount{0};
+#if VULKAN
+            constexpr uint16_t kSpirvBindShift{2};
+            regIndex = static_cast<uint16_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
+#endif
+            AppendBytes(bytes, num);
+            AppendBytes(bytes, regIndex);
+            AppendBytes(bytes, regCount);
             AppendUniformTextureMeta(bytes, /*texComponent*/ 0, TextureDimensionIdFromResource(compiler, sampler));
 
 #if OPENGL
@@ -155,6 +176,12 @@ namespace Babylon::ShaderCompilerCommon
             {
                 stages[name] = static_cast<uint8_t>(stages.size());
             }
+#elif VULKAN
+            // NativeEngine setTexture stage is the bgfx sampler slot, not the raw SPIR-V binding.
+            constexpr uint16_t kSpirvBindShift{2};
+            stages[name] = regIndex >= kSpirvBindShift
+                ? static_cast<uint8_t>(regIndex - kSpirvBindShift)
+                : static_cast<uint8_t>(0);
 #else
             stages[name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
 #endif
@@ -326,6 +353,10 @@ namespace Babylon::ShaderCompilerCommon
 #if __APPLE__
             // with metal, we bind images and not samplers
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers{resources.separate_images};
+#elif VULKAN
+            // bgfx Vulkan packages separate images (regIndex = image binding). Samplers are
+            // paired at imageBinding + kSpirvSamplerShift and are not listed in the uniform table.
+            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
 #elif OPENGL
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
 #else
@@ -389,6 +420,8 @@ namespace Babylon::ShaderCompilerCommon
             const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
             const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
 #if __APPLE__
+            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
+#elif VULKAN
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
 #elif OPENGL
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
