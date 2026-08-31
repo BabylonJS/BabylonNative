@@ -83,16 +83,17 @@ namespace
                 }
             }
 
-            std::sort(textures.begin(), textures.end(), [](glslang::TIntermSymbol* a, glslang::TIntermSymbol* b) {
-                return a->getType().getQualifier().layoutBinding < b->getType().getQualifier().layoutBinding;
-            });
-
-            for (size_t i = 0; i < textures.size(); ++i)
+            // SamplerSplitterTraverser assigns one shared layoutBinding per sampler name
+            // across VS/FS. Preserve that slot and only apply bgfx's fixed shifts —
+            // do not compact per-stage (different subsets would desync the same
+            // sampler across stages and overwrite UniformStages).
+            for (auto* texture : textures)
             {
-                const unsigned imageBinding = kSpirvBindShift + static_cast<unsigned>(i);
-                textures[i]->getWritableType().getQualifier().layoutBinding = imageBinding;
+                const unsigned originalBinding = texture->getType().getQualifier().layoutBinding;
+                const unsigned imageBinding = kSpirvBindShift + originalBinding;
+                texture->getWritableType().getQualifier().layoutBinding = imageBinding;
 
-                std::string texName = textures[i]->getName().c_str();
+                std::string texName = texture->getName().c_str();
                 std::string baseName = texName;
                 constexpr char kSuffix[] = "Texture";
                 constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
