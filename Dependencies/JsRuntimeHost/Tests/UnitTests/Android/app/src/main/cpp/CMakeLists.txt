@@ -18,6 +18,7 @@ npm(install --silent WORKING_DIRECTORY ${TESTS_DIR})
 
 add_library(UnitTestsJNI SHARED
     JNI.cpp
+    ${UNIT_TESTS_DIR}/Shared/StandardStreamLogger.cpp
     ${UNIT_TESTS_DIR}/Shared/Shared.h
     ${UNIT_TESTS_DIR}/Shared/Shared.cpp)
 

@@ -8,6 +8,7 @@ set(TYPE_SCRIPTS
 file(GLOB ASSETS "${CMAKE_CURRENT_SOURCE_DIR}/Assets/*")
 
 set(SOURCES
+    "Shared/StandardStreamLogger.cpp"
     "Shared/Shared.cpp"
     "Shared/Shared.h")
 
