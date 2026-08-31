@@ -33,6 +33,8 @@ namespace Babylon::Plugins
 
         // Creates a JavaScript value wrapping this external texture.
         // Wrap the returned value with `engine.wrapNativeTexture` on the JS side to get a Babylon.js `InternalTexture`.
+        // Disposing the InternalTexture releases Babylon Native's rendering resources immediately;
+        // otherwise they remain until JavaScript finalization. The external texture remains caller-owned.
         // If layerIndex is set, the JavaScript texture views only that array layer (single-slice); otherwise the entire texture.
         // This method must be called from the JavaScript thread. The caller must ensure no other thread
         // is concurrently calling any other operations on this object, including move operations.
