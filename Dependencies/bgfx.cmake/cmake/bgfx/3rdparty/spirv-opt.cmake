@@ -112,6 +112,7 @@ file(
 	${SPIRV_TOOLS}/source/val/validate_derivatives.cpp
 	${SPIRV_TOOLS}/source/val/validate_dot_product.cpp
 	${SPIRV_TOOLS}/source/val/validate_execution_limitations.cpp
+	${SPIRV_TOOLS}/source/val/validate_explicit_layout.cpp
 	${SPIRV_TOOLS}/source/val/validate_extensions.cpp
 	${SPIRV_TOOLS}/source/val/validate_function.cpp
 	${SPIRV_TOOLS}/source/val/validate_graph.cpp
