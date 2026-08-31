@@ -52,13 +52,13 @@ namespace Babylon::Plugins
         texture->ViewFirstLayer(layerIndex.value_or(0));
         texture->ViewNumLayers(layerIndex.has_value() ? 1 : 0);
 
-        auto* result = texture.release();
+        auto* result = texture.get();
         if (!m_textures.insert(result).second)
         {
-            assert(!"Failed to insert texture");
+            throw std::runtime_error{"Failed to insert texture"};
         }
 
-        return result;
+        return texture.release();
     }
 
     void ExternalTexture::ImplBase::DestroyTexture(Graphics::Texture* texture)

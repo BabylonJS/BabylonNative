@@ -47,6 +47,8 @@ namespace Babylon::Plugins
         Napi::Promise AddToContextAsync(Napi::Env, std::optional<uint16_t> layerIndex = {}) const;
 
         // Updates to a new texture. If layerIndex is set, views only that array layer (single-slice).
+        // Do not call this concurrently with JavaScript use or disposal of a texture returned by CreateForJavaScript;
+        // Graphics::Texture is not thread-safe, so Update must be serialized with those JavaScript operations.
         void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint16_t> layerIndex = {});
 
     private:
