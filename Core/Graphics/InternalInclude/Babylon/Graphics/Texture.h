@@ -6,6 +6,7 @@ namespace Babylon::Graphics
 {
     class DeviceContext;
 
+    // This class is not thread-safe. Callers must serialize all access.
     class Texture final
     {
     public:
@@ -19,7 +20,7 @@ namespace Babylon::Graphics
 
         bool IsValid() const;
 
-        void Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags);
+        void Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle = 0);
         void Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch = UINT16_MAX);
 
         void Create3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMips, bgfx::TextureFormat::Enum format, uint64_t flags);
@@ -28,7 +29,7 @@ namespace Babylon::Graphics
         void CreateCube(uint16_t size, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags);
         void UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch = UINT16_MAX);
 
-        void Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags);
+        void Attach(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags);
 
         bgfx::TextureHandle Handle() const;
         uint16_t Width() const;
@@ -64,11 +65,16 @@ namespace Babylon::Graphics
         }
 
     private:
-        // Resets every piece of shape metadata to its default. Each Create*/Attach calls this
-        // before assigning the subset that applies to it, so a field a given path does not set
-        // (m_depth is only meaningful for Create3D) cannot survive from the previous, differently
-        // shaped texture this object described.
-        void ResetMetadata();
+        void SetMetadata(
+            uint16_t width,
+            uint16_t height,
+            uint16_t depth,
+            bool hasMips,
+            bool isCube,
+            bool is3D,
+            uint16_t numLayers,
+            bgfx::TextureFormat::Enum format,
+            uint64_t flags);
 
         bgfx::TextureHandle m_handle{bgfx::kInvalidHandle};
         bool m_ownsHandle{false};

@@ -9,6 +9,7 @@
 
 #include "Helpers.h"
 
+#include <future>
 #include <iostream>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;

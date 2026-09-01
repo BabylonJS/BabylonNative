@@ -117,7 +117,8 @@ namespace Babylon::Graphics
                 init.resolution.formatDepthStencil = bgfx::TextureFormat::UnknownDepth;
                 break;
             case DepthStencilFormat::Depth32:
-                init.resolution.formatDepthStencil = bgfx::TextureFormat::D32;
+                // D32 has no DSV mapping on D3D11/D12 in current bgfx; D32F does.
+                init.resolution.formatDepthStencil = bgfx::TextureFormat::D32F;
                 break;
             case DepthStencilFormat::Depth24Stencil8:
             default:
@@ -493,7 +494,10 @@ namespace Babylon::Graphics
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
         arcana::task_completion_source<void, std::exception_ptr> completionSource{};
-        m_readTextureRequests.emplace(bgfx::readTexture(handle, data.data(), mipLevel), completionSource);
+        bgfx::TextureRegion region{};
+        region.init(handle);
+        region.mip = mipLevel;
+        m_readTextureRequests.emplace(bgfx::read(region, data.data()), completionSource);
         return completionSource.as_task();
     }
 

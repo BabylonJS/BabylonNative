@@ -27,6 +27,7 @@ set(SOURCES
     "Source/App.cpp"
     "Source/Tests.Device.FrameEncoder.cpp"
     "Source/Tests.ExternalTexture.cpp"
+    "Source/Tests.ExternalTexture.Lifecycle.cpp"
     "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.LayerCount.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
@@ -104,6 +105,10 @@ endif()
 
 if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
+endif()
+
+if(GRAPHICS_API STREQUAL "Vulkan")
+    target_compile_definitions(UnitTests PRIVATE BABYLON_NATIVE_GRAPHICS_API_VULKAN)
 endif()
 
 if(GRAPHICS_API STREQUAL "OpenGL")

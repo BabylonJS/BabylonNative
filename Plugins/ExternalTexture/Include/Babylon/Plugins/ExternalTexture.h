@@ -33,6 +33,8 @@ namespace Babylon::Plugins
 
         // Creates a JavaScript value wrapping this external texture.
         // Wrap the returned value with `engine.wrapNativeTexture` on the JS side to get a Babylon.js `InternalTexture`.
+        // Disposing the InternalTexture releases Babylon Native's rendering resources immediately;
+        // otherwise they remain until JavaScript finalization. The external texture remains caller-owned.
         // If layerIndex is set, the JavaScript texture views only that array layer (single-slice); otherwise the entire texture.
         // This method must be called from the JavaScript thread. The caller must ensure no other thread
         // is concurrently calling any other operations on this object, including move operations.
@@ -45,6 +47,8 @@ namespace Babylon::Plugins
         Napi::Promise AddToContextAsync(Napi::Env, std::optional<uint16_t> layerIndex = {}) const;
 
         // Updates to a new texture. If layerIndex is set, views only that array layer (single-slice).
+        // Do not call this concurrently with JavaScript use or disposal of a texture returned by CreateForJavaScript;
+        // Graphics::Texture is not thread-safe, so Update must be serialized with those JavaScript operations.
         void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint16_t> layerIndex = {});
 
     private:
