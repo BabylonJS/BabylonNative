@@ -27,6 +27,7 @@ set(SOURCES
     "Source/App.cpp"
     "Source/Tests.Device.FrameEncoder.cpp"
     "Source/Tests.ExternalTexture.cpp"
+    "Source/Tests.ExternalTexture.Lifecycle.cpp"
     "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.LayerCount.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
