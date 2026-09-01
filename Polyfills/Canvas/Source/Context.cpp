@@ -934,16 +934,12 @@ namespace Babylon::Polyfills::Internal
         }
 
         // maxViews-1 is reserved for readback blits (see DeviceImpl::FlushViewsIfNeeded).
-        const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews - 1);
-        encoder->blit(
-            blitView,
-            blitTexture,
-            /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0,
-            srcTexture,
-            /*srcMip*/ 0, /*srcX*/ 0, /*srcY*/ 0, /*srcZ*/ 0,
-            static_cast<uint16_t>(width),
-            static_cast<uint16_t>(height),
-            /*depth*/ 0);
+                const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews - 1);
+                bgfx::TextureRegion dstRegion{};
+                dstRegion.init(blitTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
+                bgfx::TextureRegion srcRegion{};
+                srcRegion.init(srcTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
+                encoder->blit(blitView, dstRegion, srcRegion);
 
         std::mutex mutex;
         std::condition_variable cv;
