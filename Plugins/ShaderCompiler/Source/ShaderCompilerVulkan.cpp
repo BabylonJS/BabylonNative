@@ -10,9 +10,12 @@
 #include <spirv_parser.hpp>
 #include <spirv_glsl.hpp>
 #include <bgfx/bgfx.h>
-#include <algorithm>
+#include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+#define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20) // Copy-pasta from bgfx_p.h
 
 
 namespace
@@ -26,62 +29,95 @@ namespace
     constexpr unsigned kSpirvFragmentBinding = 1;
     constexpr unsigned kSpirvBindShift = 2;
     constexpr unsigned kSpirvSamplerShift = 16;
+    // bgfx Vulkan m_bindInfo is indexed by sampler stage 0..15.
+    constexpr unsigned kMaxBgfxTextureStages = 16;
 
-    void ApplyBgfxVulkanResourceBindings(glslang::TProgram& program)
+    void CollectStageUniforms(
+        glslang::TIntermediate* intermediate,
+        std::vector<glslang::TIntermSymbol*>& textures,
+        std::vector<glslang::TIntermSymbol*>& pureSamplers,
+        std::vector<glslang::TIntermSymbol*>& ubos)
     {
-        auto applyStage = [](glslang::TIntermediate* intermediate, unsigned uboBinding) {
-            if (intermediate == nullptr)
+        if (intermediate == nullptr)
+        {
+            return;
+        }
+
+        auto* root = intermediate->getTreeRoot()->getAsAggregate();
+        if (root == nullptr || root->getSequence().empty())
+        {
+            return;
+        }
+
+        auto* linkerObjects = root->getSequence().back()->getAsAggregate();
+        if (linkerObjects == nullptr)
+        {
+            return;
+        }
+
+        for (glslang::TIntermNode* node : linkerObjects->getSequence())
+        {
+            auto* symbol = node->getAsSymbolNode();
+            if (symbol == nullptr)
             {
-                return;
+                continue;
             }
 
-            auto* root = intermediate->getTreeRoot()->getAsAggregate();
-            if (root == nullptr || root->getSequence().empty())
+            const auto& type = symbol->getType();
+            if (type.getQualifier().storage != glslang::EvqUniform)
             {
-                return;
+                continue;
             }
 
-            auto* linkerObjects = root->getSequence().back()->getAsAggregate();
-            if (linkerObjects == nullptr)
+            if (type.getBasicType() == glslang::EbtSampler)
             {
-                return;
-            }
-
-            std::vector<glslang::TIntermSymbol*> textures;
-            std::vector<glslang::TIntermSymbol*> pureSamplers;
-            std::vector<glslang::TIntermSymbol*> ubos;
-
-            for (glslang::TIntermNode* node : linkerObjects->getSequence())
-            {
-                auto* symbol = node->getAsSymbolNode();
-                if (symbol == nullptr)
+                const auto& sampler = type.getSampler();
+                if (sampler.sampler)
                 {
-                    continue;
-                }
-
-                const auto& type = symbol->getType();
-                if (type.getQualifier().storage != glslang::EvqUniform)
-                {
-                    continue;
-                }
-
-                if (type.getBasicType() == glslang::EbtSampler)
-                {
-                    const auto& sampler = type.getSampler();
-                    if (sampler.sampler)
-                    {
-                        pureSamplers.push_back(symbol);
-                    }
-                    else
-                    {
-                        textures.push_back(symbol);
-                    }
+                    pureSamplers.push_back(symbol);
                 }
                 else
                 {
-                    ubos.push_back(symbol);
+                    textures.push_back(symbol);
                 }
             }
+            else
+            {
+                ubos.push_back(symbol);
+            }
+        }
+    }
+
+    void ApplyBgfxVulkanResourceBindings(glslang::TProgram& program)
+    {
+        // Count distinct sampler slots shared across VS/FS (SamplerSplitter assigns one
+        // layoutBinding per unique name). bgfx only has 16 texture stages.
+        {
+            std::set<unsigned> uniqueSlots;
+            auto collectSlots = [&](glslang::TIntermediate* intermediate) {
+                std::vector<glslang::TIntermSymbol*> textures;
+                std::vector<glslang::TIntermSymbol*> pureSamplers;
+                std::vector<glslang::TIntermSymbol*> ubos;
+                CollectStageUniforms(intermediate, textures, pureSamplers, ubos);
+                for (auto* texture : textures)
+                {
+                    uniqueSlots.insert(texture->getType().getQualifier().layoutBinding);
+                }
+            };
+            collectSlots(program.getIntermediate(EShLangVertex));
+            collectSlots(program.getIntermediate(EShLangFragment));
+            if (uniqueSlots.size() > kMaxBgfxTextureStages)
+            {
+                throw std::runtime_error{
+                    "Vulkan shader uses more than 16 distinct sampler textures; bgfx supports at most 16 texture stages"};
+            }
+        }
+
+        auto applyStage = [](glslang::TIntermediate* intermediate, unsigned uboBinding) {
+            std::vector<glslang::TIntermSymbol*> textures;
+            std::vector<glslang::TIntermSymbol*> pureSamplers;
+            std::vector<glslang::TIntermSymbol*> ubos;
+            CollectStageUniforms(intermediate, textures, pureSamplers, ubos);
 
             // SamplerSplitterTraverser assigns one shared layoutBinding per sampler name
             // across VS/FS. Preserve that slot and only apply bgfx's fixed shifts —
@@ -126,6 +162,51 @@ namespace
 
         applyStage(program.getIntermediate(EShLangVertex), kSpirvVertexBinding);
         applyStage(program.getIntermediate(EShLangFragment), kSpirvFragmentBinding);
+    }
+
+    // Vulkan-only bgfx sampler packaging: separate_images with Texture-suffix stripped,
+    // regIndex = image descriptor binding, UniformStages = regIndex - kSpirvBindShift.
+    void AppendSamplersVulkan(
+        std::vector<uint8_t>& bytes,
+        const spirv_cross::Compiler& compiler,
+        const spirv_cross::ParsedIR& originalIr,
+        const spirv_cross::SmallVector<spirv_cross::Resource>& samplers,
+        std::map<std::string, uint8_t>& stages)
+    {
+        using namespace Babylon::ShaderCompilerCommon;
+
+        for (const spirv_cross::Resource& sampler : samplers)
+        {
+            const std::string& originalName = originalIr.get_name(sampler.id);
+            std::string name = originalName.empty() ? sampler.name : originalName;
+
+            // Separate images are named with a "Texture" suffix by SplitSamplersIntoSamplersAndTextures.
+            // bgfx/shaderc strip that suffix so the packaged uniform name matches the original GLSL
+            // sampler identifier (and therefore Babylon.js).
+            constexpr char kTextureSuffix[] = "Texture";
+            constexpr size_t kTextureSuffixLen = sizeof(kTextureSuffix) - 1;
+            if (name.size() > kTextureSuffixLen && name.compare(name.size() - kTextureSuffixLen, kTextureSuffixLen, kTextureSuffix) == 0)
+            {
+                name.resize(name.size() - kTextureSuffixLen);
+            }
+
+            AppendBytes(bytes, static_cast<uint8_t>(name.size()));
+            AppendBytes(bytes, name);
+            AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
+
+            // createShader computes stage = regIndex - kSpirvBindShift; writing 0 underflows.
+            const uint8_t num{0};
+            const uint16_t regIndex{static_cast<uint16_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding))};
+            const uint16_t regCount{0};
+            AppendBytes(bytes, num);
+            AppendBytes(bytes, regIndex);
+            AppendBytes(bytes, regCount);
+            AppendUniformTextureMeta(bytes, /*texComponent*/ 0, TextureDimensionIdFromResource(compiler, sampler));
+
+            stages[name] = regIndex >= kSpirvBindShift
+                ? static_cast<uint8_t>(regIndex - kSpirvBindShift)
+                : static_cast<uint8_t>(0);
+        }
     }
 
     void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
@@ -215,6 +296,8 @@ namespace Babylon::Plugins
         return CreateBgfxShader(
             {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(spirvVS.data()), spirvVS.size() * sizeof(uint32_t)), std::move(vertexAttributeRenaming)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(spirvFS.data()), spirvFS.size() * sizeof(uint32_t)), {}},
-            std::move(builtInInstanceDataSlots));
+            std::move(builtInInstanceDataSlots),
+            SamplerResourceSet::SeparateImages,
+            AppendSamplersVulkan);
     }
 }

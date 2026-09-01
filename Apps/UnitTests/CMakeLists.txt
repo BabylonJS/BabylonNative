@@ -106,6 +106,10 @@ if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
 endif()
 
+if(GRAPHICS_API STREQUAL "Vulkan")
+    target_compile_definitions(UnitTests PRIVATE BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+endif()
+
 if(GRAPHICS_API STREQUAL "OpenGL")
     # Multisample: bgfx backs an MSAA render target with a renderbuffer it allocates itself,
     # so an imported texture never receives the resolved pixels. Rendering into the caller's
