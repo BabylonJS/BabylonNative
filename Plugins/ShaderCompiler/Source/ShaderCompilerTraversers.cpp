@@ -1841,18 +1841,22 @@ namespace Babylon::ShaderCompilerTraversers
                     return false;
                 }
 
-                // Four-component elements already give every register an identical full mask,
-                // so they are legal as an indexable range and are left alone.
-                if (type.getVectorSize() >= 4)
-                {
-                    return false;
-                }
+                // Observed fxc hang/reject shapes are float and vec2 arrays (e.g. CSM
+                                // vDepthMetric). Gary confirmed flat int[4] and vec3[4] compile without
+                                // this pass: the indexable-range rule requires matching component masks
+                                // across registers, not a full .xyzw mask. Treating anything narrower
+                                // than vec4 as flattenable is therefore a conservative workaround that
+                                // covers the known bad cases without chasing every fxc edge case.
+                                if (type.getVectorSize() >= 4)
+                                {
+                                    return false;
+                                }
 
-                // An unsized or specialization-constant-sized array has no element count to
-                // expand at this point, and multi-dimensional arrays are not emitted by
-                // Babylon.js, so both keep their existing form.
-                return type.isSizedArray() && type.getArraySizes()->getNumDims() == 1 && type.getOuterArraySize() > 0;
-            }
+                                // An unsized or specialization-constant-sized array has no element count to
+                                // expand at this point, and multi-dimensional arrays are not emitted by
+                                // Babylon.js, so both keep their existing form.
+                                return type.isSizedArray() && type.getArraySizes()->getNumDims() == 1 && type.getOuterArraySize() > 0;
+                            }
 
             static void FlattenStage(TIntermediate* intermediate, IdGenerator& ids, TStorageQualifier storage)
             {
@@ -1904,62 +1908,75 @@ namespace Babylon::ShaderCompilerTraversers
                 else
                 {
                     // Vertex: publish the global to the outgoing per-element varyings once the
-                    // shader body has finished writing it. An early return would jump over these
-                    // copies and silently emit stale varyings, so refuse to transform rather than
-                    // mis-render. Babylon.js vertex shaders do not return early today; this is
-                    // here so that if one ever does, it surfaces as a build failure.
-                    if (HasEarlyReturn(mainBody))
-                    {
-                        throw std::runtime_error{"Cannot flatten varying arrays: vertex main() returns early"};
-                    }
-                    bodySequence.insert(bodySequence.end(), copyStatements.begin(), copyStatements.end());
-                }
-            }
+                                    // shader body has finished writing it. Nested or mid-body returns would
+                                    // jump over those copies and silently emit stale varyings, so refuse to
+                                    // transform rather than mis-render. Babylon.js vertex shaders do not return
+                                    // early today; this is here so that if one ever does, it surfaces as a
+                                    // build failure.
+                                    if (HasEarlyReturn(mainBody))
+                                    {
+                                        throw std::runtime_error{"Cannot flatten varying arrays: vertex main() returns early"};
+                                    }
 
-            /// True when main() can return before reaching the end of its body. A return that is
-            /// the final top-level statement is equivalent to falling off the end, so it does not
-            /// count; anything nested or earlier does.
-            static bool HasEarlyReturn(TIntermAggregate* mainBody)
-            {
-                class ReturnFinder final : public TIntermTraverser
-                {
-                public:
-                    bool Found{false};
+                                    // A trailing top-level `return;` is not "early", but copies appended after
+                                    // it never run. Insert immediately before that return when present.
+                                    auto insertAt = bodySequence.end();
+                                    if (!bodySequence.empty())
+                                    {
+                                        auto* trailing = bodySequence.back() != nullptr ? bodySequence.back()->getAsBranchNode() : nullptr;
+                                        if (trailing != nullptr && trailing->getFlowOp() == EOpReturn)
+                                        {
+                                            --insertAt;
+                                        }
+                                    }
+                                    bodySequence.insert(insertAt, copyStatements.begin(), copyStatements.end());
+                                }
+                            }
 
-                    bool visitBranch(TVisit, TIntermBranch* branch) override
-                    {
-                        if (branch->getFlowOp() == EOpReturn)
-                        {
-                            Found = true;
-                        }
-                        return true;
-                    }
-                };
+                            /// True when main() can return before the statements this pass inserts. A trailing
+                            /// top-level return is handled by inserting copies immediately before it, so it is
+                            /// not treated as early; nested or earlier returns still are.
+                            static bool HasEarlyReturn(TIntermAggregate* mainBody)
+                            {
+                                class ReturnFinder final : public TIntermTraverser
+                                {
+                                public:
+                                    bool Found{false};
 
-                auto& sequence = mainBody->getSequence();
-                for (size_t i = 0; i < sequence.size(); ++i)
-                {
-                    if (sequence[i] == nullptr)
+                                    bool visitBranch(TVisit, TIntermBranch* branch) override
+                                    {
+                                        if (branch->getFlowOp() == EOpReturn)
+                                        {
+                                            Found = true;
+                                        }
+                                        return true;
+                                    }
+                                };
+
+                                auto& sequence = mainBody->getSequence();
+                                for (size_t i = 0; i < sequence.size(); ++i)
+                                {
+                                    if (sequence[i] == nullptr)
                     {
-                        continue;
+                                        continue;
                     }
 
-                    auto* branch = sequence[i]->getAsBranchNode();
-                    const bool isTrailingReturn = branch != nullptr && branch->getFlowOp() == EOpReturn && i + 1 == sequence.size();
-                    if (isTrailingReturn)
-                    {
-                        continue;
-                    }
+                                    auto* branch = sequence[i]->getAsBranchNode();
+                                    const bool isTrailingReturn = branch != nullptr && branch->getFlowOp() == EOpReturn && i + 1 == sequence.size();
+                                    if (isTrailingReturn)
+                                    {
+                                        continue;
+                                    }
 
-                    ReturnFinder finder{};
-                    sequence[i]->traverse(&finder);
-                    if (finder.Found)
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
+                                    ReturnFinder finder{};
+                                    sequence[i]->traverse(&finder);
+                                    if (finder.Found)
+                                    {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            }
 
             static void FlattenVarying(
                 TIntermediate* intermediate,
@@ -1987,11 +2004,16 @@ namespace Babylon::ShaderCompilerTraversers
 
                 // Element type for the flattened varyings. The dereference constructor keeps the
                 // original storage and interpolation qualifiers, which is what these need.
-                const TType elementType{varyingType, 0};
+                                // It also copies layout(location=N) onto every element; pinned SPIRV-Cross
+                                // then maps each to the same TEXCOORDN and D3DCompile rejects the duplicates.
+                                // Clear the location so SPIRV-Cross assigns vacant TEXCOORDs the same way it
+                                // does for undecorated inter-stage varyings (BN never mapIO's them).
+                                TType elementType{varyingType, 0};
+                                elementType.getQualifier().layoutLocation = TQualifier::layoutLocationEnd;
 
-                for (int i = 0; i < arraySize; ++i)
-                {
-                    TIntermSymbol elementPrototype{ids.Next(), TString{(name + "_" + std::to_string(i)).c_str()}, elementType};
+                                for (int i = 0; i < arraySize; ++i)
+                                {
+                                    TIntermSymbol elementPrototype{ids.Next(), TString{(name + "_" + std::to_string(i)).c_str()}, elementType};
                     auto* elementDeclaration = intermediate->addSymbol(elementPrototype);
                     linkerObjects.push_back(elementDeclaration);
 

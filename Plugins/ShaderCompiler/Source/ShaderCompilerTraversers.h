@@ -138,24 +138,27 @@ namespace Babylon::ShaderCompilerTraversers
     ///
     /// SPIRV-Cross emits an array-typed member in the HLSL interface struct for an array-typed
     /// varying (`float vDepthMetric0[4] : TEXCOORD5;`). fxc turns that into an indexable input
-    /// register range and rejects the range unless all its registers share a write mask, which
-    /// a narrow element type never satisfies -- each register uses only `.x`:
+        /// register range and requires every register in the range to use the same component mask
+        /// (not necessarily all four slots -- matching `.x` or matching `.xyz` is fine). Observed
+        /// hang/reject shapes are float and vec2 arrays; flat int[4] and vec3[4] compile without
+        /// this pass. Treating element width `< 4` as flattenable is a conservative workaround:
     ///
-    ///     error X8000: masks on all input registers in an index range must be identical
-    ///
-    /// fxc does not simply fail on this, it hangs, so D3D11 compilation of Babylon.js cascaded
-    /// shadow map shaders never completes. `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]`
-    /// in lightFragmentDeclaration.fx is the trigger; the companion `vec4` array is unaffected
-    /// because 4-component elements do give every register an identical mask.
-    ///
-    /// The global array is what preserves dynamic indexing -- the cascade index is computed per
-    /// fragment at runtime, so accesses cannot just be rewritten to the per-element varyings.
-    /// Element-wise copies are inserted at the top of the fragment `main` and the end of the
-    /// vertex `main`. Only literally-sized, single-dimension, non-struct, non-matrix arrays with
-    /// fewer than four components per element are affected.
-    ///
-    /// Only needed for the fxc (DXBC) backend; dxc accepts the indexable range.
-    void FlattenNarrowVaryingArrays(glslang::TProgram& program, IdGenerator& ids);
+        ///     error X8000: masks on all input registers in an index range must be identical
+        ///
+        /// fxc does not simply fail on the bad shapes, it hangs, so D3D11 compilation of Babylon.js
+        /// cascaded shadow map shaders never completes. `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]`
+        /// in lightFragmentDeclaration.fx is the trigger; the companion `vec4` array is unaffected.
+        ///
+        /// The global array is what preserves dynamic indexing -- the cascade index is computed per
+        /// fragment at runtime, so accesses cannot just be rewritten to the per-element varyings.
+        /// Element-wise copies are inserted at the top of the fragment `main` and immediately before
+        /// a trailing top-level `return` (or at the end) of the vertex `main`. Only literally-sized,
+        /// single-dimension, non-struct, non-matrix arrays with fewer than four components per
+        /// element are affected. Explicit `layout(location=N)` on the array is cleared on the
+        /// generated elements so they do not all pin the same TEXCOORD.
+        ///
+        /// Only needed for the fxc (DXBC) backend; dxc accepts the indexable range.
+        void FlattenNarrowVaryingArrays(glslang::TProgram& program, IdGenerator& ids);
 
     /// Invert dFdy operands similar to bgfx_shader.sh
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
