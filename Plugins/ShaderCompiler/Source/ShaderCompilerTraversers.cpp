@@ -1762,17 +1762,20 @@ namespace Babylon::ShaderCompilerTraversers
         ///
         /// SPIRV-Cross emits an array-typed member in the HLSL interface struct for an
         /// array-typed varying, e.g. `float vDepthMetric0[4] : TEXCOORD5;`. fxc turns that
-        /// into an indexable input register range, and rejects the range when the per-register
-        /// write masks differ -- which is always the case for a scalar element type, since each
-        /// register only uses `.x`:
+        /// into an indexable input register range and requires every register in the range
+        /// to use the same component mask (not necessarily all four slots -- matching `.x`
+        /// or matching `.xyz` is fine). Observed hang/reject shapes are float and vec2
+        /// arrays; `flat int[4]` and `vec3[4]` compile without this pass. Treating element
+        /// width `< 4` as flattenable is a conservative workaround covering the known bad
+        /// cases:
         ///
         ///     error X8000: masks on all input registers in an index range must be identical
         ///
-        /// In practice fxc does not merely fail here, it hangs, which is how this surfaced:
-        /// D3D11 shader compilation for Babylon.js cascaded shadow maps never returns.
-        /// `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]` in lightFragmentDeclaration.fx
-        /// is the trigger. Its companion `varying vec4 vPositionFromLight{X}[...]` is fine,
-        /// because a 4-component element type gives every register the same full mask.
+        /// In practice fxc does not merely fail on the bad shapes, it hangs, which is how
+        /// this surfaced: D3D11 shader compilation for Babylon.js cascaded shadow maps never
+        /// returns. `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]` in
+        /// lightFragmentDeclaration.fx is the trigger. Its companion
+        /// `varying vec4 vPositionFromLight{X}[...]` is fine.
         ///
         /// Each such array is replaced by:
         ///   - one scalar/narrow varying per element (`v_0`, `v_1`, ...), so the interface
@@ -1784,12 +1787,15 @@ namespace Babylon::ShaderCompilerTraversers
         /// `vDepthMetric{X}[index{X}]` is computed at runtime (lightFragment.fx picks the
         /// cascade per fragment), so the accesses cannot simply be rewritten to the per-element
         /// varyings. Copies between the two forms are inserted in `main`: element-wise reads at
-        /// the top of the fragment entry point, element-wise writes at the end of the vertex one.
-        /// Routing through a global also keeps writes performed by non-inlined helper functions
-        /// working, since they observe the global rather than a local copy.
+        /// the top of the fragment entry point, element-wise writes immediately before a trailing
+        /// top-level `return` (or at the end) of the vertex one. Routing through a global also
+        /// keeps writes performed by non-inlined helper functions working, since they observe
+        /// the global rather than a local copy.
         ///
         /// Only literally-sized, single-dimension, non-struct, non-matrix arrays with fewer than
         /// four components per element are flattened. Everything else keeps its existing form.
+        /// Explicit `layout(location=N)` on the array is cleared on generated elements so they
+        /// do not all pin the same TEXCOORD.
         class NarrowVaryingArrayFlattenerTraverser final : private TIntermTraverser
         {
         public:
@@ -1842,21 +1848,21 @@ namespace Babylon::ShaderCompilerTraversers
                 }
 
                 // Observed fxc hang/reject shapes are float and vec2 arrays (e.g. CSM
-                                // vDepthMetric). Gary confirmed flat int[4] and vec3[4] compile without
-                                // this pass: the indexable-range rule requires matching component masks
-                                // across registers, not a full .xyzw mask. Treating anything narrower
-                                // than vec4 as flattenable is therefore a conservative workaround that
-                                // covers the known bad cases without chasing every fxc edge case.
-                                if (type.getVectorSize() >= 4)
-                                {
-                                    return false;
-                                }
+                // vDepthMetric). flat int[4] and vec3[4] compile without this pass: the
+                // indexable-range rule requires matching component masks across registers,
+                // not a full .xyzw mask. Treating anything narrower than vec4 as flattenable
+                // is therefore a conservative workaround that covers the known bad cases
+                // without chasing every fxc edge case.
+                if (type.getVectorSize() >= 4)
+                {
+                    return false;
+                }
 
-                                // An unsized or specialization-constant-sized array has no element count to
-                                // expand at this point, and multi-dimensional arrays are not emitted by
-                                // Babylon.js, so both keep their existing form.
-                                return type.isSizedArray() && type.getArraySizes()->getNumDims() == 1 && type.getOuterArraySize() > 0;
-                            }
+                // An unsized or specialization-constant-sized array has no element count to
+                // expand at this point, and multi-dimensional arrays are not emitted by
+                // Babylon.js, so both keep their existing form.
+                return type.isSizedArray() && type.getArraySizes()->getNumDims() == 1 && type.getOuterArraySize() > 0;
+            }
 
             static void FlattenStage(TIntermediate* intermediate, IdGenerator& ids, TStorageQualifier storage)
             {
@@ -1908,75 +1914,75 @@ namespace Babylon::ShaderCompilerTraversers
                 else
                 {
                     // Vertex: publish the global to the outgoing per-element varyings once the
-                                    // shader body has finished writing it. Nested or mid-body returns would
-                                    // jump over those copies and silently emit stale varyings, so refuse to
-                                    // transform rather than mis-render. Babylon.js vertex shaders do not return
-                                    // early today; this is here so that if one ever does, it surfaces as a
-                                    // build failure.
-                                    if (HasEarlyReturn(mainBody))
-                                    {
-                                        throw std::runtime_error{"Cannot flatten varying arrays: vertex main() returns early"};
-                                    }
-
-                                    // A trailing top-level `return;` is not "early", but copies appended after
-                                    // it never run. Insert immediately before that return when present.
-                                    auto insertAt = bodySequence.end();
-                                    if (!bodySequence.empty())
-                                    {
-                                        auto* trailing = bodySequence.back() != nullptr ? bodySequence.back()->getAsBranchNode() : nullptr;
-                                        if (trailing != nullptr && trailing->getFlowOp() == EOpReturn)
-                                        {
-                                            --insertAt;
-                                        }
-                                    }
-                                    bodySequence.insert(insertAt, copyStatements.begin(), copyStatements.end());
-                                }
-                            }
-
-                            /// True when main() can return before the statements this pass inserts. A trailing
-                            /// top-level return is handled by inserting copies immediately before it, so it is
-                            /// not treated as early; nested or earlier returns still are.
-                            static bool HasEarlyReturn(TIntermAggregate* mainBody)
-                            {
-                                class ReturnFinder final : public TIntermTraverser
-                                {
-                                public:
-                                    bool Found{false};
-
-                                    bool visitBranch(TVisit, TIntermBranch* branch) override
-                                    {
-                                        if (branch->getFlowOp() == EOpReturn)
-                                        {
-                                            Found = true;
-                                        }
-                                        return true;
-                                    }
-                                };
-
-                                auto& sequence = mainBody->getSequence();
-                                for (size_t i = 0; i < sequence.size(); ++i)
-                                {
-                                    if (sequence[i] == nullptr)
+                    // shader body has finished writing it. Nested or mid-body returns would
+                    // jump over those copies and silently emit stale varyings, so refuse to
+                    // transform rather than mis-render. Babylon.js vertex shaders do not return
+                    // early today; this is here so that if one ever does, it surfaces as a
+                    // build failure.
+                    if (HasEarlyReturn(mainBody))
                     {
-                                        continue;
+                        throw std::runtime_error{"Cannot flatten varying arrays: vertex main() returns early"};
                     }
 
-                                    auto* branch = sequence[i]->getAsBranchNode();
-                                    const bool isTrailingReturn = branch != nullptr && branch->getFlowOp() == EOpReturn && i + 1 == sequence.size();
-                                    if (isTrailingReturn)
-                                    {
-                                        continue;
-                                    }
+                    // A trailing top-level `return;` is not "early", but copies appended after
+                    // it never run. Insert immediately before that return when present.
+                    auto insertAt = bodySequence.end();
+                    if (!bodySequence.empty())
+                    {
+                        auto* trailing = bodySequence.back() != nullptr ? bodySequence.back()->getAsBranchNode() : nullptr;
+                        if (trailing != nullptr && trailing->getFlowOp() == EOpReturn)
+                        {
+                            --insertAt;
+                        }
+                    }
+                    bodySequence.insert(insertAt, copyStatements.begin(), copyStatements.end());
+                }
+            }
 
-                                    ReturnFinder finder{};
-                                    sequence[i]->traverse(&finder);
-                                    if (finder.Found)
-                                    {
-                                        return true;
-                                    }
-                                }
-                                return false;
-                            }
+            /// True when main() can return before the statements this pass inserts. A trailing
+            /// top-level return is handled by inserting copies immediately before it, so it is
+            /// not treated as early; nested or earlier returns still are.
+            static bool HasEarlyReturn(TIntermAggregate* mainBody)
+            {
+                class ReturnFinder final : public TIntermTraverser
+                {
+                public:
+                    bool Found{false};
+
+                    bool visitBranch(TVisit, TIntermBranch* branch) override
+                    {
+                        if (branch->getFlowOp() == EOpReturn)
+                        {
+                            Found = true;
+                        }
+                        return true;
+                    }
+                };
+
+                auto& sequence = mainBody->getSequence();
+                for (size_t i = 0; i < sequence.size(); ++i)
+                {
+                    if (sequence[i] == nullptr)
+                    {
+                        continue;
+                    }
+
+                    auto* branch = sequence[i]->getAsBranchNode();
+                    const bool isTrailingReturn = branch != nullptr && branch->getFlowOp() == EOpReturn && i + 1 == sequence.size();
+                    if (isTrailingReturn)
+                    {
+                        continue;
+                    }
+
+                    ReturnFinder finder{};
+                    sequence[i]->traverse(&finder);
+                    if (finder.Found)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
 
             static void FlattenVarying(
                 TIntermediate* intermediate,
@@ -2004,16 +2010,16 @@ namespace Babylon::ShaderCompilerTraversers
 
                 // Element type for the flattened varyings. The dereference constructor keeps the
                 // original storage and interpolation qualifiers, which is what these need.
-                                // It also copies layout(location=N) onto every element; pinned SPIRV-Cross
-                                // then maps each to the same TEXCOORDN and D3DCompile rejects the duplicates.
-                                // Clear the location so SPIRV-Cross assigns vacant TEXCOORDs the same way it
-                                // does for undecorated inter-stage varyings (BN never mapIO's them).
-                                TType elementType{varyingType, 0};
-                                elementType.getQualifier().layoutLocation = TQualifier::layoutLocationEnd;
+                // It also copies layout(location=N) onto every element; pinned SPIRV-Cross
+                // then maps each to the same TEXCOORDN and D3DCompile rejects the duplicates.
+                // Clear the location so SPIRV-Cross assigns vacant TEXCOORDs the same way it
+                // does for undecorated inter-stage varyings (BN never mapIO's them).
+                TType elementType{varyingType, 0};
+                elementType.getQualifier().layoutLocation = TQualifier::layoutLocationEnd;
 
-                                for (int i = 0; i < arraySize; ++i)
-                                {
-                                    TIntermSymbol elementPrototype{ids.Next(), TString{(name + "_" + std::to_string(i)).c_str()}, elementType};
+                for (int i = 0; i < arraySize; ++i)
+                {
+                    TIntermSymbol elementPrototype{ids.Next(), TString{(name + "_" + std::to_string(i)).c_str()}, elementType};
                     auto* elementDeclaration = intermediate->addSymbol(elementPrototype);
                     linkerObjects.push_back(elementDeclaration);
 
