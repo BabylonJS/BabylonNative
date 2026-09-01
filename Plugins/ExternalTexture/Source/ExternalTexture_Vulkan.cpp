@@ -5,6 +5,7 @@
 
 #include "ExternalTexture_Base.h"
 
+#include <optional>
 #include <stdexcept>
 
 namespace Babylon::Plugins
