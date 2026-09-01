@@ -108,7 +108,12 @@ if(GRAPHICS_API STREQUAL "D3D12")
 endif()
 
 if(GRAPHICS_API STREQUAL "Vulkan")
-    target_compile_definitions(UnitTests PRIVATE BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+    # Vulkan packaging paths (e.g. the >16 sampler rejection) are gated on this define.
+    # ExternalTexture / native-texture helpers are not implemented for Vulkan yet, so skip
+    # those tests rather than failing at link or runtime.
+    target_compile_definitions(UnitTests PRIVATE
+        BABYLON_NATIVE_GRAPHICS_API_VULKAN
+        SKIP_EXTERNAL_TEXTURE_TESTS)
 endif()
 
 if(GRAPHICS_API STREQUAL "OpenGL")

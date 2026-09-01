@@ -328,10 +328,13 @@ TEST(ShaderCompilation, VulkanRejectsMoreThanSixteenSamplers)
         sum += "texture2D(t" + std::to_string(i) + ", vec2(0.5))";
     }
 
+    // Keep unexpected success out of the catch path: throwing "…>16 samplers" from
+    // inside try would set failed=true and pass the "16" substring assertion even
+    // when the compiler incorrectly accepted the program.
     std::string script = R"(
         const engine = new BABYLON.NativeEngine();
         engine.getCaps().parallelShaderCompile = null;
-        let failed = false;
+        let status = "unset";
         let message = "";
         try {
             const effect = engine.createEffect({
@@ -345,13 +348,18 @@ TEST(ShaderCompilation, VulkanRejectsMoreThanSixteenSamplers)
                     void main() { gl_FragColor = )" + sum + R"(; }
                 `
             }, ["position"], [)" + uniforms + R"(], []);
-            if (effect.isReady()) { throw new Error("expected compile failure for >16 samplers"); }
+            if (effect.isReady()) {
+                status = "unexpected_success";
+            } else {
+                status = "not_ready";
+                message = "effect is not ready";
+            }
         } catch (e) {
-            failed = true;
+            status = "threw";
             message = String(e && e.message ? e.message : e);
         }
         engine.dispose();
-        globalThis.__failed = failed;
+        globalThis.__status = status;
         globalThis.__message = message;
     )";
 
@@ -359,18 +367,20 @@ TEST(ShaderCompilation, VulkanRejectsMoreThanSixteenSamplers)
     loader.LoadScript("app:///Assets/babylon.max.js");
     loader.Eval(script, "vulkan_too_many_samplers_test.js");
 
-    bool failed = false;
+    std::string status;
     std::string message;
     std::promise<void> done{};
-    loader.Dispatch([&done, &failed, &message](Napi::Env env) {
-        failed = env.Global().Get("__failed").ToBoolean();
+    loader.Dispatch([&done, &status, &message](Napi::Env env) {
+        status = env.Global().Get("__status").ToString();
         message = env.Global().Get("__message").ToString();
         done.set_value();
     });
     done.get_future().get();
     device.FinishRenderingCurrentFrame();
 
-    ASSERT_TRUE(failed || !failureMessage.empty()) << "expected compile failure";
+    ASSERT_NE(status, "unexpected_success") << "compiler accepted >16 samplers; expected rejection";
+    ASSERT_TRUE(status == "threw" || status == "not_ready" || !failureMessage.empty())
+        << "status=" << status << " message=" << message << " native=" << failureMessage;
     const std::string combined = message + failureMessage;
     EXPECT_NE(combined.find("16"), std::string::npos) << combined;
 }

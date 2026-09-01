@@ -141,7 +141,17 @@ jobs:
       cxx: clang++
       js-engine: QuickJS
 
-  # ── Android ───────────────────────────────────────────────────
+    # Exercises GRAPHICS_API=Vulkan (lavapipe) so Vulkan-only unit tests such as
+    # ShaderCompilation.VulkanRejectsMoreThanSixteenSamplers are compiled and run.
+    Ubuntu_Clang_Vulkan:
+      uses: ./.github/workflows/build-linux.yml
+      with:
+        cc: clang
+        cxx: clang++
+        js-engine: JavaScriptCore
+        graphics-api: Vulkan
+
+    # ── Android ───────────────────────────────────────────────────
   Android_Ubuntu_JSC:
     uses: ./.github/workflows/build-android.yml
     with:
