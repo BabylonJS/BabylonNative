@@ -30,6 +30,22 @@ else()
     set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_posix.cpp)
 endif()
 
+# The in-process Node-API conformance harness only builds against engines that export the full C
+# napi_* surface it uses. Hermes supplies napi through its own hermesNapi library, which does not
+# export e.g. napi_create_external / napi_get_value_external, so linking it fails; QuickJS is likewise
+# not validated on-device yet. Opt an engine in here once its harness run is green.
+set(JSR_NODE_API_HARNESS_ENGINES V8 JavaScriptCore)
+if(NAPI_JAVASCRIPT_ENGINE IN_LIST JSR_NODE_API_HARNESS_ENGINES)
+    set(JSR_NODE_API_HARNESS_SRC
+        ${TESTS_DIR}/NodeApi/node_lite.cpp
+        ${NODE_LITE_PLATFORM_SRC}
+        ${NODE_LITE_CHILD_PROCESS_SRC}
+        ${TESTS_DIR}/NodeApi/node_lite_jsruntimehost.cpp
+        ${TESTS_DIR}/NodeApi/js_runtime_api.cpp
+        ${TESTS_DIR}/NodeApi/string_utils.cpp
+        ${TESTS_DIR}/NodeApi/test_main.cpp)
+endif()
+
 add_library(UnitTestsJNI SHARED
     JNI.cpp
     ${UNIT_TESTS_DIR}/Shared/DelayedTaskScheduler.cpp
@@ -37,13 +53,7 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Shared/TimeoutDispatcher.cpp
     ${UNIT_TESTS_DIR}/Shared/Shared.h
     ${UNIT_TESTS_DIR}/Shared/Shared.cpp
-    ${TESTS_DIR}/NodeApi/node_lite.cpp
-    ${NODE_LITE_PLATFORM_SRC}
-    ${NODE_LITE_CHILD_PROCESS_SRC}
-    ${TESTS_DIR}/NodeApi/node_lite_jsruntimehost.cpp
-    ${TESTS_DIR}/NodeApi/js_runtime_api.cpp
-    ${TESTS_DIR}/NodeApi/string_utils.cpp
-    ${TESTS_DIR}/NodeApi/test_main.cpp)
+    ${JSR_NODE_API_HARNESS_SRC})
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Shared/V8ForegroundTaskRunner.cpp)
@@ -85,8 +95,10 @@ target_link_libraries(UnitTestsJNI
 if(ANDROID)
     target_link_libraries(UnitTestsJNI PRIVATE dl)
 endif()
-target_compile_definitions(UnitTestsJNI
-    PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="2_function_arguments,3_callbacks,4_object_factory,5_function_factory,test_reference_double_free")
+if(JSR_NODE_API_HARNESS_SRC)
+    target_compile_definitions(UnitTestsJNI
+        PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="2_function_arguments,3_callbacks,4_object_factory,5_function_factory,test_reference_double_free")
+endif()
 
 # The conformance addons are built as standalone SHARED lib<name>.so by Tests/NodeApi/CMakeLists.txt,
 # packaged by AGP into nativeLibraryDir, and dlopen'd in-process by node_lite_android. Both they and
