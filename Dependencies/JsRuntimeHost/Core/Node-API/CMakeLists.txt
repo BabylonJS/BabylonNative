@@ -269,7 +269,7 @@ endif()
 # platforms, where napi keeps following the project's default library type (i.e. honors
 # BUILD_SHARED_LIBS).
 set(JSR_NAPI_SHARED_DEFAULT OFF)
-if(ANDROID)
+if(ANDROID AND NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
     set(JSR_NAPI_SHARED_DEFAULT ON)
 endif()
 option(JSR_NAPI_SHARED "Build napi as a shared library (libnapi.so)" ${JSR_NAPI_SHARED_DEFAULT})
