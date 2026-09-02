@@ -457,10 +457,10 @@ namespace Babylon::Plugins
             }
 
             // Mirror Encoder::EncodeMeshToDracoBuffer. NativeDraco builds Draco with
-                        // DRACO_GLTF_BITSTREAM=ON (glTF-compatible output); that subset may compile out
-                        // attribute deduplication, so guard those passes on the feature macros Draco
-                        // publishes. They only shrink the encoded output; skipping them still produces a
-                        // valid stream.
+            // DRACO_GLTF_BITSTREAM=ON (glTF-compatible output); that subset may compile out
+            // attribute deduplication, so guard those passes on the feature macros Draco
+            // publishes. They only shrink the encoded output; skipping them still produces a
+            // valid stream.
             if (mesh.GetNamedAttributeId(draco::GeometryAttribute::POSITION) == -1)
             {
                 throw Napi::Error::New(env, "Draco: Missing position attribute for encoding.");
