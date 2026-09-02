@@ -1,0 +1,86 @@
+name: Build Android
+
+on:
+  workflow_call:
+    inputs:
+      js-engine:
+        required: true
+        type: string
+
+env:
+  NDK_VERSION: '28.2.13676358'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.js-engine == 'Hermes' && 60 || 30 }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # Hermes for Android builds the full LLVH/BCGen/Boost.Context/VM chain
+      # twice (once as host tools, once for x86_64 NDK) plus an emulator image.
+      # Default ubuntu-latest runners only ship ~14 GB free on /, which the
+      # combined output exhausts during `:app:buildCMakeDebug[x86_64]` (gradle
+      # then aborts with `java.io.IOException: No space left on device`).
+      # Reclaim space *before* anything is downloaded.
+      - name: Free up disk space (Hermes only)
+        if: inputs.js-engine == 'Hermes'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install NDK
+        run: echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${{ env.NDK_VERSION }}"
+
+      - name: Build JS test bundle
+        working-directory: Tests
+        run: npm install
+
+      - name: Install Ninja (Hermes host-compiler bootstrap)
+        if: inputs.js-engine == 'Hermes'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run Connected Android Test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-snapshot -no-window -no-boot-anim -no-audio
+          script: chmod +x Tests/UnitTests/Android/gradlew && Tests/UnitTests/Android/gradlew -p Tests/UnitTests/Android connectedAndroidTest -PabiFilters=x86_64 -PjsEngine=${{ inputs.js-engine }} -PndkVersion=${{ env.NDK_VERSION }}
+
+      - name: Dump Test Results
+        if: always()
+        working-directory: Tests/UnitTests/Android
+        run: |
+          find ./app/build/outputs/androidTest-results -name "*.txt" -print0 | while IFS= read -r -d '' file; do
+            echo "cat \"$file\""
+            cat "$file"
+          done
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AndroidTestResults_${{ inputs.js-engine }}
+          path: Tests/UnitTests/Android/app/build/outputs/androidTest-results/connected
+          if-no-files-found: ignore

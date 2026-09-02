@@ -4,7 +4,10 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # AndroidExtensions
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/AndroidExtensions" EXCLUDE_FROM_ALL)
+    # UrlLib is imported separately and otherwise tries to FetchContent this
+    # target when it is configured for Android.
+    set(AndroidExtensions_POPULATED TRUE)
 endif()
 
 # --------------------------------------------------
@@ -38,7 +41,12 @@ set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 
-FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+# bgfx.cmake pins these sources as git submodules. They are imported as
+# sibling subtrees so a Babylon Native checkout remains self-contained.
+set(BGFX_DIR "${CMAKE_CURRENT_LIST_DIR}/bgfx" CACHE PATH "Location of the in-tree bgfx sources." FORCE)
+set(BIMG_DIR "${CMAKE_CURRENT_LIST_DIR}/bimg" CACHE PATH "Location of the in-tree bimg sources." FORCE)
+set(BX_DIR "${CMAKE_CURRENT_LIST_DIR}/bx" CACHE PATH "Location of the in-tree bx sources." FORCE)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/bgfx.cmake" EXCLUDE_FROM_ALL)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
 # This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
@@ -145,7 +153,7 @@ endif()
 set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF)
 
 if(NOT TARGET glslang)
-    FetchContent_MakeAvailable_With_Message(glslang)
+    add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/glslang" EXCLUDE_FROM_ALL)
 
     set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
     set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
@@ -257,7 +265,11 @@ endif()
 # --------------------------------------------------
 # JsRuntimeHost
 # --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/UrlLib" EXCLUDE_FROM_ALL)
+# JsRuntimeHost consumes UrlLib through FetchContent. It is already available
+# from the local subtree, so suppress that nested FetchContent call.
+set(UrlLib_POPULATED TRUE)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/JsRuntimeHost")
 
 # Two JsRuntimeHost targets cannot be built without RTTI:
 #   v8inspector - includes asio, whose headers use typeid() unconditionally
@@ -347,7 +359,7 @@ endif()
 if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
     set(SPIRV_CROSS_ENABLE_HLSL OFF)
 endif()
-FetchContent_MakeAvailable_With_Message(SPIRV-Cross)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/SPIRV-Cross" EXCLUDE_FROM_ALL)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 if(TARGET spirv-cross-glsl)
     set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)

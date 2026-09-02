@@ -1,0 +1,670 @@
+/*
+ * Copyright 2010-2026 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bx/blob/master/LICENSE
+ */
+
+#include <bx/string.h>
+#include <bx/os.h>
+
+#if BX_CRT_MSVC
+#	include <direct.h>
+#else
+#	include <unistd.h> // syscall, _SC_PAGESIZE
+#endif // BX_CRT_MSVC
+
+#if BX_PLATFORM_WINDOWS || BX_PLATFORM_WINRT
+#	ifndef WIN32_LEAN_AND_MEAN
+#		define WIN32_LEAN_AND_MEAN
+#	endif // WIN32_LEAN_AND_MEAN
+#	include <windows.h>
+#	include <psapi.h>
+#elif  BX_PLATFORM_POSIX
+#	include <sched.h> // sched_yield
+#	if BX_PLATFORM_IOS       \
+	|| BX_PLATFORM_OSX       \
+	|| BX_PLATFORM_PS4       \
+	|| BX_PLATFORM_VISIONOS
+#		include <pthread.h> // mach_port_t
+#	endif // BX_PLATFORM_*
+
+#	include <time.h> // nanosleep
+#	if !BX_PLATFORM_PS4
+#		include <dlfcn.h> // dlopen, dlclose, dlsym
+#	endif // !BX_PLATFORM_PS4
+
+#	if BX_PLATFORM_ANDROID
+#		include <malloc.h> // mallinfo
+#	elif   BX_PLATFORM_LINUX \
+		|| BX_PLATFORM_RPI
+#		include <stdio.h>  // fopen
+#		include <sys/mman.h>
+#		include <sys/syscall.h>
+#	elif BX_PLATFORM_OSX
+#		include <mach/mach.h> // mach_task_basic_info
+#		include <sys/mman.h>
+#	endif // BX_PLATFORM_ANDROID
+#endif // BX_PLATFORM_
+
+namespace bx
+{
+	void sleep(uint32_t _ms)
+	{
+#if BX_PLATFORM_WINDOWS
+		::Sleep(_ms);
+#elif  BX_PLATFORM_XBOXONE \
+	|| BX_PLATFORM_WINRT   \
+	|| BX_CRT_NONE
+		BX_UNUSED(_ms);
+		BX_ASSERT(false, "Function '%s' is not implemented!", BX_FUNCTION);
+#else
+		timespec req = { (time_t)_ms/1000, (long)( (_ms%1000)*1000000) };
+		timespec rem = { 0, 0 };
+		::nanosleep(&req, &rem);
+#endif // BX_PLATFORM_
+	}
+
+	void yield()
+	{
+#if BX_PLATFORM_WINDOWS
+		::SwitchToThread();
+#elif  BX_PLATFORM_XBOXONE \
+	|| BX_PLATFORM_WINRT   \
+	|| BX_CRT_NONE
+		BX_ASSERT(false, "Function '%s' is not implemented!", BX_FUNCTION);
+#else
+		::sched_yield();
+#endif // BX_PLATFORM_
+	}
+
+	uint32_t getTid()
+	{
+#if BX_PLATFORM_WINDOWS
+		return ::GetCurrentThreadId();
+#elif  BX_PLATFORM_LINUX \
+	|| BX_PLATFORM_RPI
+		return (pid_t)::syscall(SYS_gettid);
+#elif  BX_PLATFORM_IOS \
+	|| BX_PLATFORM_OSX
+		return (mach_port_t)::pthread_mach_thread_np(pthread_self() );
+#else
+		BX_ASSERT(false, "Function '%s' is not implemented!", BX_FUNCTION);
+		return 0;
+#endif // BX_PLATFORM_
+	}
+
+	size_t getProcessMemoryUsed()
+	{
+#if BX_PLATFORM_ANDROID
+		struct mallinfo mi = mallinfo();
+		return mi.uordblks;
+#elif  BX_PLATFORM_LINUX
+		FILE* file = fopen("/proc/self/statm", "r");
+		if (NULL == file)
+		{
+			return 0;
+		}
+
+		long pages = 0;
+		int items = fscanf(file, "%*s%ld", &pages);
+		fclose(file);
+		return 1 == items
+			? pages * sysconf(_SC_PAGESIZE)
+			: 0
+			;
+#elif BX_PLATFORM_OSX
+#	if defined(MACH_TASK_BASIC_INFO)
+		mach_task_basic_info info;
+		mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
+
+		int const result = task_info(mach_task_self()
+				, MACH_TASK_BASIC_INFO
+				, (task_info_t)&info
+				, &infoCount
+				);
+#	else
+		task_basic_info info;
+		mach_msg_type_number_t infoCount = TASK_BASIC_INFO_COUNT;
+
+		int const result = task_info(mach_task_self()
+				, TASK_BASIC_INFO
+				, (task_info_t)&info
+				, &infoCount
+				);
+#	endif // defined(MACH_TASK_BASIC_INFO)
+		if (KERN_SUCCESS != result)
+		{
+			return 0;
+		}
+
+		return info.resident_size;
+#elif BX_PLATFORM_WINDOWS
+		PROCESS_MEMORY_COUNTERS pmc;
+		GetProcessMemoryInfo(GetCurrentProcess()
+			, &pmc
+			, sizeof(pmc)
+			);
+		return pmc.WorkingSetSize;
+#else
+		BX_ASSERT(false, "Function '%s' is not implemented!", BX_FUNCTION);
+		return 0;
+#endif // BX_PLATFORM_*
+	}
+
+	void* dlopen(const FilePath& _filePath)
+	{
+#if BX_PLATFORM_WINDOWS
+		// LOAD_LIBRARY_SEARCH_DEFAULT_DIRS excludes CWD and %PATH% from the search order.
+		HMODULE handle = ::LoadLibraryExA(_filePath.getCPtr(), NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+
+		BX_WARN(NULL != handle, "dlopen failed: \"%s\" 0x%x.", _filePath.getCPtr(), ::GetLastError() );
+
+		return (void*)handle;
+#elif  BX_PLATFORM_EMSCRIPTEN \
+	|| BX_PLATFORM_PS4        \
+	|| BX_PLATFORM_XBOXONE    \
+	|| BX_PLATFORM_WINRT      \
+	|| BX_PLATFORM_NX         \
+	|| BX_CRT_NONE
+		BX_UNUSED(_filePath);
+		return NULL;
+#else
+		void* so = ::dlopen(_filePath.getCPtr(), RTLD_LOCAL|RTLD_LAZY);
+		BX_WARN(NULL != so, "dlopen failed: \"%s\" %s.", _filePath.getCPtr(), ::dlerror() );
+		return so;
+#endif // BX_PLATFORM_
+	}
+
+	void dlclose(void* _handle)
+	{
+		if (NULL == _handle)
+		{
+			return;
+		}
+
+#if BX_PLATFORM_WINDOWS
+		::FreeLibrary( (HMODULE)_handle);
+#elif  BX_PLATFORM_EMSCRIPTEN \
+	|| BX_PLATFORM_PS4        \
+	|| BX_PLATFORM_XBOXONE    \
+	|| BX_PLATFORM_WINRT      \
+	|| BX_PLATFORM_NX         \
+	|| BX_CRT_NONE
+		BX_UNUSED(_handle);
+#else
+		::dlclose(_handle);
+#endif // BX_PLATFORM_
+	}
+
+	void* dlsym(void* _handle, const StringView& _symbol)
+	{
+		const int32_t symbolMax = _symbol.getLength()+1;
+		char* symbol = (char*)BX_STACK_ALLOC(symbolMax);
+		strCopy(symbol, symbolMax, _symbol);
+
+#if BX_PLATFORM_WINDOWS
+		return (void*)::GetProcAddress( (HMODULE)_handle, symbol);
+#elif  BX_PLATFORM_EMSCRIPTEN \
+	|| BX_PLATFORM_PS4        \
+	|| BX_PLATFORM_XBOXONE    \
+	|| BX_PLATFORM_WINRT      \
+	|| BX_PLATFORM_NX         \
+	|| BX_CRT_NONE
+		BX_UNUSED(_handle, symbol);
+		return NULL;
+#else
+		return ::dlsym(_handle, symbol);
+#endif // BX_PLATFORM_
+	}
+
+	bool getEnv(char* _out, uint32_t* _inOutSize, const StringView& _name)
+	{
+		const int32_t nameMax = _name.getLength()+1;
+		char* name = (char*)BX_STACK_ALLOC(nameMax);
+		strCopy(name, nameMax, _name);
+
+#if BX_PLATFORM_WINDOWS
+		DWORD len = ::GetEnvironmentVariableA(name, _out, *_inOutSize);
+		bool result = len != 0 && len < *_inOutSize;
+		*_inOutSize = len;
+		return result;
+#elif  BX_PLATFORM_EMSCRIPTEN \
+	|| BX_PLATFORM_PS4        \
+	|| BX_PLATFORM_XBOXONE    \
+	|| BX_PLATFORM_WINRT      \
+	|| BX_PLATFORM_NX         \
+	|| BX_CRT_NONE
+		BX_UNUSED(name, _out, _inOutSize);
+		return false;
+#else
+		const char* ptr = ::getenv(name);
+		uint32_t len = 0;
+		bool result = false;
+		if (NULL != ptr)
+		{
+			len = (uint32_t)strLen(ptr);
+
+			result = len != 0 && len < *_inOutSize;
+			if (len < *_inOutSize)
+			{
+				strCopy(_out, *_inOutSize, ptr);
+			}
+		}
+
+		*_inOutSize = len;
+		return result;
+#endif // BX_PLATFORM_
+	}
+
+	void setEnv(const StringView& _name, const StringView& _value)
+	{
+		const int32_t nameMax = _name.getLength()+1;
+		char* name = (char*)BX_STACK_ALLOC(nameMax);
+		strCopy(name, nameMax, _name);
+
+		char* value = NULL;
+		if (!_value.isEmpty() )
+		{
+			int32_t valueMax = _value.getLength()+1;
+			value = (char*)BX_STACK_ALLOC(valueMax);
+			strCopy(value, valueMax, _value);
+		}
+
+#if BX_PLATFORM_WINDOWS
+		::SetEnvironmentVariableA(name, value);
+#elif  BX_PLATFORM_EMSCRIPTEN \
+	|| BX_PLATFORM_PS4        \
+	|| BX_PLATFORM_XBOXONE    \
+	|| BX_PLATFORM_WINRT      \
+	|| BX_PLATFORM_NX         \
+	|| BX_CRT_NONE
+		BX_UNUSED(name, value);
+#else
+		if (NULL != value)
+		{
+			::setenv(name, value, 1);
+		}
+		else
+		{
+			::unsetenv(name);
+		}
+#endif // BX_PLATFORM_
+	}
+
+	int chdir(const char* _path)
+	{
+#if BX_PLATFORM_PS4     \
+ || BX_PLATFORM_XBOXONE \
+ || BX_PLATFORM_WINRT   \
+ || BX_CRT_NONE
+		BX_UNUSED(_path);
+		return -1;
+#elif BX_CRT_MSVC
+		return ::_chdir(_path);
+#else
+		return ::chdir(_path);
+#endif // BX_COMPILER_
+	}
+
+	void* exec(const char* const* _argv)
+	{
+#if BX_PLATFORM_LINUX
+		pid_t pid = fork();
+
+		if (0 == pid)
+		{
+			int result = execvp(_argv[0], const_cast<char *const*>(&_argv[1]) );
+			BX_UNUSED(result);
+			return NULL;
+		}
+
+		return (void*)uintptr_t(pid);
+#elif BX_PLATFORM_WINDOWS
+		STARTUPINFOA si;
+		memSet(&si, 0, sizeof(STARTUPINFOA) );
+		si.cb = sizeof(STARTUPINFOA);
+
+		PROCESS_INFORMATION pi;
+		memSet(&pi, 0, sizeof(PROCESS_INFORMATION) );
+
+		int32_t total = 0;
+		for (uint32_t ii = 0; NULL != _argv[ii]; ++ii)
+		{
+			total += (int32_t)strLen(_argv[ii]) + 1;
+		}
+
+		char* temp = (char*)BX_STACK_ALLOC(total);
+		int32_t len = 0;
+		for(uint32_t ii = 0; NULL != _argv[ii]; ++ii)
+		{
+			len += snprintf(&temp[len], bx::max(0, total-len)
+				, "%s "
+				, _argv[ii]
+				);
+		}
+
+		bool ok = !!CreateProcessA(_argv[0]
+			, temp
+			, NULL
+			, NULL
+			, false
+			, 0
+			, NULL
+			, NULL
+			, &si
+			, &pi
+			);
+		if (ok)
+		{
+			return pi.hProcess;
+		}
+
+		return NULL;
+#else
+		BX_UNUSED(_argv);
+		return NULL;
+#endif // BX_PLATFORM_LINUX
+	}
+
+	void exit(int32_t _exitCode, bool _cleanup)
+	{
+		if (_cleanup)
+		{
+			::exit(_exitCode);
+		}
+
+#if BX_PLATFORM_WINDOWS
+		TerminateProcess(GetCurrentProcess(), _exitCode);
+#else
+		_Exit(_exitCode);
+#endif // BX_PLATFORM_*
+
+		BX_UNREACHABLE;
+	}
+
+	namespace
+	{
+#if BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+		static int32_t toPosixProt(uint32_t _protect)
+		{
+			switch (_protect)
+			{
+			case Memory::ProtectRead:      return PROT_READ;
+			case Memory::ProtectReadWrite: return PROT_READ | PROT_WRITE;
+			case Memory::ProtectReadExec:  return PROT_READ | PROT_EXEC;
+			case Memory::ProtectNone:      // fall through
+			default:                       return PROT_NONE;
+			}
+		}
+
+		static int32_t toPosixAdvice(uint32_t _advise)
+		{
+			switch (_advise)
+			{
+			case Memory::Normal:           return MADV_NORMAL;
+			case Memory::SequentialAccess: return MADV_SEQUENTIAL;
+			case Memory::RandomAccess:     return MADV_RANDOM;
+			case Memory::Prefetch:         return MADV_WILLNEED;
+			case Memory::DontNeed:         return MADV_DONTNEED;
+			default:                       return -1;
+			}
+		}
+#elif BX_PLATFORM_WINDOWS
+		static DWORD toWinProtect(uint32_t _protect)
+		{
+			switch (_protect)
+			{
+			case Memory::ProtectRead:      return PAGE_READONLY;
+			case Memory::ProtectReadWrite: return PAGE_READWRITE;
+			case Memory::ProtectReadExec:  return PAGE_EXECUTE_READ;
+			case Memory::ProtectNone:      // fall through
+			default:                       return PAGE_NOACCESS;
+			}
+		}
+#endif // BX_PLATFORM_*
+	} // namespace
+
+	void* memoryMap(void* _address, size_t _size, size_t _alignment, uint32_t _flags, Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		const uint32_t state   = _flags & Memory::StateMask;
+		const uint32_t protect = _flags & Memory::ProtectMask;
+		const uint32_t advise  = _flags & Memory::AdviseMask;
+		const uint32_t page    = _flags & Memory::PageMask;
+
+		const size_t pageSize = memoryPageSize();
+		BX_ASSERT(_alignment <= pageSize, "Alignments greater than the page size are not implemented (requested %zu, page %zu).", _alignment, pageSize);
+		BX_UNUSED(_alignment, pageSize);
+
+#if BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+		if (NULL == _address)
+		{
+			if (0 == (state & Memory::Reserve) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: Memory::Reserve required for fresh allocation.");
+				return NULL;
+			}
+
+			uint32_t effectiveProtect = protect;
+			if (0 == effectiveProtect)
+			{
+				effectiveProtect = (Memory::Commit == (state & Memory::Commit) ) ? Memory::ProtectReadWrite : Memory::ProtectNone;
+			}
+
+			int32_t mmapFlags = MAP_ANON | MAP_PRIVATE;
+#	if BX_PLATFORM_LINUX
+			if (0 != (page & Memory::PageHuge) )
+			{
+				mmapFlags |= MAP_HUGETLB;
+#		ifdef MAP_HUGE_1GB
+				mmapFlags |= MAP_HUGE_1GB;
+#		endif // MAP_HUGE_1GB
+			}
+			else if (0 != (page & Memory::PageLarge) )
+			{
+				mmapFlags |= MAP_HUGETLB;
+#		ifdef MAP_HUGE_2MB
+				mmapFlags |= MAP_HUGE_2MB;
+#		endif // MAP_HUGE_2MB
+			}
+#	else
+			BX_UNUSED(page);
+#	endif // BX_PLATFORM_LINUX
+
+			void* result = mmap(_address, _size, toPosixProt(effectiveProtect), mmapFlags, -1 /*fd*/, 0 /*offset*/);
+
+			if (MAP_FAILED == result)
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: mmap failed.");
+				return NULL;
+			}
+
+			if (0 != advise)
+			{
+				const int32_t adv = toPosixAdvice(advise);
+				if (-1 != adv)
+				{
+					madvise(result, _size, adv);
+				}
+			}
+
+			return result;
+		}
+
+		// Reconfigure existing region.
+		if (0 != (state & Memory::Decommit) )
+		{
+			// Drop physical pages, then revoke access so use-after-free faults.
+			madvise(_address, _size, MADV_DONTNEED);
+			const int32_t prot = (0 != protect) ? toPosixProt(protect) : PROT_NONE;
+			if (0 != mprotect(_address, _size, prot) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: mprotect (decommit) failed.");
+				return NULL;
+			}
+		}
+		else if (Memory::Commit == (state & Memory::Commit) )
+		{
+			const uint32_t effectiveProtect = (0 != protect) ? protect : Memory::ProtectReadWrite;
+			if (0 != mprotect(_address, _size, toPosixProt(effectiveProtect) ) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: mprotect (commit) failed.");
+				return NULL;
+			}
+		}
+		else if (0 != protect)
+		{
+			if (0 != mprotect(_address, _size, toPosixProt(protect) ) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: mprotect failed.");
+				return NULL;
+			}
+		}
+
+		if (0 != advise)
+		{
+			const int32_t adv = toPosixAdvice(advise);
+			if (-1 != adv)
+			{
+				madvise(_address, _size, adv);
+			}
+		}
+
+		return _address;
+#elif BX_PLATFORM_WINDOWS
+		if (NULL == _address)
+		{
+			if (0 == (state & Memory::Reserve) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: Memory::Reserve required for fresh allocation.");
+				return NULL;
+			}
+
+			DWORD allocType = MEM_RESERVE;
+			DWORD winProtect = PAGE_NOACCESS;
+
+			if (Memory::Commit == (state & Memory::Commit) )
+			{
+				allocType |= MEM_COMMIT;
+				winProtect = toWinProtect( (0 != protect) ? protect : Memory::ProtectReadWrite);
+			}
+			else if (0 != protect)
+			{
+				winProtect = toWinProtect(protect);
+			}
+
+			if (0 != (page & (Memory::PageLarge | Memory::PageHuge) ) )
+			{
+				allocType |= MEM_LARGE_PAGES;
+			}
+
+			void* result = VirtualAlloc(_address, _size, allocType, winProtect);
+
+			if (NULL == result)
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: VirtualAlloc failed.");
+				return NULL;
+			}
+
+			BX_UNUSED(advise);
+			return result;
+		}
+
+		// Reconfigure existing region.
+		if (0 != (state & Memory::Decommit) )
+		{
+			if (!VirtualFree(_address, _size, MEM_DECOMMIT) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: VirtualFree(MEM_DECOMMIT) failed.");
+				return NULL;
+			}
+		}
+		else if (Memory::Commit == (state & Memory::Commit) )
+		{
+			const DWORD winProtect = toWinProtect( (0 != protect) ? protect : Memory::ProtectReadWrite);
+			if (NULL == VirtualAlloc(_address, _size, MEM_COMMIT, winProtect) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: VirtualAlloc(MEM_COMMIT) failed.");
+				return NULL;
+			}
+		}
+		else if (0 != protect)
+		{
+			DWORD oldProtect = 0;
+			if (!VirtualProtect(_address, _size, toWinProtect(protect), &oldProtect) )
+			{
+				BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: VirtualProtect failed.");
+				return NULL;
+			}
+		}
+
+		BX_UNUSED(advise);
+		return _address;
+#else
+		BX_UNUSED(_address, _size, _alignment, _flags, state, protect, advise, page, pageSize);
+		BX_ERROR_SET(_err, kErrorMemoryMapFailed, "memoryMap: Not implemented!");
+		return NULL;
+#endif // BX_PLATFORM_*
+	}
+
+	void memoryUnmap(void* _address, size_t _size, Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+#if BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+		int32_t result = munmap(_address, _size);
+
+		if (-1 == result)
+		{
+			BX_ERROR_SET(
+				  _err
+				, kErrorMemoryUnmapFailed
+				, "kErrorMemoryUnmapFailed"
+				);
+		}
+#elif BX_PLATFORM_WINDOWS
+		BX_UNUSED(_size);
+		if (!VirtualFree(_address, 0, MEM_RELEASE) )
+		{
+			BX_ERROR_SET(
+				  _err
+				, kErrorMemoryUnmapFailed
+				, "kErrorMemoryUnmapFailed"
+				);
+		}
+#else
+		BX_UNUSED(_address, _size);
+		BX_ERROR_SET(_err, kErrorMemoryUnmapFailed, "Not implemented!");
+#endif // BX_PLATFORM_*
+	}
+
+	size_t memoryPageSize(uint32_t _flags)
+	{
+		const uint32_t page = _flags & Memory::PageMask;
+
+#if BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+		if (0 != (page & Memory::PageHuge) )
+		{
+			return 1ull << 30; // 1 GiB nominal
+		}
+		if (0 != (page & Memory::PageLarge) )
+		{
+			return 2ull << 20; // 2 MiB nominal
+		}
+		return sysconf(_SC_PAGESIZE);
+#elif BX_PLATFORM_WINDOWS
+		if (0 != (page & (Memory::PageLarge | Memory::PageHuge) ) )
+		{
+			return ::GetLargePageMinimum();
+		}
+		SYSTEM_INFO si;
+		memSet(&si, 0, sizeof(si) );
+		::GetSystemInfo(&si);
+		return si.dwAllocationGranularity;
+#else
+		BX_UNUSED(page);
+		return 16<<10;
+#endif // BX_PLATFORM_WINDOWS
+	}
+
+} // namespace bx

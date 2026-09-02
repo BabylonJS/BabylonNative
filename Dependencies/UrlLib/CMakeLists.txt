@@ -1,0 +1,118 @@
+cmake_minimum_required(VERSION 3.18)
+
+include(FetchContent)
+
+# --------------------------------------------------
+# Declarations
+# --------------------------------------------------
+FetchContent_Declare(arcana.cpp
+    GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
+    GIT_TAG        7c6be8aaa29effbc8ee1a2217388fb6e399150d2)
+FetchContent_Declare(AndroidExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
+    GIT_TAG        2e85a8d43b89246c460112c9e5546ad54b6e87b4)
+FetchContent_Declare(CMakeExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
+    GIT_TAG dc750e7f69dad76779419df6442f834c57a30a1f)
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 4.4.1)
+# --------------------------------------------------
+
+if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
+    FetchContent_MakeAvailable(CMakeExtensions)
+endif()
+
+if(IOS)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "OS64COMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "13" CACHE STRING "")
+endif()
+
+project(UrlLib)
+
+FetchContent_MakeAvailable_With_Message(arcana.cpp)
+
+if(ANDROID)
+    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+endif()
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(ANDROID)
+    set(ADDITIONAL_SOURCES
+        "Source/UrlRequest_Android.cpp"
+        "Source/WebSocket_Android.cpp")
+    set(ADDITIONAL_LIBRARIES
+        PRIVATE android
+        PRIVATE AndroidExtensions
+        PRIVATE log)
+elseif(APPLE)
+    set(ADDITIONAL_SOURCES
+        "Source/UrlRequest_Apple.mm"
+        "Source/WebSocket_Apple.mm"
+        "Source/WebSocket_Apple_ObjC.h"
+        "Source/WebSocket_Apple_ObjC.m")
+elseif(UNIX)
+    set(ADDITIONAL_SOURCES
+        "Source/UrlRequest_Unix.cpp"
+        "Source/WebSocket_Unix.cpp")
+    set(ADDITIONAL_LIBRARIES
+        PRIVATE curl)
+elseif(WIN32)
+    set(ADDITIONAL_SOURCES
+        "Source/UrlRequest_Windows_Shared.h"
+        "Source/WebSocket_Windows.cpp")
+    if(WINDOWS_STORE)
+        set(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES}
+            "Source/UrlRequest_UWP.cpp")
+    else()
+        set(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES}
+            "Source/UrlRequest_Win32.cpp")
+        set(ADDITIONAL_LIBRARIES
+            PUBLIC onecoreuap.lib)
+    endif()
+else()
+    message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+set(SOURCES
+    "Include/UrlLib/UrlLib.h"
+    "Source/UrlRequest_Base.h"
+    "Source/UrlRequest_Shared.h"
+    "Source/WebSocket_Base.h"
+    "Source/WebSocket_Shared.h"
+    ${ADDITIONAL_SOURCES})
+
+add_library(UrlLib ${SOURCES})
+
+target_include_directories(UrlLib PUBLIC "Include")
+target_include_directories(UrlLib PRIVATE "Source")
+
+target_link_libraries(UrlLib
+    PUBLIC arcana
+    ${ADDITIONAL_LIBRARIES})
+
+if(APPLE)
+    enable_objc_arc(UrlLib)
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
+endif()
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
+# Unit tests: on by default only when UrlLib is the top-level project being built for a
+# desktop host, so consumers that FetchContent UrlLib are unaffected.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT IOS AND NOT ANDROID)
+    option(URLLIB_TESTS "Build the UrlLib unit tests." ON)
+else()
+    option(URLLIB_TESTS "Build the UrlLib unit tests." OFF)
+endif()
+
+if(URLLIB_TESTS)
+    enable_testing()
+    add_subdirectory(Tests)
+endif()
