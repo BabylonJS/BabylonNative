@@ -1344,26 +1344,60 @@ namespace
             return;
         }
 
-        // gl->prog.idx can be 0 is a context is destroyed without a call to flush
-        if (gl->prog.idx)
+        // BGFX_INVALID_HANDLE is UINT16_MAX (not 0). idx==0 is a valid first program.
+        // Guard every destroy so a partially-initialized or never-flushed context is safe.
+        if (bgfx::isValid(gl->prog))
         {
             bgfx::destroy(gl->prog);
         }
-        bgfx::destroy(gl->texMissing);
+        if (bgfx::isValid(gl->texMissing))
+        {
+            bgfx::destroy(gl->texMissing);
+        }
 
-        bgfx::destroy(gl->u_scissorMat);
-        bgfx::destroy(gl->u_paintMat);
-        bgfx::destroy(gl->u_innerCol);
-        bgfx::destroy(gl->u_outerCol);
-        bgfx::destroy(gl->u_scissorExtScale);
-        bgfx::destroy(gl->u_extentRadius);
-        bgfx::destroy(gl->u_params);
-        bgfx::destroy(gl->u_sdf);
-        bgfx::destroy(gl->s_tex);
-        bgfx::destroy(gl->s_tex2);
+        if (bgfx::isValid(gl->u_scissorMat))
+        {
+            bgfx::destroy(gl->u_scissorMat);
+        }
+        if (bgfx::isValid(gl->u_paintMat))
+        {
+            bgfx::destroy(gl->u_paintMat);
+        }
+        if (bgfx::isValid(gl->u_innerCol))
+        {
+            bgfx::destroy(gl->u_innerCol);
+        }
+        if (bgfx::isValid(gl->u_outerCol))
+        {
+            bgfx::destroy(gl->u_outerCol);
+        }
+        if (bgfx::isValid(gl->u_scissorExtScale))
+        {
+            bgfx::destroy(gl->u_scissorExtScale);
+        }
+        if (bgfx::isValid(gl->u_extentRadius))
+        {
+            bgfx::destroy(gl->u_extentRadius);
+        }
+        if (bgfx::isValid(gl->u_params))
+        {
+            bgfx::destroy(gl->u_params);
+        }
+        if (bgfx::isValid(gl->u_sdf))
+        {
+            bgfx::destroy(gl->u_sdf);
+        }
+        if (bgfx::isValid(gl->s_tex))
+        {
+            bgfx::destroy(gl->s_tex);
+        }
+        if (bgfx::isValid(gl->s_tex2))
+        {
+            bgfx::destroy(gl->s_tex2);
+        }
         nanovg_filterstack::DisposeBgfx();
 
-        if (bgfx::isValid(gl->u_halfTexel) )
+        if (bgfx::isValid(gl->u_halfTexel))
         {
             bgfx::destroy(gl->u_halfTexel);
         }
