@@ -177,7 +177,7 @@ function(group_directory_targets DIR FOLDER_NAME)
 endfunction()
 
 # --------------------------------------------------
-# draco (mesh decompression, native replacement for the WASM decoder)
+# draco (mesh compression/decompression, native replacement for the WASM modules)
 # --------------------------------------------------
 if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_static)
     set(DRACO_TESTS OFF CACHE BOOL "" FORCE)
@@ -185,11 +185,13 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_s
     set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
     set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
 
-    # Build only the features in the Draco glTF bitstream spec: mesh compression, normal
-    # encoding and the standard edgebreaker. This is the same subset Babylon.js decodes
-    # with, since its default configuration loads draco_decoder_gltf.wasm rather than the
-    # full decoder, so it costs no capability the JavaScript path has. It drops point cloud
-    # compression, the predictive edgebreaker and pre-glTF backwards compatibility.
+    # Keep the glTF bitstream subset. NativeDraco is intended to produce and consume
+    # glTF-compatible Draco data (Babylon.js defaults to the glTF-only decoder). The
+    # subset still supports mesh encoding, normals, and standard Edgebreaker; it
+    # constrains the output rather than disabling encoding, and avoids emitting
+    # features outside the glTF profile (e.g. predictive valence at slower speeds)
+    # that the default decoder may reject. Attribute deduplication may be compiled
+    # out; Encode guards those passes on the feature macros Draco publishes.
     set(DRACO_GLTF_BITSTREAM ON CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable_With_Message(draco)

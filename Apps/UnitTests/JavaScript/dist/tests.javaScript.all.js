@@ -29074,8 +29074,141 @@ function hexToBytes(hex) {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Decode(new Uint8Array(0));}).to.throw();
   });
 
-  it("does not expose an encoder", function () {
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Encode).to.equal(undefined);
+  it("exposes an encoder", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Encode).to.be.a("function");
+  });
+
+  it("round trips a mesh through the encoder and back", function () {
+    // Quantization is left off so the exact-half coordinates above survive bit for bit.
+    var encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices);
+
+    // Int8Array, matching Babylon.js's IDracoEncodedMeshData contract and the WASM
+    // encoder it stands in for.
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data).to.be.an.instanceOf(Int8Array);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.attributeIds.position).to.be.a("number");
+
+    var decoded = _native.DracoCodec.Decode(encoded.data, { position: encoded.attributeIds.position });
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+
+    // Same set-of-corners comparison as the decode tests: Draco is free to reorder points.
+    var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    var corner = function corner(buffer, i) {return (
+        [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
+        map(function (v) {return v.toFixed(2);}).
+        join(","));};
+
+    var expectedCorners = [];
+    var actualCorners = [];
+    for (var i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  });
+
+  it("encodes an unindexed mesh", function () {
+    // Without an index buffer the vertices are taken as a flat triangle list, so the
+    // vertex count itself has to be a multiple of three. The shared quad fixture is
+    // four vertices, so use a single triangle here.
+    var triangle = new Float32Array([
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0]
+    );
+
+    var encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: triangle }]);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data).to.be.an.instanceOf(Int8Array);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+  });
+
+  it("accepts 32 bit indices", function () {
+    var encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      new Uint32Array(indices));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(encoded.data.length).to.be.greaterThan(0);
+  });
+
+  it("encodes typed array views with a non-zero byteOffset", function () {
+    // Both the attribute and the index buffer are subviews sitting partway into a larger
+    // ArrayBuffer, preceded by deliberately wrong data. Reading via ArrayBuffer().Data()
+    // instead of the typed view would silently encode that padding, so the round trip
+    // below is what catches it -- the decoded corners would not match.
+    var padFloats = 5;
+    var positionStorage = new Float32Array(padFloats + positions.length);
+    positionStorage.fill(-999);
+    positionStorage.set(positions, padFloats);
+    var positionView = positionStorage.subarray(padFloats);
+
+    var padIndices = 3;
+    var indexStorage = new Uint16Array(padIndices + indices.length);
+    indexStorage.fill(0xdead & 0xffff);
+    indexStorage.set(indices, padIndices);
+    var indexView = indexStorage.subarray(padIndices);
+
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(positionView.byteOffset).to.be.greaterThan(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(indexView.byteOffset).to.be.greaterThan(0);
+
+    var encoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positionView }],
+      indexView);
+
+    var decoded = _native.DracoCodec.Decode(encoded.data, { position: encoded.attributeIds.position });
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+
+    var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    var corner = function corner(buffer, i) {return (
+        [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
+        map(function (v) {return v.toFixed(2);}).
+        join(","));};
+
+    var expectedCorners = [];
+    var actualCorners = [];
+    for (var i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  });
+
+  it("rejects an index buffer that is neither 16 nor 32 bit", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+        new Int32Array([0, 1, 2, 1, 3, 2]));}).to.throw();
+  });
+
+  it("rejects an index count that is not a multiple of 3", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+        new Uint16Array([0, 1, 2, 1]));}).to.throw();
+  });
+
+  it("rejects an index that is out of range for the vertex count", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+        new Uint16Array([0, 1, 9999]));}).to.throw();
+  });
+
+  it("rejects an attribute length that is not a multiple of its size", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "position", dracoName: "POSITION", size: 3, data: new Float32Array([0, 0, 0, 1]) }],
+        indices);}).to.throw();
+  });
+
+  it("rejects a mesh with no position attribute", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {return _native.DracoCodec.Encode(
+        [{ kind: "normal", dracoName: "NORMAL", size: 3, data: positions }],
+        indices);}).to.throw();
   });
 });
 
