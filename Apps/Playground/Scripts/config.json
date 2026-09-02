@@ -557,7 +557,7 @@
             "playgroundId": "#RKKCHG#15",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "GaussianSplatting throws Uncaught Error: Invalid argument on Babylon Native (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gsplat-splat-modify.png"
         },
         {
@@ -592,7 +592,7 @@
             "playgroundId": "#XSNFXP#2",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "gsplat-spz-sh.png"
         },
         {
@@ -618,7 +618,7 @@
             "title": "SPZ v3 - Splat",
             "playgroundId": "#V7CV8W#4",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/splats/combined_SPZv3.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "gsplat-spz-v3.png"
         },
         {
@@ -747,7 +747,7 @@
             "title": "EXT_lights_ies",
             "playgroundId": "#UIAXAU#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Loading remote https:// assets is not supported",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/EXT_lights_ies/Example.gltf: 'name' is not defined (thrown during glTF load, before pixel comparison)",
             "referenceImage": "ext-lights-ies.png"
         },
         {
@@ -833,8 +833,6 @@
         {
             "title": "Volumetric Light Scattering Post Process with Morph Targets",
             "playgroundId": "#5E318S#7",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails on Linux (large diff)",
             "referenceImage": "volumetricLightScatteringMorphTargets.png"
         },
         {
@@ -845,8 +843,6 @@
         {
             "title": "NME Multi Build",
             "playgroundId": "#D8AK3Z#113",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "nme-multi-build.png"
         },
         {
@@ -957,7 +953,7 @@
             "title": "CSGVertColor",
             "playgroundId": "#R0H1IX#4",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "csgVertColor.png"
         },
         {
@@ -1038,8 +1034,7 @@
             "title": "LOD + Billboards + Instances",
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Instanced billboard foliage renders red instead of green (BN vertex/instance color routing regression)."
+            "errorRatio": 5
         },
         {
             "title": "Nested BBG",
@@ -1095,8 +1090,6 @@
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
             "referenceImage": "guiNearMenu.png"
         },
         {
@@ -1160,7 +1153,7 @@
             "playgroundId": "#NZ2RZY#4",
             "renderCount": 50,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison)",
             "referenceImage": "chibi-rex.png"
         },
         {
@@ -1168,14 +1161,14 @@
             "playgroundId": "#QATUCH#32",
             "renderCount": 150,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 239982/240000 pixels differ (99.99%) on Babylon Native (renders essentially blank)",
             "referenceImage": "yeti.png"
         },
         {
             "title": "CSG",
             "playgroundId": "#R0H1IX#8",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
             "referenceImage": "csg.png"
         },
         {
@@ -1204,14 +1197,14 @@
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "textureAreaLightStandard.png"
         },
         {
             "title": "Textured - Area Lights - PBR",
             "playgroundId": "#T7FXR8#102",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "texturedAreaLightsPBR.png"
         },
         {
@@ -1267,9 +1260,9 @@
         {
             "title": "Custom render target",
             "playgroundId": "#TQCEBF#5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 D3D11 plain (STATUS_BREAKPOINT)",
-            "referenceImage": "customRTT.png"
+            "referenceImage": "customRTT.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "GL cube skybox face-boundary seam (~12% pixel diff in upper sky); passes on D3D11/D3D12. Per-face vertical flip is required (disabling it worsens diff to 43%); residual seam is a bgfx-level GL cubemap face-boundary/seamless-filtering issue. Tracked for OpenGL backend follow-up."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
@@ -1494,7 +1487,7 @@
             "title": "GLTF Buggy with Meshopt Compression",
             "playgroundId": "#CIYTF6#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/Buggy/glTF-MeshOpt/Buggy.gltf: Object doesn't support property or method 'createObjectURL' (missing DOM API; thrown before pixel comparison)",
             "referenceImage": "gltfBuggyMeshopt.png"
         },
         {
@@ -1650,7 +1643,7 @@
             "title": "GlowLayer",
             "playgroundId": "#LRFB2D#262",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 237981/240000 pixels differ (99.16%) on Babylon Native",
             "referenceImage": "GlowLayer.png"
         },
         {
@@ -1846,9 +1839,9 @@
             "title": "Prepass SSAO + particles",
             "playgroundId": "#65MUMZ#47",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "SSAO2 blur post-process shader fails to compile on desktop GL (samples uniform used as int loop bound); unrelated to instancing.",
-            "referenceImage": "prepass-ssao-particles.png"
+            "referenceImage": "prepass-ssao-particles.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + instances",
@@ -1861,9 +1854,9 @@
             "title": "Prepass SSAO + instanced bones",
             "playgroundId": "#0K8EYN#197",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-instanced-bones.png"
+            "referenceImage": "prepass-ssao-instanced-bones.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + depth of field",
@@ -1902,7 +1895,7 @@
             "playgroundId": "#LRFB2D#263",
             "renderCount": 30,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel comparison fails: 236380/240000 pixels differ (98.49%) on Babylon Native",
             "referenceImage": "prepass-ssao-glow-layer.png"
         },
         {
@@ -1940,10 +1933,10 @@
         {
             "title": "Prepass SSAO + GUI",
             "playgroundId": "#LLVZ90#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Order-dependent state leak: passes in isolation but produces ~6000-px diff (right at 2.5% errorRatio threshold, flaky in CI) when run after sibling Prepass-SSAO tests in the full sweep on Win32 D3D11. OpenGL also fails (BGFX FATAL 'mediump float' shader compile in PrePassRenderer fragment shader). Re-enable after the order-dependent SSAO state cleanup is investigated.",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-gui.png"
+            "referenceImage": "prepass-ssao-gui.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + LOD",
@@ -1965,9 +1958,9 @@
             "title": "Prepass SSAO + highlight layer",
             "playgroundId": "#1KUJ0A#416",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-highlight-layer.png"
+            "referenceImage": "prepass-ssao-highlight-layer.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + point light",
@@ -1981,25 +1974,25 @@
             "title": "Prepass SSAO + on/off post-process",
             "playgroundId": "#1VI6WV#20",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-on-off-pp.png"
+            "referenceImage": "prepass-ssao-on-off-pp.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + thin instances",
             "playgroundId": "#V1JE4Z#25",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-thin-instances.png"
+            "referenceImage": "prepass-ssao-thin-instances.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + depth renderer",
             "playgroundId": "#3HPMAA#1",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-depth-renderer.png"
+            "referenceImage": "prepass-ssao-depth-renderer.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
         },
         {
             "title": "Prepass SSAO + visibility",
@@ -2214,8 +2207,6 @@
         {
             "title": "Test updateTextureData",
             "playgroundId": "#EVX1DH#80",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "testUpdateTextureData.png"
         },
         {
@@ -2329,22 +2320,16 @@
         {
             "title": "GUI Gradient Linear",
             "playgroundId": "#XCPP9Y#17227",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "GUI-Gradient-Linear.png"
         },
         {
             "title": "GUI Gradient Radial",
             "playgroundId": "#4Z7EK3",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "GUI-Gradient-Radial.png"
         },
         {
             "title": "GUI Gradient Linear with transparency",
             "playgroundId": "#PFK1Z5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "GUI-Gradient-Linear-with-transparency.png"
         },
         {
@@ -2383,9 +2368,9 @@
             "title": "Screen Space Reflections 2",
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine Screen Space Reflections do not render the wet/reflective floor surface; SSR effect produces less reflection than WebGL reference.",
-            "referenceImage": "Screen-Space-Reflections-2.png"
+            "referenceImage": "Screen-Space-Reflections-2.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL ES: bgfx FrameBufferGL::resolve calls glDrawBuffers(1, &GL_COLOR_ATTACHMENT0 + colorIdx), but GLES requires bufs[i] to be GL_NONE or GL_COLOR_ATTACHMENT0 + i, so resolving any attachment past the first raises GL_INVALID_OPERATION and asserts (bgfx bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11"
         },
         {
             "title": "MultiRenderTarget with different texture types",
@@ -2831,15 +2816,13 @@
             "title": "Normed 16 bits texture formats",
             "playgroundId": "#SOCPNB#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 33322, type 5. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "Normed-16-bits-texture-formats.png"
         },
         {
             "title": "UV2 Morphing",
             "playgroundId": "#N5DLM7#1",
-            "referenceImage": "UV2-Morphing.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "UV2-Morphing.png"
         },
         {
             "title": "FrameGraph nrge shadows",
@@ -2874,7 +2857,7 @@
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/PowerPlant/powerplant.obj: Out of stack space (OBJ parser recursion overflow; thrown before pixel comparison)",
             "referenceImage": "FrameGraph-nrge-depth-of-field.png"
         },
         {
@@ -4439,8 +4422,6 @@
         {
             "title": "Vertex Pulling - Normals UVs Colors Tangents",
             "playgroundId": "#664OF3#6",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "vertexPullingNormalsUVsColors.png"
         },
         {
@@ -4451,9 +4432,7 @@
         {
             "title": "Vertex Pulling - Morph Targets and Bones",
             "playgroundId": "#CT4C3C#2",
-            "referenceImage": "vertexPullingMorphBones.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "vertexPullingMorphBones.png"
         },
         {
             "title": "Vertex Pulling - isUnIndexed with index buffer",
@@ -4469,252 +4448,252 @@
             "title": "GPU Particles - Basic Properties - Size",
             "playgroundId": "#3HLS3D#2",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-size.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Scale",
             "playgroundId": "#52KBLI#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-scale.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Color",
             "playgroundId": "#30PAK9#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-color.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Speed",
             "playgroundId": "#KU4I4J#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Angular Speed",
             "playgroundId": "#9MOFU4#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-angular-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Rotation",
             "playgroundId": "#DEVC42#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-rotation.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#QC8XA2#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-translation-pivot.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Direction",
             "playgroundId": "#M6QEUB#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-direction.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Gravity",
             "playgroundId": "#9AGK0W#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-gravity.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Emit Rate",
             "playgroundId": "#IBWI36#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-emit-rate.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Lifetime",
             "playgroundId": "#RL6BAK#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-lifetime.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Target Stop Duration",
             "playgroundId": "#4AJC72#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-target-stop.png"
         },
         {
             "title": "GPU Particles - Change - Size",
             "playgroundId": "#KF9X69#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size.png"
         },
         {
             "title": "GPU Particles - Change - Color",
             "playgroundId": "#UWRCY4#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color.png"
         },
         {
             "title": "GPU Particles - Change - Speed",
             "playgroundId": "#KBHNCB#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed.png"
         },
         {
             "title": "GPU Particles - Change - Speed Limit",
             "playgroundId": "#CTNM3R#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed-limit.png"
         },
         {
             "title": "GPU Particles - Change - Angular Speed",
             "playgroundId": "#1NLEIC#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-angular-speed.png"
         },
         {
             "title": "GPU Particles - Change - Drag",
             "playgroundId": "#02KAQL#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-drag.png"
         },
         {
             "title": "GPU Particles - Change - Size Range",
             "playgroundId": "#4EWZJ9#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size-range.png"
         },
         {
             "title": "GPU Particles - Change - Color Range",
             "playgroundId": "#3M1JEJ#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color-range.png"
         },
         {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-point.png"
         },
         {
             "title": "GPU Particles - Emitters - Box",
             "playgroundId": "#2XD9BC#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-box.png"
         },
         {
             "title": "GPU Particles - Emitters - Sphere",
             "playgroundId": "#H7XR87#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Sphere",
             "playgroundId": "#0H1ATM#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Hemisphere",
             "playgroundId": "#MRQTX7#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-hemisphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Cylinder",
             "playgroundId": "#FGRJM1#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cylinder",
             "playgroundId": "#40T8G0#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Cone",
             "playgroundId": "#W73H92#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cone.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cone",
             "playgroundId": "#GSYICK#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cone.png"
         },
         {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-y.png"
         },
         {
             "title": "GPU Particles - Billboard Stretched",
             "playgroundId": "#0612KX#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-stretched.png"
         },
         {
             "title": "GPU Particles - Multiply Blend",
             "playgroundId": "#D7LQAZ#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-multiply-blend.png"
         },
         {
             "title": "GPU Particles - Animations",
             "playgroundId": "#B0EJQY#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-animations.png"
         },
         {
             "title": "GPU Particles - Noise",
             "playgroundId": "#P6JQIP#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-noise.png"
         },
         {
             "title": "GPU Particles - Flowmaps",
             "playgroundId": "#SGAEHS#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Native lacks the 'Image' DOM constructor: throws ReferenceError: 'Image' is not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-flowmaps.png"
         },
         {
             "title": "GPU Particles - Local Space",
             "playgroundId": "#NK19TU#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-local-space.png"
         },
         {

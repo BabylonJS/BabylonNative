@@ -35,6 +35,9 @@ namespace Playground
         runtime.LoadScript("app:///Scripts/ammo.js");
         // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
         // runtime.LoadScript("app:///Scripts/recast.js");
+        // PolygonMeshBuilder resolves `earcut` as a global at triangulation time, so without this
+        // any polygon scene fails with `ReferenceError: earcut is not defined`.
+        runtime.LoadScript("app:///Scripts/earcut.min.js");
         runtime.LoadScript("app:///Scripts/babylon.max.js");
         // Load addons right after babylon.max.js so addons init sees a fully
         // constructed BABYLON global.
@@ -44,6 +47,7 @@ namespace Playground
         runtime.LoadScript("app:///Scripts/babylon.gui.js");
         runtime.LoadScript("app:///Scripts/meshwriter.min.js");
         runtime.LoadScript("app:///Scripts/babylonjs.serializers.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.proceduralTextures.js");
     }
 
     std::function<void(Babylon::Embedding::LogLevel, std::string_view)>

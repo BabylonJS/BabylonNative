@@ -37,6 +37,11 @@ public:
     );
     void Render(std::function<void()> element);
 
+    // Returns true if this stack has any filter elements (blur/sepia/etc.) that
+    // require intermediate pool framebuffers. When false, draws render straight
+    // into the final (canvas) framebuffer and can share a single bgfx view.
+    bool HasFilters() const { return stackElementCount > 0; }
+
     void ParseString(const std::string& string);
     static bool ValidString(const std::string& string);
 

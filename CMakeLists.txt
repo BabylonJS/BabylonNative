@@ -27,6 +27,14 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(draco
+    GIT_REPOSITORY https://github.com/google/draco.git
+    GIT_TAG 1.5.7
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(meshoptimizer
+    GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
+    GIT_TAG v0.22
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
     EXCLUDE_FROM_ALL)
@@ -38,7 +46,6 @@ FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
     EXCLUDE_FROM_ALL)
-
 # --------------------------------------------------
 
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
@@ -90,6 +97,7 @@ option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphic
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEDRACO "Include Babylon Native Plugin NativeDraco." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin NativeEncoding." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Enable WebP image parsing in NativeEngine (via bimg)." ON)
@@ -100,6 +108,7 @@ if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
 endif()
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS "Include Babylon Native Plugin NativeEngine - Compile Shaders." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT "Include Babylon Native Plugin NativeMeshopt." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
@@ -127,8 +136,20 @@ option(BABYLON_NATIVE_EMBEDDING_APPLE "Build the Apple (iOS / macOS / visionOS) 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
+# RTTI
+# Babylon Native does not use dynamic_cast or typeid anywhere in Core, Plugins,
+# Polyfills, Embedding or Apps, but compilers emit RTTI records for every
+# polymorphic class by default. Disabling it is a pure size win. UBSan's vptr
+# check is the only thing that needs RTTI, so it is derived from the sanitizer
+# switch rather than exposed as an option of its own.
+#
+# Deliberately a plain variable and not a cache entry: a cached ENABLE_RTTI
+# would persist ON in any build directory that was configured with
+# -DENABLE_SANITIZERS=ON even once, so re-configuring that directory without
+# sanitizers would silently keep emitting RTTI and lose the size win.
+set(ENABLE_RTTI ${ENABLE_SANITIZERS})
+
 if(ENABLE_SANITIZERS)
-    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         set(SANITIZERS "address,undefined")
         # Check for Clang since vptr and fdsan are Clang-specific
@@ -244,6 +265,65 @@ if(BABYLON_NATIVE_OPENGLES_FROM_BROWSER)
     if(NOT ANGLE_LIBEGL)
         message(FATAL_ERROR "OpenGLWindowsDevOnly requires ANGLE libraries (libEGL.dll, libGLESv2.dll) from Edge or Chrome, but none were found.")
     endif()
+
+    # The browser ships ANGLE as DLLs with no import libraries. bgfx resolves its GL entry
+    # points dynamically, but code that calls GL ES directly needs something to link against,
+    # so synthesize an import library from the DLL's export table.
+    get_filename_component(_msvc_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    find_program(ANGLE_DUMPBIN_EXECUTABLE NAMES dumpbin dumpbin.exe HINTS "${_msvc_bin_dir}")
+    find_program(ANGLE_LIB_EXECUTABLE NAMES lib lib.exe HINTS "${_msvc_bin_dir}")
+    if(NOT ANGLE_DUMPBIN_EXECUTABLE OR NOT ANGLE_LIB_EXECUTABLE)
+        message(FATAL_ERROR "OpenGLWindowsDevOnly requires the MSVC dumpbin and lib tools to generate an ANGLE import library.")
+    endif()
+
+    set(_angle_gen_dir "${CMAKE_BINARY_DIR}/ANGLE")
+    set(ANGLE_GLESV2_IMPORT_LIB "${_angle_gen_dir}/libGLESv2.lib")
+
+    if(NOT EXISTS "${ANGLE_GLESV2_IMPORT_LIB}" OR "${ANGLE_LIBGLESV2}" IS_NEWER_THAN "${ANGLE_GLESV2_IMPORT_LIB}")
+        execute_process(
+            COMMAND "${ANGLE_DUMPBIN_EXECUTABLE}" /nologo /exports "${ANGLE_LIBGLESV2}"
+            OUTPUT_VARIABLE _angle_exports
+            RESULT_VARIABLE _angle_exports_result
+            ERROR_VARIABLE _angle_exports_error
+        )
+        if(NOT _angle_exports_result EQUAL 0)
+            message(FATAL_ERROR "Failed to read the exports of ${ANGLE_LIBGLESV2}: ${_angle_exports_error}")
+        endif()
+
+        # Export table rows look like "  1422   58D 00023330 glIsTexture"; keep the names.
+        string(REGEX MATCHALL "[0-9A-F]+ +gl[A-Za-z0-9_]+" _angle_export_rows "${_angle_exports}")
+        set(_angle_def_exports "")
+        foreach(_angle_row IN LISTS _angle_export_rows)
+            string(REGEX REPLACE "^.+ +" "" _angle_symbol "${_angle_row}")
+            string(APPEND _angle_def_exports "    ${_angle_symbol}\n")
+        endforeach()
+        if(NOT _angle_def_exports)
+            message(FATAL_ERROR "Found no GL ES entry points exported by ${ANGLE_LIBGLESV2}.")
+        endif()
+
+        if(CMAKE_VS_PLATFORM_NAME STREQUAL "Win32")
+            set(_angle_machine "x86")
+        elseif(CMAKE_VS_PLATFORM_NAME)
+            set(_angle_machine "${CMAKE_VS_PLATFORM_NAME}")
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            set(_angle_machine "x86")
+        else()
+            set(_angle_machine "x64")
+        endif()
+
+        file(MAKE_DIRECTORY "${_angle_gen_dir}")
+        file(WRITE "${_angle_gen_dir}/libGLESv2.def" "LIBRARY libGLESv2\nEXPORTS\n${_angle_def_exports}")
+        execute_process(
+            COMMAND "${ANGLE_LIB_EXECUTABLE}" /nologo "/def:${_angle_gen_dir}/libGLESv2.def" "/machine:${_angle_machine}" "/out:${ANGLE_GLESV2_IMPORT_LIB}"
+            RESULT_VARIABLE _angle_lib_result
+            OUTPUT_QUIET
+            ERROR_VARIABLE _angle_lib_error
+        )
+        if(NOT _angle_lib_result EQUAL 0)
+            message(FATAL_ERROR "Failed to generate an ANGLE import library: ${_angle_lib_error}")
+        endif()
+        message(STATUS "Generated ANGLE import library: ${ANGLE_GLESV2_IMPORT_LIB}")
+    endif()
 endif()
 
 if(APPLE)
@@ -265,7 +345,44 @@ if(MSVC)
 
     # Enable multiprocessor compilation for faster builds
     add_compile_options(/MP)
+
+    # Strip unreferenced code from RelWithDebInfo binaries.
+    #
+    # MSVC turns /OPT:REF and /OPT:ICF off whenever /DEBUG is passed, and CMake's
+    # default RelWithDebInfo link flags are "/debug /INCREMENTAL". The effect is that
+    # RelWithDebInfo keeps every unreferenced COMDAT that made it into the static
+    # libraries.
+    #
+    # /OPT:REF alone captures the entire win (/OPT:ICF measured zero additional
+    # bytes), so identical functions are left unfolded and stack traces stay
+    # unambiguous. Incremental linking must be off because it is incompatible with
+    # /OPT:REF. Debug is left untouched, and Release/MinSizeRel already get /OPT:REF
+    # implicitly because they do not link with /DEBUG.
+    add_link_options($<$<CONFIG:RelWithDebInfo>:/INCREMENTAL:NO> $<$<CONFIG:RelWithDebInfo>:/OPT:REF>)
 endif()
+
+if(NOT ENABLE_RTTI)
+    # Applied to C++ only: /GR- and -fno-rtti are not valid for C sources.
+    # OBJCXX is listed explicitly so Objective-C++ (.mm) sources are covered on
+    # Apple regardless of whether CMake classifies them as CXX or OBJCXX.
+    if(MSVC)
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR->)
+    else()
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-fno-rtti>)
+    endif()
+endif()
+
+# Re-enables RTTI for a single target. Needed by dependencies that genuinely
+# require it; see the call sites for the specific reason in each case.
+# Call sites gate on the configuration that provides the target, so an
+# unresolved name is a mistake and target_compile_options reports it.
+function(babylon_native_force_rtti target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:/GR>)
+    else()
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-frtti>)
+    endif()
+endfunction()
 
 if(APPLE)
     # Create scheme for installation and other targets

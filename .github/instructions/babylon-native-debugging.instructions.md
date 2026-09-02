@@ -123,6 +123,9 @@ per flag** (intentional design -- long-name aliases were removed).
 -l, --list                  List configured tests as TSV and exit (0)
     --headless              Don't show window; route all logs to stdout
     --break-on-fail         Trigger debugger break on a failing test
+    --stop-on-first-failure Exit as soon as a test fails; by default the runner
+                            completes the whole suite and reports the full tally
+                            (the exit code is non-zero either way)
     --generate-references   Save rendered images as new reference PNGs
     --once                  Run only the first matching test, then exit
     --include-excluded      Force-run tests with excludeFromAutomaticTesting /

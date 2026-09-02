@@ -71,16 +71,18 @@ namespace Babylon::ShaderCompilerTraversers
     /// Changes the names and locations of varying attributes in the vertex shader to
     /// match bgfx's expectations.
     ///
-    /// `instancedAttributes` maps vertex-attribute names that the consumer binds with a
+    /// `instancedAttributes` maps generic vertex-attribute names that the consumer binds with a
     /// per-instance divisor (e.g. the fluid renderer's `position` or an instanced `color`)
     /// to the bgfx per-instance i_data location (top TEXCOORD semantic) they must occupy.
     /// The location is computed from the draw-time instance packing order so the attribute
     /// is read from the slot bgfx actually fills. The built-in instanced names (`world0-3`,
-    /// `instanceColor`, `splatIndex0-3`) keep their fixed mapping; an empty map preserves
-    /// legacy behavior.
-    void AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
-    void AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
-    void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
+    /// `previousWorld0-3`, `instanceColor`, `splatIndex0-3`) are not fixed to a per-name slot: each
+    /// shader's declared set is assigned a dense i_data run, since bgfx requires the used slots to
+    /// start at i_data0 with no holes. Generic names present in `instancedAttributes` use slots
+    /// after that run; built-in names in the map are rejected.
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
+    std::map<std::string, uint32_t> AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming, const std::map<std::string, uint32_t>& instancedAttributes = {});
 
     /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable.
     /// Native platforms expect them to be two separate variables -- a texture and a
@@ -129,6 +131,34 @@ namespace Babylon::ShaderCompilerTraversers
     /// `OpVariable` hoisting rule plus the absence of per-iteration-freshness
     /// accumulators in BabylonJS-generated GLSL).
     void ZeroInitializeStructLocals(glslang::TProgram& program);
+
+    /// Flatten narrow inter-stage varying arrays into one varying per array element, e.g.
+    /// `varying float vDepthMetric0[4]` becomes `vDepthMetric0_0 .. vDepthMetric0_3` plus a
+    /// plain global array that every existing reference is repointed at.
+    ///
+    /// SPIRV-Cross emits an array-typed member in the HLSL interface struct for an array-typed
+    /// varying (`float vDepthMetric0[4] : TEXCOORD5;`). fxc turns that into an indexable input
+    /// register range and requires every register in the range to use the same component mask
+    /// (not necessarily all four slots -- matching `.x` or matching `.xyz` is fine). Observed
+    /// hang/reject shapes are float and vec2 arrays; flat int[4] and vec3[4] compile without
+    /// this pass. Treating element width `< 4` as flattenable is a conservative workaround:
+    ///
+    ///     error X8000: masks on all input registers in an index range must be identical
+    ///
+    /// fxc does not simply fail on the bad shapes, it hangs, so D3D11 compilation of Babylon.js
+    /// cascaded shadow map shaders never completes. `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]`
+    /// in lightFragmentDeclaration.fx is the trigger; the companion `vec4` array is unaffected.
+    ///
+    /// The global array is what preserves dynamic indexing -- the cascade index is computed per
+    /// fragment at runtime, so accesses cannot just be rewritten to the per-element varyings.
+    /// Element-wise copies are inserted at the top of the fragment `main` and immediately before
+    /// a trailing top-level `return` (or at the end) of the vertex `main`. Only literally-sized,
+    /// single-dimension, non-struct, non-matrix arrays with fewer than four components per
+    /// element are affected. Explicit `layout(location=N)` on the array is cleared on the
+    /// generated elements so they do not all pin the same TEXCOORD.
+    ///
+    /// Only needed for the fxc (DXBC) backend; dxc accepts the indexable range.
+    void FlattenNarrowVaryingArrays(glslang::TProgram& program, IdGenerator& ids);
 
     /// Invert dFdy operands similar to bgfx_shader.sh
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45

@@ -3,6 +3,7 @@
 #include <arcana/tracing/trace_region.h>
 
 #include <cassert>
+#include <stdexcept>
 
 namespace
 {
@@ -66,6 +67,42 @@ namespace Babylon
 
         m_handle = bgfx::createProgram(vertexShader, fragmentShader, true);
         m_vertexAttributeLocations = shaderInfo->VertexAttributeLocations;
+
+        std::map<std::string, uint32_t> builtInSlots = shaderInfo->BuiltInInstanceDataSlots;
+        if (builtInSlots.empty())
+        {
+            uint32_t builtInCount{};
+            for (const auto& [name, location] : m_vertexAttributeLocations)
+            {
+                builtInCount += Graphics::IsBuiltInInstanceAttributeName(name) ? 1 : 0;
+            }
+            uint32_t slot{builtInCount};
+            for (const auto& [name, location] : m_vertexAttributeLocations)
+            {
+                if (Graphics::IsBuiltInInstanceAttributeName(name))
+                {
+                    builtInSlots.emplace(name, --slot);
+                }
+            }
+        }
+
+        m_builtInInstanceDataSlots.clear();
+        for (const auto& [name, slot] : builtInSlots)
+        {
+            const auto location = m_vertexAttributeLocations.find(name);
+            if (location == m_vertexAttributeLocations.end())
+            {
+                throw std::runtime_error{"Built-in instance attribute '" + name + "' has no shader location."};
+            }
+            if (slot >= Graphics::MAX_INSTANCE_DATA_SLOT_COUNT)
+            {
+                throw std::runtime_error{"Built-in instance attribute '" + name + "' has an invalid i_data slot."};
+            }
+            if (!m_builtInInstanceDataSlots.emplace(location->second, slot).second)
+            {
+                throw std::runtime_error{"Multiple built-in instance attributes use the same shader location."};
+            }
+        }
     }
 
     void Program::SetSources(std::string vertexSource, std::string fragmentSource)
@@ -124,6 +161,7 @@ namespace Babylon
         m_uniformNameToIndex.clear();
         m_uniformInfos.clear();
         m_vertexAttributeLocations.clear();
+        m_builtInInstanceDataSlots.clear();
     }
 
     void Program::SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength)

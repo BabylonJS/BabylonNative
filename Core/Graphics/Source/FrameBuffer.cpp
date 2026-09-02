@@ -82,6 +82,7 @@ namespace Babylon::Graphics
     {
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
         m_viewId = m_deviceContext.AcquireNewViewId();
+        m_viewIdGeneration = m_deviceContext.ViewIdGeneration();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
@@ -146,7 +147,17 @@ namespace Babylon::Graphics
     {
         // In order for Blit to work properly we need to force the creation of a new ViewID.
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
-        encoder.blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
+
+        // bgfx blit now takes TextureRegion pairs. UINT16_MAX was the old "whole texture"
+        // sentinel; zero width/height now means "rest of mip from x/y".
+        const uint16_t regionWidth{width == UINT16_MAX ? static_cast<uint16_t>(0) : width};
+        const uint16_t regionHeight{height == UINT16_MAX ? static_cast<uint16_t>(0) : height};
+
+        bgfx::TextureRegion dstRegion{};
+        dstRegion.init(dst, dstX, dstY, regionWidth, regionHeight);
+        bgfx::TextureRegion srcRegion{};
+        srcRegion.init(src, srcX, srcY, regionWidth, regionHeight);
+        encoder.blit(m_viewId.value(), dstRegion, srcRegion);
     }
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
@@ -197,12 +208,14 @@ namespace Babylon::Graphics
 
     void FrameBuffer::SetBgfxViewPortAndScissor(const Rect& viewPort, const Rect& scissor)
     {
-        if (m_viewId.has_value() && viewPort.Equals(m_bgfxViewPort) && scissor.Equals(m_bgfxScissor))
+        if (m_viewId.has_value() && m_viewIdGeneration == m_deviceContext.ViewIdGeneration() &&
+            viewPort.Equals(m_bgfxViewPort) && scissor.Equals(m_bgfxScissor))
         {
             return;
         }
 
         m_viewId = m_deviceContext.AcquireNewViewId();
+        m_viewIdGeneration = m_deviceContext.ViewIdGeneration();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);

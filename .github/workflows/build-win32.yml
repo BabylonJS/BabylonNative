@@ -65,8 +65,9 @@ jobs:
             ${{ steps.vars.outputs.js_define }} ^
             -D BX_CONFIG_DEBUG=ON ^
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
-            -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
             -D BABYLON_DEBUG_TRACE=ON ^
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
+            -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
             -D ENABLE_SANITIZERS=${{ steps.vars.outputs.sanitizer_flag }}
 
       - name: Build

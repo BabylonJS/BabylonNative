@@ -32,6 +32,11 @@
 
 namespace Babylon
 {
+    namespace Graphics
+    {
+        class Texture;
+    }
+
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
@@ -100,11 +105,14 @@ namespace Babylon
         void LoadTexture(const Napi::CallbackInfo& info);
         void CopyTexture(NativeDataStream::Reader& data);
         void LoadRawTexture(const Napi::CallbackInfo& info);
+        void UpdateTextureData(const Napi::CallbackInfo& info);
         void LoadRawTexture2DArray(const Napi::CallbackInfo& info);
+        void LoadRawTexture3D(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);
         Napi::Value GetTextureHeight(const Napi::CallbackInfo& info);
+        Napi::Value GetTextureLayerCount(const Napi::CallbackInfo& info);
         void SetTextureSampling(NativeDataStream::Reader& data);
         void SetTextureWrapMode(NativeDataStream::Reader& data);
         void SetTextureAnisotropicLevel(NativeDataStream::Reader& data);
@@ -114,9 +122,12 @@ namespace Babylon
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value ReadTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
+        Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
+        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples);
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
+        VertexBuffer::InstanceDataLayout GetInstanceDataLayout() const;
         void DrawIndexed(NativeDataStream::Reader& data);
         void DrawIndexedInstanced(NativeDataStream::Reader& data);
         void Draw(NativeDataStream::Reader& data);
@@ -138,7 +149,7 @@ namespace Babylon
         void PopulateFrameStats(const Napi::CallbackInfo& info);
         void BeginFrame(const Napi::CallbackInfo&);
         void EndFrame(const Napi::CallbackInfo&);
-        void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
+        void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout);
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();

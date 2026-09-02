@@ -111,6 +111,7 @@ namespace
             js.Set("listTests",          Napi::Boolean::New(env, playgroundOptions.ListTests));
             js.Set("headless",           Napi::Boolean::New(env, playgroundOptions.Headless));
             js.Set("breakOnFail",        Napi::Boolean::New(env, playgroundOptions.BreakOnFail));
+            js.Set("stopOnFirstFailure", Napi::Boolean::New(env, playgroundOptions.StopOnFirstFailure));
             js.Set("generateReferences", Napi::Boolean::New(env, playgroundOptions.GenerateReferences));
             js.Set("runOnce",            Napi::Boolean::New(env, playgroundOptions.RunOnce));
             js.Set("includeExcluded",    Napi::Boolean::New(env, playgroundOptions.IncludeExcluded));

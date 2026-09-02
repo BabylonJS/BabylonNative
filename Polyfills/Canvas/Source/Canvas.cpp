@@ -8,6 +8,7 @@
 #include <cstring>
 #include "Colors.h"
 #include "Gradient.h"
+#include "Font.h"
 
 namespace
 {
@@ -63,22 +64,29 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
     {
+        LoadTTFCore(info, "Canvas.loadTTF");
+    }
+
+    void NativeCanvas::LoadTTFCore(const Napi::CallbackInfo& info, const char* methodName)
+    {
+        if (info.Length() < 1 || !info[0].IsString())
+        {
+            throw Napi::TypeError::New(info.Env(), std::string{methodName} + " expects the font name as a string in argument 1.");
+        }
+
         // don't allow same font to be loaded more than once
         // why? because Context doesn't update nvgCreateFontMem when old fontBuffer released
         auto fontName = info[0].As<Napi::String>().Utf8Value();
         if (fontsInfos.find(fontName) == fontsInfos.end())
         {
-            const auto buffer = info[1].As<Napi::ArrayBuffer>();
-            std::vector<uint8_t> fontBuffer(buffer.ByteLength());
-            memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
-            fontsInfos[fontName] = std::move(fontBuffer);
+            fontsInfos[fontName] = GetFontDataArgument(info, 1, methodName);
         }
     }
 
     // @deprecated: LoadTTFAsync is always synchronous, use LoadTTF instead
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
-        LoadTTF(info);
+        LoadTTFCore(info, "Canvas.loadTTFAsync");
 
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
         deferred.Resolve(info.Env().Undefined());
@@ -214,10 +222,10 @@ namespace Babylon::Polyfills::Internal
             m_texture = std::make_unique<Graphics::Texture>(m_graphicsContext);
         }
 
-        m_texture->Attach(bgfx::getTexture(m_frameBuffer->Handle()), false, m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+        m_texture->Attach(bgfx::getTexture(m_frameBuffer->Handle()), m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
         // Hand the blit view id reserved during the preceding Context::Flush to the texture so
         // NativeEngine::CopyTexture blits on a view ordered before the consuming layer.
-        m_texture->BlitViewId(m_blitViewId);
+        m_texture->BlitViewId(m_blitViewId, m_blitViewIdGeneration);
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), m_texture.get());
     }
 

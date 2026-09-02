@@ -163,7 +163,7 @@ TEST(ExternalTexture, RenderWithMsaaSamples1)
 // after the MSAA resolve.
 TEST(ExternalTexture, RenderWithMsaaSamples4)
 {
-#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_MULTISAMPLE_TESTS)
     GTEST_SKIP();
 #else
     auto pixels = RenderAndReadback(4);

@@ -60,9 +60,27 @@ namespace Babylon::ShaderCompilerCommon
         std::vector<Uniform> Uniforms{};
     };
 
-    void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment);
-    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages);
+    void AppendUniformTextureMeta(std::vector<uint8_t>& bytes, uint8_t texComponent = 0, uint8_t texDimension = 0, uint16_t texFormat = 0);
+        uint8_t TextureDimensionIdFromResource(const spirv_cross::Compiler& compiler, const spirv_cross::Resource& resource);
+
+        void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment);
+        void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::ParsedIR& originalIr, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages);
     NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler);
+
+        // Which SPIR-V resource list is packaged as bgfx sampler uniforms.
+        enum class SamplerResourceSet
+        {
+            SeparateSamplers,
+            SeparateImages,
+            SampledImages,
+        };
+
+        using AppendSamplersFn = void (*)(
+            std::vector<uint8_t>& bytes,
+            const spirv_cross::Compiler& compiler,
+            const spirv_cross::ParsedIR& originalIr,
+            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers,
+            std::map<std::string, uint8_t>& stages);
 
     /// Assigns unique descriptor bindings to every uniform buffer in the shader so that
     /// when the SPIR-V is transpiled to HLSL/MSL each cbuffer ends up at a distinct
@@ -81,5 +99,14 @@ namespace Babylon::ShaderCompilerCommon
         std::map<std::string, std::string> AttributeRenaming;
     };
 
-    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo);
-}
+    // Backend-default packaging (D3D separate_samplers / GL sampled_images / Metal separate_images).
+    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo, std::map<std::string, uint32_t> builtInInstanceDataSlots);
+
+    // Explicit sampler resource set + appender (used by Vulkan for separate_images + v12 binding model).
+    Graphics::BgfxShaderInfo CreateBgfxShader(
+        ShaderInfo vertexShaderInfo,
+        ShaderInfo fragmentShaderInfo,
+        std::map<std::string, uint32_t> builtInInstanceDataSlots,
+        SamplerResourceSet samplerResources,
+        AppendSamplersFn appendSamplers);
+    }

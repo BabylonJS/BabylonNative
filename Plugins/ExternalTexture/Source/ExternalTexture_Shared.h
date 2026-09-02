@@ -36,36 +36,29 @@ namespace Babylon::Plugins
     {
         std::scoped_lock lock{m_mutex};
 
-        bgfx::TextureHandle handle = bgfx::createTexture2D(
+        auto texture = std::make_unique<Graphics::Texture>(context);
+        texture->Create2D(
             m_info.Width,
             m_info.Height,
             HasMips(),
             m_info.NumLayers,
             m_info.Format,
             m_info.Flags,
-            0,
-            NativeHandleToUintPtr(static_cast<Impl*>(this)->Get())
-        );
+            NativeTextureHandle(static_cast<Impl*>(this)->Get()));
 
         DEBUG_TRACE("ExternalTexture [0x%p] CreateForJavaScript %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
-            this, int(m_info.Width), int(m_info.Height), int(HasMips()), int(m_info.NumLayers), int(m_info.Format), int(m_info.Flags), int(handle.idx));
+            this, int(m_info.Width), int(m_info.Height), int(HasMips()), int(m_info.NumLayers), int(m_info.Format), int(m_info.Flags), int(texture->Handle().idx));
 
-        if (!bgfx::isValid(handle))
-        {
-            throw std::runtime_error{"Failed to create external texture"};
-        }
-
-        auto* texture = new Graphics::Texture{context};
-        texture->Attach(handle, true, m_info.Width, m_info.Height, HasMips(), m_info.NumLayers, m_info.Format, m_info.Flags);
         texture->ViewFirstLayer(layerIndex.value_or(0));
         texture->ViewNumLayers(layerIndex.has_value() ? 1 : 0);
 
-        if (!m_textures.insert(texture).second)
+        auto* result = texture.get();
+        if (!m_textures.insert(result).second)
         {
-            assert(!"Failed to insert texture");
+            throw std::runtime_error{"Failed to insert texture"};
         }
 
-        return texture;
+        return texture.release();
     }
 
     void ExternalTexture::ImplBase::DestroyTexture(Graphics::Texture* texture)

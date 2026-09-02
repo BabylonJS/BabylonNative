@@ -9,6 +9,7 @@
 
 #include "Helpers.h"
 
+#include <future>
 #include <iostream>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -169,7 +170,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 
 TEST(ExternalTexture, AddToContextAsyncWithLayerIndex)
 {
-#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_EXTERNAL_TEXTURE_ARRAY_TESTS)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};

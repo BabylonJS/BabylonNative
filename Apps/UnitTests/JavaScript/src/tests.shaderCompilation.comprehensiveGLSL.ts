@@ -108,6 +108,14 @@ flat out uint  vFlagsOut;
 smooth out vec4 vColor;
 centroid out vec2 vCentroidUV;
 out vec4 vSplatColor;
+// Narrow (scalar) varying array, read back with a runtime index in the fragment
+// shader. This mirrors Babylon.js cascaded shadow maps, whose per-cascade
+// "varying float vDepthMetric[N]" used to make SPIRV-Cross emit an indexable HLSL
+// input register range that fxc rejects -- and in practice hangs on -- because the
+// per-register write masks differ. The vec4 array below is the companion case that
+// was always legal, since its masks are uniform.
+out float vCascadeDepth[4];
+out vec4  vCascadePosition[4];
 
 // ── Constant declarations ───────────────────────────────────────────────
 const float EPSILON = 1e-6;
@@ -675,6 +683,12 @@ void main() {
     vCentroidUV  = uv;
     vColor       = color;
 
+    // Written through a loop so the array is not trivially scalarizable.
+    for (int c = 0; c < 4; ++c) {
+        vCascadeDepth[c]    = float(c) * 0.25 + uv.x;
+        vCascadePosition[c] = uViewProj * uModel * vec4(position + float(c), 1.0);
+    }
+
     gl_Position  = uViewProj * uModel * vec4(position, 1.0);
     gl_PointSize = 1.0;
 }
@@ -761,6 +775,9 @@ flat in uint  vFlagsOut;
 smooth in vec4 vColor;
 centroid in vec2 vCentroidUV;
 in vec4 vSplatColor;
+// See the vertex shader: scalar varying array selected by a runtime index.
+in float vCascadeDepth[4];
+in vec4  vCascadePosition[4];
 
 // ── Fragment output (MRT-capable) ───────────────────────────────────────
 layout(location = 0) out vec4 fragColor;
@@ -826,6 +843,25 @@ void main() {
     // ── Texture sampling: texelFetch() ──────────────────────────────
     ivec2 texCoord = ivec2(gl_FragCoord.xy);
     vec4  fetched  = texelFetch(uSampler2D, texCoord, 0);
+
+    // texelFetch coordinates are flipped vertically by the shader compiler, which has to clone
+    // the coordinate expression to reference it twice. Cover the operand shapes that appear in
+    // Babylon shaders beyond a plain symbol: a constructor, a binary expression, a nested
+    // constructor over a float expression, a nested constructor over integer binaries, built-in
+    // calls, and a non-constant lod. Integer multiply, divide, modulo and bitwise operators are
+    // deliberately avoided: Babylon Native builds glslang and SPIRV-Cross in their WEBMIN
+    // configurations, which do not support them, so they would fail for reasons that have nothing
+    // to do with texel coordinates.
+    int   fetchIndex = int(gl_FragCoord.x) + int(gl_FragCoord.y);
+    int   fetchLod = fetchIndex - fetchIndex;
+    ivec2 fetchSize = textureSize(uSampler2D, 0);
+    vec4  fetchedCtor   = texelFetch(uSampler2D, ivec2(gl_FragCoord.xy), 0);
+    vec4  fetchedOffset = texelFetch(uSampler2D, texCoord + ivec2(1, 1), 0);
+    vec4  fetchedScaled = texelFetch(uSampler2D, ivec2(vUV * vec2(fetchSize)), 0);
+    vec4  fetchedNested = texelFetch(uSampler2D, ivec2(fetchSize.x - texCoord.x, fetchSize.y - texCoord.y), 0);
+    vec4  fetchedCall   = texelFetch(uSampler2D, ivec2(abs(texCoord.x), abs(texCoord.y)), 0);
+    vec4  fetchedLod    = texelFetch(uSampler2D, texCoord.yx, fetchLod);
+    vec4  fetchedComplex = fetchedCtor + fetchedOffset + fetchedScaled + fetchedNested + fetchedCall + fetchedLod;
     
     // ── Texture sampling: textureSize() ─────────────────────────────
     ivec2 size2d    = textureSize(uSampler2D, 0);
@@ -951,7 +987,13 @@ void main() {
     gl_FragDepth = fragDepth;
 
     // ── Output (blend in splat color contribution) ────────────────────
-    fragColor = finalColor + vSplatColor * 0.001;
+    // Runtime-selected cascade, matching how Babylon.js CSM indexes vDepthMetric.
+    // The index must stay opaque to the compiler for this to exercise dynamic
+    // indexing of the flattened varying array.
+    int cascade = int(clamp(floor(fragDepth * 4.0), 0.0, 3.0));
+    float cascadeContribution = vCascadeDepth[cascade] + vCascadePosition[cascade].w;
+
+    fragColor = finalColor + vSplatColor * 0.001 + fetchedComplex * 0.0001 + cascadeContribution * 0.0001;
 }
 `;
 

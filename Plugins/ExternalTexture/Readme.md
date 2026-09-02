@@ -68,11 +68,13 @@ function YOUR_JS_FUNCTION(externalTexture, width, height) {
 
 This class assumes that the native texture was created using the same graphics device used to create the Babylon::Device. See [Properly Initialize `Babylon::Graphics::Device`](#properly-initialize-babylongraphicsdevice).
 
-`ExternalTexture::CreateForJavaScript` synchronously returns a `Napi::Value` wrapping a bgfx texture handle that is backed directly by the native texture. The returned value can be passed to `engine.wrapNativeTexture` on the JS side.
+`ExternalTexture::CreateForJavaScript` synchronously returns a `Napi::Value` wrapping a Babylon Native texture that is backed directly by the native texture. The returned value can be passed to `engine.wrapNativeTexture` on the JS side.
 
 It is safe to create multiple JS objects from the same `Babylon::Plugins::ExternalTexture` via `ExternalTexture::CreateForJavaScript`.
 
 Once the JS texture is available on the JS side, use `engine.wrapNativeTexture` to create an Babylon.js `InternalTexture`.
+
+If the `InternalTexture` is stored in a `ThinTexture`, call `ThinTexture.dispose()` as soon as it will no longer be used; otherwise, call `InternalTexture.dispose()` directly. Disposal immediately releases Babylon Native's rendering resources for that texture. The caller can then release the externally owned texture and its GPU memory without waiting for JavaScript finalization. The lightweight native wrapper remains allocated until finalization but no longer holds rendering resources, and `ExternalTexture::Update` does not make it usable again.
 
 ## Example 1: Copy rendering content (D3D12)
 

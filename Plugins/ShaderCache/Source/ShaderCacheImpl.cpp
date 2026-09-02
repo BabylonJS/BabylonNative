@@ -35,7 +35,13 @@ namespace
 
 namespace Babylon::Plugins::ShaderCache
 {
-    static const uint32_t CACHE_VERSION = 2;
+    // 3: sampler uniforms are stored under their original GLSL name rather than the
+    //    SPIRV-Cross-renamed identifier, which changes both the bgfx uniform table in
+    //    Vertex/FragmentBytes and the keys of UniformStages.
+    // 4: store the compiler-assigned built-in instance-data slots.
+    // 5: shader binary packaging bumped to bgfx BGFX_SHADER_BIN_VERSION 12 (raw
+    //    SRV/UAV masks + tex meta); stale v4 cache entries would be rejected by bgfx.
+    static const uint32_t CACHE_VERSION = 5;
 
     void ShaderCacheImpl::Clear()
     {
@@ -66,6 +72,14 @@ namespace Babylon::Plugins::ShaderCache
             {
                 SaveString(stream, attributeLocation.first);
                 stream.write(reinterpret_cast<const char*>(&attributeLocation.second), sizeof(uint32_t));
+            }
+
+            uint32_t builtInInstanceDataSlotCount{static_cast<uint32_t>(info->BuiltInInstanceDataSlots.size())};
+            stream.write(reinterpret_cast<const char*>(&builtInInstanceDataSlotCount), sizeof(uint32_t));
+            for (const auto& [name, slot] : info->BuiltInInstanceDataSlots)
+            {
+                SaveString(stream, name);
+                stream.write(reinterpret_cast<const char*>(&slot), sizeof(uint32_t));
             }
 
             uint32_t stageCount{static_cast<uint32_t>(info->UniformStages.size())};
@@ -112,6 +126,17 @@ namespace Babylon::Plugins::ShaderCache
                 uint32_t locationIndex;
                 stream.read(reinterpret_cast<char*>(&locationIndex), sizeof(uint32_t));
                 info->VertexAttributeLocations[locationName] = locationIndex;
+            }
+
+            uint32_t builtInInstanceDataSlotCount;
+            stream.read(reinterpret_cast<char*>(&builtInInstanceDataSlotCount), sizeof(uint32_t));
+            for (unsigned int index = 0; index < builtInInstanceDataSlotCount; ++index)
+            {
+                std::string name;
+                LoadString(stream, name);
+                uint32_t slot;
+                stream.read(reinterpret_cast<char*>(&slot), sizeof(uint32_t));
+                info->BuiltInInstanceDataSlots[name] = slot;
             }
 
             uint32_t stageCount;

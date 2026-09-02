@@ -1,6 +1,8 @@
 #include "VertexBuffer.h"
 #include "Babylon/Graphics/DeviceContext.h"
+#include <algorithm>
 #include <cassert>
+#include <string>
 
 namespace Babylon
 {
@@ -124,7 +126,58 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount)
+    VertexBuffer::InstanceDataLayout VertexBuffer::CreateInstanceDataLayout(
+        const std::map<uint32_t, InstanceInfo>& instances,
+        const std::map<uint32_t, uint32_t>& builtInSlots,
+        uint32_t maxSlotCount)
+    {
+        if (instances.empty())
+        {
+            return {};
+        }
+
+        if (builtInSlots.size() > maxSlotCount)
+        {
+            throw std::runtime_error{"Shader declares more built-in instance-data slots than the device supports."};
+        }
+
+        std::vector<bool> usedBuiltInSlots(builtInSlots.size());
+        InstanceDataLayout layout{};
+        for (const auto& [attrib, slot] : builtInSlots)
+        {
+            if (slot >= usedBuiltInSlots.size() || usedBuiltInSlots[slot])
+            {
+                throw std::runtime_error{"Shader has an invalid built-in instance-data layout."};
+            }
+            usedBuiltInSlots[slot] = true;
+            if (instances.count(attrib) != 0)
+            {
+                layout.Slots.emplace(attrib, slot);
+            }
+        }
+
+        uint32_t nextSlot = static_cast<uint32_t>(builtInSlots.size());
+        for (auto instance = instances.rbegin(); instance != instances.rend(); ++instance)
+        {
+            if (builtInSlots.count(instance->first) != 0)
+            {
+                continue;
+            }
+            if (nextSlot >= maxSlotCount)
+            {
+                throw std::runtime_error{"Number of vertex buffer instance slots greater than " + std::to_string(maxSlotCount) + " is not supported"};
+            }
+            layout.Slots.emplace(instance->first, nextSlot++);
+        }
+        layout.SlotCount = nextSlot;
+        return layout;
+    }
+
+    void VertexBuffer::BuildInstanceDataBuffer(
+        bgfx::InstanceDataBuffer& instanceDataBuffer,
+        const std::map<uint32_t, InstanceInfo>& instances,
+        uint32_t instanceCount,
+        const InstanceDataLayout& layout)
     {
         // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
         static constexpr uint16_t kSlotSize = 16;
@@ -145,31 +198,43 @@ namespace Babylon
             return;
         }
 
-        const uint16_t instanceStride = static_cast<uint16_t>(instances.size() * kSlotSize);
+        const size_t slotCount = layout.SlotCount;
+        const uint32_t maxInstanceData = bgfx::getCaps()->limits.maxInstanceData;
+        if (slotCount > maxInstanceData)
+        {
+            throw std::runtime_error{"Number of vertex buffer instance slots greater than " + std::to_string(maxInstanceData) + " is not supported"};
+        }
+        if (layout.Slots.size() != instances.size())
+        {
+            throw std::runtime_error{"Instance-data layout does not cover every recorded attribute."};
+        }
+
+        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
 
         // Create instance datas. Instance Data Buffer is transient.
         bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
 
         uint8_t* data{instanceDataBuffer.data};
 
-        // Zero the buffer so any unused bytes within a 16-byte slot (when ElementSize < 16) read as
-        // zero in the shader instead of leaking transient ring-buffer garbage.
+        // Zero the buffer so any unused bytes within a 16-byte slot (when ElementSize < 16), and any
+        // slot the draw supplied no data for at all, read as zero in the shader instead of leaking
+        // transient ring-buffer garbage.
         std::memset(data, 0, static_cast<size_t>(instanceStride) * instanceCount);
 
-        // Reverse because bgfx maps instance data in reverse attrib order:
-        // D3D11: TEXCOORD7 = i_data0, TEXCOORD6 = i_data1, etc.
-        // OpenGL also expects this layout since bgfx abstracts the mapping.
-        uint32_t slotOffset{};
-        for (auto iter = instances.rbegin(); iter != instances.rend(); ++iter)
+        for (const auto& [attrib, element] : instances)
         {
-            const auto& element{iter->second};
+            const uint32_t slot = layout.Slots.at(attrib);
+            if (slot >= layout.SlotCount)
+            {
+                throw std::runtime_error{"Instance-data attribute maps outside the allocated buffer."};
+            }
+            const uint32_t slotOffset = slot * kSlotSize;
             assert(element.ElementSize <= kSlotSize);
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {
                 std::memcpy(data + instance * instanceStride + slotOffset, source + instance * element.Stride + element.Offset, element.ElementSize);
             }
-            slotOffset += kSlotSize;
         }
     }
 }
