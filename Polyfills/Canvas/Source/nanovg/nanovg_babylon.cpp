@@ -1016,7 +1016,7 @@ namespace
         // The canvas framebuffer is bound with a fresh view by Context::Flush before this
         // flush runs, so the first draw call can reuse that view without re-binding.
         gl->canvasViewNeedsRefresh = false;
-        if (!gl->prog.idx)
+        if (!bgfx::isValid(gl->prog))
         {
             bgfx::RendererType::Enum type = bgfx::getRendererType();
             gl->prog = bgfx::createProgram(
@@ -1344,7 +1344,7 @@ namespace
             return;
         }
 
-        // BGFX_INVALID_HANDLE is UINT16_MAX (not 0). idx==0 is a valid first program.
+        // Handles are initialized to BGFX_INVALID_HANDLE; prog is lazy-created on flush.
         // Guard every destroy so a partially-initialized or never-flushed context is safe.
         if (bgfx::isValid(gl->prog))
         {
@@ -1437,6 +1437,23 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     }
 
     bx::memSet(gl, 0, sizeof(struct GLNVGcontext) );
+    // memSet leaves handle idx at 0; bgfx treats 0 as a valid first handle, so mark
+    // resources invalid until create* runs (prog is also lazy-created on first flush).
+    gl->prog = BGFX_INVALID_HANDLE;
+    gl->u_scissorMat = BGFX_INVALID_HANDLE;
+    gl->u_paintMat = BGFX_INVALID_HANDLE;
+    gl->u_innerCol = BGFX_INVALID_HANDLE;
+    gl->u_outerCol = BGFX_INVALID_HANDLE;
+    gl->u_scissorExtScale = BGFX_INVALID_HANDLE;
+    gl->u_extentRadius = BGFX_INVALID_HANDLE;
+    gl->u_params = BGFX_INVALID_HANDLE;
+    gl->u_halfTexel = BGFX_INVALID_HANDLE;
+    gl->u_sdf = BGFX_INVALID_HANDLE;
+    gl->s_tex = BGFX_INVALID_HANDLE;
+    gl->s_tex2 = BGFX_INVALID_HANDLE;
+    gl->th = BGFX_INVALID_HANDLE;
+    gl->th2 = BGFX_INVALID_HANDLE;
+    gl->texMissing = BGFX_INVALID_HANDLE;
 
     bx::memSet(&params, 0, sizeof(params) );
     params.renderCreate         = nvgRenderCreate;
