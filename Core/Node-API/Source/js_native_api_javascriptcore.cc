@@ -1547,7 +1547,12 @@ napi_status napi_typeof(napi_env env, napi_value value, napi_valuetype* result) 
     case kJSTypeSymbol: *result = napi_symbol; break;
     default:
       JSObjectRef object{ToJSObject(env, value)};
-      if (JSObjectIsFunction(env->context, object)) {
+      // Consult JSObjectIsConstructor in addition to JSObjectIsFunction: some JSC builds (e.g.
+      // libjavascriptcoregtk) report constructors created via JSObjectMakeConstructor -- such as
+      // node-addon-api DefineClass constructors -- as not-a-function, which would otherwise be
+      // classified as napi_object and make Napi IsFunction() reject otherwise-valid constructors
+      // (see issue #194).
+      if (JSObjectIsFunction(env->context, object) || JSObjectIsConstructor(env->context, object)) {
         *result = napi_function;
       } else {
         NativeInfo* info = NativeInfo::Get<NativeInfo>(object);
@@ -2138,7 +2143,9 @@ napi_status napi_open_escapable_handle_scope(napi_env env,
                                              napi_escapable_handle_scope* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, result);
-  *result = reinterpret_cast<napi_escapable_handle_scope>(1);
+  const size_t token = ++env->next_escapable_scope_token;
+  env->open_escapable_scopes.emplace(token, false);
+  *result = reinterpret_cast<napi_escapable_handle_scope>(token);
   return napi_ok;
 }
 
@@ -2147,11 +2154,17 @@ napi_status napi_close_escapable_handle_scope(napi_env env,
                                               napi_escapable_handle_scope scope) {
   CHECK_ENV(env);
   CHECK_ARG(env, scope);
+  const auto it = env->open_escapable_scopes.find(reinterpret_cast<size_t>(scope));
+  if (it == env->open_escapable_scopes.end()) {
+    return napi_set_last_error(env, napi_invalid_arg);
+  }
+  env->open_escapable_scopes.erase(it);
   return napi_ok;
 }
 
-// Stub implementation of handle scope apis for JSC.
-// This one will return escapee value as this is called from leveldown db.
+// JSC roots values independently of any scope, so the escapee is returned as
+// is. The scope is still tracked so a second escape is rejected as Node-API
+// requires.
 napi_status napi_escape_handle(napi_env env,
                                napi_escapable_handle_scope scope,
                                napi_value escapee,
@@ -2160,6 +2173,14 @@ napi_status napi_escape_handle(napi_env env,
   CHECK_ARG(env, scope);
   CHECK_ARG(env, escapee);
   CHECK_ARG(env, result);
+  const auto it = env->open_escapable_scopes.find(reinterpret_cast<size_t>(scope));
+  if (it == env->open_escapable_scopes.end()) {
+    return napi_set_last_error(env, napi_invalid_arg);
+  }
+  if (it->second) {
+    return napi_set_last_error(env, napi_escape_called_twice);
+  }
+  it->second = true;
   *result = escapee;
   return napi_ok;
 }

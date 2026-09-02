@@ -6,6 +6,7 @@
 #include <UrlLib/UrlLib.h>
 
 #include <unordered_map>
+#include <vector>
 
 namespace Babylon::Polyfills::Internal
 {

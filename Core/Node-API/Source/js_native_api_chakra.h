@@ -7,6 +7,7 @@
 #include <napi/js_native_api_types.h>
 #include <thread>
 #include <cassert>
+#include <map>
 
 struct napi_env__ {
   JsSourceContext source_context = JS_SOURCE_CONTEXT_NONE;
@@ -14,6 +15,14 @@ struct napi_env__ {
   JsValueRef has_own_property_function = JS_INVALID_REFERENCE;
 
   JsPropertyIdRef wrap_property_id = JS_INVALID_REFERENCE;
+
+  // Escapable scope bookkeeping: token -> whether that scope has escaped. Values
+  // are rooted by the engine rather than by a scope here, so this exists only to
+  // honour the one-escape-per-scope rule and to reject tokens that are not open.
+  // The token is a monotonic counter, never an index into anything, so two scopes
+  // can never share one.
+  size_t next_escapable_scope_token = 0;
+  std::map<size_t, bool> open_escapable_scopes;
 
   const std::thread::id thread_id{std::this_thread::get_id()};
 };

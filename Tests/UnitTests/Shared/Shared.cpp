@@ -111,6 +111,60 @@ TEST(JavaScript, All)
     EXPECT_EQ(exitCode, 0);
 }
 
+// The unit test host's UnhandledExceptionHandler fails the whole JavaScript
+// suite, so a throwing timer callback cannot be exercised from tests.ts. This
+// covers it natively instead.
+TEST(Scheduling, IntervalSurvivesThrowingCallback)
+{
+    // Regression: repeating timeouts are re-armed after their callback returns
+    // rather than before it runs, so an exception escaping a tick must not
+    // silently stop the interval. Browsers keep the interval running and report
+    // the error, and that is also what this dispatcher did previously.
+    std::promise<int32_t> tickCountPromise;
+    std::atomic<int32_t> unhandledErrorCount{0};
+
+    Babylon::AppRuntime::Options options{};
+    options.UnhandledExceptionHandler = [&unhandledErrorCount](const Napi::Error&) {
+        ++unhandledErrorCount;
+    };
+
+    Babylon::AppRuntime runtime{options};
+
+    runtime.Dispatch([&tickCountPromise](Napi::Env env) {
+        Babylon::Polyfills::Scheduling::Initialize(env);
+
+        auto reportTicks = Napi::Function::New(
+            env, [&tickCountPromise](const Napi::CallbackInfo& info) {
+                tickCountPromise.set_value(info[0].As<Napi::Number>().Int32Value());
+            },
+            "reportTicks");
+        env.Global().Set("reportTicks", reportTicks);
+    });
+
+    Babylon::ScriptLoader loader{runtime};
+    loader.Eval(R"(
+        var ticks = 0;
+        var id = setInterval(function () {
+            ticks++;
+            if (ticks === 3) {
+                clearInterval(id);
+                reportTicks(ticks);
+                return;
+            }
+            throw new Error('tick failed');
+        }, 1);
+    )",
+        "");
+
+    auto tickCountFuture{tickCountPromise.get_future()};
+    ASSERT_EQ(tickCountFuture.wait_for(std::chrono::seconds(10)), std::future_status::ready)
+        << "the interval stopped after a tick threw";
+    EXPECT_EQ(tickCountFuture.get(), 3);
+
+    // The first two ticks threw, and those errors must still be surfaced.
+    EXPECT_EQ(unhandledErrorCount.load(), 2);
+}
+
 TEST(Console, Log)
 {
     Babylon::AppRuntime runtime{};
@@ -401,6 +455,377 @@ TEST(NodeApi, GetValueStringUtf16HandlesZeroBufsize)
     EXPECT_TRUE(zeroSafe.get_future().get());
     EXPECT_TRUE(normalWorks.get_future().get());
 }
+
+// Closes an escapable handle scope however the test leaves it. Without this, a
+// failing assertion returns with the scope still open, the enclosing
+// Napi::HandleScope then fails to close, and Napi::Error::Fatal throws out of its
+// implicitly-noexcept destructor -- so the process terminates with no FAILED line
+// instead of reporting the assertion.
+class ScopedEscapableHandleScope
+{
+public:
+    ScopedEscapableHandleScope(napi_env env, napi_escapable_handle_scope scope)
+        : m_env{env}
+        , m_scope{scope}
+    {
+    }
+
+    ~ScopedEscapableHandleScope()
+    {
+        Close();
+    }
+
+    ScopedEscapableHandleScope(const ScopedEscapableHandleScope&) = delete;
+    ScopedEscapableHandleScope& operator=(const ScopedEscapableHandleScope&) = delete;
+
+    napi_status Close()
+    {
+        if (m_scope == nullptr)
+        {
+            return napi_ok;
+        }
+
+        const napi_escapable_handle_scope scope{m_scope};
+        m_scope = nullptr;
+        return napi_close_escapable_handle_scope(m_env, scope);
+    }
+
+private:
+    napi_env m_env;
+    napi_escapable_handle_scope m_scope;
+};
+
+// Regression: a handle returned by napi_escape_handle must stay alive after its
+// escapable scope is closed. The escaped handle is stored in the parent scope, so
+// closing the scope must not free it along with the scope's own handles. This is the
+// contract Napi::ObjectReference::Get relies on, which in turn is what
+// Napi::Error::Message and Napi::Error::what use, so getting it wrong turns any
+// report of a native error message into a use-after-free.
+TEST(NodeApi, EscapedHandleOutlivesItsScope)
+{
+    Babylon::AppRuntime runtime{};
+
+    std::promise<bool> escapedValueIsIntact;
+
+    runtime.Dispatch([&escapedValueIsIntact](Napi::Env env) mutable {
+        napi_env nenv{env};
+
+        // Assertions stay on the test thread: the dispatched lambda reports through the
+        // promise and returns early on failure so the waiter can never deadlock.
+        napi_escapable_handle_scope scope{};
+        if (napi_open_escapable_handle_scope(nenv, &scope) != napi_ok)
+        {
+            escapedValueIsIntact.set_value(false);
+            return;
+        }
+        ScopedEscapableHandleScope scopeGuard{nenv, scope};
+
+        napi_value inner{};
+        if (napi_create_string_utf8(nenv, "escape me", NAPI_AUTO_LENGTH, &inner) != napi_ok)
+        {
+            escapedValueIsIntact.set_value(false);
+            return;
+        }
+
+        napi_value escaped{};
+        if (napi_escape_handle(nenv, scope, inner, &escaped) != napi_ok)
+        {
+            escapedValueIsIntact.set_value(false);
+            return;
+        }
+
+        if (scopeGuard.Close() != napi_ok)
+        {
+            escapedValueIsIntact.set_value(false);
+            return;
+        }
+
+        // Allocate through the parent scope so a dangling escaped handle is likely to
+        // have been reused by the time it is read back.
+        for (int i = 0; i < 32; ++i)
+        {
+            napi_value filler{};
+            napi_create_string_utf8(nenv, "filler filler filler", NAPI_AUTO_LENGTH, &filler);
+        }
+
+        char buffer[32]{};
+        size_t copied{0};
+        const napi_status status{napi_get_value_string_utf8(nenv, escaped, buffer, sizeof(buffer), &copied)};
+        escapedValueIsIntact.set_value(status == napi_ok && copied == 9 && std::string{buffer} == "escape me");
+    });
+
+    EXPECT_TRUE(escapedValueIsIntact.get_future().get());
+}
+
+// Regression: two escapable scopes open at once, both escaping before either closes,
+// then closed innermost first. An implementation that stores an escaped handle by
+// inserting it into the middle of the handle stack shifts every entry above it,
+// silently invalidating the start index the still-open inner scope was handed. Closing
+// the inner scope then keeps the wrong slot and frees the inner escaped handle,
+// reintroducing the dangling napi_value this fix is about.
+//
+// Engines differ on whether the outer scope may escape while an inner one is open, so
+// the test only requires that of the engines that allow it.
+TEST(NodeApi, NestedEscapableScopesBothEscape)
+{
+    Babylon::AppRuntime runtime{};
+
+    std::promise<bool> bothValuesIntact;
+
+    runtime.Dispatch([&bothValuesIntact](Napi::Env env) mutable {
+        napi_env nenv{env};
+
+        const auto fail = [&bothValuesIntact]() { bothValuesIntact.set_value(false); };
+
+        napi_escapable_handle_scope outerScope{};
+        if (napi_open_escapable_handle_scope(nenv, &outerScope) != napi_ok)
+        {
+            return fail();
+        }
+        ScopedEscapableHandleScope outerGuard{nenv, outerScope};
+
+        // Give the outer scope handles of its own, so the inner scope starts at a
+        // different index and the shifting bug is observable.
+        for (int i = 0; i < 4; ++i)
+        {
+            napi_value outerFiller{};
+            if (napi_create_string_utf8(nenv, "outer filler", NAPI_AUTO_LENGTH, &outerFiller) != napi_ok)
+            {
+                return fail();
+            }
+        }
+
+        napi_value outerSource{};
+        if (napi_create_string_utf8(nenv, "outer value", NAPI_AUTO_LENGTH, &outerSource) != napi_ok)
+        {
+            return fail();
+        }
+
+        napi_escapable_handle_scope innerScope{};
+        if (napi_open_escapable_handle_scope(nenv, &innerScope) != napi_ok)
+        {
+            return fail();
+        }
+        ScopedEscapableHandleScope innerGuard{nenv, innerScope};
+
+        napi_value innerSource{};
+        if (napi_create_string_utf8(nenv, "inner value", NAPI_AUTO_LENGTH, &innerSource) != napi_ok)
+        {
+            return fail();
+        }
+
+        // Inner escapes first, then the still-open outer scope escapes.
+        napi_value innerEscaped{};
+        if (napi_escape_handle(nenv, innerScope, innerSource, &innerEscaped) != napi_ok)
+        {
+            return fail();
+        }
+
+        // Hermes only permits escaping from the innermost open scope and reports
+        // napi_handle_scope_mismatch here. That is a legitimate refusal rather than a
+        // failure, so record whether the engine allows this and keep checking the part
+        // that applies either way.
+        napi_value outerEscaped{};
+        const napi_status outerEscapeStatus{napi_escape_handle(nenv, outerScope, outerSource, &outerEscaped)};
+        const bool outerEscapeSupported{outerEscapeStatus == napi_ok};
+        if (!outerEscapeSupported && outerEscapeStatus != napi_handle_scope_mismatch)
+        {
+            return fail();
+        }
+
+        // Close innermost first, as the scopes must be.
+        if (innerGuard.Close() != napi_ok)
+        {
+            return fail();
+        }
+
+        // The inner escaped handle now belongs to the outer scope and must still read
+        // back while that scope is open. Churn allocations first: a wrongly freed handle
+        // only reads back wrong once its block has been reused, so allocate enough to
+        // make that near certain rather than a matter of luck.
+        for (int i = 0; i < 512; ++i)
+        {
+            napi_value filler{};
+            napi_create_string_utf8(nenv, "filler filler filler", NAPI_AUTO_LENGTH, &filler);
+        }
+
+        char innerBuffer[32]{};
+        size_t innerCopied{0};
+        if (napi_get_value_string_utf8(nenv, innerEscaped, innerBuffer, sizeof(innerBuffer), &innerCopied) != napi_ok ||
+            std::string{innerBuffer} != "inner value")
+        {
+            return fail();
+        }
+
+        if (outerGuard.Close() != napi_ok)
+        {
+            return fail();
+        }
+
+        for (int i = 0; i < 512; ++i)
+        {
+            napi_value filler{};
+            napi_create_string_utf8(nenv, "filler filler filler", NAPI_AUTO_LENGTH, &filler);
+        }
+
+        if (!outerEscapeSupported)
+        {
+            // Nothing escaped from the outer scope, so the inner check above is the whole
+            // result on this engine.
+            bothValuesIntact.set_value(true);
+            return;
+        }
+
+        char outerBuffer[32]{};
+        size_t outerCopied{0};
+        const napi_status status{napi_get_value_string_utf8(nenv, outerEscaped, outerBuffer, sizeof(outerBuffer), &outerCopied)};
+        bothValuesIntact.set_value(status == napi_ok && std::string{outerBuffer} == "outer value");
+    });
+
+    EXPECT_TRUE(bothValuesIntact.get_future().get());
+}
+
+// Node-API permits at most one escape per escapable scope. The second call must be
+// rejected with napi_escape_called_twice, and must leave the first escaped handle
+// untouched rather than replacing or freeing it.
+TEST(NodeApi, SecondEscapeIsRejected)
+{
+    Babylon::AppRuntime runtime{};
+
+    std::promise<bool> secondEscapeRejected;
+    std::promise<bool> firstValueIntact;
+
+    runtime.Dispatch([&secondEscapeRejected, &firstValueIntact](Napi::Env env) mutable {
+        napi_env nenv{env};
+
+        const auto fail = [&secondEscapeRejected, &firstValueIntact]() {
+            secondEscapeRejected.set_value(false);
+            firstValueIntact.set_value(false);
+        };
+
+        napi_escapable_handle_scope scope{};
+        if (napi_open_escapable_handle_scope(nenv, &scope) != napi_ok)
+        {
+            return fail();
+        }
+        ScopedEscapableHandleScope scopeGuard{nenv, scope};
+
+        napi_value first{};
+        napi_value second{};
+        if (napi_create_string_utf8(nenv, "first", NAPI_AUTO_LENGTH, &first) != napi_ok ||
+            napi_create_string_utf8(nenv, "second", NAPI_AUTO_LENGTH, &second) != napi_ok)
+        {
+            return fail();
+        }
+
+        napi_value firstEscaped{};
+        if (napi_escape_handle(nenv, scope, first, &firstEscaped) != napi_ok)
+        {
+            return fail();
+        }
+
+        napi_value secondEscaped{};
+        secondEscapeRejected.set_value(
+            napi_escape_handle(nenv, scope, second, &secondEscaped) == napi_escape_called_twice);
+
+        if (scopeGuard.Close() != napi_ok)
+        {
+            firstValueIntact.set_value(false);
+            return;
+        }
+
+        for (int i = 0; i < 32; ++i)
+        {
+            napi_value filler{};
+            napi_create_string_utf8(nenv, "filler filler filler", NAPI_AUTO_LENGTH, &filler);
+        }
+
+        char buffer[32]{};
+        size_t copied{0};
+        const napi_status status{napi_get_value_string_utf8(nenv, firstEscaped, buffer, sizeof(buffer), &copied)};
+        firstValueIntact.set_value(status == napi_ok && std::string{buffer} == "first");
+    });
+
+    EXPECT_TRUE(secondEscapeRejected.get_future().get());
+    EXPECT_TRUE(firstValueIntact.get_future().get());
+}
+
+// Regression: two escapable scopes opened with no handle allocated between them.
+// An implementation whose opaque token is derived from a position in the handle
+// stack hands both scopes the same token, so the second scope to escape is refused
+// with napi_escape_called_twice despite never having escaped. Deriving the token
+// from a counter instead keeps the two apart.
+TEST(NodeApi, AdjacentEscapableScopesEscapeIndependently)
+{
+    Babylon::AppRuntime runtime{};
+
+    std::promise<bool> bothEscapesAccepted;
+
+    runtime.Dispatch([&bothEscapesAccepted](Napi::Env env) mutable {
+        napi_env nenv{env};
+
+        const auto fail = [&bothEscapesAccepted]() { bothEscapesAccepted.set_value(false); };
+
+        napi_escapable_handle_scope outerScope{};
+        if (napi_open_escapable_handle_scope(nenv, &outerScope) != napi_ok)
+        {
+            return fail();
+        }
+        ScopedEscapableHandleScope outerGuard{nenv, outerScope};
+
+        // Deliberately allocate nothing here: this is what makes the two scopes share a
+        // position in the handle stack.
+        napi_escapable_handle_scope innerScope{};
+        if (napi_open_escapable_handle_scope(nenv, &innerScope) != napi_ok)
+        {
+            return fail();
+        }
+        ScopedEscapableHandleScope innerGuard{nenv, innerScope};
+
+        napi_value innerSource{};
+        if (napi_create_string_utf8(nenv, "inner value", NAPI_AUTO_LENGTH, &innerSource) != napi_ok)
+        {
+            return fail();
+        }
+
+        napi_value innerEscaped{};
+        if (napi_escape_handle(nenv, innerScope, innerSource, &innerEscaped) != napi_ok)
+        {
+            return fail();
+        }
+
+        napi_value outerSource{};
+        if (napi_create_string_utf8(nenv, "outer value", NAPI_AUTO_LENGTH, &outerSource) != napi_ok)
+        {
+            return fail();
+        }
+
+        // The outer scope has not escaped yet, so this must not be refused.
+        napi_value outerEscaped{};
+        const napi_status outerEscapeStatus{napi_escape_handle(nenv, outerScope, outerSource, &outerEscaped)};
+        if (outerEscapeStatus == napi_handle_scope_mismatch)
+        {
+            // Engines that only allow escaping from the innermost open scope cannot
+            // exercise this case at all; the inner escape above is the whole result.
+            bothEscapesAccepted.set_value(true);
+            return;
+        }
+        if (outerEscapeStatus != napi_ok)
+        {
+            return fail();
+        }
+
+        if (innerGuard.Close() != napi_ok || outerGuard.Close() != napi_ok)
+        {
+            return fail();
+        }
+
+        bothEscapesAccepted.set_value(true);
+    });
+
+    EXPECT_TRUE(bothEscapesAccepted.get_future().get());
+}
+
 #endif
 
 int RunTests()

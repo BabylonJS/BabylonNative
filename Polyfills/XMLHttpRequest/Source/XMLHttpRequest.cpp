@@ -2,6 +2,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <arcana/tracing/trace_region.h>
+#include <cstring>
 #include <sstream>
 
 namespace Babylon::Polyfills::Internal
@@ -120,7 +121,8 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_request.ResponseType() == UrlLib::UrlResponseType::String)
         {
-            return Napi::Value::From(Env(), m_request.ResponseString().data());
+            const std::string_view responseString{m_request.ResponseString()};
+            return Napi::String::New(Env(), responseString.data(), responseString.size());
         }
         else
         {
@@ -133,7 +135,12 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), m_request.ResponseString().data());
+        // The body may legitimately contain embedded nulls: Emscripten's EXPORT_ES6 output, for
+        // example, inlines the .wasm payload as a JavaScript string literal. Passing .data()
+        // alone would hand a const char* to Napi and truncate at the first null, so the length
+        // has to be supplied explicitly.
+        const std::string_view responseString{m_request.ResponseString()};
+        return Napi::String::New(Env(), responseString.data(), responseString.size());
     }
 
     Napi::Value XMLHttpRequest::GetResponseType(const Napi::CallbackInfo&)
