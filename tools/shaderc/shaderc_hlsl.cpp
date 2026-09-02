@@ -1,0 +1,780 @@
+/*
+ * Copyright 2011-2026 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
+ */
+
+#include "shaderc.h"
+
+#if SHADERC_CONFIG_HAS_D3DCOMPILER
+
+#if defined(__MINGW32__)
+#	define __REQUIRED_RPCNDR_H_VERSION__ 475
+#	define __in
+#	define __out
+#endif // defined(__MINGW32__)
+
+#define COM_NO_WINDOWS_H
+#if BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+#	include <wsl/winadapter.h>
+#	include <d3d4linux.h>
+#else
+#	include <d3dcompiler.h>
+#	include <d3d11shader.h>
+#endif // BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+#include <bx/os.h>
+
+#ifndef D3D_SVF_USED
+#	define D3D_SVF_USED 2
+#endif // D3D_SVF_USED
+
+namespace bgfx { namespace hlsl
+{
+	typedef HRESULT(WINAPI* PFN_D3D_COMPILE)(
+		  LPCVOID pSrcData
+		, SIZE_T SrcDataSize
+		, LPCSTR pSourceName
+		, CONST D3D_SHADER_MACRO* pDefines
+		, ID3DInclude* pInclude
+		, LPCSTR pEntrypoint
+		, LPCSTR pTarget
+		, UINT Flags1
+		, UINT Flags2
+		, ID3DBlob** ppCode
+		, ID3DBlob** ppErrorMsgs
+		);
+
+	typedef HRESULT(WINAPI* PFN_D3D_DISASSEMBLE)(
+		  LPCVOID pSrcData
+		, SIZE_T SrcDataSize
+		, UINT Flags
+		, LPCSTR szComments
+		, ID3DBlob** ppDisassembly
+		);
+
+	typedef HRESULT(WINAPI* PFN_D3D_REFLECT)(
+		  LPCVOID pSrcData
+		, SIZE_T SrcDataSize
+		, REFIID pInterface
+		, void** ppReflector
+		);
+
+	typedef HRESULT(WINAPI* PFN_D3D_STRIP_SHADER)(
+		  LPCVOID pShaderBytecode
+		, SIZE_T BytecodeLength
+		, UINT uStripFlags
+		, ID3DBlob** ppStrippedBlob
+		);
+
+	PFN_D3D_COMPILE      D3DCompile;
+	PFN_D3D_DISASSEMBLE  D3DDisassemble;
+	PFN_D3D_REFLECT      D3DReflect;
+	PFN_D3D_STRIP_SHADER D3DStripShader;
+
+	struct D3DCompiler
+	{
+		const char* fileName;
+		const GUID  reflectionGuid;
+	};
+
+	static const D3DCompiler s_d3dcompiler[] =
+	{ // BK - the only different method in interface is GetRequiresFlags at the end
+	  //      of IID_ID3D11ShaderReflection47 (which is not used anyway).
+		{ "D3DCompiler_47.dll", { 0x8d536ca1, 0x0cca, 0x4956, { 0xa8, 0x37, 0x78, 0x69, 0x63, 0x75, 0x55, 0x84 } } },
+		{ "D3DCompiler_46.dll", { 0x0a233719, 0x3960, 0x4578, { 0x9d, 0x7c, 0x20, 0x3b, 0x8b, 0x1d, 0x9c, 0xc1 } } },
+		{ "D3DCompiler_45.dll", { 0x0a233719, 0x3960, 0x4578, { 0x9d, 0x7c, 0x20, 0x3b, 0x8b, 0x1d, 0x9c, 0xc1 } } },
+		{ "D3DCompiler_44.dll", { 0x0a233719, 0x3960, 0x4578, { 0x9d, 0x7c, 0x20, 0x3b, 0x8b, 0x1d, 0x9c, 0xc1 } } },
+		{ "D3DCompiler_43.dll", { 0x0a233719, 0x3960, 0x4578, { 0x9d, 0x7c, 0x20, 0x3b, 0x8b, 0x1d, 0x9c, 0xc1 } } },
+	};
+
+	static const D3DCompiler* s_compiler = NULL;
+
+#if BX_PLATFORM_WINDOWS
+	static void* s_d3dcompilerdll = NULL;
+#endif // BX_PLATFORM_WINDOWS
+
+	const D3DCompiler* load(bx::WriterI* _messageWriter)
+	{
+#if BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+		BX_TRACE("Using d3d4linux for HLSL compilation (Wine-based D3DCompiler).");
+
+		bx::Error messageErr;
+		bx::FileInfo fi;
+
+		bx::FilePath executableDir = bx::FilePath(bx::Dir::Executable).getPath();
+
+		bx::FilePath d3d4linuxExe(executableDir);
+		d3d4linuxExe.join("../windows/d3d4linux.exe");
+
+		if (bx::stat(fi, d3d4linuxExe) )
+		{
+			bx::setEnv("D3D4LINUX_EXE", d3d4linuxExe);
+		}
+		else
+		{
+			bx::write(_messageWriter, &messageErr, "Error: `%s` not found.\n", d3d4linuxExe.getCPtr() );
+			return NULL;
+		}
+
+		bx::FilePath d3d4linuxDll(executableDir);
+		d3d4linuxDll.join("../windows/d3dcompiler_47.dll");
+
+		if (bx::stat(fi, d3d4linuxDll) )
+		{
+			bx::setEnv("D3D4LINUX_DLL", d3d4linuxDll);
+		}
+		else
+		{
+			bx::write(_messageWriter, &messageErr, "Error: `%s` not found.\n", d3d4linuxDll.getCPtr() );
+			return NULL;
+		}
+
+		if (g_verbose)
+		{
+			bx::setEnv("D3D4LINUX_VERBOSE", "1");
+		}
+
+		D3DCompile     = (PFN_D3D_COMPILE     )&d3d4linux::compile;
+		D3DReflect     = (PFN_D3D_REFLECT     )&d3d4linux::reflect;
+		D3DDisassemble = (PFN_D3D_DISASSEMBLE )&d3d4linux::disassemble;
+		D3DStripShader = (PFN_D3D_STRIP_SHADER)&d3d4linux::strip_shader;
+
+		return &s_d3dcompiler[0];
+#else
+		if (NULL != s_d3dcompilerdll)
+		{
+			return s_compiler;
+		}
+
+		bx::Error messageErr;
+
+		for (uint32_t ii = 0; ii < BX_COUNTOF(s_d3dcompiler); ++ii)
+		{
+			const D3DCompiler* compiler = &s_d3dcompiler[ii];
+			s_d3dcompilerdll = bx::dlopen(compiler->fileName);
+			if (NULL == s_d3dcompilerdll)
+			{
+				continue;
+			}
+
+			D3DCompile     = (PFN_D3D_COMPILE     )bx::dlsym(s_d3dcompilerdll, "D3DCompile");
+			D3DDisassemble = (PFN_D3D_DISASSEMBLE )bx::dlsym(s_d3dcompilerdll, "D3DDisassemble");
+			D3DReflect     = (PFN_D3D_REFLECT     )bx::dlsym(s_d3dcompilerdll, "D3DReflect");
+			D3DStripShader = (PFN_D3D_STRIP_SHADER)bx::dlsym(s_d3dcompilerdll, "D3DStripShader");
+
+			if (NULL == D3DCompile
+			||  NULL == D3DDisassemble
+			||  NULL == D3DReflect
+			||  NULL == D3DStripShader)
+			{
+				bx::dlclose(s_d3dcompilerdll);
+				s_d3dcompilerdll = NULL;
+				continue;
+			}
+
+			if (g_verbose)
+			{
+				char filePath[bx::kMaxFilePath];
+				GetModuleFileNameA( (HMODULE)s_d3dcompilerdll, filePath, sizeof(filePath) );
+				BX_TRACE("Loaded %s compiler (%s).", compiler->fileName, filePath);
+			}
+
+			return compiler;
+		}
+
+		bx::write(_messageWriter, &messageErr, "Error: Unable to open D3DCompiler_*.dll shader compiler.\n");
+		return NULL;
+#endif // BX_PLATFORM_LINUX || BX_PLATFORM_OSX
+	}
+
+	void unload()
+	{
+#if BX_PLATFORM_WINDOWS
+		if (NULL != s_d3dcompilerdll)
+		{
+			bx::dlclose(s_d3dcompilerdll);
+			s_d3dcompilerdll = NULL;
+		}
+#endif // BX_PLATFORM_WINDOWS
+
+		s_compiler     = NULL;
+		D3DCompile     = NULL;
+		D3DDisassemble = NULL;
+		D3DReflect     = NULL;
+		D3DStripShader = NULL;
+	}
+
+	struct RemapInputSemantic
+	{
+		bgfx::Attrib::Enum m_attr;
+		const char* m_name;
+		uint8_t m_index;
+	};
+
+	static const RemapInputSemantic s_remapInputSemantic[bgfx::Attrib::Count + 1] =
+	{
+		{ bgfx::Attrib::Position,  "POSITION",     0 },
+		{ bgfx::Attrib::Normal,    "NORMAL",       0 },
+		{ bgfx::Attrib::Tangent,   "TANGENT",      0 },
+		{ bgfx::Attrib::Bitangent, "BITANGENT",    0 },
+		{ bgfx::Attrib::Color0,    "COLOR",        0 },
+		{ bgfx::Attrib::Color1,    "COLOR",        1 },
+		{ bgfx::Attrib::Color2,    "COLOR",        2 },
+		{ bgfx::Attrib::Color3,    "COLOR",        3 },
+		{ bgfx::Attrib::Indices,   "BLENDINDICES", 0 },
+		{ bgfx::Attrib::Weight,    "BLENDWEIGHT",  0 },
+		{ bgfx::Attrib::TexCoord0, "TEXCOORD",     0 },
+		{ bgfx::Attrib::TexCoord1, "TEXCOORD",     1 },
+		{ bgfx::Attrib::TexCoord2, "TEXCOORD",     2 },
+		{ bgfx::Attrib::TexCoord3, "TEXCOORD",     3 },
+		{ bgfx::Attrib::TexCoord4, "TEXCOORD",     4 },
+		{ bgfx::Attrib::TexCoord5, "TEXCOORD",     5 },
+		{ bgfx::Attrib::TexCoord6, "TEXCOORD",     6 },
+		{ bgfx::Attrib::TexCoord7, "TEXCOORD",     7 },
+		{ bgfx::Attrib::Count,     "",             0 },
+	};
+
+	const RemapInputSemantic& findInputSemantic(const char* _name, uint8_t _index)
+	{
+		for (uint32_t ii = 0; ii < bgfx::Attrib::Count; ++ii)
+		{
+			const RemapInputSemantic& ris = s_remapInputSemantic[ii];
+			if (0 == bx::strCmp(ris.m_name, _name)
+			&&  ris.m_index == _index)
+			{
+				return ris;
+			}
+		}
+
+		return s_remapInputSemantic[bgfx::Attrib::Count];
+	}
+
+	struct UniformRemap
+	{
+		UniformType::Enum id;
+		D3D_SHADER_VARIABLE_CLASS paramClass;
+		D3D_SHADER_VARIABLE_TYPE paramType;
+		uint8_t columns;
+		uint8_t rows;
+	};
+
+	static const UniformRemap s_uniformRemap[] =
+	{
+		{ UniformType::Sampler, D3D_SVC_SCALAR,         D3D_SVT_INT,         0, 0 },
+		{ UniformType::Vec4,    D3D_SVC_VECTOR,         D3D_SVT_FLOAT,       0, 0 },
+		{ UniformType::Mat3,    D3D_SVC_MATRIX_COLUMNS, D3D_SVT_FLOAT,       3, 3 },
+		{ UniformType::Mat4,    D3D_SVC_MATRIX_COLUMNS, D3D_SVT_FLOAT,       4, 4 },
+		{ UniformType::Sampler, D3D_SVC_OBJECT,         D3D_SVT_SAMPLER,     0, 0 },
+		{ UniformType::Sampler, D3D_SVC_OBJECT,         D3D_SVT_SAMPLER2D,   0, 0 },
+		{ UniformType::Sampler, D3D_SVC_OBJECT,         D3D_SVT_SAMPLER3D,   0, 0 },
+		{ UniformType::Sampler, D3D_SVC_OBJECT,         D3D_SVT_SAMPLERCUBE, 0, 0 },
+	};
+
+	UniformType::Enum findUniformType(const D3D11_SHADER_TYPE_DESC& constDesc)
+	{
+		for (uint32_t ii = 0; ii < BX_COUNTOF(s_uniformRemap); ++ii)
+		{
+			const UniformRemap& remap = s_uniformRemap[ii];
+
+			if (remap.paramClass == constDesc.Class
+			&&  remap.paramType  == constDesc.Type)
+			{
+				if (D3D_SVC_MATRIX_COLUMNS != constDesc.Class)
+				{
+					return remap.id;
+				}
+
+				if (remap.columns == constDesc.Columns
+				&&  remap.rows    == constDesc.Rows)
+				{
+					return remap.id;
+				}
+			}
+		}
+
+		return UniformType::Count;
+	}
+
+	static uint32_t s_optimizationLevelD3D11[] =
+	{
+		D3DCOMPILE_OPTIMIZATION_LEVEL0,
+		D3DCOMPILE_OPTIMIZATION_LEVEL1,
+		D3DCOMPILE_OPTIMIZATION_LEVEL2,
+		D3DCOMPILE_OPTIMIZATION_LEVEL3,
+	};
+
+	typedef std::vector<std::string> UniformNameList;
+
+	bool getReflectionDataD3D11(ID3DBlob* _code, bool _vshader, UniformArray& _uniforms, uint8_t& _numAttrs, uint16_t* _attrs, uint16_t& _size, UniformNameList& unusedUniforms, bx::WriterI* _messageWriter)
+	{
+		bx::Error messageErr;
+
+		ID3D11ShaderReflection* reflect = NULL;
+		HRESULT hr = D3DReflect(_code->GetBufferPointer()
+			, _code->GetBufferSize()
+			, s_compiler->reflectionGuid
+			, (void**)&reflect
+			);
+
+		if (FAILED(hr) )
+		{
+			bx::write(_messageWriter, &messageErr, "Error: D3DReflect failed 0x%08x\n", (uint32_t)hr);
+			return false;
+		}
+
+		D3D11_SHADER_DESC desc;
+		hr = reflect->GetDesc(&desc);
+		if (FAILED(hr) )
+		{
+			bx::write(_messageWriter, &messageErr, "Error: ID3D11ShaderReflection::GetDesc failed 0x%08x\n", (uint32_t)hr);
+			return false;
+		}
+
+		BX_TRACE("Creator: %s 0x%08x", desc.Creator, desc.Version);
+		BX_TRACE("Num constant buffers: %d", desc.ConstantBuffers);
+
+		BX_TRACE("Input:");
+
+		if (_vshader) // Only care about input semantic on vertex shaders
+		{
+			for (uint32_t ii = 0; ii < desc.InputParameters; ++ii)
+			{
+				D3D11_SIGNATURE_PARAMETER_DESC spd;
+				reflect->GetInputParameterDesc(ii, &spd);
+				BX_TRACE("\t%2d: %s%d, vt %d, ct %d, mask %x, reg %d"
+					, ii
+					, spd.SemanticName
+					, spd.SemanticIndex
+					, spd.SystemValueType
+					, spd.ComponentType
+					, spd.Mask
+					, spd.Register
+					);
+
+				const RemapInputSemantic& ris = findInputSemantic(spd.SemanticName, uint8_t(spd.SemanticIndex) );
+				if (ris.m_attr != bgfx::Attrib::Count)
+				{
+					_attrs[_numAttrs] = bgfx::attribToId(ris.m_attr);
+					++_numAttrs;
+				}
+			}
+		}
+
+		BX_TRACE("Output:");
+		for (uint32_t ii = 0; ii < desc.OutputParameters; ++ii)
+		{
+			D3D11_SIGNATURE_PARAMETER_DESC spd;
+			reflect->GetOutputParameterDesc(ii, &spd);
+			BX_TRACE("\t%2d: %s%d, %d, %d", ii, spd.SemanticName, spd.SemanticIndex, spd.SystemValueType, spd.ComponentType);
+		}
+
+		for (uint32_t ii = 0, num = bx::min(1, desc.ConstantBuffers); ii < num; ++ii)
+		{
+			ID3D11ShaderReflectionConstantBuffer* cbuffer = reflect->GetConstantBufferByIndex(ii);
+			D3D11_SHADER_BUFFER_DESC bufferDesc;
+			hr = cbuffer->GetDesc(&bufferDesc);
+
+			_size = (uint16_t)bufferDesc.Size;
+
+			if (SUCCEEDED(hr) )
+			{
+				BX_TRACE("%s, %d, vars %d, size %d"
+					, bufferDesc.Name
+					, bufferDesc.Type
+					, bufferDesc.Variables
+					, bufferDesc.Size
+					);
+
+				for (uint32_t jj = 0; jj < bufferDesc.Variables; ++jj)
+				{
+					ID3D11ShaderReflectionVariable* var = cbuffer->GetVariableByIndex(jj);
+					ID3D11ShaderReflectionType* type = var->GetType();
+					D3D11_SHADER_VARIABLE_DESC varDesc;
+					hr = var->GetDesc(&varDesc);
+					if (SUCCEEDED(hr) )
+					{
+						D3D11_SHADER_TYPE_DESC constDesc;
+						hr = type->GetDesc(&constDesc);
+						if (SUCCEEDED(hr) )
+						{
+							UniformType::Enum uniformType = findUniformType(constDesc);
+
+							if (UniformType::Count != uniformType
+							&&  0 != (varDesc.uFlags & D3D_SVF_USED) )
+							{
+								Uniform un;
+								un.name = varDesc.Name;
+								un.type = uniformType;
+								un.num = uint8_t(constDesc.Elements);
+								un.regIndex = uint16_t(varDesc.StartOffset);
+								un.regCount = uint16_t(bx::alignUp(varDesc.Size, 16) / 16);
+								_uniforms.push_back(un);
+
+								BX_TRACE("\t%s, %d, size %d, flags 0x%08x, %d (used)"
+									, varDesc.Name
+									, varDesc.StartOffset
+									, varDesc.Size
+									, varDesc.uFlags
+									, uniformType
+									);
+							}
+							else
+							{
+								if (0 == (varDesc.uFlags & D3D_SVF_USED) )
+								{
+									unusedUniforms.push_back(varDesc.Name);
+								}
+
+								BX_TRACE("\t%s, unknown type", varDesc.Name);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		BX_TRACE("Bound:");
+		for (uint32_t ii = 0; ii < desc.BoundResources; ++ii)
+		{
+			D3D11_SHADER_INPUT_BIND_DESC bindDesc;
+
+			hr = reflect->GetResourceBindingDesc(ii, &bindDesc);
+			if (SUCCEEDED(hr) )
+			{
+				if (D3D_SIT_SAMPLER == bindDesc.Type)
+				{
+					BX_TRACE("\t%s, %d, %d, %d"
+						, bindDesc.Name
+						, bindDesc.Type
+						, bindDesc.BindPoint
+						, bindDesc.BindCount
+						);
+
+					bx::StringView end = bx::strFind(bindDesc.Name, "Sampler");
+
+					if (!end.isEmpty() )
+					{
+						Uniform un;
+						un.name.assign(bindDesc.Name, (end.getPtr() - bindDesc.Name) );
+						un.type = UniformType::Enum(kUniformSamplerBit | UniformType::Sampler);
+						un.num = 1;
+						un.regIndex = uint16_t(bindDesc.BindPoint);
+						un.regCount = uint16_t(bindDesc.BindCount);
+						_uniforms.push_back(un);
+					}
+				}
+			}
+		}
+
+		if (NULL != reflect)
+		{
+			reflect->Release();
+		}
+
+		return true;
+	}
+
+	static bool compile(const Options& _options, uint32_t _version, const std::string& _code, bx::WriterI* _shaderWriter, bx::WriterI* _messageWriter, bool _firstPass)
+	{
+		bx::Error messageErr;
+
+		const char* profile = _options.profile.c_str();
+
+		if (profile[0] == '\0')
+		{
+			bx::write(_messageWriter, &messageErr, "Error: Shader profile must be specified.\n");
+			return false;
+		}
+
+		char profileAndType[8] = {};
+		profileAndType[0] = (_options.shaderType == 'f') ? 'p' : _options.shaderType;
+		bx::strCat(profileAndType, BX_COUNTOF(profileAndType), profile);
+
+		s_compiler = load(_messageWriter);
+		if (NULL == s_compiler)
+		{
+			bx::write(_messageWriter, &messageErr, "Error: Unabled to load D3D compiler!\n");
+			return false;
+		}
+
+		bool result = false;
+		bool debug = _options.debugInformation;
+
+		uint32_t flags = D3DCOMPILE_ENABLE_BACKWARDS_COMPATIBILITY;
+		flags |= debug ? D3DCOMPILE_DEBUG : 0;
+		flags |= _options.avoidFlowControl ? D3DCOMPILE_AVOID_FLOW_CONTROL : 0;
+		flags |= _options.noPreshader ? D3DCOMPILE_NO_PRESHADER : 0;
+		flags |= _options.partialPrecision ? D3DCOMPILE_PARTIAL_PRECISION : 0;
+		flags |= _options.preferFlowControl ? D3DCOMPILE_PREFER_FLOW_CONTROL : 0;
+		flags |= _options.backwardsCompatibility ? D3DCOMPILE_ENABLE_BACKWARDS_COMPATIBILITY : 0;
+
+		bool werror = _options.warningsAreErrors;
+
+		if (werror)
+		{
+			flags |= D3DCOMPILE_WARNINGS_ARE_ERRORS;
+		}
+
+		if (_options.optimize )
+		{
+			const uint32_t optimization = bx::min(_options.optimizationLevel, BX_COUNTOF(s_optimizationLevelD3D11) - 1);
+			flags |= s_optimizationLevelD3D11[optimization];
+		}
+		else
+		{
+			flags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+		}
+
+		BX_TRACE("Profile: %s", profile);
+		BX_TRACE("Flags: 0x%08x", flags);
+
+		ID3DBlob* code;
+		ID3DBlob* errorMsg;
+
+		// Output preprocessed shader so that HLSL can be debugged via GPA
+		// or PIX. Compiling through memory won't embed preprocessed shader
+		// file path.
+		std::string hlslfp;
+
+		if (debug)
+		{
+			hlslfp = _options.outputFilePath + ".hlsl";
+			writeFile(hlslfp.c_str(), _code.c_str(), (int32_t)_code.size() );
+		}
+
+		bx::ErrorAssert err;
+
+		HRESULT hr = D3DCompile(_code.c_str()
+			, _code.size()
+			, hlslfp.c_str()
+			, NULL
+			, NULL
+			, "main"
+			, profileAndType
+			, flags
+			, 0
+			, &code
+			, &errorMsg
+			);
+		if (FAILED(hr)
+		|| (werror && NULL != errorMsg) )
+		{
+			const char* log = (char*)errorMsg->GetBufferPointer();
+
+			int32_t line   = 0;
+			int32_t column = 0;
+			int32_t start  = 0;
+			int32_t end    = INT32_MAX;
+
+			if (!hlslfp.empty())
+			{
+				bx::StringView logfp = bx::strFind(log, hlslfp.c_str() );
+				if (!logfp.isEmpty() )
+				{
+					log = logfp.getPtr() + hlslfp.length();
+				}
+			}
+
+			bool found = false
+				|| 2 == sscanf(log, "(%u,%u",  &line, &column)
+				|| 2 == sscanf(log, " :%u:%u: ", &line, &column)
+				;
+
+			if (found
+			&&  0 != line)
+			{
+				start = bx::max<int32_t>(1, line-10);
+				end   = start + 20;
+			}
+
+			printCode(_code.c_str(), line, start, end, column);
+			bx::write(_messageWriter, &messageErr, "Error: D3DCompile failed 0x%08x `%s`\n", (uint32_t)hr, log);
+			errorMsg->Release();
+			return false;
+		}
+
+		UniformArray uniforms;
+		uint8_t numAttrs = 0;
+		uint16_t attrs[bgfx::Attrib::Count];
+		uint16_t size = 0;
+
+		{
+			UniformNameList unusedUniforms;
+			if (!getReflectionDataD3D11(code, profileAndType[0] == 'v', uniforms, numAttrs, attrs, size, unusedUniforms, _messageWriter) )
+			{
+				bx::write(_messageWriter, &messageErr, "Error: Unable to get D3D11 reflection data.\n");
+				goto error;
+			}
+
+			if (_firstPass
+			&&  unusedUniforms.size() > 0)
+			{
+				// first time through, we just find unused uniforms and get rid of them
+				std::string output;
+				bx::LineReader reader(_code.c_str() );
+				while (!reader.isDone() )
+				{
+					bx::StringView strLine = reader.next();
+					bool found = false;
+
+					for (UniformNameList::iterator it = unusedUniforms.begin(), itEnd = unusedUniforms.end(); it != itEnd; ++it)
+					{
+						bx::StringView str = strFind(strLine, "uniform ");
+						if (str.isEmpty() )
+						{
+							continue;
+						}
+
+						// matching lines like:  uniform u_name;
+						// we want to replace "uniform" with "static" so that it's no longer
+						// included in the uniform blob that the application must upload
+						// we can't just remove them, because unused functions might still reference
+						// them and cause a compile error when they're gone
+						if (!bx::findIdentifierMatch(strLine, it->c_str() ).isEmpty() )
+						{
+							output.append(strLine.getPtr(), str.getPtr() );
+							output += "static ";
+							output.append(str.getTerm(), strLine.getTerm() );
+							output += "\n";
+							found = true;
+
+							unusedUniforms.erase(it);
+							break;
+						}
+					}
+
+					if (!found)
+					{
+						output.append(strLine.getPtr(), strLine.getTerm() );
+						output += "\n";
+					}
+				}
+
+				// recompile with the unused uniforms converted to statics
+				return compile(_options, _version, output.c_str(), _shaderWriter, _messageWriter, false);
+			}
+		}
+
+		{
+			uint16_t count = (uint16_t)uniforms.size();
+			bx::write(_shaderWriter, count, &err);
+
+			uint32_t fragmentBit = profileAndType[0] == 'p' ? kUniformFragmentBit : 0;
+			for (UniformArray::const_iterator it = uniforms.begin(); it != uniforms.end(); ++it)
+			{
+				const Uniform& un = *it;
+				uint8_t nameSize = (uint8_t)un.name.size();
+				bx::write(_shaderWriter, nameSize, &err);
+				bx::write(_shaderWriter, un.name.c_str(), nameSize, &err);
+				uint8_t type = uint8_t(un.type | fragmentBit);
+				bx::write(_shaderWriter, type, &err);
+				bx::write(_shaderWriter, un.num, &err);
+				bx::write(_shaderWriter, un.regIndex, &err);
+				bx::write(_shaderWriter, un.regCount, &err);
+				bx::write(_shaderWriter, un.texComponent, &err);
+				bx::write(_shaderWriter, un.texDimension, &err);
+				bx::write(_shaderWriter, un.texFormat, &err);
+
+				BX_TRACE("%s, %s, %d, %d, %d"
+					, un.name.c_str()
+					, getUniformTypeName(UniformType::Enum(un.type & ~kUniformMask))
+					, un.num
+					, un.regIndex
+					, un.regCount
+					);
+			}
+		}
+
+		{
+			ID3DBlob* stripped;
+			hr = D3DStripShader(code->GetBufferPointer()
+				, code->GetBufferSize()
+				, D3DCOMPILER_STRIP_REFLECTION_DATA
+				| D3DCOMPILER_STRIP_TEST_BLOBS
+				, &stripped
+				);
+
+			if (SUCCEEDED(hr) )
+			{
+				code->Release();
+				code = stripped;
+			}
+		}
+
+		{
+			uint32_t shaderSize = uint32_t(code->GetBufferSize() );
+			bx::write(_shaderWriter, shaderSize, &err);
+			bx::write(_shaderWriter, code->GetBufferPointer(), shaderSize, &err);
+			uint8_t nul = 0;
+			bx::write(_shaderWriter, nul, &err);
+		}
+
+		if (_version >= 400)
+		{
+			bx::write(_shaderWriter, numAttrs, &err);
+			bx::write(_shaderWriter, attrs, numAttrs*sizeof(uint16_t), &err);
+
+			bx::write(_shaderWriter, size, &err);
+		}
+
+		if (_options.disasm)
+		{
+			ID3DBlob* disasm;
+			D3DDisassemble(code->GetBufferPointer()
+				, code->GetBufferSize()
+				, 0
+				, NULL
+				, &disasm
+				);
+
+			if (NULL != disasm)
+			{
+				std::string disasmfp = _options.outputFilePath + ".disasm";
+
+				writeFile(disasmfp.c_str(), disasm->GetBufferPointer(), (uint32_t)disasm->GetBufferSize() );
+				disasm->Release();
+			}
+		}
+
+		if (NULL != errorMsg)
+		{
+			errorMsg->Release();
+		}
+
+		result = true;
+
+	error:
+		code->Release();
+		unload();
+		return result;
+	}
+
+} // namespace hlsl
+
+	bool compileHLSLShader(const Options& _options, uint32_t _version, const std::string& _code, bx::WriterI* _shaderWriter, bx::WriterI* _messageWriter)
+	{
+		return hlsl::compile(_options, _version, _code, _shaderWriter, _messageWriter, true);
+	}
+
+} // namespace bgfx
+
+#else // SHADERC_CONFIG_HAS_D3DCOMPILER
+
+namespace bgfx
+{
+	bool compileHLSLShader(const Options& _options, uint32_t _version, const std::string& _code, bx::WriterI* _shaderWriter, bx::WriterI* _messageWriter)
+	{
+		BX_UNUSED(_options, _version, _code, _shaderWriter);
+		bx::Error messageErr;
+#if BX_PLATFORM_WINDOWS
+		bx::write(_messageWriter, &messageErr, "HLSL compiler support is not compiled in.\n");
+#elif BX_PLATFORM_LINUX
+		bx::write(_messageWriter, &messageErr, "HLSL compiler support through D3D4Linux is not compiled in.\n");
+#else
+		bx::write(_messageWriter, &messageErr, "HLSL compiler is not supported on this platform.\n");
+#endif
+		return false;
+	}
+
+} // namespace bgfx
+
+#endif // SHADERC_CONFIG_HAS_D3DCOMPILER
