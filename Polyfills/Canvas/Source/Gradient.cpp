@@ -165,7 +165,7 @@ namespace Babylon::Polyfills::Internal
         }
 
         // Register after successful construction only.
-                NativeInstanceRegistry<CanvasGradient>::Add(info, this);
+        NativeInstanceRegistry<CanvasGradient>::Add(info, this);
     }
 
     CanvasGradient::~CanvasGradient()
