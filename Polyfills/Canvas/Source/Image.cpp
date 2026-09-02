@@ -54,7 +54,7 @@ namespace Babylon::Polyfills::Internal
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
         // Register after successful construction only.
-                NativeInstanceRegistry<NativeCanvasImage>::Add(info, this);
+        NativeInstanceRegistry<NativeCanvasImage>::Add(info, this);
     }
 
     NativeCanvasImage::~NativeCanvasImage()
