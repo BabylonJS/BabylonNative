@@ -1,0 +1,7 @@
+.git
+.build
+.debug
+.svn
+tags
+.DS_Store
+.gdb_history
