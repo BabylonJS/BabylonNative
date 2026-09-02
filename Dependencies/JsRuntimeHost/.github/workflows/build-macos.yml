@@ -1,0 +1,51 @@
+name: Build macOS
+
+on:
+  workflow_call:
+    inputs:
+      xcode-version:
+        required: true
+        type: string
+      runs-on:
+        required: false
+        type: string
+        default: macos-latest
+      js-engine:
+        required: false
+        type: string
+        default: ''
+      enable-sanitizers:
+        required: false
+        type: boolean
+        default: false
+      enable-thread-sanitizer:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
+
+      - name: Configure CMake
+        run: |
+          cmake -B Build/macOS -G Xcode \
+            ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
+            -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
+            -D ENABLE_THREAD_SANITIZER=${{ inputs.enable-thread-sanitizer && 'ON' || 'OFF' }}
+
+      - name: Build
+        run: cmake --build Build/macOS --target UnitTests --config RelWithDebInfo
+
+      - name: Run Tests
+        working-directory: Build/macOS/Tests/UnitTests/RelWithDebInfo
+        run: ./UnitTests
+        env:
+          TSAN_OPTIONS: ${{ inputs.enable-thread-sanitizer && format('suppressions={0}/.github/tsan_suppressions.txt', github.workspace) || '' }}
+
