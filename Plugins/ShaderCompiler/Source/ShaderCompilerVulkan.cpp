@@ -34,9 +34,9 @@ namespace
 
     void CollectStageUniforms(
         glslang::TIntermediate* intermediate,
-        std::vector<glslang::TIntermSymbol*>& textures,
-        std::vector<glslang::TIntermSymbol*>& pureSamplers,
-        std::vector<glslang::TIntermSymbol*>& ubos)
+        std::vector<TIntermSymbol*>& textures,
+        std::vector<TIntermSymbol*>& pureSamplers,
+        std::vector<TIntermSymbol*>& ubos)
     {
         if (intermediate == nullptr)
         {
@@ -55,7 +55,7 @@ namespace
             return;
         }
 
-        for (glslang::TIntermNode* node : linkerObjects->getSequence())
+        for (TIntermNode* node : linkerObjects->getSequence())
         {
             auto* symbol = node->getAsSymbolNode();
             if (symbol == nullptr)
@@ -95,9 +95,9 @@ namespace
         {
             std::set<unsigned> uniqueSlots;
             auto collectSlots = [&](glslang::TIntermediate* intermediate) {
-                std::vector<glslang::TIntermSymbol*> textures;
-                std::vector<glslang::TIntermSymbol*> pureSamplers;
-                std::vector<glslang::TIntermSymbol*> ubos;
+                std::vector<TIntermSymbol*> textures;
+                std::vector<TIntermSymbol*> pureSamplers;
+                std::vector<TIntermSymbol*> ubos;
                 CollectStageUniforms(intermediate, textures, pureSamplers, ubos);
                 for (auto* texture : textures)
                 {
@@ -114,9 +114,9 @@ namespace
         }
 
         auto applyStage = [](glslang::TIntermediate* intermediate, unsigned uboBinding) {
-            std::vector<glslang::TIntermSymbol*> textures;
-            std::vector<glslang::TIntermSymbol*> pureSamplers;
-            std::vector<glslang::TIntermSymbol*> ubos;
+            std::vector<TIntermSymbol*> textures;
+            std::vector<TIntermSymbol*> pureSamplers;
+            std::vector<TIntermSymbol*> ubos;
             CollectStageUniforms(intermediate, textures, pureSamplers, ubos);
 
             // SamplerSplitterTraverser assigns one shared layoutBinding per sampler name
