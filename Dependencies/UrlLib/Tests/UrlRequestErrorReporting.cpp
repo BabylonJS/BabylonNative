@@ -17,6 +17,8 @@
 #include <memory>
 #include <regex>
 #include <string>
+#include <thread>
+#include <vector>
 
 #if defined(_WIN32)
 #include <winsock2.h>
@@ -50,6 +52,13 @@ namespace
         ::closesocket(socket);
     }
 
+    // Wakes a thread blocked in accept()/recv() on this socket. Closing the socket alone does not
+    // reliably interrupt a blocking call in another thread.
+    void ShutdownSocket(NativeSocket socket)
+    {
+        ::shutdown(socket, SD_BOTH);
+    }
+
     bool EnsureSocketsInitialized()
     {
         static const bool initialized = [] {
@@ -71,6 +80,13 @@ namespace
     void CloseSocket(NativeSocket socket)
     {
         ::close(socket);
+    }
+
+    // Wakes a thread blocked in accept()/recv() on this socket. On Linux, close() in another thread
+    // does NOT interrupt a blocking accept(); shutdown() does.
+    void ShutdownSocket(NativeSocket socket)
+    {
+        ::shutdown(socket, SHUT_RDWR);
     }
 
     bool EnsureSocketsInitialized()
@@ -184,6 +200,96 @@ namespace
 
         NativeSocket m_fd;
         uint16_t m_port;
+    };
+
+    // A loopback TCP server that accepts connections but never responds, so an HTTP request to it
+    // hangs until it is aborted. A background thread accept()s connections and holds them open
+    // until teardown. Used to verify that UrlRequest::Abort() interrupts an in-flight request
+    // rather than waiting for the transport's own timeout. Non-movable: the accept thread captures
+    // `this`.
+    class HangingServer
+    {
+    public:
+        HangingServer()
+        {
+            if (!EnsureSocketsInitialized())
+            {
+                return;
+            }
+
+            NativeSocket listener = ::socket(AF_INET, SOCK_STREAM, 0);
+            if (listener == InvalidSocket)
+            {
+                return;
+            }
+
+            sockaddr_in address{};
+            address.sin_family = AF_INET;
+            address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            address.sin_port = 0;
+            SocketLength addressLength = static_cast<SocketLength>(sizeof(address));
+            if (::bind(listener, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) != 0 ||
+                ::getsockname(listener, reinterpret_cast<sockaddr*>(&address), &addressLength) != 0 ||
+                ::listen(listener, 8) != 0)
+            {
+                CloseSocket(listener);
+                return;
+            }
+
+            m_listener = listener;
+            m_port = ntohs(address.sin_port);
+            m_acceptThread = std::thread{[this]() {
+                for (;;)
+                {
+                    NativeSocket connection = ::accept(m_listener, nullptr, nullptr);
+                    if (connection == InvalidSocket)
+                    {
+                        break; // listener closed during teardown
+                    }
+                    m_accepted.push_back(connection); // hold open, never respond
+                }
+            }};
+        }
+
+        HangingServer(const HangingServer&) = delete;
+        HangingServer& operator=(const HangingServer&) = delete;
+        HangingServer(HangingServer&&) = delete;
+        HangingServer& operator=(HangingServer&&) = delete;
+
+        ~HangingServer()
+        {
+            if (m_listener != InvalidSocket)
+            {
+                // shutdown() (not just close()) so a thread blocked in accept() is woken: on Linux
+                // close() in another thread does not interrupt the blocking accept().
+                ShutdownSocket(m_listener);
+                CloseSocket(m_listener);
+            }
+            if (m_acceptThread.joinable())
+            {
+                m_acceptThread.join();
+            }
+            for (NativeSocket connection : m_accepted)
+            {
+                CloseSocket(connection);
+            }
+        }
+
+        bool Valid() const
+        {
+            return m_listener != InvalidSocket;
+        }
+
+        std::string Url() const
+        {
+            return "http://127.0.0.1:" + std::to_string(m_port) + "/";
+        }
+
+    private:
+        NativeSocket m_listener{InvalidSocket};
+        uint16_t m_port{0};
+        std::vector<NativeSocket> m_accepted{};
+        std::thread m_acceptThread{};
     };
 
     // RAII temp file with a per-process-unique name, so parallel test runs sharing a temp
@@ -350,6 +456,48 @@ TEST(UrlRequestErrorReporting, ReopenClearsPriorError)
     EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::Ok);
     EXPECT_EQ(request.ResponseString(), "reused");
     EXPECT_TRUE(request.ErrorString().empty()) << request.ErrorString();
+}
+
+TEST(UrlRequestErrorReporting, AbortInterruptsInFlightRequest)
+{
+    // The Windows backend already observes Abort() (its WinRT continuations are guarded by
+    // m_cancellationSource), but it does not populate the transport-error accessors, so the
+    // symbol assertions below are gated to the backends that do.
+    SKIP_WITHOUT_TRANSPORT_ERROR_DETAIL();
+
+    HangingServer server{};
+    ASSERT_TRUE(server.Valid());
+
+    UrlLib::UrlRequest request{};
+    request.Open(UrlLib::UrlMethod::Get, server.Url());
+
+    auto done = std::make_shared<std::promise<void>>();
+    auto future = done->get_future();
+    request.SendAsync().then(arcana::inline_scheduler, arcana::cancellation::none(),
+        [done](const arcana::expected<void, std::exception_ptr>&) {
+            done->set_value();
+        });
+
+    // Let the request connect to the hanging server and start waiting for a response that never
+    // comes, then abort. Without Abort() being observed on this backend the request would block
+    // until the transport's own timeout.
+    std::this_thread::sleep_for(std::chrono::milliseconds{250});
+    request.Abort();
+
+    ASSERT_EQ(future.wait_for(std::chrono::seconds{15}), std::future_status::ready)
+        << "Abort did not interrupt the in-flight request";
+
+    EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::None);
+    EXPECT_FALSE(request.ErrorString().empty());
+#if defined(__APPLE__)
+    EXPECT_EQ(request.ErrorSymbol(), "NSURLErrorCancelled") << request.ErrorString();
+    EXPECT_EQ(request.ErrorCode(), -999) << request.ErrorString();
+#else
+    // The guarantee under test is that Abort() interrupts the request promptly (the bounded wait
+    // above) and records a curl transport error. Assert the "curl:" prefix rather than pinning the
+    // exact CURLcode, which can vary with libcurl internals/timing.
+    EXPECT_EQ(request.ErrorString().substr(0, 5), "curl:") << request.ErrorString();
+#endif
 }
 
 #if defined(__APPLE__)
