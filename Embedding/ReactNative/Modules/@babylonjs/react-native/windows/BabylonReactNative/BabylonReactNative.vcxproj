@@ -148,7 +148,6 @@
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Polyfills\XMLHttpRequest\$(Configuration);
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\Foundation\$(Configuration);
         $(BabylonNativeBuildDir)_deps\urllib-build\$(Configuration);
-        $(BabylonNativeBuildDir)_deps\libwebp-build\$(Configuration);
         $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bgfx\$(Configuration);
         $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bx\$(Configuration);
         $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bimg\$(Configuration);
@@ -207,8 +206,6 @@
         SPIRVd.lib;
         UrlLib.lib;
         Window.lib;
-        libwebp.lib;
-        libsharpyuv.lib;
         Scheduling.lib;
         XMLHttpRequest.lib;
         WindowsApp.lib;
@@ -269,8 +266,6 @@
         Scheduling.lib;
         XMLHttpRequest.lib;
         WindowsApp.lib;
-        libwebp.lib;
-        libsharpyuv.lib;
         %(AdditionalDependencies);
       </AdditionalDependencies>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>

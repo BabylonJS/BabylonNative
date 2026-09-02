@@ -66,12 +66,36 @@ else()
 endif()
 message("-- JSI     : " ${JSI_LIB})
 
-add_library(jsi ALIAS ReactAndroid::jsi)
+if(${REACT_NATIVE_VERSION} GREATER_EQUAL 71)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/jsi_bridge.cpp" "")
+    add_library(jsi STATIC "${CMAKE_CURRENT_BINARY_DIR}/jsi_bridge.cpp")
+    target_link_libraries(jsi PUBLIC ReactAndroid::jsi)
+endif()
 
 set(BABYLON_NATIVE_BUILD_APPS OFF CACHE BOOL "")
 set(BABYLON_REACT_NATIVE_SHARED_DIR "${CMAKE_CURRENT_LIST_DIR}/../shared")
 set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP OFF CACHE BOOL "")
 add_subdirectory(${BABYLON_REACT_NATIVE_SHARED_DIR} ${CMAKE_CURRENT_BINARY_DIR}/shared)
+
+function(enable_babylon_native_rtti directory)
+    get_property(targets DIRECTORY "${directory}" PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(target IN LISTS targets)
+        get_target_property(target_type ${target} TYPE)
+        get_target_property(imported ${target} IMPORTED)
+        if(NOT imported AND target_type MATCHES "^(STATIC_LIBRARY|SHARED_LIBRARY|MODULE_LIBRARY|OBJECT_LIBRARY|EXECUTABLE)$")
+            target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-frtti>)
+        endif()
+    endforeach()
+
+    get_property(subdirectories DIRECTORY "${directory}" PROPERTY SUBDIRECTORIES)
+    foreach(subdirectory IN LISTS subdirectories)
+        enable_babylon_native_rtti("${subdirectory}")
+    endforeach()
+endfunction()
+
+# React Native's JSI headers use dynamic_cast, including from templates
+# instantiated by BabylonNative targets.
+enable_babylon_native_rtti("${BABYLON_REACT_NATIVE_SHARED_DIR}")
 
 if (TARGET NativeXr)
     disable_warnings(NativeXr)

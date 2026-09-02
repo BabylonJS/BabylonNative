@@ -230,7 +230,7 @@ const createPackage = async () => {
   exec('npm pack', 'Assembled');
 };
 
-const COMMIT_ID = 'ce2edf0851e0c8483559832a4f8eb9d39c6b2f53';
+const COMMIT_ID = '17d3e4e6b1233547d7ccfdf89da04c327340f8fc';
 const ZIP_URL = `https://github.com/BabylonJS/BabylonNative/archive/${COMMIT_ID}.zip`;
 const TARGET_DIR = path.resolve(__dirname, '../Modules/@babylonjs/react-native/shared/BabylonNative');
 const ZIP_PATH = path.join(TARGET_DIR, `${COMMIT_ID}.zip`);
@@ -272,6 +272,20 @@ async function unzipFile(zipPath, destDir) {
 
 function deleteFile(filePath) {
   return fs.promises.unlink(filePath);
+}
+
+async function renameWithRetries(source, destination) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await fs.promises.rename(source, destination);
+      return;
+    } catch (error) {
+      if (error.code !== 'EPERM' || attempt === 5) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, attempt * 250));
+    }
+  }
 }
 
 function runCMake(buildDir) {
@@ -359,10 +373,8 @@ const buildBabylonNativeSourceTree = async () => {
   await deleteFile(ZIP_PATH);
 
   console.log('Renaming BabylonNative-xxx folder ...');
-  await fs.rename(`${TARGET_DIR}/BabylonNative-${COMMIT_ID}`, `${TARGET_DIR}/Repo`, (err) => {
-    if (err) throw err;
-    console.log('Rename complete!');
-  });
+  await renameWithRetries(`${TARGET_DIR}/BabylonNative-${COMMIT_ID}`, `${TARGET_DIR}/Repo`);
+  console.log('Rename complete!');
 
   console.log('Running CMake...');
   await runCMake(UNZIP_FOLDER);
@@ -380,7 +392,10 @@ const buildBabylonNativeSourceTree = async () => {
   deleteFolderRecursive(`${UNZIP_FOLDER}/Install`);
 
   // dependencies cleanup
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/3rdparty`, ['renderdoc', 'stb', 'sdf']);
+  // Keep only the 3rdparty folders that bgfx/src actually includes:
+  // renderdoc (debug_renderdoc.cpp), metal-cpp (renderer_mtl.h), h264 (video.h),
+  // plus stb/sdf.
+  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/3rdparty`, ['renderdoc', 'stb', 'sdf', 'metal-cpp', 'h264']);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/examples`,['common']);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/bindings`);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/docs`);

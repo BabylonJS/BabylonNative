@@ -39,7 +39,16 @@ apply plugin: 'kotlin-android'
 
 def reactNativeArchitectures() {
   def value = project.getProperties().get("reactNativeArchitectures")
-  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+  def architectures = value ? value.split(",").collect { it.trim() } : ["armeabi-v7a", "x86_64", "arm64-v8a"]
+  // The 32-bit x86 ABI is not supported: bgfx's bx uses SSE4.x intrinsics
+  // (_mm_blendv_ps, _mm_round_ps), which are above the Android x86 ABI baseline
+  // of SSSE3 and fail to compile. Drop it rather than break the whole build for
+  // consumers still carrying x86 in the React Native default property.
+  def unsupported = architectures.findAll { it == "x86" }
+  if (!unsupported.isEmpty()) {
+    logger.warn("BabylonReactNative: skipping unsupported ABI 'x86' (requires SSE4.x, unavailable on the Android x86 baseline).")
+  }
+  return architectures - unsupported
 }
 
 static def findNodeModules(baseDir) {
