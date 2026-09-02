@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
+#include <napi/napi.h>
 #include <mutex>
 #include <unordered_set>
 
@@ -17,15 +18,24 @@ namespace Babylon::Polyfills::Internal
         static void Add(const Napi::CallbackInfo& info, T* instance)
         {
             // Non-enumerable brand so it does not show up in Object.keys / for..in.
-            info.This().As<Napi::Object>().DefineProperty(
-                Napi::PropertyDescriptor::Value(
-                    BRAND_NAME,
-                    Napi::External<T>::New(info.Env(), instance),
-                    napi_default));
+                    // Use the C napi_define_properties path: Napi::PropertyDescriptor is not
+                    // available on every JsRuntimeHost port (notably UWP/JSI).
+                    Napi::Object self = info.This().As<Napi::Object>();
+                    Napi::External<T> brand = Napi::External<T>::New(info.Env(), instance);
+                    napi_property_descriptor desc{};
+                    desc.utf8name = BRAND_NAME;
+                    desc.value = brand;
+                    desc.attributes = napi_default; // non-enumerable, non-configurable, non-writable
+                    napi_status status = napi_define_properties(info.Env(), self, 1, &desc);
+                    if (status != napi_ok)
+                    {
+                        Napi::Error::New(info.Env(), "NativeInstanceRegistry: failed to brand instance").ThrowAsJavaScriptException();
+                        return;
+                    }
 
-            const std::scoped_lock lock{Mutex()};
-            Instances().insert(instance);
-        }
+                    const std::scoped_lock lock{Mutex()};
+                    Instances().insert(instance);
+                }
 
         static void Remove(const T* instance)
         {
