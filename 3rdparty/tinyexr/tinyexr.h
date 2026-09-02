@@ -5607,6 +5607,11 @@ static bool DecodePixelData(/* out */ unsigned char **out_images,
                   (size_t(height) - 1 - (size_t(y) + v)) * size_t(x_stride);
             }
 
+            if (reinterpret_cast<const unsigned char *>(line_ptr + width) >
+                (data_ptr + data_len)) {
+              return false;
+            }
+
             for (int u = 0; u < width; u++) {
               tinyexr::FP16 hf;
 
@@ -5722,20 +5727,29 @@ static bool DecodeTiledPixelData(
     const EXRChannelInfo *channels,
     const std::vector<size_t> &channel_offset_list) {
   // Here, data_width and data_height are the dimensions of the current (sub)level.
-  if (tile_size_x * tile_offset_x > data_width ||
-      tile_size_y * tile_offset_y > data_height) {
+  if (tile_offset_x < 0 || tile_offset_y < 0 ||
+      tile_size_x <= 0 || tile_size_y <= 0) {
+    return false;
+  }
+
+  const tinyexr_int64 tile_x0 =
+      static_cast<tinyexr_int64>(tile_size_x) * tile_offset_x;
+  const tinyexr_int64 tile_y0 =
+      static_cast<tinyexr_int64>(tile_size_y) * tile_offset_y;
+
+  if (tile_x0 > data_width || tile_y0 > data_height) {
     return false;
   }
 
   // Compute actual image size in a tile.
-  if ((tile_offset_x + 1) * tile_size_x >= data_width) {
-    (*width) = data_width - (tile_offset_x * tile_size_x);
+  if (tile_x0 + tile_size_x >= data_width) {
+    (*width) = static_cast<int>(static_cast<tinyexr_int64>(data_width) - tile_x0);
   } else {
     (*width) = tile_size_x;
   }
 
-  if ((tile_offset_y + 1) * tile_size_y >= data_height) {
-    (*height) = data_height - (tile_offset_y * tile_size_y);
+  if (tile_y0 + tile_size_y >= data_height) {
+    (*height) = static_cast<int>(static_cast<tinyexr_int64>(data_height) - tile_y0);
   } else {
     (*height) = tile_size_y;
   }
@@ -7439,7 +7453,8 @@ static int DecodeEXRImage(EXRImage *exr_image, const EXRHeader *exr_header,
   }
 
   if (exr_header->data_window.max_x < exr_header->data_window.min_x ||
-      exr_header->data_window.max_x - exr_header->data_window.min_x ==
+      static_cast<tinyexr_int64>(exr_header->data_window.max_x) -
+              static_cast<tinyexr_int64>(exr_header->data_window.min_x) ==
           std::numeric_limits<int>::max()) {
     // Issue 63
     tinyexr::SetErrorMessage("Invalid data width value", err);
@@ -7453,7 +7468,8 @@ static int DecodeEXRImage(EXRImage *exr_image, const EXRHeader *exr_header,
   }
 
   if (exr_header->data_window.max_y < exr_header->data_window.min_y ||
-      exr_header->data_window.max_y - exr_header->data_window.min_y ==
+      static_cast<tinyexr_int64>(exr_header->data_window.max_y) -
+              static_cast<tinyexr_int64>(exr_header->data_window.min_y) ==
           std::numeric_limits<int>::max()) {
     tinyexr::SetErrorMessage("Invalid data height value", err);
     return TINYEXR_ERROR_INVALID_DATA;

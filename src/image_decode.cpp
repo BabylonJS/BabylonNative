@@ -593,6 +593,31 @@ namespace bimg
 		result = ParseEXRHeaderFromMemory(&exrHeader, &exrVersion, (uint8_t*)_data, _size, &err);
 		if (TINYEXR_SUCCESS == result)
 		{
+			int uniformType = TINYEXR_PIXELTYPE_HALF;
+			for (int ii = 0; ii < exrHeader.num_channels; ++ii)
+			{
+				if (0 == bx::strCmp(exrHeader.channels[ii].name, "R") )
+				{
+					uniformType = TINYEXR_PIXELTYPE_FLOAT == exrHeader.pixel_types[ii]
+						? TINYEXR_PIXELTYPE_FLOAT
+						: TINYEXR_PIXELTYPE_HALF
+						;
+					break;
+				}
+			}
+
+			for (int ii = 0; ii < exrHeader.num_channels; ++ii)
+			{
+				const char* name = exrHeader.channels[ii].name;
+				if (0 == bx::strCmp(name, "R")
+				||  0 == bx::strCmp(name, "G")
+				||  0 == bx::strCmp(name, "B")
+				||  0 == bx::strCmp(name, "A") )
+				{
+					exrHeader.requested_pixel_types[ii] = uniformType;
+				}
+			}
+
 			EXRImage exrImage;
 			InitEXRImage(&exrImage);
 
@@ -1380,7 +1405,7 @@ namespace bimg
 		_imageContainer.m_offset      = UINT32_MAX;
 		_imageContainer.m_width       = _width;
 		_imageContainer.m_height      = _height;
-		_imageContainer.m_depth       = 1;
+		_imageContainer.m_depth       = 0;
 		_imageContainer.m_numLayers   = 1;
 		_imageContainer.m_numMips     = 1;
 		_imageContainer.m_hasAlpha    = false;

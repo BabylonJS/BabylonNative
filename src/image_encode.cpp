@@ -630,9 +630,9 @@ namespace bimg
 			const uint32_t dstPitch = _dst->m_width*16;
 			const uint32_t dstSlice = _dst->m_height*dstPitch;
 
-			for (uint32_t zz = 0, depth = _dst->m_depth; zz < depth; ++zz, dstData += dstSlice)
+			for (uint32_t zz = 0, depth = dstMip.m_depth; zz < depth; ++zz, dstData += dstSlice)
 			{
-				const uint32_t srcDataStep = uint32_t(bx::floor(zz * _src->m_depth / float(_dst->m_depth) ) );
+				const uint32_t srcDataStep = uint32_t(bx::floor(zz * srcMip.m_depth / float(depth) ) );
 				const uint8_t* srcData = &srcMip.m_data[srcDataStep*srcSlice];
 
 				void* result = stbir_resize(
