@@ -60,18 +60,11 @@ namespace bgfx
 #	endif
 #endif
 
-#ifndef SHADERC_CONFIG_HAS_GLSL_OPTIMIZER
-#	if __has_include("glsl_optimizer.h")
-#		define SHADERC_CONFIG_HAS_GLSL_OPTIMIZER 1
-#	else
-#		define SHADERC_CONFIG_HAS_GLSL_OPTIMIZER 0
-#	endif
-#endif
-
 #include <bx/debug.h>
 #include <bx/commandline.h>
 #include <bx/endian.h>
 #include <bx/string.h>
+#include <bx/scanner.h>
 #include <bx/hash.h>
 #include <bx/file.h>
 #include "../../src/vertexlayout.h"
@@ -109,6 +102,10 @@ namespace bgfx
 	const char* getUniformTypeName(UniformType::Enum _enum);
 	UniformType::Enum nameToUniformTypeEnum(const char* _name);
 
+	/// Converts a SPIR-V `spv::Dim` (plus the arrayed flag) into the texture
+	/// dimension id stored in `Uniform::texDimension`.
+	uint8_t spirvDimToTextureDimensionId(uint32_t _dim, bool _arrayed);
+
 	struct Uniform
 	{
 		Uniform()
@@ -132,6 +129,24 @@ namespace bgfx
 		uint16_t texFormat;
 	};
 
+	struct RawBindings
+	{
+		RawBindings()
+			: srv(0)
+			, uav(0)
+		{
+		}
+
+		void write(bx::WriterI* _writer, bx::Error* _err) const
+		{
+			bx::write(_writer, srv, _err);
+			bx::write(_writer, uav, _err);
+		}
+
+		uint32_t srv;
+		uint32_t uav;
+	};
+
 	struct Options
 	{
 		Options();
@@ -152,7 +167,6 @@ namespace bgfx
 		bool disasm;
 		bool raw;
 		bool preprocessOnly;
-		bool keepComments;
 		bool depends;
 
 		bool debugInformation;

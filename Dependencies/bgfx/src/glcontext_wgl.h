@@ -10,6 +10,14 @@
 
 #include <wgl/wglext.h>
 
+#ifndef APIENTRY
+#	define APIENTRY
+#endif // APIENTRY
+
+#ifndef APIENTRYP
+#	define APIENTRYP APIENTRY *
+#endif // APIENTRYP
+
 namespace bgfx { namespace gl
 {
 typedef PROC (APIENTRYP PFNWGLGETPROCADDRESSPROC) (LPCSTR lpszProc);
@@ -61,12 +69,17 @@ typedef void (APIENTRYP PFNGLSTENCILOPPROC) (GLenum fail, GLenum zfail, GLenum z
 	struct GlContext
 	{
 		GlContext()
-			: m_current(NULL)
+			: m_contextAttrs()
+			, m_pfd()
+			, m_current(NULL)
 			, m_opengl32dll(NULL)
 			, m_context(NULL)
 			, m_hdc(NULL)
+			, m_dummyHwnd(NULL)
+			, m_ownsContext(false)
 			, m_msaaContext(false)
 			, m_swapInterval(0)
+			, m_pixelFormat(0)
 		{
 		}
 
@@ -88,17 +101,16 @@ typedef void (APIENTRYP PFNGLSTENCILOPPROC) (GLenum fail, GLenum zfail, GLenum z
 		}
 
 		int32_t m_contextAttrs[9];
-		int m_pixelFormat;
 		PIXELFORMATDESCRIPTOR m_pfd;
 		SwapChainGL* m_current;
 		void* m_opengl32dll;
 		HGLRC m_context;
-		HDC m_hdc;
-		// true when MSAA is handled by the context instead of using MSAA FBO
-		bool m_msaaContext;
-		// Desired wglSwapIntervalEXT value, cached so it can be re-applied whenever a swap
-		// chain's context becomes current (wglSwapIntervalEXT is per-context on Windows).
-		int m_swapInterval;
+		HDC   m_hdc;
+		HWND  m_dummyHwnd;
+		bool  m_ownsContext;
+		bool  m_msaaContext;
+		int   m_swapInterval;
+		int   m_pixelFormat;
 	};
 } /* namespace gl */ } // namespace bgfx
 

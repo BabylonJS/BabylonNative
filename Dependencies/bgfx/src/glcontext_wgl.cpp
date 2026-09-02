@@ -10,6 +10,14 @@
 
 #	if BGFX_USE_WGL
 
+#		if BGFX_CONFIG_RENDERER_OPENGLES
+#			define BGFX_WGL_CONTEXT_VERSION     BGFX_CONFIG_RENDERER_OPENGLES
+#			define BGFX_WGL_CONTEXT_PROFILE_BIT WGL_CONTEXT_ES_PROFILE_BIT_EXT
+#		else
+#			define BGFX_WGL_CONTEXT_VERSION     BGFX_CONFIG_RENDERER_OPENGL
+#			define BGFX_WGL_CONTEXT_PROFILE_BIT WGL_CONTEXT_CORE_PROFILE_BIT_ARB
+#		endif // BGFX_CONFIG_RENDERER_OPENGLES
+
 namespace bgfx { namespace gl
 {
 	PFNWGLGETPROCADDRESSPROC wglGetProcAddress;
@@ -111,6 +119,25 @@ namespace bgfx { namespace gl
 		return context;
 	}
 
+	static HWND createDummyWindow()
+	{
+		// An application can only set the pixel format of a window one time.
+		// Once a window's pixel format is set, it cannot be changed.
+		// MSDN: https://web.archive.org/web/20190207230357/https://docs.microsoft.com/en-us/windows/desktop/api/wingdi/nf-wingdi-setpixelformat
+		return CreateWindowA("STATIC"
+			, ""
+			, WS_POPUP|WS_DISABLED
+			, -32000
+			, -32000
+			, 0
+			, 0
+			, NULL
+			, NULL
+			, GetModuleHandle(NULL)
+			, 0
+			);
+	}
+
 	void GlContext::create(const Resolution& _resolution)
 	{
 		m_opengl32dll = bx::dlopen("opengl32.dll");
@@ -122,27 +149,110 @@ namespace bgfx { namespace gl
 		// If g_platformHooks.nwh is NULL, the assumption is that GL context was created
 		// by user (for example, using SDL, GLFW, etc.)
 		BX_WARN(NULL != g_platformData.nwh
+			||  NULL != g_platformData.context
 			, "bgfx::setPlatform with valid window is not called. This might "
 				"be intentional when GL context is created by the user."
 			);
 
-		if (NULL != g_platformData.nwh && NULL != g_platformData.context )
+		HWND nwh = (HWND)g_platformData.nwh;
+
+		m_ownsContext = NULL == g_platformData.context;
+
+		if (NULL == nwh
+		&&  m_ownsContext)
 		{
-			// user has provided a context and a window
-			wglMakeCurrent = (PFNWGLMAKECURRENTPROC)bx::dlsym(m_opengl32dll, "wglMakeCurrent");
-			BGFX_FATAL(NULL != wglMakeCurrent, Fatal::UnableToInitialize, "Failed get wglMakeCurrent.");
+			m_dummyHwnd = createDummyWindow();
+			BGFX_FATAL(NULL != m_dummyHwnd, Fatal::UnableToInitialize, "Failed to create headless window.");
 
-			m_hdc = GetDC( (HWND)g_platformData.nwh);
-			BGFX_FATAL(NULL != m_hdc, Fatal::UnableToInitialize, "GetDC failed!");
-
-			HGLRC context = (HGLRC)g_platformData.context;
-			int result = wglMakeCurrent(m_hdc, context );
-			BGFX_FATAL(0 != result, Fatal::UnableToInitialize, "wglMakeCurrent failed!");
-
-			m_context = context;
+			nwh = m_dummyHwnd;
 		}
 
-		if (NULL != g_platformData.nwh && NULL == g_platformData.context )
+		BGFX_FATAL(NULL != nwh
+			, Fatal::UnableToInitialize
+			, "Caller-provided GL context also needs the window it was created for."
+			);
+
+		if (!m_ownsContext)
+		{
+			wglMakeCurrent   = bx::dlsym<PFNWGLMAKECURRENTPROC  >(m_opengl32dll, "wglMakeCurrent");
+			wglCreateContext = bx::dlsym<PFNWGLCREATECONTEXTPROC>(m_opengl32dll, "wglCreateContext");
+			wglDeleteContext = bx::dlsym<PFNWGLDELETECONTEXTPROC>(m_opengl32dll, "wglDeleteContext");
+
+			BGFX_FATAL(NULL != wglMakeCurrent,   Fatal::UnableToInitialize, "Failed get wglMakeCurrent.");
+			BGFX_FATAL(NULL != wglCreateContext, Fatal::UnableToInitialize, "Failed get wglCreateContext.");
+			BGFX_FATAL(NULL != wglDeleteContext, Fatal::UnableToInitialize, "Failed get wglDeleteContext.");
+
+			m_hdc = GetDC(nwh);
+			BGFX_FATAL(NULL != m_hdc, Fatal::UnableToInitialize, "GetDC failed!");
+
+			m_context = (HGLRC)g_platformData.context;
+
+			int result = wglMakeCurrent(m_hdc, m_context);
+			BGFX_FATAL(0 != result, Fatal::UnableToInitialize, "wglMakeCurrent failed!");
+
+			m_pixelFormat = GetPixelFormat(m_hdc);
+
+			if (0 != m_pixelFormat)
+			{
+				DescribePixelFormat(m_hdc, m_pixelFormat, sizeof(m_pfd), &m_pfd);
+
+				BX_TRACE("Pixel format:\n"
+					"\tiPixelType %d\n"
+					"\tcColorBits %d\n"
+					"\tcAlphaBits %d\n"
+					"\tcDepthBits %d\n"
+					"\tcStencilBits %d\n"
+					, m_pfd.iPixelType
+					, m_pfd.cColorBits
+					, m_pfd.cAlphaBits
+					, m_pfd.cDepthBits
+					, m_pfd.cStencilBits
+					);
+			}
+			else
+			{
+				BX_TRACE("Caller-provided GL context window has no pixel format; secondary swap chains are unavailable (last err: 0x%08x)."
+					, GetLastError()
+					);
+			}
+
+			// WGL extensions can only be resolved once a context is current.
+			wglGetExtensionsStringARB  = wglGetProc<PFNWGLGETEXTENSIONSSTRINGARBPROC >("wglGetExtensionsStringARB");
+			wglChoosePixelFormatARB    = wglGetProc<PFNWGLCHOOSEPIXELFORMATARBPROC   >("wglChoosePixelFormatARB");
+			wglCreateContextAttribsARB = wglGetProc<PFNWGLCREATECONTEXTATTRIBSARBPROC>("wglCreateContextAttribsARB");
+			wglSwapIntervalEXT         = wglGetProc<PFNWGLSWAPINTERVALEXTPROC        >("wglSwapIntervalEXT");
+
+			if (NULL != wglGetExtensionsStringARB)
+			{
+				const char* extensions = (const char*)wglGetExtensionsStringARB(m_hdc);
+				BX_TRACE("WGL extensions:");
+				dumpExtensions(extensions);
+			}
+
+			// Attributes for the contexts SwapChainGL shares with this one.
+			const int32_t contextAttrs[9] =
+			{
+				WGL_CONTEXT_MAJOR_VERSION_ARB, BGFX_WGL_CONTEXT_VERSION / 10,
+				WGL_CONTEXT_MINOR_VERSION_ARB, BGFX_WGL_CONTEXT_VERSION % 10,
+				WGL_CONTEXT_FLAGS_ARB, BGFX_CONFIG_DEBUG ? WGL_CONTEXT_DEBUG_BIT_ARB : 0,
+				WGL_CONTEXT_PROFILE_MASK_ARB, BGFX_WGL_CONTEXT_PROFILE_BIT,
+				0
+			};
+
+			static_assert(sizeof(contextAttrs) == sizeof(m_contextAttrs) );
+			bx::memCopy(m_contextAttrs, contextAttrs, sizeof(contextAttrs) );
+
+			m_current = NULL;
+
+			m_swapInterval = !!(_resolution.reset & BGFX_RESET_VSYNC) ? 1 : 0;
+
+			if (NULL != wglSwapIntervalEXT)
+			{
+				wglSwapIntervalEXT(m_swapInterval);
+			}
+		}
+
+		if (m_ownsContext)
 		{
 			wglMakeCurrent = bx::dlsym<PFNWGLMAKECURRENTPROC>(m_opengl32dll, "wglMakeCurrent");
 			BGFX_FATAL(NULL != wglMakeCurrent, Fatal::UnableToInitialize, "Failed get wglMakeCurrent.");
@@ -153,26 +263,11 @@ namespace bgfx { namespace gl
 			wglDeleteContext = bx::dlsym<PFNWGLDELETECONTEXTPROC>(m_opengl32dll, "wglDeleteContext");
 			BGFX_FATAL(NULL != wglDeleteContext, Fatal::UnableToInitialize, "Failed get wglDeleteContext.");
 
-			m_hdc = GetDC( (HWND)g_platformData.nwh);
+			m_hdc = GetDC(nwh);
 			BGFX_FATAL(NULL != m_hdc, Fatal::UnableToInitialize, "GetDC failed!");
 
 			// Dummy window to peek into WGL functionality.
-			//
-			// An application can only set the pixel format of a window one time.
-			// Once a window's pixel format is set, it cannot be changed.
-			// MSDN: https://web.archive.org/web/20190207230357/https://docs.microsoft.com/en-us/windows/desktop/api/wingdi/nf-wingdi-setpixelformat
-			HWND hwnd = CreateWindowA("STATIC"
-				, ""
-				, WS_POPUP|WS_DISABLED
-				, -32000
-				, -32000
-				, 0
-				, 0
-				, NULL
-				, NULL
-				, GetModuleHandle(NULL)
-				, 0
-				);
+			HWND hwnd = createDummyWindow();
 
 			HDC hdc = GetDC(hwnd);
 			BGFX_FATAL(NULL != hdc, Fatal::UnableToInitialize, "GetDC failed!");
@@ -255,24 +350,17 @@ namespace bgfx { namespace gl
 				BX_UNUSED(flags);
 				int32_t contextAttrs[9] =
 				{
-#if BGFX_CONFIG_RENDERER_OPENGL >= 31
-					WGL_CONTEXT_MAJOR_VERSION_ARB, BGFX_CONFIG_RENDERER_OPENGL / 10,
-					WGL_CONTEXT_MINOR_VERSION_ARB, BGFX_CONFIG_RENDERER_OPENGL % 10,
+					WGL_CONTEXT_MAJOR_VERSION_ARB, BGFX_WGL_CONTEXT_VERSION / 10,
+					WGL_CONTEXT_MINOR_VERSION_ARB, BGFX_WGL_CONTEXT_VERSION % 10,
 					WGL_CONTEXT_FLAGS_ARB, flags,
-					WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-#else
-					WGL_CONTEXT_MAJOR_VERSION_ARB, 2,
-					WGL_CONTEXT_MINOR_VERSION_ARB, 1,
-					0, 0,
-					0, 0,
-#endif // BGFX_CONFIG_RENDERER_OPENGL >= 31
+					WGL_CONTEXT_PROFILE_MASK_ARB, BGFX_WGL_CONTEXT_PROFILE_BIT,
 					0
 				};
 
 				m_context = wglCreateContextAttribsARB(m_hdc, 0, contextAttrs);
 				if (NULL == m_context)
 				{
-					// nVidia doesn't like context profile mask for contexts below 3.2?
+					// NVIDIA doesn't like context profile mask for contexts below 3.2?
 					contextAttrs[6] = WGL_CONTEXT_PROFILE_MASK_ARB == contextAttrs[6] ? 0 : contextAttrs[6];
 					m_context = wglCreateContextAttribsARB(m_hdc, 0, contextAttrs);
 				}
@@ -309,19 +397,27 @@ namespace bgfx { namespace gl
 
 	void GlContext::destroy()
 	{
-		if (NULL != g_platformData.nwh)
+		if (NULL != m_hdc)
 		{
 			wglMakeCurrent(NULL, NULL);
 
-			if (NULL == g_platformData.context)
+			if (m_ownsContext)
 			{
 				wglDeleteContext(m_context);
-				m_context = NULL;
-
 			}
 
-			ReleaseDC( (HWND)g_platformData.nwh, m_hdc);
+			m_context     = NULL;
+			m_pixelFormat = 0;
+			m_current     = NULL;
+
+			ReleaseDC(NULL != m_dummyHwnd ? m_dummyHwnd : (HWND)g_platformData.nwh, m_hdc);
 			m_hdc = NULL;
+		}
+
+		if (NULL != m_dummyHwnd)
+		{
+			DestroyWindow(m_dummyHwnd);
+			m_dummyHwnd = NULL;
 		}
 
 		bx::dlclose(m_opengl32dll);
@@ -344,6 +440,17 @@ namespace bgfx { namespace gl
 
 	uint64_t GlContext::getCaps() const
 	{
+		if (NULL == wglCreateContextAttribsARB)
+		{
+			return 0;
+		}
+
+		if (!m_ownsContext
+		&&  (0 == m_pixelFormat || 0 == (m_pfd.dwFlags & PFD_DRAW_TO_WINDOW) ) )
+		{
+			return 0;
+		}
+
 		return BGFX_CAPS_SWAP_CHAIN;
 	}
 

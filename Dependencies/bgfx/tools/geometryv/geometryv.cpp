@@ -48,24 +48,32 @@ static const bgfx::EmbeddedShader s_embeddedShaders[] =
 
 static const char* s_attribShortNames[] =
 {
-	"P",   // Position
-	"N",   // Normal
-	"T",   // Tangent
-	"B",   // Bitangent
-	"C0",  // Color0
-	"C1",  // Color1
-	"C2",  // Color2
-	"C3",  // Color3
-	"I",   // Indices
-	"W",   // Weight
-	"TC0", // TexCoord0
-	"TC1", // TexCoord1
-	"TC2", // TexCoord2
-	"TC3", // TexCoord3
-	"TC4", // TexCoord4
-	"TC5", // TexCoord5
-	"TC6", // TexCoord6
-	"TC7", // TexCoord7
+	"P",    // Position
+	"N",    // Normal
+	"T",    // Tangent
+	"B",    // Bitangent
+	"C0",   // Color0
+	"C1",   // Color1
+	"C2",   // Color2
+	"C3",   // Color3
+	"I",    // Indices
+	"W",    // Weight
+	"TC0",  // TexCoord0
+	"TC1",  // TexCoord1
+	"TC2",  // TexCoord2
+	"TC3",  // TexCoord3
+	"TC4",  // TexCoord4
+	"TC5",  // TexCoord5
+	"TC6",  // TexCoord6
+	"TC7",  // TexCoord7
+	"TC8",  // TexCoord8
+	"TC9",  // TexCoord9
+	"TC10", // TexCoord10
+	"TC11", // TexCoord11
+	"TC12", // TexCoord12
+	"TC13", // TexCoord13
+	"TC14", // TexCoord14
+	"TC15", // TexCoord15
 };
 static_assert(BX_COUNTOF(s_attribShortNames) == bgfx::Attrib::Count);
 
@@ -649,6 +657,12 @@ void keyBindingHelp(const char* _bindings, const char* _description)
 	ImGui::Text("%s", _description);
 }
 
+static const bx::CommandLineOption s_options[] =
+{
+	{ 'h', "help",    0, NULL, "Help."                     },
+	{ 'v', "version", 0, NULL, "Version information only." },
+};
+
 void help(const char* _error = NULL)
 {
 	if (NULL != _error)
@@ -679,8 +693,12 @@ void help(const char* _error = NULL)
 	bx::printf(
 		  "\n"
 		  "Options:\n"
-		  "  -h, --help               Help.\n"
-		  "  -v, --version            Version information only.\n"
+		);
+
+	bx::Error err;
+	bx::write(bx::getStdOut(), s_options, BX_COUNTOF(s_options), &err);
+
+	bx::printf(
 		  "\n"
 		  "For additional information, see https://github.com/bkaradzic/bgfx\n"
 		);
@@ -688,7 +706,7 @@ void help(const char* _error = NULL)
 
 int _main_(int _argc, char** _argv)
 {
-	bx::CommandLine cmdLine(_argc, _argv);
+	bx::CommandLine cmdLine(_argc, _argv, s_options, BX_COUNTOF(s_options) );
 
 	if (cmdLine.hasArg('v', "version") )
 	{
@@ -767,7 +785,8 @@ int _main_(int _argc, char** _argv)
 			;
 	};
 
-	const char* filePath = _argc < 2 ? "" : _argv[1];
+	const char* filePath = cmdLine.getPositional(1);
+	filePath = NULL == filePath ? "" : filePath;
 
 	std::string path = filePath;
 	{

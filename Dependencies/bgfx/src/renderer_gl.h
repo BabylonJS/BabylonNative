@@ -12,14 +12,17 @@
 	|| BX_PLATFORM_NX                                                                       \
 	|| BX_PLATFORM_RPI                                                                      \
 	) )                                                                                     \
-	|| (BGFX_CONFIG_RENDERER_OPENGLES && BX_PLATFORM_WINDOWS)
+	|| (BGFX_CONFIG_RENDERER_OPENGLES && BX_PLATFORM_WINDOWS && !BGFX_CONFIG_GL_USE_WGL)
 
 #define BGFX_USE_HTML5 (BGFX_CONFIG_RENDERER_OPENGLES && (0 \
 	|| BX_PLATFORM_EMSCRIPTEN                               \
 	) )
 
-#define BGFX_USE_WGL (BGFX_CONFIG_RENDERER_OPENGL && (0 \
-	|| BX_PLATFORM_WINDOWS                              \
+#define BGFX_USE_WGL ( (0                                        \
+	||  BGFX_CONFIG_RENDERER_OPENGL                              \
+	|| (BGFX_CONFIG_RENDERER_OPENGLES && BGFX_CONFIG_GL_USE_WGL) \
+	) && (0                                                      \
+	|| BX_PLATFORM_WINDOWS                                       \
 	) )
 
 #define BGFX_USE_GL_DYNAMIC_LIB (0 \
@@ -30,14 +33,6 @@
 // Keep a state cache of GL uniform values to avoid redundant uploads
 // on the following platforms.
 #define BGFX_GL_CONFIG_UNIFORM_CACHE BX_PLATFORM_EMSCRIPTEN
-
-#ifndef BGFX_GL_CONFIG_BLIT_EMULATION
-#	define BGFX_GL_CONFIG_BLIT_EMULATION 0
-#endif // BGFX_GL_CONFIG_BLIT_EMULATION
-
-#ifndef BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION
-#	define BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION 0
-#endif // BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION
 
 #define BGFX_GL_PROFILER_BEGIN(_view, _abgr)                                               \
 	BX_MACRO_BLOCK_BEGIN                                                                   \
@@ -58,66 +53,19 @@
 	BX_MACRO_BLOCK_END
 
 #if BGFX_CONFIG_RENDERER_OPENGL
-#	if BGFX_CONFIG_RENDERER_OPENGL >= 31
-#		include <gl/glcorearb.h>
-#	else
-#		if BX_PLATFORM_LINUX
-#			define GL_PROTOTYPES
-#			define GL_GLEXT_LEGACY
-#			include <GL/gl.h>
-#			undef GL_PROTOTYPES
-#		elif BX_PLATFORM_WINDOWS
-#			ifndef WIN32_LEAN_AND_MEAN
-#				define WIN32_LEAN_AND_MEAN
-#			endif // WIN32_LEAN_AND_MEAN
-#			include <windows.h>
-#			include <GL/gl.h>
-#		else
-#			include <GL/gl.h>
-#		endif // BX_PLATFORM_
-
-#		include <gl/glext.h>
-#	endif // BGFX_CONFIG_RENDERER_OPENGL >= 31
+#	include <gl/glcorearb.h>
 
 #elif BGFX_CONFIG_RENDERER_OPENGLES
 typedef double GLdouble;
-#	if BGFX_CONFIG_RENDERER_OPENGLES < 30
-#		include <GLES2/gl2platform.h>
-#		include <GLES2/gl2.h>
-#		include <GLES2/gl2ext.h>
-typedef int64_t  GLint64;
-typedef uint64_t GLuint64;
-#		define GL_PROGRAM_BINARY_LENGTH GL_PROGRAM_BINARY_LENGTH_OES
-#		define GL_NUM_PROGRAM_BINARY_FORMATS GL_NUM_PROGRAM_BINARY_FORMATS_OES
-#		define GL_HALF_FLOAT GL_HALF_FLOAT_OES
-#		define GL_RGBA8 GL_RGBA8_OES
-#		define GL_UNSIGNED_INT_2_10_10_10_REV GL_UNSIGNED_INT_2_10_10_10_REV_EXT
-#		ifndef GL_TEXTURE_3D
-#			define GL_TEXTURE_3D GL_TEXTURE_3D_OES
-#		endif // GL_TEXTURE_3D
-#		define GL_SAMPLER_3D GL_SAMPLER_3D_OES
-#		define GL_TEXTURE_WRAP_R GL_TEXTURE_WRAP_R_OES
-#		ifndef GL_MIN
-#			define GL_MIN GL_MIN_EXT
-#		endif // GL_MIN
-#		ifndef GL_MAX
-#			define GL_MAX GL_MAX_EXT
-#		endif // GL_MAX
-#		define GL_DEPTH_COMPONENT24 GL_DEPTH_COMPONENT24_OES
-#		define GL_DEPTH24_STENCIL8 GL_DEPTH24_STENCIL8_OES
-#		define GL_DEPTH_COMPONENT32 GL_DEPTH_COMPONENT32_OES
-#		define GL_UNSIGNED_INT_24_8 GL_UNSIGNED_INT_24_8_OES
-#	elif BGFX_CONFIG_RENDERER_OPENGLES >= 30
-#		include <GLES3/gl3platform.h>
-#		if BGFX_CONFIG_RENDERER_OPENGLES >= 32
-#			include <GLES3/gl32.h>
-#		elif BGFX_CONFIG_RENDERER_OPENGLES >= 31
-#			include <GLES3/gl31.h>
-#		else
-#			include <GLES3/gl3.h>
-#		endif // BGFX_CONFIG_RENDERER_OPENGLES
-#		include <GLES2/gl2ext.h>
-#	endif // BGFX_CONFIG_RENDERER_
+#	include <GLES3/gl3platform.h>
+#	if BGFX_CONFIG_RENDERER_OPENGLES >= 32
+#		include <GLES3/gl32.h>
+#	elif BGFX_CONFIG_RENDERER_OPENGLES >= 31
+#		include <GLES3/gl31.h>
+#	else
+#		include <GLES3/gl3.h>
+#	endif // BGFX_CONFIG_RENDERER_OPENGLES
+#	include <GLES2/gl2ext.h>
 
 #endif // BGFX_CONFIG_RENDERER_OPENGL
 
@@ -305,6 +253,10 @@ typedef uint64_t GLuint64;
 #	define GL_STENCIL_INDEX 0x1901
 #endif // GL_STENCIL_INDEX
 
+#ifndef GL_DEPTH_STENCIL_TEXTURE_MODE
+#	define GL_DEPTH_STENCIL_TEXTURE_MODE 0x90EA
+#endif // GL_DEPTH_STENCIL_TEXTURE_MODE
+
 #ifndef GL_RED
 #	define GL_RED 0x1903
 #endif // GL_RED
@@ -340,6 +292,10 @@ typedef uint64_t GLuint64;
 #ifndef GL_RGB10_A2
 #	define GL_RGB10_A2 0x8059
 #endif // GL_RGB10_A2
+
+#ifndef GL_RGB10_A2UI
+#	define GL_RGB10_A2UI 0x906F
+#endif // GL_RGB10_A2UI
 
 #ifndef GL_RGBA16
 #	define GL_RGBA16 0x805B
@@ -385,6 +341,18 @@ typedef uint64_t GLuint64;
 #	define GL_UNSIGNED_INT_10F_11F_11F_REV 0x8C3B
 #endif // GL_UNSIGNED_INT_10F_11F_11F_REV
 
+#ifndef GL_COPY_READ_BUFFER
+#	define GL_COPY_READ_BUFFER 0x8F36
+#endif // GL_COPY_READ_BUFFER
+
+#ifndef GL_COPY_WRITE_BUFFER
+#	define GL_COPY_WRITE_BUFFER 0x8F37
+#endif // GL_COPY_WRITE_BUFFER
+
+#ifndef GL_MAP_READ_BIT
+#	define GL_MAP_READ_BIT 0x0001
+#endif // GL_MAP_READ_BIT
+
 #ifndef GL_COMPRESSED_RGB_S3TC_DXT1_EXT
 #	define GL_COMPRESSED_RGB_S3TC_DXT1_EXT 0x83F0
 #endif // GL_COMPRESSED_RGB_S3TC_DXT1_EXT
@@ -405,9 +373,17 @@ typedef uint64_t GLuint64;
 #	define GL_COMPRESSED_LUMINANCE_LATC1_EXT 0x8C70
 #endif // GL_COMPRESSED_LUMINANCE_LATC1_EXT
 
+#ifndef GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT
+#	define GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT 0x8C71
+#endif // GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT
+
 #ifndef GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT
 #	define GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT 0x8C72
 #endif // GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT
+
+#ifndef GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT
+#	define GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT 0x8C73
+#endif // GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT
 
 #ifndef GL_COMPRESSED_RED_RGTC1
 #	define GL_COMPRESSED_RED_RGTC1 0x8DBB
@@ -774,6 +750,18 @@ typedef uint64_t GLuint64;
 #	define GL_UNPACK_ROW_LENGTH 0x0CF2
 #endif // GL_UNPACK_ROW_LENGTH
 
+#ifndef GL_UNPACK_IMAGE_HEIGHT
+#	define GL_UNPACK_IMAGE_HEIGHT 0x806E
+#endif // GL_UNPACK_IMAGE_HEIGHT
+
+#ifndef GL_PACK_ROW_LENGTH
+#	define GL_PACK_ROW_LENGTH 0x0D02
+#endif // GL_PACK_ROW_LENGTH
+
+#ifndef GL_PACK_IMAGE_HEIGHT
+#	define GL_PACK_IMAGE_HEIGHT 0x806C
+#endif // GL_PACK_IMAGE_HEIGHT
+
 #ifndef GL_DEPTH_STENCIL
 #	define GL_DEPTH_STENCIL 0x84F9
 #endif // GL_DEPTH_STENCIL
@@ -785,6 +773,14 @@ typedef uint64_t GLuint64;
 #ifndef GL_DEPTH_COMPONENT32F
 #	define GL_DEPTH_COMPONENT32F 0x8CAC
 #endif // GL_DEPTH_COMPONENT32F
+
+#ifndef GL_DEPTH32F_STENCIL8
+#	define GL_DEPTH32F_STENCIL8 0x8CAD
+#endif // GL_DEPTH32F_STENCIL8
+
+#ifndef GL_FLOAT_32_UNSIGNED_INT_24_8_REV
+#	define GL_FLOAT_32_UNSIGNED_INT_24_8_REV 0x8DAD
+#endif // GL_FLOAT_32_UNSIGNED_INT_24_8_REV
 
 #ifndef GL_DEPTH_STENCIL_ATTACHMENT
 #	define GL_DEPTH_STENCIL_ATTACHMENT 0x821A
@@ -858,6 +854,26 @@ typedef uint64_t GLuint64;
 #	define GL_SAMPLER_2D_ARRAY_SHADOW 0x8DC4
 #endif // GL_SAMPLER_2D_ARRAY_SHADOW
 
+#ifndef GL_SAMPLER_CUBE_SHADOW
+#	define GL_SAMPLER_CUBE_SHADOW 0x8DC5
+#endif // GL_SAMPLER_CUBE_SHADOW
+
+#ifndef GL_SAMPLER_CUBE_MAP_ARRAY
+#	define GL_SAMPLER_CUBE_MAP_ARRAY 0x900C
+#endif // GL_SAMPLER_CUBE_MAP_ARRAY
+
+#ifndef GL_SAMPLER_CUBE_MAP_ARRAY_SHADOW
+#	define GL_SAMPLER_CUBE_MAP_ARRAY_SHADOW 0x900D
+#endif // GL_SAMPLER_CUBE_MAP_ARRAY_SHADOW
+
+#ifndef GL_INT_SAMPLER_CUBE_MAP_ARRAY
+#	define GL_INT_SAMPLER_CUBE_MAP_ARRAY 0x900E
+#endif // GL_INT_SAMPLER_CUBE_MAP_ARRAY
+
+#ifndef GL_UNSIGNED_INT_SAMPLER_CUBE_MAP_ARRAY
+#	define GL_UNSIGNED_INT_SAMPLER_CUBE_MAP_ARRAY 0x900F
+#endif // GL_UNSIGNED_INT_SAMPLER_CUBE_MAP_ARRAY
+
 #ifndef GL_TEXTURE_MAX_LEVEL
 #	define GL_TEXTURE_MAX_LEVEL 0x813D
 #endif // GL_TEXTURE_MAX_LEVEL
@@ -886,9 +902,17 @@ typedef uint64_t GLuint64;
 #	define GL_ELEMENT_ARRAY_BARRIER_BIT 0x00000002
 #endif // GL_ELEMENT_ARRAY_BARRIER_BIT
 
+#ifndef GL_TEXTURE_FETCH_BARRIER_BIT
+#	define GL_TEXTURE_FETCH_BARRIER_BIT 0x00000008
+#endif // GL_TEXTURE_FETCH_BARRIER_BIT
+
 #ifndef GL_SHADER_IMAGE_ACCESS_BARRIER_BIT
 #	define GL_SHADER_IMAGE_ACCESS_BARRIER_BIT 0x00000020
 #endif // GL_SHADER_IMAGE_ACCESS_BARRIER_BIT
+
+#ifndef GL_BUFFER_UPDATE_BARRIER_BIT
+#	define GL_BUFFER_UPDATE_BARRIER_BIT 0x00000200
+#endif // GL_BUFFER_UPDATE_BARRIER_BIT
 
 #ifndef GL_SHADER_STORAGE_BARRIER_BIT
 #	define GL_SHADER_STORAGE_BARRIER_BIT 0x00002000
@@ -949,6 +973,18 @@ typedef uint64_t GLuint64;
 #ifndef GL_UNSIGNED_INT_IMAGE_CUBE
 #	define GL_UNSIGNED_INT_IMAGE_CUBE 0x9066
 #endif // GL_UNSIGNED_INT_IMAGE_CUBE
+
+#ifndef GL_IMAGE_CUBE_MAP_ARRAY
+#	define GL_IMAGE_CUBE_MAP_ARRAY 0x9054
+#endif // GL_IMAGE_CUBE_MAP_ARRAY
+
+#ifndef GL_INT_IMAGE_CUBE_MAP_ARRAY
+#	define GL_INT_IMAGE_CUBE_MAP_ARRAY 0x905F
+#endif // GL_INT_IMAGE_CUBE_MAP_ARRAY
+
+#ifndef GL_UNSIGNED_INT_IMAGE_CUBE_MAP_ARRAY
+#	define GL_UNSIGNED_INT_IMAGE_CUBE_MAP_ARRAY 0x906A
+#endif // GL_UNSIGNED_INT_IMAGE_CUBE_MAP_ARRAY
 
 #ifndef GL_PROGRAM_INPUT
 #	define GL_PROGRAM_INPUT 0x92E3
@@ -1428,14 +1464,16 @@ namespace bgfx { namespace gl
 		{
 		}
 
-		bool init(GLenum _target, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, uint64_t _flags);
-		void create(const Memory* _mem, uint64_t _flags, uint8_t _skip);
+		bool init(GLenum _target, uint32_t _width, uint32_t _height, uint32_t _depth, uint8_t _numMips, uint64_t _flags, uint64_t _external = 0);
+		void create(const Memory* _mem, uint64_t _flags, uint8_t _skip, uint64_t _external = 0);
 		void destroy();
 		void overrideInternal(uintptr_t _ptr);
 		void update(uint8_t _side, uint8_t _mip, const Rect& _rect, uint16_t _z, uint16_t _depth, uint16_t _pitch, const Memory* _mem);
+		void clear(uint8_t _mip, uint8_t _numMips, uint16_t _layer, uint16_t _numLayers);
 		void setSamplerState(uint32_t _flags, const float _rgba[4]);
 		void commit(uint32_t _stage, uint32_t _flags, const float _palette[][4], uint8_t _firstMip, uint8_t _numMips, uint16_t _firstLayer, uint16_t _numLayers);
-		GLuint getViewId(uint8_t _firstMip, uint8_t _numMips, uint16_t _firstLayer, uint16_t _numLayers);
+		GLenum getViewTarget(uint16_t _numLayers, bool _layered = false) const;
+		GLuint getViewId(uint8_t _firstMip, uint8_t _numMips, uint16_t _firstLayer, uint16_t _numLayers, GLenum* _target = NULL, bool _layered = false);
 		void resolve(uint8_t _resolve) const;
 
 		bool isCubeMap() const
@@ -1443,6 +1481,23 @@ namespace bgfx { namespace gl
 			return 0
 				|| GL_TEXTURE_CUBE_MAP       == m_target
 				|| GL_TEXTURE_CUBE_MAP_ARRAY == m_target
+				;
+		}
+
+		bool isLayered() const
+		{
+			return 0
+				|| isCubeMap()
+				|| GL_TEXTURE_2D_ARRAY == m_target
+				|| GL_TEXTURE_3D       == m_target
+				;
+		}
+
+		bool isMsaaSurface() const
+		{
+			return 0
+				|| GL_TEXTURE_2D_MULTISAMPLE       == m_target
+				|| GL_TEXTURE_2D_MULTISAMPLE_ARRAY == m_target
 				;
 		}
 
@@ -1462,6 +1517,9 @@ namespace bgfx { namespace gl
 		uint8_t m_requestedFormat;
 		uint8_t m_textureFormat;
 		bool m_immutableStorage;
+		int32_t m_baseLevel = 0;
+		int32_t m_maxLevel  = -1;
+		bool    m_depthStencilTexturing = false;
 	};
 
 	struct ShaderGL
@@ -1525,7 +1583,7 @@ namespace bgfx { namespace gl
 		void init();
 
 		void bindAttributesBegin();
-		void bindAttributes(const VertexLayout& _layout, uint32_t _baseVertex = 0);
+		void bindAttributes(const VertexLayout& _layout, uint32_t _baseVertex = 0, bool _lastStream = true);
 		void bindInstanceData(uint32_t _stride, uint32_t _baseVertex = 0) const;
 		void bindAttributesEnd();
 		void unbindInstanceData() const;
@@ -1634,8 +1692,8 @@ namespace bgfx { namespace gl
 					return false;
 				}
 
-				GLint available;
-				GL_CHECK(glGetQueryObjectiv(query.m_end
+				GLuint available;
+				GL_CHECK(glGetQueryObjectuiv(query.m_end
 					, GL_QUERY_RESULT_AVAILABLE
 					, &available
 					) );

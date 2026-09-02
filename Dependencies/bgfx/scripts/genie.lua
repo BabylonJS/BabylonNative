@@ -87,6 +87,10 @@ newaction {
 			local c3gen = require "bindings-c3"
 			c3gen.write(c3gen.gen(), "../bindings/c3/bgfx.c3")
 
+			local pygen = require "bindings-py"
+			pygen.write(pygen.gen(), "../bindings/py/bgfx.py")
+			pygen.write(pygen.gen_pyi(), "../bindings/py/bgfx.pyi")
+
 			local docsgen = require "docs-rst"
 			docsgen.write(docsgen.gen(), "../docs/bgfx.rst")
 		end
@@ -260,12 +264,12 @@ function exampleProjectDefaults()
 		linkoptions {
 			"/ignore:4199", -- LNK4199: /DELAYLOAD:*.dll ignored; no imports found from *.dll
 		}
-		links { -- this is needed only for testing with GLES2/3 on Windows with VS2008
+		links { -- this is needed only for testing with GLES on Windows with VS2008
 			"DelayImp",
 		}
 
 	configuration { "vs201*", "x32 or x64" }
-		linkoptions { -- this is needed only for testing with GLES2/3 on Windows with VS201x
+		linkoptions { -- this is needed only for testing with GLES on Windows with VS201x
 			"/DELAYLOAD:\"libEGL.dll\"",
 			"/DELAYLOAD:\"libGLESv2.dll\"",
 		}
@@ -581,6 +585,8 @@ or _OPTIONS["with-combined-examples"] then
 		, "48-drawindirect"
 		, "49-hextile"
 		, "51-gpufont"
+		, "52-layered"
+		, "53-sky2"
 		)
 
 

@@ -428,10 +428,6 @@ namespace bgfx { namespace mtl
 			, m_depth(0)
 			, m_numMips(0)
 		{
-			for (uint32_t ii = 0; ii < BX_COUNTOF(m_ptrMips); ++ii)
-			{
-				m_ptrMips[ii] = NULL;
-			}
 		}
 
 		void create(const Memory* _mem, uint64_t _flags, uint8_t _skip, uint64_t _external);
@@ -448,6 +444,8 @@ namespace bgfx { namespace mtl
 			, const Memory* _mem
 			);
 
+		void clear(uint8_t _mip, uint8_t _numMips, uint16_t _layer, uint16_t _numLayers);
+
 		void commit(
 			  uint8_t _stage
 			, bool _vertex
@@ -460,13 +458,12 @@ namespace bgfx { namespace mtl
 			, uint8_t _numMips = UINT8_MAX
 			);
 
-		MTL::Texture* getTextureMipLevel(uint8_t _mip);
-		MTL::Texture* getTextureView(uint16_t _firstLayer, uint16_t _numLayers, uint8_t _firstMip, uint8_t _numMips);
+		MTL::Texture* getTextureImage(uint8_t _mip, uint16_t _firstLayer = 0, uint16_t _numLayers = UINT16_MAX);
+		MTL::Texture* getTextureView(uint16_t _firstLayer, uint16_t _numLayers, uint8_t _firstMip, uint8_t _numMips, bool _stencil = false);
 
 		MTL::Texture* m_ptr;
 		MTL::Texture* m_ptrMsaa;
 		MTL::Texture* m_ptrStencil; // for emulating packed depth/stencil formats - only for iOS8...
-		MTL::Texture* m_ptrMips[14];
 		stl::unordered_map<uint64_t, MTL::Texture*> m_ptrViews;
 		MTL::SamplerState* m_sampler;
 		VideoDecoderMtl*   m_videoDecoder;
@@ -488,10 +485,12 @@ namespace bgfx { namespace mtl
 			: m_metalLayer(NULL)
 			, m_drawable(NULL)
 			, m_drawableTexture(NULL)
+			, m_screenshotTarget(NULL)
 			, m_backBufferColorMsaa()
 			, m_backBufferDepth()
 			, m_backBufferStencil()
 			, m_maxAnisotropy(0)
+			, m_colorFormat(TextureFormat::Count)
 		{
 		}
 
@@ -509,6 +508,7 @@ namespace bgfx { namespace mtl
 		CA::MetalDrawable* m_drawable;
 
 		MTL::Texture* m_drawableTexture;
+		MTL::Texture* m_screenshotTarget;
 
 		MTL::Texture* m_backBufferColorMsaa;
 		MTL::Texture* m_backBufferDepth;
@@ -516,6 +516,7 @@ namespace bgfx { namespace mtl
 
 		uint32_t m_maxAnisotropy;
 		void* m_nwh;
+		TextureFormat::Enum m_colorFormat;
 	};
 
 	struct FrameBufferMtl
@@ -557,9 +558,9 @@ namespace bgfx { namespace mtl
 		uint32_t m_height;
 		uint16_t m_denseIdx;
 
-		TextureHandle m_colorHandle[BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS-1];
+		TextureHandle m_colorHandle[BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS];
 		TextureHandle m_depthHandle;
-		Attachment m_colorAttachment[BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS-1];
+		Attachment m_colorAttachment[BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS];
 		Attachment m_depthAttachment;
 		uint8_t m_num; // number of color handles
 	};
@@ -602,7 +603,9 @@ namespace bgfx { namespace mtl
 	struct TimerQueryMtl
 	{
 		TimerQueryMtl()
-			: m_control(4)
+			: m_frameNum(0)
+			, m_control(4)
+			, m_samplingIdx(0)
 		{
 		}
 
@@ -610,8 +613,17 @@ namespace bgfx { namespace mtl
 		void shutdown();
 		uint32_t begin(uint32_t _resultIdx, uint32_t _frameNum);
 		void end(uint32_t _idx);
-		void addHandlers(MTL::CommandBuffer*& _commandBuffer);
+		void addHandlers(MTL::CommandBuffer*& _commandBuffer, uint32_t _frameNum);
 		bool get();
+
+		bool isViewTimingSupported() const
+		{
+			return NULL != m_sampling[0].m_sampleBuffer;
+		}
+
+		void beginFrame(uint32_t _frameNum);
+		void attach(MTL::RenderPassDescriptor* _renderPassDescriptor);
+		void resolve(uint32_t _samplingIdx);
 
 		struct Result
 		{
@@ -629,13 +641,37 @@ namespace bgfx { namespace mtl
 			uint32_t m_frameNum;
 		};
 
+		struct Query
+		{
+			uint32_t m_resultIdx;
+			uint32_t m_frameNum;
+			uint32_t m_first;
+			uint32_t m_num;
+		};
+
+		struct Sampling
+		{
+			MTL::CounterSampleBuffer* m_sampleBuffer;
+			Query    m_query[BGFX_CONFIG_MAX_VIEWS];
+			uint32_t m_numQueries;
+			uint32_t m_numSamples;
+			uint32_t m_activeQuery;
+			uint64_t m_cpuTimestamp;
+			uint64_t m_gpuTimestamp;
+		};
+
 		uint64_t m_begin;
 		uint64_t m_end;
 		uint64_t m_elapsed;
 		uint64_t m_frequency;
+		uint32_t m_frameNum;
 
 		Result m_result[BGFX_CONFIG_MAX_VIEWS+1];
+		Result m_frameResult[4];
 		bx::RingBufferControl m_control;
+
+		Sampling m_sampling[BGFX_CONFIG_MAX_FRAME_LATENCY];
+		uint32_t m_samplingIdx;
 	};
 
 	struct OcclusionQueryMTL

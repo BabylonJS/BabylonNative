@@ -252,8 +252,8 @@ A View's state is preserved between frames.
     :members:
 
 .. doxygenfunction:: bgfx::setViewName
-.. doxygenfunction:: bgfx::setViewRect(ViewId _id, uint16_t _x, uint16_t _y, uint16_t _width, uint16_t _height)
-.. doxygenfunction:: bgfx::setViewRect(ViewId _id, uint16_t _x, uint16_t _y, BackbufferRatio::Enum _ratio)
+.. doxygenfunction:: bgfx::setViewRect(ViewId _id, int16_t _x, int16_t _y, uint16_t _width, uint16_t _height)
+.. doxygenfunction:: bgfx::setViewRect(ViewId _id, int16_t _x, int16_t _y, BackbufferRatio::Enum _ratio)
 .. doxygenfunction:: bgfx::setViewScissor
 .. doxygenfunction:: bgfx::setViewClear(ViewId _id, uint16_t _flags, uint32_t _rgba = 0x000000ff, float _depth = 1.0f, uint8_t _stencil = 0)
 .. doxygenfunction:: bgfx::setViewClear(ViewId _id, uint16_t _flags, float _depth, uint8_t _stencil, uint8_t _c0 = UINT8_MAX, uint8_t _c1 = UINT8_MAX, uint8_t _c2 = UINT8_MAX, uint8_t _c3 = UINT8_MAX, uint8_t _c4 = UINT8_MAX, uint8_t _c5 = UINT8_MAX, uint8_t _c6 = UINT8_MAX, uint8_t _c7 = UINT8_MAX)
@@ -434,6 +434,9 @@ Set vertex, index, and instance data buffers for draw calls.
 .. doxygenstruct:: bgfx::InstanceDataBuffer
     :members:
 
+.. doxygenstruct:: bgfx::BufferRegion
+    :members:
+
 .. doxygenfunction:: bgfx::setIndexBuffer(IndexBufferHandle _handle)
 .. doxygenfunction:: bgfx::setIndexBuffer(IndexBufferHandle _handle, uint32_t _firstIndex, uint32_t _numIndices)
 .. doxygenfunction:: bgfx::setIndexBuffer(DynamicIndexBufferHandle _handle)
@@ -490,6 +493,7 @@ Bind buffers to compute stages.
 .. doxygenstruct:: bgfx::Access
     :members:
 
+.. doxygenfunction:: bgfx::read(const BufferRegion & _src, void* _data)
 .. doxygenfunction:: bgfx::setBuffer(uint8_t _stage, IndexBufferHandle _handle, Access::Enum _access)
 .. doxygenfunction:: bgfx::setBuffer(uint8_t _stage, VertexBufferHandle _handle, Access::Enum _access)
 .. doxygenfunction:: bgfx::setBuffer(uint8_t _stage, DynamicIndexBufferHandle _handle, Access::Enum _access)
@@ -501,7 +505,8 @@ Images
 
 Bind texture images to compute stages.
 
-.. doxygenfunction:: bgfx::setImage
+.. doxygenfunction:: bgfx::setImage(uint8_t _stage, TextureHandle _handle, uint8_t _mip, Access::Enum _access, TextureFormat::Enum _format = TextureFormat::Count)
+.. doxygenfunction:: bgfx::setImage(uint8_t _stage, TextureHandle _handle, uint16_t _firstLayer, uint16_t _numLayers, uint8_t _mip, Access::Enum _access, TextureFormat::Enum _format = TextureFormat::Count)
 
 Dispatch
 ********
@@ -516,8 +521,10 @@ Blit
 
 In Views, all draw commands are executed **after** blit and compute commands.
 
-.. doxygenfunction:: bgfx::blit(ViewId _id, TextureHandle _dst, uint16_t _dstX, uint16_t _dstY, TextureHandle _src, uint16_t _srcX = 0, uint16_t _srcY = 0, uint16_t _width = UINT16_MAX, uint16_t _height = UINT16_MAX)
-.. doxygenfunction:: bgfx::blit(ViewId _id, TextureHandle _dst, uint8_t _dstMip, uint16_t _dstX, uint16_t _dstY, uint16_t _dstZ, TextureHandle _src, uint8_t _srcMip = 0, uint16_t _srcX = 0, uint16_t _srcY = 0, uint16_t _srcZ = 0, uint16_t _width = UINT16_MAX, uint16_t _height = UINT16_MAX, uint16_t _depth = UINT16_MAX)
+.. doxygenfunction:: bgfx::blit(ViewId _id, const TextureRegion & _dst, const TextureRegion & _src)
+.. doxygenfunction:: bgfx::blit(ViewId _id, const BufferRegion & _dst, const BufferRegion & _src)
+.. doxygenfunction:: bgfx::blit(ViewId _id, const BufferRegion & _dst, const TextureRegion & _src)
+.. doxygenfunction:: bgfx::blit(ViewId _id, const TextureRegion & _dst, const BufferRegion & _src)
 
 Resources
 ---------
@@ -607,6 +614,9 @@ Textures
 .. doxygenstruct:: bgfx::TextureFormat
     :members:
 
+.. doxygenstruct:: bgfx::TextureRegion
+    :members:
+
 .. doxygenstruct:: bgfx::TextureInfo
     :members:
 
@@ -630,7 +640,8 @@ Textures
 .. doxygenfunction:: bgfx::updateTexture2D
 .. doxygenfunction:: bgfx::updateTexture3D
 .. doxygenfunction:: bgfx::updateTextureCube
-.. doxygenfunction:: bgfx::readTexture
+.. doxygenfunction:: bgfx::clear
+.. doxygenfunction:: bgfx::read(const TextureRegion & _src, void* _data)
 .. doxygenfunction:: bgfx::getDirectAccessPtr
 .. doxygenfunction:: bgfx::destroy(TextureHandle _handle)
 

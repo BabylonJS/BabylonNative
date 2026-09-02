@@ -75,6 +75,7 @@ namespace bgfx { namespace noop
 			g_caps.limits.maxComputeBindings = g_caps.limits.maxTextureSamplers;
 			g_caps.limits.maxFBAttachments   = BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS;
 			g_caps.limits.maxVertexStreams   = BGFX_CONFIG_MAX_VERTEX_STREAMS;
+			g_caps.limits.maxVertexAttributes = 32;
 		}
 
 		~RendererContextNOOP()
@@ -173,7 +174,15 @@ namespace bgfx { namespace noop
 		{
 		}
 
+		void clearTexture(TextureHandle /*_handle*/, uint8_t /*_mip*/, uint8_t /*_numMips*/, uint16_t /*_layer*/, uint16_t /*_numLayers*/) override
+		{
+		}
+
 		void readTexture(TextureHandle /*_handle*/, void* /*_data*/, uint16_t /*_layer*/, uint8_t /*_mip*/) override
+		{
+		}
+
+		void readBuffer(Handle /*_handle*/, void* /*_data*/, uint32_t /*_offset*/, uint32_t /*_size*/) override
 		{
 		}
 

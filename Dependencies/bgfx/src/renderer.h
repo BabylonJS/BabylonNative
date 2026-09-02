@@ -22,7 +22,7 @@ namespace bgfx
 		bool hasItem(uint16_t _view) const
 		{
 			return m_item < m_frame->m_numBlitItems
-				&& m_key.m_view <= _view
+				&& m_key.m_view <= m_frame->m_viewOrder[_view]
 				;
 		}
 
@@ -38,7 +38,7 @@ namespace bgfx
 
 		const Frame* m_frame;
 		BlitKey  m_key;
-		uint16_t m_item;
+		uint32_t m_item;
 	};
 
 	struct UniformCacheItem
@@ -60,7 +60,7 @@ namespace bgfx
 		bool hasItem(uint16_t _view) const
 		{
 			return m_item < m_frame->m_uniformCacheFrame.m_numItems
-				&& m_key.m_view <= _view
+				&& m_key.m_view <= m_frame->m_viewOrder[_view]
 				;
 		}
 
@@ -98,22 +98,20 @@ namespace bgfx
 		void reset(Frame* _frame)
 		{
 			m_alphaRef = 0.0f;
+			m_ndcFixup = 1.0f;
 			m_invViewCached = UINT16_MAX;
 			m_invProjCached = UINT16_MAX;
 			m_invViewProjCached = UINT16_MAX;
 
 			m_view = m_viewTmp;
 
-			for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_VIEWS; ++ii)
+			for (uint32_t ii = 0, num = _frame->m_numUsedViews; ii < num; ++ii)
 			{
-				bx::memCopy(&m_view[ii].un.f4x4, &_frame->m_view[ii].m_view.un.f4x4, sizeof(Matrix4) );
-			}
-
-			for (uint32_t ii = 0; ii < BGFX_CONFIG_MAX_VIEWS; ++ii)
-			{
-				bx::float4x4_mul(&m_viewProj[ii].un.f4x4
-					, &m_view[ii].un.f4x4
-					, &_frame->m_view[ii].m_proj.un.f4x4
+				const uint16_t view = _frame->m_usedViews[ii];
+				bx::memCopy(&m_view[view].un.f4x4, &_frame->m_view[view].m_view.un.f4x4, sizeof(Matrix4) );
+				bx::float4x4_mul(&m_viewProj[view].un.f4x4
+					, &m_view[view].un.f4x4
+					, &_frame->m_view[view].m_proj.un.f4x4
 					);
 			}
 		}
@@ -318,7 +316,13 @@ namespace bgfx
 
 				case PredefinedUniform::IndirectArgBase:
 					{
-						const float base[4] = { bx::bitsToFloat(_draw.m_startIndex), 0.0f, 0.0f, 0.0f };
+						const float base[4] =
+						{
+							bx::bitsToFloat(_draw.m_startIndex),
+							0.0f,
+							0.0f,
+							m_ndcFixup,
+						};
 						_renderer->setShaderUniform4f(flags
 							, predefined.m_loc
 							, base
@@ -342,6 +346,8 @@ namespace bgfx
 		Matrix4  m_invProj;
 		Matrix4  m_invViewProj;
 		float    m_alphaRef;
+		float    m_ndcFixup;
+
 		uint16_t m_invViewCached;
 		uint16_t m_invProjCached;
 		uint16_t m_invViewProjCached;

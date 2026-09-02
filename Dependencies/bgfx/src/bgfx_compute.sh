@@ -13,7 +13,7 @@
 #if BGFX_SHADER_LANGUAGE_METAL \
  || BGFX_SHADER_LANGUAGE_SPIRV \
  || BGFX_SHADER_LANGUAGE_WGSL
-#	define FORMAT(_format) [[spv::format_ ## _format]]
+#	define FORMAT(_format) [[__CONCAT(spv::format_, _format)]]
 #	define WRITEONLY [[spv::nonreadable]]
 #else
 #	define FORMAT(_format)
@@ -59,6 +59,15 @@
 #define BUFFER_RW(_name, _type, _reg) __BUFFER_XX(_name, _type, _reg, readwrite)
 #define BUFFER_WO(_name, _type, _reg) __BUFFER_XX(_name, _type, _reg, writeonly)
 
+#define BUFFER_RAW_RO(_name, _reg) __BUFFER_XX(_name, uint, _reg, readonly)
+#define BUFFER_RAW_RW(_name, _reg) __BUFFER_XX(_name, uint, _reg, readwrite)
+#define BUFFER_RAW_WO(_name, _reg) __BUFFER_XX(_name, uint, _reg, writeonly)
+
+#define rawLoadUint(_buffer, _index)           _buffer[_index]
+#define rawLoadFloat(_buffer, _index)          uintBitsToFloat(_buffer[_index])
+#define rawStoreUint(_buffer, _index, _value)  _buffer[_index] = _value
+#define rawStoreFloat(_buffer, _index, _value) _buffer[_index] = floatBitsToUint(_value)
+
 #define NUM_THREADS(_x, _y, _z) layout (local_size_x = _x, local_size_y = _y, local_size_z = _z) in;
 
 #define atomicFetchAndAdd(_mem, _data, _original)                    _original = atomicAdd(_mem, _data)
@@ -101,48 +110,48 @@
 #endif // BGFX_SHADER_LANGUAGE_HLSL
 #define COMP_rgba32f  float4
 
-#define IMAGE2D_RO( _name, _format, _reg)                                       \
-	FORMAT(_format) Texture2D<COMP_ ## _format> _name : REGISTER(t, _reg);      \
+#define IMAGE2D_RO( _name, _format, _reg) \
+	FORMAT(_format) Texture2D<__CONCAT(COMP_, _format)> _name : REGISTER(t, _reg);
 
 #define UIMAGE2D_RO(_name, _format, _reg) IMAGE2D_RO(_name, _format, _reg)
 
-#define IMAGE2D_WO( _name, _format, _reg)                                                 \
-	WRITEONLY FORMAT(_format) RWTexture2D<COMP_ ## _format> _name : REGISTER(u, _reg);  \
+#define IMAGE2D_WO( _name, _format, _reg) \
+	WRITEONLY FORMAT(_format) RWTexture2D<__CONCAT(COMP_, _format)> _name : REGISTER(u, _reg);
 
 #define UIMAGE2D_WO(_name, _format, _reg) IMAGE2D_WO(_name, _format, _reg)
 
-#define IMAGE2D_RW( _name, _format, _reg)                            \
-	FORMAT(_format) RWTexture2D<COMP_ ## _format> _name : REGISTER(u, _reg);  \
+#define IMAGE2D_RW( _name, _format, _reg) \
+	FORMAT(_format) RWTexture2D<__CONCAT(COMP_, _format)> _name : REGISTER(u, _reg);
 
 #define UIMAGE2D_RW(_name, _format, _reg) IMAGE2D_RW(_name, _format, _reg)
 
-#define IMAGE2D_ARRAY_RO(_name, _format, _reg)                                     \
-	FORMAT(_format) Texture2DArray<COMP_ ## _format> _name : REGISTER(t, _reg);    \
+#define IMAGE2D_ARRAY_RO(_name, _format, _reg) \
+	FORMAT(_format) Texture2DArray<__CONCAT(COMP_, _format)> _name : REGISTER(t, _reg);
 
 #define UIMAGE2D_ARRAY_RO(_name, _format, _reg) IMAGE2D_ARRAY_RO(_name, _format, _reg)
 
-#define IMAGE2D_ARRAY_WO( _name, _format, _reg)                                       \
-	WRITEONLY FORMAT(_format) RWTexture2DArray<COMP_ ## _format> _name : REGISTER(u, _reg);    \
+#define IMAGE2D_ARRAY_WO( _name, _format, _reg) \
+	WRITEONLY FORMAT(_format) RWTexture2DArray<__CONCAT(COMP_, _format)> _name : REGISTER(u, _reg);
 
 #define UIMAGE2D_ARRAY_WO(_name, _format, _reg) IMAGE2D_ARRAY_WO(_name, _format, _reg)
 
-#define IMAGE2D_ARRAY_RW(_name, _format, _reg)                              \
-	FORMAT(_format) RWTexture2DArray<COMP_ ## _format> _name : REGISTER(u, _reg);    \
+#define IMAGE2D_ARRAY_RW(_name, _format, _reg) \
+	FORMAT(_format) RWTexture2DArray<__CONCAT(COMP_, _format)> _name : REGISTER(u, _reg);
 
 #define UIMAGE2D_ARRAY_RW(_name, _format, _reg) IMAGE2D_ARRAY_RW(_name, _format, _reg)
 
-#define IMAGE3D_RO( _name, _format, _reg)                                     \
-	FORMAT(_format) Texture3D<COMP_ ## _format> _name : REGISTER(t, _reg);
+#define IMAGE3D_RO( _name, _format, _reg) \
+	FORMAT(_format) Texture3D<__CONCAT(COMP_, _format)> _name : REGISTER(t, _reg);
 
 #define UIMAGE3D_RO(_name, _format, _reg) IMAGE3D_RO(_name, _format, _reg)
 
-#define IMAGE3D_WO( _name, _format, _reg)                                      \
-	WRITEONLY FORMAT(_format) RWTexture3D<COMP_ ## _format> _name : REGISTER(u, _reg);
+#define IMAGE3D_WO( _name, _format, _reg) \
+	WRITEONLY FORMAT(_format) RWTexture3D<__CONCAT(COMP_, _format)> _name : REGISTER(u, _reg);
 
-#define UIMAGE3D_WO(_name, _format, _reg) IMAGE3D_RW(_name, _format, _reg)
+#define UIMAGE3D_WO(_name, _format, _reg) IMAGE3D_WO(_name, _format, _reg)
 
-#define IMAGE3D_RW( _name, _format, _reg)                            \
-	FORMAT(_format) RWTexture3D<COMP_ ## _format> _name : REGISTER(u, _reg);  \
+#define IMAGE3D_RW( _name, _format, _reg) \
+	FORMAT(_format) RWTexture3D<__CONCAT(COMP_, _format)> _name : REGISTER(u, _reg);
 
 #define UIMAGE3D_RW(_name, _format, _reg) IMAGE3D_RW(_name, _format, _reg)
 
@@ -152,10 +161,28 @@
 #define BUFFER_RO(_name, _struct, _reg) StructuredBuffer<_struct>    _name : REGISTER(t, _reg)
 #define BUFFER_RW(_name, _struct, _reg) RWStructuredBuffer <_struct> _name : REGISTER(u, _reg)
 #define BUFFER_WO(_name, _struct, _reg) BUFFER_RW(_name, _struct, _reg)
+
+#define BUFFER_RAW_RO(_name, _reg) BUFFER_RO(_name, uint, _reg)
+#define BUFFER_RAW_RW(_name, _reg) BUFFER_RW(_name, uint, _reg)
+#define BUFFER_RAW_WO(_name, _reg) BUFFER_WO(_name, uint, _reg)
+
+#define rawLoadUint(_buffer, _index)           _buffer[_index]
+#define rawLoadFloat(_buffer, _index)          uintBitsToFloat(_buffer[_index])
+#define rawStoreUint(_buffer, _index, _value)  _buffer[_index] = _value
+#define rawStoreFloat(_buffer, _index, _value) _buffer[_index] = floatBitsToUint(_value)
 #else
 #define BUFFER_RO(_name, _struct, _reg) Buffer<_struct>   _name : REGISTER(t, _reg)
 #define BUFFER_RW(_name, _struct, _reg) RWBuffer<_struct> _name : REGISTER(u, _reg)
 #define BUFFER_WO(_name, _struct, _reg) BUFFER_RW(_name, _struct, _reg)
+
+#define BUFFER_RAW_RO(_name, _reg) ByteAddressBuffer   _name : REGISTER(t, _reg)
+#define BUFFER_RAW_RW(_name, _reg) RWByteAddressBuffer _name : REGISTER(u, _reg)
+#define BUFFER_RAW_WO(_name, _reg) BUFFER_RAW_RW(_name, _reg)
+
+#define rawLoadUint(_buffer, _index)           _buffer.Load( (_index)*4)
+#define rawLoadFloat(_buffer, _index)          uintBitsToFloat(_buffer.Load( (_index)*4) )
+#define rawStoreUint(_buffer, _index, _value)  _buffer.Store( (_index)*4, _value)
+#define rawStoreFloat(_buffer, _index, _value) _buffer.Store( (_index)*4, floatBitsToUint(_value) )
 #endif // BGFX_SHADER_LANGUAGE_*
 
 #define NUM_THREADS(_x, _y, _z) [numthreads(_x, _y, _z)]

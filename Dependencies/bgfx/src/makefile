@@ -24,15 +24,17 @@ BIN = vs_debugfont.bin.h \
 	  cs_mipgen_oddy.bin.h \
 	  cs_mipgen_oddxy.bin.h \
 	  cs_yuv_to_rgb.bin.h \
+	  cs_blit_texture_to_buffer.bin.h \
+	  cs_blit_buffer_to_texture.bin.h \
 
 .PHONY: all
 all: $(BIN)
 
 define shader-embedded
 	@echo [$(<)]
-	 $(SILENT) $(SHADERC) --type $(1) --platform linux   -p 120        -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_glsl
+	 $(SILENT) $(SHADERC) --type $(1) --platform linux   -p 430        -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_glsl
 	 @cat "$(SHADER_TMP)" > $(@)
-	-$(SILENT) $(SHADERC) --type $(1) --platform android -p 100_es     -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_essl
+	-$(SILENT) $(SHADERC) --type $(1) --platform android -p 300_es     -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_essl
 	-@cat "$(SHADER_TMP)" >> $(@)
 	-$(SILENT) $(SHADERC) --type $(1) --platform linux   -p spirv      -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_spv
 	-@cat "$(SHADER_TMP)" >> $(@)
@@ -114,6 +116,12 @@ cs_mipgen_oddxy.bin.h : cs_mipgen_oddxy.sc cs_mipgen.sh
 	$(call shader-embedded-compute)
 
 cs_yuv_to_rgb.bin.h : cs_yuv_to_rgb.sc
+	$(call shader-embedded-compute)
+
+cs_blit_texture_to_buffer.bin.h : cs_blit_texture_to_buffer.sc
+	$(call shader-embedded-compute)
+
+cs_blit_buffer_to_texture.bin.h : cs_blit_buffer_to_texture.sc
 	$(call shader-embedded-compute)
 
 .PHONY: clean

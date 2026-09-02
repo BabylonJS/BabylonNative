@@ -154,11 +154,11 @@ bgfx::TextureHandle loadTextureWithUpdate(const char* _filePath, uint64_t _flags
 		if (NULL != imageContainer)
 		{
 			BX_ASSERT(!imageContainer->m_cubeMap, "Cubemap Texture loading not supported");
-			BX_ASSERT(1 >= imageContainer->m_depth, "3D Texture loading not supported");
+			BX_ASSERT(!bimg::isVolume(*imageContainer), "3D Texture loading not supported");
 			BX_ASSERT(1 == imageContainer->m_numLayers, "Texture Layer loading not supported");
 
 			if (!imageContainer->m_cubeMap
-			&&  1 >= imageContainer->m_depth
+			&& !bimg::isVolume(*imageContainer)
 			&&  1 == imageContainer->m_numLayers
 			&&  bgfx::isTextureValid(0, false, imageContainer->m_numLayers, bgfx::TextureFormat::Enum(imageContainer->m_format), _flags)
 			   )
@@ -232,6 +232,7 @@ bgfx::TextureHandle loadTextureWithUpdate(const char* _filePath, uint64_t _flags
 }
 
 static const uint16_t kTextureSide   = 512;
+static const uint32_t kClearCubeAfterAllocations = 1024;
 static const uint32_t kTexture2dSize = 256;
 
 class ExampleUpdate : public entry::AppI
@@ -471,6 +472,7 @@ public:
 
 		m_hit  = 0;
 		m_miss = 0;
+		m_lastClearHit = 0;
 
 		imguiCreate();
 
@@ -629,6 +631,15 @@ public:
 
 			if (bx::getNow() > m_updateTime)
 			{
+				if (m_hit - m_lastClearHit >= kClearCubeAfterAllocations)
+				{
+					bgfx::clear(m_textureCube[0]);
+					bgfx::clear(m_textureCube[1]);
+					m_cube.reset(kTextureSide);
+					m_quads.clear();
+					m_lastClearHit = m_hit;
+				}
+
 				PackCube face;
 
 				uint16_t bw = bx::max<uint16_t>(1, m_rng.gen()%(kTextureSide/4) );
@@ -646,18 +657,8 @@ public:
 					{
 						bgfx::blit(
 							  0
-							, m_textureCube[1]
-							, 0
-							, rect.m_x
-							, rect.m_y
-							, face.m_side
-							, m_textureCube[0]
-							, 0
-							, rect.m_x
-							, rect.m_y
-							, face.m_side
-							, rect.m_width
-							, rect.m_height
+							, { .handle = m_textureCube[1], .x = rect.m_x, .y = rect.m_y, .z = face.m_side }
+							, { .handle = m_textureCube[0], .x = rect.m_x, .y = rect.m_y, .z = face.m_side, .width = rect.m_width, .height = rect.m_height }
 							);
 					}
 
@@ -679,18 +680,8 @@ public:
 						{
 							bgfx::blit(
 								  0
-								, m_textureCube[1]
-								, 0
-								, rect.m_x
-								, rect.m_y
-								, face.m_side
-								, m_textureCube[0]
-								, 0
-								, rect.m_x
-								, rect.m_y
-								, face.m_side
-								, rect.m_width
-								, rect.m_height
+								, { .handle = m_textureCube[1], .x = rect.m_x, .y = rect.m_y, .z = face.m_side }
+								, { .handle = m_textureCube[0], .x = rect.m_x, .y = rect.m_y, .z = face.m_side, .width = rect.m_width, .height = rect.m_height }
 								);
 						}
 
@@ -703,16 +694,15 @@ public:
 					// Fill rect.
 					const uint32_t pitch = kTexture2dSize*4;
 
-					const uint16_t tw = m_rng.gen()% kTexture2dSize;
-					const uint16_t th = m_rng.gen()% kTexture2dSize;
+					const uint16_t tw = bx::max<uint16_t>(1, m_rng.gen()% kTexture2dSize);
+					const uint16_t th = bx::max<uint16_t>(1, m_rng.gen()% kTexture2dSize);
 					const uint16_t tx = m_rng.gen()%(kTexture2dSize-tw);
 					const uint16_t ty = m_rng.gen()%(kTexture2dSize-th);
 
 					uint8_t* dst = &m_texture2dData[(ty*kTexture2dSize+tx)*4];
 					uint8_t* next = dst + pitch;
 
-					// Using makeRef to pass texture memory without copying.
-					const bgfx::Memory* mem = bgfx::makeRef(dst, tw*th*4);
+					const bgfx::Memory* mem = bgfx::makeRef(dst, (th-1)*pitch + tw*4);
 
 					for (uint32_t yy = 0; yy < th; ++yy, dst = next, next += pitch)
 					{
@@ -786,7 +776,7 @@ public:
 				bgfx::setViewFrameBuffer(mipRtView, m_mipFb);
 				bgfx::setViewRect(mipRtView, 0, 0, 256, 256);
 				bgfx::setViewClear(mipRtView
-					, BGFX_CLEAR_COLOR|BGFX_CLEAR_DEPTH
+					, BGFX_CLEAR_COLOR
 					, 0x306080ff
 					, 1.0f
 					, 0
@@ -803,7 +793,12 @@ public:
 				bgfx::setVertexBuffer(0, m_vbh);
 				bgfx::setIndexBuffer(m_ibh);
 				bgfx::setTexture(0, s_texCube, m_textureCube[0]);
-				bgfx::setState(BGFX_STATE_DEFAULT);
+				bgfx::setState(0
+					| BGFX_STATE_WRITE_RGB
+					| BGFX_STATE_WRITE_A
+					| BGFX_STATE_CULL_CW
+					| BGFX_STATE_MSAA
+					);
 				bgfx::submit(mipRtView, m_program);
 			}
 
@@ -1035,17 +1030,17 @@ public:
 
 			if (m_blitSupported)
 			{
-				bgfx::blit(1, m_blitTestA, 0, 0, m_blitTestB, 0, 0);
-				bgfx::blit(1, m_blitTestC, 0, 0, m_blitTestA, 0, 0);
+				bgfx::blit(1, { .handle = m_blitTestA }, { .handle = m_blitTestB });
+				bgfx::blit(1, { .handle = m_blitTestC }, { .handle = m_blitTestA });
 
-				bgfx::blit(1, m_blitTestA, 0, 0, m_blitTestB, 0, 0);
-				bgfx::blit(1, m_blitTestB, 0, 0, m_blitTestC, 0, 0);
+				bgfx::blit(1, { .handle = m_blitTestA }, { .handle = m_blitTestB });
+				bgfx::blit(1, { .handle = m_blitTestB }, { .handle = m_blitTestC });
 
-				bgfx::blit(1, m_blitTestA, 0, 0, m_blitTestB, 0, 0);
-				bgfx::blit(1, m_blitTestB, 0, 0, m_blitTestA, 0, 0);
+				bgfx::blit(1, { .handle = m_blitTestA }, { .handle = m_blitTestB });
+				bgfx::blit(1, { .handle = m_blitTestB }, { .handle = m_blitTestA });
 
-				bgfx::blit(1, m_blitTestB, 0, 0, m_blitTestA, 0, 0);
-				bgfx::blit(1, m_blitTestC, 0, 0, m_blitTestB, 0, 0);
+				bgfx::blit(1, { .handle = m_blitTestB }, { .handle = m_blitTestA });
+				bgfx::blit(1, { .handle = m_blitTestC }, { .handle = m_blitTestB });
 			}
 
 			imguiEndFrame();
@@ -1082,6 +1077,7 @@ public:
 
 	uint32_t m_hit;
 	uint32_t m_miss;
+	uint32_t m_lastClearHit;
 
 	uint8_t m_rr;
 	uint8_t m_gg;

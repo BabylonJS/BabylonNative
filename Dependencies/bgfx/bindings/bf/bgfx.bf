@@ -281,9 +281,16 @@ public static class bgfx
 		FuncRefMask            = 0x000000ff,
 		FuncRmaskShift         = 8,
 		FuncRmaskMask          = 0x0000ff00,
-		None                   = 0x00000000,
+	
+		/// <summary>
+		/// No stencil test.
+		/// </summary>
+		None                   = 0x0000ff00,
+	
+		/// <summary>
+		/// Stencil front or back mask.
+		/// </summary>
 		Mask                   = 0xffffffff,
-		Default                = 0x00000000,
 	
 		/// <summary>
 		/// Enable stencil test, less.
@@ -612,69 +619,6 @@ public static class bgfx
 	[AllowDuplicates]
 	public enum BufferFlags : uint16
 	{
-		/// <summary>
-		/// 1 x 8-bit value
-		/// </summary>
-		ComputeFormat8x1       = 0x0001,
-	
-		/// <summary>
-		/// 2 x 8-bit values
-		/// </summary>
-		ComputeFormat8x2       = 0x0002,
-	
-		/// <summary>
-		/// 4 x 8-bit values
-		/// </summary>
-		ComputeFormat8x4       = 0x0003,
-	
-		/// <summary>
-		/// 1 x 16-bit value
-		/// </summary>
-		ComputeFormat16x1      = 0x0004,
-	
-		/// <summary>
-		/// 2 x 16-bit values
-		/// </summary>
-		ComputeFormat16x2      = 0x0005,
-	
-		/// <summary>
-		/// 4 x 16-bit values
-		/// </summary>
-		ComputeFormat16x4      = 0x0006,
-	
-		/// <summary>
-		/// 1 x 32-bit value
-		/// </summary>
-		ComputeFormat32x1      = 0x0007,
-	
-		/// <summary>
-		/// 2 x 32-bit values
-		/// </summary>
-		ComputeFormat32x2      = 0x0008,
-	
-		/// <summary>
-		/// 4 x 32-bit values
-		/// </summary>
-		ComputeFormat32x4      = 0x0009,
-		ComputeFormatShift     = 0,
-		ComputeFormatMask      = 0x000f,
-	
-		/// <summary>
-		/// Type `int`.
-		/// </summary>
-		ComputeTypeInt         = 0x0010,
-	
-		/// <summary>
-		/// Type `uint`.
-		/// </summary>
-		ComputeTypeUint        = 0x0020,
-	
-		/// <summary>
-		/// Type `float`.
-		/// </summary>
-		ComputeTypeFloat       = 0x0030,
-		ComputeTypeShift       = 4,
-		ComputeTypeMask        = 0x0030,
 		None                   = 0x0000,
 	
 		/// <summary>
@@ -1554,12 +1498,12 @@ public static class bgfx
 		Nvn,
 	
 		/// <summary>
-		/// OpenGL ES 2.0+
+		/// OpenGL ES 3.0+
 		/// </summary>
 		OpenGLES,
 	
 		/// <summary>
-		/// OpenGL 2.1+
+		/// OpenGL 4.3+
 		/// </summary>
 		OpenGL,
 	
@@ -1690,6 +1634,46 @@ public static class bgfx
 		/// </summary>
 		TexCoord7,
 	
+		/// <summary>
+		/// a_texcoord8
+		/// </summary>
+		TexCoord8,
+	
+		/// <summary>
+		/// a_texcoord9
+		/// </summary>
+		TexCoord9,
+	
+		/// <summary>
+		/// a_texcoord10
+		/// </summary>
+		TexCoord10,
+	
+		/// <summary>
+		/// a_texcoord11
+		/// </summary>
+		TexCoord11,
+	
+		/// <summary>
+		/// a_texcoord12
+		/// </summary>
+		TexCoord12,
+	
+		/// <summary>
+		/// a_texcoord13
+		/// </summary>
+		TexCoord13,
+	
+		/// <summary>
+		/// a_texcoord14
+		/// </summary>
+		TexCoord14,
+	
+		/// <summary>
+		/// a_texcoord15
+		/// </summary>
+		TexCoord15,
+	
 		Count
 	}
 	
@@ -1731,6 +1715,16 @@ public static class bgfx
 		/// </summary>
 		Float,
 	
+		/// <summary>
+		/// Int32
+		/// </summary>
+		Int32,
+	
+		/// <summary>
+		/// Uint32
+		/// </summary>
+		Uint32,
+	
 		Count
 	}
 	
@@ -1758,14 +1752,29 @@ public static class bgfx
 		BC4,
 	
 		/// <summary>
+		/// Block Compression 4. Single 8-bit red channel, signed normalized. 4 BPP.
+		/// </summary>
+		BC4S,
+	
+		/// <summary>
 		/// Block Compression 5. Two 8-bit channels (RG), unsigned normalized. 8 BPP.
 		/// </summary>
 		BC5,
 	
 		/// <summary>
+		/// Block Compression 5. Two 8-bit channels (RG), signed normalized. 8 BPP.
+		/// </summary>
+		BC5S,
+	
+		/// <summary>
 		/// Block Compression 6H. Three 16-bit floating-point channels (RGB), HDR. 8 BPP.
 		/// </summary>
 		BC6H,
+	
+		/// <summary>
+		/// Block Compression 6H. Three 16-bit unsigned floating-point channels (RGB), HDR. 8 BPP.
+		/// </summary>
+		BC6HU,
 	
 		/// <summary>
 		/// RGB 4-7 bits per color channel, 0-8 bits alpha. Block Compression 7. High-quality RGBA, 4-7 bits per color, 0-8 bits alpha. 8 BPP.
@@ -2188,6 +2197,11 @@ public static class bgfx
 		RGB10A2,
 	
 		/// <summary>
+		/// Packed 32-bit, 10-bit red, 10-bit green, 10-bit blue, 2-bit alpha, unsigned integer. 32 BPP.
+		/// </summary>
+		RGB10A2U,
+	
+		/// <summary>
 		/// Packed 32-bit, 11-bit red, 11-bit green, 10-bit blue, unsigned floating point. No alpha. 32 BPP.
 		/// </summary>
 		RG11B10F,
@@ -2231,6 +2245,11 @@ public static class bgfx
 		/// 32-bit depth, floating point. 32 BPP.
 		/// </summary>
 		D32F,
+	
+		/// <summary>
+		/// 32-bit depth, floating point, with 8-bit stencil (stored as 64-bit). 64 BPP.
+		/// </summary>
+		D32FS8,
 	
 		/// <summary>
 		/// 8-bit stencil only, no depth. 8 BPP.
@@ -2587,6 +2606,8 @@ public static class bgfx
 			public uint32 maxComputeBindings;
 			public uint32 maxVertexLayouts;
 			public uint32 maxVertexStreams;
+			public uint32 maxVertexAttributes;
+			public uint32 maxInstanceData;
 			public uint32 maxIndexBuffers;
 			public uint32 maxVertexBuffers;
 			public uint32 maxDynamicIndexBuffers;
@@ -2598,6 +2619,8 @@ public static class bgfx
 			public uint32 maxTransientVbSize;
 			public uint32 maxTransientIbSize;
 			public uint32 minUniformBufferSize;
+			public uint32 blitRowPitchAlign;
+			public uint32 blitOffsetAlign;
 		}
 	
 		public RendererType rendererType;
@@ -2609,7 +2632,7 @@ public static class bgfx
 		public uint8 numGPUs;
 		public GPU[4] gpu;
 		public Limits limits;
-		public uint32[100] formats;
+		public uint32[105] formats;
 		public uint32[3] codecs;
 	}
 	
@@ -2715,6 +2738,29 @@ public static class bgfx
 	}
 	
 	[CRepr]
+	public struct TextureRegion
+	{
+		public TextureHandle handle;
+		public uint8 mip;
+		public uint16 x;
+		public uint16 y;
+		public uint16 z;
+		public uint16 width;
+		public uint16 height;
+		public uint16 depth;
+	}
+	
+	[CRepr]
+	public struct BufferRegion
+	{
+		public BufferHandle handle;
+		public uint32 offset;
+		public uint32 size;
+		public uint32 rowPitch;
+		public uint32 slicePitch;
+	}
+	
+	[CRepr]
 	public struct TextureInfo
 	{
 		public TextureFormat format;
@@ -2733,7 +2779,7 @@ public static class bgfx
 	{
 		public uint32 magic;
 		public VideoCodec codec;
-		public uint8_t* parameterSets;
+		public uint8* parameterSets;
 		public uint32 parameterSetsSize;
 		public uint32 cachedAuBytes;
 		public uint8 flags;
@@ -2750,7 +2796,7 @@ public static class bgfx
 	public struct VideoDecoderFrame
 	{
 		public uint32 magic;
-		public uint8_t* bitstream;
+		public uint8* bitstream;
 		public VideoDecoderAu* aus;
 		public uint32 numAus;
 		public int64 presentationTimeUs;
@@ -2817,6 +2863,7 @@ public static class bgfx
 		public uint32 numDraw;
 		public uint32 numCompute;
 		public uint32 numBlit;
+		public uint32 numBlitRepack;
 		public uint32 numDrawCallsPeak;
 		public uint32 maxGpuLatency;
 		public uint32 gpuFrameNum;
@@ -2853,8 +2900,8 @@ public static class bgfx
 	{
 		public uint32 hash;
 		public uint16 stride;
-		public uint16[18] offset;
-		public uint16[18] attributes;
+		public uint16[26] offset;
+		public uint16[26] attributes;
 	}
 	
 	[CRepr]
@@ -2934,7 +2981,53 @@ public static class bgfx
 	    public bool Valid => idx != uint16.MaxValue;
 	}
 	
+	[CRepr]
+	public struct BufferHandle {
+	    public uint16 idx;
+	    public uint16 type;
+	    public bool Valid => idx != uint16.MaxValue;
+	}
+	
 
+	/// <summary>
+	/// Fill in the region of a plain 2D texture. `mip`, `z` and `depth` are left
+	/// at zero, which addresses mip 0 of the only slice a 2D texture has.
+	/// </summary>
+	///
+	/// <param name="_handle">Texture handle.</param>
+	/// <param name="_x">X position of the region.</param>
+	/// <param name="_y">Y position of the region.</param>
+	/// <param name="_width">Width of the region. 0 uses the rest of the mip from `_x`.</param>
+	/// <param name="_height">Height of the region. 0 uses the rest of the mip from `_y`.</param>
+	///
+	[LinkName("bgfx_texture_region_init")]
+	public static extern void texture_region_init(TextureRegion* _this, TextureHandle _handle, uint16 _x, uint16 _y, uint16 _width, uint16 _height);
+	
+	/// <summary>
+	/// Fill `rowPitch`, `slicePitch` and `size` with the layout the backend copies
+	/// fastest for `_texture`, and round `offset` up to `Caps::Limits::blitOffsetAlign`.
+	/// `handle` is left untouched, so `size` can be used to create the buffer the
+	/// region will point at.
+	/// </summary>
+	///
+	/// <param name="_texture">Texture region the buffer is copied to or from.</param>
+	///
+	[LinkName("bgfx_buffer_region_init_texture")]
+	public static extern void buffer_region_init_texture(BufferRegion* _this, TextureRegion* _texture);
+	
+	/// <summary>
+	/// Fill in the region a blit between two buffers copies. `rowPitch` and
+	/// `slicePitch` are left at zero, since neither end of such a blit is a
+	/// texture.
+	/// </summary>
+	///
+	/// <param name="_handle">Buffer handle.</param>
+	/// <param name="_offset">Byte offset into the buffer.</param>
+	/// <param name="_size">Number of bytes. 0 uses the rest of the buffer.</param>
+	///
+	[LinkName("bgfx_buffer_region_init_buffer")]
+	public static extern void buffer_region_init_buffer(BufferRegion* _this, BufferHandle _handle, uint32 _offset, uint32 _size);
+	
 	/// <summary>
 	/// Init attachment.
 	/// </summary>
@@ -3323,6 +3416,29 @@ public static class bgfx
 	///
 	[LinkName("bgfx_create_index_buffer")]
 	public static extern IndexBufferHandle create_index_buffer(Memory* _mem, uint16 _flags);
+	
+	/// <summary>
+	/// Read back contents of buffer.
+	/// 
+	/// @remarks
+	///   Read back is asynchronous, and the result is available at the returned frame.
+	///   A zero `size` reads the rest of the buffer. `rowPitch` and `slicePitch` are
+	///   unused.
+	/// 
+	///   Read back is intended for reading GPU written (compute, or draw indirect) buffers
+	///   back to the CPU. It's not intended to be used in the main render loop, since it
+	///   stalls the GPU.
+	/// 
+	/// @attention Buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_src">Source buffer region.</param>
+	/// <param name="_data">Destination buffer.</param>
+	///
+	[LinkName("bgfx_read_buffer")]
+	public static extern uint32 read_buffer(BufferRegion* _src, void* _data);
 	
 	/// <summary>
 	/// Set static index buffer debug name.
@@ -3848,7 +3964,29 @@ public static class bgfx
 	public static extern void update_texture_cube(TextureHandle _handle, uint16 _layer, uint8 _side, uint8 _mip, uint16 _x, uint16 _y, uint16 _width, uint16 _height, Memory* _mem, uint16 _pitch);
 	
 	/// <summary>
+	/// Clear a texture subresource range to zero.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_handle">Texture handle.</param>
+	/// <param name="_mip">First mip level.</param>
+	/// <param name="_numMips">Number of mip levels.</param>
+	/// <param name="_layer">First array layer (or 3D depth slice base).</param>
+	/// <param name="_numLayers">Number of layers.</param>
+	///
+	[LinkName("bgfx_clear_texture")]
+	public static extern void clear_texture(TextureHandle _handle, uint8 _mip, uint8 _numMips, uint16 _layer, uint16 _numLayers);
+	
+	/// <summary>
 	/// Read back texture content.
+	/// 
+	/// @remarks
+	///   Read back is asynchronous, and the result is available at the returned frame.
+	///   `TextureRegion::z` selects cube face, 3D slice, or array layer. The region must
+	///   cover the whole mip.
+	/// 
+	///   Read back is not intended to be used in the main render loop, since it stalls
+	///   the GPU.
 	/// 
 	/// @attention Texture must be created with `BGFX_TEXTURE_READ_BACK` flag.
 	///            It's a texture for CPU readback, and can't be a GPU resource
@@ -3857,13 +3995,11 @@ public static class bgfx
 	/// 
 	/// </summary>
 	///
-	/// <param name="_handle">Texture handle.</param>
+	/// <param name="_src">Source texture region.</param>
 	/// <param name="_data">Destination buffer.</param>
-	/// <param name="_layer">Texture layer.</param>
-	/// <param name="_mip">Mip level.</param>
 	///
 	[LinkName("bgfx_read_texture")]
-	public static extern uint32 read_texture(TextureHandle _handle, void* _data, uint16 _layer, uint8 _mip);
+	public static extern uint32 read_texture(TextureRegion* _src, void* _data);
 	
 	/// <summary>
 	/// Set texture debug name.
@@ -4174,25 +4310,25 @@ public static class bgfx
 	/// </summary>
 	///
 	/// <param name="_id">View id.</param>
-	/// <param name="_x">Position x from the left corner of the window.</param>
-	/// <param name="_y">Position y from the top corner of the window.</param>
+	/// <param name="_x">Position x from the left corner of the window. Can be negative to place view origin outside of the window.</param>
+	/// <param name="_y">Position y from the top corner of the window. Can be negative to place view origin outside of the window.</param>
 	/// <param name="_width">Width of view port region.</param>
 	/// <param name="_height">Height of view port region.</param>
 	///
 	[LinkName("bgfx_set_view_rect")]
-	public static extern void set_view_rect(ViewId _id, uint16 _x, uint16 _y, uint16 _width, uint16 _height);
+	public static extern void set_view_rect(ViewId _id, int16 _x, int16 _y, uint16 _width, uint16 _height);
 	
 	/// <summary>
 	/// Set view rectangle. Draw primitive outside view will be clipped.
 	/// </summary>
 	///
 	/// <param name="_id">View id.</param>
-	/// <param name="_x">Position x from the left corner of the window.</param>
-	/// <param name="_y">Position y from the top corner of the window.</param>
+	/// <param name="_x">Position x from the left corner of the window. Can be negative to place view origin outside of the window.</param>
+	/// <param name="_y">Position y from the top corner of the window. Can be negative to place view origin outside of the window.</param>
 	/// <param name="_ratio">Width and height will be set in respect to back-buffer size. See: `BackbufferRatio::Enum`.</param>
 	///
 	[LinkName("bgfx_set_view_rect_ratio")]
-	public static extern void set_view_rect_ratio(ViewId _id, uint16 _x, uint16 _y, BackbufferRatio _ratio);
+	public static extern void set_view_rect_ratio(ViewId _id, int16 _x, int16 _y, BackbufferRatio _ratio);
 	
 	/// <summary>
 	/// Set view scissor. Draw primitive outside view will be clipped. When
@@ -4873,6 +5009,22 @@ public static class bgfx
 	public static extern void encoder_set_image(Encoder* _this, uint8 _stage, TextureHandle _handle, uint8 _mip, Access _access, TextureFormat _format);
 	
 	/// <summary>
+	/// Set compute image stage for draw primitive, selecting a sub-range of the
+	/// texture's array layers and mip levels.
+	/// </summary>
+	///
+	/// <param name="_stage">Compute stage.</param>
+	/// <param name="_handle">Texture handle.</param>
+	/// <param name="_firstLayer">First array layer.</param>
+	/// <param name="_numLayers">Number of array layers.</param>
+	/// <param name="_mip">Mip level.</param>
+	/// <param name="_access">Image access. See `Access::Enum`.</param>
+	/// <param name="_format">Texture format. See: `TextureFormat::Enum`.</param>
+	///
+	[LinkName("bgfx_encoder_set_image_view")]
+	public static extern void encoder_set_image_view(Encoder* _this, uint8 _stage, TextureHandle _handle, uint16 _firstLayer, uint16 _numLayers, uint8 _mip, Access _access, TextureFormat _format);
+	
+	/// <summary>
 	/// Dispatch compute.
 	/// </summary>
 	///
@@ -4910,7 +5062,15 @@ public static class bgfx
 	public static extern void encoder_discard(Encoder* _this, uint8 _flags);
 	
 	/// <summary>
-	/// Blit 2D texture region between two 2D textures.
+	/// Blit texture region between two textures.
+	/// 
+	/// @remarks
+	///   The copy covers the region the two sides have in common: each side gives
+	///   the origin it starts at, and the size is the smaller of the two extents.
+	///   A zero `width`, `height` or `depth` extends to the rest of that mip.
+	/// 
+	///   Blit is performed on GPU, and it is ordered within the view. In views, all
+	///   draw commands are executed after blit and compute commands.
 	/// 
 	/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
 	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
@@ -4918,22 +5078,89 @@ public static class bgfx
 	/// </summary>
 	///
 	/// <param name="_id">View id.</param>
-	/// <param name="_dst">Destination texture handle.</param>
-	/// <param name="_dstMip">Destination texture mip level.</param>
-	/// <param name="_dstX">Destination texture X position.</param>
-	/// <param name="_dstY">Destination texture Y position.</param>
-	/// <param name="_dstZ">If texture is 2D this argument should be 0. If destination texture is cube this argument represents destination texture cube face. For 3D texture this argument represents destination texture Z position.</param>
-	/// <param name="_src">Source texture handle.</param>
-	/// <param name="_srcMip">Source texture mip level.</param>
-	/// <param name="_srcX">Source texture X position.</param>
-	/// <param name="_srcY">Source texture Y position.</param>
-	/// <param name="_srcZ">If texture is 2D this argument should be 0. If source texture is cube this argument represents source texture cube face. For 3D texture this argument represents source texture Z position.</param>
-	/// <param name="_width">Width of region.</param>
-	/// <param name="_height">Height of region.</param>
-	/// <param name="_depth">If texture is 3D this argument represents depth of region, otherwise it's unused.</param>
+	/// <param name="_dst">Destination texture region.</param>
+	/// <param name="_src">Source texture region.</param>
 	///
 	[LinkName("bgfx_encoder_blit")]
-	public static extern void encoder_blit(Encoder* _this, ViewId _id, TextureHandle _dst, uint8 _dstMip, uint16 _dstX, uint16 _dstY, uint16 _dstZ, TextureHandle _src, uint8 _srcMip, uint16 _srcX, uint16 _srcY, uint16 _srcZ, uint16 _width, uint16 _height, uint16 _depth);
+	public static extern void encoder_blit(Encoder* _this, ViewId _id, TextureRegion* _dst, TextureRegion* _src);
+	
+	/// <summary>
+	/// Blit buffer region between two buffers.
+	/// 
+	/// @remarks
+	///   The source region gives the number of bytes copied, and the destination
+	///   region gives only the offset they land at. A zero `size` copies the rest of
+	///   the source buffer. `rowPitch` and `slicePitch` are unused.
+	/// 
+	///   Buffer blit is performed on GPU, and it is ordered within the view, same as
+	///   texture blit. In views, all draw commands are executed after blit and compute
+	///   commands.
+	/// 
+	/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+	/// @attention Source and destination buffer must be different.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_id">View id.</param>
+	/// <param name="_dst">Destination buffer region.</param>
+	/// <param name="_src">Source buffer region.</param>
+	///
+	[LinkName("bgfx_encoder_blit_buffer")]
+	public static extern void encoder_blit_buffer(Encoder* _this, ViewId _id, BufferRegion* _dst, BufferRegion* _src);
+	
+	/// <summary>
+	/// Blit texture region into buffer.
+	/// 
+	/// @remarks
+	///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+	///   `slicePitch` choose how the texels are laid out in the buffer, and 0 packs
+	///   them tightly. `BufferRegion::init` fills in the layout the backend copies
+	///   fastest, and bgfx repacks internally for any other layout.
+	/// 
+	///   Blit is performed on GPU, and it is ordered within the view, same as texture
+	///   blit. In views, all draw commands are executed after blit and compute commands.
+	/// 
+	/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_id">View id.</param>
+	/// <param name="_dst">Destination buffer region.</param>
+	/// <param name="_src">Source texture region.</param>
+	///
+	[LinkName("bgfx_encoder_blit_to_buffer")]
+	public static extern void encoder_blit_to_buffer(Encoder* _this, ViewId _id, BufferRegion* _dst, TextureRegion* _src);
+	
+	/// <summary>
+	/// Blit buffer contents into texture region.
+	/// 
+	/// @remarks
+	///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+	///   `slicePitch` describe how the texels are laid out in the buffer, and 0 reads
+	///   them tightly packed. `BufferRegion::init` fills in the layout the backend
+	///   copies fastest, and bgfx repacks internally for any other layout.
+	/// 
+	///   Blit is performed on GPU, and it is ordered within the view, same as texture
+	///   blit. In views, all draw commands are executed after blit and compute commands.
+	/// 
+	/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
+	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_id">View id.</param>
+	/// <param name="_dst">Destination texture region.</param>
+	/// <param name="_src">Source buffer region.</param>
+	///
+	[LinkName("bgfx_encoder_blit_from_buffer")]
+	public static extern void encoder_blit_from_buffer(Encoder* _this, ViewId _id, TextureRegion* _dst, BufferRegion* _src);
 	
 	/// <summary>
 	/// Request screen shot of window back buffer.
@@ -5534,6 +5761,22 @@ public static class bgfx
 	public static extern void set_image(uint8 _stage, TextureHandle _handle, uint8 _mip, Access _access, TextureFormat _format);
 	
 	/// <summary>
+	/// Set compute image stage for draw primitive, selecting a sub-range of the
+	/// texture's array layers and mip levels.
+	/// </summary>
+	///
+	/// <param name="_stage">Compute stage.</param>
+	/// <param name="_handle">Texture handle.</param>
+	/// <param name="_firstLayer">First array layer.</param>
+	/// <param name="_numLayers">Number of array layers.</param>
+	/// <param name="_mip">Mip level.</param>
+	/// <param name="_access">Image access. See `Access::Enum`.</param>
+	/// <param name="_format">Texture format. See: `TextureFormat::Enum`.</param>
+	///
+	[LinkName("bgfx_set_image_view")]
+	public static extern void set_image_view(uint8 _stage, TextureHandle _handle, uint16 _firstLayer, uint16 _numLayers, uint8 _mip, Access _access, TextureFormat _format);
+	
+	/// <summary>
 	/// Dispatch compute.
 	/// </summary>
 	///
@@ -5571,7 +5814,15 @@ public static class bgfx
 	public static extern void discard(uint8 _flags);
 	
 	/// <summary>
-	/// Blit 2D texture region between two 2D textures.
+	/// Blit texture region between two textures.
+	/// 
+	/// @remarks
+	///   The copy covers the region the two sides have in common: each side gives
+	///   the origin it starts at, and the size is the smaller of the two extents.
+	///   A zero `width`, `height` or `depth` extends to the rest of that mip.
+	/// 
+	///   Blit is performed on GPU, and it is ordered within the view. In views, all
+	///   draw commands are executed after blit and compute commands.
 	/// 
 	/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
 	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
@@ -5579,22 +5830,89 @@ public static class bgfx
 	/// </summary>
 	///
 	/// <param name="_id">View id.</param>
-	/// <param name="_dst">Destination texture handle.</param>
-	/// <param name="_dstMip">Destination texture mip level.</param>
-	/// <param name="_dstX">Destination texture X position.</param>
-	/// <param name="_dstY">Destination texture Y position.</param>
-	/// <param name="_dstZ">If texture is 2D this argument should be 0. If destination texture is cube this argument represents destination texture cube face. For 3D texture this argument represents destination texture Z position.</param>
-	/// <param name="_src">Source texture handle.</param>
-	/// <param name="_srcMip">Source texture mip level.</param>
-	/// <param name="_srcX">Source texture X position.</param>
-	/// <param name="_srcY">Source texture Y position.</param>
-	/// <param name="_srcZ">If texture is 2D this argument should be 0. If source texture is cube this argument represents source texture cube face. For 3D texture this argument represents source texture Z position.</param>
-	/// <param name="_width">Width of region.</param>
-	/// <param name="_height">Height of region.</param>
-	/// <param name="_depth">If texture is 3D this argument represents depth of region, otherwise it's unused.</param>
+	/// <param name="_dst">Destination texture region.</param>
+	/// <param name="_src">Source texture region.</param>
 	///
 	[LinkName("bgfx_blit")]
-	public static extern void blit(ViewId _id, TextureHandle _dst, uint8 _dstMip, uint16 _dstX, uint16 _dstY, uint16 _dstZ, TextureHandle _src, uint8 _srcMip, uint16 _srcX, uint16 _srcY, uint16 _srcZ, uint16 _width, uint16 _height, uint16 _depth);
+	public static extern void blit(ViewId _id, TextureRegion* _dst, TextureRegion* _src);
+	
+	/// <summary>
+	/// Blit buffer region between two buffers.
+	/// 
+	/// @remarks
+	///   The source region gives the number of bytes copied, and the destination
+	///   region gives only the offset they land at. A zero `size` copies the rest of
+	///   the source buffer. `rowPitch` and `slicePitch` are unused.
+	/// 
+	///   Buffer blit is performed on GPU, and it is ordered within the view, same as
+	///   texture blit. In views, all draw commands are executed after blit and compute
+	///   commands.
+	/// 
+	/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+	/// @attention Source and destination buffer must be different.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_id">View id.</param>
+	/// <param name="_dst">Destination buffer region.</param>
+	/// <param name="_src">Source buffer region.</param>
+	///
+	[LinkName("bgfx_blit_buffer")]
+	public static extern void blit_buffer(ViewId _id, BufferRegion* _dst, BufferRegion* _src);
+	
+	/// <summary>
+	/// Blit texture region into buffer.
+	/// 
+	/// @remarks
+	///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+	///   `slicePitch` choose how the texels are laid out in the buffer, and 0 packs
+	///   them tightly. `BufferRegion::init` fills in the layout the backend copies
+	///   fastest, and bgfx repacks internally for any other layout.
+	/// 
+	///   Blit is performed on GPU, and it is ordered within the view, same as texture
+	///   blit. In views, all draw commands are executed after blit and compute commands.
+	/// 
+	/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_id">View id.</param>
+	/// <param name="_dst">Destination buffer region.</param>
+	/// <param name="_src">Source texture region.</param>
+	///
+	[LinkName("bgfx_blit_to_buffer")]
+	public static extern void blit_to_buffer(ViewId _id, BufferRegion* _dst, TextureRegion* _src);
+	
+	/// <summary>
+	/// Blit buffer contents into texture region.
+	/// 
+	/// @remarks
+	///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+	///   `slicePitch` describe how the texels are laid out in the buffer, and 0 reads
+	///   them tightly packed. `BufferRegion::init` fills in the layout the backend
+	///   copies fastest, and bgfx repacks internally for any other layout.
+	/// 
+	///   Blit is performed on GPU, and it is ordered within the view, same as texture
+	///   blit. In views, all draw commands are executed after blit and compute commands.
+	/// 
+	/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
+	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+	/// 
+	/// </summary>
+	///
+	/// <param name="_id">View id.</param>
+	/// <param name="_dst">Destination texture region.</param>
+	/// <param name="_src">Source buffer region.</param>
+	///
+	[LinkName("bgfx_blit_from_buffer")]
+	public static extern void blit_from_buffer(ViewId _id, TextureRegion* _dst, BufferRegion* _src);
 	
 
 	public static bgfx.StateFlags blend_function_separate(bgfx.StateFlags _srcRGB, bgfx.StateFlags _dstRGB, bgfx.StateFlags _srcA, bgfx.StateFlags _dstA)

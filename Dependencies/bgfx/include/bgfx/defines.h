@@ -15,7 +15,7 @@
 #ifndef BGFX_DEFINES_H_HEADER_GUARD
 #define BGFX_DEFINES_H_HEADER_GUARD
 
-#define BGFX_API_VERSION UINT32_C(147)
+#define BGFX_API_VERSION UINT32_C(157)
 
 /**
  * Color RGB/alpha/depth write. When it's not specified write will be disabled.
@@ -170,9 +170,8 @@
 #define BGFX_STENCIL_FUNC_RMASK_MASK              UINT32_C(0x0000ff00)
 #define BGFX_STENCIL_FUNC_RMASK(v) ( ( (uint32_t)(v)<<BGFX_STENCIL_FUNC_RMASK_SHIFT )&BGFX_STENCIL_FUNC_RMASK_MASK)
 
-#define BGFX_STENCIL_NONE                         UINT32_C(0x00000000)
-#define BGFX_STENCIL_MASK                         UINT32_C(0xffffffff)
-#define BGFX_STENCIL_DEFAULT                      UINT32_C(0x00000000)
+#define BGFX_STENCIL_NONE                         UINT32_C(0x0000ff00) //!< No stencil test.
+#define BGFX_STENCIL_MASK                         UINT32_C(0xffffffff) //!< Stencil front or back mask.
 
 #define BGFX_STENCIL_TEST_LESS                    UINT32_C(0x00010000) //!< Enable stencil test, less.
 #define BGFX_STENCIL_TEST_LEQUAL                  UINT32_C(0x00020000) //!< Enable stencil test, less or equal.
@@ -273,24 +272,6 @@
 #define BGFX_DEBUG_STATS                          UINT32_C(0x00000004) //!< Enable statistics display.
 #define BGFX_DEBUG_TEXT                           UINT32_C(0x00000008) //!< Enable debug text display.
 #define BGFX_DEBUG_PROFILER                       UINT32_C(0x00000010) //!< Enable profiler. This causes per-view statistics to be collected, available through `bgfx::Stats::ViewStats`. This is unrelated to the profiler functions in `bgfx::CallbackI`.
-
-#define BGFX_BUFFER_COMPUTE_FORMAT_8X1            UINT16_C(0x0001) //!< 1 x 8-bit value
-#define BGFX_BUFFER_COMPUTE_FORMAT_8X2            UINT16_C(0x0002) //!< 2 x 8-bit values
-#define BGFX_BUFFER_COMPUTE_FORMAT_8X4            UINT16_C(0x0003) //!< 4 x 8-bit values
-#define BGFX_BUFFER_COMPUTE_FORMAT_16X1           UINT16_C(0x0004) //!< 1 x 16-bit value
-#define BGFX_BUFFER_COMPUTE_FORMAT_16X2           UINT16_C(0x0005) //!< 2 x 16-bit values
-#define BGFX_BUFFER_COMPUTE_FORMAT_16X4           UINT16_C(0x0006) //!< 4 x 16-bit values
-#define BGFX_BUFFER_COMPUTE_FORMAT_32X1           UINT16_C(0x0007) //!< 1 x 32-bit value
-#define BGFX_BUFFER_COMPUTE_FORMAT_32X2           UINT16_C(0x0008) //!< 2 x 32-bit values
-#define BGFX_BUFFER_COMPUTE_FORMAT_32X4           UINT16_C(0x0009) //!< 4 x 32-bit values
-#define BGFX_BUFFER_COMPUTE_FORMAT_SHIFT          0
-#define BGFX_BUFFER_COMPUTE_FORMAT_MASK           UINT16_C(0x000f)
-
-#define BGFX_BUFFER_COMPUTE_TYPE_INT              UINT16_C(0x0010) //!< Type `int`.
-#define BGFX_BUFFER_COMPUTE_TYPE_UINT             UINT16_C(0x0020) //!< Type `uint`.
-#define BGFX_BUFFER_COMPUTE_TYPE_FLOAT            UINT16_C(0x0030) //!< Type `float`.
-#define BGFX_BUFFER_COMPUTE_TYPE_SHIFT            4
-#define BGFX_BUFFER_COMPUTE_TYPE_MASK             UINT16_C(0x0030)
 
 #define BGFX_BUFFER_NONE                          UINT16_C(0x0000)
 #define BGFX_BUFFER_COMPUTE_READ                  UINT16_C(0x0100) //!< Buffer will be read by shader.
@@ -568,7 +549,7 @@
 #define BGFX_PCI_ID_AMD                           UINT16_C(0x1002) //!< AMD adapter.
 #define BGFX_PCI_ID_APPLE                         UINT16_C(0x106b) //!< Apple adapter.
 #define BGFX_PCI_ID_INTEL                         UINT16_C(0x8086) //!< Intel adapter.
-#define BGFX_PCI_ID_NVIDIA                        UINT16_C(0x10de) //!< nVidia adapter.
+#define BGFX_PCI_ID_NVIDIA                        UINT16_C(0x10de) //!< NVIDIA adapter.
 #define BGFX_PCI_ID_MICROSOFT                     UINT16_C(0x1414) //!< Microsoft adapter.
 #define BGFX_PCI_ID_ARM                           UINT16_C(0x13b5) //!< ARM adapter.
 
