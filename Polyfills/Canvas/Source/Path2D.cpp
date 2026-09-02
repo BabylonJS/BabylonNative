@@ -133,7 +133,7 @@ namespace Babylon::Polyfills::Internal
         }
 
         // Register after successful construction only.
-                NativeInstanceRegistry<NativeCanvasPath2D>::Add(info, this);
+        NativeInstanceRegistry<NativeCanvasPath2D>::Add(info, this);
     }
 
     NativeCanvasPath2D::~NativeCanvasPath2D()
