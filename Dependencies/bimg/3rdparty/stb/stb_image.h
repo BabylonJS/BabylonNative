@@ -1,4 +1,4 @@
-/* stb_image - v2.29 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.30 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    Do this:
@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.30  (2024-05-31) avoid erroneous gcc warning
       2.29  (2023-05-xx) optimizations
       2.28  (2023-01-29) many error fixes, security errors, just tons of stuff
       2.27  (2021-07-11) document stbi_info better, 16-bit PNM support, bug fixes
@@ -5076,7 +5077,7 @@ static void stbi__de_iphone(stbi__png *z)
 
 static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
 {
-   stbi_uc palette[1024], pal_img_n=0;
+   stbi_uc palette[1024] = {0}, pal_img_n=0;
    stbi_uc has_trans=0, tc[3]={0};
    stbi__uint16 tc16[3];
    stbi__uint32 ioff=0, idata_limit=0, i, pal_len=0;
@@ -5159,9 +5160,11 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                // non-paletted with tRNS = constant alpha. if header-scanning, we can stop now.
                if (scan == STBI__SCAN_header) { ++s->img_n; return 1; }
                if (z->depth == 16) {
-                  for (k = 0; k < s->img_n; ++k) tc16[k] = (stbi__uint16)stbi__get16be(s); // copy the values as-is
+                  for (k = 0; k < s->img_n && k < 3; ++k) // extra loop test to suppress false GCC warning
+                     tc16[k] = (stbi__uint16)stbi__get16be(s); // copy the values as-is
                } else {
-                  for (k = 0; k < s->img_n; ++k) tc[k] = (stbi_uc)(stbi__get16be(s) & 255) * stbi__depth_scale_table[z->depth]; // non 8-bit images will be larger
+                  for (k = 0; k < s->img_n && k < 3; ++k)
+                     tc[k] = (stbi_uc)(stbi__get16be(s) & 255) * stbi__depth_scale_table[z->depth]; // non 8-bit images will be larger
                }
             }
             break;
@@ -5595,7 +5598,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    if (info.bpp < 16) {
       int z=0;
-      if (psize == 0 || psize > 256) { STBI_FREE(out); return stbi__errpuc("invalid", "Corrupt BMP"); }
+      if (psize <= 0 || psize > 256) { STBI_FREE(out); return stbi__errpuc("invalid", "Corrupt BMP"); }
       for (i=0; i < psize; ++i) {
          pal[i][2] = stbi__get8(s);
          pal[i][1] = stbi__get8(s);

@@ -197,7 +197,7 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
-		if (_input.m_depth     != 1
+		if (0 != _input.m_depth
 		&&  _input.m_numLayers != 1
 		&&  _input.m_format    != TextureFormat::RGBA32F
 		&&  _input.m_width/2   != _input.m_height)
@@ -217,7 +217,7 @@ namespace bimg
 			, _input.m_format
 			, dstWidth
 			, dstWidth
-			, 1
+			, 0
 			, 1
 			, true
 			, false
@@ -339,7 +339,7 @@ namespace bimg
 	{
 		BX_ERROR_SCOPE(_err);
 
-		if (_input.m_depth     != 1
+		if (0 != _input.m_depth
 		&&  _input.m_numLayers != 1
 		&&  _input.m_format    != TextureFormat::RGBA32F
 		&& ( (_input.m_width   != _input.m_height*6) || (_input.m_width*6 != _input.m_height) ) )
@@ -358,7 +358,7 @@ namespace bimg
 			, _input.m_format
 			, dstWidth
 			, dstWidth
-			, 1
+			, 0
 			, 1
 			, true
 			, false
@@ -413,7 +413,7 @@ namespace bimg
 		const uint32_t dstPitch = dstWidth*16;
 		const float texelSize   = 1.0f / float(dstWidth);
 
-		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, dstWidth, dstWidth, 1, 1, true, false);
+		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, dstWidth, dstWidth, 0, 1, true, false);
 
 		if (NULL == output)
 		{
@@ -1177,7 +1177,7 @@ namespace bimg
 			}
 		}
 
-		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, input->m_width, input->m_width, 1, 1, true, true);
+		ImageContainer* output = imageAlloc(_allocator, TextureFormat::RGBA32F, input->m_width, input->m_width, 0, 1, true, true);
 
 		if (NULL == output)
 		{

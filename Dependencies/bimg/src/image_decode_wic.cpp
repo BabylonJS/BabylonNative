@@ -142,7 +142,7 @@ namespace bimg
 				if (0 < width
 				&&  0 < height)
 				{
-					image = imageAlloc(_allocator, TextureFormat::RGBA8, width, height, 1, 1, false, false);
+					image = imageAlloc(_allocator, TextureFormat::RGBA8, width, height, 0, 1, false, false);
 					if (NULL != image)
 					{
 						hr = converter->CopyPixels(NULL, width * 4, image->m_size, (BYTE*)image->m_data);

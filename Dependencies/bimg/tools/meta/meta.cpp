@@ -46,6 +46,12 @@ static void version()
 		);
 }
 
+static const bx::CommandLineOption s_options[] =
+{
+	{ 'h', "help",    0, NULL, "Display this help and exit."          },
+	{ 'v', "version", 0, NULL, "Output version information and exit." },
+};
+
 static void help(const char* _error = NULL)
 {
 	if (NULL != _error)
@@ -63,8 +69,12 @@ static void help(const char* _error = NULL)
 		  "file without decoding pixel data, similar to the UNIX `file` tool.\n"
 		  "\n"
 		  "Options:\n"
-		  "  -h, --help    Display this help and exit.\n"
-		  "  -v, --version Output version information and exit.\n"
+		);
+
+	bx::Error err;
+	bx::write(bx::getStdOut(), s_options, BX_COUNTOF(s_options), &err);
+
+	bx::printf(
 		  "\n"
 		  "For more information, see https://github.com/bkaradzic/bimg\n"
 		);
@@ -118,7 +128,7 @@ static bool processFile(bx::AllocatorI* _allocator, const char* _filePath)
 		, info.m_height
 		);
 
-	if (info.m_depth > 1)
+	if (0 != info.m_depth)
 	{
 		bx::printf(" x %u", info.m_depth);
 	}
@@ -162,7 +172,7 @@ static bool processFile(bx::AllocatorI* _allocator, const char* _filePath)
 
 int main(int _argc, const char* _argv[])
 {
-	bx::CommandLine cmdLine(_argc, _argv);
+	bx::CommandLine cmdLine(_argc, _argv, s_options, BX_COUNTOF(s_options) );
 
 	if (cmdLine.hasArg('v', "version") )
 	{
@@ -176,23 +186,24 @@ int main(int _argc, const char* _argv[])
 		return bx::kExitSuccess;
 	}
 
+	const char* unknown = cmdLine.findUnknownOption();
+	if (NULL != unknown)
+	{
+		char error[256];
+		bx::snprintf(error, BX_COUNTOF(error), "Unknown option '%s'.", unknown);
+		help(error);
+		return bx::kExitFailure;
+	}
+
 	bx::DefaultAllocator allocator;
 
 	bool any = false;
 	bool ok  = true;
 
-	for (int32_t ii = 1, num = cmdLine.getNum(); ii < num; ++ii)
+	for (int32_t ii = 1, num = cmdLine.getNumPositional(); ii < num; ++ii)
 	{
-		const char* arg = cmdLine.get(ii);
-
-		// Skip options; only positional arguments are treated as files.
-		if ('-' == arg[0])
-		{
-			continue;
-		}
-
 		any = true;
-		ok &= processFile(&allocator, arg);
+		ok &= processFile(&allocator, cmdLine.getPositional(ii) );
 	}
 
 	if (!any)
