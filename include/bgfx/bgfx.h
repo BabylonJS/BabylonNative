@@ -66,8 +66,8 @@ namespace bgfx
 			Gnm,        //!< GNM
 			Metal,      //!< Metal
 			Nvn,        //!< NVN
-			OpenGLES,   //!< OpenGL ES 2.0+
-			OpenGL,     //!< OpenGL 2.1+
+			OpenGLES,   //!< OpenGL ES 3.0+
+			OpenGL,     //!< OpenGL 4.3+
 			Vulkan,     //!< Vulkan
 			WebGPU,     //!< WebGPU
 
@@ -101,24 +101,32 @@ namespace bgfx
 		/// Corresponds to vertex shader attribute.
 		enum Enum
 		{
-			Position,  //!< a_position
-			Normal,    //!< a_normal
-			Tangent,   //!< a_tangent
-			Bitangent, //!< a_bitangent
-			Color0,    //!< a_color0
-			Color1,    //!< a_color1
-			Color2,    //!< a_color2
-			Color3,    //!< a_color3
-			Indices,   //!< a_indices
-			Weight,    //!< a_weight
-			TexCoord0, //!< a_texcoord0
-			TexCoord1, //!< a_texcoord1
-			TexCoord2, //!< a_texcoord2
-			TexCoord3, //!< a_texcoord3
-			TexCoord4, //!< a_texcoord4
-			TexCoord5, //!< a_texcoord5
-			TexCoord6, //!< a_texcoord6
-			TexCoord7, //!< a_texcoord7
+			Position,   //!< a_position
+			Normal,     //!< a_normal
+			Tangent,    //!< a_tangent
+			Bitangent,  //!< a_bitangent
+			Color0,     //!< a_color0
+			Color1,     //!< a_color1
+			Color2,     //!< a_color2
+			Color3,     //!< a_color3
+			Indices,    //!< a_indices
+			Weight,     //!< a_weight
+			TexCoord0,  //!< a_texcoord0
+			TexCoord1,  //!< a_texcoord1
+			TexCoord2,  //!< a_texcoord2
+			TexCoord3,  //!< a_texcoord3
+			TexCoord4,  //!< a_texcoord4
+			TexCoord5,  //!< a_texcoord5
+			TexCoord6,  //!< a_texcoord6
+			TexCoord7,  //!< a_texcoord7
+			TexCoord8,  //!< a_texcoord8
+			TexCoord9,  //!< a_texcoord9
+			TexCoord10, //!< a_texcoord10
+			TexCoord11, //!< a_texcoord11
+			TexCoord12, //!< a_texcoord12
+			TexCoord13, //!< a_texcoord13
+			TexCoord14, //!< a_texcoord14
+			TexCoord15, //!< a_texcoord15
 
 			Count
 		};
@@ -140,6 +148,8 @@ namespace bgfx
 			Uint16, //!< Uint16
 			Half,   //!< Half, availability depends on: `BGFX_CAPS_VERTEX_ATTRIB_HALF`.
 			Float,  //!< Float
+			Int32,  //!< Int32
+			Uint32, //!< Uint32
 
 			Count
 		};
@@ -172,8 +182,11 @@ namespace bgfx
 			BC2,          //!< Block Compression 2. 5-bit R, 6-bit G, 5-bit B, 4-bit explicit A. 8 BPP.
 			BC3,          //!< Block Compression 3. 5-bit R, 6-bit G, 5-bit B, 8-bit interpolated A. 8 BPP.
 			BC4,          //!< Block Compression 4. Single 8-bit red channel, unsigned normalized. 4 BPP.
+			BC4S,         //!< Block Compression 4. Single 8-bit red channel, signed normalized. 4 BPP.
 			BC5,          //!< Block Compression 5. Two 8-bit channels (RG), unsigned normalized. 8 BPP.
+			BC5S,         //!< Block Compression 5. Two 8-bit channels (RG), signed normalized. 8 BPP.
 			BC6H,         //!< Block Compression 6H. Three 16-bit floating-point channels (RGB), HDR. 8 BPP.
+			BC6HU,        //!< Block Compression 6H. Three 16-bit unsigned floating-point channels (RGB), HDR. 8 BPP.
 			BC7,          //!< RGB 4-7 bits per color channel, 0-8 bits alpha. Block Compression 7. High-quality RGBA, 4-7 bits per color, 0-8 bits alpha. 8 BPP.
 			ETC1,         //!< Ericsson Texture Compression 1. 8-bit per channel RGB. 4 BPP.
 			ETC2,         //!< Ericsson Texture Compression 2. 8-bit per channel RGB. 4 BPP.
@@ -258,6 +271,7 @@ namespace bgfx
 			BGR5A1,       //!< Packed 16-bit, 5-bit blue, 5-bit green, 5-bit red, 1-bit alpha. BGRA byte order, unsigned normalized. 16 BPP.
 			RGB5A1,       //!< Packed 16-bit, 5-bit red, 5-bit green, 5-bit blue, 1-bit alpha, unsigned normalized. 16 BPP.
 			RGB10A2,      //!< Packed 32-bit, 10-bit red, 10-bit green, 10-bit blue, 2-bit alpha, unsigned normalized. 32 BPP.
+			RGB10A2U,     //!< Packed 32-bit, 10-bit red, 10-bit green, 10-bit blue, 2-bit alpha, unsigned integer. 32 BPP.
 			RG11B10F,     //!< Packed 32-bit, 11-bit red, 11-bit green, 10-bit blue, unsigned floating point. No alpha. 32 BPP.
 			UnknownDepth, //!< Depth formats below.
 			D16,          //!< 16-bit depth, unsigned normalized. 16 BPP.
@@ -267,6 +281,7 @@ namespace bgfx
 			D16F,         //!< 16-bit depth, floating point. 16 BPP.
 			D24F,         //!< 24-bit depth, floating point (stored as 32-bit). 32 BPP.
 			D32F,         //!< 32-bit depth, floating point. 32 BPP.
+			D32FS8,       //!< 32-bit depth, floating point, with 8-bit stencil (stored as 64-bit). 64 BPP.
 			D0S8,         //!< 8-bit stencil only, no depth. 8 BPP.
 
 			Count
@@ -517,6 +532,61 @@ namespace bgfx
 	BGFX_HANDLE(VertexBufferHandle)
 	BGFX_HANDLE(VertexLayoutHandle)
 
+	struct BufferHandle
+	{
+		enum Enum
+		{
+			DynamicIndexBuffer,
+			DynamicVertexBuffer,
+			IndexBuffer,
+			IndirectBuffer,
+			VertexBuffer,
+
+			Count
+		};
+
+		BufferHandle()
+			: idx(kInvalidHandle)
+			, type(Count)
+		{
+		}
+
+		BufferHandle(DynamicIndexBufferHandle _handle)
+			: idx(_handle.idx)
+			, type(DynamicIndexBuffer)
+		{
+		}
+
+		BufferHandle(DynamicVertexBufferHandle _handle)
+			: idx(_handle.idx)
+			, type(DynamicVertexBuffer)
+		{
+		}
+
+		BufferHandle(IndexBufferHandle _handle)
+			: idx(_handle.idx)
+			, type(IndexBuffer)
+		{
+		}
+
+		BufferHandle(IndirectBufferHandle _handle)
+			: idx(_handle.idx)
+			, type(IndirectBuffer)
+		{
+		}
+
+		BufferHandle(VertexBufferHandle _handle)
+			: idx(_handle.idx)
+			, type(VertexBuffer)
+		{
+		}
+
+		uint16_t idx;
+		uint16_t type;
+	};
+
+	inline bool isValid(BufferHandle _handle) { return bgfx::kInvalidHandle != _handle.idx; }
+
 	/// Renderer capabilities.
 	///
 	/// @attention C99's equivalent binding is `bgfx_caps_t`.
@@ -545,6 +615,8 @@ namespace bgfx
 			uint32_t maxComputeBindings;      //!< Maximum number of compute bindings.
 			uint32_t maxVertexLayouts;        //!< Maximum number of vertex format layouts.
 			uint32_t maxVertexStreams;        //!< Maximum number of vertex streams.
+			uint32_t maxVertexAttributes;     //!< Maximum number of vertex attributes.
+			uint32_t maxInstanceData;         //!< Maximum number of instance data slots.
 			uint32_t maxIndexBuffers;         //!< Maximum number of index buffer handles.
 			uint32_t maxVertexBuffers;        //!< Maximum number of vertex buffer handles.
 			uint32_t maxDynamicIndexBuffers;  //!< Maximum number of dynamic index buffer handles.
@@ -556,6 +628,10 @@ namespace bgfx
 			uint32_t maxTransientVbSize;      //!< Maximum transient vertex buffer size.
 			uint32_t maxTransientIbSize;      //!< Maximum transient index buffer size.
 			uint32_t minUniformBufferSize;    //!< Mimimum uniform buffer size.
+			uint32_t blitRowPitchAlign;       //!< Row pitch alignment, in bytes, that buffer to texture blit copies
+			                                  ///  natively. Any other `BufferRegion::rowPitch` is repacked internally.
+			uint32_t blitOffsetAlign;         //!< Offset alignment, in bytes, that buffer to texture blit copies
+			                                  ///  natively. Any other `BufferRegion::offset` is repacked internally.
 		};
 
 		RendererType::Enum rendererType;        //!< Renderer backend type. See: `bgfx::RendererType`
@@ -669,13 +745,22 @@ namespace bgfx
 			Limits();
 
 			uint16_t maxEncoders;           //!< Maximum number of encoder threads.
-			uint32_t numDrawCalls;          //!< Initial number of draw calls per frame. Rounded up to a
-			                                ///  multiple of 1024 (the minimum); 0 selects the default of 1024.
-			                                ///  The render-item buffers grow on demand up to
-			                                ///  `BGFX_CONFIG_MAX_DRAW_CALLS` and lazily shrink.
+			uint32_t numDrawCalls;          //!< Number of draw calls per frame to reserve storage for. Rounded
+			                                ///  up to a multiple of `BGFX_CONFIG_DRAW_CALL_BLOCK`, which is also
+			                                ///  the minimum. This is a reservation, not a limit: submitting more
+			                                ///  than this grows the storage during the frame, up to
+			                                ///  `BGFX_CONFIG_MAX_DRAW_CALLS`. With
+			                                ///  `BGFX_CONFIG_DYNAMIC_FRAME_STORAGE` disabled nothing grows, and
+			                                ///  this is a hard limit that `Caps::Limits::maxDrawCalls` reports
+			                                ///  back; submissions past it are dropped. See
+			                                ///  `Stats::numDrawCallsPeak` to size it.
 			uint32_t numDrawCallPeakFrames; //!< Number of frames the draw-call peak (high-water mark) is observed
-			                                ///  before the render-item buffers are shrunk. Set to 0 to disable
-			                                ///  dynamic resizing and keep the buffers fixed at `numDrawCalls`.
+			                                ///  before unused storage is released. Also used for resource command
+			                                ///  buffers and uniform buffers. Set to 0 to keep whatever has been
+			                                ///  allocated for the lifetime of the context. With
+			                                ///  `BGFX_CONFIG_DYNAMIC_FRAME_STORAGE` disabled draw/blit/rect storage
+			                                ///  is not resized; unused uniform and resource command buffer space
+			                                ///  is still released.
 			uint32_t minResourceCbSize;     //!< Minimum resource command buffer size.
 			uint32_t maxTransientVbSize;    //!< Maximum transient vertex buffer size.
 			uint32_t maxTransientIbSize;    //!< Maximum transient index buffer size.
@@ -762,6 +847,103 @@ namespace bgfx
 		uint32_t num;              //!< Number of instances.
 		uint16_t stride;           //!< Vertex buffer stride.
 		VertexBufferHandle handle; //!< Vertex buffer object handle.
+	};
+
+	/// Region of a texture, used as the source or destination of a blit, or as
+	/// the region handed to `bgfx::read`.
+	///
+	/// Every field defaults to zero, and zero always means "the natural whole".
+	/// `{ .handle = tex }` therefore addresses all of mip 0.
+	///
+	/// @attention C99's equivalent binding is `bgfx_texture_region_t`.
+	///
+	struct TextureRegion
+	{
+		/// Fill in the region of a plain 2D texture. `mip`, `z` and `depth` are left
+		/// at zero, which addresses mip 0 of the only slice a 2D texture has.
+		///
+		/// @param[in] _handle Texture handle.
+		/// @param[in] _x X position of the region.
+		/// @param[in] _y Y position of the region.
+		/// @param[in] _width Width of the region. 0 uses the rest of the mip from `_x`.
+		/// @param[in] _height Height of the region. 0 uses the rest of the mip from `_y`.
+		///
+		/// @attention C99's equivalent binding is `bgfx_texture_region_init`.
+		///
+		void init(
+			  TextureHandle _handle
+			, uint16_t _x = 0
+			, uint16_t _y = 0
+			, uint16_t _width = 0
+			, uint16_t _height = 0
+			);
+
+		TextureHandle handle = BGFX_INVALID_HANDLE; //!< Texture handle.
+		uint8_t mip = 0;                            //!< Mip level.
+		uint16_t x = 0;                             //!< X position of the region.
+		uint16_t y = 0;                             //!< Y position of the region.
+		uint16_t z = 0;                             //!< If texture is 2D this should be 0. If the texture is a cube map
+		                                            ///  this is the cube face, for a 2D array it is the layer, and for a
+		                                            ///  3D texture it is the Z position.
+		uint16_t width = 0;                         //!< Width of the region. 0 uses the rest of the mip from `x`.
+		uint16_t height = 0;                        //!< Height of the region. 0 uses the rest of the mip from `y`.
+		uint16_t depth = 0;                         //!< Depth of the region for a 3D texture, or the number of layers or
+		                                            ///  cube faces otherwise. 0 uses the rest from `z`.
+	};
+
+	/// Region of a buffer, used as the source or destination of a blit, or as the
+	/// region handed to `bgfx::read`.
+	///
+	/// `rowPitch` and `slicePitch` describe how texture data is laid out in the
+	/// buffer, and are ignored when the other end of the blit is also a buffer.
+	/// Both are in bytes, and 0 selects the tightly packed layout: a row pitch of
+	/// the region width in blocks multiplied by the block size, and a slice pitch
+	/// of that row pitch multiplied by the region height in blocks.
+	///
+	/// A pitch the backend cannot copy natively is repacked by bgfx, which costs
+	/// an extra pass over the data. `Caps::Limits::blitRowPitchAlign` and
+	/// `blitOffsetAlign` report what the backend copies directly, and
+	/// `BufferRegion::init` fills in a layout that matches them.
+	///
+	/// @attention C99's equivalent binding is `bgfx_buffer_region_t`.
+	///
+	struct BufferRegion
+	{
+		/// Fill `rowPitch`, `slicePitch` and `size` with the layout the backend copies
+		/// fastest for `_texture`, and round `offset` up to `Caps::Limits::blitOffsetAlign`.
+		/// `handle` is left untouched, so `size` can be used to create the buffer the
+		/// region will point at.
+		///
+		/// @param[in] _texture Texture region the buffer is copied to or from.
+		///
+		/// @attention C99's equivalent binding is `bgfx_buffer_region_init_texture`.
+		///
+		void init(const TextureRegion& _texture);
+
+		/// Fill in the region a blit between two buffers copies. `rowPitch` and
+		/// `slicePitch` are left at zero, since neither end of such a blit is a
+		/// texture.
+		///
+		/// @param[in] _handle Buffer handle.
+		/// @param[in] _offset Byte offset into the buffer.
+		/// @param[in] _size Number of bytes. 0 uses the rest of the buffer.
+		///
+		/// @attention C99's equivalent binding is `bgfx_buffer_region_init_buffer`.
+		///
+		void init(
+			  BufferHandle _handle
+			, uint32_t _offset = 0
+			, uint32_t _size = 0
+			);
+
+		BufferHandle handle = {}; //!< Buffer handle.
+		uint32_t offset = 0;      //!< Byte offset into the buffer.
+		uint32_t size = 0;        //!< Number of bytes. Only used when both ends of a blit are
+		                          ///  buffers, or by `bgfx::read`. 0 uses the rest of the buffer.
+		uint32_t rowPitch = 0;    //!< Distance in bytes between the start of two consecutive rows
+		                          ///  of blocks. 0 is tightly packed.
+		uint32_t slicePitch = 0;  //!< Distance in bytes between the start of two consecutive
+		                          ///  slices, layers or cube faces. 0 is tightly packed.
 	};
 
 	/// Texture info.
@@ -946,6 +1128,9 @@ namespace bgfx
 		uint32_t numDraw;                   //!< Number of draw calls submitted.
 		uint32_t numCompute;                //!< Number of compute calls submitted.
 		uint32_t numBlit;                   //!< Number of blit calls submitted.
+		uint32_t numBlitRepack;             //!< Number of buffer to texture blit calls that had to be repacked,
+		                                    ///  because `BufferRegion::rowPitch` or `offset` didn't match
+		                                    ///  `Caps::Limits::blitRowPitchAlign` or `blitOffsetAlign`.
 		uint32_t numDrawCallsPeak;          //!< Highest number of draw+compute calls requested in a single
 		                                    ///  frame so far (peak demand, before any were dropped). Useful
 		                                    ///  to tune `Init::Limits::numDrawCalls`.
@@ -1725,6 +1910,29 @@ namespace bgfx
 			, TextureFormat::Enum _format = TextureFormat::Count
 			);
 
+		/// Set compute image stage for draw primitive, selecting a sub-range of the
+		/// texture's array layers and mip levels.
+		///
+		/// @param[in] _stage Compute stage.
+		/// @param[in] _handle Texture handle.
+		/// @param[in] _firstLayer First array layer.
+		/// @param[in] _numLayers Number of array layers.
+		/// @param[in] _mip Mip level.
+		/// @param[in] _access Image access. See `Access::Enum`.
+		/// @param[in] _format Texture format. See: `TextureFormat::Enum`.
+		///
+		/// @attention C99's equivalent binding is `bgfx_encoder_set_image_view`.
+		///
+		void setImage(
+			  uint8_t _stage
+			, TextureHandle _handle
+			, uint16_t _firstLayer
+			, uint16_t _numLayers
+			, uint8_t _mip
+			, Access::Enum _access
+			, TextureFormat::Enum _format = TextureFormat::Count
+			);
+
 		/// Dispatch compute.
 		///
 		/// @param[in] _id View id.
@@ -1773,55 +1981,19 @@ namespace bgfx
 		///
 		void discard(uint8_t _flags = BGFX_DISCARD_ALL);
 
-		/// Blit 2D texture region between two 2D textures.
+		/// Blit texture region between two textures.
 		///
 		/// @param[in] _id View id.
-		/// @param[in] _dst Destination texture handle.
-		/// @param[in] _dstX Destination texture X position.
-		/// @param[in] _dstY Destination texture Y position.
-		/// @param[in] _src Source texture handle.
-		/// @param[in] _srcX Source texture X position.
-		/// @param[in] _srcY Source texture Y position.
-		/// @param[in] _width Width of region.
-		/// @param[in] _height Height of region.
+		/// @param[in] _dst Destination texture region.
+		/// @param[in] _src Source texture region.
 		///
-		/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
+		/// @remarks
+		///   The copy covers the region the two sides have in common: each side gives
+		///   the origin it starts at, and the size is the smaller of the two extents.
+		///   A zero `width`, `height` or `depth` extends to the rest of that mip.
 		///
-		/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
-		///
-		void blit(
-			  ViewId _id
-			, TextureHandle _dst
-			, uint16_t _dstX
-			, uint16_t _dstY
-			, TextureHandle _src
-			, uint16_t _srcX = 0
-			, uint16_t _srcY = 0
-			, uint16_t _width = UINT16_MAX
-			, uint16_t _height = UINT16_MAX
-			);
-
-		/// Blit 2D texture region between two 2D textures.
-		///
-		/// @param[in] _id View id.
-		/// @param[in] _dst Destination texture handle.
-		/// @param[in] _dstMip Destination texture mip level.
-		/// @param[in] _dstX Destination texture X position.
-		/// @param[in] _dstY Destination texture Y position.
-		/// @param[in] _dstZ If texture is 2D this argument should be 0. If destination texture is cube
-		///   this argument represents destination texture cube face. For 3D texture this argument
-		///   represents destination texture Z position.
-		/// @param[in] _src Source texture handle.
-		/// @param[in] _srcMip Source texture mip level.
-		/// @param[in] _srcX Source texture X position.
-		/// @param[in] _srcY Source texture Y position.
-		/// @param[in] _srcZ If texture is 2D this argument should be 0. If source texture is cube
-		///   this argument represents source texture cube face. For 3D texture this argument
-		///   represents source texture Z position.
-		/// @param[in] _width Width of region.
-		/// @param[in] _height Height of region.
-		/// @param[in] _depth If texture is 3D this argument represents depth of region, otherwise it's
-		///   unused.
+		///   Blit is performed on GPU, and it is ordered within the view. In views, all
+		///   draw commands are executed after blit and compute commands.
 		///
 		/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
 		///
@@ -1831,19 +2003,97 @@ namespace bgfx
 		///
 		void blit(
 			  ViewId _id
-			, TextureHandle _dst
-			, uint8_t _dstMip
-			, uint16_t _dstX
-			, uint16_t _dstY
-			, uint16_t _dstZ
-			, TextureHandle _src
-			, uint8_t _srcMip = 0
-			, uint16_t _srcX = 0
-			, uint16_t _srcY = 0
-			, uint16_t _srcZ = 0
-			, uint16_t _width = UINT16_MAX
-			, uint16_t _height = UINT16_MAX
-			, uint16_t _depth = UINT16_MAX
+			, const TextureRegion& _dst
+			, const TextureRegion& _src
+			);
+
+		/// Blit buffer region between two buffers.
+		///
+		/// @param[in] _id View id.
+		/// @param[in] _dst Destination buffer region.
+		/// @param[in] _src Source buffer region.
+		///
+		/// @remarks
+		///   The source region gives the number of bytes copied, and the destination
+		///   region gives only the offset they land at. A zero `size` copies the rest of
+		///   the source buffer. `rowPitch` and `slicePitch` are unused.
+		///
+		///   Buffer blit is performed on GPU, and it is ordered within the view, same as
+		///   texture blit. In views, all draw commands are executed after blit and compute
+		///   commands.
+		///
+		/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+		///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+		///
+		/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+		///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+		///
+		/// @attention Source and destination buffer must be different.
+		///
+		/// @attention C99's equivalent binding is `bgfx_encoder_blit_buffer`.
+		///
+		void blit(
+			  ViewId _id
+			, const BufferRegion& _dst
+			, const BufferRegion& _src
+			);
+
+		/// Blit texture region into buffer.
+		///
+		/// @param[in] _id View id.
+		/// @param[in] _dst Destination buffer region.
+		/// @param[in] _src Source texture region.
+		///
+		/// @remarks
+		///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+		///   `slicePitch` choose how the texels are laid out in the buffer, and 0 packs
+		///   them tightly. `BufferRegion::init` fills in the layout the backend copies
+		///   fastest, and bgfx repacks internally for any other layout.
+		///
+		///   Blit is performed on GPU, and it is ordered within the view, same as texture
+		///   blit. In views, all draw commands are executed after blit and compute commands.
+		///
+		/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+		///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+		///
+		/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+		///
+		/// @attention C99's equivalent binding is `bgfx_encoder_blit_to_buffer`.
+		///
+		void blit(
+			  ViewId _id
+			, const BufferRegion& _dst
+			, const TextureRegion& _src
+			);
+
+		/// Blit buffer contents into texture region.
+		///
+		/// @param[in] _id View id.
+		/// @param[in] _dst Destination texture region.
+		/// @param[in] _src Source buffer region.
+		///
+		/// @remarks
+		///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+		///   `slicePitch` describe how the texels are laid out in the buffer, and 0 reads
+		///   them tightly packed. `BufferRegion::init` fills in the layout the backend
+		///   copies fastest, and bgfx repacks internally for any other layout.
+		///
+		///   Blit is performed on GPU, and it is ordered within the view, same as texture
+		///   blit. In views, all draw commands are executed after blit and compute commands.
+		///
+		/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+		///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+		///
+		/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
+		///
+		/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+		///
+		/// @attention C99's equivalent binding is `bgfx_encoder_blit_from_buffer`.
+		///
+		void blit(
+			  ViewId _id
+			, const TextureRegion& _dst
+			, const BufferRegion& _src
 			);
 	};
 
@@ -2475,6 +2725,32 @@ namespace bgfx
 	IndexBufferHandle createIndexBuffer(
 		  const Memory* _mem
 		, uint16_t _flags = BGFX_BUFFER_NONE
+		);
+
+	/// Read back contents of buffer.
+	///
+	/// @param[in] _src Source buffer region.
+	/// @param[in] _data Destination buffer.
+	///
+	/// @returns Frame number when the result will be available. See: `bgfx::frame`.
+	///
+	/// @remarks
+	///   Read back is asynchronous, and the result is available at the returned frame.
+	///   A zero `size` reads the rest of the buffer. `rowPitch` and `slicePitch` are
+	///   unused.
+	///
+	///   Read back is intended for reading GPU written (compute, or draw indirect) buffers
+	///   back to the CPU. It's not intended to be used in the main render loop, since it
+	///   stalls the GPU.
+	///
+	/// @attention Buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	///
+	/// @attention C99's equivalent binding is `bgfx_read_buffer`.
+	///
+	uint32_t read(
+		  const BufferRegion& _src
+		, void* _data
 		);
 
 	/// Set static index buffer debug name.
@@ -3281,14 +3557,38 @@ namespace bgfx
 		, uint16_t _pitch = UINT16_MAX
 		);
 
-	/// Read back texture content.
+	/// Clear a texture subresource range to zero.
 	///
 	/// @param[in] _handle Texture handle.
+	/// @param[in] _mip First mip level.
+	/// @param[in] _numMips Number of mip levels.
+	/// @param[in] _layer First array layer (or 3D depth slice base).
+	/// @param[in] _numLayers Number of layers.
+	///
+	/// @attention C99's equivalent binding is `bgfx_clear_texture`.
+	///
+	void clear(
+		  TextureHandle _handle
+		, uint8_t _mip = 0
+		, uint8_t _numMips = UINT8_MAX
+		, uint16_t _layer = 0
+		, uint16_t _numLayers = UINT16_MAX
+		);
+
+	/// Read back texture content.
+	///
+	/// @param[in] _src Source texture region.
 	/// @param[in] _data Destination buffer.
-	/// @param[in] _layer Texture layer.
-	/// @param[in] _mip Mip level.
 	///
 	/// @returns Frame number when the result will be available. See: `bgfx::frame`.
+	///
+	/// @remarks
+	///   Read back is asynchronous, and the result is available at the returned frame.
+	///   `TextureRegion::z` selects cube face, 3D slice, or array layer. The region must
+	///   cover the whole mip.
+	///
+	///   Read back is not intended to be used in the main render loop, since it stalls
+	///   the GPU.
 	///
 	/// @attention Texture must be created with `BGFX_TEXTURE_READ_BACK` flag.
 	///            It's a texture for CPU readback, and can't be a GPU resource
@@ -3298,11 +3598,9 @@ namespace bgfx
 	///
 	/// @attention C99's equivalent binding is `bgfx_read_texture`.
 	///
-	uint32_t readTexture(
-		  TextureHandle _handle
+	uint32_t read(
+		  const TextureRegion& _src
 		, void* _data
-		, uint16_t _layer = 0
-		, uint8_t _mip = 0
 		);
 
 	/// Set texture debug name.
@@ -3691,8 +3989,10 @@ namespace bgfx
 	/// Set view rectangle. Draw primitive outside view will be clipped.
 	///
 	/// @param[in] _id View id.
-	/// @param[in] _x Position x from the left corner of the window.
-	/// @param[in] _y Position y from the top corner of the window.
+	/// @param[in] _x Position x from the left corner of the window. Can be
+	///   negative to place view origin outside of the window.
+	/// @param[in] _y Position y from the top corner of the window. Can be
+	///   negative to place view origin outside of the window.
 	/// @param[in] _width Width of view port region.
 	/// @param[in] _height Height of view port region.
 	///
@@ -3700,8 +4000,8 @@ namespace bgfx
 	///
 	void setViewRect(
 		  ViewId _id
-		, uint16_t _x
-		, uint16_t _y
+		, int16_t _x
+		, int16_t _y
 		, uint16_t _width
 		, uint16_t _height
 		);
@@ -3709,8 +4009,10 @@ namespace bgfx
 	/// Set view rectangle. Draw primitive outside view will be clipped.
 	///
 	/// @param[in] _id View id.
-	/// @param[in] _x Position x from the left corner of the window.
-	/// @param[in] _y Position y from the top corner of the window.
+	/// @param[in] _x Position x from the left corner of the window. Can be
+	///   negative to place view origin outside of the window.
+	/// @param[in] _y Position y from the top corner of the window. Can be
+	///   negative to place view origin outside of the window.
 	/// @param[in] _ratio Width and height will be set in respect to back-buffer size.
 	///   See: `BackbufferRatio::Enum`.
 	///
@@ -3718,8 +4020,8 @@ namespace bgfx
 	///
 	void setViewRect(
 		  ViewId _id
-		, uint16_t _x
-		, uint16_t _y
+		, int16_t _x
+		, int16_t _y
 		, BackbufferRatio::Enum _ratio
 		);
 
@@ -4739,6 +5041,29 @@ namespace bgfx
 		, TextureFormat::Enum _format = TextureFormat::Count
 		);
 
+	/// Set compute image stage for draw primitive, selecting a sub-range of the
+	/// texture's array layers and mip levels.
+	///
+	/// @param[in] _stage Compute stage.
+	/// @param[in] _handle Texture handle.
+	/// @param[in] _firstLayer First array layer.
+	/// @param[in] _numLayers Number of array layers.
+	/// @param[in] _mip Mip level.
+	/// @param[in] _access Image access. See `Access::Enum`.
+	/// @param[in] _format Texture format. See: `TextureFormat::Enum`.
+	///
+	/// @attention C99's equivalent binding is `bgfx_set_image_view`.
+	///
+	void setImage(
+		  uint8_t _stage
+		, TextureHandle _handle
+		, uint16_t _firstLayer
+		, uint16_t _numLayers
+		, uint8_t _mip
+		, Access::Enum _access
+		, TextureFormat::Enum _format = TextureFormat::Count
+		);
+
 	/// Dispatch compute.
 	///
 	/// @param[in] _id View id.
@@ -4787,55 +5112,19 @@ namespace bgfx
 	///
 	void discard(uint8_t _flags = BGFX_DISCARD_ALL);
 
-	/// Blit 2D texture region between two 2D textures.
+	/// Blit texture region between two textures.
 	///
 	/// @param[in] _id View id.
-	/// @param[in] _dst Destination texture handle.
-	/// @param[in] _dstX Destination texture X position.
-	/// @param[in] _dstY Destination texture Y position.
-	/// @param[in] _src Source texture handle.
-	/// @param[in] _srcX Source texture X position.
-	/// @param[in] _srcY Source texture Y position.
-	/// @param[in] _width Width of region.
-	/// @param[in] _height Height of region.
+	/// @param[in] _dst Destination texture region.
+	/// @param[in] _src Source texture region.
 	///
-	/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
+	/// @remarks
+	///   The copy covers the region the two sides have in common: each side gives
+	///   the origin it starts at, and the size is the smaller of the two extents.
+	///   A zero `width`, `height` or `depth` extends to the rest of that mip.
 	///
-	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
-	///
-	void blit(
-		  ViewId _id
-		, TextureHandle _dst
-		, uint16_t _dstX
-		, uint16_t _dstY
-		, TextureHandle _src
-		, uint16_t _srcX = 0
-		, uint16_t _srcY = 0
-		, uint16_t _width = UINT16_MAX
-		, uint16_t _height = UINT16_MAX
-		);
-
-	/// Blit 2D texture region between two 2D textures.
-	///
-	/// @param[in] _id View id.
-	/// @param[in] _dst Destination texture handle.
-	/// @param[in] _dstMip Destination texture mip level.
-	/// @param[in] _dstX Destination texture X position.
-	/// @param[in] _dstY Destination texture Y position.
-	/// @param[in] _dstZ If texture is 2D this argument should be 0. If destination texture is cube
-	///   this argument represents destination texture cube face. For 3D texture this argument
-	///   represents destination texture Z position.
-	/// @param[in] _src Source texture handle.
-	/// @param[in] _srcMip Source texture mip level.
-	/// @param[in] _srcX Source texture X position.
-	/// @param[in] _srcY Source texture Y position.
-	/// @param[in] _srcZ If texture is 2D this argument should be 0. If source texture is cube
-	///   this argument represents source texture cube face. For 3D texture this argument
-	///   represents source texture Z position.
-	/// @param[in] _width Width of region.
-	/// @param[in] _height Height of region.
-	/// @param[in] _depth If texture is 3D this argument represents depth of region, otherwise it's
-	///   unused.
+	///   Blit is performed on GPU, and it is ordered within the view. In views, all
+	///   draw commands are executed after blit and compute commands.
 	///
 	/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
 	///
@@ -4845,19 +5134,97 @@ namespace bgfx
 	///
 	void blit(
 		  ViewId _id
-		, TextureHandle _dst
-		, uint8_t _dstMip
-		, uint16_t _dstX
-		, uint16_t _dstY
-		, uint16_t _dstZ
-		, TextureHandle _src
-		, uint8_t _srcMip = 0
-		, uint16_t _srcX = 0
-		, uint16_t _srcY = 0
-		, uint16_t _srcZ = 0
-		, uint16_t _width = UINT16_MAX
-		, uint16_t _height = UINT16_MAX
-		, uint16_t _depth = UINT16_MAX
+		, const TextureRegion& _dst
+		, const TextureRegion& _src
+		);
+
+	/// Blit buffer region between two buffers.
+	///
+	/// @param[in] _id View id.
+	/// @param[in] _dst Destination buffer region.
+	/// @param[in] _src Source buffer region.
+	///
+	/// @remarks
+	///   The source region gives the number of bytes copied, and the destination
+	///   region gives only the offset they land at. A zero `size` copies the rest of
+	///   the source buffer. `rowPitch` and `slicePitch` are unused.
+	///
+	///   Buffer blit is performed on GPU, and it is ordered within the view, same as
+	///   texture blit. In views, all draw commands are executed after blit and compute
+	///   commands.
+	///
+	/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	///
+	/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+	///
+	/// @attention Source and destination buffer must be different.
+	///
+	/// @attention C99's equivalent binding is `bgfx_blit_buffer`.
+	///
+	void blit(
+		  ViewId _id
+		, const BufferRegion& _dst
+		, const BufferRegion& _src
+		);
+
+	/// Blit texture region into buffer.
+	///
+	/// @param[in] _id View id.
+	/// @param[in] _dst Destination buffer region.
+	/// @param[in] _src Source texture region.
+	///
+	/// @remarks
+	///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+	///   `slicePitch` choose how the texels are laid out in the buffer, and 0 packs
+	///   them tightly. `BufferRegion::init` fills in the layout the backend copies
+	///   fastest, and bgfx repacks internally for any other layout.
+	///
+	///   Blit is performed on GPU, and it is ordered within the view, same as texture
+	///   blit. In views, all draw commands are executed after blit and compute commands.
+	///
+	/// @attention Destination buffer must be created with `BGFX_BUFFER_COMPUTE_WRITE`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flag.
+	///
+	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+	///
+	/// @attention C99's equivalent binding is `bgfx_blit_to_buffer`.
+	///
+	void blit(
+		  ViewId _id
+		, const BufferRegion& _dst
+		, const TextureRegion& _src
+		);
+
+	/// Blit buffer contents into texture region.
+	///
+	/// @param[in] _id View id.
+	/// @param[in] _dst Destination texture region.
+	/// @param[in] _src Source buffer region.
+	///
+	/// @remarks
+	///   The texture region gives the size of the copy. `BufferRegion::rowPitch` and
+	///   `slicePitch` describe how the texels are laid out in the buffer, and 0 reads
+	///   them tightly packed. `BufferRegion::init` fills in the layout the backend
+	///   copies fastest, and bgfx repacks internally for any other layout.
+	///
+	///   Blit is performed on GPU, and it is ordered within the view, same as texture
+	///   blit. In views, all draw commands are executed after blit and compute commands.
+	///
+	/// @attention Source buffer must be created with one of `BGFX_BUFFER_COMPUTE_*`, or
+	///   `BGFX_BUFFER_DRAW_INDIRECT` flags.
+	///
+	/// @attention Destination texture must be created with `BGFX_TEXTURE_BLIT_DST` flag.
+	///
+	/// @attention Availability depends on: `BGFX_CAPS_TEXTURE_BLIT`.
+	///
+	/// @attention C99's equivalent binding is `bgfx_blit_from_buffer`.
+	///
+	void blit(
+		  ViewId _id
+		, const TextureRegion& _dst
+		, const BufferRegion& _src
 		);
 
 } // namespace bgfx

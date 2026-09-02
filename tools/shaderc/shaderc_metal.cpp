@@ -199,6 +199,14 @@ namespace bgfx { namespace metal
 		"a_texcoord5",
 		"a_texcoord6",
 		"a_texcoord7",
+		"a_texcoord8",
+		"a_texcoord9",
+		"a_texcoord10",
+		"a_texcoord11",
+		"a_texcoord12",
+		"a_texcoord13",
+		"a_texcoord14",
+		"a_texcoord15",
 	};
 	static_assert(bgfx::Attrib::Count == BX_COUNTOF(s_attribName) );
 
@@ -236,6 +244,8 @@ namespace bgfx { namespace metal
 		uint16_t size = 0;
 
 		bx::ErrorAssert err;
+
+		RawBindings().write(_shaderWriter, &err);
 
 		uint16_t count = uint16_t(uniforms.size());
 		bx::write(_shaderWriter, count, &err);
@@ -640,6 +650,8 @@ namespace bgfx { namespace metal
 							name = name.substr(0, name.length() - 7);
 						}
 
+						const spirv_cross::SPIRType& type = refl.get_type(resource.type_id);
+
 						Uniform un;
 						un.name = name;
 						un.type = UniformType::Sampler;
@@ -647,6 +659,7 @@ namespace bgfx { namespace metal
 						un.num = 0;			// needed?
 						un.regIndex = 0;	// needed?
 						un.regCount = 0;	// needed?
+						un.texDimension = spirvDimToTextureDimensionId(uint32_t(type.image.dim), type.image.arrayed);
 
 						uniforms.push_back(un);
 					}

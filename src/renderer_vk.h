@@ -189,6 +189,8 @@
 			VK_IMPORT_DEVICE_FUNC(false, vkCmdDispatchIndirect);                      \
 			VK_IMPORT_DEVICE_FUNC(false, vkCmdBindPipeline);                          \
 			VK_IMPORT_DEVICE_FUNC(false, vkCmdSetStencilReference);                   \
+			VK_IMPORT_DEVICE_FUNC(false, vkCmdSetStencilCompareMask);                 \
+			VK_IMPORT_DEVICE_FUNC(false, vkCmdSetStencilWriteMask);                   \
 			VK_IMPORT_DEVICE_FUNC(false, vkCmdSetBlendConstants);                     \
 			VK_IMPORT_DEVICE_FUNC(false, vkCmdSetScissor);                            \
 			VK_IMPORT_DEVICE_FUNC(false, vkCmdBindDescriptorSets);                    \
@@ -394,9 +396,9 @@ VK_DESTROY_FUNC(DescriptorSet);
 		{
 		}
 
-		static constexpr uint16_t MAX_ENTRIES = 1 << 10;
-		DeviceMemoryAllocationVK entries[MAX_ENTRIES];
-		bx::HandleAllocLruT<MAX_ENTRIES> lru;
+		static constexpr uint16_t kMaxEntries = 1 << 10;
+		DeviceMemoryAllocationVK entries[kMaxEntries];
+		bx::HandleAllocLruT<kMaxEntries> lru;
 		uint64_t totalSizeCached;
 
 		void recycle(DeviceMemoryAllocationVK &_alloc);
@@ -404,10 +406,6 @@ VK_DESTROY_FUNC(DescriptorSet);
 		void evictAll();
 	};
 
-	/** A Buffer used for moving data from main memory to GPU memory.
-	 * This can either be an independently allocated memory region, or a sub-region
-	 * of the scratch staging buffer for the frame-in-flight.
-	 */
 	struct StagingBufferVK
 	{
 		VkBuffer m_buffer;
@@ -415,7 +413,7 @@ VK_DESTROY_FUNC(DescriptorSet);
 
 		uint8_t* m_data;
 		uint32_t m_size;
-		uint32_t m_offset; // Offset into the bound buffer (not the device memory!)
+		uint32_t m_offset;
 		bool     m_isFromScratch;
 	};
 
@@ -537,8 +535,7 @@ VK_DESTROY_FUNC(DescriptorSet);
 	struct ShaderVK
 	{
 		ShaderVK()
-			: m_code(NULL)
-			, m_module(VK_NULL_HANDLE)
+			: m_module(VK_NULL_HANDLE)
 			, m_constantBuffer(NULL)
 			, m_hash(0)
 			, m_numUniforms(0)
@@ -552,7 +549,6 @@ VK_DESTROY_FUNC(DescriptorSet);
 		void create(const Memory* _mem);
 		void destroy();
 
-		const Memory* m_code;
 		VkShaderModule m_module;
 		UniformBuffer* m_constantBuffer;
 
@@ -684,8 +680,9 @@ VK_DESTROY_FUNC(DescriptorSet);
 		void create(VkImage _image, uint32_t _width, uint32_t _height, TextureFormat::Enum _format);
 		void destroy();
 		uint32_t pitch(uint8_t _mip = 0) const;
+		uint32_t stagingSize(VkImageAspectFlags _aspect, uint8_t _mip = 0) const;
 		void copyImageToBuffer(VkCommandBuffer _commandBuffer, VkBuffer _buffer, VkImageLayout _layout, VkImageAspectFlags _aspect, uint16_t _layer = 0, uint8_t _mip = 0) const;
-		void readback(VkDeviceMemory _memory, VkDeviceSize _offset, void* _data, uint8_t _mip = 0) const;
+		void readback(VkDeviceMemory _memory, VkDeviceSize _offset, void* _data, VkImageAspectFlags _aspect, uint8_t _mip = 0) const;
 
 		VkImage  m_image;
 		uint32_t m_width;
@@ -720,6 +717,7 @@ VK_DESTROY_FUNC(DescriptorSet);
 		void destroy();
 
 		void update(VkCommandBuffer _commandBuffer, uint8_t _side, uint8_t _mip, const Rect& _rect, uint16_t _z, uint16_t _depth, uint16_t _pitch, const Memory* _mem);
+		void clear(VkCommandBuffer _commandBuffer, uint8_t _mip, uint8_t _numMips, uint16_t _layer, uint16_t _numLayers);
 		void resolve(VkCommandBuffer _commandBuffer, uint8_t _resolve, uint32_t _layer, uint32_t _numLayers, uint32_t _mip);
 
 		void copyBufferToTexture(VkCommandBuffer _commandBuffer, VkBuffer _stagingBuffer, uint32_t _bufferImageCopyCount, VkBufferImageCopy* _bufferImageCopy);
@@ -772,6 +770,7 @@ VK_DESTROY_FUNC(DescriptorSet);
 			, m_swapChain(VK_NULL_HANDLE)
 			, m_lastImageRenderedSemaphore(VK_NULL_HANDLE)
 			, m_lastImageAcquiredSemaphore(VK_NULL_HANDLE)
+			, m_needPresent(false)
 			, m_backBufferDepthStencilImageView(VK_NULL_HANDLE)
 			, m_backBufferColorMsaaImageView(VK_NULL_HANDLE)
 		{
@@ -859,6 +858,7 @@ VK_DESTROY_FUNC(DescriptorSet);
 			, m_nwh(NULL)
 			, m_needPresent(false)
 			, m_framebuffer(VK_NULL_HANDLE)
+			, m_currentFramebuffer(VK_NULL_HANDLE)
 		{
 		}
 

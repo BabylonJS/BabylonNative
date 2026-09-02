@@ -204,106 +204,111 @@ namespace bgfx { namespace d3d11
 
 	static const TextureFormatInfo s_textureFormat[] =
 	{
-		{ DXGI_FORMAT_BC1_UNORM,          DXGI_FORMAT_BC1_UNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_BC1_UNORM_SRGB       }, // BC1
-		{ DXGI_FORMAT_BC2_UNORM,          DXGI_FORMAT_BC2_UNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_BC2_UNORM_SRGB       }, // BC2
-		{ DXGI_FORMAT_BC3_UNORM,          DXGI_FORMAT_BC3_UNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_BC3_UNORM_SRGB       }, // BC3
-		{ DXGI_FORMAT_BC4_UNORM,          DXGI_FORMAT_BC4_UNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // BC4
-		{ DXGI_FORMAT_BC5_UNORM,          DXGI_FORMAT_BC5_UNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // BC5
-		{ DXGI_FORMAT_BC6H_SF16,          DXGI_FORMAT_BC6H_SF16,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // BC6H
-		{ DXGI_FORMAT_BC7_UNORM,          DXGI_FORMAT_BC7_UNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_BC7_UNORM_SRGB       }, // BC7
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // ETC1
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // ETC2
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // ETC2A
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // ETC2A1
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // EACR11 UNORM
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // EACR11 SNORM
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // EACRG11 UNORM
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // EACRG11 SNORM
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // PTC12
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // PTC14
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // PTC12A
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // PTC14A
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // PTC22
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // PTC24
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // ATC
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // ATCE
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // ATCI
-		{ DXGI_FORMAT_ASTC_4X4_UNORM,     DXGI_FORMAT_ASTC_4X4_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_4X4_UNORM_SRGB  }, // ASTC4x4
-		{ DXGI_FORMAT_ASTC_5X4_UNORM,     DXGI_FORMAT_ASTC_5X4_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_5X4_UNORM_SRGB  }, // ASTC5x4
-		{ DXGI_FORMAT_ASTC_5X5_UNORM,     DXGI_FORMAT_ASTC_5X5_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_5X5_UNORM_SRGB  }, // ASTC5x5
-		{ DXGI_FORMAT_ASTC_6X5_UNORM,     DXGI_FORMAT_ASTC_6X5_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_6X5_UNORM_SRGB  }, // ASTC6x5
-		{ DXGI_FORMAT_ASTC_6X6_UNORM,     DXGI_FORMAT_ASTC_6X6_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_6X6_UNORM_SRGB  }, // ASTC6x6
-		{ DXGI_FORMAT_ASTC_8X5_UNORM,     DXGI_FORMAT_ASTC_8X5_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_8X5_UNORM_SRGB  }, // ASTC8x5
-		{ DXGI_FORMAT_ASTC_8X6_UNORM,     DXGI_FORMAT_ASTC_8X6_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_8X6_UNORM_SRGB  }, // ASTC8x6
-		{ DXGI_FORMAT_ASTC_8X8_UNORM,     DXGI_FORMAT_ASTC_8X8_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_8X8_UNORM_SRGB  }, // ASTC8x8
-		{ DXGI_FORMAT_ASTC_10X5_UNORM,    DXGI_FORMAT_ASTC_10X5_UNORM,       DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_10X5_UNORM_SRGB }, // ASTC10x5
-		{ DXGI_FORMAT_ASTC_10X6_UNORM,    DXGI_FORMAT_ASTC_10X6_UNORM,       DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_10X6_UNORM_SRGB }, // ASTC10x6
-		{ DXGI_FORMAT_ASTC_10X8_UNORM,    DXGI_FORMAT_ASTC_10X8_UNORM,       DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_10X8_UNORM_SRGB }, // ASTC10x8
-		{ DXGI_FORMAT_ASTC_10X10_UNORM,   DXGI_FORMAT_ASTC_10X10_UNORM,      DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_10X10_UNORM_SRGB}, // ASTC10x10
-		{ DXGI_FORMAT_ASTC_12X10_UNORM,   DXGI_FORMAT_ASTC_12X10_UNORM,      DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_12X10_UNORM_SRGB}, // ASTC12x10
-		{ DXGI_FORMAT_ASTC_12X12_UNORM,   DXGI_FORMAT_ASTC_12X12_UNORM,      DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_ASTC_12X12_UNORM_SRGB}, // ASTC12x12
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // Unknown
-		{ DXGI_FORMAT_R1_UNORM,           DXGI_FORMAT_R1_UNORM,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R1
-		{ DXGI_FORMAT_A8_UNORM,           DXGI_FORMAT_A8_UNORM,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // A8
-		{ DXGI_FORMAT_R8_UNORM,           DXGI_FORMAT_R8_UNORM,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R8
-		{ DXGI_FORMAT_R8_SINT,            DXGI_FORMAT_R8_SINT,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R8I
-		{ DXGI_FORMAT_R8_UINT,            DXGI_FORMAT_R8_UINT,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R8U
-		{ DXGI_FORMAT_R8_SNORM,           DXGI_FORMAT_R8_SNORM,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R8S
-		{ DXGI_FORMAT_R16_UNORM,          DXGI_FORMAT_R16_UNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R16
-		{ DXGI_FORMAT_R16_SINT,           DXGI_FORMAT_R16_SINT,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R16I
-		{ DXGI_FORMAT_R16_UINT,           DXGI_FORMAT_R16_UINT,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R16U
-		{ DXGI_FORMAT_R16_FLOAT,          DXGI_FORMAT_R16_FLOAT,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R16F
-		{ DXGI_FORMAT_R16_SNORM,          DXGI_FORMAT_R16_SNORM,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R16S
-		{ DXGI_FORMAT_R32_SINT,           DXGI_FORMAT_R32_SINT,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R32I
-		{ DXGI_FORMAT_R32_UINT,           DXGI_FORMAT_R32_UINT,              DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R32U
-		{ DXGI_FORMAT_R32_FLOAT,          DXGI_FORMAT_R32_FLOAT,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R32F
-		{ DXGI_FORMAT_R8G8_UNORM,         DXGI_FORMAT_R8G8_UNORM,            DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG8
-		{ DXGI_FORMAT_R8G8_SINT,          DXGI_FORMAT_R8G8_SINT,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG8I
-		{ DXGI_FORMAT_R8G8_UINT,          DXGI_FORMAT_R8G8_UINT,             DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG8U
-		{ DXGI_FORMAT_R8G8_SNORM,         DXGI_FORMAT_R8G8_SNORM,            DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG8S
-		{ DXGI_FORMAT_R16G16_UNORM,       DXGI_FORMAT_R16G16_UNORM,          DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG16
-		{ DXGI_FORMAT_R16G16_SINT,        DXGI_FORMAT_R16G16_SINT,           DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG16I
-		{ DXGI_FORMAT_R16G16_UINT,        DXGI_FORMAT_R16G16_UINT,           DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG16U
-		{ DXGI_FORMAT_R16G16_FLOAT,       DXGI_FORMAT_R16G16_FLOAT,          DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG16F
-		{ DXGI_FORMAT_R16G16_SNORM,       DXGI_FORMAT_R16G16_SNORM,          DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG16S
-		{ DXGI_FORMAT_R32G32_SINT,        DXGI_FORMAT_R32G32_SINT,           DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG32I
-		{ DXGI_FORMAT_R32G32_UINT,        DXGI_FORMAT_R32G32_UINT,           DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG32U
-		{ DXGI_FORMAT_R32G32_FLOAT,       DXGI_FORMAT_R32G32_FLOAT,          DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG32F
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGB8
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGB8I
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGB8U
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGB8S
-		{ DXGI_FORMAT_R9G9B9E5_SHAREDEXP, DXGI_FORMAT_R9G9B9E5_SHAREDEXP,    DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGB9E5F
-		{ DXGI_FORMAT_B8G8R8A8_UNORM,     DXGI_FORMAT_B8G8R8A8_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_B8G8R8A8_UNORM_SRGB  }, // BGRA8
-		{ DXGI_FORMAT_R8G8B8A8_UNORM,     DXGI_FORMAT_R8G8B8A8_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_R8G8B8A8_UNORM_SRGB  }, // RGBA8
-		{ DXGI_FORMAT_R8G8B8A8_SINT,      DXGI_FORMAT_R8G8B8A8_SINT,         DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_R8G8B8A8_UNORM_SRGB  }, // RGBA8I
-		{ DXGI_FORMAT_R8G8B8A8_UINT,      DXGI_FORMAT_R8G8B8A8_UINT,         DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_R8G8B8A8_UNORM_SRGB  }, // RGBA8U
-		{ DXGI_FORMAT_R8G8B8A8_SNORM,     DXGI_FORMAT_R8G8B8A8_SNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA8S
-		{ DXGI_FORMAT_R16G16B16A16_UNORM, DXGI_FORMAT_R16G16B16A16_UNORM,    DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA16
-		{ DXGI_FORMAT_R16G16B16A16_SINT,  DXGI_FORMAT_R16G16B16A16_SINT,     DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA16I
-		{ DXGI_FORMAT_R16G16B16A16_UINT,  DXGI_FORMAT_R16G16B16A16_UINT,     DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA16U
-		{ DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT,    DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA16F
-		{ DXGI_FORMAT_R16G16B16A16_SNORM, DXGI_FORMAT_R16G16B16A16_SNORM,    DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA16S
-		{ DXGI_FORMAT_R32G32B32A32_SINT,  DXGI_FORMAT_R32G32B32A32_SINT,     DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA32I
-		{ DXGI_FORMAT_R32G32B32A32_UINT,  DXGI_FORMAT_R32G32B32A32_UINT,     DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA32U
-		{ DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT,    DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA32F
-		{ DXGI_FORMAT_B5G6R5_UNORM,       DXGI_FORMAT_B5G6R5_UNORM,          DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // B5G6R5
-		{ DXGI_FORMAT_B5G6R5_UNORM,       DXGI_FORMAT_B5G6R5_UNORM,          DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // R5G6B5
-		{ DXGI_FORMAT_B4G4R4A4_UNORM,     DXGI_FORMAT_B4G4R4A4_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // BGRA4
-		{ DXGI_FORMAT_B4G4R4A4_UNORM,     DXGI_FORMAT_B4G4R4A4_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGBA4
-		{ DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_B5G5R5A1_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // BGR5A1
-		{ DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_B5G5R5A1_UNORM,        DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGB5A1
-		{ DXGI_FORMAT_R10G10B10A2_UNORM,  DXGI_FORMAT_R10G10B10A2_UNORM,     DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RGB10A2
-		{ DXGI_FORMAT_R11G11B10_FLOAT,    DXGI_FORMAT_R11G11B10_FLOAT,       DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // RG11B10F
-		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,               DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN              }, // UnknownDepth
-		{ DXGI_FORMAT_R16_TYPELESS,       DXGI_FORMAT_R16_UNORM,             DXGI_FORMAT_D16_UNORM,         DXGI_FORMAT_UNKNOWN              }, // D16
-		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN              }, // D24
-		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN              }, // D24S8
-		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN              }, // D32
-		{ DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_R32_FLOAT,             DXGI_FORMAT_D32_FLOAT,         DXGI_FORMAT_UNKNOWN              }, // D16F
-		{ DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_R32_FLOAT,             DXGI_FORMAT_D32_FLOAT,         DXGI_FORMAT_UNKNOWN              }, // D24F
-		{ DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_R32_FLOAT,             DXGI_FORMAT_D32_FLOAT,         DXGI_FORMAT_UNKNOWN              }, // D32F
-		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT, DXGI_FORMAT_UNKNOWN              }, // D0S8
+		{ DXGI_FORMAT_BC1_UNORM,          DXGI_FORMAT_BC1_UNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_BC1_UNORM_SRGB        }, // BC1
+		{ DXGI_FORMAT_BC2_UNORM,          DXGI_FORMAT_BC2_UNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_BC2_UNORM_SRGB        }, // BC2
+		{ DXGI_FORMAT_BC3_UNORM,          DXGI_FORMAT_BC3_UNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_BC3_UNORM_SRGB        }, // BC3
+		{ DXGI_FORMAT_BC4_UNORM,          DXGI_FORMAT_BC4_UNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BC4
+		{ DXGI_FORMAT_BC4_SNORM,          DXGI_FORMAT_BC4_SNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BC4S
+		{ DXGI_FORMAT_BC5_UNORM,          DXGI_FORMAT_BC5_UNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BC5
+		{ DXGI_FORMAT_BC5_SNORM,          DXGI_FORMAT_BC5_SNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BC5S
+		{ DXGI_FORMAT_BC6H_SF16,          DXGI_FORMAT_BC6H_SF16,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BC6H
+		{ DXGI_FORMAT_BC6H_UF16,          DXGI_FORMAT_BC6H_UF16,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BC6HU
+		{ DXGI_FORMAT_BC7_UNORM,          DXGI_FORMAT_BC7_UNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_BC7_UNORM_SRGB        }, // BC7
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // ETC1
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // ETC2
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // ETC2A
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // ETC2A1
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // EACR11 UNORM
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // EACR11 SNORM
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // EACRG11 UNORM
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // EACRG11 SNORM
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // PTC12
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // PTC14
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // PTC12A
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // PTC14A
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // PTC22
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // PTC24
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // ATC
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // ATCE
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // ATCI
+		{ DXGI_FORMAT_ASTC_4X4_UNORM,     DXGI_FORMAT_ASTC_4X4_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_4X4_UNORM_SRGB   }, // ASTC4x4
+		{ DXGI_FORMAT_ASTC_5X4_UNORM,     DXGI_FORMAT_ASTC_5X4_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_5X4_UNORM_SRGB   }, // ASTC5x4
+		{ DXGI_FORMAT_ASTC_5X5_UNORM,     DXGI_FORMAT_ASTC_5X5_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_5X5_UNORM_SRGB   }, // ASTC5x5
+		{ DXGI_FORMAT_ASTC_6X5_UNORM,     DXGI_FORMAT_ASTC_6X5_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_6X5_UNORM_SRGB   }, // ASTC6x5
+		{ DXGI_FORMAT_ASTC_6X6_UNORM,     DXGI_FORMAT_ASTC_6X6_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_6X6_UNORM_SRGB   }, // ASTC6x6
+		{ DXGI_FORMAT_ASTC_8X5_UNORM,     DXGI_FORMAT_ASTC_8X5_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_8X5_UNORM_SRGB   }, // ASTC8x5
+		{ DXGI_FORMAT_ASTC_8X6_UNORM,     DXGI_FORMAT_ASTC_8X6_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_8X6_UNORM_SRGB   }, // ASTC8x6
+		{ DXGI_FORMAT_ASTC_8X8_UNORM,     DXGI_FORMAT_ASTC_8X8_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_8X8_UNORM_SRGB   }, // ASTC8x8
+		{ DXGI_FORMAT_ASTC_10X5_UNORM,    DXGI_FORMAT_ASTC_10X5_UNORM,          DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_10X5_UNORM_SRGB  }, // ASTC10x5
+		{ DXGI_FORMAT_ASTC_10X6_UNORM,    DXGI_FORMAT_ASTC_10X6_UNORM,          DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_10X6_UNORM_SRGB  }, // ASTC10x6
+		{ DXGI_FORMAT_ASTC_10X8_UNORM,    DXGI_FORMAT_ASTC_10X8_UNORM,          DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_10X8_UNORM_SRGB  }, // ASTC10x8
+		{ DXGI_FORMAT_ASTC_10X10_UNORM,   DXGI_FORMAT_ASTC_10X10_UNORM,         DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_10X10_UNORM_SRGB }, // ASTC10x10
+		{ DXGI_FORMAT_ASTC_12X10_UNORM,   DXGI_FORMAT_ASTC_12X10_UNORM,         DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_12X10_UNORM_SRGB }, // ASTC12x10
+		{ DXGI_FORMAT_ASTC_12X12_UNORM,   DXGI_FORMAT_ASTC_12X12_UNORM,         DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_ASTC_12X12_UNORM_SRGB }, // ASTC12x12
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // Unknown
+		{ DXGI_FORMAT_R1_UNORM,           DXGI_FORMAT_R1_UNORM,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R1
+		{ DXGI_FORMAT_A8_UNORM,           DXGI_FORMAT_A8_UNORM,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // A8
+		{ DXGI_FORMAT_R8_UNORM,           DXGI_FORMAT_R8_UNORM,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R8
+		{ DXGI_FORMAT_R8_SINT,            DXGI_FORMAT_R8_SINT,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R8I
+		{ DXGI_FORMAT_R8_UINT,            DXGI_FORMAT_R8_UINT,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R8U
+		{ DXGI_FORMAT_R8_SNORM,           DXGI_FORMAT_R8_SNORM,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R8S
+		{ DXGI_FORMAT_R16_UNORM,          DXGI_FORMAT_R16_UNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R16
+		{ DXGI_FORMAT_R16_SINT,           DXGI_FORMAT_R16_SINT,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R16I
+		{ DXGI_FORMAT_R16_UINT,           DXGI_FORMAT_R16_UINT,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R16U
+		{ DXGI_FORMAT_R16_FLOAT,          DXGI_FORMAT_R16_FLOAT,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R16F
+		{ DXGI_FORMAT_R16_SNORM,          DXGI_FORMAT_R16_SNORM,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R16S
+		{ DXGI_FORMAT_R32_SINT,           DXGI_FORMAT_R32_SINT,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R32I
+		{ DXGI_FORMAT_R32_UINT,           DXGI_FORMAT_R32_UINT,                 DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R32U
+		{ DXGI_FORMAT_R32_FLOAT,          DXGI_FORMAT_R32_FLOAT,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R32F
+		{ DXGI_FORMAT_R8G8_UNORM,         DXGI_FORMAT_R8G8_UNORM,               DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG8
+		{ DXGI_FORMAT_R8G8_SINT,          DXGI_FORMAT_R8G8_SINT,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG8I
+		{ DXGI_FORMAT_R8G8_UINT,          DXGI_FORMAT_R8G8_UINT,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG8U
+		{ DXGI_FORMAT_R8G8_SNORM,         DXGI_FORMAT_R8G8_SNORM,               DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG8S
+		{ DXGI_FORMAT_R16G16_UNORM,       DXGI_FORMAT_R16G16_UNORM,             DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG16
+		{ DXGI_FORMAT_R16G16_SINT,        DXGI_FORMAT_R16G16_SINT,              DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG16I
+		{ DXGI_FORMAT_R16G16_UINT,        DXGI_FORMAT_R16G16_UINT,              DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG16U
+		{ DXGI_FORMAT_R16G16_FLOAT,       DXGI_FORMAT_R16G16_FLOAT,             DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG16F
+		{ DXGI_FORMAT_R16G16_SNORM,       DXGI_FORMAT_R16G16_SNORM,             DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG16S
+		{ DXGI_FORMAT_R32G32_SINT,        DXGI_FORMAT_R32G32_SINT,              DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG32I
+		{ DXGI_FORMAT_R32G32_UINT,        DXGI_FORMAT_R32G32_UINT,              DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG32U
+		{ DXGI_FORMAT_R32G32_FLOAT,       DXGI_FORMAT_R32G32_FLOAT,             DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG32F
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB8
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB8I
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB8U
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB8S
+		{ DXGI_FORMAT_R9G9B9E5_SHAREDEXP, DXGI_FORMAT_R9G9B9E5_SHAREDEXP,       DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB9E5F
+		{ DXGI_FORMAT_B8G8R8A8_UNORM,     DXGI_FORMAT_B8G8R8A8_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_B8G8R8A8_UNORM_SRGB   }, // BGRA8
+		{ DXGI_FORMAT_R8G8B8A8_UNORM,     DXGI_FORMAT_R8G8B8A8_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_R8G8B8A8_UNORM_SRGB   }, // RGBA8
+		{ DXGI_FORMAT_R8G8B8A8_SINT,      DXGI_FORMAT_R8G8B8A8_SINT,            DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_R8G8B8A8_UNORM_SRGB   }, // RGBA8I
+		{ DXGI_FORMAT_R8G8B8A8_UINT,      DXGI_FORMAT_R8G8B8A8_UINT,            DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_R8G8B8A8_UNORM_SRGB   }, // RGBA8U
+		{ DXGI_FORMAT_R8G8B8A8_SNORM,     DXGI_FORMAT_R8G8B8A8_SNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA8S
+		{ DXGI_FORMAT_R16G16B16A16_UNORM, DXGI_FORMAT_R16G16B16A16_UNORM,       DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA16
+		{ DXGI_FORMAT_R16G16B16A16_SINT,  DXGI_FORMAT_R16G16B16A16_SINT,        DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA16I
+		{ DXGI_FORMAT_R16G16B16A16_UINT,  DXGI_FORMAT_R16G16B16A16_UINT,        DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA16U
+		{ DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT,       DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA16F
+		{ DXGI_FORMAT_R16G16B16A16_SNORM, DXGI_FORMAT_R16G16B16A16_SNORM,       DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA16S
+		{ DXGI_FORMAT_R32G32B32A32_SINT,  DXGI_FORMAT_R32G32B32A32_SINT,        DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA32I
+		{ DXGI_FORMAT_R32G32B32A32_UINT,  DXGI_FORMAT_R32G32B32A32_UINT,        DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA32U
+		{ DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT,       DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA32F
+		{ DXGI_FORMAT_B5G6R5_UNORM,       DXGI_FORMAT_B5G6R5_UNORM,             DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // B5G6R5
+		{ DXGI_FORMAT_B5G6R5_UNORM,       DXGI_FORMAT_B5G6R5_UNORM,             DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // R5G6B5
+		{ DXGI_FORMAT_B4G4R4A4_UNORM,     DXGI_FORMAT_B4G4R4A4_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BGRA4
+		{ DXGI_FORMAT_B4G4R4A4_UNORM,     DXGI_FORMAT_B4G4R4A4_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGBA4
+		{ DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_B5G5R5A1_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // BGR5A1
+		{ DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_B5G5R5A1_UNORM,           DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB5A1
+		{ DXGI_FORMAT_R10G10B10A2_UNORM,  DXGI_FORMAT_R10G10B10A2_UNORM,        DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB10A2
+		{ DXGI_FORMAT_R10G10B10A2_UINT,   DXGI_FORMAT_R10G10B10A2_UINT,         DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RGB10A2U
+		{ DXGI_FORMAT_R11G11B10_FLOAT,    DXGI_FORMAT_R11G11B10_FLOAT,          DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // RG11B10F
+		{ DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // UnknownDepth
+		{ DXGI_FORMAT_R16_TYPELESS,       DXGI_FORMAT_R16_UNORM,                DXGI_FORMAT_D16_UNORM,            DXGI_FORMAT_UNKNOWN               }, // D16
+		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS,    DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // D24
+		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS,    DXGI_FORMAT_D24_UNORM_S8_UINT,    DXGI_FORMAT_UNKNOWN               }, // D24S8
+		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS,    DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // D32
+		{ DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_R32_FLOAT,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // D16F
+		{ DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_R32_FLOAT,                DXGI_FORMAT_UNKNOWN,              DXGI_FORMAT_UNKNOWN               }, // D24F
+		{ DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_R32_FLOAT,                DXGI_FORMAT_D32_FLOAT,            DXGI_FORMAT_UNKNOWN               }, // D32F
+		{ DXGI_FORMAT_R32G8X24_TYPELESS,  DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS, DXGI_FORMAT_D32_FLOAT_S8X24_UINT, DXGI_FORMAT_UNKNOWN               }, // D32FS8
+		{ DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_R24_UNORM_X8_TYPELESS,    DXGI_FORMAT_D24_UNORM_S8_UINT,    DXGI_FORMAT_UNKNOWN               }, // D0S8
 	};
 	static_assert(TextureFormat::Count == BX_COUNTOF(s_textureFormat) );
 
@@ -327,6 +332,14 @@ namespace bgfx { namespace d3d11
 		{ "TEXCOORD",     5, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD",     6, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD",     7, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",     8, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",     9, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",    10, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",    11, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",    12, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",    13, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",    14, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",    15, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	static_assert(Attrib::Count == BX_COUNTOF(s_attrib) );
 
@@ -373,6 +386,18 @@ namespace bgfx { namespace d3d11
 			{ DXGI_FORMAT_R32G32_FLOAT,       DXGI_FORMAT_R32G32_FLOAT       },
 			{ DXGI_FORMAT_R32G32B32_FLOAT,    DXGI_FORMAT_R32G32B32_FLOAT    },
 			{ DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT },
+		},
+		{ // Int32 (32-bit integers can't be normalized; both slots are the SINT format)
+			{ DXGI_FORMAT_R32_SINT,           DXGI_FORMAT_R32_SINT           },
+			{ DXGI_FORMAT_R32G32_SINT,        DXGI_FORMAT_R32G32_SINT        },
+			{ DXGI_FORMAT_R32G32B32_SINT,     DXGI_FORMAT_R32G32B32_SINT     },
+			{ DXGI_FORMAT_R32G32B32A32_SINT,  DXGI_FORMAT_R32G32B32A32_SINT  },
+		},
+		{ // Uint32
+			{ DXGI_FORMAT_R32_UINT,           DXGI_FORMAT_R32_UINT           },
+			{ DXGI_FORMAT_R32G32_UINT,        DXGI_FORMAT_R32G32_UINT        },
+			{ DXGI_FORMAT_R32G32B32_UINT,     DXGI_FORMAT_R32G32B32_UINT     },
+			{ DXGI_FORMAT_R32G32B32A32_UINT,  DXGI_FORMAT_R32G32B32A32_UINT  },
 		},
 	};
 	static_assert(AttribType::Count == BX_COUNTOF(s_attribType) );
@@ -457,6 +482,32 @@ namespace bgfx { namespace d3d11
 		IID_ID3D11Device1,
 	};
 
+	static const char* s_messageCategory[] =
+	{
+		"APPLICATION_DEFINED",
+		"MISCELLANEOUS",
+		"INITIALIZATION",
+		"CLEANUP",
+		"COMPILATION",
+		"STATE_CREATION",
+		"STATE_SETTING",
+		"STATE_GETTING",
+		"RESOURCE_MANIPULATION",
+		"EXECUTION",
+		"SHADER",
+	};
+	static_assert(BX_COUNTOF(s_messageCategory) == D3D11_MESSAGE_CATEGORY_SHADER+1);
+
+	static const char* s_messageSeverity[] =
+	{
+		"CORRUPTION",
+		"ERROR",
+		"WARNING",
+		"INFO",
+		"MESSAGE",
+	};
+	static_assert(BX_COUNTOF(s_messageSeverity) == D3D11_MESSAGE_SEVERITY_MESSAGE+1);
+
 	inline bool isLost(HRESULT _hr)
 	{
 		return false
@@ -509,6 +560,7 @@ namespace bgfx { namespace d3d11
 			va_end(argList);
 			temp[size] = '\0';
 
+			_interface->SetPrivateData(WKPDID_D3DDebugObjectName, 0, NULL); // destroy first...
 			_interface->SetPrivateData(WKPDID_D3DDebugObjectName, size, temp);
 		}
 	}
@@ -686,6 +738,8 @@ namespace bgfx { namespace d3d11
 	int  WINAPI d3d11Annotation_BeginEvent(DWORD _color, LPCWSTR _name);
 	int  WINAPI d3d11Annotation_EndEvent();
 	void WINAPI d3d11Annotation_SetMarker(DWORD _color, LPCWSTR _name);
+
+	struct TextureD3D11;
 
 	struct RendererContextD3D11 : public RendererContextI
 	{
@@ -1088,6 +1142,7 @@ namespace bgfx { namespace d3d11
 					m_scd.flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 					m_scd.maxFrameLatency = bx::min<uint8_t>(_init.resolution.maxFrameLatency, BGFX_CONFIG_MAX_FRAME_LATENCY);
+					m_scd.waitable        = false;
 					m_scd.nwh             = g_platformData.nwh;
 					m_scd.ndt             = g_platformData.ndt;
 					m_scd.windowed        = true;
@@ -1204,7 +1259,7 @@ namespace bgfx { namespace d3d11
 
 				if (SUCCEEDED(hr) )
 				{
-					m_infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+					m_infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, isDebuggerAttached() );
 					m_infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR,      false);
 					m_infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING,    false);
 					m_infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_INFO,       false);
@@ -1313,7 +1368,10 @@ namespace bgfx { namespace d3d11
 						  D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT
 						, BGFX_CONFIG_MAX_VERTEX_STREAMS
 						) );
+					g_caps.limits.maxVertexAttributes = D3D11_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT;
 				}
+
+				g_caps.limits.maxInstanceData = bx::min(g_caps.limits.maxInstanceData, g_caps.limits.maxVertexAttributes);
 
 				// 32-bit indices only supported on 9_2+.
 				if (m_featureLevel >= D3D_FEATURE_LEVEL_9_2)
@@ -1638,7 +1696,7 @@ namespace bgfx { namespace d3d11
 				if (_init.debug
 				&&  NULL != m_infoQueue)
 				{
-					m_infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+					m_infoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, isDebuggerAttached() );
 				}
 
 				{ //
@@ -1755,6 +1813,8 @@ namespace bgfx { namespace d3d11
 			m_deviceCtx->ClearState();
 			m_deviceCtx->Flush();
 
+			m_zeroInitTileCache.invalidate();
+
 			invalidateCache();
 
 			for (uint32_t ii = 0; ii < BX_COUNTOF(m_frameBuffers); ++ii)
@@ -1782,7 +1842,14 @@ namespace bgfx { namespace d3d11
 				m_textures[ii].destroy();
 			}
 
+			for (uint32_t ii = 0; ii < BX_COUNTOF(m_uniforms); ++ii)
+			{
+				bx::free(g_allocator, m_uniforms[ii]);
+				m_uniforms[ii] = NULL;
+			}
+
 			DX_RELEASE(m_annotation, 1);
+			dumpInfoQueue();
 			DX_RELEASE_W(m_infoQueue, 0);
 			DX_RELEASE(m_msaaRt, 0);
 
@@ -1911,27 +1978,96 @@ namespace bgfx { namespace d3d11
 			m_textures[_handle.idx].update(_side, _mip, _rect, _z, _depth, _pitch, _mem);
 		}
 
+		void clearTexture(TextureHandle _handle, uint8_t _mip, uint8_t _numMips, uint16_t _layer, uint16_t _numLayers) override
+		{
+			m_textures[_handle.idx].clear(_mip, _numMips, _layer, _numLayers);
+		}
+
 		void readTexture(TextureHandle _handle, void* _data, uint16_t _layer, uint8_t _mip) override
 		{
 			const TextureD3D11& texture = m_textures[_handle.idx];
 			const uint32_t subresource = _mip + _layer*texture.m_numMips;
+
+			BX_ASSERT(NULL != texture.m_staging, "Texture must be created with BGFX_TEXTURE_READ_BACK.");
+
+			m_deviceCtx->CopySubresourceRegion(texture.m_staging, subresource, 0, 0, 0, texture.m_ptr, subresource, NULL);
+
 			D3D11_MAPPED_SUBRESOURCE mapped;
-			DX_CHECK(m_deviceCtx->Map(texture.m_ptr, subresource, D3D11_MAP_READ, 0, &mapped) );
+			DX_CHECK(m_deviceCtx->Map(texture.m_staging, subresource, D3D11_MAP_READ, 0, &mapped) );
 
 			uint32_t srcWidth  = bx::max(1, texture.m_width >>_mip);
 			uint32_t srcHeight = bx::max(1, texture.m_height>>_mip);
 			uint8_t* src       = (uint8_t*)mapped.pData;
 			uint32_t srcPitch  = mapped.RowPitch;
 
-			const uint8_t bpp = bimg::getBitsPerPixel(bimg::TextureFormat::Enum(texture.m_textureFormat) );
+			const bimg::ImageBlockInfo& blockInfo = bimg::getBlockInfo(bimg::TextureFormat::Enum(texture.m_textureFormat) );
+			const uint32_t blockWidth  = bx::max<uint32_t>(1, blockInfo.blockWidth);
+			const uint32_t blockHeight = bx::max<uint32_t>(1, blockInfo.blockHeight);
 			uint8_t* dst      = (uint8_t*)_data;
-			uint32_t dstPitch = srcWidth*bpp/8;
+			uint32_t dstPitch = ( (srcWidth + blockWidth - 1)/blockWidth)*blockInfo.blockSize;
+			uint32_t numRows  = (srcHeight + blockHeight - 1)/blockHeight;
 
 			uint32_t pitch = bx::min(srcPitch, dstPitch);
 
-			bx::memCopy(dst, dstPitch, src, srcPitch, pitch, srcHeight);
+			if (TextureFormat::D0S8 == texture.m_textureFormat)
+			{
+				for (uint32_t yy = 0; yy < numRows; ++yy)
+				{
+					const uint8_t* srcRow = src + yy*srcPitch;
+					      uint8_t* dstRow = dst + yy*dstPitch;
 
-			m_deviceCtx->Unmap(texture.m_ptr, subresource);
+					for (uint32_t xx = 0; xx < srcWidth; ++xx)
+					{
+						dstRow[xx] = srcRow[xx*4 + 3];
+					}
+				}
+			}
+			else
+			{
+				bx::memCopy(dst, dstPitch, src, srcPitch, pitch, numRows);
+			}
+
+			m_deviceCtx->Unmap(texture.m_staging, subresource);
+		}
+
+		BufferD3D11& getBuffer(Handle _handle)
+		{
+			if (_handle.isIndexBuffer() )
+			{
+				return m_indexBuffers[_handle.idx];
+			}
+
+			return m_vertexBuffers[_handle.idx];
+		}
+
+		void readBuffer(Handle _handle, void* _data, uint32_t _offset, uint32_t _size) override
+		{
+			const BufferD3D11& buffer = getBuffer(_handle);
+
+			D3D11_BUFFER_DESC desc;
+			bx::memSet(&desc, 0, sizeof(desc) );
+			desc.ByteWidth      = _offset + _size;
+			desc.Usage          = D3D11_USAGE_STAGING;
+			desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+
+			ID3D11Buffer* staging = NULL;
+			DX_CHECK(m_device->CreateBuffer(&desc, NULL, &staging) );
+
+			D3D11_BOX box;
+			box.left   = _offset;
+			box.right  = _offset + _size;
+			box.top    = 0;
+			box.bottom = 1;
+			box.front  = 0;
+			box.back   = 1;
+			m_deviceCtx->CopySubresourceRegion(staging, 0, _offset, 0, 0, buffer.m_ptr, 0, &box);
+
+			D3D11_MAPPED_SUBRESOURCE mapped;
+			DX_CHECK(m_deviceCtx->Map(staging, 0, D3D11_MAP_READ, 0, &mapped) );
+			bx::memCopy(_data, (const uint8_t*)mapped.pData + _offset, _size);
+			m_deviceCtx->Unmap(staging, 0);
+
+			DX_RELEASE(staging, 0);
 		}
 
 		void resizeTexture(TextureHandle _handle, uint16_t _width, uint16_t _height, uint8_t _numMips, uint16_t _numLayers) override
@@ -2006,6 +2142,11 @@ namespace bgfx { namespace d3d11
 
 		void destroyFrameBuffer(FrameBufferHandle _handle) override
 		{
+			if (m_fbh.idx == _handle.idx)
+			{
+				m_fbh = BGFX_INVALID_HANDLE;
+			}
+
 			uint16_t denseIdx = m_frameBuffers[_handle.idx].destroy();
 			if (UINT16_MAX != denseIdx)
 			{
@@ -2202,6 +2343,7 @@ namespace bgfx { namespace d3d11
 			}
 		}
 
+		void blitBufferTexture(const BlitItem& _blit);
 		void submitBlit(BlitState& _bs, uint16_t _view);
 
 		void submitUniformCache(UniformCacheState& _ucs, uint16_t _view);
@@ -2388,6 +2530,26 @@ namespace bgfx { namespace d3d11
 			return m_lost;
 		}
 
+		bool handleDeviceLost(HRESULT _hr)
+		{
+			const bool lost = isLost(_hr);
+
+			if (lost
+			&&  !m_lost)
+			{
+				m_lost = true;
+				BGFX_FATAL(false
+					, bgfx::Fatal::DeviceLost
+					, "Device is lost. FAILED HRESULT(%x) %s (%s)"
+					, _hr
+					, getLostReason(_hr)
+					, DXGI_ERROR_DEVICE_REMOVED == _hr ? getLostReason(m_device->GetDeviceRemovedReason() ) : "no info"
+					);
+			}
+
+			return lost;
+		}
+
 		void flip() override
 		{
 			if (!m_lost)
@@ -2425,15 +2587,7 @@ namespace bgfx { namespace d3d11
 					}
 				}
 
-				m_lost = isLost(hr);
-				BGFX_FATAL(
-					  !m_lost
-					, bgfx::Fatal::DeviceLost
-					, "Device is lost. FAILED HRESULT(%x) %s (%s)"
-					, hr
-					, getLostReason(hr)
-					, DXGI_ERROR_DEVICE_REMOVED == hr ? getLostReason(m_device->GetDeviceRemovedReason() ) : "no info"
-					);
+				handleDeviceLost(hr);
 			}
 		}
 
@@ -2691,7 +2845,7 @@ namespace bgfx { namespace d3d11
 			}
 		}
 
-		void setFrameBuffer(FrameBufferHandle _fbh, bool _msaa = true, bool _needPresent = true)
+		void resolveFrameBuffer(FrameBufferHandle _fbh)
 		{
 			if (isValid(m_fbh)
 			&&  m_fbh.idx != _fbh.idx
@@ -2699,7 +2853,13 @@ namespace bgfx { namespace d3d11
 			{
 				FrameBufferD3D11& frameBuffer = m_frameBuffers[m_fbh.idx];
 				frameBuffer.resolve();
+				m_rtMsaa = false;
 			}
+		}
+
+		void setFrameBuffer(FrameBufferHandle _fbh, bool _msaa = true, bool _needPresent = true)
+		{
+			resolveFrameBuffer(_fbh);
 
 			if (!isValid(_fbh) )
 			{
@@ -2824,7 +2984,7 @@ namespace bgfx { namespace d3d11
 
 				for (uint32_t ii = 0; ii < _numInstanceData; ++ii)
 				{
-					uint32_t index = 7-ii; // TEXCOORD7 = i_data0, TEXCOORD6 = i_data1, etc.
+					const uint32_t index = BGFX_CONFIG_INSTANCE_DATA_FIRST_TEXCOORD - ii; // TEXCOORD(x) = i_data0, TEXCOORD(x-1) = i_data1, etc.
 
 					uint32_t jj;
 					D3D11_INPUT_ELEMENT_DESC* curr = vertexElements;
@@ -2921,7 +3081,7 @@ namespace bgfx { namespace d3d11
 
 				if (desc.IndependentBlendEnable)
 				{
-					for (uint32_t ii = 1, rgba = _rgba; ii < BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS; ++ii, rgba >>= 11)
+					for (uint32_t ii = 1, rgba = _rgba; ii < BX_COUNTOF(desc.RenderTarget); ++ii, rgba >>= 11)
 					{
 						drt = &desc.RenderTarget[ii];
 						drt->BlendEnable = 0 != (rgba & 0x7ff);
@@ -2943,7 +3103,7 @@ namespace bgfx { namespace d3d11
 				}
 				else
 				{
-					for (uint32_t ii = 1; ii < BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS; ++ii)
+					for (uint32_t ii = 1; ii < BX_COUNTOF(desc.RenderTarget); ++ii)
 					{
 						bx::memCopy(&desc.RenderTarget[ii], drt, sizeof(D3D11_RENDER_TARGET_BLEND_DESC) );
 					}
@@ -2958,11 +3118,19 @@ namespace bgfx { namespace d3d11
 			const uint64_t f1 = BGFX_STATE_BLEND_INV_FACTOR;
 			const uint64_t f2 = BGFX_STATE_BLEND_FACTOR<<4;
 			const uint64_t f3 = BGFX_STATE_BLEND_INV_FACTOR<<4;
+			const uint64_t f4 = BGFX_STATE_BLEND_FACTOR<<8;
+			const uint64_t f5 = BGFX_STATE_BLEND_INV_FACTOR<<8;
+			const uint64_t f6 = BGFX_STATE_BLEND_FACTOR<<12;
+			const uint64_t f7 = BGFX_STATE_BLEND_INV_FACTOR<<12;
 			bool hasFactor = 0
 				|| f0 == (_state & f0)
 				|| f1 == (_state & f1)
 				|| f2 == (_state & f2)
 				|| f3 == (_state & f3)
+				|| f4 == (_state & f4)
+				|| f5 == (_state & f5)
+				|| f6 == (_state & f6)
+				|| f7 == (_state & f7)
 				;
 
 			float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -2982,9 +3150,14 @@ namespace bgfx { namespace d3d11
 			uint32_t func = (_state&BGFX_STATE_DEPTH_TEST_MASK)>>BGFX_STATE_DEPTH_TEST_SHIFT;
 			_state &= 0 == func ? 0 : BGFX_D3D11_DEPTH_STENCIL_MASK;
 
-			uint32_t fstencil = unpackStencil(0, _stencil);
-			uint32_t ref = (fstencil&BGFX_STENCIL_FUNC_REF_MASK)>>BGFX_STENCIL_FUNC_REF_SHIFT;
-			_stencil &= kStencilNoRefMask;
+			const uint32_t ref = (unpackStencil(0, _stencil)&BGFX_STENCIL_FUNC_REF_MASK)>>BGFX_STENCIL_FUNC_REF_SHIFT;
+			_stencil = stencilEnabled(_stencil)
+				? (_stencil & kStencilNoRefMask)
+				: 0
+				;
+
+			const uint32_t fstencil  = unpackStencil(0, _stencil);
+			const uint8_t  writeMask = unpackStencilWriteMask(_stencil);
 
 			bx::HashMurmur2A murmur;
 			murmur.begin();
@@ -3001,13 +3174,12 @@ namespace bgfx { namespace d3d11
 				desc.DepthWriteMask = !!(BGFX_STATE_WRITE_Z & _state) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 				desc.DepthFunc      = s_cmpFunc[func];
 
-				uint32_t bstencil     = unpackStencil(1, _stencil);
-				uint32_t frontAndBack = bstencil != BGFX_STENCIL_NONE && bstencil != fstencil;
-				bstencil = frontAndBack ? bstencil : fstencil;
+				uint32_t frontAndBack = stencilFrontAndBack(_stencil);
+				uint32_t bstencil     = frontAndBack ? unpackStencil(1, _stencil) : fstencil;
 
 				desc.StencilEnable    = 0 != _stencil;
 				desc.StencilReadMask  = (fstencil&BGFX_STENCIL_FUNC_RMASK_MASK)>>BGFX_STENCIL_FUNC_RMASK_SHIFT;
-				desc.StencilWriteMask = 0xff;
+				desc.StencilWriteMask = writeMask;
 				desc.FrontFace.StencilFailOp      = s_stencilOp[(fstencil&BGFX_STENCIL_OP_FAIL_S_MASK)>>BGFX_STENCIL_OP_FAIL_S_SHIFT];
 				desc.FrontFace.StencilDepthFailOp = s_stencilOp[(fstencil&BGFX_STENCIL_OP_FAIL_Z_MASK)>>BGFX_STENCIL_OP_FAIL_Z_SHIFT];
 				desc.FrontFace.StencilPassOp      = s_stencilOp[(fstencil&BGFX_STENCIL_OP_PASS_Z_MASK)>>BGFX_STENCIL_OP_PASS_Z_SHIFT];
@@ -3256,13 +3428,16 @@ namespace bgfx { namespace d3d11
 			commitTextureStage();
 		}
 
-		ID3D11UnorderedAccessView* getCachedUav(TextureHandle _handle, uint8_t _mip)
+		ID3D11UnorderedAccessView* getCachedUav(TextureHandle _handle, uint8_t _mip, uint16_t _firstLayer = 0, uint16_t _numLayers = UINT16_MAX)
 		{
+			const bool arrayed = UINT16_MAX != _numLayers;
+
 			bx::HashMurmur2A murmur;
 			murmur.begin();
 			murmur.add(_handle);
 			murmur.add(_mip);
-			murmur.add(1);
+			murmur.add(_firstLayer);
+			murmur.add(arrayed ? _numLayers : 0);
 			uint32_t hash = murmur.end();
 
 			IUnknown** ptr = m_srvUavLru.find(hash);
@@ -3276,12 +3451,16 @@ namespace bgfx { namespace d3d11
 				switch (texture.m_type)
 				{
 				case TextureD3D11::Texture2D:
-					if (1 < texture.m_numLayers)
+					if (1 < texture.m_numLayers || arrayed)
 					{
+						const uint16_t numLayers = arrayed
+							? _numLayers
+							: uint16_t(texture.m_numLayers)
+							;
 						desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
 						desc.Texture2DArray.MipSlice = _mip;
-						desc.Texture2DArray.FirstArraySlice = 0;
-						desc.Texture2DArray.ArraySize = texture.m_numLayers;
+						desc.Texture2DArray.FirstArraySlice = _firstLayer;
+						desc.Texture2DArray.ArraySize = bx::max<uint16_t>(numLayers, 1);
 					}
 					else
 					{
@@ -3292,8 +3471,11 @@ namespace bgfx { namespace d3d11
 
 				case TextureD3D11::TextureCube:
 					desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
-					desc.Texture2DArray.ArraySize = 6;
-					desc.Texture2DArray.FirstArraySlice = 0;
+					desc.Texture2DArray.ArraySize = arrayed
+						? bx::max<uint16_t>(_numLayers, 1)
+						: uint16_t(bx::max<uint32_t>(texture.m_numLayers, 1u) * 6)
+						;
+					desc.Texture2DArray.FirstArraySlice = _firstLayer;
 					desc.Texture2DArray.MipSlice = _mip;
 					break;
 
@@ -3317,7 +3499,7 @@ namespace bgfx { namespace d3d11
 			return uav;
 		}
 
-		ID3D11ShaderResourceView* getCachedSrv(TextureHandle _handle, uint8_t _firstMip, uint8_t _numMips = 1, uint16_t _firstLayer = 0, uint16_t _numLayers = UINT16_MAX, bool _compute = false, bool _stencil = false)
+		ID3D11ShaderResourceView* getCachedSrv(TextureHandle _handle, uint8_t _firstMip, uint8_t _numMips = 1, uint16_t _firstLayer = 0, uint16_t _numLayers = UINT16_MAX, bool _compute = false, bool _stencil = false, bool _asArray = false)
 		{
 			const TextureD3D11& texture = m_textures[_handle.idx];
 
@@ -3330,8 +3512,8 @@ namespace bgfx { namespace d3d11
 			murmur.add(_firstMip);
 			murmur.add(numMips);
 			murmur.add(_firstLayer);
-			murmur.add(numLayers);
-			murmur.add(0);
+			murmur.add(_asArray ? _numLayers : numLayers);
+			murmur.add(_asArray);
 			murmur.add(_compute);
 			murmur.add(_stencil);
 			uint32_t hash = murmur.end();
@@ -3345,15 +3527,17 @@ namespace bgfx { namespace d3d11
 				const bool msaaSample = 1 < msaa.Count && 0 != (texture.m_flags&BGFX_TEXTURE_MSAA_SAMPLE);
 
 				D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-				desc.Format = _stencil
-					? DXGI_FORMAT_X24_TYPELESS_G8_UINT
-					: texture.getSrvFormat()
+				desc.Format = !_stencil
+					? texture.getSrvFormat()
+					: (DXGI_FORMAT_R32G8X24_TYPELESS == s_textureFormat[texture.m_textureFormat].m_fmt
+						? DXGI_FORMAT_X32_TYPELESS_G8X24_UINT
+						: DXGI_FORMAT_X24_TYPELESS_G8_UINT)
 					;
 
 				switch (texture.m_type)
 				{
 				case TextureD3D11::Texture2D:
-					if (1 < texture.m_numLayers)
+					if (1 < numLayers || 0 != _firstLayer)
 					{
 						desc.ViewDimension = msaaSample
 							? D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY
@@ -3376,9 +3560,31 @@ namespace bgfx { namespace d3d11
 					break;
 
 				case TextureD3D11::TextureCube:
-					desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-					desc.TextureCube.MostDetailedMip = _firstMip;
-					desc.TextureCube.MipLevels       = numMips;
+					if (_asArray)
+					{
+						const uint16_t slices = uint16_t(bx::max<uint32_t>(texture.m_numLayers, 1u) * 6);
+						const uint16_t first  = bx::min<uint16_t>(_firstLayer, uint16_t(slices - 1) );
+						const uint16_t count  = bx::min<uint16_t>(_numLayers, uint16_t(slices - first) );
+						desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+						desc.Texture2DArray.MostDetailedMip = _firstMip;
+						desc.Texture2DArray.MipLevels       = numMips;
+						desc.Texture2DArray.FirstArraySlice = first;
+						desc.Texture2DArray.ArraySize       = count;
+					}
+					else if (1 < numLayers)
+					{
+						desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+						desc.TextureCubeArray.MostDetailedMip  = _firstMip;
+						desc.TextureCubeArray.MipLevels        = numMips;
+						desc.TextureCubeArray.First2DArrayFace = _firstLayer * 6;
+						desc.TextureCubeArray.NumCubes         = numLayers;
+					}
+					else
+					{
+						desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+						desc.TextureCube.MostDetailedMip = _firstMip;
+						desc.TextureCube.MipLevels       = numMips;
+					}
 					break;
 
 				case TextureD3D11::Texture3D:
@@ -3580,7 +3786,13 @@ namespace bgfx { namespace d3d11
 
 			const Rect fbRect(0, 0, bx::narrowCast<uint16_t>(width), bx::narrowCast<uint16_t>(height) );
 
-			if (_rect.isEqual(fbRect) )
+			const bool needsQuadClear = true
+				&& isValid(m_fbh)
+				&& m_frameBuffers[m_fbh.idx].m_needsQuadClear
+				;
+
+			if (_rect.isEqual(fbRect)
+			&& !needsQuadClear)
 			{
 				clear(_clear, _palette);
 			}
@@ -3588,18 +3800,20 @@ namespace bgfx { namespace d3d11
 			{
 				ID3D11DeviceContext* deviceCtx = m_deviceCtx;
 
-				uint64_t state = 0;
-				state |= _clear.m_flags & BGFX_CLEAR_COLOR ? BGFX_STATE_WRITE_RGB|BGFX_STATE_WRITE_A         : 0;
-				state |= _clear.m_flags & BGFX_CLEAR_DEPTH ? BGFX_STATE_DEPTH_TEST_ALWAYS|BGFX_STATE_WRITE_Z : 0;
+				const uint64_t state = 0
+					| (_clear.m_flags & BGFX_CLEAR_COLOR ? BGFX_STATE_WRITE_RGB|BGFX_STATE_WRITE_A         : 0)
+					| (_clear.m_flags & BGFX_CLEAR_DEPTH ? BGFX_STATE_DEPTH_TEST_ALWAYS|BGFX_STATE_WRITE_Z : 0)
+					;
 
-				uint64_t stencil = 0;
-				stencil |= _clear.m_flags & BGFX_CLEAR_STENCIL ? 0
-					| BGFX_STENCIL_TEST_ALWAYS
-					| BGFX_STENCIL_FUNC_REF(_clear.m_stencil)
-					| BGFX_STENCIL_FUNC_RMASK(0xff)
-					| BGFX_STENCIL_OP_FAIL_S_REPLACE
-					| BGFX_STENCIL_OP_FAIL_Z_REPLACE
-					| BGFX_STENCIL_OP_PASS_Z_REPLACE
+				const uint64_t stencil = _clear.m_flags & BGFX_CLEAR_STENCIL
+					? packStencil(0
+						| BGFX_STENCIL_TEST_ALWAYS
+						| BGFX_STENCIL_FUNC_REF(_clear.m_stencil)
+						| BGFX_STENCIL_FUNC_RMASK(0xff)
+						| BGFX_STENCIL_OP_FAIL_S_REPLACE
+						| BGFX_STENCIL_OP_FAIL_Z_REPLACE
+						| BGFX_STENCIL_OP_PASS_Z_REPLACE
+						, BGFX_STENCIL_NONE)
 					: 0
 					;
 
@@ -3676,6 +3890,47 @@ namespace bgfx { namespace d3d11
 			}
 		}
 
+		void dumpInfoQueue()
+		{
+			if (NULL == m_infoQueue)
+			{
+				return;
+			}
+
+			const uint64_t num = m_infoQueue->GetNumStoredMessages();
+
+			if (0 == num)
+			{
+				return;
+			}
+
+			uint8_t buffer[4<<10];
+			D3D11_MESSAGE* msg = (D3D11_MESSAGE*)buffer;
+
+			for (uint64_t ii = 0; ii < num; ++ii)
+			{
+				SIZE_T size = sizeof(buffer);
+
+				if (FAILED(m_infoQueue->GetMessage(ii, msg, &size) ) )
+				{
+					BX_TRACE("D3D11 message %d is too large (%d bytes) to dump.", uint32_t(ii), uint32_t(size) );
+					continue;
+				}
+
+				if (D3D11_MESSAGE_SEVERITY_WARNING >= msg->Severity)
+				{
+					BX_TRACE("D3D11 %s %s #%d: %s"
+						, s_messageSeverity[bx::min<uint32_t>(msg->Severity, BX_COUNTOF(s_messageSeverity)-1)]
+						, s_messageCategory[bx::min<uint32_t>(msg->Category, BX_COUNTOF(s_messageCategory)-1)]
+						, msg->ID
+						, msg->pDescription
+						);
+				}
+			}
+
+			m_infoQueue->ClearStoredMessages();
+		}
+
 		void* m_d3d9Dll;
 		void* m_d3d11Dll;
 		void* m_renderDocDll;
@@ -3739,6 +3994,7 @@ namespace bgfx { namespace d3d11
 		StateCacheT<ID3D11RasterizerState*> m_rasterizerStateCache;
 		StateCacheT<ID3D11SamplerState*> m_samplerStateCache;
 		StateCacheLru<IUnknown*, 1024> m_srvUavLru;
+		StateCacheLru<IUnknown*, 16>   m_zeroInitTileCache;
 
 		TextVideoMem m_textVideoMem;
 
@@ -3844,28 +4100,10 @@ namespace bgfx { namespace d3d11
 		s_renderD3D11->m_annotation->SetMarker(_name);
 	}
 
-	struct UavFormat
-	{
-		DXGI_FORMAT format[3];
-		uint32_t    stride;
-	};
-
-	static const UavFormat s_uavFormat[] =
-	{	//  BGFX_BUFFER_COMPUTE_TYPE_INT,  BGFX_BUFFER_COMPUTE_TYPE_UINT,  BGFX_BUFFER_COMPUTE_TYPE_FLOAT
-		{ { DXGI_FORMAT_UNKNOWN,           DXGI_FORMAT_UNKNOWN,            DXGI_FORMAT_UNKNOWN            },  0 }, // ignored
-		{ { DXGI_FORMAT_R8_SINT,           DXGI_FORMAT_R8_UINT,            DXGI_FORMAT_UNKNOWN            },  1 }, // BGFX_BUFFER_COMPUTE_FORMAT_8X1
-		{ { DXGI_FORMAT_R8G8_SINT,         DXGI_FORMAT_R8G8_UINT,          DXGI_FORMAT_UNKNOWN            },  2 }, // BGFX_BUFFER_COMPUTE_FORMAT_8X2
-		{ { DXGI_FORMAT_R8G8B8A8_SINT,     DXGI_FORMAT_R8G8B8A8_UINT,      DXGI_FORMAT_UNKNOWN            },  4 }, // BGFX_BUFFER_COMPUTE_FORMAT_8X4
-		{ { DXGI_FORMAT_R16_SINT,          DXGI_FORMAT_R16_UINT,           DXGI_FORMAT_R16_FLOAT          },  2 }, // BGFX_BUFFER_COMPUTE_FORMAT_16X1
-		{ { DXGI_FORMAT_R16G16_SINT,       DXGI_FORMAT_R16G16_UINT,        DXGI_FORMAT_R16G16_FLOAT       },  4 }, // BGFX_BUFFER_COMPUTE_FORMAT_16X2
-		{ { DXGI_FORMAT_R16G16B16A16_SINT, DXGI_FORMAT_R16G16B16A16_UINT,  DXGI_FORMAT_R16G16B16A16_FLOAT },  8 }, // BGFX_BUFFER_COMPUTE_FORMAT_16X4
-		{ { DXGI_FORMAT_R32_SINT,          DXGI_FORMAT_R32_UINT,           DXGI_FORMAT_R32_FLOAT          },  4 }, // BGFX_BUFFER_COMPUTE_FORMAT_32X1
-		{ { DXGI_FORMAT_R32G32_SINT,       DXGI_FORMAT_R32G32_UINT,        DXGI_FORMAT_R32G32_FLOAT       },  8 }, // BGFX_BUFFER_COMPUTE_FORMAT_32X2
-		{ { DXGI_FORMAT_R32G32B32A32_SINT, DXGI_FORMAT_R32G32B32A32_UINT,  DXGI_FORMAT_R32G32B32A32_FLOAT }, 16 }, // BGFX_BUFFER_COMPUTE_FORMAT_32X4
-	};
-
 	void BufferD3D11::create(uint32_t _size, void* _data, uint16_t _flags, uint16_t _stride, bool _vertex)
 	{
+		BX_UNUSED(_stride);
+
 		m_uav   = NULL;
 		m_size  = _size;
 		m_flags = _flags;
@@ -3883,7 +4121,8 @@ namespace bgfx { namespace d3d11
 			| (needSrv ? D3D11_BIND_SHADER_RESOURCE  : 0)
 			;
 		desc.MiscFlags = 0
-			| (drawIndirect ? D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS : 0)
+			| (drawIndirect            ? D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS        : 0)
+			| (needUav || needSrv      ? D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS   : 0)
 			;
 		desc.StructureByteStride = 0;
 
@@ -3895,36 +4134,20 @@ namespace bgfx { namespace d3d11
 			format = DXGI_FORMAT_R32G32B32A32_UINT;
 			stride = 16;
 		}
+		else if (_vertex)
+		{
+			format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			stride = 16;
+		}
+		else if (0 == (_flags & BGFX_BUFFER_INDEX32) )
+		{
+			format = DXGI_FORMAT_R16_UINT;
+			stride = 2;
+		}
 		else
 		{
-			uint32_t uavFormat = (_flags & BGFX_BUFFER_COMPUTE_FORMAT_MASK) >> BGFX_BUFFER_COMPUTE_FORMAT_SHIFT;
-			if (0 == uavFormat)
-			{
-				if (_vertex)
-				{
-					format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-					stride = 16;
-				}
-				else
-				{
-					if (0 == (_flags & BGFX_BUFFER_INDEX32) )
-					{
-						format = DXGI_FORMAT_R16_UINT;
-						stride = 2;
-					}
-					else
-					{
-						format = DXGI_FORMAT_R32_UINT;
-						stride = 4;
-					}
-				}
-			}
-			else
-			{
-				const uint32_t uavType = bx::satSub<uint32_t>(uint32_t( (_flags & BGFX_BUFFER_COMPUTE_TYPE_MASK) >> BGFX_BUFFER_COMPUTE_TYPE_SHIFT ), 1u);
-				format = s_uavFormat[uavFormat].format[uavType];
-				stride = s_uavFormat[uavFormat].stride;
-			}
+			format = DXGI_FORMAT_R32_UINT;
+			stride = 4;
 		}
 
 		ID3D11Device* device = s_renderD3D11->m_device;
@@ -3938,7 +4161,7 @@ namespace bgfx { namespace d3d11
 		{
 			desc.Usage = D3D11_USAGE_DEFAULT;
 			desc.CPUAccessFlags = 0;
-			desc.StructureByteStride = _stride;
+			desc.StructureByteStride = 0;
 
 			DX_CHECK(device->CreateBuffer(&desc
 				, NULL == _data ? NULL : &srd
@@ -3954,6 +4177,14 @@ namespace bgfx { namespace d3d11
 			DX_CHECK(device->CreateUnorderedAccessView(m_ptr
 				, &uavd
 				, &m_uav
+				) );
+
+			uavd.Format = DXGI_FORMAT_R32_TYPELESS;
+			uavd.Buffer.NumElements = m_size / 4;
+			uavd.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
+			DX_CHECK(device->CreateUnorderedAccessView(m_ptr
+				, &uavd
+				, &m_uavRaw
 				) );
 		}
 		else if (m_dynamic)
@@ -4006,6 +4237,16 @@ namespace bgfx { namespace d3d11
 			DX_CHECK(device->CreateShaderResourceView(m_ptr
 				, &srvd
 				, &m_srv
+				) );
+
+			srvd.Format = DXGI_FORMAT_R32_TYPELESS;
+			srvd.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+			srvd.BufferEx.FirstElement = 0;
+			srvd.BufferEx.NumElements  = m_size / 4;
+			srvd.BufferEx.Flags        = D3D11_BUFFEREX_SRV_FLAG_RAW;
+			DX_CHECK(device->CreateShaderResourceView(m_ptr
+				, &srvd
+				, &m_srvRaw
 				) );
 		}
 	}
@@ -4127,6 +4368,10 @@ namespace bgfx { namespace d3d11
 			bx::read(&reader, hashOut, &err);
 		}
 
+		readRawBindings(&reader, m_rawSrvMask, m_rawUavMask, &err);
+
+		bx::memSet(m_textureDimension, uint8_t(TextureDimension::Count), sizeof(m_textureDimension) );
+
 		uint16_t count;
 		bx::read(&reader, count, &err);
 
@@ -4163,10 +4408,12 @@ namespace bgfx { namespace d3d11
 				uint16_t regCount = 0;
 				bx::read(&reader, regCount, &err);
 
+				uint8_t texComponent = 0;
+				uint8_t texDimension = 0;
 				if (!isShaderVerLess(magic, 8) )
 				{
-					uint16_t texInfo = 0;
-					bx::read(&reader, texInfo, &err);
+					bx::read(&reader, texComponent, &err);
+					bx::read(&reader, texDimension, &err);
 				}
 
 				if (!isShaderVerLess(magic, 10) )
@@ -4174,6 +4421,8 @@ namespace bgfx { namespace d3d11
 					uint16_t texFormat = 0;
 					bx::read(&reader, texFormat, &err);
 				}
+
+				BX_UNUSED(texComponent);
 
 				const char* kind = "invalid";
 
@@ -4205,6 +4454,11 @@ namespace bgfx { namespace d3d11
 				else
 				{
 					kind = "sampler";
+
+					if (regIndex < BX_COUNTOF(m_textureDimension) )
+					{
+						m_textureDimension[regIndex] = uint8_t(idToTextureDimension(texDimension) );
+					}
 				}
 
 				BX_TRACE("\t%s: %s (%s), num %2d, r.index %3d, r.count %2d"
@@ -4352,6 +4606,162 @@ namespace bgfx { namespace d3d11
 		}
 	}
 
+	static ID3D11Resource* zeroInitTile(DXGI_FORMAT _fmt, uint32_t _tileDim, uint32_t _blockW, uint32_t _blockH, uint32_t _blockSize, bool _volume)
+	{
+		const uint64_t key = uint64_t(_fmt) | (_volume ? UINT64_C(0x100000000) : 0);
+
+		if (IUnknown** cached = s_renderD3D11->m_zeroInitTileCache.find(key) )
+		{
+			return static_cast<ID3D11Resource*>(*cached);
+		}
+
+		const uint32_t rowPitch = (_tileDim / _blockW) * _blockSize;
+		const uint32_t numRows  = _tileDim / _blockH;
+		uint8_t zeros[kTextureZeroInitBudget] = {};
+		BX_ASSERT(rowPitch * numRows <= sizeof(zeros), "Zero-init tile exceeds budget.");
+
+		D3D11_SUBRESOURCE_DATA srd = { zeros, rowPitch, rowPitch * numRows };
+
+		ID3D11Resource* tile = NULL;
+
+		if (_volume)
+		{
+			D3D11_TEXTURE3D_DESC desc;
+			bx::memSet(&desc, 0, sizeof(desc) );
+			desc.Width     = _tileDim;
+			desc.Height    = _tileDim;
+			desc.Depth     = 1;
+			desc.MipLevels = 1;
+			desc.Format    = _fmt;
+			desc.Usage     = D3D11_USAGE_DEFAULT;
+			desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+			ID3D11Texture3D* volumeTile = NULL;
+			s_renderD3D11->m_device->CreateTexture3D(&desc, &srd, &volumeTile);
+			tile = volumeTile;
+		}
+		else
+		{
+			D3D11_TEXTURE2D_DESC desc;
+			bx::memSet(&desc, 0, sizeof(desc) );
+			desc.Width          = _tileDim;
+			desc.Height         = _tileDim;
+			desc.MipLevels      = 1;
+			desc.ArraySize      = 1;
+			desc.Format         = _fmt;
+			desc.SampleDesc.Count = 1;
+			desc.Usage          = D3D11_USAGE_DEFAULT;
+			desc.BindFlags      = D3D11_BIND_SHADER_RESOURCE;
+
+			ID3D11Texture2D* planeTile = NULL;
+			s_renderD3D11->m_device->CreateTexture2D(&desc, &srd, &planeTile);
+			tile = planeTile;
+		}
+
+		if (NULL != tile)
+		{
+			s_renderD3D11->m_zeroInitTileCache.add(key, tile, 0);
+		}
+
+		return tile;
+	}
+
+	void TextureD3D11::clear(uint8_t _baseMip, uint8_t _numMips, uint16_t _baseLayer, uint16_t _numLayers)
+	{
+		const bimg::TextureFormat::Enum tf = bimg::TextureFormat::Enum(m_textureFormat);
+
+		ID3D11Device*        device = s_renderD3D11->m_device;
+		ID3D11DeviceContext* ctx    = s_renderD3D11->m_deviceCtx;
+
+		const DXGI_FORMAT fmt   = (0 != (m_flags & BGFX_TEXTURE_SRGB) )
+			? s_textureFormat[m_textureFormat].m_fmtSrgb
+			: s_textureFormat[m_textureFormat].m_fmt
+			;
+		const uint32_t numMips  = m_numMips;
+		const uint32_t numSides = m_numLayers * (TextureD3D11::TextureCube == m_type ? 6 : 1);
+		const bool     is3D     = TextureD3D11::Texture3D == m_type;
+		const bool     rtColor  = 0 != (m_flags & BGFX_TEXTURE_RT_MASK);
+
+		const uint32_t mipBeg  = bx::min<uint32_t>(_baseMip, numMips);
+		const uint32_t mipEnd  = (UINT8_MAX  == _numMips)   ? numMips  : bx::min<uint32_t>(numMips,  uint32_t(_baseMip)   + _numMips);
+		const uint32_t sideBeg = is3D ? 0 : bx::min<uint32_t>(_baseLayer, numSides);
+		const uint32_t sideEnd = is3D ? 1 : ( (UINT16_MAX == _numLayers) ? numSides : bx::min<uint32_t>(numSides, uint32_t(_baseLayer) + _numLayers) );
+
+		if (rtColor && !is3D)
+		{
+			const float black[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			for (uint32_t side = sideBeg; side < sideEnd; ++side)
+			{
+				for (uint32_t mip = mipBeg; mip < mipEnd; ++mip)
+				{
+					D3D11_RENDER_TARGET_VIEW_DESC rtvd;
+					bx::memSet(&rtvd, 0, sizeof(rtvd) );
+					rtvd.Format = fmt;
+					if (1 < numSides)
+					{
+						rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+						rtvd.Texture2DArray.MipSlice        = mip;
+						rtvd.Texture2DArray.FirstArraySlice = side;
+						rtvd.Texture2DArray.ArraySize       = 1;
+					}
+					else
+					{
+						rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+						rtvd.Texture2D.MipSlice = mip;
+					}
+
+					ID3D11RenderTargetView* rtv = NULL;
+					if (SUCCEEDED(device->CreateRenderTargetView(m_ptr, &rtvd, &rtv) )
+					&&  NULL != rtv)
+					{
+						ctx->ClearRenderTargetView(rtv, black);
+						DX_RELEASE(rtv, 0);
+					}
+				}
+			}
+			return;
+		}
+
+		const bimg::ImageBlockInfo& bi = bimg::getBlockInfo(tf);
+		const uint32_t blockW    = bx::max<uint32_t>(1, bi.blockWidth);
+		const uint32_t blockH    = bx::max<uint32_t>(1, bi.blockHeight);
+		const uint32_t blockSize = bi.blockSize;
+		const uint32_t tileDim   = textureZeroInitTileDim(bimg::getBitsPerPixel(tf) );
+
+		ID3D11Resource* tile = zeroInitTile(fmt, tileDim, blockW, blockH, blockSize, is3D);
+		if (NULL == tile)
+		{
+			return;
+		}
+
+		for (uint32_t side = sideBeg; side < sideEnd; ++side)
+		{
+			for (uint32_t mip = mipBeg; mip < mipEnd; ++mip)
+			{
+				const uint32_t mipW   = bx::max<uint32_t>(1, m_width  >> mip);
+				const uint32_t mipH   = bx::max<uint32_t>(1, m_height >> mip);
+				const uint32_t mipD   = is3D ? bx::max<uint32_t>(1, m_depth >> mip) : 1;
+				const uint32_t dstSub = is3D ? mip : (mip + side * numMips);
+
+				for (uint32_t zz = 0; zz < mipD; ++zz)
+				{
+					for (uint32_t yy = 0; yy < mipH; yy += tileDim)
+					{
+						const uint32_t bh = bx::min<uint32_t>(tileDim, mipH - yy);
+						for (uint32_t xx = 0; xx < mipW; xx += tileDim)
+						{
+							const uint32_t bw = bx::min<uint32_t>(tileDim, mipW - xx);
+							D3D11_BOX box;
+							box.left = 0; box.top = 0; box.front = 0;
+							box.right = bw; box.bottom = bh; box.back = 1;
+							ctx->CopySubresourceRegion(m_ptr, dstSub, xx, yy, zz, tile, 0, &box);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	void* TextureD3D11::create(const Memory* _mem, uint64_t _flags, uint8_t _skip, uint64_t _external)
 	{
 		void* directAccessPtr = NULL;
@@ -4391,7 +4801,7 @@ namespace bgfx { namespace d3d11
 			{
 				m_type  = TextureCube;
 			}
-			else if (imageContainer.m_depth > 1)
+			else if (isVolume(imageContainer) )
 			{
 				m_type = Texture3D;
 			}
@@ -4410,8 +4820,8 @@ namespace bgfx { namespace d3d11
 
 			const bool compressed = bimg::isCompressed(bimg::TextureFormat::Enum(m_textureFormat) );
 			const bool isVideoDecodeDst = 0 != (m_flags & BGFX_TEXTURE_INTERNAL_VIDEO_DECODE_DST);
-			const bool swizzle    = TextureFormat::BGRA8 == m_textureFormat
-				&& (0 != (m_flags&BGFX_TEXTURE_COMPUTE_WRITE) || isVideoDecodeDst)
+			const bool swizzle = TextureFormat::BGRA8 == m_textureFormat
+				&& ( (0 != (m_flags&BGFX_TEXTURE_COMPUTE_WRITE) && 0 == (g_caps.formats[TextureFormat::BGRA8] & BGFX_CAPS_FORMAT_TEXTURE_IMAGE_WRITE) ) || isVideoDecodeDst)
 				;
 
 			BX_TRACE("Texture %3d: %s (requested: %s), layers %d, %dx%d%s%s%s."
@@ -4447,8 +4857,8 @@ namespace bgfx { namespace d3d11
 						}
 						else if (compressed)
 						{
-							srd[kk].SysMemPitch      = (mip.m_width /blockInfo.blockWidth )*mip.m_blockSize;
-							srd[kk].SysMemSlicePitch = (mip.m_height/blockInfo.blockHeight)*srd[kk].SysMemPitch;
+							const uint32_t numBlocksX = (mip.m_width + blockInfo.blockWidth - 1) / blockInfo.blockWidth;
+							srd[kk].SysMemPitch = numBlocksX * mip.m_blockSize;
 						}
 						else
 						{
@@ -4474,13 +4884,13 @@ namespace bgfx { namespace d3d11
 							}
 						}
 
-						srd[kk].SysMemSlicePitch = mip.m_height*srd[kk].SysMemPitch;
+						srd[kk].SysMemSlicePitch = ( (mip.m_height + blockInfo.blockHeight - 1) / blockInfo.blockHeight) * srd[kk].SysMemPitch;
 						++kk;
 					}
 				}
 			}
 
-			const bool writeOnly      = 0 != (m_flags & (BGFX_TEXTURE_RT_WRITE_ONLY|BGFX_TEXTURE_READ_BACK) );
+			const bool writeOnly      = 0 != (m_flags & BGFX_TEXTURE_RT_WRITE_ONLY);
 			const bool computeWrite   = 0 != (m_flags & BGFX_TEXTURE_COMPUTE_WRITE)
 				|| isVideoDecodeDst
 				;
@@ -4492,6 +4902,16 @@ namespace bgfx { namespace d3d11
 
 			const uint32_t msaaQuality = bx::satSub<uint32_t>(uint32_t( (m_flags&BGFX_TEXTURE_RT_MSAA_MASK) >> BGFX_TEXTURE_RT_MSAA_SHIFT ), 1u);
 			const DXGI_SAMPLE_DESC& msaa = s_msaa[msaaQuality];
+
+			const bool blitUav = true
+				&& blit
+				&& !compressed
+				&& !writeOnly
+				&& 1 == msaa.Count
+				&& !bimg::isDepth(bimg::TextureFormat::Enum(m_textureFormat) )
+				&& 0 != (g_caps.formats[m_textureFormat] & BGFX_CAPS_FORMAT_TEXTURE_IMAGE_WRITE)
+				;
+
 			const bool msaaSample  = true
 				&& 1 < msaa.Count
 				&& 0 != (m_flags&BGFX_TEXTURE_MSAA_SAMPLE)
@@ -4587,11 +5007,15 @@ namespace bgfx { namespace d3d11
 						desc.Usage = D3D11_USAGE_DEFAULT;
 					}
 
+					if (blitUav)
+					{
+						desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+						desc.Usage = D3D11_USAGE_DEFAULT;
+					}
+
 					if (readBack)
 					{
-						desc.BindFlags      = 0;
-						desc.Usage          = D3D11_USAGE_STAGING;
-						desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+						desc.Usage = D3D11_USAGE_DEFAULT;
 					}
 
 					if (imageContainer.m_cubeMap)
@@ -4647,7 +5071,12 @@ namespace bgfx { namespace d3d11
 						desc.MipLevels = 1;
 						DX_CHECK(s_renderD3D11->m_device->CreateTexture2D(&desc, NULL, &m_rt2d) );
 
-						desc.BindFlags &= ~(D3D11_BIND_RENDER_TARGET|D3D11_BIND_DEPTH_STENCIL);
+						const bool autoGenMips = 0 != (desc.MiscFlags & D3D11_RESOURCE_MISC_GENERATE_MIPS);
+						desc.BindFlags &= ~D3D11_BIND_DEPTH_STENCIL;
+						if (!autoGenMips)
+						{
+							desc.BindFlags &= ~D3D11_BIND_RENDER_TARGET;
+						}
 						desc.SampleDesc = s_msaa[0];
 						desc.MipLevels  = savedMipLevels;
 					}
@@ -4696,9 +5125,7 @@ namespace bgfx { namespace d3d11
 
 					if (readBack)
 					{
-						desc.BindFlags = 0;
-						desc.Usage = D3D11_USAGE_STAGING;
-						desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+						desc.Usage = D3D11_USAGE_DEFAULT;
 					}
 
 					srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
@@ -4725,6 +5152,32 @@ namespace bgfx { namespace d3d11
 			{
 			}
 
+			if (readBack)
+			{
+				if (Texture3D == m_type)
+				{
+					D3D11_TEXTURE3D_DESC desc;
+					m_texture3d->GetDesc(&desc);
+					desc.Usage          = D3D11_USAGE_STAGING;
+					desc.BindFlags      = 0;
+					desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+					desc.MiscFlags      = 0;
+
+					DX_CHECK(s_renderD3D11->m_device->CreateTexture3D(&desc, NULL, (ID3D11Texture3D**)&m_staging) );
+				}
+				else
+				{
+					D3D11_TEXTURE2D_DESC desc;
+					m_texture2d->GetDesc(&desc);
+					desc.Usage          = D3D11_USAGE_STAGING;
+					desc.BindFlags      = 0;
+					desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+					desc.MiscFlags      = 0;
+
+					DX_CHECK(s_renderD3D11->m_device->CreateTexture2D(&desc, NULL, (ID3D11Texture2D**)&m_staging) );
+				}
+			}
+
 			if (!writeOnly)
 			{
 				DX_CHECK(s_renderD3D11->m_device->CreateShaderResourceView(m_ptr, &srvd, &m_srv) );
@@ -4732,7 +5185,41 @@ namespace bgfx { namespace d3d11
 
 			if (computeWrite)
 			{
-				DX_CHECK(s_renderD3D11->m_device->CreateUnorderedAccessView(m_ptr, NULL, &m_uav) );
+				D3D11_UNORDERED_ACCESS_VIEW_DESC uavd;
+				uavd.Format = getSrvFormat();
+				switch (m_type)
+				{
+				case TextureCube:
+					uavd.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+					uavd.Texture2DArray.MipSlice        = 0;
+					uavd.Texture2DArray.FirstArraySlice = 0;
+					uavd.Texture2DArray.ArraySize       = 6 * bx::max<uint32_t>(m_numLayers, 1);
+					break;
+
+				case Texture3D:
+					uavd.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
+					uavd.Texture3D.MipSlice    = 0;
+					uavd.Texture3D.FirstWSlice = 0;
+					uavd.Texture3D.WSize       = UINT32_MAX;
+					break;
+
+				default:
+					if (1 < m_numLayers)
+					{
+						uavd.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+						uavd.Texture2DArray.MipSlice        = 0;
+						uavd.Texture2DArray.FirstArraySlice = 0;
+						uavd.Texture2DArray.ArraySize       = m_numLayers;
+					}
+					else
+					{
+						uavd.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+						uavd.Texture2D.MipSlice = 0;
+					}
+					break;
+				}
+
+				DX_CHECK(s_renderD3D11->m_device->CreateUnorderedAccessView(m_ptr, &uavd, &m_uav) );
 			}
 
 			if (isVideoDecodeDst)
@@ -4783,6 +5270,7 @@ namespace bgfx { namespace d3d11
 		DX_RELEASE(m_rt, 0);
 		DX_RELEASE(m_srv, 0);
 		DX_RELEASE(m_uav, 0);
+		DX_RELEASE(m_staging, 0);
 
 		if (0 == (m_flags & BGFX_SAMPLER_INTERNAL_SHARED) )
 		{
@@ -4881,7 +5369,13 @@ namespace bgfx { namespace d3d11
 		uint32_t rectPitch  = _rect.m_width*bpp/8;
 		if (bimg::isCompressed(bimg::TextureFormat::Enum(m_textureFormat) ) )
 		{
-			rectPitch = (_rect.m_width / blockInfo.blockWidth)*blockInfo.blockSize;
+			const uint32_t blockW   = blockInfo.blockWidth;
+			const uint32_t blockH   = blockInfo.blockHeight;
+			const uint32_t alignedW = bx::max<uint32_t>(blockW, bx::alignUp(_rect.m_width,  blockW) );
+			const uint32_t alignedH = bx::max<uint32_t>(blockH, bx::alignUp(_rect.m_height, blockH) );
+			box.right  = box.left + alignedW;
+			box.bottom = box.top  + alignedH;
+			rectPitch  = (alignedW / blockW) * blockInfo.blockSize;
 		}
 
 		const uint32_t srcPitch   = UINT16_MAX == _pitch ? rectPitch : _pitch;
@@ -4931,6 +5425,30 @@ namespace bgfx { namespace d3d11
 			}
 		}
 
+		if (NULL == temp)
+		{
+			const uint32_t numRows = bimg::isCompressed(bimg::TextureFormat::Enum(m_textureFormat) )
+				? bx::max<uint32_t>(1, (box.bottom - box.top + blockInfo.blockHeight - 1) / blockInfo.blockHeight)
+				: (box.bottom - box.top)
+				;
+			const uint32_t numSlices = TextureD3D11::Texture3D == m_type ? (box.back - box.front) : 1;
+			const uint32_t needed    = (numSlices - 1) * slicePitch + (numRows - 1) * copyPitch + rectPitch;
+
+			if (_mem->size < needed)
+			{
+				BX_TRACE("TextureD3D11::update: short source memory (%d bytes, need %d) for %dx%dx%d mip %d of %s texture; skipping."
+					, _mem->size
+					, needed
+					, _rect.m_width
+					, _rect.m_height
+					, _depth
+					, _mip
+					, bimg::getName(bimg::TextureFormat::Enum(m_textureFormat) )
+					);
+				return;
+			}
+		}
+
 		deviceCtx->UpdateSubresource(
 			  m_ptr
 			, subres
@@ -4946,7 +5464,7 @@ namespace bgfx { namespace d3d11
 		}
 	}
 
-	void TextureD3D11::commit(uint8_t _stage, uint32_t _flags, const float _palette[][4], uint16_t _firstLayer, uint16_t _numLayers, uint8_t _firstMip, uint8_t _numMips)
+	void TextureD3D11::commit(uint8_t _stage, uint32_t _flags, const float _palette[][4], uint16_t _firstLayer, uint16_t _numLayers, uint8_t _firstMip, uint8_t _numMips, TextureDimension::Enum _dimension)
 	{
 		TextureStage& ts = s_renderD3D11->m_textureStage;
 
@@ -4959,14 +5477,37 @@ namespace bgfx { namespace d3d11
 			&& numLayers == m_numLayers
 			;
 
-		if (0 != (_flags & BGFX_SAMPLER_SAMPLE_STENCIL) )
+		const uint32_t flags = 0 == (BGFX_SAMPLER_INTERNAL_DEFAULT & _flags)
+			? _flags
+			: uint32_t(m_flags)
+			;
+
+		const bool asArray = TextureCube == m_type
+			&& (TextureDimension::Dimension2D      == _dimension
+			||  TextureDimension::Dimension2DArray == _dimension)
+			;
+
+		if (asArray)
 		{
 			ts.m_srv[_stage] = s_renderD3D11->getCachedSrv(
 				  TextureHandle{ uint16_t(this - s_renderD3D11->m_textures) }
-				, 0
-				, 1
-				, 0
-				, UINT16_MAX
+				, _firstMip
+				, numMips
+				, _firstLayer
+				, _numLayers
+				, false
+				, 0 != (flags & BGFX_SAMPLER_SAMPLE_STENCIL)
+				, true
+				);
+		}
+		else if (0 != (flags & BGFX_SAMPLER_SAMPLE_STENCIL) )
+		{
+			ts.m_srv[_stage] = s_renderD3D11->getCachedSrv(
+				  TextureHandle{ uint16_t(this - s_renderD3D11->m_textures) }
+				, _firstMip
+				, numMips
+				, _firstLayer
+				, numLayers
 				, false
 				, true
 				);
@@ -4986,10 +5527,6 @@ namespace bgfx { namespace d3d11
 			ts.m_srv[_stage] = m_srv;
 		}
 
-		const uint32_t flags = 0 == (BGFX_SAMPLER_INTERNAL_DEFAULT & _flags)
-			? _flags
-			: uint32_t(m_flags)
-			;
 		uint32_t index = (flags & BGFX_SAMPLER_BORDER_COLOR_MASK) >> BGFX_SAMPLER_BORDER_COLOR_SHIFT;
 		ts.m_sampler[_stage] = s_renderD3D11->getSamplerState(flags, _palette[index]);
 	}
@@ -5001,10 +5538,15 @@ namespace bgfx { namespace d3d11
 		const bool needResolve = NULL != m_rt;
 		if (needResolve)
 		{
-			for (uint32_t ii = _layer; ii < _numLayers; ++ii)
+			const DXGI_FORMAT resolveFormat = bimg::isDepth(bimg::TextureFormat::Enum(m_textureFormat) )
+				? s_textureFormat[m_textureFormat].m_fmt
+				: getSrvFormat()
+				;
+
+			for (uint32_t ii = _layer, end = _layer + _numLayers; ii < end; ++ii)
 			{
 				const UINT resource = _mip + (ii * m_numMips);
-				deviceCtx->ResolveSubresource(m_texture2d, resource, m_rt, resource, s_textureFormat[m_textureFormat].m_fmt);
+				deviceCtx->ResolveSubresource(m_texture2d, resource, m_rt, ii, resolveFormat);
 			}
 		}
 
@@ -5026,11 +5568,31 @@ namespace bgfx { namespace d3d11
 		return handle;
 	}
 
+	bool TextureD3D11::isMsaaSurface() const
+	{
+		const uint32_t msaaQuality = bx::satSub<uint32_t>(uint32_t( (m_flags&BGFX_TEXTURE_RT_MSAA_MASK) >> BGFX_TEXTURE_RT_MSAA_SHIFT), 1u);
+		return true
+			&& 1 < s_msaa[msaaQuality].Count
+			&& 0 != (m_flags & BGFX_TEXTURE_MSAA_SAMPLE)
+			;
+	}
+
 	DXGI_FORMAT TextureD3D11::getSrvFormat() const
 	{
 		if (bimg::isDepth(bimg::TextureFormat::Enum(m_textureFormat) ) )
 		{
 			return s_textureFormat[m_textureFormat].m_fmtSrv;
+		}
+
+		if (TextureFormat::BGRA8 == m_textureFormat
+		&&  ( (0 != (m_flags&BGFX_TEXTURE_COMPUTE_WRITE) && 0 == (g_caps.formats[TextureFormat::BGRA8] & BGFX_CAPS_FORMAT_TEXTURE_IMAGE_WRITE) )
+			|| 0 != (m_flags&BGFX_TEXTURE_INTERNAL_VIDEO_DECODE_DST) )
+			)
+		{
+			return 0 != (m_flags&BGFX_TEXTURE_SRGB)
+				? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+				: DXGI_FORMAT_R8G8B8A8_UNORM
+				;
 		}
 
 		return 0 != (m_flags&BGFX_TEXTURE_SRGB)
@@ -5157,6 +5719,7 @@ namespace bgfx { namespace d3d11
 	{
 		m_width  = 0;
 		m_height = 0;
+		m_needsQuadClear = false;
 
 		if (0 < m_numTh)
 		{
@@ -5180,8 +5743,8 @@ namespace bgfx { namespace d3d11
 							{
 								D3D11_TEXTURE2D_DESC desc;
 								texture.m_texture2d->GetDesc(&desc);
-								m_width  = desc.Width;
-								m_height = desc.Height;
+								m_width  = bx::max<uint32_t>(1, desc.Width  >> at.mip);
+								m_height = bx::max<uint32_t>(1, desc.Height >> at.mip);
 							}
 							break;
 
@@ -5189,8 +5752,8 @@ namespace bgfx { namespace d3d11
 							{
 								D3D11_TEXTURE3D_DESC desc;
 								texture.m_texture3d->GetDesc(&desc);
-								m_width  = desc.Width;
-								m_height = desc.Height;
+								m_width  = bx::max<uint32_t>(1, desc.Width  >> at.mip);
+								m_height = bx::max<uint32_t>(1, desc.Height >> at.mip);
 							}
 							break;
 						}
@@ -5335,6 +5898,8 @@ namespace bgfx { namespace d3d11
 							desc.Texture3D.MipSlice    = at.mip;
 							desc.Texture3D.FirstWSlice = at.layer;
 							desc.Texture3D.WSize       = at.numLayers;
+
+							m_needsQuadClear = true;
 
 							DX_CHECK(s_renderD3D11->m_device->CreateRenderTargetView(texture.m_ptr, &desc, &m_rtv[m_num]) );
 							break;
@@ -5541,6 +6106,14 @@ namespace bgfx { namespace d3d11
 			{
 				m_control.consume(1);
 
+				Result& result = m_result[query.m_resultIdx];
+				--result.m_pending;
+
+				if (s_renderD3D11->handleDeviceLost(hr) )
+				{
+					return false;
+				}
+
 				struct D3D11_QUERY_DATA_TIMESTAMP_DISJOINT
 				{
 					UINT64 Frequency;
@@ -5548,15 +6121,26 @@ namespace bgfx { namespace d3d11
 				};
 
 				D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjoint;
-				DX_CHECK(deviceCtx->GetData(query.m_disjoint, &disjoint, sizeof(disjoint), 0) );
+				hr = deviceCtx->GetData(query.m_disjoint, &disjoint, sizeof(disjoint), 0);
+
+				if (s_renderD3D11->handleDeviceLost(hr) )
+				{
+					return false;
+				}
+
+				BX_ASSERT(SUCCEEDED(hr), "GetData(m_disjoint) FAILED 0x%08x.", (uint32_t)hr);
 
 				uint64_t timeBegin;
-				DX_CHECK(deviceCtx->GetData(query.m_begin, &timeBegin, sizeof(timeBegin), 0) );
+				hr = deviceCtx->GetData(query.m_begin, &timeBegin, sizeof(timeBegin), 0);
 
-				Result& result = m_result[query.m_resultIdx];
-				--result.m_pending;
-				result.m_frameNum = query.m_frameNum;
+				if (s_renderD3D11->handleDeviceLost(hr) )
+				{
+					return false;
+				}
 
+				BX_ASSERT(SUCCEEDED(hr), "GetData(m_begin) FAILED 0x%08x.", (uint32_t)hr);
+
+				result.m_frameNum  = query.m_frameNum;
 				result.m_frequency = disjoint.Frequency;
 				result.m_begin     = timeBegin;
 				result.m_end       = timeEnd;
@@ -5650,6 +6234,167 @@ namespace bgfx { namespace d3d11
 		}
 	}
 
+	void RendererContextD3D11::blitBufferTexture(const BlitItem& _blit)
+	{
+		const bool toBuffer = _blit.m_dst.isBuffer();
+
+		const TextureD3D11& texture = m_textures[(toBuffer ? _blit.m_src : _blit.m_dst).idx];
+		const BufferD3D11&  buffer  = getBuffer(toBuffer ? _blit.m_dst : _blit.m_src);
+
+		const bimg::TextureFormat::Enum format = bimg::TextureFormat::Enum(texture.m_textureFormat);
+
+		if (bimg::isCompressed(format)
+		||  bimg::isDepth(format) )
+		{
+			BX_WARN(false, "Blit between buffer and texture is not supported for compressed or depth formats.");
+
+			return;
+		}
+
+		if (0 == (g_caps.formats[texture.m_textureFormat] & BGFX_CAPS_FORMAT_TEXTURE_IMAGE_WRITE) )
+		{
+			BX_WARN(false, "Blit between buffer and texture is not supported for texture format %s.", bimg::getName(format) );
+
+			return;
+		}
+
+		if (TextureD3D11::Texture3D == texture.m_type)
+		{
+			BX_WARN(false, "Blit between buffer and 3D texture is not supported.");
+
+			return;
+		}
+
+		if (NULL == g_blitFallback)
+		{
+			return;
+		}
+
+		const ProgramHandle prog = g_blitFallback->m_program[toBuffer
+			? BlitFallback::TextureToBuffer
+			: BlitFallback::BufferToTexture
+			];
+
+		if (!isValid(prog) )
+		{
+			return;
+		}
+
+		const uint32_t bpp    = bimg::getBitsPerPixel(format) / 8;
+		const uint32_t offset = toBuffer ? _blit.m_dstOffset : _blit.m_srcOffset;
+
+		if (0 != offset % bpp
+		||  0 != _blit.m_rowPitch % bpp)
+		{
+			BX_WARN(false
+				, "Buffer offset %d and row pitch %d must be a multiple of texture format block size %d."
+				, offset
+				, _blit.m_rowPitch
+				, bpp
+				);
+
+			return;
+		}
+
+		const DXGI_FORMAT dxgiFormat = texture.getSrvFormat();
+		const uint32_t numElements   = (_blit.m_rowPitch * _blit.m_height) / bpp;
+
+		ID3D11ShaderResourceView*  srv = NULL;
+		ID3D11UnorderedAccessView* uav = NULL;
+
+		if (toBuffer)
+		{
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvd = {};
+			srvd.Format                         = dxgiFormat;
+			srvd.ViewDimension                  = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+			srvd.Texture2DArray.MostDetailedMip = _blit.m_srcMip;
+			srvd.Texture2DArray.MipLevels       = 1;
+			srvd.Texture2DArray.FirstArraySlice = _blit.m_srcZ;
+			srvd.Texture2DArray.ArraySize       = 1;
+
+			DX_CHECK(m_device->CreateShaderResourceView(texture.m_ptr, &srvd, &srv) );
+
+			D3D11_UNORDERED_ACCESS_VIEW_DESC uavd = {};
+			uavd.Format              = dxgiFormat;
+			uavd.ViewDimension       = D3D11_UAV_DIMENSION_BUFFER;
+			uavd.Buffer.FirstElement = offset / bpp;
+			uavd.Buffer.NumElements  = numElements;
+
+			DX_CHECK(m_device->CreateUnorderedAccessView(buffer.m_ptr, &uavd, &uav) );
+		}
+		else
+		{
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvd = {};
+			srvd.Format              = dxgiFormat;
+			srvd.ViewDimension       = D3D11_SRV_DIMENSION_BUFFER;
+			srvd.Buffer.FirstElement = offset / bpp;
+			srvd.Buffer.NumElements  = numElements;
+
+			DX_CHECK(m_device->CreateShaderResourceView(buffer.m_ptr, &srvd, &srv) );
+
+			D3D11_UNORDERED_ACCESS_VIEW_DESC uavd = {};
+			uavd.Format                         = dxgiFormat;
+			uavd.ViewDimension                  = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+			uavd.Texture2DArray.MipSlice        = _blit.m_dstMip;
+			uavd.Texture2DArray.FirstArraySlice = _blit.m_dstZ;
+			uavd.Texture2DArray.ArraySize       = 1;
+
+			DX_CHECK(m_device->CreateUnorderedAccessView(texture.m_ptr, &uavd, &uav) );
+		}
+
+		if (NULL == srv
+		||  NULL == uav)
+		{
+			DX_RELEASE(srv, 0);
+			DX_RELEASE(uav, 0);
+
+			return;
+		}
+
+		const ShaderD3D11& shader = *m_program[prog.idx].m_vsh;
+
+		const float params[8] =
+		{
+			float(toBuffer ? _blit.m_srcX : _blit.m_dstX),
+			float(toBuffer ? _blit.m_srcY : _blit.m_dstY),
+			0.0f,
+			float(_blit.m_rowPitch / bpp),
+			float(_blit.m_width),
+			float(_blit.m_height),
+			1.0f,
+			0.0f,
+		};
+
+		ID3D11DeviceContext* deviceCtx = m_deviceCtx;
+
+		deviceCtx->CSSetShader(shader.m_computeShader, NULL, 0);
+		deviceCtx->CSSetShaderResources(0, 1, &srv);
+		deviceCtx->CSSetUnorderedAccessViews(0, 1, &uav, NULL);
+
+		if (NULL != shader.m_buffer)
+		{
+			deviceCtx->UpdateSubresource(shader.m_buffer, 0, NULL, params, 0, 0);
+			deviceCtx->CSSetConstantBuffers(0, 1, &shader.m_buffer);
+		}
+
+		deviceCtx->Dispatch(
+			  bx::strideAlign(_blit.m_width,  8) / 8
+			, bx::strideAlign(_blit.m_height, 8) / 8
+			, 1
+			);
+
+		ID3D11ShaderResourceView*  srvNull = NULL;
+		ID3D11UnorderedAccessView* uavNull = NULL;
+		deviceCtx->CSSetShaderResources(0, 1, &srvNull);
+		deviceCtx->CSSetUnorderedAccessViews(0, 1, &uavNull, NULL);
+		deviceCtx->CSSetShader(NULL, NULL, 0);
+
+		m_currentProgram = NULL;
+
+		DX_RELEASE(srv, 0);
+		DX_RELEASE(uav, 0);
+	}
+
 	void RendererContextD3D11::submitBlit(BlitState& _bs, uint16_t _view)
 	{
 		ID3D11DeviceContext* deviceCtx = m_deviceCtx;
@@ -5658,20 +6403,82 @@ namespace bgfx { namespace d3d11
 		{
 			const BlitItem& blit = _bs.advance();
 
+			if (blit.m_src.isBuffer()
+			&&  blit.m_dst.isBuffer() )
+			{
+				const BufferD3D11& srcBuf = getBuffer(blit.m_src);
+				const BufferD3D11& dstBuf = getBuffer(blit.m_dst);
+
+				D3D11_BOX box;
+				box.left   = blit.m_srcOffset;
+				box.right  = blit.m_srcOffset + blit.m_size;
+				box.top    = 0;
+				box.bottom = 1;
+				box.front  = 0;
+				box.back   = 1;
+
+				deviceCtx->CopySubresourceRegion(dstBuf.m_ptr, 0, blit.m_dstOffset, 0, 0, srcBuf.m_ptr, 0, &box);
+
+				continue;
+			}
+
+			if (blit.m_src.isBuffer()
+			||  blit.m_dst.isBuffer() )
+			{
+				blitBufferTexture(blit);
+
+				continue;
+			}
+
 			const TextureD3D11& src = m_textures[blit.m_src.idx];
 			const TextureD3D11& dst = m_textures[blit.m_dst.idx];
 
+			const bool srcReadsMsaaRt = NULL != src.m_rt && dst.isMsaaSurface();
+
+			if (NULL != src.m_rt
+			&&  !srcReadsMsaaRt
+			&&  0 == blit.m_srcMip)
+			{
+				src.resolve(BGFX_RESOLVE_NONE, blit.m_srcZ, 1, 0);
+			}
+
+			if ( src.isMsaaSurface()
+			&&  !dst.isMsaaSurface()
+			&&  TextureD3D11::Texture3D != src.m_type)
+			{
+				const DXGI_FORMAT resolveFormat = bimg::isDepth(bimg::TextureFormat::Enum(src.m_textureFormat) )
+					? s_textureFormat[src.m_textureFormat].m_fmt
+					: src.getSrvFormat()
+					;
+
+				const uint32_t srcSubresource = blit.m_srcZ*src.m_numMips + blit.m_srcMip;
+				const uint32_t dstSubresource = blit.m_dstZ*dst.m_numMips + blit.m_dstMip;
+
+				deviceCtx->ResolveSubresource(
+					  dst.m_ptr
+					, dstSubresource
+					, src.m_ptr
+					, srcSubresource
+					, resolveFormat
+					);
+
+				continue;
+			}
+
 			if (TextureD3D11::Texture3D == src.m_type)
 			{
-				D3D11_BOX box;
-				box.left   = blit.m_srcX;
-				box.top    = blit.m_srcY;
-				box.front  = blit.m_srcZ;
-				box.right  = blit.m_srcX + blit.m_width;
-				box.bottom = blit.m_srcY + blit.m_height;
-				box.back   = blit.m_srcZ + bx::max<int32_t>(1, blit.m_depth);
+				const D3D11_BOX box =
+				{
+					.left   = blit.m_srcX,
+					.top    = blit.m_srcY,
+					.front  = blit.m_srcZ,
+					.right  = uint32_t(blit.m_srcX) + blit.m_width,
+					.bottom = uint32_t(blit.m_srcY) + blit.m_height,
+					.back   = uint32_t(blit.m_srcZ) + bx::max<uint32_t>(1, blit.m_depth),
+				};
 
-				deviceCtx->CopySubresourceRegion(dst.m_ptr
+				deviceCtx->CopySubresourceRegion(
+					  dst.m_ptr
 					, blit.m_dstMip
 					, blit.m_dstX
 					, blit.m_dstY
@@ -5683,31 +6490,37 @@ namespace bgfx { namespace d3d11
 			}
 			else
 			{
-				bool depthStencil = bimg::isDepth(bimg::TextureFormat::Enum(src.m_textureFormat) );
+				const bool depthStencil = bimg::isDepth(bimg::TextureFormat::Enum(src.m_textureFormat) );
 				BX_ASSERT(!depthStencil
 					||  (blit.m_width == bx::max(1, src.m_width >> blit.m_srcMip) && blit.m_height == bx::max(1, src.m_height >> blit.m_srcMip))
 					, "When blitting depthstencil surface, source resolution must match destination."
 					);
 
-				D3D11_BOX box;
-				box.left   = blit.m_srcX;
-				box.top    = blit.m_srcY;
-				box.front  = 0;
-				box.right  = blit.m_srcX + blit.m_width;
-				box.bottom = blit.m_srcY + blit.m_height;
-				box.back   = 1;
+				const bool msaaToMsaa = (src.isMsaaSurface() || srcReadsMsaaRt) && dst.isMsaaSurface();
+				const bool wholeSubResource = depthStencil || msaaToMsaa;
+
+				const D3D11_BOX box =
+				{
+					.left   = blit.m_srcX,
+					.top    = blit.m_srcY,
+					.front  = 0,
+					.right  = uint32_t(blit.m_srcX) + blit.m_width,
+					.bottom = uint32_t(blit.m_srcY) + blit.m_height,
+					.back   = 1,
+				};
 
 				const uint32_t srcZ = blit.m_srcZ;
 				const uint32_t dstZ = blit.m_dstZ;
 
-				deviceCtx->CopySubresourceRegion(dst.m_ptr
+				deviceCtx->CopySubresourceRegion(
+					  dst.m_ptr
 					, dstZ*dst.m_numMips+blit.m_dstMip
-					, blit.m_dstX
-					, blit.m_dstY
+					, wholeSubResource ? 0 : blit.m_dstX
+					, wholeSubResource ? 0 : blit.m_dstY
 					, 0
-					, src.m_ptr
+					, srcReadsMsaaRt ? src.m_rt : src.m_ptr
 					, srcZ*src.m_numMips+blit.m_srcMip
-					, depthStencil ? NULL : &box
+					, wholeSubResource ? NULL : &box
 					);
 			}
 		}
@@ -5807,8 +6620,8 @@ namespace bgfx { namespace d3d11
 		Rect viewScissorRect;
 		viewScissorRect.clear();
 
-		const uint32_t maxComputeBindings = g_caps.limits.maxComputeBindings;
-		const uint32_t maxTextureSamplers = g_caps.limits.maxTextureSamplers;
+		const uint8_t maxComputeBindings = bx::narrowCast<uint8_t>(g_caps.limits.maxComputeBindings);
+		const uint8_t maxTextureSamplers = bx::narrowCast<uint8_t>(g_caps.limits.maxTextureSamplers);
 
 		uint32_t statsNumPrimsSubmitted[BX_COUNTOF(s_primInfo)] = {};
 		uint32_t statsNumPrimsRendered[BX_COUNTOF(s_primInfo)] = {};
@@ -5867,6 +6680,10 @@ namespace bgfx { namespace d3d11
 
 					profiler.begin(view);
 
+					resolveFrameBuffer(_render->m_view[view].m_fbh);
+					submitUniformCache(ucs, view);
+					submitBlit(bs, view);
+
 					if (_render->m_view[view].m_fbh.idx != fbh.idx)
 					{
 						fbh = _render->m_view[view].m_fbh;
@@ -5874,10 +6691,11 @@ namespace bgfx { namespace d3d11
 					}
 
 					viewState.m_rect = _render->m_view[view].m_rect;
+					const Rect& clippedRect = _render->m_view[view].m_clippedRect;
 
 					const Rect& scissorRect = _render->m_view[view].m_scissor;
 					viewHasScissor = !scissorRect.isZero();
-					viewScissorRect = viewHasScissor ? scissorRect : viewState.m_rect;
+					viewScissorRect = viewHasScissor ? scissorRect : clippedRect;
 
 					D3D11_VIEWPORT vp;
 					vp.TopLeftX = viewState.m_rect.m_x;
@@ -5891,12 +6709,9 @@ namespace bgfx { namespace d3d11
 
 					if (BGFX_CLEAR_NONE != (clr.m_flags & BGFX_CLEAR_MASK) )
 					{
-						clearQuad(_clearQuad, viewState.m_rect, clr, _render->m_colorPalette);
+						clearQuad(_clearQuad, clippedRect, clr, _render->m_colorPalette);
 						prim = s_primInfo[Topology::Count]; // Force primitive type update after clear quad.
 					}
-
-					submitUniformCache(ucs, view);
-					submitBlit(bs, view);
 				}
 
 				if (isCompute)
@@ -5975,9 +6790,10 @@ namespace bgfx { namespace d3d11
 									TextureD3D11& texture = m_textures[bind.m_idx];
 									if (Access::Read != bind.m_access)
 									{
-										uav[stage] = 0 == bind.m_firstMip
+										const bool arrayed = (UINT16_MAX != bind.m_numLayers);
+										uav[stage] = (0 == bind.m_firstMip && !arrayed)
 											? texture.m_uav
-											: s_renderD3D11->getCachedUav(texture.getHandle(), bind.m_firstMip)
+											: s_renderD3D11->getCachedUav(texture.getHandle(), bind.m_firstMip, bind.m_firstLayer, bind.m_numLayers)
 											;
 										m_textureStage.m_srv[stage]     = NULL;
 										m_textureStage.m_sampler[stage] = NULL;
@@ -5993,7 +6809,10 @@ namespace bgfx { namespace d3d11
 							case Binding::Texture:
 								{
 									TextureD3D11& texture = m_textures[bind.m_idx];
-									texture.commit(stage, bind.m_samplerFlags, _render->m_colorPalette, bind.m_firstLayer, bind.m_numLayers, bind.m_firstMip, bind.m_numMips);
+									const ProgramD3D11* program = m_currentProgram;
+									texture.commit(stage, bind.m_samplerFlags, _render->m_colorPalette, bind.m_firstLayer, bind.m_numLayers, bind.m_firstMip, bind.m_numMips
+										, NULL != program ? program->getTextureDimension(stage) : TextureDimension::Count
+										);
 								}
 								break;
 
@@ -6004,15 +6823,22 @@ namespace bgfx { namespace d3d11
 										? m_indexBuffers[bind.m_idx]
 										: m_vertexBuffers[bind.m_idx]
 										;
+									const ProgramD3D11* program = m_currentProgram;
 									if (Access::Read != bind.m_access)
 									{
-										uav[stage] = buffer.m_uav;
+										uav[stage] = NULL != program && program->isRawUav(stage)
+											? buffer.m_uavRaw
+											: buffer.m_uav
+											;
 										m_textureStage.m_srv[stage]     = NULL;
 										m_textureStage.m_sampler[stage] = NULL;
 									}
 									else
 									{
-										m_textureStage.m_srv[stage] = buffer.m_srv;
+										m_textureStage.m_srv[stage] = NULL != program && program->isRawSrv(stage)
+											? buffer.m_srvRaw
+											: buffer.m_srv
+											;
 									}
 								}
 								break;
@@ -6123,7 +6949,7 @@ namespace bgfx { namespace d3d11
 					currentBind.clear();
 
 					setBlendState(newFlags, draw.m_rgba);
-					setDepthStencilState(newFlags, packStencil(BGFX_STENCIL_DEFAULT, BGFX_STENCIL_DEFAULT) );
+					setDepthStencilState(newFlags, packStencil(BGFX_STENCIL_NONE, BGFX_STENCIL_NONE) );
 
 					const uint64_t pt = newFlags&BGFX_STATE_PT_MASK;
 					primIndex = uint8_t(pt>>BGFX_STATE_PT_SHIFT);
@@ -6313,9 +7139,10 @@ namespace bgfx { namespace d3d11
 										TextureD3D11& texture = m_textures[bind.m_idx];
 										if (Access::Read != bind.m_access)
 										{
-											m_textureStage.m_uav[stage] = 0 == bind.m_firstMip
+											const bool arrayed = (UINT16_MAX != bind.m_numLayers);
+											m_textureStage.m_uav[stage] = (0 == bind.m_firstMip && !arrayed)
 												? texture.m_uav
-												: s_renderD3D11->getCachedUav(texture.getHandle(), bind.m_firstMip)
+												: s_renderD3D11->getCachedUav(texture.getHandle(), bind.m_firstMip, bind.m_firstLayer, bind.m_numLayers)
 												;
 										}
 										else
@@ -6329,7 +7156,10 @@ namespace bgfx { namespace d3d11
 								case Binding::Texture:
 									{
 										TextureD3D11& texture = m_textures[bind.m_idx];
-										texture.commit(stage, bind.m_samplerFlags, _render->m_colorPalette, bind.m_firstLayer, bind.m_numLayers, bind.m_firstMip, bind.m_numMips);
+										const ProgramD3D11* program = m_currentProgram;
+										texture.commit(stage, bind.m_samplerFlags, _render->m_colorPalette, bind.m_firstLayer, bind.m_numLayers, bind.m_firstMip, bind.m_numMips
+											, NULL != program ? program->getTextureDimension(stage) : TextureDimension::Count
+											);
 									}
 									break;
 
@@ -6340,9 +7170,26 @@ namespace bgfx { namespace d3d11
 											? m_indexBuffers[bind.m_idx]
 											: m_vertexBuffers[bind.m_idx]
 											;
-										m_textureStage.m_srv[stage] = buffer.m_srv;
-										m_textureStage.m_sampler[stage] = NULL;
-										m_textureStage.m_uav[stage]     = NULL;
+										const ProgramD3D11* program = m_currentProgram;
+										if (Access::Read != bind.m_access
+										&&  NULL != buffer.m_uav)
+										{
+											m_textureStage.m_srv[stage]     = NULL;
+											m_textureStage.m_sampler[stage] = NULL;
+											m_textureStage.m_uav[stage]     = NULL != program && program->isRawUav(stage)
+												? buffer.m_uavRaw
+												: buffer.m_uav
+												;
+										}
+										else
+										{
+											m_textureStage.m_srv[stage] = NULL != program && program->isRawSrv(stage)
+												? buffer.m_srvRaw
+												: buffer.m_srv
+												;
+											m_textureStage.m_sampler[stage] = NULL;
+											m_textureStage.m_uav[stage]     = NULL;
+										}
 									}
 									break;
 								}
@@ -6685,6 +7532,7 @@ namespace bgfx { namespace d3d11
 		perfStats.numDraw       = statsKeyType[0];
 		perfStats.numCompute    = statsKeyType[1];
 		perfStats.numBlit       = _render->m_numBlitItems;
+		perfStats.numBlitRepack = _render->m_numBlitRepack;
 		perfStats.maxGpuLatency = maxGpuLatency;
 		perfStats.gpuFrameNum   = result.m_frameNum;
 		bx::memCopy(perfStats.numPrims, statsNumPrimsRendered, sizeof(perfStats.numPrims) );
@@ -6846,6 +7694,13 @@ namespace bgfx { namespace d3d11
 			deviceCtx->ResolveSubresource(backBufferColor, 0, m_msaaRt, 0, m_scd.format);
 			DX_RELEASE(backBufferColor, 0);
 		}
+
+		if (_render->m_flush)
+		{
+			m_deviceCtx->Flush();
+		}
+
+		dumpInfoQueue();
 	}
 } /* namespace d3d11 */ } // namespace bgfx
 
