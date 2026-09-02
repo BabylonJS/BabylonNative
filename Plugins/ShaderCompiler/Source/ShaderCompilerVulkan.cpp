@@ -5,6 +5,7 @@
 #include <arcana/experimental/array.h>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Include/intermediate.h>
+#include <glslang/MachineIndependent/localintermediate.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
@@ -17,6 +18,8 @@
 
 #define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20) // Copy-pasta from bgfx_p.h
 
+// Same as ShaderCompilerTraversers: IR node types live in namespace glslang.
+using namespace glslang;
 
 namespace
 {
