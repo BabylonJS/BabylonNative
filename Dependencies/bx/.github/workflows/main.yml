@@ -14,18 +14,20 @@ jobs:
       fail-fast: true
       matrix:
         include: [
-          { config: Debug,   platform: x64, bindir: 'win64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
-          { config: Release, platform: x64, bindir: 'win64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
+          { config: Debug,   platform: x64,   runs-on: windows-latest, bindir: 'win64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
+          { config: Release, platform: x64,   runs-on: windows-latest, bindir: 'win64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
+          { config: Debug,   platform: ARM64, runs-on: windows-11-arm, bindir: 'arm64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
+          { config: Release, platform: ARM64, runs-on: windows-11-arm, bindir: 'arm64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
 #          { config: Debug,   platform: x64, bindir: 'win64_vs2026', genie-action: 'vs2026', solution-ext: 'slnx' },
 #          { config: Release, platform: x64, bindir: 'win64_vs2026', genie-action: 'vs2026', solution-ext: 'slnx' },
         ]
     name: msvc-${{ matrix.config }}-${{ matrix.platform }}
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout bx
         uses: actions/checkout@v6
         with:
-          repository: bkaradzic/bx
+          repository: ${{ github.repository }}
           path: bx
       - name: Prepare
         uses: microsoft/setup-msbuild@v2
@@ -54,7 +56,7 @@ jobs:
       - name: Checkout bx
         uses: actions/checkout@v6
         with:
-          repository: bkaradzic/bx
+          repository: ${{ github.repository }}
           path: bx
       - name: Prepare
         uses: msys2/setup-msys2@v2
@@ -90,7 +92,7 @@ jobs:
       - name: Checkout bx
         uses: actions/checkout@v6
         with:
-          repository: bkaradzic/bx
+          repository: ${{ github.repository }}
           path: bx
       - name: Build
         run: |
@@ -115,7 +117,7 @@ jobs:
       - name: Checkout bx
         uses: actions/checkout@v6
         with:
-          repository: bkaradzic/bx
+          repository: ${{ github.repository }}
           path: bx
       - name: Build
         run: |
@@ -140,7 +142,7 @@ jobs:
       - name: Checkout bx
         uses: actions/checkout@v6
         with:
-          repository: bkaradzic/bx
+          repository: ${{ github.repository }}
           path: bx
       - uses: nttld/setup-ndk@v1
         id: setup-ndk
@@ -169,7 +171,7 @@ jobs:
       - name: Checkout bx
         uses: actions/checkout@v6
         with:
-          repository: bkaradzic/bx
+          repository: ${{ github.repository }}
           path: bx
       - uses: mymindstorm/setup-emsdk@v14
         with:

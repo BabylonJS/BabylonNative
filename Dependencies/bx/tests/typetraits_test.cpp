@@ -25,6 +25,8 @@ struct TestClassDerivedB        /*                                              
 		: TestClassDerivedA     {                                                                        };
 struct TestClassDerivedX        /*                                                                       */
 		: TestClassVirtualDtor  {                                                                        };
+struct TestClassPadded          { uint32_t x; uint16_t y; uint8_t z;                                     };
+struct TestClassNoPadding       { uint32_t x; uint16_t y; uint8_t z; uint8_t w;                          };
 union  TestUnionEmpty           {                                                                        };
 union  TestUnion                { int32_t x; float y;                                                    };
 enum   TestEnumEmpty            {                                                                        };
@@ -208,6 +210,19 @@ TEST_CASE("type-traits isTriviallyCopyable", "")
 	STATIC_REQUIRE( bx::isTriviallyCopyable<TestClassDefaultCtor >() );
 	STATIC_REQUIRE( bx::isTriviallyCopyable<TestClassDefaultDtor >() );
 	STATIC_REQUIRE(!bx::isTriviallyCopyable<TestClassVirtualDtor >() );
+}
+
+TEST_CASE("type-traits hasUniqueObjectRepresentation", "")
+{
+	STATIC_REQUIRE( 8 == sizeof(TestClassPadded) );
+	STATIC_REQUIRE( 8 == sizeof(TestClassNoPadding) );
+
+	STATIC_REQUIRE( bx::hasUniqueObjectRepresentation<int32_t              >() );
+	STATIC_REQUIRE( bx::hasUniqueObjectRepresentation<TestClassMember      >() );
+	STATIC_REQUIRE( bx::hasUniqueObjectRepresentation<TestClassNoPadding   >() );
+	STATIC_REQUIRE(!bx::hasUniqueObjectRepresentation<TestClassPadded      >() );
+	STATIC_REQUIRE(!bx::hasUniqueObjectRepresentation<TestClassVirtualDtor >() );
+	STATIC_REQUIRE(!bx::hasUniqueObjectRepresentation<float                >() );
 }
 
 TEST_CASE("type-traits isTriviallyConstructible", "")

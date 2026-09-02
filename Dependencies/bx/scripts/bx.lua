@@ -78,6 +78,7 @@ project "bx"
 			path.join(BX_DIR, "src/mutex.cpp"),
 			path.join(BX_DIR, "src/os.cpp"),
 			path.join(BX_DIR, "src/process.cpp"),
+			path.join(BX_DIR, "src/scanner.cpp"),
 			path.join(BX_DIR, "src/semaphore.cpp"),
 			path.join(BX_DIR, "src/settings.cpp"),
 			path.join(BX_DIR, "src/sort.cpp"),

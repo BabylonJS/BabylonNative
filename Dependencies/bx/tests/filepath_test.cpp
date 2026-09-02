@@ -64,6 +64,15 @@ FilePathTest s_filePathTest[] =
 
 	{"abc\\/../..\\/././../def", "../../def"},
 	{"\\abc/def\\../..\\..", "/"},
+
+	// Drive letter
+	{"c:", "C:"},
+	{"c:/", "C:/"},
+	{"c:abc", "C:/abc"},
+	{"c:/abc/../def", "C:/def"},
+	{"c:/..", "C:/"},
+	{"c:/../..", "C:/"},
+	{"c:\\abc\\..\\def", "C:/def"},
 };
 
 struct FilePathSplit
@@ -116,6 +125,25 @@ TEST_CASE("FilePath", "[filepath][string]")
 		REQUIRE(0 == bx::strCmp(test.extension, ext) );
 		REQUIRE(test.absolute == fp.isAbsolute() );
 	};
+}
+
+TEST_CASE("FilePath sub-view", "[filepath]")
+{
+	const char buffer[] = "C:/abc";
+
+	bx::FilePath fp;
+	fp.set(bx::StringView(buffer, 2) );
+	REQUIRE(0 == bx::strCmp("C:", fp) );
+
+	const char buffer2[] = "ab/cd";
+	fp.set(bx::StringView(buffer2, 2) );
+	REQUIRE(0 == bx::strCmp("ab", fp) );
+
+	fp.set(bx::StringView(buffer2, 3) );
+	REQUIRE(0 == bx::strCmp("ab/", fp) );
+
+	fp.set(bx::StringView(buffer2, 0) );
+	REQUIRE(0 == bx::strCmp(".", fp) );
 }
 
 TEST_CASE("FilePath temp", "[filepath]")

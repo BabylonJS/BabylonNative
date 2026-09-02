@@ -67,8 +67,7 @@ namespace bx
 		const simd32_t signMask = simd32_splat(kFloatSignMask);
 		const simd32_t value    = simd32_splat(_value);
 		const simd32_t tmp0     = simd32_x32_sra(value, 31);
-		const simd32_t tmp1     = simd32_i32_neg(tmp0);
-		const simd32_t mask     = simd32_or(tmp1, signMask);
+		const simd32_t mask     = simd32_or(tmp0, signMask);
 		const simd32_t result   = simd32_xor(value, mask);
 
 		return result.u32;
@@ -357,9 +356,10 @@ namespace bx
 		const float absA   = abs(aa);
 		const float cosA   = cos(absA);
 		const float cosASq = square(cosA);
-		const float tmp0   = sqrt(1.0f - cosASq);
-		const float tmp1   = aa > 0.0f && aa < kPi ? 1.0f : -1.0f;
-		const float sinA   = mul(tmp0, tmp1);
+		const float tmp0   = max(0.0f, 1.0f - cosASq);
+		const float tmp1   = sqrt(tmp0);
+		const float tmp2   = aa > 0.0f && aa < kPi ? 1.0f : -1.0f;
+		const float sinA   = mul(tmp1, tmp2);
 
 		_outSinApprox = sinA;
 		_outCos = cosA;

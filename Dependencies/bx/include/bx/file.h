@@ -138,6 +138,18 @@ namespace bx
 	///
 	bool removeAll(const FilePath& _filePath, Error* _err = ErrorIgnore{});
 
+	/// Copies file contents.
+	///
+	bool copy(const FilePath& _from, const FilePath& _to, Error* _err = ErrorIgnore{});
+
+	/// Moves file or directory.
+	///
+	bool move(const FilePath& _from, const FilePath& _to, Error* _err = ErrorIgnore{});
+
+	/// Moves file or directory into OS trash (Recycle Bin).
+	///
+	bool moveToTrash(const FilePath& _filePath, Error* _err = ErrorIgnore{});
+
 } // namespace bx
 
 #endif // BX_FILE_H_HEADER_GUARD

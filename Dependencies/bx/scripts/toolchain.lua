@@ -435,6 +435,9 @@ function toolchain(_buildDir, _libDir)
 			action.vstudio.windowsTargetPlatformMinVersion = windowsPlatform
 		end
 
+		-- Windows on ARM64 is a desktop target for MSVC.
+		platforms { "ARM64" }
+
 		if (_ACTION .. "-clang") == _OPTIONS["vs"] then
 			if "vs2017-clang" == _OPTIONS["vs"] then
 				premake.vstudio.toolset = "v141_clang_c2"
@@ -548,7 +551,7 @@ function toolchain(_buildDir, _libDir)
 			"-Wno-tautological-constant-compare",
 		}
 
-	configuration { "vs*", "not NX32", "not NX64" }
+	configuration { "vs*", "not ARM64", "not NX32", "not NX64" }
 		flags {
 			"EnableAVX",
 		}
@@ -590,6 +593,14 @@ function toolchain(_buildDir, _libDir)
 		objdir (path.join(_buildDir, "win64_" .. _ACTION, "obj"))
 		libdirs {
 			path.join(_libDir, "lib/win64_" .. _ACTION),
+		}
+
+	configuration { "ARM64", "vs*" }
+		defines { "_WIN64" }
+		targetdir (path.join(_buildDir, "arm64_" .. _ACTION, "bin"))
+		objdir (path.join(_buildDir, "arm64_" .. _ACTION, "obj"))
+		libdirs {
+			path.join(_libDir, "lib/arm64_" .. _ACTION),
 		}
 
 	configuration { "x32", "vs2017" }

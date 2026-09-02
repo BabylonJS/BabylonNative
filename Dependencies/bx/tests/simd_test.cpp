@@ -773,6 +773,103 @@ TEST_CASE("simd128_x32_sra", "[simd]")
 	check_i32("sra", simd128_x32_sra(a, 2), -2, -4, 8, 16);
 }
 
+TEST_CASE("simd_x32_bit_mask_ni", "[simd]")
+{
+	static constexpr uint32_t ones = UINT32_MAX;
+
+	SECTION("each bit is tested independently")
+	{
+		const simd128_t bit0 = simd128_ld<simd128_t>( 0u,  1u,  2u,  3u);
+		check_u32("bit0", simd_x32_bit_mask_ni<0, simd128_t>(bit0), 0, ones, 0, ones);
+
+		const simd128_t bit1 = simd128_ld<simd128_t>( 0u,  2u,  1u,  3u);
+		check_u32("bit1", simd_x32_bit_mask_ni<1, simd128_t>(bit1), 0, ones, 0, ones);
+
+		const simd128_t bit2 = simd128_ld<simd128_t>( 0u,  4u,  3u,  7u);
+		check_u32("bit2", simd_x32_bit_mask_ni<2, simd128_t>(bit2), 0, ones, 0, ones);
+
+		const simd128_t bit3 = simd128_ld<simd128_t>( 0u,  8u,  7u, 15u);
+		check_u32("bit3", simd_x32_bit_mask_ni<3, simd128_t>(bit3), 0, ones, 0, ones);
+
+		const simd128_t bit4 = simd128_ld<simd128_t>( 0u, 16u, 15u, 31u);
+		check_u32("bit4", simd_x32_bit_mask_ni<4, simd128_t>(bit4), 0, ones, 0, ones);
+	}
+
+	SECTION("bits above the one asked for are ignored")
+	{
+		const simd128_t high = simd128_splat<simd128_t>(~uint32_t(31) );
+
+		check_u32("bit0", simd_x32_bit_mask_ni<0, simd128_t>(high), 0, 0, 0, 0);
+		check_u32("bit1", simd_x32_bit_mask_ni<1, simd128_t>(high), 0, 0, 0, 0);
+		check_u32("bit2", simd_x32_bit_mask_ni<2, simd128_t>(high), 0, 0, 0, 0);
+		check_u32("bit3", simd_x32_bit_mask_ni<3, simd128_t>(high), 0, 0, 0, 0);
+		check_u32("bit4", simd_x32_bit_mask_ni<4, simd128_t>(high), 0, 0, 0, 0);
+	}
+
+	SECTION("a count of 31 sets every mask")
+	{
+		const simd128_t all = simd128_splat<simd128_t>(uint32_t(31) );
+
+		check_u32("bit0", simd_x32_bit_mask_ni<0, simd128_t>(all), ones, ones, ones, ones);
+		check_u32("bit1", simd_x32_bit_mask_ni<1, simd128_t>(all), ones, ones, ones, ones);
+		check_u32("bit2", simd_x32_bit_mask_ni<2, simd128_t>(all), ones, ones, ones, ones);
+		check_u32("bit3", simd_x32_bit_mask_ni<3, simd128_t>(all), ones, ones, ones, ones);
+		check_u32("bit4", simd_x32_bit_mask_ni<4, simd128_t>(all), ones, ones, ones, ones);
+	}
+}
+
+TEST_CASE("simd_x32_shift_ni", "[simd]")
+{
+	SECTION("srl")
+	{
+		const simd128_t a     = simd128_ld<simd128_t>(0x80000000u, 0xffffffffu, 0xffffffffu, 0xffffffffu);
+		const simd128_t count = simd128_ld<simd128_t>(         0u,          1u,         16u,         31u);
+
+		check_u32("srl", simd_x32_srl_ni<simd128_t>(a, count), 0x80000000, 0x7fffffff, 0x0000ffff, 0x00000001);
+	}
+
+	SECTION("sll")
+	{
+		const simd128_t a     = simd128_ld<simd128_t>(1u, 1u,  1u,  1u);
+		const simd128_t count = simd128_ld<simd128_t>(0u, 1u, 16u, 31u);
+
+		check_u32("sll", simd_x32_sll_ni<simd128_t>(a, count), 1, 2, 0x00010000, 0x80000000);
+	}
+
+	SECTION("sra keeps the sign")
+	{
+		const simd128_t a     = simd128_ld<simd128_t>(uint32_t(-256), uint32_t(-256), uint32_t(-256), 256u);
+		const simd128_t count = simd128_ld<simd128_t>(            0u,             4u,            31u,   4u);
+
+		check_i32("sra", simd_x32_sra_ni<simd128_t>(a, count), -256, -16, -1, 16);
+	}
+
+	SECTION("every shift distance, one lane at a time")
+	{
+		for (uint32_t ii = 0; ii < 32; ii += 4)
+		{
+			const simd128_t a     = simd128_splat<simd128_t>(UINT32_MAX);
+			const simd128_t count = simd128_ld<simd128_t>(ii, ii+1, ii+2, ii+3);
+
+			check_u32("srl", simd_x32_srl_ni<simd128_t>(a, count)
+				, UINT32_MAX >> ii
+				, UINT32_MAX >> (ii+1)
+				, UINT32_MAX >> (ii+2)
+				, UINT32_MAX >> (ii+3)
+				);
+
+			const simd128_t one = simd128_splat<simd128_t>(uint32_t(1) );
+
+			check_u32("sll", simd_x32_sll_ni<simd128_t>(one, count)
+				, uint32_t(1) << ii
+				, uint32_t(1) << (ii+1)
+				, uint32_t(1) << (ii+2)
+				, uint32_t(1) << (ii+3)
+				);
+		}
+	}
+}
+
 TEST_CASE("simd128_selb", "[simd]")
 {
 	const simd128_t a    = simd128_ld<simd128_t>(1.0f, 2.0f, 3.0f, 4.0f);

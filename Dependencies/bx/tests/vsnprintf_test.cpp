@@ -226,7 +226,9 @@ TEST_CASE("Format %f", "[string][printf]")
 	REQUIRE(test("4.1",            "%.1f",    4.1) );
 	REQUIRE(test("0.00",           "%.2f",    1e-4) );
 	REQUIRE(test("-5.20",          "%+4.2f", -5.2) );
-	REQUIRE(test("0.0       ",     "%-10.1f", 0.) );
+
+	volatile double zero = 0.0; // /fp:fast allows the compiler to disregard the sign of zero.
+	REQUIRE(test("0.0       ",     "%-10.1f", zero) );
 	REQUIRE(test("-8.8888888800",  "%.10f",  -8.88888888) );
 	REQUIRE(test("880.0888888800", "%.10f",   880.08888888) );
 	REQUIRE(test("100056789.0",    "%.1f",    100056789.0) );

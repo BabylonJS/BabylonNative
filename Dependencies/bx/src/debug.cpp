@@ -8,6 +8,7 @@
 #include <bx/readerwriter.h> // WriterI
 #include <bx/os.h>           // exit
 #include <bx/process.h>      // ProcessReader
+#include <bx/scanner.h>      // Scanner
 
 #include <inttypes.h>        // PRIx*
 
@@ -79,8 +80,8 @@ extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned in
 	|| BX_PLATFORM_WINRT   \
 	|| BX_PLATFORM_XBOXONE
 extern "C" __declspec(dllimport) void  __stdcall OutputDebugStringA(const char* _str);
-extern "C" __declspec(dllimport) void* __stdcall GetStdHandle(uint32_t _stdHandle);
-extern "C" __declspec(dllimport) int   __stdcall WriteFile(void* _file, const void* _buffer, uint32_t _sizeInBytes, uint32_t* _outNumberOfBytesWritten, void* _overapped);
+extern "C" __declspec(dllimport) void* __stdcall GetStdHandle(unsigned long _stdHandle);
+extern "C" __declspec(dllimport) int   __stdcall WriteFile(void* _file, const void* _buffer, unsigned long _sizeInBytes, unsigned long* _outNumberOfBytesWritten, struct _OVERLAPPED* _overlapped);
 #elif BX_PLATFORM_IOS || BX_PLATFORM_OSX || BX_PLATFORM_VISIONOS
 #	if defined(__OBJC__)
 #		import <Foundation/NSObjCRuntime.h>
@@ -143,8 +144,8 @@ namespace bx
 	{
 		OutputDebugStringA(_out);
 
-		uint32_t written;
-		WriteFile(s_debugConsoleHandle, _out, (uint32_t)strLen(_out), &written, NULL);
+		unsigned long written;
+		WriteFile(s_debugConsoleHandle, _out, (unsigned long)strLen(_out), &written, NULL);
 	}
 
 	static void stubDebugOutput(const char* _out)
@@ -683,7 +684,7 @@ namespace bx
 
 		int32_t total = write(_writer, _err, "Callstack (%d):\n", _num);
 
-		total += write(_writer, _err, "\t #: %-*s  Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
+		total += write(_writer, _err, "\t #: %-*s   Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
 
 		CallbackData cbData;
 
@@ -709,7 +710,7 @@ namespace bx
 			const StringView fileName = strTail(cbData.fileName, kWidth);
 
 			total += write(_writer, _err
-				, "\t%2d: %-*S % 5d  %*p  %S\n"
+				, "\t%2d: %-*S % 6d  %*p  %S\n"
 				, ii
 				, kWidth
 				, &fileName
@@ -904,7 +905,7 @@ namespace bx
 	{
 		int32_t total = write(_writer, _err, "Callstack (%d):\n", _num);
 
-		total += write(_writer, _err, "\t #: %-*s  Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
+		total += write(_writer, _err, "\t #: %-*s   Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
 
 		static bool initCalled = false;
 
@@ -931,7 +932,7 @@ namespace bx
 			const StringView fileName = strTail(filePath, kWidth);
 
 			total += write(_writer, _err
-				, "\t%2d: %-*S % 5d  %*p  %s\n"
+				, "\t%2d: %-*S % 6d  %*p  %s\n"
 				, ii
 				, kWidth
 				, &fileName
@@ -946,22 +947,6 @@ namespace bx
 	}
 
 #elif BX_CONFIG_CALLSTACK_USE_EXECINFO
-
-	StringView strConsumeTo(StringView& _input, const StringView& _find)
-	{
-		const StringView to = strFind(_input, _find);
-
-		if (!to.isEmpty() )
-		{
-			const StringView result(_input.getPtr(), to.getPtr() );
-
-			_input.set(to.getTerm(), _input.getTerm() );
-
-			return result;
-		}
-
-		return StringView();
-	}
 
 	int32_t writeCallstack(WriterI* _writer, const uintptr_t* _stack, uint32_t _num, Error* _err)
 	{
@@ -1077,7 +1062,7 @@ namespace bx
 
 #	endif // BX_PLATFORM_*
 
-		total += write(_writer, _err, "\t #: %-*s  Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
+		total += write(_writer, _err, "\t #: %-*s   Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
 
 		for (uint32_t ii = 0; ii < _num && _err->isOk(); ++ii)
 		{
@@ -1126,16 +1111,18 @@ namespace bx
 					{
 						for (LineReader lr({atosBuffer, bytes}); !lr.isDone();)
 						{
-							StringView input = lr.next();
+							Scanner scanner(lr.next() );
 
-							atosFunctionName = strConsumeTo(input, " (");
+							atosFunctionName = scanner.acceptUntil(" (");
 
 							if (atosFunctionName.isEmpty() )
 							{
 								break;
 							}
 
-							filePath = strConsumeTo(input, ":");
+							scanner.accept(" (");
+
+							filePath = scanner.acceptUntil(":");
 
 							if (filePath.isEmpty() )
 							{
@@ -1143,7 +1130,9 @@ namespace bx
 								break;
 							}
 
-							const StringView lineStr = strConsumeTo(input, ")");
+							scanner.accept(':');
+
+							const StringView lineStr = scanner.acceptUntil(")");
 
 							if (!lineStr.isEmpty() )
 							{
@@ -1175,7 +1164,7 @@ namespace bx
 			const StringView fileName = strTail(filePath, kWidth);
 
 			total += write(_writer, _err
-				, "\t%2d: %-*S % 5d  %*p  %s\n"
+				, "\t%2d: %-*S % 6d  %*p  %s\n"
 				, ii
 				, kWidth
 				, &fileName
@@ -1197,7 +1186,7 @@ namespace bx
 	{
 		int32_t total = write(_writer, _err, "Callstack (%d): - symbol resolve is not available\n", _num);
 
-		total += write(_writer, _err, "\t #: %-*s  Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
+		total += write(_writer, _err, "\t #: %-*s   Line  %-*s  Function ---\n", kWidth, "File ---", kWidthPc, "PC ---");
 
 		const StringView fileName      = "<unknown?>";
 		const StringView demangledName = "<unknown?>";
@@ -1205,7 +1194,7 @@ namespace bx
 		for (uint32_t ii = 0; ii < _num && _err->isOk(); ++ii)
 		{
 			total += write(_writer, _err
-				, "\t%2d: %-*S % 5d  %*p  %S\n"
+				, "\t%2d: %-*S % 6d  %*p  %S\n"
 				, ii
 				, kWidth
 				, &fileName
