@@ -4,6 +4,7 @@
  */
 
 #include "test.h"
+#include <bx/constants.h>
 #include <bx/filepath.h>
 #include <bx/string.h>
 #include <bx/handlealloc.h>
@@ -118,6 +119,59 @@ TEST_CASE("strCmpI", "[string]")
 
 	REQUIRE(0 <  bx::strCmpI(abvgx, abvgd) );
 	REQUIRE(0 <  bx::strCmpI(abvgd, empty) );
+}
+
+TEST_CASE("isEqual", "[string]")
+{
+	// Case sensitive (default).
+	REQUIRE( bx::isEqual("test", "test") );
+	REQUIRE(!bx::isEqual("test", "Test") );
+	REQUIRE(!bx::isEqual("test", "testtest") );
+	REQUIRE(!bx::isEqual("testtest", "test") );
+	REQUIRE( bx::isEqual("", "") );
+	REQUIRE(!bx::isEqual("", "test") );
+	REQUIRE(!bx::isEqual("a", "A") );
+
+	// Case insensitive.
+	REQUIRE( bx::isEqual("test", "TEST", false) );
+	REQUIRE( bx::isEqual("TeSt", "tEsT", false) );
+	REQUIRE( bx::isEqual("a", "A", false) );
+	REQUIRE(!bx::isEqual("test", "testest", false) );
+	REQUIRE( bx::isEqual("", "", false) );
+
+	// Non-letters are unaffected by case folding.
+	REQUIRE( bx::isEqual("1389-[]", "1389-[]", false) );
+	REQUIRE(!bx::isEqual("1389-[]", "1389-{}", false) );
+
+	// Mixed string types (all implicitly convert to StringView).
+	const bx::StringView    sv("RGBA");
+	const bx::StringLiteral sl("RGBA");
+	REQUIRE( bx::isEqual(sv, sl) );
+	REQUIRE( bx::isEqual(sv, "RGBA") );
+	REQUIRE( bx::isEqual("rgba", sl, false) );
+}
+
+TEST_CASE("operator==/operator!=", "[string]")
+{
+	REQUIRE(  bx::StringView("test") == bx::StringView("test") );
+	REQUIRE(  bx::StringView("test") == "test" );
+	REQUIRE(  "test" == bx::StringView("test") );
+	REQUIRE(!(bx::StringView("test") == "Test") );
+
+	REQUIRE(  bx::StringView("test") != "Test" );
+	REQUIRE(!(bx::StringView("test") != "test") );
+}
+
+TEST_CASE("isEqual constexpr", "[string]")
+{
+	STATIC_REQUIRE( bx::isEqual("1389", "1389") );
+	STATIC_REQUIRE(!bx::isEqual("1389", "1388") );
+	STATIC_REQUIRE( bx::isEqual("abvgd", "ABVGD", false) );
+	STATIC_REQUIRE(!bx::isEqual("abvgd", "ABVGD") );
+
+	STATIC_REQUIRE( bx::StringView("mac") == "mac" );
+	STATIC_REQUIRE( bx::StringView("mac") != "pod" );
+	STATIC_REQUIRE( bx::isEqual(bx::StringLiteral("pod"), bx::StringView("POD"), false) );
 }
 
 TEST_CASE("strCmpV", "[string]")
@@ -426,6 +480,40 @@ TEST_CASE("fromString double", "[string]")
 	REQUIRE(testFromString<double>(std::numeric_limits<double>::max(),    "1.7976931348623158e+308") );
 }
 
+TEST_CASE("fromString hex float", "[string]")
+{
+	double d = 1.0;
+
+	REQUIRE(bx::fromString(&d, "0x1p+0")   ); REQUIRE(d ==  1.0);
+	REQUIRE(bx::fromString(&d, "0x1P0")    ); REQUIRE(d ==  1.0);
+	REQUIRE(bx::fromString(&d, "0x1.8p+1") ); REQUIRE(d ==  3.0);
+	REQUIRE(bx::fromString(&d, "0x1p-1")   ); REQUIRE(d ==  0.5);
+	REQUIRE(bx::fromString(&d, "-0x1.4p+2")); REQUIRE(d == -5.0);
+	REQUIRE(bx::fromString(&d, "0x0.8p+1") ); REQUIRE(d ==  1.0);
+	REQUIRE(bx::fromString(&d, "0x1.8")    ); REQUIRE(d ==  1.5);
+	REQUIRE(bx::fromString(&d, "0x10")     ); REQUIRE(d == 16.0);
+
+	REQUIRE(bx::fromString(&d, "0x1.fffffep+127") );
+	REQUIRE(d == double(bx::kFloatLargest) );
+
+	REQUIRE(bx::fromString(&d, "0x1p-126") );
+	REQUIRE(d == double(bx::kFloatSmallest) );
+
+	REQUIRE(bx::fromString(&d, "0x1.fffffffffffffp+1023") );
+	REQUIRE(d == bx::kDoubleLargest);
+
+	REQUIRE(bx::fromString(&d, "0x1p-1022") );
+	REQUIRE(d == bx::kDoubleSmallest);
+
+	float f = 0.0f;
+
+	REQUIRE(bx::fromString(&f, "0x1.fffffep+127") );
+	REQUIRE(f == bx::kFloatLargest);
+
+	REQUIRE(bx::fromString(&f, "0x1p-126") );
+	REQUIRE(f == bx::kFloatSmallest);
+}
+
 static bool testFromString(int32_t _value, const char* _input)
 {
 	char tmp[1024];
@@ -601,6 +689,75 @@ TEST_CASE("strWord", "[string]")
 {
 	REQUIRE(bx::strWord(" abvgd-1389.0").isEmpty() );
 	REQUIRE(0 == bx::strCmp(bx::strWord("abvgd-1389.0"), "abvgd") );
+
+	REQUIRE(0 == bx::strCmp(bx::strWord("1389.0"), "1389") );
+}
+
+TEST_CASE("strIdentifier", "[string]")
+{
+	REQUIRE(bx::strIdentifier("").isEmpty() );
+	REQUIRE(bx::strIdentifier(" abvgd").isEmpty() );
+	REQUIRE(bx::strIdentifier("-abc").isEmpty() );
+
+	REQUIRE(bx::strIdentifier("123abc").isEmpty() );
+	REQUIRE(bx::strIdentifier("5_0").isEmpty() );
+
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("abvgd-1389.0"), "abvgd") );
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("abc123 def"),   "abc123") );
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("_abc9"),        "_abc9") );
+	REQUIRE(0 == bx::strCmp(bx::strIdentifier("ps_5_0"),       "ps_5_0") );
+
+	const bx::StringView test("123abc");
+	REQUIRE(test.getPtr() == bx::strIdentifier(test).getPtr() );
+}
+
+TEST_CASE("strFindEol strFindNl", "[string]")
+{
+	{
+		const bx::StringView test("abc");
+		REQUIRE(test.getTerm() == bx::strFindEol(test).getPtr() );
+		REQUIRE(test.getTerm() == bx::strFindNl(test).getPtr() );
+	}
+
+	{
+		const bx::StringView test("abc\ndef");
+		REQUIRE(test.getPtr() + 3 == bx::strFindEol(test).getPtr() );
+		REQUIRE(test.getPtr() + 4 == bx::strFindNl(test).getPtr() );
+	}
+
+	{
+		// End of line is the \r of a \r\n pair, new line is past the \n.
+		const bx::StringView test("abc\r\ndef");
+		REQUIRE(test.getPtr() + 3 == bx::strFindEol(test).getPtr() );
+		REQUIRE(test.getPtr() + 5 == bx::strFindNl(test).getPtr() );
+	}
+
+	{
+		// A lone \r is not a line terminator.
+		const bx::StringView test("abc\rdef\n");
+		REQUIRE(test.getPtr() + 7 == bx::strFindEol(test).getPtr() );
+		REQUIRE(test.getPtr() + 8 == bx::strFindNl(test).getPtr() );
+	}
+
+	{
+		// Must return the *first* terminator, not the first \r\n.
+		const bx::StringView test("abc\ndef\r\n");
+		REQUIRE(test.getPtr() + 3 == bx::strFindEol(test).getPtr() );
+		REQUIRE(test.getPtr() + 4 == bx::strFindNl(test).getPtr() );
+	}
+
+	{
+		const bx::StringView test("\r\n");
+		REQUIRE(test.getPtr() == bx::strFindEol(test).getPtr() );
+		REQUIRE(test.getTerm() == bx::strFindNl(test).getPtr() );
+	}
+
+	{
+		// Leading \n whose preceding \r is outside the view.
+		const bx::StringView test("a\r\nb");
+		const bx::StringView tail(test, 2, INT32_MAX);
+		REQUIRE(tail.getPtr() == bx::strFindEol(tail).getPtr() );
+	}
 }
 
 TEST_CASE("strFindBlock", "[string]")

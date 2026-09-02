@@ -4,6 +4,8 @@
  */
 
 #include <bx/file.h>
+#include <bx/os.h>
+#include <bx/url.h>
 
 #ifndef BX_CONFIG_CRT_FILE_READER_WRITER
 #	define BX_CONFIG_CRT_FILE_READER_WRITER !BX_CRT_NONE
@@ -19,14 +21,25 @@
 #	if BX_CONFIG_CRT_DIRECTORY_READER
 #		include <dirent.h>
 #	endif // BX_CONFIG_CRT_DIRECTORY_READER
-#	include <stdio.h>      // remove
+#	include <fcntl.h>      // open
+#	include <stdio.h>      // remove, rename
 #	include <sys/stat.h>   // stat, mkdir
+#	include <time.h>       // time, localtime
 #	if BX_CRT_MSVC
 #		include <direct.h> // _getcwd
+#		include <io.h>     // _close, _open
 #	else
-#		include <unistd.h> // getcwd
+#		include <unistd.h> // close, getcwd
 #	endif // BX_CRT_MSVC
 #endif // !BX_CRT_NONE
+
+#if BX_PLATFORM_WINDOWS
+#	ifndef WIN32_LEAN_AND_MEAN
+#		define WIN32_LEAN_AND_MEAN
+#	endif // WIN32_LEAN_AND_MEAN
+#	include <windows.h>
+#	include <shellapi.h>   // SHFileOperationW
+#endif // BX_PLATFORM_WINDOWS
 
 namespace bx
 {
@@ -958,6 +971,447 @@ namespace bx
 		close(&dr);
 
 		return remove(_filePath, _err);
+	}
+
+#if BX_PLATFORM_WINDOWS
+	static int32_t widen(wchar_t* _out, int32_t _max, const FilePath& _filePath)
+	{
+		return MultiByteToWideChar(CP_UTF8, 0, _filePath.getCPtr(), -1, _out, _max);
+	}
+#endif // BX_PLATFORM_WINDOWS
+
+	bool copy(const FilePath& _from, const FilePath& _to, Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		if (!_err->isOk() )
+		{
+			return false;
+		}
+
+		FileReader reader;
+
+		if (!reader.open(_from, _err) )
+		{
+			return false;
+		}
+
+		FileWriter writer;
+
+		if (!writer.open(_to, false, _err) )
+		{
+			reader.close();
+			return false;
+		}
+
+		bool result = true;
+		uint8_t buffer[4096];
+
+		while (result)
+		{
+			Error err;
+			const int32_t size = reader.read(buffer, sizeof(buffer), &err);
+
+			if (0 < size)
+			{
+				result = size == writer.write(buffer, size, _err);
+			}
+
+			if (!err.isOk() )
+			{
+				result = result && err == kErrorReaderWriterEof;
+				break;
+			}
+		}
+
+		writer.close();
+		reader.close();
+
+		if (!result
+		&&  _err->isOk() )
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Failed to copy file.");
+		}
+
+		return result;
+	}
+
+	bool move(const FilePath& _from, const FilePath& _to, Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		if (!_err->isOk() )
+		{
+			return false;
+		}
+
+#if BX_PLATFORM_WINDOWS
+		wchar_t from[kMaxFilePath+1];
+		wchar_t to[kMaxFilePath+1];
+
+		if (0 == widen(from, BX_COUNTOF(from), _from)
+		||  0 == widen(to,   BX_COUNTOF(to),   _to) )
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Failed to convert file path.");
+			return false;
+		}
+
+		if (0 == MoveFileExW(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) )
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Failed to move file.");
+			return false;
+		}
+
+		return true;
+#else
+#	if BX_CRT_NONE
+		int32_t result = -1;
+#	else
+		int32_t result = ::rename(_from.getCPtr(), _to.getCPtr() );
+#	endif // BX_CRT_NONE
+
+		if (0 == result)
+		{
+			return true;
+		}
+
+		if (!copy(_from, _to, _err) )
+		{
+			return false;
+		}
+
+		return remove(_from, _err);
+#endif // BX_PLATFORM_WINDOWS
+	}
+
+	[[maybe_unused]] static bool claimFilePath(const FilePath& _filePath, bool _isDir)
+	{
+		if (_isDir)
+		{
+			return make(_filePath);
+		}
+
+#if BX_CRT_NONE
+		BX_UNUSED(_filePath);
+		return false;
+#else
+#	if BX_CRT_MSVC
+		const int32_t fd = ::_open(_filePath.getCPtr(), _O_WRONLY | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
+#	else
+		const int32_t fd = ::open(_filePath.getCPtr(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+#	endif // BX_CRT_MSVC
+
+		if (0 > fd)
+		{
+			return false;
+		}
+
+#	if BX_CRT_MSVC
+		::_close(fd);
+#	else
+		::close(fd);
+#	endif // BX_CRT_MSVC
+
+		return true;
+#endif // BX_CRT_NONE
+	}
+
+#if BX_PLATFORM_WINDOWS
+	static bool moveToTrashImpl(const FilePath& _filePath, Error* _err)
+	{
+		wchar_t from[kMaxFilePath+1] = {};
+
+		const int32_t num = widen(from, BX_COUNTOF(from)-1, _filePath);
+
+		if (0 == num)
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Trash: Failed to convert file path.");
+			return false;
+		}
+
+		for (int32_t ii = 0; ii < num; ++ii)
+		{
+			if (L'/' == from[ii])
+			{
+				from[ii] = L'\\';
+			}
+		}
+
+		void* shell32 = dlopen("shell32.dll");
+
+		if (NULL == shell32)
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Trash: Failed to load `shell32.dll`.");
+			return false;
+		}
+
+		typedef int (WINAPI *SHFileOperationWFn)(SHFILEOPSTRUCTW*);
+		SHFileOperationWFn shFileOperationW = dlsym<SHFileOperationWFn>(shell32, "SHFileOperationW");
+
+		int32_t result = -1;
+
+		if (NULL != shFileOperationW)
+		{
+			SHFILEOPSTRUCTW op = {};
+			op.wFunc  = FO_DELETE;
+			op.pFrom  = from;
+			op.fFlags = FOF_ALLOWUNDO | FOF_NO_UI;
+
+			result = shFileOperationW(&op);
+		}
+
+		dlclose(shell32);
+
+		if (0 != result)
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Trash: Failed to move file into Recycle Bin.");
+			return false;
+		}
+
+		return true;
+	}
+#elif BX_CRT_NONE
+	static bool moveToTrashImpl(const FilePath& _filePath, Error* _err)
+	{
+		BX_UNUSED(_filePath);
+
+		BX_ERROR_SET(_err, kErrorAccess, "Trash: Not supported.");
+		return false;
+	}
+#else
+	static bool reserveTrashPath(
+		  FilePath& _outFilePath
+		, FilePath& _outInfoPath
+		, const FilePath& _filesDir
+		, const FilePath& _infoDir
+		, const StringView& _fileName
+		, const tm* _lt
+		, bool _isDir
+		, Error* _err
+		)
+	{
+#if BX_PLATFORM_OSX
+		BX_UNUSED(_outInfoPath, _infoDir);
+#endif // BX_PLATFORM_OSX
+
+		const FilePath tmp(_fileName);
+		const StringView baseName = tmp.getBaseName();
+		const StringView ext      = tmp.getExt();
+
+		for (int32_t ii = 0; ii < 8; ++ii)
+		{
+			char name[kMaxFilePath];
+
+			if (0 == ii)
+			{
+				strCopy(name, BX_COUNTOF(name), _fileName);
+			}
+			else
+			{
+				snprintf(name, BX_COUNTOF(name), "%.*s.%04d%02d%02dT%02d%02d%02d-%d%.*s"
+					, baseName.getLength()
+					, baseName.getPtr()
+					, _lt->tm_year + 1900
+					, _lt->tm_mon  + 1
+					, _lt->tm_mday
+					, _lt->tm_hour
+					, _lt->tm_min
+					, _lt->tm_sec
+					, ii
+					, ext.getLength()
+					, ext.getPtr()
+					);
+			}
+
+#if !BX_PLATFORM_OSX
+			char infoName[kMaxFilePath];
+			snprintf(infoName, BX_COUNTOF(infoName), "%s.trashinfo", name);
+
+			FilePath infoPath(_infoDir);
+			infoPath.join(infoName);
+
+			if (!claimFilePath(infoPath, false) )
+			{
+				continue;
+			}
+#endif // !BX_PLATFORM_OSX
+
+			FilePath filePath(_filesDir);
+			filePath.join(name);
+
+			if (!claimFilePath(filePath, _isDir) )
+			{
+#if !BX_PLATFORM_OSX
+				remove(infoPath);
+#endif // !BX_PLATFORM_OSX
+				continue;
+			}
+
+			_outFilePath = filePath;
+
+#if !BX_PLATFORM_OSX
+			_outInfoPath = infoPath;
+#endif // !BX_PLATFORM_OSX
+
+			return true;
+		}
+
+		BX_ERROR_SET(_err, kErrorAccess, "Trash: Failed to reserve unique file name.");
+
+		return false;
+	}
+
+	static bool moveToTrashImpl(const FilePath& _filePath, Error* _err)
+	{
+		FilePath trashDir;
+		FilePath filesDir;
+		FilePath infoDir;
+
+#if BX_PLATFORM_OSX
+		trashDir.set(Dir::Home);
+		trashDir.join(".Trash");
+
+		filesDir = trashDir;
+#else
+		// Reference(s):
+		//  - The FreeDesktop.org Trash specification
+		//    https://specifications.freedesktop.org/trash-spec/latest/
+		//
+		char tmp[kMaxFilePath];
+		uint32_t size = BX_COUNTOF(tmp);
+
+		if (getEnv(tmp, &size, "XDG_DATA_HOME")
+		&&  0 < size)
+		{
+			trashDir.set(StringView(tmp, size) );
+		}
+		else
+		{
+			trashDir.set(Dir::Home);
+			trashDir.join(".local/share");
+		}
+
+		trashDir.join("Trash");
+
+		filesDir = trashDir;
+		filesDir.join("files");
+
+		infoDir = trashDir;
+		infoDir.join("info");
+#endif // BX_PLATFORM_OSX
+
+		if (!makeAll(filesDir, _err) )
+		{
+			return false;
+		}
+
+#if !BX_PLATFORM_OSX
+		if (!makeAll(infoDir, _err) )
+		{
+			return false;
+		}
+#endif // !BX_PLATFORM_OSX
+
+		const time_t tt = ::time(NULL);
+		const tm* lt = ::localtime(&tt);
+
+		FileInfo fi;
+
+		if (!stat(fi, _filePath) )
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Trash: File doesn't exist.");
+			return false;
+		}
+
+		FilePath dstPath;
+		FilePath infoPath;
+
+		if (!reserveTrashPath(dstPath, infoPath, filesDir, infoDir, _filePath.getFileName(), lt, FileType::Dir == fi.type, _err) )
+		{
+			return false;
+		}
+
+#if !BX_PLATFORM_OSX
+		{
+			FileWriter writer;
+
+			if (!writer.open(infoPath, false, _err) )
+			{
+				remove(infoPath);
+				remove(dstPath);
+				return false;
+			}
+
+			char url[kMaxFilePath*3];
+			urlEncode(url, BX_COUNTOF(url), _filePath, UrlEncoding::Path);
+
+			char info[BX_COUNTOF(url) + 128];
+			const int32_t len = snprintf(info, BX_COUNTOF(info)
+				, "[Trash Info]\nPath=%s\nDeletionDate=%04d-%02d-%02dT%02d:%02d:%02d\n"
+				, url
+				, lt->tm_year + 1900
+				, lt->tm_mon  + 1
+				, lt->tm_mday
+				, lt->tm_hour
+				, lt->tm_min
+				, lt->tm_sec
+				);
+
+			write(&writer, info, len, _err);
+			writer.close();
+
+			if (!_err->isOk() )
+			{
+				remove(infoPath);
+				remove(dstPath);
+				return false;
+			}
+		}
+#endif // !BX_PLATFORM_OSX
+
+		if (!move(_filePath, dstPath, _err) )
+		{
+#if !BX_PLATFORM_OSX
+			remove(infoPath);
+#endif // !BX_PLATFORM_OSX
+			remove(dstPath);
+			return false;
+		}
+
+		return true;
+	}
+#endif // BX_PLATFORM_WINDOWS
+
+	bool moveToTrash(const FilePath& _filePath, Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		if (!_err->isOk() )
+		{
+			return false;
+		}
+
+		FileInfo fi;
+
+		if (!stat(fi, _filePath) )
+		{
+			BX_ERROR_SET(_err, kErrorAccess, "Trash: File doesn't exist.");
+			return false;
+		}
+
+		FilePath filePath;
+
+		if (_filePath.isAbsolute() )
+		{
+			filePath = _filePath;
+		}
+		else
+		{
+			filePath.set(Dir::Current);
+			filePath.join(_filePath);
+		}
+
+		return moveToTrashImpl(filePath, _err);
 	}
 
 } // namespace bx

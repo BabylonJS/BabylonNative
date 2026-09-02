@@ -41,6 +41,39 @@ static const UrlTest s_urlTest[] =
 	, "file:///d:/tmp/archive.tar.gz",
 	{ "file", "", "", "", "", "/d:/tmp/archive.tar.gz", "", "" },
 	},
+
+	{ true
+	, "scheme://host.rs/path#fragment",
+	{ "scheme", "", "", "host.rs", "", "/path", "", "fragment" },
+	},
+	{ true
+	, "scheme://host.rs/path?query#fragment",
+	{ "scheme", "", "", "host.rs", "", "/path", "query", "fragment" },
+	},
+	{ true
+	, "scheme://host.rs/path?",
+	{ "scheme", "", "", "host.rs", "", "/path", "", "" },
+	},
+	{ true
+	, "scheme://username:password@host.rs/",
+	{ "scheme", "username", "password", "host.rs", "", "/", "", "" },
+	},
+	{ true
+	, "scheme://host.rs",
+	{ "scheme", "", "", "host.rs", "", "", "", "" },
+	},
+	{ false // Fragment must not precede query.
+	, "scheme://host.rs/path#fragment?query",
+	{ "", "", "", "", "", "", "", "" },
+	},
+	{ false // Neither scheme nor path.
+	, "host.rs",
+	{ "", "", "", "", "", "", "", "" },
+	},
+	{ false // Scheme must be alpha.
+	, "1scheme://host.rs/",
+	{ "", "", "", "", "", "", "", "" },
+	},
 };
 
 TEST_CASE("tokenizeUrl", "[url][string]")
@@ -66,4 +99,75 @@ TEST_CASE("tokenizeUrl", "[url][string]")
 			}
 		}
 	}
+}
+
+struct UrlEncodeTest
+{
+	const char* input;
+	bx::UrlEncoding::Enum encoding;
+	const char* expected;
+};
+
+static const UrlEncodeTest s_urlEncodeTest[] =
+{
+	{ "",              bx::UrlEncoding::Component, ""                    },
+	{ "abcABC123",     bx::UrlEncoding::Component, "abcABC123"           },
+	{ "-_.~",          bx::UrlEncoding::Component, "-_.~"                },
+	{ "a b",           bx::UrlEncoding::Component, "a%20b"               },
+	{ "100%",          bx::UrlEncoding::Component, "100%25"              },
+	{ "a+b=c&d",       bx::UrlEncoding::Component, "a%2Bb%3Dc%26d"       },
+	{ "\xc3\xa9",      bx::UrlEncoding::Component, "%C3%A9"              },
+	{ "/tmp/a b.txt",  bx::UrlEncoding::Component, "%2Ftmp%2Fa%20b.txt"  },
+	{ "/tmp/a b.txt",  bx::UrlEncoding::Path,      "/tmp/a%20b.txt"      },
+	{ "\xc3\xa9",      bx::UrlEncoding::Path,      "%C3%A9"              },
+};
+
+TEST_CASE("urlEncode", "[url][string]")
+{
+	for (uint32_t ii = 0; ii < BX_COUNTOF(s_urlEncodeTest); ++ii)
+	{
+		const UrlEncodeTest& test = s_urlEncodeTest[ii];
+
+		char tmp[128];
+		const int32_t len = bx::urlEncode(tmp, BX_COUNTOF(tmp), test.input, test.encoding);
+
+		REQUIRE(0 == bx::strCmp(test.expected, tmp) );
+		REQUIRE(len == bx::strLen(test.expected) );
+	}
+}
+
+TEST_CASE("urlEncode truncate", "[url][string]")
+{
+	{
+		char tmp[4];
+		REQUIRE(3 == bx::urlEncode(tmp, BX_COUNTOF(tmp), "abcdef") );
+		REQUIRE(0 == bx::strCmp("abc", tmp) );
+	}
+
+	{
+		char tmp[4];
+		REQUIRE(3 == bx::urlEncode(tmp, BX_COUNTOF(tmp), "  ") );
+		REQUIRE(0 == bx::strCmp("%20", tmp) );
+	}
+
+	{
+		char tmp[3];
+		REQUIRE(0 == bx::urlEncode(tmp, BX_COUNTOF(tmp), " ") );
+		REQUIRE(0 == bx::strCmp("", tmp) );
+	}
+
+	{
+		char tmp[1];
+		REQUIRE(0 == bx::urlEncode(tmp, BX_COUNTOF(tmp), "abc") );
+		REQUIRE(0 == bx::strCmp("", tmp) );
+	}
+}
+
+TEST_CASE("urlEncode StringView", "[url][string]")
+{
+	const bx::StringView str("abc def", 3);
+
+	char tmp[128];
+	REQUIRE(3 == bx::urlEncode(tmp, BX_COUNTOF(tmp), str) );
+	REQUIRE(0 == bx::strCmp("abc", tmp) );
 }

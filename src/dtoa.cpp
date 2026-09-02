@@ -1059,8 +1059,124 @@ namespace bx
 		return result;
 	}
 
+	static bool toHexDigit(uint32_t* _out, char _ch)
+	{
+		if (_ch >= '0' && _ch <= '9')
+		{
+			*_out = uint32_t(_ch - '0');
+			return true;
+		}
+
+		if (_ch >= 'a' && _ch <= 'f')
+		{
+			*_out = uint32_t(_ch - 'a' + 10);
+			return true;
+		}
+
+		if (_ch >= 'A' && _ch <= 'F')
+		{
+			*_out = uint32_t(_ch - 'A' + 10);
+			return true;
+		}
+
+		return false;
+	}
+
+	static bool fromStringHex(double* _out, const StringView& _str)
+	{
+		const char* ptr = _str.getPtr();
+		const char* end = _str.getTerm();
+
+		bool negative = false;
+
+		if (ptr < end
+		&& ('-' == *ptr || '+' == *ptr) )
+		{
+			negative = ('-' == *ptr);
+			++ptr;
+		}
+
+		if ( (end - ptr) < 2
+		||  '0' != ptr[0]
+		|| ('x' != ptr[1] && 'X' != ptr[1]) )
+		{
+			return false;
+		}
+
+		ptr += 2;
+
+		double   mantissa = 0.0;
+		bool     anyDigit = false;
+		uint32_t digit;
+
+		for (; ptr < end && toHexDigit(&digit, *ptr); ++ptr)
+		{
+			mantissa  = mantissa * 16.0 + double(digit);
+			anyDigit  = true;
+		}
+
+		if (ptr < end && '.' == *ptr)
+		{
+			++ptr;
+			double scale = 1.0 / 16.0;
+			for (; ptr < end && toHexDigit(&digit, *ptr); ++ptr)
+			{
+				mantissa += double(digit) * scale;
+				scale    *= 1.0 / 16.0;
+				anyDigit  = true;
+			}
+		}
+
+		if (!anyDigit)
+		{
+			return false; // "0x" with no hex digits
+		}
+
+		int32_t exponent = 0;
+		if (ptr < end
+		&& ('p' == *ptr || 'P' == *ptr) )
+		{
+			++ptr;
+
+			int32_t expSign = 1;
+			if (ptr < end && ('+' == *ptr || '-' == *ptr) )
+			{
+				expSign = ('-' == *ptr) ? -1 : 1; ++ptr;
+			}
+
+			int32_t magnitude = 0;
+			for (; ptr < end && *ptr >= '0' && *ptr <= '9'; ++ptr)
+			{
+				magnitude = magnitude * 10 + int32_t(*ptr - '0');
+			}
+
+			exponent = expSign * magnitude;
+		}
+
+		double value = mantissa;
+
+		for (int32_t ii = 0; ii < exponent; ++ii)
+		{
+			value *= 2.0;
+		}
+
+		for (int32_t ii = 0; ii > exponent; --ii)
+		{
+			value *= 0.5;
+		}
+
+		*_out = negative ? -value : value;
+
+		return true;
+	}
+
 	bool fromString(double* _out, const StringView& _str)
 	{
+		if (fromStringHex(_out, _str) )
+		{
+			return true;
+		}
+
 		PrepNumber pn;
 		pn.mantissa = 0;
 		pn.negative = 0;

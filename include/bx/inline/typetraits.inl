@@ -367,6 +367,15 @@ namespace bx
 	}
 
 	//---
+	template<typename Ty> struct HasUniqueObjectRepresentationT : public BoolConstantT<__has_unique_object_representations(Ty)> {};
+
+	template<typename Ty>
+	inline constexpr bool hasUniqueObjectRepresentation()
+	{
+		return HasUniqueObjectRepresentationT<Ty>::value;
+	}
+
+	//---
 	template<typename Ty> struct IsTriviallyDestructibleT : public BoolConstantT<
 #if BX_COMPILER_GCC
 		__has_trivial_destructor(Ty)

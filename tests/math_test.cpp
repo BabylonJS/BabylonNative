@@ -861,6 +861,43 @@ TEST_CASE("bitsToFloat, floatToBits, bitsToDouble, doubleToBits", "[math]")
 	STATIC_REQUIRE(0x123456789abcdef0ull == bx::doubleToBits(bx::bitsToDouble(0x123456789abcdef0ull) ) );
 }
 
+TEST_CASE("floatFlip", "[math]")
+{
+	const float values[] =
+	{
+		bx::LimitsT<float>::min,
+		-1000.0f,
+		  -30.0f,
+		  -10.0f,
+		   -1.0f,
+		   -0.5f,
+		   -0.0f,
+		    0.0f,
+		    0.5f,
+		    1.0f,
+		   10.0f,
+		   30.0f,
+		 1000.0f,
+		 bx::LimitsT<float>::max,
+	};
+
+	for (uint32_t ii = 1; ii < BX_COUNTOF(values); ++ii)
+	{
+		const uint32_t prev = bx::floatFlip(bx::floatToBits(values[ii-1]) );
+		const uint32_t curr = bx::floatFlip(bx::floatToBits(values[ii  ]) );
+
+		INFO("values[" << ii-1 << "] = " << values[ii-1] << " -> " << prev);
+		INFO("values[" << ii   << "] = " << values[ii  ] << " -> " << curr);
+
+		REQUIRE(prev <= curr);
+	}
+
+	REQUIRE(bx::floatFlip(bx::floatToBits(-0.0f) ) < bx::floatFlip(bx::floatToBits(0.0f) ) );
+
+	REQUIRE(bx::floatFlip(bx::floatToBits( 1.0f) ) != bx::floatFlip(bx::floatToBits(bx::bitsToFloat(bx::floatToBits( 1.0f)+1) ) ) );
+	REQUIRE(bx::floatFlip(bx::floatToBits(-1.0f) ) != bx::floatFlip(bx::floatToBits(bx::bitsToFloat(bx::floatToBits(-1.0f)+1) ) ) );
+}
+
 TEST_CASE("lerp", "[math]")
 {
 	STATIC_REQUIRE(1389.0f == bx::lerp(1389.0f, 1453.0f, 0.0f) );

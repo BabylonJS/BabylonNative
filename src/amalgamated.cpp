@@ -18,6 +18,7 @@
 #include "mutex.cpp"
 #include "os.cpp"
 #include "process.cpp"
+#include "scanner.cpp"
 #include "semaphore.cpp"
 #include "settings.cpp"
 #include "sort.cpp"

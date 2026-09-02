@@ -3,10 +3,36 @@
  * License: https://github.com/bkaradzic/bnet#license-bsd-2-clause
  */
 
+#include <bx/scanner.h>
 #include <bx/url.h>
 
 namespace bx
 {
+	static bool isNotSlash(char _ch)
+	{
+		return '/' != _ch;
+	}
+
+	static bool isNotColon(char _ch)
+	{
+		return ':' != _ch;
+	}
+
+	static bool isNotQuery(char _ch)
+	{
+		return '?' != _ch;
+	}
+
+	static bool isNotFragment(char _ch)
+	{
+		return '#' != _ch;
+	}
+
+	static bool isNotQueryOrFragment(char _ch)
+	{
+		return isNotQuery(_ch) && isNotFragment(_ch);
+	}
+
 	UrlView::UrlView()
 	{
 	}
@@ -23,22 +49,14 @@ namespace bx
 	{
 		clear();
 
-		const char* term  = _url.getTerm();
-		StringView schemeEnd = strFind(_url, "://");
-		const char* hostStart = !schemeEnd.isEmpty() ? schemeEnd.getTerm() : _url.getPtr();
-		StringView path = strFind(StringView(hostStart, term), '/');
+		Scanner scanner(_url);
 
-		if (schemeEnd.isEmpty()
-		&&  path.isEmpty() )
+		const StringView scheme = scanner.acceptUntil("://");
+
+		const bool hasScheme = !scanner.accept("://").isEmpty();
+
+		if (hasScheme)
 		{
-			return false;
-		}
-
-		if (!schemeEnd.isEmpty()
-		&& (path.isEmpty() || path.getPtr() > schemeEnd.getPtr() ) )
-		{
-			const StringView scheme(_url.getPtr(), schemeEnd.getPtr() );
-
 			if (!isAlpha(scheme) )
 			{
 				return false;
@@ -47,65 +65,58 @@ namespace bx
 			m_tokens[Scheme].set(scheme);
 		}
 
-		if (!path.isEmpty() )
-		{
-			path.set(path.getPtr(), term);
-			const StringView query    = strFind(path, '?');
-			const StringView fragment = strFind(path, '#');
+		const StringView authority = scanner.acceptWhile(isNotSlash);
 
-			if (!fragment.isEmpty()
-			&&   fragment.getPtr() < query.getPtr() )
+		const bool hasPath = !scanner.peek('/').isEmpty();
+
+		if (!hasScheme
+		&&  !hasPath)
+		{
+			return false;
+		}
+
+		if (hasPath)
+		{
+			m_tokens[Path].set(scanner.acceptWhile(isNotQueryOrFragment) );
+
+			if (!scanner.accept('?').isEmpty() )
+			{
+				m_tokens[Query].set(scanner.acceptWhile(isNotFragment) );
+			}
+
+			if (!scanner.accept('#').isEmpty() )
+			{
+				m_tokens[Fragment].set(scanner.acceptWhile(isNotQuery) );
+			}
+
+			// Anything left over is a query following a fragment.
+			if (!scanner.isDone() )
 			{
 				return false;
 			}
-
-			m_tokens[Path].set(path.getPtr()
-				, !query.isEmpty()    ? query.getPtr()
-				: !fragment.isEmpty() ? fragment.getPtr()
-				: term
-				);
-
-			if (!query.isEmpty() )
-			{
-				m_tokens[Query].set(query.getPtr()+1
-					, !fragment.isEmpty() ? fragment.getPtr()
-					: term
-					);
-			}
-
-			if (!fragment.isEmpty() )
-			{
-				m_tokens[Fragment].set(fragment.getPtr()+1, term);
-			}
-
-			term = path.getPtr();
 		}
 
-		const StringView userPassEnd = strFind(StringView(hostStart, term), '@');
-		const char* userPassStart = !userPassEnd.isEmpty() ? hostStart : NULL;
-		hostStart = !userPassEnd.isEmpty() ? userPassEnd.getPtr()+1 : hostStart;
-		const StringView portStart = strFind(StringView(hostStart, term), ':');
+		Scanner authorityScanner(authority);
 
-		m_tokens[Host].set(hostStart, !portStart.isEmpty() ? portStart.getPtr() : term);
+		const StringView userInfo = authorityScanner.acceptUntil("@");
 
-		if (!portStart.isEmpty())
+		if (!authorityScanner.accept('@').isEmpty() )
 		{
-			m_tokens[Port].set(portStart.getPtr()+1, term);
+			Scanner userInfoScanner(userInfo);
+
+			m_tokens[UserName].set(userInfoScanner.acceptWhile(isNotColon) );
+
+			if (!userInfoScanner.accept(':').isEmpty() )
+			{
+				m_tokens[Password].set(userInfoScanner.acceptAll() );
+			}
 		}
 
-		if (NULL != userPassStart)
+		m_tokens[Host].set(authorityScanner.acceptWhile(isNotColon) );
+
+		if (!authorityScanner.accept(':').isEmpty() )
 		{
-			StringView passStart = strFind(StringView(userPassStart, userPassEnd.getPtr() ), ':');
-
-			m_tokens[UserName].set(userPassStart
-				, !passStart.isEmpty() ? passStart.getPtr()
-				: userPassEnd.getPtr()
-				);
-
-			if (!passStart.isEmpty() )
-			{
-				m_tokens[Password].set(passStart.getPtr()+1, userPassEnd.getPtr() );
-			}
+			m_tokens[Port].set(authorityScanner.acceptAll() );
 		}
 
 		return true;
@@ -116,42 +127,59 @@ namespace bx
 		return m_tokens[_token];
 	}
 
-	static char toHex(char _nible)
+	static char toHex(uint8_t _nible)
 	{
 		return "0123456789ABCDEF"[_nible&0xf];
 	}
 
 	// https://secure.wikimedia.org/wikipedia/en/wiki/URL_encoding
-	void urlEncode(char* _out, uint32_t _max, const StringView& _str)
+	int32_t urlEncode(char* _out, int32_t _max, const StringView& _str, UrlEncoding::Enum _encoding)
 	{
-		_max--; // need space for zero terminator
-
-		const char* str  = _str.getPtr();
-		const char* term = _str.getTerm();
-
-		uint32_t ii = 0;
-		for (char ch = *str++
-			; str <= term && ii < _max
-			; ch = *str++
-			)
+		if (0 >= _max)
 		{
+			return 0;
+		}
+
+		const char* str = _str.getPtr();
+
+		const int32_t max = _max-1; // need space for zero terminator
+		int32_t len = 0;
+
+		for (int32_t ii = 0, num = _str.getLength(); ii < num; ++ii)
+		{
+			const char ch = str[ii];
+
 			if (isAlphaNum(ch)
-			||  ch == '-'
-			||  ch == '_'
-			||  ch == '.'
-			||  ch == '~')
+			||  '-' == ch
+			||  '_' == ch
+			||  '.' == ch
+			||  '~' == ch
+			|| ('/' == ch && UrlEncoding::Path == _encoding) )
 			{
-				_out[ii++] = ch;
+				if (max < len+1)
+				{
+					break;
+				}
+
+				_out[len++] = ch;
 			}
-			else if (ii+3 < _max)
+			else
 			{
-				_out[ii++] = '%';
-				_out[ii++] = toHex(ch>>4);
-				_out[ii++] = toHex(ch);
+				// Escape sequence must not be split by truncation.
+				if (max < len+3)
+				{
+					break;
+				}
+
+				_out[len++] = '%';
+				_out[len++] = toHex(uint8_t(ch)>>4);
+				_out[len++] = toHex(uint8_t(ch) );
 			}
 		}
 
-		_out[ii] = '\0';
+		_out[len] = '\0';
+
+		return len;
 	}
 
 } // namespace bx

@@ -46,8 +46,10 @@ namespace bx
 	private:
 		Settings();
 
+		struct Ini;
+
 		AllocatorI* m_allocator;
-		void* m_ini;
+		Ini*        m_ini;
 	};
 
 	///

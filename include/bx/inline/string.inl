@@ -188,7 +188,7 @@ namespace bx
 		return m_0terminated;
 	}
 
-	inline constexpr bool operator==(const StringView& _lhs, const StringView& _rhs)
+	inline BX_CONSTEXPR_FUNC bool isEqual(const StringView& _lhs, const StringView& _rhs, bool _caseSensitive)
 	{
 		const int32_t len = _lhs.getLength();
 
@@ -214,14 +214,43 @@ namespace bx
 			}
 		}
 
-		for (int32_t ii = 0, num = len-1
-			; ii < num && *lhs == *rhs
-			; ++ii, ++lhs, ++rhs
-			)
+		if (_caseSensitive)
 		{
+			for (int32_t ii = 0; ii < len; ++ii)
+			{
+				if (lhs[ii] != rhs[ii])
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 
-		return *lhs == *rhs;
+		for (int32_t ii = 0; ii < len; ++ii)
+		{
+			const char lch = lhs[ii];
+			const char rch = rhs[ii];
+			const char ll  = 'A' <= lch && lch <= 'Z' ? char(lch + 0x20) : lch;
+			const char rl  = 'A' <= rch && rch <= 'Z' ? char(rch + 0x20) : rch;
+
+			if (ll != rl)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	inline constexpr bool operator==(const StringView& _lhs, const StringView& _rhs)
+	{
+		return isEqual(_lhs, _rhs);
+	}
+
+	inline constexpr bool operator!=(const StringView& _lhs, const StringView& _rhs)
+	{
+		return !(_lhs == _rhs);
 	}
 
 	inline constexpr bool overlap(const StringView& _a, const StringView& _b)
@@ -432,48 +461,119 @@ namespace bx
 		return StringView(m_ptr, m_len);
 	}
 
+	inline BX_CONSTEXPR_FUNC bool isInRange(char _ch, char _from, char _to)
+	{
+		return unsigned(_ch - _from) <= unsigned(_to-_from);
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isSpace(char _ch)
+	{
+		return ' '  == _ch // Space.
+			|| '\t' == _ch // Horizontal tab.
+			|| '\n' == _ch // Line feed / new line.
+			|| '\r' == _ch // Carriage return.
+			|| '\v' == _ch // Vertical tab.
+			|| '\f' == _ch // Form feed / new page.
+			;
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isSpaceHoriz(char _ch)
+	{
+		return false
+			|| ' ' == _ch
+			|| '\t' == _ch
+			|| '\r' == _ch
+			;
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isUpper(char _ch)
+	{
+		return isInRange(_ch, 'A', 'Z');
+	}
+
+	inline BX_CONSTEXPR_FUNC char toUpper(char _ch)
+	{
+		return _ch - (isLower(_ch) ? 0x20 : 0);
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isLower(char _ch)
+	{
+		return isInRange(_ch, 'a', 'z');
+	}
+
+	inline BX_CONSTEXPR_FUNC char toLower(char _ch)
+	{
+		return _ch + (isUpper(_ch) ? 0x20 : 0);
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isAlpha(char _ch)
+	{
+		return isLower(_ch) || isUpper(_ch);
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isNumeric(char _ch)
+	{
+		return isInRange(_ch, '0', '9');
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isAlphaNum(char _ch)
+	{
+		return false
+			|| isAlpha(_ch)
+			|| isNumeric(_ch)
+			;
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isHexNum(char _ch)
+	{
+		return false
+			|| isInRange(toLower(_ch), 'a', 'f')
+			|| isNumeric(_ch)
+			;
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isOctNum(char _ch)
+	{
+		return isInRange(_ch, '0', '7');
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isBinNum(char _ch)
+	{
+		return isInRange(_ch, '0', '1');
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isPrint(char _ch)
+	{
+		return isInRange(_ch, ' ', '~');
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isIdentStart(char _ch)
+	{
+		return false
+			|| isAlpha(_ch)
+			|| '_' == _ch
+			;
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isIdentChar(char _ch)
+	{
+		return false
+			|| isAlphaNum(_ch)
+			|| '_' == _ch
+			;
+	}
+
+	inline BX_CONSTEXPR_FUNC bool isPathSeparator(char _ch)
+	{
+		return false
+			|| '/'  == _ch
+			|| '\\' == _ch
+			;
+	}
+
 	inline StringView strSubstr(const StringView& _str, int32_t _start, int32_t _len)
 	{
 		return StringView(_str, _start, _len);
-	}
-
-	inline LineReader::LineReader(const StringView& _str)
-		: m_str(_str)
-	{
-		reset();
-	}
-
-	inline void LineReader::reset()
-	{
-		m_curr = m_str;
-		m_line = 0;
-	}
-
-	inline StringView LineReader::next()
-	{
-		if (m_curr.getPtr() != m_str.getTerm() )
-		{
-			++m_line;
-
-			StringView curr(m_curr);
-			m_curr = strFindNl(m_curr);
-
-			StringView line(curr.getPtr(), m_curr.getPtr() );
-
-			return strRTrim(strRTrim(line, "\n"), "\r");
-		}
-
-		return m_curr;
-	}
-
-	inline bool LineReader::isDone() const
-	{
-		return m_curr.getPtr() == m_str.getTerm();
-	}
-
-	inline uint32_t LineReader::getLine() const
-	{
-		return m_line;
 	}
 
 	inline constexpr int32_t strLen(const StringView& _str, int32_t _max)

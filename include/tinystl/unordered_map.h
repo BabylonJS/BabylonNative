@@ -57,6 +57,7 @@ namespace tinystl {
 		const_iterator end() const;
 
 		void clear();
+		void reset();
 		bool empty() const;
 		size_t size() const;
 
@@ -180,6 +181,13 @@ namespace tinystl {
 
 	template<typename Key, typename Value, typename Alloc>
 	inline void unordered_map<Key, Value, Alloc>::clear() {
+		reset();
+		m_buckets.last = m_buckets.first;
+		buffer_resize<pointer, Alloc>(&m_buckets, 9, 0);
+	}
+
+	template<typename Key, typename Value, typename Alloc>
+	inline void unordered_map<Key, Value, Alloc>::reset() {
 		if (m_buckets.first) {
 			pointer it = *m_buckets.first;
 			while (it) {
@@ -189,10 +197,10 @@ namespace tinystl {
 
 				it = next;
 			}
+
+			buffer_fill_urange(m_buckets.first, m_buckets.last, pointer(0));
 		}
 
-		m_buckets.last = m_buckets.first;
-		buffer_resize<pointer, Alloc>(&m_buckets, 9, 0);
 		m_size = 0;
 	}
 

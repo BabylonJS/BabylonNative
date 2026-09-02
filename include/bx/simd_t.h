@@ -72,7 +72,7 @@
 #	define BX_SIMD_AVX  1
 #endif //
 
-#if defined(__SSE2__) || (BX_COMPILER_MSVC && (BX_ARCH_64BIT || _M_IX86_FP >= 2) )
+#if BX_CPU_X86 && (defined(__SSE2__) || (BX_COMPILER_MSVC && (BX_ARCH_64BIT || _M_IX86_FP >= 2) ) )
 #	include <emmintrin.h>
 #	include <smmintrin.h> // SSE4.1  minspec is SSE4.2 so always available
 #	if defined(__SSE4_2__) || BX_COMPILER_MSVC

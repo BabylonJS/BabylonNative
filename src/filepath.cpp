@@ -6,6 +6,7 @@
 #include <bx/file.h>
 #include <bx/os.h>
 #include <bx/readerwriter.h>
+#include <bx/scanner.h>
 
 #if BX_CRT_MSVC
 #	include <direct.h>   // _getcwd
@@ -24,12 +25,9 @@ extern "C" int _NSGetExecutablePath(char* _buf, uint32_t* _bufSize);
 
 namespace bx
 {
-	static bool isPathSeparator(char _ch)
+	static bool isNotPathSeparator(char _ch)
 	{
-		return false
-			|| '/'  == _ch
-			|| '\\' == _ch
-			;
+		return !isPathSeparator(_ch);
 	}
 
 	static int32_t normalizeFilePath(char* _dst, int32_t _dstSize, const char* _src, int32_t _num)
@@ -38,9 +36,9 @@ namespace bx
 		// - Lexical File Names in Plan 9 or Getting Dot-Dot Right
 		//   https://web.archive.org/web/20180629044444/https://9p.io/sys/doc/lexnames.html
 
-		const int32_t num = strLen(_src, _num);
+		const StringView src(_src, strLen(_src, _num) );
 
-		if (0 == num)
+		if (src.isEmpty() )
 		{
 			return strCopy(_dst, _dstSize, ".");
 		}
@@ -50,91 +48,80 @@ namespace bx
 		StaticMemoryBlockWriter writer(_dst, _dstSize);
 		Error err;
 
-		int32_t idx      = 0;
-		int32_t dotdot   = 0;
+		Scanner scanner(src);
 
-		if (2 <= num
-		&&  ':' == _src[1])
+		// Everything below `dotdot` is a prefix `..` can't back out of.
+		int32_t dotdot = 0;
+
+		if (2 <= src.getLength()
+		&&  ':' == src.getPtr()[1])
 		{
-			size += write(&writer, toUpper(_src[idx]), &err);
+			size += write(&writer, toUpper(src.getPtr()[0]), &err);
 			size += write(&writer, ':', &err);
-			idx  += 2;
+			scanner.seek(2);
 			dotdot = size;
 		}
 
-		const int32_t slashIdx = idx;
+		const bool rooted = !scanner.accept(isPathSeparator).isEmpty();
 
-		bool rooted = isPathSeparator(_src[idx]);
 		if (rooted)
 		{
 			size += write(&writer, '/', &err);
-			++idx;
 			dotdot = size;
 		}
 
+		const int32_t rootSize = size;
+
 		bool trailingSlash = false;
 
-		while (idx < num && err.isOk() )
+		while (!scanner.isDone()
+		&&     err.isOk() )
 		{
-			switch (_src[idx])
+			if (!scanner.acceptWhile(isPathSeparator).isEmpty() )
 			{
-			case '/':
-			case '\\':
-				++idx;
-				trailingSlash = idx == num;
-				break;
-
-			case '.':
-				if (idx+1 == num
-				||  isPathSeparator(_src[idx+1]) )
-				{
-					++idx;
-					break;
-				}
-
-				if ('.' == _src[idx+1]
-				&& (idx+2 == num || isPathSeparator(_src[idx+2]) ) )
-				{
-					idx += 2;
-
-					if (dotdot < size)
-					{
-						for (--size
-							; dotdot < size && !isPathSeparator(_dst[size])
-							; --size)
-						{
-						}
-						seek(&writer, size, Whence::Begin);
-					}
-					else if (!rooted)
-					{
-						if (0 < size)
-						{
-							size += write(&writer, '/', &err);
-						}
-
-						size += write(&writer, "..", &err);
-						dotdot = size;
-					}
-
-					break;
-				}
-				[[fallthrough]];
-
-			default:
-				if ( ( rooted && slashIdx+1 != size)
-				||   (!rooted &&          0 != size) )
-				{
-					size += write(&writer, '/', &err);
-				}
-
-				for (; idx < num && !isPathSeparator(_src[idx]); ++idx)
-				{
-					size += write(&writer, _src[idx], &err);
-				}
-
-				break;
+				trailingSlash = scanner.isDone();
+				continue;
 			}
+
+			const StringView component = scanner.acceptWhile(isNotPathSeparator);
+
+			if (component == ".")
+			{
+				continue;
+			}
+
+			if (component == "..")
+			{
+				if (dotdot < size)
+				{
+					for (--size
+						; dotdot < size && !isPathSeparator(_dst[size])
+						; --size)
+					{
+					}
+
+					seek(&writer, size, Whence::Begin);
+				}
+				else if (!rooted)
+				{
+					if (0 < size)
+					{
+						size += write(&writer, '/', &err);
+					}
+
+					size += write(&writer, "..", &err);
+					dotdot = size;
+				}
+
+				continue;
+			}
+
+			if (rooted ? rootSize != size : 0 != size)
+			{
+				size += write(&writer, '/', &err);
+			}
+
+			size += write(&writer, component, &err);
 		}
 
 		if (0 == size)

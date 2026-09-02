@@ -801,37 +801,35 @@ namespace bx
 		return result;
 	}
 
+	template<int32_t BitT, typename Ty>
+	BX_SIMD_INLINE Ty simd_x32_bit_mask_ni(Ty _count)
+	{
+		const Ty shifted = simd_x32_sll(_count, 31-BitT);
+		const Ty result  = simd_x32_sra(shifted, 31);
+
+		return result;
+	}
+
 	template<typename Ty>
 	BX_SIMD_INLINE Ty simd_x32_srl_ni(Ty _a, Ty _count)
 	{
-		const Ty bit0    = simd_splat<Ty>(uint32_t(1) );
-		const Ty bit1    = simd_splat<Ty>(uint32_t(2) );
-		const Ty bit2    = simd_splat<Ty>(uint32_t(4) );
-		const Ty bit3    = simd_splat<Ty>(uint32_t(8) );
-		const Ty bit4    = simd_splat<Ty>(uint32_t(16) );
-
-		const Ty b0      = simd_and(_count, bit0);
-		const Ty mask0   = simd_i32_neg(b0);
+		const Ty mask0   = simd_x32_bit_mask_ni<0, Ty>(_count);
 		const Ty shr0    = simd_x32_srl(_a, 1);
 		const Ty r0      = simd_selb(mask0, shr0, _a);
 
-		const Ty b1      = simd_and(_count, bit1);
-		const Ty mask1   = simd_i32_neg(b1);
+		const Ty mask1   = simd_x32_bit_mask_ni<1, Ty>(_count);
 		const Ty shr1    = simd_x32_srl(r0, 2);
 		const Ty r1      = simd_selb(mask1, shr1, r0);
 
-		const Ty b2      = simd_and(_count, bit2);
-		const Ty mask2   = simd_i32_neg(b2);
+		const Ty mask2   = simd_x32_bit_mask_ni<2, Ty>(_count);
 		const Ty shr2    = simd_x32_srl(r1, 4);
 		const Ty r2      = simd_selb(mask2, shr2, r1);
 
-		const Ty b3      = simd_and(_count, bit3);
-		const Ty mask3   = simd_i32_neg(b3);
+		const Ty mask3   = simd_x32_bit_mask_ni<3, Ty>(_count);
 		const Ty shr3    = simd_x32_srl(r2, 8);
 		const Ty r3      = simd_selb(mask3, shr3, r2);
 
-		const Ty b4      = simd_and(_count, bit4);
-		const Ty mask4   = simd_i32_neg(b4);
+		const Ty mask4   = simd_x32_bit_mask_ni<4, Ty>(_count);
 		const Ty shr4    = simd_x32_srl(r3, 16);
 		const Ty result  = simd_selb(mask4, shr4, r3);
 
@@ -841,34 +839,23 @@ namespace bx
 	template<typename Ty>
 	BX_SIMD_INLINE Ty simd_x32_sll_ni(Ty _a, Ty _count)
 	{
-		const Ty bit0    = simd_splat<Ty>(uint32_t(1) );
-		const Ty bit1    = simd_splat<Ty>(uint32_t(2) );
-		const Ty bit2    = simd_splat<Ty>(uint32_t(4) );
-		const Ty bit3    = simd_splat<Ty>(uint32_t(8) );
-		const Ty bit4    = simd_splat<Ty>(uint32_t(16) );
-
-		const Ty b0      = simd_and(_count, bit0);
-		const Ty mask0   = simd_i32_neg(b0);
+		const Ty mask0   = simd_x32_bit_mask_ni<0, Ty>(_count);
 		const Ty sll0    = simd_x32_sll(_a, 1);
 		const Ty r0      = simd_selb(mask0, sll0, _a);
 
-		const Ty b1      = simd_and(_count, bit1);
-		const Ty mask1   = simd_i32_neg(b1);
+		const Ty mask1   = simd_x32_bit_mask_ni<1, Ty>(_count);
 		const Ty sll1    = simd_x32_sll(r0, 2);
 		const Ty r1      = simd_selb(mask1, sll1, r0);
 
-		const Ty b2      = simd_and(_count, bit2);
-		const Ty mask2   = simd_i32_neg(b2);
+		const Ty mask2   = simd_x32_bit_mask_ni<2, Ty>(_count);
 		const Ty sll2    = simd_x32_sll(r1, 4);
 		const Ty r2      = simd_selb(mask2, sll2, r1);
 
-		const Ty b3      = simd_and(_count, bit3);
-		const Ty mask3   = simd_i32_neg(b3);
+		const Ty mask3   = simd_x32_bit_mask_ni<3, Ty>(_count);
 		const Ty sll3    = simd_x32_sll(r2, 8);
 		const Ty r3      = simd_selb(mask3, sll3, r2);
 
-		const Ty b4      = simd_and(_count, bit4);
-		const Ty mask4   = simd_i32_neg(b4);
+		const Ty mask4   = simd_x32_bit_mask_ni<4, Ty>(_count);
 		const Ty sll4    = simd_x32_sll(r3, 16);
 		const Ty result  = simd_selb(mask4, sll4, r3);
 
@@ -878,34 +865,23 @@ namespace bx
 	template<typename Ty>
 	BX_SIMD_INLINE Ty simd_x32_sra_ni(Ty _a, Ty _count)
 	{
-		const Ty bit0    = simd_splat<Ty>(uint32_t(1) );
-		const Ty bit1    = simd_splat<Ty>(uint32_t(2) );
-		const Ty bit2    = simd_splat<Ty>(uint32_t(4) );
-		const Ty bit3    = simd_splat<Ty>(uint32_t(8) );
-		const Ty bit4    = simd_splat<Ty>(uint32_t(16) );
-
-		const Ty b0      = simd_and(_count, bit0);
-		const Ty mask0   = simd_i32_neg(b0);
+		const Ty mask0   = simd_x32_bit_mask_ni<0, Ty>(_count);
 		const Ty sra0    = simd_x32_sra(_a, 1);
 		const Ty r0      = simd_selb(mask0, sra0, _a);
 
-		const Ty b1      = simd_and(_count, bit1);
-		const Ty mask1   = simd_i32_neg(b1);
+		const Ty mask1   = simd_x32_bit_mask_ni<1, Ty>(_count);
 		const Ty sra1    = simd_x32_sra(r0, 2);
 		const Ty r1      = simd_selb(mask1, sra1, r0);
 
-		const Ty b2      = simd_and(_count, bit2);
-		const Ty mask2   = simd_i32_neg(b2);
+		const Ty mask2   = simd_x32_bit_mask_ni<2, Ty>(_count);
 		const Ty sra2    = simd_x32_sra(r1, 4);
 		const Ty r2      = simd_selb(mask2, sra2, r1);
 
-		const Ty b3      = simd_and(_count, bit3);
-		const Ty mask3   = simd_i32_neg(b3);
+		const Ty mask3   = simd_x32_bit_mask_ni<3, Ty>(_count);
 		const Ty sra3    = simd_x32_sra(r2, 8);
 		const Ty r3      = simd_selb(mask3, sra3, r2);
 
-		const Ty b4      = simd_and(_count, bit4);
-		const Ty mask4   = simd_i32_neg(b4);
+		const Ty mask4   = simd_x32_bit_mask_ni<4, Ty>(_count);
 		const Ty sra4    = simd_x32_sra(r3, 16);
 		const Ty result  = simd_selb(mask4, sra4, r3);
 
