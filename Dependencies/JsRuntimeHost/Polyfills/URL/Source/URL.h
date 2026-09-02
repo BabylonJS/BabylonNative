@@ -19,6 +19,8 @@ namespace Babylon::Polyfills::Internal
         // Static methods (exposed to JavaScript)
         static Napi::Value CanParse(const Napi::CallbackInfo& info);
         static Napi::Value Parse(const Napi::CallbackInfo& info);
+        static Napi::Value CreateObjectURL(const Napi::CallbackInfo& info);
+        static Napi::Value RevokeObjectURL(const Napi::CallbackInfo& info);
 
         // Parse the URL string and populate all components including searchParams
         // Returns true if parsing succeeded, false otherwise
