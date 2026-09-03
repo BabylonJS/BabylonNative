@@ -248,6 +248,12 @@ namespace xr
                     void* DepthTexturePointer{};
                     Size DepthTextureSize;
 
+                    // WebXR raw camera access: the platform camera image for this
+                    // view, rendered into an RGBA texture each frame. Null when unavailable.
+                    // Currently only populated by the ARKit backend.
+                    void* CameraTexturePointer{};
+                    Size CameraTextureSize;
+
                     float DepthNearZ{};
                     float DepthFarZ{};
 
