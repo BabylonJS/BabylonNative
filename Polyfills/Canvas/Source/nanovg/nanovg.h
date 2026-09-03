@@ -595,6 +595,10 @@ void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const ch
 // Measured values are returned in local coordinate space.
 float nvgTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds);
 
+// Like nvgTextBounds, but keeps per-glyph ink extents on ymin/ymax instead of replacing
+// them with the full line box (fonsLineBounds). Used by canvas measureText actualBoundingBox*.
+float nvgTextBoundsInk(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds);
+
 // Measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
 // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]
 // Measured values are returned in local coordinate space.

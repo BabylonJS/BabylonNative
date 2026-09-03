@@ -33,7 +33,15 @@ namespace Babylon::Polyfills::Internal
         // Out-of-range pixels are written as zero. Used to implement getImageData without a GPU readback.
         void ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst);
 
-    private:
+                // Flush pending NanoVG draws to the canvas framebuffer, then read the full
+                // RGBA8 contents back from the GPU. Used by toDataURL and drawImage(canvas).
+                std::vector<uint8_t> CaptureRGBA();
+
+                // Called by NativeCanvas when the canvas wrapper is destroyed so this context
+                // does not keep a dangling m_canvas pointer across JS finalizer ordering.
+                void DetachCanvas();
+
+            private:
         void FillRect(const Napi::CallbackInfo&);
         Napi::Value MeasureText(const Napi::CallbackInfo&);
         void FillText(const Napi::CallbackInfo&);
@@ -103,8 +111,10 @@ namespace Babylon::Polyfills::Internal
         bool SetFontFaceId();
         void EnsureFontsLoaded();
         void Flush(const Napi::CallbackInfo&);
+                // Shared body of Flush() for C++ callers (CaptureRGBA). Throws std::exception on failure.
+                void FlushCore();
 
-        NativeCanvas* m_canvas;
+                NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 
         // A gradient style holds the assigned JavaScript object, not a bare CanvasGradient*.

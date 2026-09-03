@@ -495,7 +495,36 @@ describe("Canvas2D", function () {
     expect(data.width).to.equal(4);
     expect(data.height).to.equal(3);
   });
-});
+
+    it("accepts another Canvas as drawImage source and supports toDataURL png", function () {
+      const srcCanvas = new _native.Canvas();
+      srcCanvas.width = 32;
+      srcCanvas.height = 32;
+      const srcCtx = srcCanvas.getContext("2d");
+      // Semi-transparent fill exercises GPU readback + unpremultiply (opaque red alone
+      // would still pass if the source were transparent/stale or double-premultiplied).
+      srcCtx.fillStyle = "rgba(255, 0, 0, 0.5)";
+      srcCtx.fillRect(0, 0, 32, 32);
+
+      const dstCanvas = new _native.Canvas();
+      dstCanvas.width = 32;
+      dstCanvas.height = 32;
+      const dstCtx = dstCanvas.getContext("2d");
+      expect(function () { dstCtx.drawImage(srcCanvas, 0, 0); }).to.not.throw();
+
+      const url = srcCanvas.toDataURL("image/png");
+      expect(url.indexOf("data:image/png;base64,")).to.equal(0);
+      expect(url.length).to.be.greaterThan(32);
+
+      // Sample destination after drawImage(canvas) — must see straight-alpha red, not
+      // transparent black and not double-premultiplied (dark) red.
+      const sample = dstCtx.getImageData(16, 16, 1, 1).data;
+      expect(sample[0]).to.be.at.least(200); // R
+      expect(sample[1]).to.be.at.most(30);   // G
+      expect(sample[2]).to.be.at.most(30);   // B
+      expect(sample[3]).to.be.within(100, 160); // A ~128
+    });
+  });
 
 function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {
   const engine = new NativeEngine();

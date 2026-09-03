@@ -6,9 +6,17 @@
 #include <napi/pointer.h>
 #include <cassert>
 #include <cstring>
+#include <string>
+#include <vector>
 #include "Colors.h"
 #include "Gradient.h"
 #include "Font.h"
+#include <basen.hpp>
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+#include <bimg/encode.h>
+#include <bx/allocator.h>
+#include <bx/readerwriter.h>
+#endif
 
 namespace
 {
@@ -33,6 +41,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
+                InstanceMethod("toDataURL", &NativeCanvas::ToDataURL),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
                 InstanceMethod("remove", &NativeCanvas::Remove),
                 StaticMethod("parseColor", &NativeCanvas::ParseColor)});
@@ -49,6 +58,13 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::~NativeCanvas()
     {
+        // Canvas and Context form a JS cycle; finalizer order is not guaranteed.
+        // Clear the reverse pointer first so Context::~Context cannot touch us.
+        if (m_context != nullptr)
+        {
+            m_context->DetachCanvas();
+            m_context = nullptr;
+        }
         Dispose();
     }
 
@@ -103,6 +119,10 @@ namespace Babylon::Polyfills::Internal
         {
             context = Context::CreateInstance(info.Env(), info.This());
             thisObj.Set(contextPropertyName, context);
+            if (context.IsObject())
+            {
+                m_context = Context::Unwrap(context.As<Napi::Object>());
+            }
         }
 
         return context;
@@ -229,6 +249,56 @@ namespace Babylon::Polyfills::Internal
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), m_texture.get());
     }
 
+
+    Napi::Value NativeCanvas::ToDataURL(const Napi::CallbackInfo& info)
+    {
+        // toDataURL([type]) — only image/png is supported; other types throw.
+        std::string type{"image/png"};
+        if (info.Length() >= 1 && info[0].IsString())
+        {
+            type = info[0].As<Napi::String>().Utf8Value();
+        }
+        if (type != "image/png" && type != "image/PNG")
+        {
+            throw Napi::TypeError::New(info.Env(), "Canvas.toDataURL: only image/png is supported on Native.");
+        }
+
+        const uint32_t width = m_width;
+        const uint32_t height = m_height;
+        std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
+        if (m_context != nullptr && width > 0 && height > 0)
+        {
+            try
+            {
+                // GPU readback after flush so NanoVG content (fillRect/text/paths) is included.
+                rgba = m_context->CaptureRGBA();
+            }
+            catch (const std::exception& ex)
+            {
+                throw Napi::Error::New(info.Env(), ex.what());
+            }
+        }
+
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Canvas.toDataURL: image encoding is disabled in this build.");
+#else
+        bx::MemoryBlock memoryBlock{&Graphics::DeviceContext::GetDefaultAllocator()};
+        bx::MemoryWriter writer{&memoryBlock};
+        bx::Error err{};
+        bimg::imageWritePng(&writer, width, height, width * 4, rgba.data(), bimg::TextureFormat::RGBA8, false, &err);
+        if (!err.isOk() || memoryBlock.getSize() == 0)
+        {
+            throw Napi::Error::New(info.Env(), "Canvas.toDataURL: PNG encode failed.");
+        }
+
+        // more(0) returns the buffer start without growing (see bx::MemoryBlock).
+        const char* pngBytes = static_cast<const char*>(memoryBlock.more(0));
+        const size_t pngSize = memoryBlock.getSize();
+        std::string encoded;
+        bn::encode_b64(pngBytes, pngBytes + pngSize, std::back_inserter(encoded));
+        return Napi::String::New(info.Env(), "data:image/png;base64," + encoded);
+#endif
+    }
     Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)
     {
         const auto colorString = info[0].As<Napi::String>().Utf8Value();

@@ -588,37 +588,42 @@ namespace Babylon::Graphics
             return;
         }
 
-        // The flush advances a bgfx frame, which must happen on the render (bgfx API)
-        // thread. This method is only expected to be called from the JS thread while
-        // the render thread is parked in FinishRenderingCurrentFrame. If we're on the
-        // render thread (or affinity is unset), there is nothing safe to do here.
-        if (m_renderThreadAffinity.check())
-        {
-            return;
+            ForceMidFrameFlush();
         }
 
-        std::unique_lock lock{m_frameSyncMutex};
-
-        // The mid-frame flush advances a bgfx frame on the render thread, which
-        // can only be serviced while the render thread is parked in
-        // FinishRenderingCurrentFrame waiting for frame scopes to drain. That is
-        // only guaranteed while at least one FrameCompletionScope is active (the
-        // normal requestAnimationFrame render path). When a snippet drives frames
-        // manually (e.g. setInterval + engine.beginFrame/scene.render/
-        // engine.endFrame) there is no frame scope, the render thread is not
-        // parked to service the request, and parking the JS thread on
-        // m_flushCompleteCV would deadlock. Skip the flush in that case; the hard
-        // cap in AcquireNewViewId remains as a backstop. Likewise skip if the gate
-        // is currently closed (bgfx::frame() in progress).
-        if (m_frameBlocked || m_pendingFrameScopes == 0)
+        void DeviceImpl::ForceMidFrameFlush()
         {
-            return;
-        }
+            // The flush advances a bgfx frame, which must happen on the render (bgfx API)
+            // thread. This method is only expected to be called from the JS thread while
+            // the render thread is parked in FinishRenderingCurrentFrame. If we're on the
+            // render thread (or affinity is unset), there is nothing safe to do here.
+            if (m_renderThreadAffinity.check())
+            {
+                return;
+            }
 
-        m_flushRequested = true;
-        m_frameSyncCV.notify_all();
-        m_flushCompleteCV.wait(lock, [this] { return !m_flushRequested; });
-    }
+            std::unique_lock lock{m_frameSyncMutex};
+
+            // The mid-frame flush advances a bgfx frame on the render thread, which
+            // can only be serviced while the render thread is parked in
+            // FinishRenderingCurrentFrame waiting for frame scopes to drain. That is
+            // only guaranteed while at least one FrameCompletionScope is active (the
+            // normal requestAnimationFrame render path). When a snippet drives frames
+            // manually (e.g. setInterval + engine.beginFrame/scene.render/
+            // engine.endFrame) there is no frame scope, the render thread is not
+            // parked to service the request, and parking the JS thread on
+            // m_flushCompleteCV would deadlock. Skip the flush in that case; the hard
+            // cap in AcquireNewViewId remains as a backstop. Likewise skip if the gate
+            // is currently closed (bgfx::frame() in progress).
+            if (m_frameBlocked || m_pendingFrameScopes == 0)
+            {
+                return;
+            }
+
+            m_flushRequested = true;
+            m_frameSyncCV.notify_all();
+            m_flushCompleteCV.wait(lock, [this] { return !m_flushRequested; });
+        }
 
     // Called on the render thread from FinishRenderingCurrentFrame while holding
     // m_frameSyncMutex, with the requesting JS thread parked in FlushViewsIfNeeded
@@ -640,18 +645,27 @@ namespace Babylon::Graphics
         // bgfx::frame() would flip a half-drawn backbuffer to the screen partway through the
         // logical frame; bgfx remembers the flush in m_flushPrevFrame so the next real frame
         // still flips exactly once.
-        bgfx::frame(BGFX_FRAME_FLUSH);
-        m_nextViewId.store(0);
-        m_midFrameFlushCount.fetch_add(1);
+        // Same completion path as Frame(): readTexture requests become ready once the
+                // returned frame number catches the request. Without this, a mid-frame flush
+                // could never unblock a JS-thread ReadTexture wait that forced the flush.
+                const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
+                while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)
+                {
+                    m_readTextureRequests.front().second.complete();
+                    m_readTextureRequests.pop();
+                }
 
-        // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
-        // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
-        // Without this a cached high id would sort *after* every id handed out from the reset
-        // counter, inverting submission order relative to the JS-side draw order.
-        m_viewIdGeneration.fetch_add(1);
+                m_nextViewId.store(0);
+                m_midFrameFlushCount.fetch_add(1);
 
-        m_frameEncoder = bgfx::begin(true);
-    }
+                // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
+                // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
+                // Without this a cached high id would sort *after* every id handed out from the reset
+                // counter, inverting submission order relative to the JS-side draw order.
+                m_viewIdGeneration.fetch_add(1);
+
+                m_frameEncoder = bgfx::begin(true);
+            }
 
     void DeviceImpl::UpdateBgfxState()
     {
