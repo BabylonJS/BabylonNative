@@ -1,0 +1,88 @@
+name: Binary Size Check
+
+on:
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: size-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  size-check:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    # Intentionally no write permissions: this workflow builds untrusted PR code
+    # and uploads results as an artifact. The companion `Binary Size Check Comment`
+    # workflow (triggered on workflow_run) downloads the artifact and posts the
+    # sticky comment with full write perms from master.
+    # See https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout base ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - name: Checkout head ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+
+      - name: Configure base (Win32 x64 D3D11, matches CI flags)
+        shell: cmd
+        working-directory: base
+        run: |
+          cmake -G "Visual Studio 17 2022" ^
+            -B build\Win32_x64 ^
+            -A x64 ^
+            -D BX_CONFIG_DEBUG=ON ^
+            -D GRAPHICS_API=D3D11 ^
+            -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
+            -D BABYLON_DEBUG_TRACE=ON
+
+      - name: Build base Playground
+        shell: cmd
+        working-directory: base
+        run: cmake --build build\Win32_x64 --config RelWithDebInfo --target Playground -- /m
+
+      - name: Configure head (same flags)
+        shell: cmd
+        working-directory: head
+        run: |
+          cmake -G "Visual Studio 17 2022" ^
+            -B build\Win32_x64 ^
+            -A x64 ^
+            -D BX_CONFIG_DEBUG=ON ^
+            -D GRAPHICS_API=D3D11 ^
+            -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
+            -D BABYLON_DEBUG_TRACE=ON
+
+      - name: Build head Playground
+        shell: cmd
+        working-directory: head
+        run: cmake --build build\Win32_x64 --config RelWithDebInfo --target Playground -- /m
+
+      - name: Measure sizes and format comment
+        shell: pwsh
+        run: |
+          ./head/Scripts/MeasureBinarySize.ps1 `
+            -BaseBuildDir base/build/Win32_x64 `
+            -HeadBuildDir head/build/Win32_x64 `
+            -Config RelWithDebInfo `
+            -Platform "Win32 x64 D3D11 RelWithDebInfo" `
+            -BaseRef "${{ github.event.pull_request.base.sha }}" `
+            -HeadRef "${{ github.event.pull_request.head.sha }}" `
+            -PrNumber ${{ github.event.pull_request.number }} `
+            -OutputDir "${{ runner.temp }}/size-check-report"
+
+      - name: Upload size-check report artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: size-check-report
+          path: ${{ runner.temp }}/size-check-report
+          if-no-files-found: error
+          retention-days: 7
