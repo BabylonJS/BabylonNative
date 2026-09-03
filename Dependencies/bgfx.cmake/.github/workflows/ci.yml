@@ -75,7 +75,7 @@ jobs:
       # Run CMake to generate Ninja project files
       - name: Generate project files
         run: |
-          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja -DCMAKE_BUILD_TYPE=Release
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja -DCMAKE_BUILD_TYPE=Release -DBGFX_BUILD_TESTS=ON
 
       # Build the whole project with Ninja (which is spawn by CMake).
       - name: Build
@@ -86,6 +86,10 @@ jobs:
       - name: Build examples
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target bgfx-examples
+
+      - name: Run bx tests
+        run: |
+          ctest --test-dir "${{ env.CMAKE_BUILD_DIR }}" -R bx.test --output-on-failure
 
   cross-android:
     name: cross-android
