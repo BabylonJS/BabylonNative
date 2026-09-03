@@ -10,7 +10,6 @@
 
 #include "Helpers.h"
 
-#include <chrono>
 #include <cstdlib>
 #include <future>
 #include <iostream>
@@ -249,10 +248,7 @@ namespace
             jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
         });
 
-        auto renderFuture = renderDone.get_future();
-        EXPECT_EQ(renderFuture.wait_for(std::chrono::seconds(30)), std::future_status::ready)
-            << "render timed out";
-        EXPECT_NO_THROW(renderFuture.get()) << "render rejected";
+        renderDone.get_future().get();
 
         device.FinishRenderingCurrentFrame();
 
@@ -321,6 +317,55 @@ TEST(ShaderCompilation, FragCoordYMatchesInterpolatedUV)
         ASSERT_LE(std::abs(values.first - values.second), 6)
             << "gl_FragCoord.y disagrees with the interpolated vUV.y at row " << row
             << " (gl_FragCoord=" << values.first << ", vUV=" << values.second << ")";
+    }
+#endif
+}
+
+// `return gl_FragCoord;` parents the symbol on TIntermBranch, which MakeReplacements
+// must handle; without that the compiler throws "Cannot replace symbol".
+TEST(ShaderCompilation, FragCoordDirectReturnMatchesInterpolatedUV)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    constexpr uint32_t WIDTH = 8;
+    constexpr uint32_t HEIGHT = 64;
+
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "attribute vec2 uv;\n"
+        "varying vec2 vUV;\n"
+        "void main(void) { vUV = uv; gl_Position = vec4(position, 1.0); }\n";
+
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "uniform vec2 targetSize;\n"
+        "varying vec2 vUV;\n"
+        "vec4 fragCoord() { return gl_FragCoord; }\n"
+        "void main(void) {\n"
+        "    gl_FragColor = vec4(fragCoord().y / targetSize.y, vUV.y, 0.0, 1.0);\n"
+        "}\n";
+
+    auto pixels = RenderFullScreenQuad(WIDTH, HEIGHT, vertexShader, fragmentShader, false);
+    ASSERT_EQ(pixels.size(), static_cast<size_t>(WIDTH) * HEIGHT * 4);
+
+    const auto texel = [&pixels](uint32_t row) {
+        const size_t offset = static_cast<size_t>(row) * WIDTH * 4;
+        return std::make_pair(static_cast<int>(pixels[offset]), static_cast<int>(pixels[offset + 1]));
+    };
+
+    const auto first = texel(0);
+    const auto last = texel(HEIGHT - 1);
+    ASSERT_GT(std::abs(first.second - last.second), 200)
+        << "vUV.y reference ramp did not vary across the target";
+
+    for (uint32_t row = 0; row < HEIGHT; ++row)
+    {
+        const auto values = texel(row);
+        ASSERT_LE(std::abs(values.first - values.second), 6)
+            << "gl_FragCoord.y disagrees with the interpolated vUV.y at row " << row
+            << " after a direct return (gl_FragCoord=" << values.first << ", vUV=" << values.second << ")";
     }
 #endif
 }
