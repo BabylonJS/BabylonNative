@@ -86,6 +86,16 @@ namespace Babylon::ShaderCompilerTraversers
                         branch->setFalseBlock(replacement);
                     }
                 }
+                else if (auto* flow = parent->getAsBranchNode())
+                {
+                    // `return gl_FragCoord;` (and similar) parents the symbol on TIntermBranch.
+                    if (flow->getExpression() != symbol)
+                    {
+                        throw std::runtime_error{"Cannot replace symbol: unexpected branch expression"};
+                    }
+                    RemoveAllTreeNodes(flow->getExpression());
+                    flow->setExpression(replacement);
+                }
                 else
                 {
                     throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};
@@ -1422,6 +1432,15 @@ namespace Babylon::ShaderCompilerTraversers
                             selection->setFalseBlock(replacement);
                         }
                     }
+                    else if (auto* flow = parent->getAsBranchNode())
+                    {
+                        if (flow->getExpression() != oldSymbol)
+                        {
+                            throw std::runtime_error{
+                                "SamplerFunctionParameterSplitter: unexpected branch expression when rewriting body sampler reference"};
+                        }
+                        flow->setExpression(replacement);
+                    }
                     else
                     {
                         throw std::runtime_error{
@@ -2354,6 +2373,133 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
         };
+
+        /// Presents gl_FragCoord in OpenGL's coordinate space on the top-left-origin backends
+        /// (D3D, Metal, Vulkan). FlipSamplerCoordinates already flips every sample coordinate, so
+        /// gl_FragCoord was the one input left in physical space -- making
+        /// `texelFetch(tex, ivec2(gl_FragCoord.xy), 0)` read the mirrored row.
+        ///
+        /// The flip is `targetHeight - gl_FragCoord.y`, with no -1 term: the hardware yields
+        /// p + 0.5 for physical row p, and p == height - 1 - y, so the GL value y + 0.5 is exactly
+        /// height minus the incoming value.
+        ///
+        /// The height cannot come from bgfx's u_viewRect, which SetBgfxViewPortAndScissor narrows
+        /// to the viewport, while gl_FragCoord is relative to the whole render target.
+        class FragCoordYFlipTraverser final : private TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids)
+            {
+                auto* intermediate{program.getIntermediate(EShLangFragment)};
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                FragCoordYFlipTraverser traverser{intermediate};
+                intermediate->getTreeRoot()->traverse(&traverser);
+
+                if (traverser.m_symbolsToParents.empty())
+                {
+                    return;
+                }
+
+                // Declared as a linker object so MoveNonSamplerUniformsIntoStruct sweeps it into
+                // the "Frame" struct with every other non-sampler uniform.
+                TType targetSizeType{EbtFloat, EvqUniform, 4};
+                TIntermSymbol* targetSize{intermediate->addSymbol(TIntermSymbol{ids.Next(), Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME, targetSizeType})};
+
+                auto* linkerObjects = FindLinkerObjects(intermediate->getTreeRoot()->getAsAggregate());
+                if (linkerObjects == nullptr)
+                {
+                    throw std::runtime_error{"FragCoordYFlip: fragment stage has no linker objects sequence."};
+                }
+                linkerObjects->getSequence().push_back(targetSize);
+
+                traverser.ApplyReplacements(targetSize);
+            }
+
+        protected:
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                // Linker object references declare gl_FragCoord rather than read it.
+                if (symbol->getName() != "gl_FragCoord" || IsLinkerObject(path))
+                {
+                    return;
+                }
+
+                m_symbolsToParents.emplace_back(symbol, getParentNode());
+            }
+
+        private:
+            FragCoordYFlipTraverser(TIntermediate* intermediate)
+                : TIntermTraverser{true, false, false}
+                , m_intermediate{intermediate}
+            {
+            }
+
+            static TIntermAggregate* FindLinkerObjects(TIntermAggregate* root)
+            {
+                if (root == nullptr)
+                {
+                    return nullptr;
+                }
+
+                for (auto* node : root->getSequence())
+                {
+                    auto* aggregate = node != nullptr ? node->getAsAggregate() : nullptr;
+                    if (aggregate != nullptr && aggregate->getOp() == EOpLinkerObjects)
+                    {
+                        return aggregate;
+                    }
+                }
+
+                return nullptr;
+            }
+
+            void ApplyReplacements(TIntermSymbol* targetSize)
+            {
+                for (const auto& [symbol, parent] : m_symbolsToParents)
+                {
+                    // Not batched into one MakeReplacements call: that maps one replacement per
+                    // symbol *name*, so every gl_FragCoord reference would share one subtree and
+                    // that node would end up with multiple parents.
+                    MakeReplacements({{"gl_FragCoord", BuildFlippedFragCoord(symbol, targetSize)}}, {{symbol, parent}});
+                }
+            }
+
+            /// Builds `vec4(gl_FragCoord.x, targetSize.y - gl_FragCoord.y, .z, .w)`. The whole
+            /// vector is rebuilt rather than patching .y because a reference may be swizzled,
+            /// indexed, or passed along whole, and the parent node is not inspected here.
+            TIntermTyped* BuildFlippedFragCoord(TIntermSymbol* fragCoord, TIntermSymbol* targetSize)
+            {
+                const TSourceLoc& loc{fragCoord->getLoc()};
+                TType floatType{EbtFloat, EvqTemporary, 1};
+                TType vec4Type{EbtFloat, EvqTemporary, 4};
+
+                // Each component gets its own symbol copy so no node ends up with two parents.
+                auto component = [&](int index) {
+                    TIntermTyped* copy{m_intermediate->addSymbol(*fragCoord)};
+                    TIntermTyped* element{m_intermediate->addIndex(EOpIndexDirect, copy, m_intermediate->addConstantUnion(index, loc), loc)};
+                    element->setType(floatType);
+                    return element;
+                };
+
+                TIntermTyped* height{m_intermediate->addIndex(EOpIndexDirect, m_intermediate->addSymbol(*targetSize), m_intermediate->addConstantUnion(1, loc), loc)};
+                height->setType(floatType);
+
+                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, height, component(1), loc)};
+
+                TIntermAggregate* constructed{m_intermediate->makeAggregate(component(0), loc)};
+                constructed = m_intermediate->growAggregate(constructed, flippedY, loc);
+                constructed = m_intermediate->growAggregate(constructed, component(2), loc);
+                constructed = m_intermediate->growAggregate(constructed, component(3), loc);
+                return m_intermediate->setAggregateOperator(constructed, EOpConstructVec4, vec4Type, loc);
+            }
+
+            TIntermediate* m_intermediate{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -2409,5 +2555,10 @@ namespace Babylon::ShaderCompilerTraversers
     void FlipSamplerCoordinates(TProgram& program)
     {
         FlipSamplerCoordinatesTraverser::Traverse(program);
+    }
+
+    void FlipFragCoordY(TProgram& program, IdGenerator& ids)
+    {
+        FragCoordYFlipTraverser::Traverse(program, ids);
     }
 }

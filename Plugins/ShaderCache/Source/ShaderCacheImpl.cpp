@@ -41,7 +41,9 @@ namespace Babylon::Plugins::ShaderCache
     // 4: store the compiler-assigned built-in instance-data slots.
     // 5: shader binary packaging bumped to bgfx BGFX_SHADER_BIN_VERSION 12 (raw
     //    SRV/UAV masks + tex meta); stale v4 cache entries would be rejected by bgfx.
-    static const uint32_t CACHE_VERSION = 5;
+    // 6: FlipFragCoordY rewrites gl_FragCoord and injects bnFragCoordTargetSize;
+    //    version-5 entries for those shaders skip compilation and omit the uniform.
+    static const uint32_t CACHE_VERSION = 6;
 
     void ShaderCacheImpl::Clear()
     {

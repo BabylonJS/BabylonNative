@@ -109,6 +109,8 @@ namespace Babylon::Plugins
         ShaderCompilerTraversers::IdGenerator ids{};
         // Flip 2D texture sample coordinates (replaces the former ProcessSamplerFlip texture() macro).
         ShaderCompilerTraversers::FlipSamplerCoordinates(program);
+        // Must precede the uniform struct move, which collects the uniform this declares.
+        ShaderCompilerTraversers::FlipFragCoordY(program, ids);
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::map<std::string, std::string> vertexAttributeRenaming = {};
