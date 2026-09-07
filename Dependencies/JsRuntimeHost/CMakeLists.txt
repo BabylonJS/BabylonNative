@@ -58,9 +58,7 @@ FetchContent_Declare(quickjs-ng
     
 # --------------------------------------------------
 
-if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
-    FetchContent_MakeAvailable(CMakeExtensions)
-endif()
+FetchContent_MakeAvailable(CMakeExtensions)
 
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
@@ -157,9 +155,7 @@ FetchContent_MakeAvailable_With_Message(arcana.cpp)
 set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 
 if(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST OR JSRUNTIMEHOST_POLYFILL_FETCH)
-    if(NOT TARGET UrlLib)
-        FetchContent_MakeAvailable_With_Message(UrlLib)
-    endif()
+    FetchContent_MakeAvailable_With_Message(UrlLib)
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 endif()
 

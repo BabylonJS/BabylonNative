@@ -13,9 +13,7 @@ FetchContent_Declare(CMakeExtensions
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 # --------------------------------------------------
 
-if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
-    FetchContent_MakeAvailable(CMakeExtensions)
-endif()
+FetchContent_MakeAvailable(CMakeExtensions)
 
 project(AndroidExtensions)
 

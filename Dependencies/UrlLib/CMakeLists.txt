@@ -19,9 +19,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.4.1)
 # --------------------------------------------------
 
-if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
-    FetchContent_MakeAvailable(CMakeExtensions)
-endif()
+FetchContent_MakeAvailable(CMakeExtensions)
 
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
