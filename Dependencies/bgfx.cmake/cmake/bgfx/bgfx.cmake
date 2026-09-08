@@ -205,6 +205,7 @@ if(XCODE)
 	set_source_files_properties(
 		${BGFX_DIR}/src/renderer_vk.cpp
 		${BGFX_DIR}/src/renderer_webgpu.cpp
+		${BGFX_DIR}/src/video_mtl.cpp
 		PROPERTIES
 			LANGUAGE OBJCXX
 			XCODE_EXPLICIT_FILE_TYPE sourcecode.cpp.objcpp
