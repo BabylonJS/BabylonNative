@@ -43,34 +43,46 @@ target_link_libraries(
 		   ${TINYEXR_LIBRARIES} #
 )
 
-# AVIF decode support via the dav1d codec. Mirrors bimg's GENie build
-# (bimg/scripts/bimg_decode.lua), which enables AVIF unconditionally.
-target_compile_definitions(bimg_decode PRIVATE AVIF_CODEC_DAV1D)
-
-target_sources(
-	bimg_decode
-	PRIVATE ${BIMG_DIR}/3rdparty/dav1d/dav1d-amalgamated.c #
-			${BIMG_DIR}/3rdparty/dav1d/dav1d-bitdepth-8.c #
-			${BIMG_DIR}/3rdparty/dav1d/dav1d-bitdepth-16.c #
-			${BIMG_DIR}/3rdparty/libavif/libavif-amalgamated.c #
-)
-
-target_include_directories(
-	bimg_decode
-	PRIVATE ${BIMG_DIR}/3rdparty #
-			${BIMG_DIR}/3rdparty/libavif #
-			${BIMG_DIR}/3rdparty/libavif/include #
-			${BIMG_DIR}/3rdparty/libavif/third_party/libyuv/include #
-			${BIMG_DIR}/3rdparty/dav1d #
-			${BIMG_DIR}/3rdparty/dav1d/include #
-)
-
-if(MSVC)
-	target_include_directories(bimg_decode PRIVATE ${BIMG_DIR}/3rdparty/dav1d/include/compat/msvc)
+if("${BIMG_CONFIG_PARSE_AVIF}" STREQUAL "")
+	set(BIMG_PARSE_AVIF "${BIMG_CONFIG_PARSE_ENABLE}")
+else()
+	set(BIMG_PARSE_AVIF "${BIMG_CONFIG_PARSE_AVIF}")
 endif()
 
-# dav1d requires C11.
-set_target_properties(bimg_decode PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
+target_compile_definitions(
+	bimg_decode PRIVATE
+	BIMG_CONFIG_PARSE_ENABLE=$<BOOL:${BIMG_CONFIG_PARSE_ENABLE}>
+	BIMG_CONFIG_PARSE_AVIF=$<BOOL:${BIMG_PARSE_AVIF}>
+)
+
+if(BIMG_PARSE_AVIF)
+	target_compile_definitions(bimg_decode PRIVATE AVIF_CODEC_DAV1D)
+
+	target_sources(
+		bimg_decode
+		PRIVATE ${BIMG_DIR}/3rdparty/dav1d/dav1d-amalgamated.c #
+				${BIMG_DIR}/3rdparty/dav1d/dav1d-bitdepth-8.c #
+				${BIMG_DIR}/3rdparty/dav1d/dav1d-bitdepth-16.c #
+				${BIMG_DIR}/3rdparty/libavif/libavif-amalgamated.c #
+	)
+
+	target_include_directories(
+		bimg_decode
+		PRIVATE ${BIMG_DIR}/3rdparty #
+				${BIMG_DIR}/3rdparty/libavif #
+				${BIMG_DIR}/3rdparty/libavif/include #
+				${BIMG_DIR}/3rdparty/libavif/third_party/libyuv/include #
+				${BIMG_DIR}/3rdparty/dav1d #
+				${BIMG_DIR}/3rdparty/dav1d/include #
+	)
+
+	if(MSVC)
+		target_include_directories(bimg_decode PRIVATE ${BIMG_DIR}/3rdparty/dav1d/include/compat/msvc)
+	endif()
+
+	# dav1d requires C11.
+	set_target_properties(bimg_decode PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
+endif()
 
 if(BGFX_INSTALL AND NOT BGFX_LIBRARY_TYPE MATCHES "SHARED")
 	install(
