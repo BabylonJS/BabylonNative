@@ -18,6 +18,19 @@ cmake --build cmake-build
 
 If downloading via zip (instead of using git submodules) manually download bx, bimg and bgfx and copy them into the root directory, or locate them via `BX_DIR`, `BIMG_DIR` and `BGFX_DIR` CMake variables.
 
+### Image parsing
+
+`BIMG_CONFIG_PARSE_ENABLE` defaults to `ON` and controls bimg's default image-format
+parser configuration. `BIMG_CONFIG_PARSE_AVIF` accepts `ON`, `OFF`, or an empty
+value (the default), which inherits `BIMG_CONFIG_PARSE_ENABLE` on each configure.
+An explicit AVIF setting overrides the default, matching bimg's configuration.
+
+Use `-DBIMG_CONFIG_PARSE_AVIF=OFF` to disable only AVIF, or
+`-DBIMG_CONFIG_PARSE_ENABLE=OFF` to disable the default image-format parsers.
+When AVIF is disabled, its parser and the libavif/dav1d sources are excluded from
+`bimg_decode`. Set these CMake variables rather than only adding preprocessor
+definitions to compiler flags, so source selection and parser configuration agree.
+
 ## How To Use
 This project is setup to be included a few different ways. To include bgfx source code in your project simply use add_subdirectory to include this project. To build bgfx binaries build the `INSTALL` target (or `make install`). The installed files will be in the directory specified by `CMAKE_INSTALL_PREFIX` which we recommend you set to `./install` so it will export to your build directory. Note you may want to build install on both `Release` and `Debug` configurations.
 
