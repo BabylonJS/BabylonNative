@@ -10,6 +10,10 @@ if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
     add_subdirectory(NativeCapture)
 endif()
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    add_subdirectory(NativeDawn)
+endif()
+
 if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)
     add_subdirectory(NativeDraco)
 endif()
@@ -61,4 +65,3 @@ endif()
 if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
     add_subdirectory(TestUtils)
 endif()
-

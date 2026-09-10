@@ -35,6 +35,16 @@ set(SOURCES
     "Source/nanovg/nanovg_filterstack.h"
     )
 
+# The Dawn/WebGPU NanoVG backend. It is a peer of nanovg_babylon.cpp (the bgfx
+# backend) and reuses the same nanovg core, so it is added to this target rather
+# than a separate library to avoid duplicate nanovg symbols at link time.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    list(APPEND SOURCES
+        "Source/nanovg/nanovg_dawn.cpp"
+        "Source/nanovg/nanovg_dawn.h"
+        "Source/nanovg/nanovg_dawn_shader.h")
+endif()
+
 file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
 
 add_library(Canvas ${SOURCES} ${SHADERS})
@@ -58,6 +68,11 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
         PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_link_libraries(Canvas
         PRIVATE bimg)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    target_link_libraries(Canvas
+        PRIVATE webgpu_dawn)
 endif()
 
 if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
