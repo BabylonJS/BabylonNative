@@ -38,6 +38,11 @@ set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 
+# Keep AVIF opt-in, including caches with bgfx.cmake's empty (inherit) default.
+if(NOT DEFINED BIMG_CONFIG_PARSE_AVIF OR "${BIMG_CONFIG_PARSE_AVIF}" STREQUAL "")
+    set(BIMG_CONFIG_PARSE_AVIF OFF)
+endif()
+
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.

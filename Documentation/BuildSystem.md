@@ -7,6 +7,16 @@ and it should be easy to incorporate Babylon Native into other existing projects
 document provides an overview of the concepts underpinning the Babylon Native build system
 and outlines some of the reasoning and intent behind them.
 
+## Image Format Parsing
+
+Native AVIF image decoding is disabled by default. This excludes the libavif and
+dav1d sources from the bimg decoder build; other image-format defaults are unchanged.
+
+To enable AVIF support, configure Babylon Native with `-DBIMG_CONFIG_PARSE_AVIF=ON`.
+An explicit setting from a parent CMake project is also respected. Unset or empty
+values use Babylon Native's disabled default, including empty cache entries left by
+earlier configurations.
+
 ## Lateral Dependency Management
 
 Scalable dependency management can be a challenge when making heavy use of Git Submodules.
