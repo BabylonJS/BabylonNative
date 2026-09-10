@@ -100,6 +100,7 @@ TEST(JavaScript, All)
         env.Global().Set("setExitCode", setExitCodeCallback);
 
         env.Global().Set("hostPlatform", Napi::Value::From(env, JSRUNTIMEHOST_PLATFORM));
+        env.Global().Set("hostEngine", Napi::Value::From(env, NAPI_JAVASCRIPT_ENGINE));
     });
 
     Babylon::ScriptLoader loader{runtime};

@@ -1,5 +1,7 @@
 #include "AppRuntime.h"
 
+#include "DelayedTaskScheduler.h"
+
 #include <arcana/threading/cancellation.h>
 #include <arcana/threading/dispatcher.h>
 
@@ -35,6 +37,8 @@ namespace Babylon
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
         arcana::cancellation_source m_cancelSource{};
         arcana::manual_dispatcher<128> m_dispatcher{};
+        std::unique_ptr<Internal::DelayedTaskScheduler> m_delayedTaskScheduler{std::make_unique<Internal::DelayedTaskScheduler>()};
+        bool m_delayedTaskSchedulerRegistered{};
         std::thread m_thread;
     };
 
@@ -51,6 +55,8 @@ namespace Babylon
 
         Dispatch([this](Napi::Env env) {
             JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(std::move(func)); });
+            Internal::DelayedTaskScheduler::SetForJavaScript(env, GetDelayedTaskScheduler());
+            m_impl->m_delayedTaskSchedulerRegistered = true;
         });
     }
 
@@ -87,8 +93,23 @@ namespace Babylon
             m_impl->m_dispatcher.blocking_tick(m_impl->m_cancelSource);
         }
 
+        Napi::HandleScope scope{env};
+        ShutdownEnvironment(env);
+
+        if (m_impl->m_delayedTaskSchedulerRegistered)
+        {
+            Internal::DelayedTaskScheduler::ClearFromJavaScript(env);
+            m_impl->m_delayedTaskSchedulerRegistered = false;
+        }
+        GetDelayedTaskScheduler().Shutdown();
+
         // The dispatcher can be non-empty if something is dispatched after cancellation.
         m_impl->m_dispatcher.clear();
+    }
+
+    Internal::DelayedTaskScheduler& AppRuntime::GetDelayedTaskScheduler()
+    {
+        return *m_impl->m_delayedTaskScheduler;
     }
 
     void AppRuntime::Suspend()

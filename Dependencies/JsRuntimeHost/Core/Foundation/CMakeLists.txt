@@ -4,6 +4,8 @@ set(SOURCES
     "Include/Babylon/PerfTrace.h"
     "Include/Babylon/StandardStreamLogger.h"
     "Source/DebugTrace.cpp"
+    "Source/DelayedTaskScheduler.cpp"
+    "Source/DelayedTaskScheduler.h"
     "Source/PerfTrace.cpp"
     "Source/StandardStreamLogger.cpp"
     "Source/StandardStreamLoggerPlatform.h")
@@ -50,3 +52,7 @@ endif()
 
 set_property(TARGET Foundation PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
+add_library(FoundationInternal INTERFACE)
+target_include_directories(FoundationInternal INTERFACE "Source")
+target_link_libraries(FoundationInternal INTERFACE Foundation)

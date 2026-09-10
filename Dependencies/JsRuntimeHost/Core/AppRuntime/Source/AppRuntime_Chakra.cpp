@@ -72,6 +72,10 @@ namespace Babylon
         Napi::Detach(env);
     }
 
+    void AppRuntime::ShutdownEnvironment(Napi::Env)
+    {
+    }
+
     void AppRuntime::DrainMicrotasks(Napi::Env)
     {
         // Chakra drains promise continuations through its

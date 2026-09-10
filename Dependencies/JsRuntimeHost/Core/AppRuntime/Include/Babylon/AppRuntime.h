@@ -12,6 +12,11 @@
 
 namespace Babylon
 {
+    namespace Internal
+    {
+        class DelayedTaskScheduler;
+    }
+
     class AppRuntime final
     {
     public:
@@ -63,6 +68,10 @@ namespace Babylon
         void RunEnvironmentTier(const char* executablePath = ".");
         void Run(Napi::Env);
 
+        // Engine-specific hook to stop task routing before joining the scheduler
+        // and discarding queued work, while the environment is still attached.
+        void ShutdownEnvironment(Napi::Env env);
+
         // This method is called from Dispatch to allow platform-specific code to add
         // extra logic around the invocation of a dispatched callback.
         void Execute(Dispatchable<void()> callback);
@@ -75,6 +84,8 @@ namespace Babylon
         // Hermes and QuickJS do NOT auto-drain: their implementations pump the
         // queue explicitly (Napi::DrainJobs / JS_ExecutePendingJob).
         void DrainMicrotasks(Napi::Env env);
+
+        Internal::DelayedTaskScheduler& GetDelayedTaskScheduler();
 
         Options m_options;
 

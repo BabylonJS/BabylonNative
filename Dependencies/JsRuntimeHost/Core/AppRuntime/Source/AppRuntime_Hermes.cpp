@@ -16,6 +16,10 @@ namespace Babylon
         Napi::Detach(env);
     }
 
+    void AppRuntime::ShutdownEnvironment(Napi::Env)
+    {
+    }
+
     void AppRuntime::DrainMicrotasks(Napi::Env env)
     {
         // Hermes does not auto-drain its job queue.  Promise continuations,

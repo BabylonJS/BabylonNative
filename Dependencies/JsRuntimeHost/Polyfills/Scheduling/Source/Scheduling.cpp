@@ -35,7 +35,7 @@ namespace Babylon::Polyfills::Scheduling
     void BABYLON_API Initialize(Napi::Env env)
     {
         auto global = env.Global();
-        auto timeoutDispatcher = std::make_shared<Internal::TimeoutDispatcher>(JsRuntime::GetFromJavaScript(env));
+        auto timeoutDispatcher = std::make_shared<Internal::TimeoutDispatcher>(env, JsRuntime::GetFromJavaScript(env));
 
         if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined() && global.Get(JS_CLEAR_TIMEOUT_NAME).IsUndefined())
         {

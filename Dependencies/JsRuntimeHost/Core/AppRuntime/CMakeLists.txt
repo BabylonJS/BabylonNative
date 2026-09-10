@@ -11,6 +11,14 @@ set(SOURCES
     "Source/AppRuntime_${NAPI_JAVASCRIPT_ENGINE}.cpp"
     "Source/AppRuntime_${JSRUNTIMEHOST_PLATFORM}.${IMPL_EXT}")
 
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    list(APPEND SOURCES
+        "Source/V8ForegroundTaskRunner.h"
+        "Source/V8ForegroundTaskRunner.cpp"
+        "Source/V8Platform.h"
+        "Source/V8Platform.cpp")
+endif()
+
 add_library(AppRuntime ${SOURCES})
 warnings_as_errors(AppRuntime)
 
@@ -19,6 +27,7 @@ target_include_directories(AppRuntime
     INTERFACE "Include")
 
 target_link_libraries(AppRuntime
+    PRIVATE FoundationInternal
     PRIVATE arcana
     PUBLIC JsRuntime)
 
@@ -58,3 +67,7 @@ endif()
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
+add_library(AppRuntimeInternal INTERFACE)
+target_include_directories(AppRuntimeInternal INTERFACE "Source")
+target_link_libraries(AppRuntimeInternal INTERFACE AppRuntime INTERFACE FoundationInternal)
