@@ -85,7 +85,7 @@ protected:
             Blur blurElement;
         };
     };
-    int stackElementCount;
+    int stackElementCount{0};
     static const int MAX_STACK_SIZE = 32;
     StackElement stackElements[MAX_STACK_SIZE];
 

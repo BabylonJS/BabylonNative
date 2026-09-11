@@ -28382,6 +28382,7 @@ mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
 
 
 
+
 (0,_tests_nativeEngine_png__WEBPACK_IMPORTED_MODULE_6__.registerPngTests)(describe, it, hasGpuRendering && hasNativeImageLoading);
 
 describe("RequestFile", function () {
@@ -28543,6 +28544,138 @@ describe("Canvas2D", function () {
     pixels[offset + 3]];
 
   }
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "intersects nested clips and restores parent clips on the GPU", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(
+      function _callee() {var _loop, _i, _arr;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
+              this.timeout(10000);_loop = /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _loop() {var translated, engine, scene, texture, ctx, pixels, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+                      translated = _arr[_i];
+                      engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.NativeEngine();
+                      scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Scene(engine);_context.prev = 1;
+
+                      texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.DynamicTexture("nested clips", 64, scene, false);
+                      ctx = texture.getContext();
+                      ctx.fillStyle = "white";
+                      ctx.fillRect(0, 0, 64, 64);
+                      ctx.save();
+                      ctx.beginPath();
+                      ctx.rect(8, 0, 24, 64);
+                      ctx.clip();
+
+                      ctx.save();
+                      if (translated) {
+                        ctx.translate(16, 0);
+                      }
+                      ctx.beginPath();
+                      ctx.rect(0, 0, 64, 64);
+                      ctx.clip();
+                      ctx.fillStyle = "red";
+                      ctx.fillRect(0, 0, 64, 64);
+                      ctx.restore();
+
+                      ctx.fillStyle = "#00ff00";
+                      ctx.fillRect(24, 0, 16, 64);
+                      ctx.save();
+                      ctx.beginPath();
+                      ctx.rect(40, 0, 16, 64);
+                      ctx.clip();
+                      ctx.fillStyle = "magenta";
+                      ctx.fillRect(0, 0, 64, 64);
+                      ctx.restore();
+                      ctx.restore();
+
+                      ctx.fillStyle = "blue";
+                      ctx.fillRect(40, 0, 8, 64);
+                      texture.update(false);_context.next = 2;return (
+                        texture.readPixels());case 2:pixels = _context.sent;if (
+                      pixels instanceof Uint8Array) {_context.next = 3;break;}throw (
+                        new Error("Expected RGBA8 GPU readback for the canvas texture"));case 3:
+
+                      pixel = function pixel(x) {return (
+                          Array.from(
+                            pixels.subarray(
+                              (32 * 64 + x) * 4,
+                              (32 * 64 + x + 1) * 4
+                            )
+                          ));};
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(4), "outside parent").to.deep.equal([
+                      255, 255, 255, 255]
+                      );
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(12), "translated child boundary").to.deep.equal(
+                        translated ? [255, 255, 255, 255] : [255, 0, 0, 255]
+                      );
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(20), "inside intersection").to.deep.equal([
+                      255, 0, 0, 255]
+                      );
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(28), "restored parent").to.deep.equal([
+                      0, 255, 0, 255]
+                      );
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(36), "outside restored parent").to.deep.equal([
+                      255, 255, 255, 255]
+                      );
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(44), "restored unclipped state").to.deep.equal([
+                      0, 0, 255, 255]
+                      );
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(52), "disjoint clip").to.deep.equal([
+                      255, 255, 255, 255]
+                      );
+                      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(60), "outside every fill").to.deep.equal([
+                      255, 255, 255, 255]
+                      );case 4:_context.prev = 4;
+
+                      scene.dispose();
+                      engine.dispose();return _context.finish(4);case 5:case "end":return _context.stop();}}, _loop, null, [[1,, 4, 5]]);});_i = 0, _arr = [false, true];case 1:if (!(_i < _arr.length)) {_context2.next = 3;break;}return _context2.delegateYield(_loop(), "t0", 2);case 2:_i++;_context2.next = 1;break;case 3:case "end":return _context2.stop();}}, _callee, this);}))
+
+
+
+  );
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "clears only the clipped GPU region and ignores globalAlpha and filters", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(
+      function _callee2() {var engine, scene, texture, ctx, _pixels, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context3) {while (1) switch (_context3.prev = _context3.next) {case 0:
+              this.timeout(10000);
+              engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.NativeEngine();
+              scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Scene(engine);_context3.prev = 1;
+
+              texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.DynamicTexture("clipped clear", 64, scene, false);
+              ctx = texture.getContext();
+              ctx.fillStyle = "red";
+              ctx.fillRect(0, 0, 64, 64);
+              texture.update(false);
+
+              ctx.filter = "blur(2px)";
+              ctx.fillRect(0, 0, 64, 64);
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(8, 0, 24, 64);
+              ctx.clip();
+              ctx.globalAlpha = 0.25;
+              ctx.clearRect(0, 0, 64, 64);
+              ctx.restore();
+              texture.update(false);_context3.next = 2;return (
+                texture.readPixels());case 2:_pixels = _context3.sent;if (
+              _pixels instanceof Uint8Array) {_context3.next = 3;break;}throw (
+                new Error("Expected RGBA8 GPU readback for the canvas texture"));case 3:
+
+              pixel = function pixel(x) {return (
+                  Array.from(
+                    _pixels.subarray((32 * 64 + x) * 4, (32 * 64 + x + 1) * 4)
+                  ));};
+              (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(36), "preserved near clip").to.deep.equal([
+              255, 0, 0, 255]
+              );
+              (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(16), "fully cleared inside clip").to.deep.equal([
+              0, 0, 0, 0]
+              );
+              (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(44), "preserved after clip").to.deep.equal([
+              255, 0, 0, 255]
+              );case 4:_context3.prev = 4;
+
+              scene.dispose();
+              engine.dispose();return _context3.finish(4);case 5:case "end":return _context3.stop();}}, _callee2, this, [[1,, 4, 5]]);}))
+
+
+  );
 
   it("round-trips a string fillStyle and strokeStyle", function () {
     var ctx = createContext();
@@ -28976,14 +29109,14 @@ describe("Canvas2D", function () {
         8.5
       );
 
-      var pixels = captureGpuPixels(destination.canvas);
+      var _pixels2 = captureGpuPixels(destination.canvas);
       // Pixel (12,3), sampled at its center (12.5,3.5), maps to source
       // x = 5.99 + (12.5 - 2.75) * 1.01 / 24.5 = 6.39194.
       // Between red texel center 5.5 and green center 6.5, ideal bilinear
       // weights are 10.8% red / 89.2% green (R~28, G~227).
       // Integer truncation maps x to 5.4375; ignoring the crop maps x to
       // 5.25. Both negative controls are solid red at this sample.
-      var green = pixelAt(pixels, destination.canvas.width, 12, 3);
+      var green = pixelAt(_pixels2, destination.canvas.width, 12, 3);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(green[1] - green[0]).to.be.greaterThan(100);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(green[3]).to.be.greaterThan(200);
 
@@ -28992,12 +29125,12 @@ describe("Canvas2D", function () {
       // That is 18.3% top red / 81.7% bottom blue (R~47, B~208).
       // Integer truncation maps y to 3.4375 and ignoring the crop maps y
       // to 3.5, both solid red rather than blue.
-      var blue = pixelAt(pixels, destination.canvas.width, 3, 14);
+      var blue = pixelAt(_pixels2, destination.canvas.width, 3, 14);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blue[2] - blue[0]).to.be.greaterThan(80);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blue[3]).to.be.greaterThan(200);
 
       var fractionalEdge = pixelAt(
-        pixels,
+        _pixels2,
         destination.canvas.width,
         26,
         3
@@ -29033,14 +29166,14 @@ describe("Canvas2D", function () {
         -6
       );
 
-      var pixels = captureGpuPixels(destination.canvas);
-      var inside = pixelAt(pixels, destination.canvas.width, 7, 7);
+      var _pixels3 = captureGpuPixels(destination.canvas);
+      var inside = pixelAt(_pixels3, destination.canvas.width, 7, 7);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[0]).to.be.greaterThan(220);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[1]).to.be.greaterThan(220);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[2]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[3]).to.be.greaterThan(220);
 
-      var outside = pixelAt(pixels, destination.canvas.width, 2, 7);
+      var outside = pixelAt(_pixels3, destination.canvas.width, 2, 7);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[3]).to.equal(0);
     } finally {
       disposeCanvas(destination);
@@ -29066,10 +29199,10 @@ describe("Canvas2D", function () {
         12
       );
 
-      var pixels = captureGpuPixels(destination.canvas);
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, destination.canvas.width, 5, 5)[3]).to.equal(0);
+      var _pixels4 = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels4, destination.canvas.width, 5, 5)[3]).to.equal(0);
 
-      var inside = pixelAt(pixels, destination.canvas.width, 10, 10);
+      var inside = pixelAt(_pixels4, destination.canvas.width, 10, 10);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[0]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[1]).to.be.greaterThan(220);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[2]).to.be.greaterThan(220);
@@ -29092,14 +29225,14 @@ describe("Canvas2D", function () {
       source.context.fillRect(0, 0, 8, 8);
       destination.context.drawImage(source.canvas, 8, 0, 8, 8);
 
-      var pixels = captureGpuPixels(destination.canvas);
-      var first = pixelAt(pixels, destination.canvas.width, 4, 4);
+      var _pixels5 = captureGpuPixels(destination.canvas);
+      var first = pixelAt(_pixels5, destination.canvas.width, 4, 4);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[0]).to.be.greaterThan(220);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[1]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[2]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[3]).to.be.greaterThan(220);
 
-      var second = pixelAt(pixels, destination.canvas.width, 12, 4);
+      var second = pixelAt(_pixels5, destination.canvas.width, 12, 4);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(second[0]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(second[1]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(second[2]).to.be.greaterThan(220);
@@ -29140,14 +29273,14 @@ describe("Canvas2D", function () {
         1
       );
 
-      var pixels = captureGpuPixels(destination.canvas);
-      var putSample = pixelAt(pixels, destination.canvas.width, 2, 2);
+      var _pixels6 = captureGpuPixels(destination.canvas);
+      var putSample = pixelAt(_pixels6, destination.canvas.width, 2, 2);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[0]).to.be.greaterThan(220);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[1]).to.be.within(75, 115);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[2]).to.be.within(15, 50);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[3]).to.be.greaterThan(240);
 
-      var drawSample = pixelAt(pixels, destination.canvas.width, 8, 2);
+      var drawSample = pixelAt(_pixels6, destination.canvas.width, 8, 2);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(drawSample[0]).to.be.within(75, 115);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(drawSample[1]).to.be.within(30, 70);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(drawSample[2]).to.be.greaterThan(220);
@@ -29188,15 +29321,15 @@ describe("Canvas2D", function () {
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(transform.e).to.equal(2);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(transform.f).to.equal(1);
 
-      var pixels = captureGpuPixels(destination.canvas);
-      var cropped = pixelAt(pixels, destination.canvas.width, 5, 4);
+      var _pixels7 = captureGpuPixels(destination.canvas);
+      var cropped = pixelAt(_pixels7, destination.canvas.width, 5, 4);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[0]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[1]).to.be.within(100, 155);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[2]).to.be.within(100, 155);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[3]).to.be.greaterThan(240);
 
       var translatedEdge = pixelAt(
-        pixels,
+        _pixels7,
         destination.canvas.width,
         8,
         4
@@ -29206,7 +29339,7 @@ describe("Canvas2D", function () {
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(translatedEdge[2]).to.be.within(100, 155);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(translatedEdge[3]).to.be.greaterThan(240);
 
-      var clippedOut = pixelAt(pixels, destination.canvas.width, 5, 8);
+      var clippedOut = pixelAt(_pixels7, destination.canvas.width, 5, 8);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(clippedOut[0]).to.be.lessThan(10);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(clippedOut[1]).to.be.lessThan(10);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(clippedOut[2]).to.be.lessThan(10);
@@ -29235,8 +29368,8 @@ describe("Canvas2D", function () {
       destination.context.drawImage(source.canvas, 2, 2, 4, 4);
       destination.context.drawImage(source.canvas, 10, 8, 4, 4);
 
-      var pixels = captureGpuPixels(destination.canvas);
-      var firstDraw = pixelAt(pixels, destination.canvas.width, 3, 3);
+      var _pixels8 = captureGpuPixels(destination.canvas);
+      var firstDraw = pixelAt(_pixels8, destination.canvas.width, 3, 3);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(firstDraw[0]).to.be.greaterThan(220);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(firstDraw[1]).to.be.lessThan(30);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(firstDraw[2]).to.be.lessThan(30);
@@ -29244,9 +29377,9 @@ describe("Canvas2D", function () {
 
       [
       // Inside the triangle but outside both destination rectangles.
-      pixelAt(pixels, destination.canvas.width, 2, 8),
+      pixelAt(_pixels8, destination.canvas.width, 2, 8),
       // Inside the second destination rectangle but outside the triangle.
-      pixelAt(pixels, destination.canvas.width, 12, 9)].
+      pixelAt(_pixels8, destination.canvas.width, 12, 9)].
       forEach(function (outside) {
         (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[0]).to.be.lessThan(10);
         (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[1]).to.be.lessThan(10);
@@ -29267,13 +29400,13 @@ describe("Canvas2D", function () {
       source.context.fillRect(0, 0, 2, 2);
       destination.context.drawImage(source.canvas, 1.75, 1.75, 2.5, 2.5);
 
-      var pixels = destination.context.getImageData(0, 0, 8, 8).data;
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, destination.canvas.width, 2, 2)[3]).to.equal(255);
+      var _pixels9 = destination.context.getImageData(0, 0, 8, 8).data;
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels9, destination.canvas.width, 2, 2)[3]).to.equal(255);
       [
-      pixelAt(pixels, destination.canvas.width, 1, 2),
-      pixelAt(pixels, destination.canvas.width, 4, 2),
-      pixelAt(pixels, destination.canvas.width, 2, 1),
-      pixelAt(pixels, destination.canvas.width, 2, 4)].
+      pixelAt(_pixels9, destination.canvas.width, 1, 2),
+      pixelAt(_pixels9, destination.canvas.width, 4, 2),
+      pixelAt(_pixels9, destination.canvas.width, 2, 1),
+      pixelAt(_pixels9, destination.canvas.width, 2, 4)].
       forEach(function (edge) {
         (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(edge[3]).to.be.within(40, 90);
       });
@@ -29293,9 +29426,9 @@ describe("Canvas2D", function () {
 
       resource.context.fillStyle = "#0000ff";
       resource.context.fillRect(0, 0, 4, 8);
-      var pixels = captureGpuPixels(resource.canvas);
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([0, 0, 255, 255]);
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+      var _pixels0 = captureGpuPixels(resource.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels0, 8, 2, 2)).to.deep.equal([0, 0, 255, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels0, 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
     } finally {
       disposeCanvas(resource);
     }
@@ -29309,9 +29442,9 @@ describe("Canvas2D", function () {
       source.context.fillRect(4, 4, 8, 8);
       destination.context.filter = "blur(2px)";
       destination.context.drawImage(source.canvas, 0, 0);
-      var pixels = captureGpuPixels(destination.canvas);
-      var fringe = pixelAt(pixels, 16, 3, 8);
-      var center = pixelAt(pixels, 16, 8, 8);
+      var _pixels1 = captureGpuPixels(destination.canvas);
+      var fringe = pixelAt(_pixels1, 16, 3, 8);
+      var center = pixelAt(_pixels1, 16, 8, 8);
       // The unfiltered CPU copy has zero alpha outside the source ink.
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[0]).to.equal(fringe[1]);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[1]).to.equal(fringe[2]);
@@ -29338,9 +29471,9 @@ describe("Canvas2D", function () {
         }
       }, 0);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
-      var pixels = captureGpuPixels(destination.canvas);
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+      var _pixels10 = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels10, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels10, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
     } finally {
       disposeCanvas(destination);
       disposeCanvas(source);
@@ -29365,9 +29498,9 @@ describe("Canvas2D", function () {
         }
       }, 0);
       (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
-      var pixels = captureGpuPixels(destination.canvas);
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
-      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+      var _pixels11 = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels11, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(_pixels11, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
     } finally {
       Object.setPrototypeOf(source.canvas, prototype);
       disposeCanvas(destination);
@@ -29661,9 +29794,9 @@ describe("PostProcesses", function () {
 describe("NativeEncoding", function () {
   this.timeout(0);function
 
-  expectValidPNG(_x) {return _expectValidPNG.apply(this, arguments);}function _expectValidPNG() {_expectValidPNG = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee3(blob) {var arrayBuffer, pngSignature;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context3) {while (1) switch (_context3.prev = _context3.next) {case 0:
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blob).to.be.instanceOf(Blob);_context3.next = 1;return (
-              blob.arrayBuffer());case 1:arrayBuffer = _context3.sent;
+  expectValidPNG(_x) {return _expectValidPNG.apply(this, arguments);}function _expectValidPNG() {_expectValidPNG = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee5(blob) {var arrayBuffer, pngSignature;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context6) {while (1) switch (_context6.prev = _context6.next) {case 0:
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blob).to.be.instanceOf(Blob);_context6.next = 1;return (
+              blob.arrayBuffer());case 1:arrayBuffer = _context6.sent;
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(arrayBuffer.byteLength).to.be.greaterThan(0);
 
             pngSignature = new Uint8Array(arrayBuffer.slice(0, 4));
@@ -29671,23 +29804,23 @@ describe("NativeEncoding", function () {
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pngSignature[1]).to.equal(80); // 'P'
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pngSignature[2]).to.equal(78); // 'N'
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pngSignature[3]).to.equal(71); // 'G'
-          case 2:case "end":return _context3.stop();}}, _callee3);}));return _expectValidPNG.apply(this, arguments);}
+          case 2:case "end":return _context6.stop();}}, _callee5);}));return _expectValidPNG.apply(this, arguments);}
 
-  it("should encode a PNG", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var pixelData, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
-          pixelData = new Uint8Array(4).fill(255);_context.next = 1;return (
-            _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false));case 1:result = _context.sent;_context.next = 2;return (
-            expectValidPNG(result));case 2:case "end":return _context.stop();}}, _callee);}))
+  it("should encode a PNG", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee3() {var pixelData, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context4) {while (1) switch (_context4.prev = _context4.next) {case 0:
+          pixelData = new Uint8Array(4).fill(255);_context4.next = 1;return (
+            _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false));case 1:result = _context4.sent;_context4.next = 2;return (
+            expectValidPNG(result));case 2:case "end":return _context4.stop();}}, _callee3);}))
   );
 
-  it("should handle multiple concurrent encoding tasks", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee2() {var pixelDatas, i, results;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
+  it("should handle multiple concurrent encoding tasks", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee4() {var pixelDatas, i, results;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context5) {while (1) switch (_context5.prev = _context5.next) {case 0:
           pixelDatas = [];
           for (i = 0; i < 10; i++) {
             pixelDatas.push(new Uint8Array(4).fill(255));
-          }_context2.next = 1;return (
+          }_context5.next = 1;return (
             Promise.all(pixelDatas.map(function (pixelData) {return (
                 _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false));}
-            )));case 1:results = _context2.sent;_context2.next = 2;return (
-            Promise.all(results.map(function (b) {return expectValidPNG(b);})));case 2:case "end":return _context2.stop();}}, _callee2);}))
+            )));case 1:results = _context5.sent;_context5.next = 2;return (
+            Promise.all(results.map(function (b) {return expectValidPNG(b);})));case 2:case "end":return _context5.stop();}}, _callee4);}))
   );
 });
 
