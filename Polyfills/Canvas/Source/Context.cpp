@@ -536,7 +536,7 @@ namespace Babylon::Polyfills::Internal
         auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetWidth();
         auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
 
-        // expand clipping 1pix in each direction because nanovg AA gets cut a bit short.
+        // Extend the clip one pixel toward the left/top because NanoVG AA gets cut a bit short.
         // A nested clip must not expand its parent's clipping region.
         nvgIntersectScissor(*m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, w + 1, h + 1);
     }
