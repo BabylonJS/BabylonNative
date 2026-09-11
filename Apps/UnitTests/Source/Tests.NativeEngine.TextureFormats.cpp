@@ -78,7 +78,7 @@ namespace
             Napi::Number::New(env, samples)});
     }
 
-    void ExpectInitializationError(Napi::Object engine, Napi::Value texture, double format, bool renderTarget, bool srgb, const char* message, uint32_t samples = 1)
+    void ExpectInitializationError(Napi::Object engine, Napi::Value texture, double format, bool renderTarget, bool srgb, const std::string& message, uint32_t samples = 1)
     {
         try
         {
@@ -170,6 +170,8 @@ TEST(NativeEngineTextureFormats, RejectedInitializationPreservesExistingTexture)
         InitializeTexture(engine, value, bgfx::TextureFormat::RGBA8, true);
         auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
         const auto originalHandle = texture->Handle();
+        ExpectInitializationError(engine, value, std::numeric_limits<double>::quiet_NaN(), true, false,
+            "Invalid texture format NaN: expected a finite integer in [0, " + std::to_string(bgfx::TextureFormat::Count) + ")");
         for (const double format : {
             static_cast<double>(bgfx::TextureFormat::Count), static_cast<double>(UINT32_MAX),
             4294967296.0 + static_cast<double>(bgfx::TextureFormat::RGBA8), -1.0,

@@ -1646,7 +1646,8 @@ namespace Babylon
         if (!std::isfinite(formatValue) || formatValue < 0 || formatValue >= static_cast<double>(bgfx::TextureFormat::Count) ||
             std::floor(formatValue) != formatValue)
         {
-            throw Napi::Error::New(info.Env(), "Invalid texture format");
+            throw Napi::Error::New(info.Env(), "Invalid texture format " + info[4].ToString().Utf8Value() +
+                ": expected a finite integer in [0, " + std::to_string(bgfx::TextureFormat::Count) + ")");
         }
         auto format = static_cast<bgfx::TextureFormat::Enum>(formatValue);
         const bool renderTarget = info[5].As<Napi::Boolean>();
