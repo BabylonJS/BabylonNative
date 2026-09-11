@@ -375,7 +375,11 @@ namespace Babylon::Polyfills::Internal
         const float height = info[3].As<Napi::Number>().FloatValue();
 
         nvgSave(*m_nvg);
-        nvgGlobalCompositeOperation(*m_nvg, NVG_COPY);
+        // NanoVG's clip is shader coverage, so COPY would erase even outside the clip.
+        nvgGlobalCompositeOperation(*m_nvg, NVG_DESTINATION_OUT);
+        nvgGlobalAlpha(*m_nvg, 1.f);
+        nanovg_filterstack clearFilters;
+        nvgFilterStack(*m_nvg, clearFilters);
 
         // See FillRect: clipping is a scissor, so the path must always be reset. Resetting it
         // invalidates the emulated clip, which points at a path that no longer exists, and the
@@ -386,7 +390,7 @@ namespace Babylon::Polyfills::Internal
 
         nvgClosePath(*m_nvg);
 
-        nvgFillColor(*m_nvg, TRANSPARENT_BLACK);
+        nvgFillColor(*m_nvg, nvgRGBA(0, 0, 0, 255));
         nvgFill(*m_nvg);
         nvgRestore(*m_nvg);
     }
@@ -533,7 +537,8 @@ namespace Babylon::Polyfills::Internal
         auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
 
         // expand clipping 1pix in each direction because nanovg AA gets cut a bit short.
-        nvgScissor(*m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, w + 1, h + 1);
+        // A nested clip must not expand its parent's clipping region.
+        nvgIntersectScissor(*m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, w + 1, h + 1);
     }
 
     void Context::StrokeRect(const Napi::CallbackInfo& info)
