@@ -122,8 +122,8 @@ namespace Babylon::Graphics
         bgfx::setViewScissor(m_viewId.value());
         m_bgfxScissor = {};
 
-        // Match touch(), but keep texture bindings set before the clear.
-        constexpr uint8_t discardFlags{BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS};
+        // Keep texture bindings and uniform writes (including OpenGL sampler indices) across the empty draw.
+        constexpr uint8_t discardFlags{BGFX_DISCARD_ALL & ~(BGFX_DISCARD_BINDINGS | BGFX_DISCARD_STATE)};
         encoder.discard(discardFlags);
         encoder.submit(m_viewId.value(), BGFX_INVALID_HANDLE, 0, discardFlags);
     }
