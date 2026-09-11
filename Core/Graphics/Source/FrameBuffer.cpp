@@ -122,7 +122,10 @@ namespace Babylon::Graphics
         bgfx::setViewScissor(m_viewId.value());
         m_bgfxScissor = {};
 
-        encoder.touch(m_viewId.value());
+        // Match touch(), but keep texture bindings set before the clear.
+        constexpr uint8_t discardFlags{BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS};
+        encoder.discard(discardFlags);
+        encoder.submit(m_viewId.value(), BGFX_INVALID_HANDLE, 0, discardFlags);
     }
 
     void FrameBuffer::SetViewPort(float x, float y, float width, float height)
