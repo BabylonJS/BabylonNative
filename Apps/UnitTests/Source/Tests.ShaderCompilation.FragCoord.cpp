@@ -10,6 +10,7 @@
 
 #include "Helpers.h"
 
+#include <chrono>
 #include <cstdlib>
 #include <future>
 #include <iostream>
@@ -303,6 +304,62 @@ TEST(NativeEngineInstanceData, QueuedDrawRetainsDataBeforeUpdate)
         EXPECT_EQ(pixels[offset + 3], 255);
     }
 #endif
+}
+
+TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWaitForFrame)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&device](Napi::Env env) {
+        env.Global().Set("globalThis", env.Global());
+        device.AddToJavaScript(env);
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+        });
+        Babylon::Polyfills::Window::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env);
+    });
+
+    Babylon::ScriptLoader loader{runtime};
+    loader.LoadScript("app:///Assets/babylon.max.js");
+
+    std::promise<void> setupDone;
+    loader.Dispatch([&setupDone](Napi::Env env) {
+        auto nativeEngine = env.Global().Get("BABYLON").As<Napi::Object>().Get("NativeEngine").As<Napi::Function>();
+        env.Global().Set("__engine", nativeEngine.New({}));
+        auto engine = env.Global().Get("__engine").As<Napi::Object>();
+        auto data = Napi::Float32Array::New(env, 3);
+        engine.Set("__buffer", engine.Get("createDynamicVertexBuffer").As<Napi::Function>().Call(engine, {data}));
+        setupDone.set_value();
+    });
+    setupDone.get_future().wait();
+
+    device.FinishRenderingCurrentFrame();
+
+    std::promise<void> updateStarted;
+    std::promise<void> updateDone;
+    auto updateStartedFuture = updateStarted.get_future();
+    auto updateFuture = updateDone.get_future();
+    loader.Dispatch([&updateStarted, &updateDone](Napi::Env env) {
+        auto engine = env.Global().Get("__engine").As<Napi::Object>();
+        auto data = Napi::Float32Array::New(env, 3);
+        updateStarted.set_value();
+        engine.Get("updateDynamicVertexBuffer").As<Napi::Function>().Call(engine, {engine.Get("__buffer"), data});
+        updateDone.set_value();
+    });
+
+    ASSERT_EQ(updateStartedFuture.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    const auto updateStatus = updateFuture.wait_for(std::chrono::milliseconds{250});
+
+    // Start another frame even on failure so the blocked runtime thread can unwind cleanly.
+    device.StartRenderingCurrentFrame();
+    ASSERT_EQ(updateFuture.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    device.FinishRenderingCurrentFrame();
+
+    EXPECT_EQ(updateStatus, std::future_status::ready)
+        << "an update with no queued commands must not wait for the next frame";
 }
 
 // gl_FragCoord.y must increase towards +Y in clip space, like the interpolated vUV.y
