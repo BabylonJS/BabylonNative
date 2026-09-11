@@ -2968,6 +2968,14 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
+        // Flush the JavaScript staging buffer first so an empty submission can
+        // remain a no-op instead of waiting for the next frame.
+        NativeDataStream::Reader reader = m_commandStream->GetReader();
+        if (!reader.CanRead())
+        {
+            return;
+        }
+
         // Acquire a FrameCompletionScope and capture it into a Dispatch
         // lambda so the frame stays open across the rest of the current JS
         // task, not just this command-stream pass. Any continuation work in
@@ -2989,7 +2997,6 @@ namespace Babylon
 
         try
         {
-            NativeDataStream::Reader reader = m_commandStream->GetReader();
             while (reader.CanRead())
             {
                 std::invoke(reader.ReadPointer<CommandFunctionPointerT>(), this, reader);
