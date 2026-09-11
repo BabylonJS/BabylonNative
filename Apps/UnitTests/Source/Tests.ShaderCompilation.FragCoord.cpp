@@ -36,7 +36,8 @@ namespace
         uint32_t height,
         const std::string& vertexShader,
         const std::string& fragmentShader,
-        bool withInputTexture)
+        bool withInputTexture,
+        const std::string& setupScript = {})
     {
         Babylon::Graphics::Device device{g_deviceConfig};
         device.StartRenderingCurrentFrame();
@@ -165,12 +166,16 @@ namespace
                     }
 
                     quad.material = material;
+                    SETUP_SCRIPT
                     globalThis.__scene = scene;
                 };
 
                 globalThis.render = function () {
                     var scene = globalThis.__scene;
-                    return scene.whenReadyAsync().then(function () {
+                    var preparation = globalThis.__prepare ? globalThis.__prepare() : Promise.resolve();
+                    return preparation.then(function () {
+                        return scene.whenReadyAsync();
+                    }).then(function () {
                         scene.render();
                     });
                 };
@@ -215,6 +220,7 @@ namespace
         replaceToken(finalScript, "VERTEX_SHADER_SOURCE", toJsStringLiteral(vertexShader));
         replaceToken(finalScript, "FRAGMENT_SHADER_SOURCE", toJsStringLiteral(fragmentShader));
         replaceToken(finalScript, "WITH_INPUT_TEXTURE", withInputTexture ? "true" : "false");
+        replaceToken(finalScript, "SETUP_SCRIPT", setupScript);
 
         loader.Eval(finalScript, "frag_coord_orientation_test.js");
 
@@ -256,6 +262,47 @@ namespace
         Helpers::DestroyTexture(outputTexture);
         return pixels;
     }
+}
+
+TEST(NativeEngineInstanceData, QueuedDrawRetainsDataBeforeUpdate)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "#include<instancesDeclaration>\n"
+        "varying float vValue;\n"
+        "void main(void) {\n"
+        "#include<instancesVertex>\n"
+        "vValue = finalWorld[3].x; gl_Position = vec4(position, 1.0); }\n";
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "varying float vValue;\n"
+        "void main(void) { gl_FragColor = vec4(vValue, 0.0, 0.0, 1.0); }\n";
+    const std::string setupScript = R"(
+        material.options.uniforms.push("world");
+        var matrices = new Float32Array(BABYLON.Matrix.Translation(0.25, 0, 0).m);
+        quad.thinInstanceSetBuffer("matrix", matrices, 16, false);
+        globalThis.__prepare = function () {
+            return material.forceCompilationAsync(quad, { useInstances: true });
+        };
+        quad.onAfterRenderObservable.add(function () {
+            matrices[12] = 0.75;
+            quad.thinInstanceBufferUpdated("matrix");
+        });
+    )";
+    const auto pixels = RenderFullScreenQuad(2, 1, vertexShader, fragmentShader, false, setupScript);
+    ASSERT_EQ(pixels.size(), 8u);
+    for (size_t offset = 0; offset < pixels.size(); offset += 4)
+    {
+        EXPECT_NEAR(pixels[offset], 64, 1);
+        EXPECT_EQ(pixels[offset + 1], 0);
+        EXPECT_EQ(pixels[offset + 2], 0);
+        EXPECT_EQ(pixels[offset + 3], 255);
+    }
+#endif
 }
 
 // gl_FragCoord.y must increase towards +Y in clip space, like the interpolated vUV.y
