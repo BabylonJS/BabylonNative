@@ -38,83 +38,113 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-
       - name: Install packages
-              run: |
-                sudo apt-get update
-                sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build
-                # Vulkan job is build-only (no lavapipe runtime): headers/libs are enough to
-                # compile GRAPHICS_API=Vulkan and catch packaging breaks CI never covered before.
-                if [ "${{ inputs.graphics-api }}" = "Vulkan" ]; then
-                  sudo apt-get install -y libvulkan-dev
-                fi
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build
+          if [ "${{ inputs.graphics-api }}" = "Vulkan" ]; then
+            sudo apt-get install -y libvulkan-dev mesa-vulkan-drivers xvfb xauth
+          fi
 
-            - name: Build X11
-              run: |
-                cmake -G Ninja -B build/Linux \
-                  -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
-                  -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
-                  -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-                  -D BX_CONFIG_DEBUG=ON \
-                  -D GRAPHICS_API=${{ inputs.graphics-api }} \
-                  -D OpenGL_GL_PREFERENCE=GLVND \
-                  -D BABYLON_DEBUG_TRACE=ON \
-                  -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
-                  -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
-                  ${{ inputs.js-engine == 'Hermes' && '-D HERMES_UNICODE_LITE=ON -D HERMES_ALLOW_BOOST_CONTEXT=0' || '' }} \
-                  -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
-                ninja -C build/Linux
+      - name: Build X11
+        run: |
+          cmake -G Ninja -B build/Linux \
+            -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
+            -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
+            -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+            -D BX_CONFIG_DEBUG=ON \
+            -D GRAPHICS_API=${{ inputs.graphics-api }} \
+            -D OpenGL_GL_PREFERENCE=GLVND \
+            -D BABYLON_DEBUG_TRACE=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+            ${{ inputs.js-engine == 'Hermes' && '-D HERMES_UNICODE_LITE=ON -D HERMES_ALLOW_BOOST_CONTEXT=0' || '' }} \
+            -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
+          ninja -C build/Linux
 
-            # Runtime steps below are OpenGL-only. Ubuntu_Clang_Vulkan is intentionally
-            # configure+build only: GH runners have no GPU, and lavapipe+bgfx Xlib surface
-            # init SEGV'd when we tried UnitTests.VulkanRejectsMoreThanSixteenSamplers.
+      - name: Enable Core Dump
+        run: sudo sysctl -w kernel.core_pattern=core.%p
 
-            - name: Enable Core Dump
-              if: ${{ inputs.graphics-api != 'Vulkan' }}
-              run: sudo sysctl -w kernel.core_pattern=core.%p
+      - name: Validation Tests
+        if: ${{ inputs.graphics-api != 'Vulkan' }}
+        run: |
+          cd build/Linux/Apps/Playground
+          ulimit -c unlimited
+          xvfb-run ./Playground app:///Scripts/validation_native.js
 
-            - name: Validation Tests
-              if: ${{ inputs.graphics-api != 'Vulkan' }}
-              run: |
-                cd build/Linux/Apps/Playground
-                ulimit -c unlimited
-                xvfb-run ./Playground app:///Scripts/validation_native.js
+      - name: Unit Tests
+        if: ${{ inputs.graphics-api != 'Vulkan' }}
+        run: |
+          cd build/Linux/Apps/UnitTests
+          ulimit -c unlimited
+          xvfb-run ./UnitTests
 
-            - name: Unit Tests
-              if: ${{ inputs.graphics-api != 'Vulkan' }}
-              run: |
-                cd build/Linux/Apps/UnitTests
-                ulimit -c unlimited
-                xvfb-run ./UnitTests
+      - name: Vulkan Sampler Boundary Tests
+        if: ${{ inputs.graphics-api == 'Vulkan' }}
+        timeout-minutes: 5
+        run: |
+          cd build/Linux/Apps/UnitTests
+          ulimit -c unlimited
+          VK_ICD_FILENAMES=$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)
+          test -n "$VK_ICD_FILENAMES"
+          export VK_ICD_FILENAMES
+          xvfb-run --auto-servernum ./UnitTests \
+            --gtest_filter=ShaderCompilation.VulkanAcceptsSixteenSamplers:ShaderCompilation.VulkanRejectsMoreThanSixteenSamplers \
+            --gtest_output=xml:vulkan-sampler-results.xml
+          # A missing or skipped boundary test must not produce a green lane.
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          report = ET.parse("vulkan-sampler-results.xml").getroot()
+          cases = report.findall("./testsuite/testcase")
+          expected = {
+              "ShaderCompilation.VulkanAcceptsSixteenSamplers",
+              "ShaderCompilation.VulkanRejectsMoreThanSixteenSamplers",
+          }
+          completed = {
+              f"{case.get('classname')}.{case.get('name')}"
+              for case in cases
+              if case.get("status") == "run" and case.get("result") == "completed"
+              and case.find("failure") is None and case.find("skipped") is None
+          }
+          if len(cases) != 2 or completed != expected:
+              raise SystemExit("Both Vulkan sampler boundary tests must run and pass")
+          PY
 
-            - name: Module Load Test
-              if: ${{ !inputs.enable-sanitizers && inputs.graphics-api != 'Vulkan' }}
-              run: |
-                cd build/Linux/Apps/ModuleLoadTest
-                ulimit -c unlimited
-                xvfb-run ./ModuleLoadTest
+      - name: Module Load Test
+        if: ${{ !inputs.enable-sanitizers && inputs.graphics-api != 'Vulkan' }}
+        run: |
+          cd build/Linux/Apps/ModuleLoadTest
+          ulimit -c unlimited
+          xvfb-run ./ModuleLoadTest
 
-            - name: Upload Rendered Pictures
-              if: ${{ always() && inputs.graphics-api != 'Vulkan' }}
-              uses: actions/upload-artifact@v6
-              with:
-                name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
-                path: build/Linux/Apps/Playground/Results
+      - name: Upload Vulkan Test Results
+        if: ${{ always() && inputs.graphics-api == 'Vulkan' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-test-results
+          path: build/Linux/Apps/UnitTests/vulkan-sampler-results.xml
 
-            - name: Upload Error Pictures
-              if: ${{ failure() && inputs.graphics-api != 'Vulkan' }}
-              uses: actions/upload-artifact@v6
-              with:
-                name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
-                path: build/Linux/Apps/Playground/Errors
+      - name: Upload Rendered Pictures
+        if: ${{ always() && inputs.graphics-api != 'Vulkan' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
+          path: build/Linux/Apps/Playground/Results
 
-            - name: Upload Core Dumps
-              if: ${{ failure() && inputs.graphics-api != 'Vulkan' }}
-              uses: actions/upload-artifact@v6
-              with:
-                name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
-                path: |
-                  build/Linux/Apps/Playground/Playground
-                  build/Linux/Apps/Playground/core.*
-                  build/Linux/Apps/UnitTests/UnitTests
-                  build/Linux/Apps/UnitTests/core.*
+      - name: Upload Error Pictures
+        if: ${{ failure() && inputs.graphics-api != 'Vulkan' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
+          path: build/Linux/Apps/Playground/Errors
+
+      - name: Upload Core Dumps
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
+          path: |
+            build/Linux/Apps/Playground/Playground
+            build/Linux/Apps/Playground/core.*
+            build/Linux/Apps/UnitTests/UnitTests
+            build/Linux/Apps/UnitTests/core.*

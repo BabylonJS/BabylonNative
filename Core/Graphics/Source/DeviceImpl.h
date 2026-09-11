@@ -124,7 +124,7 @@ namespace Babylon::Graphics
         friend class FrameCompletionScope;
 
         static const bgfx::RendererType::Enum s_bgfxRenderType;
-        static void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
+        void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
         static void ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType);
 
         // Push the render resolution onto the native rendering surface so it
@@ -143,6 +143,9 @@ namespace Babylon::Graphics
         arcana::affinity m_renderThreadAffinity{};
         bool m_rendering{};
         bool m_firstFrameStarted{};
+
+        // Keep platform-owned display resources alive until after bgfx shutdown.
+        std::unique_ptr<void, void (*)(void*)> m_nativeDisplay{nullptr, nullptr};
 
         // The single bgfx encoder for the current frame. Acquired in
         // StartRenderingCurrentFrame, ended in FinishRenderingCurrentFrame.

@@ -292,96 +292,108 @@ TEST(ShaderCompilation, PartiallySharedStageSamplersCompile)
 }
 
 #if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
-TEST(ShaderCompilation, VulkanRejectsMoreThanSixteenSamplers)
+namespace
 {
-    Babylon::Graphics::Device device{g_deviceConfig};
-    device.StartRenderingCurrentFrame();
-
-    Babylon::AppRuntime::Options options{};
-    std::string failureMessage;
-    options.UnhandledExceptionHandler = [&failureMessage](const Napi::Error& error) {
-        failureMessage = Napi::GetErrorString(error);
+    struct SamplerCompilationResult
+    {
+        bool IsReady;
+        std::string Error;
     };
 
-    Babylon::AppRuntime runtime{options};
-    runtime.Dispatch([&device](Napi::Env env) {
-        device.AddToJavaScript(env);
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-            std::cout << message << std::endl;
-        });
-        Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Plugins::NativeEngine::Initialize(env);
-    });
-
-    std::string uniforms;
-    std::string decls;
-    std::string sum;
-    for (int i = 0; i < 17; ++i)
+    SamplerCompilationResult CompileVulkanSamplers(int samplerCount)
     {
-        decls += "uniform sampler2D t" + std::to_string(i) + ";\n";
-        if (i > 0)
+        Babylon::Graphics::Device device{g_deviceConfig};
+        device.StartRenderingCurrentFrame();
+
+        Babylon::AppRuntime::Options options{};
+        options.UnhandledExceptionHandler = [](const Napi::Error& error) {
+            std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
+            std::quick_exit(1);
+        };
+
+        Babylon::AppRuntime runtime{options};
+        runtime.Dispatch([&device](Napi::Env env) {
+            device.AddToJavaScript(env);
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                std::cout << message << std::endl;
+            });
+            Babylon::Polyfills::Window::Initialize(env);
+            Babylon::Plugins::NativeEngine::Initialize(env);
+        });
+
+        std::string decls;
+        std::string sum;
+        for (int i = 0; i < samplerCount; ++i)
         {
-            uniforms += ", ";
-            sum += " + ";
-        }
-        uniforms += "\"t" + std::to_string(i) + "\"";
-        sum += "texture2D(t" + std::to_string(i) + ", vec2(0.5))";
-    }
-
-    // Keep unexpected success out of the catch path: throwing "…>16 samplers" from
-    // inside try would set failed=true and pass the "16" substring assertion even
-    // when the compiler incorrectly accepted the program.
-    std::string script = R"(
-        const engine = new BABYLON.NativeEngine();
-        engine.getCaps().parallelShaderCompile = null;
-        let status = "unset";
-        let message = "";
-        try {
-            const effect = engine.createEffect({
-                vertexSource: `
-                    attribute vec2 position;
-                    void main() { gl_Position = vec4(position, 0.0, 1.0); }
-                `,
-                fragmentSource: `
-                    precision highp float;
-)" + decls + R"(
-                    void main() { gl_FragColor = )" + sum + R"(; }
-                `
-            }, ["position"], [)" + uniforms + R"(], []);
-            if (effect.isReady()) {
-                status = "unexpected_success";
-            } else {
-                status = "not_ready";
-                message = "effect is not ready";
+            decls += "uniform sampler2D t" + std::to_string(i) + ";\n";
+            if (i > 0)
+            {
+                sum += " + ";
             }
-        } catch (e) {
-            status = "threw";
-            message = String(e && e.message ? e.message : e);
+            sum += "texture(t" + std::to_string(i) + ", vec2(0.5))";
         }
-        engine.dispose();
-        globalThis.__status = status;
-        globalThis.__message = message;
-    )";
 
-    Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
-    loader.Eval(script, "vulkan_too_many_samplers_test.js");
+        // Effect keeps only the stack on JavaScriptCore. Use the synchronous
+        // program API to preserve the native compiler's error message.
+        std::string script = R"(
+            const engine = new BABYLON.NativeEngine();
+            engine.getCaps().parallelShaderCompile = null;
+            const pipeline = engine.createPipelineContext();
+            let ready = false;
+            let message = "";
+            try {
+                engine.createShaderProgram(pipeline,
+                    `#version 300 es
+                        precision highp float;
+                        in vec2 position;
+                        void main() { gl_Position = vec4(position, 0.0, 1.0); }
+                    `,
+                    `#version 300 es
+                        precision highp float;
+                        out vec4 color;
+)" + decls + R"(
+                        void main() { color = )" + sum + R"(; }
+                    `, "");
+                ready = pipeline.isReady;
+            } catch (e) {
+                message = String(e && e.message ? e.message : e);
+            }
+            engine._deletePipelineContext(pipeline);
+            pipeline.dispose();
+            engine.dispose();
+            globalThis.__samplerReady = ready;
+            globalThis.__samplerError = message;
+        )";
 
-    std::string status;
-    std::string message;
-    std::promise<void> done{};
-    loader.Dispatch([&done, &status, &message](Napi::Env env) {
-        status = env.Global().Get("__status").ToString();
-        message = env.Global().Get("__message").ToString();
-        done.set_value();
-    });
-    done.get_future().get();
-    device.FinishRenderingCurrentFrame();
+        Babylon::ScriptLoader loader{runtime};
+        loader.LoadScript("app:///Assets/babylon.max.js");
+        loader.Eval(script, "vulkan_sampler_boundary_test.js");
 
-    ASSERT_NE(status, "unexpected_success") << "compiler accepted >16 samplers; expected rejection";
-    ASSERT_TRUE(status == "threw" || status == "not_ready" || !failureMessage.empty())
-        << "status=" << status << " message=" << message << " native=" << failureMessage;
-    const std::string combined = message + failureMessage;
-    EXPECT_NE(combined.find("16"), std::string::npos) << combined;
+        std::promise<SamplerCompilationResult> done{};
+        loader.Dispatch([&done](Napi::Env env) {
+            done.set_value({
+                env.Global().Get("__samplerReady").ToBoolean().Value(),
+                env.Global().Get("__samplerError").ToString(),
+            });
+        });
+        auto result = done.get_future().get();
+        device.FinishRenderingCurrentFrame();
+        return result;
+    }
+}
+
+TEST(ShaderCompilation, VulkanAcceptsSixteenSamplers)
+{
+    const auto result = CompileVulkanSamplers(16);
+    EXPECT_TRUE(result.IsReady) << result.Error;
+    EXPECT_TRUE(result.Error.empty()) << result.Error;
+}
+
+TEST(ShaderCompilation, VulkanRejectsMoreThanSixteenSamplers)
+{
+    const auto result = CompileVulkanSamplers(17);
+    // Assert outside the script's catch path so unexpected success cannot pass.
+    EXPECT_FALSE(result.IsReady);
+    EXPECT_NE(result.Error.find("Vulkan shader uses more than 16 distinct sampler textures"), std::string::npos) << result.Error;
 }
 #endif

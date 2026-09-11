@@ -141,8 +141,8 @@ jobs:
       cxx: clang++
       js-engine: QuickJS
 
-  # Exercises GRAPHICS_API=Vulkan (lavapipe) so Vulkan-only unit tests such as
-  # ShaderCompilation.VulkanRejectsMoreThanSixteenSamplers are compiled and run.
+  # Compile and run Vulkan's 16-sampler acceptance and 17-sampler rejection
+  # tests using lavapipe under Xvfb.
   Ubuntu_Clang_Vulkan:
     uses: ./.github/workflows/build-linux.yml
     with:
