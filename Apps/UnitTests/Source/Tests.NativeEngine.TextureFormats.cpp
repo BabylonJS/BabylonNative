@@ -4,6 +4,7 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <napi/env.h>
 #include <napi/pointer.h>
 
 #include <chrono>
@@ -11,6 +12,7 @@
 #include <functional>
 #include <future>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -30,7 +32,7 @@ namespace
                 {
                     device.AddToJavaScript(env);
                     Babylon::Plugins::NativeEngine::Initialize(env);
-                    auto run = env.RunScript(R"(
+                    auto run = Napi::Eval(env, R"(
                         (function(test) {
                             const engine = new _native.Engine();
                             const texture = engine.createTexture();
@@ -41,7 +43,7 @@ namespace
                                 engine.dispose();
                             }
                         })
-                    )").As<Napi::Function>();
+                    )", "native-texture-format-test.js").As<Napi::Function>();
                     run.Call({Napi::Function::New(env, [&](const Napi::CallbackInfo& info) {
                         test(info[0].As<Napi::Object>(), info[1]);
                     })});
@@ -49,7 +51,7 @@ namespace
                 }
                 catch (const Napi::Error& error)
                 {
-                    completed.set_exception(std::make_exception_ptr(std::runtime_error{Napi::GetErrorString(error)}));
+                    completed.set_exception(std::make_exception_ptr(std::runtime_error{error.Message() + "\n" + Napi::GetErrorString(error)}));
                 }
                 catch (...)
                 {
@@ -67,7 +69,7 @@ namespace
         ASSERT_NO_THROW(completion.get());
     }
 
-    void InitializeTexture(Napi::Object engine, Napi::Value texture, uint32_t format, bool renderTarget, bool srgb = false, uint32_t samples = 1)
+    void InitializeTexture(Napi::Object engine, Napi::Value texture, double format, bool renderTarget, bool srgb = false, uint32_t samples = 1)
     {
         const auto env = engine.Env();
         engine.Get("initializeTexture").As<Napi::Function>().Call(engine, {
@@ -76,7 +78,7 @@ namespace
             Napi::Number::New(env, samples)});
     }
 
-    void ExpectInitializationError(Napi::Object engine, Napi::Value texture, uint32_t format, bool renderTarget, bool srgb, const char* message, uint32_t samples = 1)
+    void ExpectInitializationError(Napi::Object engine, Napi::Value texture, double format, bool renderTarget, bool srgb, const char* message, uint32_t samples = 1)
     {
         try
         {
@@ -85,7 +87,7 @@ namespace
         }
         catch (const Napi::Error& error)
         {
-            EXPECT_NE(Napi::GetErrorString(error).find(message), std::string::npos);
+            EXPECT_NE(error.Message().find(message), std::string::npos) << error.Message();
         }
     }
 
@@ -168,8 +170,14 @@ TEST(NativeEngineTextureFormats, RejectedInitializationPreservesExistingTexture)
         InitializeTexture(engine, value, bgfx::TextureFormat::RGBA8, true);
         auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
         const auto originalHandle = texture->Handle();
-        for (const uint32_t format : {static_cast<uint32_t>(bgfx::TextureFormat::Count), UINT32_MAX})
+        for (const double format : {
+            static_cast<double>(bgfx::TextureFormat::Count), static_cast<double>(UINT32_MAX),
+            4294967296.0 + static_cast<double>(bgfx::TextureFormat::RGBA8), -1.0,
+            static_cast<double>(bgfx::TextureFormat::RGBA8) + 0.5,
+            std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity(),
+            -std::numeric_limits<double>::infinity()})
         {
+            SCOPED_TRACE(format);
             ExpectInitializationError(engine, value, format, true, false, "Invalid texture format");
             EXPECT_EQ(texture->Handle().idx, originalHandle.idx);
             EXPECT_EQ(texture->Format(), bgfx::TextureFormat::RGBA8);

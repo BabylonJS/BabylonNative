@@ -1642,8 +1642,9 @@ namespace Babylon
         const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         const bool hasMips = info[3].As<Napi::Boolean>();
-        const uint32_t formatValue = info[4].As<Napi::Number>().Uint32Value();
-        if (formatValue >= bgfx::TextureFormat::Count)
+        const double formatValue = info[4].As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(formatValue) || formatValue < 0 || formatValue >= static_cast<double>(bgfx::TextureFormat::Count) ||
+            std::floor(formatValue) != formatValue)
         {
             throw Napi::Error::New(info.Env(), "Invalid texture format");
         }
