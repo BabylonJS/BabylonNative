@@ -1263,6 +1263,12 @@ namespace Babylon
 
         try
         {
+            // Queued draws snapshot instance data when decoded. This immediate
+            // update must not overwrite that data before those draws execute.
+            if (m_commandStream)
+            {
+                SubmitCommands(info);
+            }
             vertexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), vertexByteOffset);
         }
         catch (std::exception& ex)
