@@ -19,6 +19,8 @@
 #include <windows.h>
 #include <cassert>
 #include <cstdio>
+#include <string>
+#include <thread>
 #include "string_utils.h"
 
 #ifndef VerifyElseExit
@@ -111,6 +113,20 @@ ProcessResult SpawnSync(std::string_view command,
                      &startup_info,    // STARTUPINFO pointer
                      &process_info));  // receives PROCESS_INFORMATION
 
+  // Release the parent's copies of the write ends first -- while they are open, ReadFile can
+  // never observe EOF -- then drain both pipes on their own threads while the child runs.
+  // Waiting for the child before reading deadlocks as soon as it writes more than the
+  // anonymous-pipe buffer (4 KiB by default): it blocks on write, the parent blocks on wait.
+  out_write_handle.Close();
+  err_write_handle.Close();
+
+  std::string std_output;
+  std::string std_error;
+  std::thread out_reader([&] { std_output = ReadFromPipe(out_read_handle.handle); });
+  std::thread err_reader([&] { std_error = ReadFromPipe(err_read_handle.handle); });
+  out_reader.join();
+  err_reader.join();
+
   VerifyElseExit(WAIT_OBJECT_0 ==
                  ::WaitForSingleObject(process_info.hProcess, INFINITE));
 
@@ -118,23 +134,12 @@ ProcessResult SpawnSync(std::string_view command,
   VerifyElseExit(::GetExitCodeProcess(process_info.hProcess, &exit_code));
 
   // Close handles to the child process and its primary thread.
-  // Some applications might keep these handles to monitor the status
-  // of the child process, for example.
   ::CloseHandle(process_info.hProcess);
   ::CloseHandle(process_info.hThread);
 
-  // Close handles to the stdin and stdout pipes no longer needed by the child
-  // process. If they are not explicitly closed, there is no way to recognize
-  // that the child process has ended.
-
-  out_write_handle.Close();
-  err_write_handle.Close();
-
   result.status = exit_code;
-  result.std_output =
-      ReplaceAll(ReadFromPipe(out_read_handle.handle), "\r\n", "\n");
-  result.std_error =
-      ReplaceAll(ReadFromPipe(err_read_handle.handle), "\r\n", "\n");
+  result.std_output = ReplaceAll(std_output, "\r\n", "\n");
+  result.std_error = ReplaceAll(std_error, "\r\n", "\n");
 
   return result;
 }
