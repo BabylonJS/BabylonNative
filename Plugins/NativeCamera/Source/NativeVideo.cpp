@@ -77,12 +77,12 @@ namespace Babylon::Plugins
         return Napi::Value::From(Env(), 1u);
     }
 
-    void NativeVideo::UpdateTexture(bgfx::TextureHandle textureHandle)
+    void NativeVideo::UpdateTexture(Graphics::Texture& texture)
     {
         // Only update the texture if we're playing and the srcObject is an instance of a MediaStream
         if (m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
         {
-            if (MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(textureHandle))
+            if (MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(texture))
             {
                 // The video dimensions have changed, raise the resize event to observers
                 RaiseEvent("resize");

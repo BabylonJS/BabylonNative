@@ -20,8 +20,16 @@
 #include <optional>
 #include <unordered_map>
 
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+#include <winrt/base.h>
+#endif
+
 namespace Babylon::Graphics
 {
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+    class ExternalBackBufferD3D11;
+#endif
+
     class DeviceImpl
     {
     public:
@@ -71,6 +79,7 @@ namespace Babylon::Graphics
         PlatformInfo GetPlatformInfo() const;
 
         uintptr_t GetId() const;
+        bgfx::FrameBufferHandle GetBackBufferHandle() const;
 
         /* ********** END DEVICE CONTRACT ********** */
 
@@ -130,8 +139,8 @@ namespace Babylon::Graphics
         friend class FrameCompletionScope;
 
         static const bgfx::RendererType::Enum s_bgfxRenderType;
-        void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
-        static void ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType);
+        void ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window);
+        static void ConfigureBgfxRenderType(bgfx::Init& init);
 
         // Push the render resolution onto the native rendering surface so it
         // matches what bgfx renders into. Implemented per graphics API. The
@@ -141,7 +150,9 @@ namespace Babylon::Graphics
 
         void UpdateBgfxState();
         void UpdateBgfxResolution();
-        void RequestScreenShots();
+        void UpdateBackBufferState();
+        void DestroyBackBuffer();
+        bool RequestScreenShots();
         void Frame();
         void PerformMidFrameViewFlush();
         void CaptureCallback(const BgfxCallback::CaptureData&);
@@ -181,17 +192,29 @@ namespace Babylon::Graphics
 
         std::optional<arcana::cancellation_source> m_cancellationSource{};
 
+        bgfx::FrameBufferHandle m_windowFrameBuffer{bgfx::kInvalidHandle};
+        void* m_windowHandle{};
+        void* m_displayHandle{};
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        std::unique_ptr<ExternalBackBufferD3D11> m_externalBackBuffer;
+#endif
+
         struct
         {
             // Mutable since const getters need to lock.
             mutable std::recursive_mutex Mutex{};
 
             // The native window/surface we render into. Cached as WindowT (the
-            // handle in Bgfx.InitState.platformData is type-erased to void* and
+            // handle in Bgfx.InitState.swapChain is type-erased to void* and
             // can't be cast back to WindowT portably) so ResizeRenderSurface can
             // push the render resolution onto the surface. Null until
             // UpdateWindow.
             WindowT Window{};
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+            winrt::com_ptr<ID3D11RenderTargetView> BackBufferColor;
+            winrt::com_ptr<ID3D11DepthStencilView> BackBufferDepthStencil;
+#endif
 
             struct
             {

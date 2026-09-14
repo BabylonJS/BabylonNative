@@ -5,6 +5,9 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#ifdef HAS_SHADER_COMPILER
+#include <Babylon/Plugins/ShaderCompiler.h>
+#endif
 #include <Babylon/ScriptLoader.h>
 
 #include <chrono>
@@ -16,6 +19,28 @@
 using namespace std::chrono_literals;
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
+
+#ifdef HAS_SHADER_COMPILER
+TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    auto shader = compiler.Compile(
+        R"(
+            in vec2 position;
+            void main() { gl_Position = vec4(position, 0.0, 1.0); }
+        )",
+        R"(
+            precision highp float;
+            uniform vec4 values[2];
+            layout(location = 0) out vec4 fragColor;
+            vec4 readValue() { return values[0]; }
+            void main() { fragColor = readValue(); }
+        )");
+
+    EXPECT_FALSE(shader.VertexBytes.empty());
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+#endif
 
 TEST(ShaderCompilation, CompileComprehensiveGLSL)
 {

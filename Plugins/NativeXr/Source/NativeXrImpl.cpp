@@ -249,6 +249,8 @@ namespace Babylon
 
                     // If a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering.
                     // Depth (numLayers) can be 0, bgfx will just reinterpret it as max(numLayers, 1).
+                    assert(view.ColorTexturePointer != nullptr);
+                    assert(view.DepthTexturePointer != nullptr);
                     assert(view.ColorTextureSize.Width != 0);
                     assert(view.ColorTextureSize.Height != 0);
                     assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
@@ -259,23 +261,38 @@ namespace Babylon
                     const auto textureHeight = static_cast<uint16_t>(view.ColorTextureSize.Height);
                     const auto textureLayers = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(view.ColorTextureSize.Depth));
 
-                    // Create textures with the desired size. It will be freed and replaced with overrideInternal call
-                    // This is mandatory as overrideInternal do not update texture size.
-                    // And size is used for determining viewport when rendering to texture.
+                    // Create bgfx handles that directly import the runtime-owned XR textures. The declared
+                    // dimensions and layers are used to determine the viewport and per-eye array slices.
                     auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
-                    auto colorTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, colorTextureFormat, BGFX_TEXTURE_RT);
+                    auto colorTexture = bgfx::createTexture2D(
+                        textureWidth,
+                        textureHeight,
+                        false,
+                        textureLayers,
+                        colorTextureFormat,
+                        BGFX_TEXTURE_RT,
+                        nullptr,
+                        reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                     m_sessionState->GraphicsContext.AddTexture(colorTexture, textureWidth, textureHeight, false, textureLayers, colorTextureFormat);
 
                     auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
-                    auto depthTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, depthTextureFormat, BGFX_TEXTURE_RT);
+                    auto depthTexture = bgfx::createTexture2D(
+                        textureWidth,
+                        textureHeight,
+                        false,
+                        textureLayers,
+                        depthTextureFormat,
+                        BGFX_TEXTURE_RT,
+                        nullptr,
+                        reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
                     m_sessionState->GraphicsContext.AddTexture(depthTexture, textureWidth, textureHeight, false, textureLayers, depthTextureFormat);
 
                     auto requiresAppClear = view.RequiresAppClear;
 
-                    arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
-                        bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
-                        bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, colorTextureFormat, requiresAppClear, &viewConfig]() {
+                    // Wait for the current bgfx frame to submit the external texture creation commands
+                    // before publishing framebuffers that reference those handles.
+                    arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [] {})
+                        .then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, colorTextureFormat, requiresAppClear, &viewConfig]() {
                           const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
                           // TODO (rgerd): Remove old framebuffers from resource table?
                           viewConfig.FrameBuffers.resize(eyeCount);
@@ -302,16 +319,16 @@ namespace Babylon
 
                           for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
                           {
-                              // See NativeEngine::CreateFrameBuffer: gate BGFX_RESOLVE_AUTO_GEN_MIPS on format caps and
-                              // always pass BGFX_RESOLVE_NONE for depth (depth formats don't support autogen mips).
+                              // See NativeEngine::CreateFrameBuffer: gate BGFX_ATTACHMENT_AUTO_GEN_MIPS on format caps and
+                              // always pass BGFX_ATTACHMENT_NONE for depth (depth formats don't support autogen mips).
                               const bgfx::Caps* caps = bgfx::getCaps();
-                              const uint8_t colorResolve = 0 != (caps->formats[colorTextureFormat] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
-                                  ? BGFX_RESOLVE_AUTO_GEN_MIPS
-                                  : BGFX_RESOLVE_NONE;
+                              const uint8_t colorAttachmentFlags = 0 != (caps->formats[colorTextureFormat] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
+                                  ? BGFX_ATTACHMENT_AUTO_GEN_MIPS
+                                  : BGFX_ATTACHMENT_NONE;
 
                               std::array<bgfx::Attachment, 2> attachments{};
-                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx, 1, 0, colorResolve);
-                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx, 1, 0, BGFX_RESOLVE_NONE);
+                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx, 1, 0, colorAttachmentFlags);
+                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx, 1, 0, BGFX_ATTACHMENT_NONE);
 
                               auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 

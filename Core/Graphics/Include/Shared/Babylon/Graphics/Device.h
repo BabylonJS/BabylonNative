@@ -35,7 +35,7 @@ namespace Babylon::Graphics
         BackBufferColorT BackBufferColor{};
 
         // Depth stencil back buffer to use instead of creating one internally.
-        // @remarks Only available for D3D11. DepthStencilFormat is ignored when specified.
+        // @remarks Only available for D3D11. BackBufferDepthStencilFormat is ignored when specified.
         BackBufferDepthStencilT BackBufferDepthStencil{};
 #endif
 
@@ -96,6 +96,7 @@ namespace Babylon::Graphics
         // Features and functionalities will be added and
         // method and structure might change.
 
+        // Switches the rendering surface at the next frame boundary without recreating the device.
         void UpdateWindow(WindowT window);
 
         // Sets the underlying graphics device used for rendering. The new device takes effect on
@@ -111,6 +112,7 @@ namespace Babylon::Graphics
         void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        // Retains the supplied views while in use. Changes take effect at the next frame boundary.
         void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil = {});
 #endif
 

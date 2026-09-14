@@ -43,7 +43,7 @@ endfunction()
 install_lib(arcana)
 
 ## bgfx
-install_lib(bimg_encode bimg_decode bgfx bimg bx minz)
+install_lib(bimg_encode bimg_decode bgfx bimg bx)
 
 ## glslang
 install_lib(GenericCodeGen glslang glslang-default-resource-limits MachineIndependent OGLCompiler OSDependent SPIRV)

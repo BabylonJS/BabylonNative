@@ -29,9 +29,11 @@ set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
+    "Source/Tests.BgfxCallback.cpp"
     "Source/Tests.Canvas.TextMetrics.cpp"
     "Source/Tests.Canvas.Readback.cpp"
     "Source/Tests.Device.FrameEncoder.cpp"
+    "Source/Tests.Device.SwapChain.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.Lifecycle.cpp"
     "Source/Tests.ExternalTexture.DeviceLoss.cpp"
@@ -99,6 +101,12 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
+if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
+    target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal)
+    target_compile_definitions(UnitTests PRIVATE HAS_SHADER_COMPILER)
+    deploy_shader_compiler_runtime(UnitTests)
+endif()
+
 # NativeDraco and NativeMeshopt default to OFF, so link and exercise them only when the
 # consuming build opted in. CI turns both on for the jobs that run UnitTests.
 if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)
@@ -112,7 +120,7 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT)
 endif()
 
 if(GRAPHICS_API STREQUAL "D3D12")
-    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
+    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS BABYLON_NATIVE_GRAPHICS_API_D3D12)
 endif()
 
 if(GRAPHICS_API STREQUAL "Vulkan")

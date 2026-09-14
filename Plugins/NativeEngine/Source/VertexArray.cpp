@@ -42,13 +42,7 @@ namespace Babylon
                 throw std::runtime_error{"Unsupported vertex buffer attribute type or normalized flag"};
             }
 
-            // Check if instancing is supported.
             const bgfx::Caps* caps = bgfx::getCaps();
-            const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & caps->supported);
-            if (!instancingSupported)
-            {
-                throw std::runtime_error{"Instancing is not supported"};
-            }
 
             // Use the runtime cap, not MAX_INSTANCE_DATA_SLOT_COUNT: backends clamp maxInstanceData
             // to the device's maxVertexAttributes during init, so the compile-time value is a
@@ -95,9 +89,7 @@ namespace Babylon
 
     void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
-        // Check if instancing is supported.
-        const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
-        if (!m_vertexBufferInstances.empty() && instancingSupported)
+        if (!m_vertexBufferInstances.empty())
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
             VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);

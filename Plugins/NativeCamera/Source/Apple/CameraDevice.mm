@@ -10,6 +10,7 @@
 #include <arcana/threading/dispatcher.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Texture.h>
 #include <arcana/threading/task_schedulers.h>
 #include <memory>
 #include <Foundation/Foundation.h>
@@ -236,8 +237,9 @@ namespace Babylon::Plugins
         id<MTLCommandQueue> commandQueue{};
         id<MTLCommandBuffer> currentCommandBuffer{};
         bool isInitialized{false};
-        bool refreshBgfxHandle{true};
-        bgfx::TextureHandle textureHandle{};
+        bool refreshBgfxTexture{true};
+        Graphics::Texture* bgfxTexture{};
+        bgfx::TextureHandle bgfxTextureHandle{bgfx::kInvalidHandle};
 
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
         std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
@@ -416,8 +418,8 @@ namespace Babylon::Plugins
 
             m_impl->isInitialized = true;
         } else {
-            // Always refresh the bgfx handle to point to textureRGBA on re-open.
-            m_impl->refreshBgfxHandle = true;
+            // Always refresh the bgfx texture to point to textureRGBA on re-open.
+            m_impl->refreshBgfxTexture = true;
         }
 
         // Construct the camera texture delegate, which is responsible for handling updates for device orientation and the capture session.
@@ -577,11 +579,11 @@ namespace Babylon::Plugins
         });
     }
 
-    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
+    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(Graphics::Texture& texture)
     {
-        // Hook into AfterRender to copy over the texture, ensuring that the textureHandle has already been initialized by bgfx.
+        // Hook into AfterRender to copy over the texture without overlapping bgfx's frame encoding.
         // Capture the cancellation token so that the shared pointer is kept alive when arcana checks internally for cancellation.
-        arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), *m_impl->cancellationSource, [this, textureHandle, cancellationSource{m_impl->cancellationSource}] {
+        arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), *m_impl->cancellationSource, [this, texture{&texture}, cancellationSource{m_impl->cancellationSource}] {
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
@@ -612,11 +614,10 @@ namespace Babylon::Plugins
                 return;
             }
 
-            // Check if the we've been handed a new texture handle and if so refresh our override
-            if (m_impl->textureHandle.idx != textureHandle.idx)
+            // Check if we've been handed a different texture or if its bgfx handle was recreated.
+            if (m_impl->bgfxTexture != texture || m_impl->bgfxTextureHandle.idx != texture->Handle().idx)
             {
-                m_impl->refreshBgfxHandle = true;
-                m_impl->textureHandle = textureHandle;
+                m_impl->refreshBgfxTexture = true;
             }
 
             // Recreate the output texture when the camera dimensions change.
@@ -627,16 +628,25 @@ namespace Babylon::Plugins
                 m_impl->textureRGBA = [m_impl->metalDevice newTextureWithDescriptor:textureDescriptor];
                 m_impl->cameraDimensions.width = static_cast<uint32_t>(width);
                 m_impl->cameraDimensions.height = static_cast<uint32_t>(height);
-                // Setting up the bgfx texture may fail if the textureHandle hasn't been initialized in a bgfx::frame call yet, if so try agin on
-                // the next frame to override it.
-                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
-            }
-            else if (m_impl->refreshBgfxHandle)
-            {
-                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
+                m_impl->refreshBgfxTexture = true;
             }
 
-            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil && !m_impl->refreshBgfxHandle)
+            if (m_impl->refreshBgfxTexture && m_impl->textureRGBA != nil)
+            {
+                texture->Create2D(
+                    static_cast<uint16_t>(width),
+                    static_cast<uint16_t>(height),
+                    texture->HasMips(),
+                    texture->NumLayers(),
+                    texture->Format(),
+                    texture->Flags(),
+                    reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
+                m_impl->bgfxTexture = texture;
+                m_impl->bgfxTextureHandle = texture->Handle();
+                m_impl->refreshBgfxTexture = false;
+            }
+
+            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil)
             {
                 m_impl->currentCommandBuffer = [m_impl->commandQueue commandBuffer];
                 m_impl->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
@@ -825,8 +835,8 @@ namespace Babylon::Plugins
             // to a deadlock where Babylon is waiting for the frame to finish render on the main thread and AVCaptureSession::stopRunning is waiting
             // for the main thread to free up while blocking the current frame from rendering.
             //
-            // Capturing textureRGBA, textureDelegate, and textureCache is done here because it's used in bgfx::overrideInternal but due to ARC being enabled in this project the lifetime of the texture
-            // needs to be maintained until after the render pass. Otherwise bgfx will try to access a destroyed texture handle during the render pass.
+            // Capturing textureRGBA, textureDelegate, and textureCache maintains the imported texture's
+            // lifetime until after the render pass. Otherwise bgfx could access a released Metal texture.
             arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), arcana::cancellation::none(),
                 [avCaptureSession = m_impl->avCaptureSession, textureRGBA = m_impl->textureRGBA, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
             {
