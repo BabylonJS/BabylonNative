@@ -28624,9 +28624,16 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke(undefined);}).to.not.throw();
     // fill() also takes a fill rule string.
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill("evenodd");}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(new String("evenodd"));}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
+      ctx.fill({ toString: function () {return "nonzero";} });
+    }).to.not.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path);}).to.not.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path, "nonzero");}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path, new String("evenodd"));}).to.not.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.stroke(path);}).to.not.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill("invalid");}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path, "invalid");}).to.throw();
   });
 
   it("rejects a non-Path2D argument to Path2D.addPath", function () {

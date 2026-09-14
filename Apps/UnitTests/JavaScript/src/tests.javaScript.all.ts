@@ -278,9 +278,16 @@ describe("Canvas2D", function () {
     expect(function () { ctx.stroke(undefined); }).to.not.throw();
     // fill() also takes a fill rule string.
     expect(function () { ctx.fill("evenodd"); }).to.not.throw();
+    expect(function () { ctx.fill(new String("evenodd") as any); }).to.not.throw();
+    expect(function () {
+      ctx.fill({ toString: function () { return "nonzero"; } } as any);
+    }).to.not.throw();
     expect(function () { ctx.fill(path); }).to.not.throw();
     expect(function () { ctx.fill(path, "nonzero"); }).to.not.throw();
+    expect(function () { ctx.fill(path, new String("evenodd") as any); }).to.not.throw();
     expect(function () { ctx.stroke(path); }).to.not.throw();
+    expect(function () { ctx.fill("invalid"); }).to.throw();
+    expect(function () { ctx.fill(path, "invalid"); }).to.throw();
   });
 
   it("rejects a non-Path2D argument to Path2D.addPath", function () {
