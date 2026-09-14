@@ -3,6 +3,7 @@
 #include "Canvas.h"
 #include "Image.h"
 #include "Context.h"
+#include "NativeInstanceRegistry.h"
 #include <functional>
 #include <sstream>
 #include <assert.h>
@@ -42,15 +43,23 @@ namespace Babylon::Polyfills::Internal
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_IMAGE_CONSTRUCTOR_NAME, func);
     }
 
+    NativeCanvasImage* NativeCanvasImage::TryUnwrap(Napi::Env env, const Napi::Value& value)
+    {
+        return NativeInstanceRegistry<NativeCanvasImage>::TryUnwrap(env, value);
+    }
+
     NativeCanvasImage::NativeCanvasImage(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvasImage>{info}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
+        // Register after successful construction only.
+        NativeInstanceRegistry<NativeCanvasImage>::Add(info, this);
     }
 
     NativeCanvasImage::~NativeCanvasImage()
     {
+        NativeInstanceRegistry<NativeCanvasImage>::Remove(this);
         Dispose();
     }
 
