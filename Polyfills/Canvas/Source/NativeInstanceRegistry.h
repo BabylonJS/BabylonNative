@@ -18,24 +18,19 @@ namespace Babylon::Polyfills::Internal
         static void Add(const Napi::CallbackInfo& info, T* instance)
         {
             // Non-enumerable brand so it does not show up in Object.keys / for..in.
-                    // Use the C napi_define_properties path: Napi::PropertyDescriptor is not
-                    // available on every JsRuntimeHost port (notably UWP/JSI).
-                    Napi::Object self = info.This().As<Napi::Object>();
-                    Napi::External<T> brand = Napi::External<T>::New(info.Env(), instance);
-                    napi_property_descriptor desc{};
-                    desc.utf8name = BRAND_NAME;
-                    desc.value = brand;
-                    desc.attributes = napi_default; // non-enumerable, non-configurable, non-writable
-                    napi_status status = napi_define_properties(info.Env(), self, 1, &desc);
-                    if (status != napi_ok)
-                    {
-                        Napi::Error::New(info.Env(), "NativeInstanceRegistry: failed to brand instance").ThrowAsJavaScriptException();
-                        return;
-                    }
+            // Object.defineProperty is supported by every JsRuntimeHost port, unlike the
+            // Napi::PropertyDescriptor and C Node-API surfaces. Omitted flags default to false.
+            Napi::Object self = info.This().As<Napi::Object>();
+            Napi::Object descriptor = Napi::Object::New(info.Env());
+            descriptor.Set("value", Napi::External<T>::New(info.Env(), instance));
+            Napi::Object object = info.Env().Global().Get("Object").As<Napi::Object>();
+            object.Get("defineProperty").As<Napi::Function>().Call(
+                object,
+                {self, Napi::String::New(info.Env(), BRAND_NAME), descriptor});
 
-                    const std::scoped_lock lock{Mutex()};
-                    Instances().insert(instance);
-                }
+            const std::scoped_lock lock{Mutex()};
+            Instances().insert(instance);
+        }
 
         static void Remove(const T* instance)
         {
