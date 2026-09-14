@@ -995,7 +995,7 @@ int fonsAddFontMem(FONScontext* stash, const char* name, unsigned char* data, in
 	// Store normalized line height. The real line height is got
 	// by multiplying the lineh by font size.
 	// Normalize metrics against em square (matches pixel height scale).
-		fons__tt_getFontVMetrics( &font->font, &ascent, &descent, &lineGap);
+	fons__tt_getFontVMetrics( &font->font, &ascent, &descent, &lineGap);
 	fh = ascent - descent;
 	em = fons__tt_getEmUnits(&font->font);
 	if (em <= 0.0f) em = (float)fh;
@@ -1531,8 +1531,8 @@ void fonsDrawDebug(FONScontext* stash, float x, float y)
 	fons__flush(stash);
 }
 
-// Atlas SDF padding; subtracted from reported ink bounds.
-#ifdef FONS_SDF_PADDING
+// Atlas SDF padding; interpolation/blur padding is stored on each glyph.
+#if defined(FONS_SDF_PADDING) && !defined(FONS_USE_FREETYPE)
 #define FONS_TEXT_BOUNDS_PADDING ((float)FONS_SDF_PADDING)
 #else
 #define FONS_TEXT_BOUNDS_PADDING 0.0f
@@ -1568,7 +1568,7 @@ float fonsTextBounds(FONScontext* stash,
 	y += fons__getVertAlign(stash, font, state->align, isize);
 
 	// Init bounds from pen only as empty-run fallback; extents come from glyphs (LSB).
-		minx = maxx = x;
+	minx = maxx = x;
 	miny = maxy = y;
 	startx = x;
 
@@ -1581,26 +1581,27 @@ float fonsTextBounds(FONScontext* stash,
 		glyph = fons__getGlyph(stash, font, codepoint, isize, iblur, FONS_GLYPH_BITMAP_OPTIONAL);
 		if (glyph != NULL) {
 			float qx0, qx1, qy0, qy1;
+			const float padding = FONS_TEXT_BOUNDS_PADDING + (float)glyph->blur + 1.0f;
 			fons__getQuad(stash, font, prevGlyphIndex, glyph, scale, state->spacing, &x, &y, &q);
-			// Drop atlas SDF padding from ink extents.
-						qx0 = q.x0 + FONS_TEXT_BOUNDS_PADDING;
-			qx1 = q.x1 - FONS_TEXT_BOUNDS_PADDING;
+			// getQuad removes one of getGlyph's (blur + 2) border pixels.
+			qx0 = q.x0 + padding;
+			qx1 = q.x1 - padding;
 			if (qx1 < qx0) qx0 = qx1 = (q.x0 + q.x1) * 0.5f;
 			if (!hasGlyph) { minx = qx0; maxx = qx1; }
 			if (qx0 < minx) minx = qx0;
 			if (qx1 > maxx) maxx = qx1;
 			if (stash->params.flags & FONS_ZERO_TOPLEFT) {
 				// q.y0 is the top edge and q.y1 the bottom edge.
-				qy0 = q.y0 + FONS_TEXT_BOUNDS_PADDING;
-				qy1 = q.y1 - FONS_TEXT_BOUNDS_PADDING;
+				qy0 = q.y0 + padding;
+				qy1 = q.y1 - padding;
 				if (qy1 < qy0) qy0 = qy1 = (q.y0 + q.y1) * 0.5f;
 				if (!hasGlyph) { miny = qy0; maxy = qy1; }
 				if (qy0 < miny) miny = qy0;
 				if (qy1 > maxy) maxy = qy1;
 			} else {
 				// y grows upwards: q.y0 is the top edge and q.y1 the bottom edge.
-				qy0 = q.y0 - FONS_TEXT_BOUNDS_PADDING;
-				qy1 = q.y1 + FONS_TEXT_BOUNDS_PADDING;
+				qy0 = q.y0 - padding;
+				qy1 = q.y1 + padding;
 				if (qy0 < qy1) qy0 = qy1 = (q.y0 + q.y1) * 0.5f;
 				if (!hasGlyph) { miny = qy1; maxy = qy0; }
 				if (qy1 < miny) miny = qy1;

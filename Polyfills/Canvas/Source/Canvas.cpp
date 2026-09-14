@@ -249,20 +249,9 @@ namespace Babylon::Polyfills::Internal
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), m_texture.get());
     }
 
-
     Napi::Value NativeCanvas::ToDataURL(const Napi::CallbackInfo& info)
     {
-        // toDataURL([type]) — only image/png is supported; other types throw.
-        std::string type{"image/png"};
-        if (info.Length() >= 1 && info[0].IsString())
-        {
-            type = info[0].As<Napi::String>().Utf8Value();
-        }
-        if (type != "image/png" && type != "image/PNG")
-        {
-            throw Napi::TypeError::New(info.Env(), "Canvas.toDataURL: only image/png is supported on Native.");
-        }
-
+        // PNG is also the Canvas fallback for empty or unsupported media types.
         const uint32_t width = m_width;
         const uint32_t height = m_height;
         std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
@@ -299,6 +288,7 @@ namespace Babylon::Polyfills::Internal
         return Napi::String::New(info.Env(), "data:image/png;base64," + encoded);
 #endif
     }
+
     Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)
     {
         const auto colorString = info[0].As<Napi::String>().Utf8Value();

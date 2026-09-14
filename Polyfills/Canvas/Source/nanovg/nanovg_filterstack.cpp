@@ -57,7 +57,7 @@ void nanovg_filterstack::InitBgfx()
     m_uniforms.u_direction = bgfx::createUniform("u_direction", bgfx::UniformType::Vec4);
     m_uniforms.u_weights = bgfx::createUniform("u_weights", bgfx::UniformType::Vec4, BLUR_UNIFORM_SIZE);
 
-        bgfx::RendererType::Enum type = bgfx::getRendererType();
+    bgfx::RendererType::Enum type = bgfx::getRendererType();
     s_gaussBlurProg = bgfx::createProgram(
         bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
         , bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_gaussblur")
@@ -80,7 +80,7 @@ void nanovg_filterstack::DisposeBgfx()
         return;
     }
 
-        if (bgfx::isValid(m_uniforms.u_strength))
+    if (bgfx::isValid(m_uniforms.u_strength))
     {
         bgfx::destroy(m_uniforms.u_strength);
         m_uniforms.u_strength = BGFX_INVALID_HANDLE;

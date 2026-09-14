@@ -78,7 +78,7 @@ namespace Babylon::Polyfills::Internal
         FrameBufferPool m_frameBufferPool;
 
         // Blit view reserved by Context::Flush for CopyTexture ordering.
-                void SetBlitViewId(bgfx::ViewId viewId, uint32_t generation)
+        void SetBlitViewId(bgfx::ViewId viewId, uint32_t generation)
         {
             m_blitViewId = viewId;
             m_blitViewIdGeneration = generation;

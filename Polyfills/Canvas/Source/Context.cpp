@@ -152,15 +152,15 @@ namespace Babylon::Polyfills::Internal
         {
             m_canvas->SetBoundContext(nullptr);
         }
-            m_canvas = nullptr;
-            Dispose();
-            m_cancellationSource->cancel();
-        }
+        m_canvas = nullptr;
+        Dispose();
+        m_cancellationSource->cancel();
+    }
 
-        void Context::DetachCanvas()
-        {
-            m_canvas = nullptr;
-        }
+    void Context::DetachCanvas()
+    {
+        m_canvas = nullptr;
+    }
 
     void Context::Dispose(const Napi::CallbackInfo&)
     {
@@ -176,6 +176,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_nvg)
         {
+            ReleaseImagesAfterFlush();
             for (auto& image : m_nvgImageIndices)
             {
                 nvgDeleteImage(*m_nvg, image.second);
@@ -705,6 +706,8 @@ namespace Babylon::Polyfills::Internal
             obj.Set("height", Napi::Value::From(info.Env(), ascent + descent));
             obj.Set("actualBoundingBoxLeft", Napi::Value::From(info.Env(), 0.f));
             obj.Set("actualBoundingBoxRight", Napi::Value::From(info.Env(), width));
+            obj.Set("actualBoundingBoxAscent", Napi::Value::From(info.Env(), ascent));
+            obj.Set("actualBoundingBoxDescent", Napi::Value::From(info.Env(), descent));
             obj.Set("fontBoundingBoxAscent", Napi::Value::From(info.Env(), ascent));
             obj.Set("fontBoundingBoxDescent", Napi::Value::From(info.Env(), descent));
             return obj.As<Napi::Value>();
@@ -867,6 +870,7 @@ namespace Babylon::Polyfills::Internal
         nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
         nvgSetFrameBufferPool(*m_nvg, { acquire, release });
         nvgEndFrame(*m_nvg);
+        ReleaseImagesAfterFlush();
         frameBuffer.Unbind();
 
         // Reserve the view id for the eventual canvas->texture blit NOW, while we are
@@ -895,18 +899,17 @@ namespace Babylon::Polyfills::Internal
             return rgba;
         }
 
+        // Capture can run with a non-null encoder but no JS-owned scope (notably in
+        // unit-test hosts). Acquire before FlushCore so both NanoVG submission and
+        // the readback remain in a frame the render thread cannot close underneath us.
+        auto scope = m_graphicsContext.AcquireFrameCompletionScope();
+
         // Push pending NanoVG draws into the canvas RT first.
         FlushCore();
         if (!m_canvas->HasFrameBuffer())
         {
             return rgba;
         }
-
-        // Hold a frame scope so ForceMidFrameFlush can complete the readback even when
-        // the unit-test host (or RAF path) already has the frame encoder open without
-        // any JS-held scopes (pendingFrameScopes must be > 0 for the handshake).
-        std::optional<Graphics::FrameCompletionScope> scope{
-            m_graphicsContext.AcquireFrameCompletionScope()};
 
         bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
         if (encoder == nullptr)
@@ -934,12 +937,12 @@ namespace Babylon::Polyfills::Internal
         }
 
         // maxViews-1 is reserved for readback blits (see DeviceImpl::FlushViewsIfNeeded).
-                const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews - 1);
-                bgfx::TextureRegion dstRegion{};
-                dstRegion.init(blitTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
-                bgfx::TextureRegion srcRegion{};
-                srcRegion.init(srcTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
-                encoder->blit(blitView, dstRegion, srcRegion);
+        const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews - 1);
+        bgfx::TextureRegion dstRegion{};
+        dstRegion.init(blitTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
+        bgfx::TextureRegion srcRegion{};
+        srcRegion.init(srcTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
+        encoder->blit(blitView, dstRegion, srcRegion);
 
         std::mutex mutex;
         std::condition_variable cv;
@@ -989,8 +992,6 @@ namespace Babylon::Polyfills::Internal
                 cv.wait_for(lock, std::chrono::milliseconds{1}, [&] { return done; });
             }
         }
-
-        scope.reset();
 
         if (bgfx::isValid(blitTexture))
         {
@@ -1166,6 +1167,7 @@ namespace Babylon::Polyfills::Internal
         {
             throw Napi::Error::New(env, "Context2D.putImageData: failed to create the source image.");
         }
+        RetainImageUntilFlush(imageIndex);
 
         // putImageData bypasses the transform, the clip region, globalAlpha and
         // the composite operation, and replaces the destination pixels outright.
@@ -1182,7 +1184,6 @@ namespace Babylon::Polyfills::Internal
         nvgFill(*m_nvg);
 
         nvgRestore(*m_nvg);
-        nvgDeleteImage(*m_nvg, imageIndex);
 
         // Keep the CPU mirror that getImageData() reads from in sync.
         BlitPixelsToCpu(patch.data(), copyWidth, copyHeight, 0, 0, copyWidth, copyHeight,
@@ -1222,9 +1223,11 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Context::BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh)
+    void Context::BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, double sx, double sy, double sw, double sh, double dx, double dy, double dw, double dh)
     {
-        if (src == nullptr || dw == 0 || dh == 0 || sw == 0 || sh == 0 || srcWidth == 0 || srcHeight == 0)
+        if (src == nullptr || dw <= 0.0 || dh <= 0.0 || sw <= 0.0 || sh <= 0.0 || srcWidth == 0 || srcHeight == 0 ||
+            !std::isfinite(sx) || !std::isfinite(sy) || !std::isfinite(sw) || !std::isfinite(sh) ||
+            !std::isfinite(dx) || !std::isfinite(dy) || !std::isfinite(dw) || !std::isfinite(dh))
         {
             return;
         }
@@ -1235,37 +1238,62 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // Clamp the iteration range to the destination rect's intersection with the canvas up
-        // front. The destination size is caller-controlled (and reaches us as an unsigned value,
-        // so a negative width wraps to ~4e9), and iterating the full rect just to reject every
-        // pixel would stall the JS thread. int64_t keeps dx/dy + dw/dh from overflowing.
-        const int64_t iBegin = std::max<int64_t>(0, -static_cast<int64_t>(dx));
-        const int64_t iEnd = std::min<int64_t>(dw, static_cast<int64_t>(m_cpuWidth) - dx);
-        const int64_t jBegin = std::max<int64_t>(0, -static_cast<int64_t>(dy));
-        const int64_t jEnd = std::min<int64_t>(dh, static_cast<int64_t>(m_cpuHeight) - dy);
-
-        for (int64_t j = jBegin; j < jEnd; ++j)
+        const double destRight = dx + dw;
+        const double destBottom = dy + dh;
+        if (!std::isfinite(destRight) || !std::isfinite(destBottom))
         {
-            // Nearest-neighbor sample of the source row (exact when dh == sh).
-            const int64_t srcY = sy + static_cast<int64_t>(j) * sh / dh;
-            if (srcY < 0 || srcY >= static_cast<int64_t>(srcHeight))
+            return;
+        }
+
+        const double clippedLeft = std::max(0.0, dx);
+        const double clippedTop = std::max(0.0, dy);
+        const double clippedRight = std::min(static_cast<double>(m_cpuWidth), destRight);
+        const double clippedBottom = std::min(static_cast<double>(m_cpuHeight), destBottom);
+        if (clippedRight <= clippedLeft || clippedBottom <= clippedTop)
+        {
+            return;
+        }
+
+        const uint32_t xBegin = static_cast<uint32_t>(std::floor(clippedLeft));
+        const uint32_t yBegin = static_cast<uint32_t>(std::floor(clippedTop));
+        const uint32_t xEnd = std::min(m_cpuWidth, static_cast<uint32_t>(std::ceil(clippedRight)));
+        const uint32_t yEnd = std::min(m_cpuHeight, static_cast<uint32_t>(std::ceil(clippedBottom)));
+
+        for (uint32_t destY = yBegin; destY < yEnd; ++destY)
+        {
+            const double pixelCenterY = static_cast<double>(destY) + 0.5;
+            if (pixelCenterY < dy || pixelCenterY >= destBottom)
             {
                 continue;
             }
 
-            const size_t destRow = static_cast<size_t>(dy + j) * m_cpuWidth;
+            const double sourceY = sy + (pixelCenterY - dy) * sh / dh;
+            if (sourceY < 0.0 || sourceY >= static_cast<double>(srcHeight))
+            {
+                continue;
+            }
+
+            const auto srcY = static_cast<uint32_t>(sourceY);
+            const size_t destRow = static_cast<size_t>(destY) * m_cpuWidth;
             const size_t srcRow = static_cast<size_t>(srcY) * srcWidth;
 
-            for (int64_t i = iBegin; i < iEnd; ++i)
+            for (uint32_t destX = xBegin; destX < xEnd; ++destX)
             {
-                const int64_t srcX = sx + static_cast<int64_t>(i) * sw / dw;
-                if (srcX < 0 || srcX >= static_cast<int64_t>(srcWidth))
+                const double pixelCenterX = static_cast<double>(destX) + 0.5;
+                if (pixelCenterX < dx || pixelCenterX >= destRight)
                 {
                     continue;
                 }
 
-                const size_t srcIndex = (srcRow + static_cast<size_t>(srcX)) * 4;
-                const size_t destIndex = (destRow + static_cast<size_t>(dx + i)) * 4;
+                const double sourceX = sx + (pixelCenterX - dx) * sw / dw;
+                if (sourceX < 0.0 || sourceX >= static_cast<double>(srcWidth))
+                {
+                    continue;
+                }
+
+                const auto srcX = static_cast<uint32_t>(sourceX);
+                const size_t srcIndex = (srcRow + srcX) * 4;
+                const size_t destIndex = (destRow + destX) * 4;
                 m_cpuPixels[destIndex + 0] = src[srcIndex + 0];
                 m_cpuPixels[destIndex + 1] = src[srcIndex + 1];
                 m_cpuPixels[destIndex + 2] = src[srcIndex + 2];
@@ -1381,8 +1409,12 @@ namespace Babylon::Polyfills::Internal
             }
 
             const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
+            if (imageIndex == 0)
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: failed to create the source image.");
+            }
+            RetainImageUntilFlush(imageIndex);
             DrawImageCommon(info, imageIndex, rgba.data(), width, height);
-            nvgDeleteImage(*m_nvg, imageIndex);
             return;
 #else
             throw Napi::Error::New(info.Env(), "drawImage: image loading disabled in this build.");
@@ -1418,8 +1450,12 @@ namespace Babylon::Polyfills::Internal
             }
 
             const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
+            if (imageIndex == 0)
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: failed to create the source image.");
+            }
+            RetainImageUntilFlush(imageIndex);
             DrawImageCommon(info, imageIndex, rgba.data(), width, height);
-            nvgDeleteImage(*m_nvg, imageIndex);
             return;
         }
 
@@ -1443,103 +1479,189 @@ namespace Babylon::Polyfills::Internal
 
     void Context::DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, const uint8_t* srcPixels, uint32_t srcWidth, uint32_t srcHeight)
     {
-        const auto imgWidth = static_cast<float>(srcWidth);
-        const auto imgHeight = static_cast<float>(srcHeight);
-
+        double sx{0.0};
+        double sy{0.0};
+        double sWidth{static_cast<double>(srcWidth)};
+        double sHeight{static_cast<double>(srcHeight)};
+        double dx{};
+        double dy{};
+        double dWidth{sWidth};
+        double dHeight{sHeight};
         if (info.Length() == 3)
         {
-            const auto dx = static_cast<float>(info[1].As<Napi::Number>().Int32Value());
-            const auto dy = static_cast<float>(info[2].As<Napi::Number>().Int32Value());
-
-            // Anchor the pattern at the destination, not the canvas origin: the
-            // rect below is drawn at (dx,dy), so a pattern based at (0,0) makes
-            // it sample from outside the image and clamp to the edge texels,
-            // which silently draws nothing for any dx/dy other than (0,0).
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, imgWidth, imgHeight, 0.f, imageIndex, 1.f);
-
-            // See FillRect: clipping is a scissor, so the path must always be reset.
-            ResetPathState();
-
-            nvgRect(*m_nvg, dx, dy, imgWidth, imgHeight);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-
-            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight,
-                static_cast<int32_t>(dx), static_cast<int32_t>(dy), srcWidth, srcHeight);
+            dx = info[1].ToNumber().DoubleValue();
+            dy = info[2].ToNumber().DoubleValue();
         }
         else if (info.Length() == 5)
         {
-            const auto dxInt = info[1].As<Napi::Number>().Int32Value();
-            const auto dyInt = info[2].As<Napi::Number>().Int32Value();
-            const auto dWidthInt = info[3].As<Napi::Number>().Int32Value();
-            const auto dHeightInt = info[4].As<Napi::Number>().Int32Value();
-
-            // Parse the extents as signed: read via Uint32Value, a negative width wraps to ~4e9,
-            // which would queue an enormous nvgRect. A non-positive extent draws nothing.
-            if (dWidthInt <= 0 || dHeightInt <= 0)
-            {
-                return;
-            }
-
-            const auto dx = static_cast<float>(dxInt);
-            const auto dy = static_cast<float>(dyInt);
-            const auto dWidth = static_cast<float>(dWidthInt);
-            const auto dHeight = static_cast<float>(dHeightInt);
-
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
-
-            // See FillRect: clipping is a scissor, so the path must always be reset.
-            ResetPathState();
-
-            nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-
-            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight,
-                dxInt, dyInt, static_cast<uint32_t>(dWidthInt), static_cast<uint32_t>(dHeightInt));
+            dx = info[1].ToNumber().DoubleValue();
+            dy = info[2].ToNumber().DoubleValue();
+            dWidth = info[3].ToNumber().DoubleValue();
+            dHeight = info[4].ToNumber().DoubleValue();
         }
         else if (info.Length() == 9)
         {
-            const auto sx = info[1].As<Napi::Number>().Int32Value();
-            const auto sy = info[2].As<Napi::Number>().Int32Value();
-            const auto sWidthInt = info[3].As<Napi::Number>().Int32Value();
-            const auto sHeightInt = info[4].As<Napi::Number>().Int32Value();
-            const auto dxInt = info[5].As<Napi::Number>().Int32Value();
-            const auto dyInt = info[6].As<Napi::Number>().Int32Value();
-            const auto dWidthInt = info[7].As<Napi::Number>().Int32Value();
-            const auto dHeightInt = info[8].As<Napi::Number>().Int32Value();
-
-            if (sWidthInt <= 0 || sHeightInt <= 0 || dWidthInt <= 0 || dHeightInt <= 0)
-            {
-                return;
-            }
-
-            const auto sWidth = static_cast<uint32_t>(sWidthInt);
-            const auto sHeight = static_cast<uint32_t>(sHeightInt);
-            const auto dx = static_cast<float>(dxInt);
-            const auto dy = static_cast<float>(dyInt);
-            const auto dWidth = static_cast<float>(dWidthInt);
-            const auto dHeight = static_cast<float>(dHeightInt);
-
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
-
-            // See FillRect: clipping is a scissor, so the path must always be reset.
-            ResetPathState();
-
-            nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-
-            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, sx, sy, sWidth, sHeight,
-                dxInt, dyInt, static_cast<uint32_t>(dWidthInt), static_cast<uint32_t>(dHeightInt));
+            sx = info[1].ToNumber().DoubleValue();
+            sy = info[2].ToNumber().DoubleValue();
+            sWidth = info[3].ToNumber().DoubleValue();
+            sHeight = info[4].ToNumber().DoubleValue();
+            dx = info[5].ToNumber().DoubleValue();
+            dy = info[6].ToNumber().DoubleValue();
+            dWidth = info[7].ToNumber().DoubleValue();
+            dHeight = info[8].ToNumber().DoubleValue();
         }
         else
         {
             throw Napi::Error::New(info.Env(), "Invalid number of parameters for DrawImage");
         }
+
+        if (srcWidth == 0 || srcHeight == 0 ||
+            !std::isfinite(sx) || !std::isfinite(sy) || !std::isfinite(sWidth) || !std::isfinite(sHeight) ||
+            !std::isfinite(dx) || !std::isfinite(dy) || !std::isfinite(dWidth) || !std::isfinite(dHeight))
+        {
+            return;
+        }
+
+        // Negative extents grow in the opposite direction without flipping the pixels.
+        if (sWidth < 0.0)
+        {
+            sx += sWidth;
+            sWidth = -sWidth;
+        }
+        if (sHeight < 0.0)
+        {
+            sy += sHeight;
+            sHeight = -sHeight;
+        }
+        if (dWidth < 0.0)
+        {
+            dx += dWidth;
+            dWidth = -dWidth;
+        }
+        if (dHeight < 0.0)
+        {
+            dy += dHeight;
+            dHeight = -dHeight;
+        }
+
+        if (sWidth == 0.0 || sHeight == 0.0 || dWidth == 0.0 || dHeight == 0.0)
+        {
+            return;
+        }
+
+        const double sourceRight = sx + sWidth;
+        const double sourceBottom = sy + sHeight;
+        if (!std::isfinite(sourceRight) || !std::isfinite(sourceBottom))
+        {
+            return;
+        }
+
+        const double clippedSx = std::max(0.0, sx);
+        const double clippedSy = std::max(0.0, sy);
+        const double clippedSourceRight = std::min(static_cast<double>(srcWidth), sourceRight);
+        const double clippedSourceBottom = std::min(static_cast<double>(srcHeight), sourceBottom);
+        const double clippedSWidth = clippedSourceRight - clippedSx;
+        const double clippedSHeight = clippedSourceBottom - clippedSy;
+        if (clippedSWidth <= 0.0 || clippedSHeight <= 0.0)
+        {
+            return;
+        }
+
+        const double scaleX = dWidth / sWidth;
+        const double scaleY = dHeight / sHeight;
+        dx += (clippedSx - sx) * scaleX;
+        dy += (clippedSy - sy) * scaleY;
+        dWidth = clippedSWidth * scaleX;
+        dHeight = clippedSHeight * scaleY;
+        sx = clippedSx;
+        sy = clippedSy;
+        sWidth = clippedSWidth;
+        sHeight = clippedSHeight;
+
+        // Map the full source image into paint space, then fill only the clipped
+        // destination rectangle. This crops through UVs without changing the current
+        // transform, scissor/clip, or global alpha.
+        const double patternX = dx - sx * scaleX;
+        const double patternY = dy - sy * scaleY;
+        const double patternWidth = static_cast<double>(srcWidth) * scaleX;
+        const double patternHeight = static_cast<double>(srcHeight) * scaleY;
+        const double floatLimit = std::numeric_limits<float>::max();
+        const auto fitsFloat = [floatLimit](double value) {
+            return std::isfinite(value) && value >= -floatLimit && value <= floatLimit;
+        };
+        if (!fitsFloat(dx) || !fitsFloat(dy) || !fitsFloat(dWidth) || !fitsFloat(dHeight) ||
+            !fitsFloat(patternX) || !fitsFloat(patternY) || !fitsFloat(patternWidth) || !fitsFloat(patternHeight))
+        {
+            return;
+        }
+
+        const float drawX = static_cast<float>(dx);
+        const float drawY = static_cast<float>(dy);
+        const float drawWidth = static_cast<float>(dWidth);
+        const float drawHeight = static_cast<float>(dHeight);
+        const float paintWidth = static_cast<float>(patternWidth);
+        const float paintHeight = static_cast<float>(patternHeight);
+        if (drawWidth <= 0.f || drawHeight <= 0.f || paintWidth <= 0.f || paintHeight <= 0.f)
+        {
+            return;
+        }
+
+        NVGpaint imagePaint = nvgImagePattern(
+            *m_nvg,
+            static_cast<float>(patternX),
+            static_cast<float>(patternY),
+            paintWidth,
+            paintHeight,
+            0.f,
+            imageIndex,
+            1.f);
+
+        if (m_isClipped)
+        {
+            // The current path is the emulated non-rectangular clip. Restrict it to
+            // the destination rectangle with a temporary scissor instead of appending
+            // the rectangle to the path, which would fill and retain their union.
+            nvgSave(*m_nvg);
+            nvgIntersectScissor(*m_nvg, drawX, drawY, drawWidth, drawHeight);
+            nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
+            nvgFill(*m_nvg);
+            nvgRestore(*m_nvg);
+        }
+        else
+        {
+            // Rectangular clips live in NanoVG's scissor state and survive resetting
+            // the temporary draw path. Keep the wrapper's path flags in sync as well.
+            ResetPathState();
+            nvgRect(*m_nvg, drawX, drawY, drawWidth, drawHeight);
+            nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
+            nvgFill(*m_nvg);
+        }
+
+        BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+    }
+
+    void Context::RetainImageUntilFlush(int imageIndex)
+    {
+        try
+        {
+            m_imagesPendingFlush.push_back(imageIndex);
+        }
+        catch (...)
+        {
+            nvgDeleteImage(*m_nvg, imageIndex);
+            throw;
+        }
+    }
+
+    void Context::ReleaseImagesAfterFlush()
+    {
+        for (const int imageIndex : m_imagesPendingFlush)
+        {
+            nvgDeleteImage(*m_nvg, imageIndex);
+        }
+        m_imagesPendingFlush.clear();
     }
 
     Napi::Value Context::CreateImageData(const Napi::CallbackInfo& info)

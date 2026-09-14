@@ -1,6 +1,37 @@
 # Canvas
 Implements parts of the 2D Canvas API using bgfx. Still a very early WIP; many methods are not yet implemented.
 
+## Readback and text metrics
+
+`toDataURL()` encodes PNG from the rendered canvas. Empty, case-variant, and
+unsupported media types use the same PNG fallback; JPEG/WebP encoding is not
+implemented. `drawImage(canvas, ...)` snapshots rendered source pixels, not only
+the CPU pixel mirror.
+
+`measureText()` uses em-scaled font sizes and glyph ink bounds. Atlas SDF padding,
+the interpolation border, and fontstash blur padding are excluded from those
+bounds. The no-font fallback exposes the same metric properties, but its values
+are estimates rather than measurements of a loaded face.
+
+## Native Canvas visual baseline
+
+The `native-canvas.png` reference for Playground `#TKVFSA#8` is a Native regression
+baseline, not a claim of browser Canvas parity. The em-size correction is
+incremental, and the current reference also records these known divergences:
+
+- Linear-gradient colors repeat past their end instead of clamping to the final
+  stop as Babylon.js/browser Canvas does.
+- The projected canvas texture has an additional dark perimeter.
+- The Native path uses Droid Sans, so the font inputs are not matched with the
+  browser path.
+
+Follow-up work must isolate gradient extension and texture-edge sampling/alpha,
+and run both paths with the same font bytes, dimensions, device-pixel ratio, and
+scene inputs. Compare each intended correction against Babylon.js before updating
+its reference. Do not regenerate a golden from current Native output merely to
+make the comparison pass. The readback/rectangle and text-padding fixes do not
+regenerate this baseline.
+
 # Nanovg
 This project contains a fork of Nanovg code and shaders found in bgfx repo. This fork features new filters stack to allow shadow, blur to be enabled in nanovg rendering (nanovg_filterstack.*).
 Also, the rendering backend of Nanovg is defined in nanovg_babylon.*. It implements nanovg rendering using bgfx with an extension to allow blending of 2 textures (used for gradient mixing) whereas default implementation only allow 1 texture. Shaders are modified accordingly.
