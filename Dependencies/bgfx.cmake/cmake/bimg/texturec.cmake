@@ -25,7 +25,7 @@ set_target_properties(
 if(BGFX_BUILD_TOOLS_TEXTURE)
 	add_executable(bgfx::texturec ALIAS texturec)
 	if(BGFX_CUSTOM_TARGETS)
-		add_dependencies(tools texturec)
+		add_dependencies(bgfx-tools texturec)
 	endif()
 endif()
 

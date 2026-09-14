@@ -28,7 +28,12 @@ function(add_bgfx_shader FILE FOLDER)
 	endif()
 
 	if(NOT "${TYPE}" STREQUAL "")
-		set(COMMON FILE ${FILE} ${TYPE} INCLUDES ${BGFX_DIR}/src)
+		set(COMMON FILE ${FILE} ${TYPE} INCLUDES ${BGFX_DIR}/src ${BGFX_DIR}/examples/common)
+		set(SHADER_DEPENDENCIES)
+		if("${FOLDER}" STREQUAL "54-s2h")
+			file(GLOB S2H_SHADER_HEADERS CONFIGURE_DEPENDS ${BGFX_DIR}/examples/common/s2h*)
+			list(APPEND SHADER_DEPENDENCIES ${S2H_SHADER_HEADERS})
+		endif()
 		set(OUTPUTS "")
 		set(OUTPUTS_PRETTY "")
 		set(OUTPUT_FILES "")
@@ -36,7 +41,7 @@ function(add_bgfx_shader FILE FOLDER)
 
 		if(WIN32)
 			# dx11
-			set(DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx11/${FILENAME}.bin)
+			set(DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dxbc/${FILENAME}.bin)
 			if(NOT "${TYPE}" STREQUAL "COMPUTE")
 				_bgfx_shaderc_parse(
 					DX11 ${COMMON} WINDOWS
@@ -54,6 +59,26 @@ function(add_bgfx_shader FILE FOLDER)
 			endif()
 			list(APPEND OUTPUTS "DX11")
 			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX11, ")
+
+			# dx12
+			set(DX12_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dxil/${FILENAME}.bin)
+			if(NOT "${TYPE}" STREQUAL "COMPUTE")
+				_bgfx_shaderc_parse(
+					DX12 ${COMMON} WINDOWS
+					PROFILE s_6_0
+					O 3
+					OUTPUT ${DX12_OUTPUT}
+				)
+			else()
+				_bgfx_shaderc_parse(
+					DX12 ${COMMON} WINDOWS
+					PROFILE s_6_0
+					O 1
+					OUTPUT ${DX12_OUTPUT}
+				)
+			endif()
+			list(APPEND OUTPUTS "DX12")
+			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX12, ")
 		endif()
 
 		if(APPLE)
@@ -67,28 +92,22 @@ function(add_bgfx_shader FILE FOLDER)
 		# essl
 		if(NOT "${TYPE}" STREQUAL "COMPUTE")
 			set(ESSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/essl/${FILENAME}.bin)
-			_bgfx_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 100_es OUTPUT ${ESSL_OUTPUT})
+			_bgfx_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 300_es OUTPUT ${ESSL_OUTPUT})
 			list(APPEND OUTPUTS "ESSL")
 			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, ")
 		endif()
 
 		# glsl
 		set(GLSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin)
-		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 140 OUTPUT ${GLSL_OUTPUT})
-		else()
-			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT})
-		endif()
+		_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT})
 		list(APPEND OUTPUTS "GLSL")
 		set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLSL, ")
 
-		# spirv
-		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			set(SPIRV_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/spirv/${FILENAME}.bin)
-			_bgfx_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT})
-			list(APPEND OUTPUTS "SPIRV")
-			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV, ")
-		endif()
+		# spirv (required by Vulkan for every shader stage, including compute)
+		set(SPIRV_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/spirv/${FILENAME}.bin)
+		_bgfx_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT})
+		list(APPEND OUTPUTS "SPIRV")
+		set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV, ")
 
 		# wgsl
 		set(WGSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/wgsl/${FILENAME}.bin)
@@ -105,7 +124,7 @@ function(add_bgfx_shader FILE FOLDER)
 
 		file(RELATIVE_PATH PRINT_NAME ${BGFX_DIR}/examples ${FILE})
 		add_custom_command(
-			MAIN_DEPENDENCY ${FILE} OUTPUT ${OUTPUT_FILES} ${COMMANDS}
+			MAIN_DEPENDENCY ${FILE} DEPENDS ${SHADER_DEPENDENCIES} OUTPUT ${OUTPUT_FILES} ${COMMANDS}
 			COMMENT "Compiling shader ${PRINT_NAME} for ${OUTPUTS_PRETTY}"
 		)
 	endif()
@@ -124,9 +143,9 @@ function(add_example ARG_NAME)
 			file(GLOB GLOB_SOURCES ${DIR}/*.mm)
 			list(APPEND SOURCES ${GLOB_SOURCES})
 		endif()
-		file(GLOB GLOB_SOURCES ${DIR}/*.c ${DIR}/*.cpp ${DIR}/*.h ${DIR}/*.sc)
+		file(GLOB GLOB_SOURCES CONFIGURE_DEPENDS ${DIR}/*.c ${DIR}/*.cpp ${DIR}/*.h ${DIR}/*.sc)
 		list(APPEND SOURCES ${GLOB_SOURCES})
-		file(GLOB GLOB_SHADERS ${DIR}/*.sc)
+		file(GLOB GLOB_SHADERS CONFIGURE_DEPENDS ${DIR}/*.sc)
 		list(APPEND SHADERS ${GLOB_SHADERS})
 	endforeach()
 
@@ -228,7 +247,7 @@ function(add_example ARG_NAME)
 			set_target_properties(example-${ARG_NAME} PROPERTIES LINK_FLAGS "/ENTRY:\"mainCRTStartup\"")
 		endif()
 		if(BGFX_CUSTOM_TARGETS)
-			add_dependencies(examples example-${ARG_NAME})
+			add_dependencies(bgfx-examples example-${ARG_NAME})
 		endif()
 		if(IOS)
 			set_target_properties(
@@ -275,8 +294,8 @@ endfunction()
 
 # Build all examples target
 if(BGFX_CUSTOM_TARGETS)
-	add_custom_target(examples)
-	set_target_properties(examples PROPERTIES FOLDER "bgfx/examples")
+	add_custom_target(bgfx-examples)
+	set_target_properties(bgfx-examples PROPERTIES FOLDER "bgfx/examples")
 endif()
 
 # Add common library for examples
@@ -346,6 +365,13 @@ if(BGFX_BUILD_EXAMPLES)
 		45-bokeh
 		46-fsr
 		47-pixelformats
+		48-drawindirect
+		49-hextile
+		50-headless
+		51-gpufont
+		52-layered
+		53-sky2
+		54-s2h
 	)
 
 	foreach(EXAMPLE ${BGFX_EXAMPLES})
