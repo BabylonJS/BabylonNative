@@ -141,8 +141,8 @@ jobs:
       cxx: clang++
       js-engine: QuickJS
 
-  # Compile and run Vulkan's 16-sampler acceptance and 17-sampler rejection
-  # tests using lavapipe under Xvfb.
+  # Exercise Vulkan validation, unit, and module-load coverage using lavapipe
+  # under Xvfb.
   Ubuntu_Clang_Vulkan:
     uses: ./.github/workflows/build-linux.yml
     with:
