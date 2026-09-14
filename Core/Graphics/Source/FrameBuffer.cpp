@@ -51,7 +51,7 @@ namespace Babylon::Graphics
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
     {
-        return m_handle;
+        return m_defaultBackBuffer ? m_deviceContext.GetBackBufferHandle() : m_handle;
     }
 
     uint16_t FrameBuffer::Width() const
@@ -86,7 +86,7 @@ namespace Babylon::Graphics
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
-        bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         // If a scissor is not set, WebGL clears the entire screen, so set the view rect to cover the entire screen
         // before clearing to match WebGL's behavior; otherwise BGFX will only clear the view rect.
@@ -219,7 +219,7 @@ namespace Babylon::Graphics
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
-        bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         m_bgfxViewPort = viewPort;
         bgfx::setViewRect(m_viewId.value(),

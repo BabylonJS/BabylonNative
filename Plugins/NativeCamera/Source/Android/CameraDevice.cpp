@@ -12,6 +12,7 @@
 #include <arcana/threading/dispatcher.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Texture.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
 #include <memory>
@@ -102,6 +103,9 @@ namespace Babylon::Plugins
         GLuint cameraRGBATextureId{};
         GLuint cameraShaderProgramId{};
         GLuint frameBufferId{};
+        GLuint importedCameraRGBATextureId{};
+        Graphics::Texture* bgfxTexture{};
+        bgfx::TextureHandle bgfxTextureHandle{bgfx::kInvalidHandle};
 
         EGLContext context{EGL_NO_CONTEXT};
         EGLDisplay display{};
@@ -431,7 +435,7 @@ namespace Babylon::Plugins
         return cameraDevices;
     }
 
-    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
+    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(Graphics::Texture& texture)
     {
         EGLContext currentContext = eglGetCurrentContext();
         if (m_impl->context != EGL_NO_CONTEXT)
@@ -512,9 +516,24 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
 
-        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [rgbaTextureId = m_impl->cameraRGBATextureId, textureHandle] {
-            bgfx::overrideInternal(textureHandle, rgbaTextureId);
-        });
+        if (m_impl->bgfxTexture != &texture ||
+            m_impl->bgfxTextureHandle.idx != texture.Handle().idx ||
+            m_impl->importedCameraRGBATextureId != m_impl->cameraRGBATextureId)
+        {
+            const auto textureWidth = static_cast<uint16_t>(!sensorIsPortrait ? m_impl->cameraDimensions.width : m_impl->cameraDimensions.height);
+            const auto textureHeight = static_cast<uint16_t>(!sensorIsPortrait ? m_impl->cameraDimensions.height : m_impl->cameraDimensions.width);
+            texture.Create2D(
+                textureWidth,
+                textureHeight,
+                texture.HasMips(),
+                texture.NumLayers(),
+                texture.Format(),
+                texture.Flags(),
+                m_impl->cameraRGBATextureId);
+            m_impl->bgfxTexture = &texture;
+            m_impl->bgfxTextureHandle = texture.Handle();
+            m_impl->importedCameraRGBATextureId = m_impl->cameraRGBATextureId;
+        }
 
         return !sensorIsPortrait
                    ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height}

@@ -113,6 +113,7 @@ namespace Babylon::Graphics
 
         //Note: This is an index that changes when bgfx gets reset. It should be used to validate that resource handles created using bgfx remain valid on destruction.
         uintptr_t GetDeviceId() const;
+        bgfx::FrameBufferHandle GetBackBufferHandle() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);

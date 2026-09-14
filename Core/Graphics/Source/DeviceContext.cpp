@@ -170,4 +170,9 @@ namespace Babylon::Graphics
     {
        return m_graphicsImpl.GetId();
     }
+
+    bgfx::FrameBufferHandle DeviceContext::GetBackBufferHandle() const
+    {
+        return m_graphicsImpl.GetBackBufferHandle();
+    }
 }

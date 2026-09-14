@@ -7,17 +7,17 @@
 
 namespace Babylon::Graphics
 {
-    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
+    void DeviceImpl::ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window)
     {
-        pd.nwh = window;
+        swapChain.nwh = window;
     }
 
-    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType)
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::Init& init)
     {
         // on Android, having no window or context set the renderer API to no op.
-        if (!pd.nwh && !pd.context)
+        if (!init.swapChain.nwh && !init.platformData.context)
         {
-            renderType = bgfx::RendererType::Noop;
+            init.type = bgfx::RendererType::Noop;
         }
     }
 

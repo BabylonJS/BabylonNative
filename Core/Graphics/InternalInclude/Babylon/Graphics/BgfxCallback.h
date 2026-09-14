@@ -25,6 +25,8 @@ namespace Babylon::Graphics
         virtual ~BgfxCallback() = default;
 
         void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
+        void CaptureNextScreenShot();
+        void CompleteScreenShot(const CaptureData& data);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
         void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
@@ -46,6 +48,7 @@ namespace Babylon::Graphics
         std::function<void(const char* output)> m_outputFunction;
 
         std::queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
+        bool m_captureScreenShot{};
 
         CaptureData m_captureData{};
         const std::function<void(const CaptureData&)> m_captureCallback{};
