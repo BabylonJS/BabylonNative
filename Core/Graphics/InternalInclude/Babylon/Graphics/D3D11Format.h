@@ -9,39 +9,39 @@
 
 // clang-format off
 
-// Copied from bgfx's renderer_d3d.h. These values are defined by newer Windows SDKs, but
-// Babylon Native also supports SDKs where the corresponding DXGI_FORMAT names are absent.
-#define DXGI_FORMAT_ASTC_4X4_UNORM        DXGI_FORMAT(134)
-#define DXGI_FORMAT_ASTC_4X4_UNORM_SRGB   DXGI_FORMAT(135)
-#define DXGI_FORMAT_ASTC_5X4_UNORM        DXGI_FORMAT(138)
-#define DXGI_FORMAT_ASTC_5X4_UNORM_SRGB   DXGI_FORMAT(139)
-#define DXGI_FORMAT_ASTC_5X5_UNORM        DXGI_FORMAT(142)
-#define DXGI_FORMAT_ASTC_5X5_UNORM_SRGB   DXGI_FORMAT(143)
-#define DXGI_FORMAT_ASTC_6X5_UNORM        DXGI_FORMAT(146)
-#define DXGI_FORMAT_ASTC_6X5_UNORM_SRGB   DXGI_FORMAT(147)
-#define DXGI_FORMAT_ASTC_6X6_UNORM        DXGI_FORMAT(150)
-#define DXGI_FORMAT_ASTC_6X6_UNORM_SRGB   DXGI_FORMAT(151)
-#define DXGI_FORMAT_ASTC_8X5_UNORM        DXGI_FORMAT(154)
-#define DXGI_FORMAT_ASTC_8X5_UNORM_SRGB   DXGI_FORMAT(155)
-#define DXGI_FORMAT_ASTC_8X6_UNORM        DXGI_FORMAT(158)
-#define DXGI_FORMAT_ASTC_8X6_UNORM_SRGB   DXGI_FORMAT(159)
-#define DXGI_FORMAT_ASTC_8X8_UNORM        DXGI_FORMAT(162)
-#define DXGI_FORMAT_ASTC_8X8_UNORM_SRGB   DXGI_FORMAT(163)
-#define DXGI_FORMAT_ASTC_10X5_UNORM       DXGI_FORMAT(166)
-#define DXGI_FORMAT_ASTC_10X5_UNORM_SRGB  DXGI_FORMAT(167)
-#define DXGI_FORMAT_ASTC_10X6_UNORM       DXGI_FORMAT(170)
-#define DXGI_FORMAT_ASTC_10X6_UNORM_SRGB  DXGI_FORMAT(171)
-#define DXGI_FORMAT_ASTC_10X8_UNORM       DXGI_FORMAT(174)
-#define DXGI_FORMAT_ASTC_10X8_UNORM_SRGB  DXGI_FORMAT(175)
-#define DXGI_FORMAT_ASTC_10X10_UNORM      DXGI_FORMAT(178)
-#define DXGI_FORMAT_ASTC_10X10_UNORM_SRGB DXGI_FORMAT(179)
-#define DXGI_FORMAT_ASTC_12X10_UNORM      DXGI_FORMAT(182)
-#define DXGI_FORMAT_ASTC_12X10_UNORM_SRGB DXGI_FORMAT(183)
-#define DXGI_FORMAT_ASTC_12X12_UNORM      DXGI_FORMAT(186)
-#define DXGI_FORMAT_ASTC_12X12_UNORM_SRGB DXGI_FORMAT(187)
-
 namespace Babylon::Graphics::D3D11TextureFormats
 {
+    // Copied from bgfx's renderer_d3d.h. These values are defined by newer Windows SDKs, but
+    // Babylon Native also supports SDKs where the corresponding DXGI_FORMAT names are absent.
+    inline constexpr DXGI_FORMAT Astc4x4Unorm{static_cast<DXGI_FORMAT>(134)};
+    inline constexpr DXGI_FORMAT Astc4x4UnormSrgb{static_cast<DXGI_FORMAT>(135)};
+    inline constexpr DXGI_FORMAT Astc5x4Unorm{static_cast<DXGI_FORMAT>(138)};
+    inline constexpr DXGI_FORMAT Astc5x4UnormSrgb{static_cast<DXGI_FORMAT>(139)};
+    inline constexpr DXGI_FORMAT Astc5x5Unorm{static_cast<DXGI_FORMAT>(142)};
+    inline constexpr DXGI_FORMAT Astc5x5UnormSrgb{static_cast<DXGI_FORMAT>(143)};
+    inline constexpr DXGI_FORMAT Astc6x5Unorm{static_cast<DXGI_FORMAT>(146)};
+    inline constexpr DXGI_FORMAT Astc6x5UnormSrgb{static_cast<DXGI_FORMAT>(147)};
+    inline constexpr DXGI_FORMAT Astc6x6Unorm{static_cast<DXGI_FORMAT>(150)};
+    inline constexpr DXGI_FORMAT Astc6x6UnormSrgb{static_cast<DXGI_FORMAT>(151)};
+    inline constexpr DXGI_FORMAT Astc8x5Unorm{static_cast<DXGI_FORMAT>(154)};
+    inline constexpr DXGI_FORMAT Astc8x5UnormSrgb{static_cast<DXGI_FORMAT>(155)};
+    inline constexpr DXGI_FORMAT Astc8x6Unorm{static_cast<DXGI_FORMAT>(158)};
+    inline constexpr DXGI_FORMAT Astc8x6UnormSrgb{static_cast<DXGI_FORMAT>(159)};
+    inline constexpr DXGI_FORMAT Astc8x8Unorm{static_cast<DXGI_FORMAT>(162)};
+    inline constexpr DXGI_FORMAT Astc8x8UnormSrgb{static_cast<DXGI_FORMAT>(163)};
+    inline constexpr DXGI_FORMAT Astc10x5Unorm{static_cast<DXGI_FORMAT>(166)};
+    inline constexpr DXGI_FORMAT Astc10x5UnormSrgb{static_cast<DXGI_FORMAT>(167)};
+    inline constexpr DXGI_FORMAT Astc10x6Unorm{static_cast<DXGI_FORMAT>(170)};
+    inline constexpr DXGI_FORMAT Astc10x6UnormSrgb{static_cast<DXGI_FORMAT>(171)};
+    inline constexpr DXGI_FORMAT Astc10x8Unorm{static_cast<DXGI_FORMAT>(174)};
+    inline constexpr DXGI_FORMAT Astc10x8UnormSrgb{static_cast<DXGI_FORMAT>(175)};
+    inline constexpr DXGI_FORMAT Astc10x10Unorm{static_cast<DXGI_FORMAT>(178)};
+    inline constexpr DXGI_FORMAT Astc10x10UnormSrgb{static_cast<DXGI_FORMAT>(179)};
+    inline constexpr DXGI_FORMAT Astc12x10Unorm{static_cast<DXGI_FORMAT>(182)};
+    inline constexpr DXGI_FORMAT Astc12x10UnormSrgb{static_cast<DXGI_FORMAT>(183)};
+    inline constexpr DXGI_FORMAT Astc12x12Unorm{static_cast<DXGI_FORMAT>(186)};
+    inline constexpr DXGI_FORMAT Astc12x12UnormSrgb{static_cast<DXGI_FORMAT>(187)};
+
     struct TextureFormatInfo
     {
         DXGI_FORMAT Linear;
@@ -76,20 +76,20 @@ namespace Babylon::Graphics::D3D11TextureFormats
         {DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN},                      // ATC
         {DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN},                      // ATCE
         {DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN},                      // ATCI
-        {DXGI_FORMAT_ASTC_4X4_UNORM, DXGI_FORMAT_ASTC_4X4_UNORM_SRGB},   // ASTC4x4
-        {DXGI_FORMAT_ASTC_5X4_UNORM, DXGI_FORMAT_ASTC_5X4_UNORM_SRGB},   // ASTC5x4
-        {DXGI_FORMAT_ASTC_5X5_UNORM, DXGI_FORMAT_ASTC_5X5_UNORM_SRGB},   // ASTC5x5
-        {DXGI_FORMAT_ASTC_6X5_UNORM, DXGI_FORMAT_ASTC_6X5_UNORM_SRGB},   // ASTC6x5
-        {DXGI_FORMAT_ASTC_6X6_UNORM, DXGI_FORMAT_ASTC_6X6_UNORM_SRGB},   // ASTC6x6
-        {DXGI_FORMAT_ASTC_8X5_UNORM, DXGI_FORMAT_ASTC_8X5_UNORM_SRGB},   // ASTC8x5
-        {DXGI_FORMAT_ASTC_8X6_UNORM, DXGI_FORMAT_ASTC_8X6_UNORM_SRGB},   // ASTC8x6
-        {DXGI_FORMAT_ASTC_8X8_UNORM, DXGI_FORMAT_ASTC_8X8_UNORM_SRGB},   // ASTC8x8
-        {DXGI_FORMAT_ASTC_10X5_UNORM, DXGI_FORMAT_ASTC_10X5_UNORM_SRGB}, // ASTC10x5
-        {DXGI_FORMAT_ASTC_10X6_UNORM, DXGI_FORMAT_ASTC_10X6_UNORM_SRGB}, // ASTC10x6
-        {DXGI_FORMAT_ASTC_10X8_UNORM, DXGI_FORMAT_ASTC_10X8_UNORM_SRGB}, // ASTC10x8
-        {DXGI_FORMAT_ASTC_10X10_UNORM, DXGI_FORMAT_ASTC_10X10_UNORM_SRGB}, // ASTC10x10
-        {DXGI_FORMAT_ASTC_12X10_UNORM, DXGI_FORMAT_ASTC_12X10_UNORM_SRGB}, // ASTC12x10
-        {DXGI_FORMAT_ASTC_12X12_UNORM, DXGI_FORMAT_ASTC_12X12_UNORM_SRGB}, // ASTC12x12
+        {Astc4x4Unorm, Astc4x4UnormSrgb},                                // ASTC4x4
+        {Astc5x4Unorm, Astc5x4UnormSrgb},                                // ASTC5x4
+        {Astc5x5Unorm, Astc5x5UnormSrgb},                                // ASTC5x5
+        {Astc6x5Unorm, Astc6x5UnormSrgb},                                // ASTC6x5
+        {Astc6x6Unorm, Astc6x6UnormSrgb},                                // ASTC6x6
+        {Astc8x5Unorm, Astc8x5UnormSrgb},                                // ASTC8x5
+        {Astc8x6Unorm, Astc8x6UnormSrgb},                                // ASTC8x6
+        {Astc8x8Unorm, Astc8x8UnormSrgb},                                // ASTC8x8
+        {Astc10x5Unorm, Astc10x5UnormSrgb},                              // ASTC10x5
+        {Astc10x6Unorm, Astc10x6UnormSrgb},                              // ASTC10x6
+        {Astc10x8Unorm, Astc10x8UnormSrgb},                              // ASTC10x8
+        {Astc10x10Unorm, Astc10x10UnormSrgb},                            // ASTC10x10
+        {Astc12x10Unorm, Astc12x10UnormSrgb},                            // ASTC12x10
+        {Astc12x12Unorm, Astc12x12UnormSrgb},                            // ASTC12x12
         {DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN},                      // Unknown
         {DXGI_FORMAT_R1_UNORM, DXGI_FORMAT_UNKNOWN},                    // R1
         {DXGI_FORMAT_A8_UNORM, DXGI_FORMAT_UNKNOWN},                    // A8
