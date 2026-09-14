@@ -51,7 +51,8 @@ endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.${GRAPHICS_API}.cpp")
+        "Source/Tests.Device.${GRAPHICS_API}.cpp"
+        "Source/Tests.Device.D3D11.ExternalBackBuffer.cpp")
 endif()
 
 if(APPLE)

@@ -287,10 +287,12 @@ namespace Babylon::Graphics
                 }
             });
 
+            // Select from the host surface; the headless bootstrap must not force Android to Noop.
             ConfigureBgfxRenderType(m_state.Bgfx.InitState);
             auto init{m_state.Bgfx.InitState};
             // Own the window framebuffer explicitly so reattaching a window does not
             // recreate the device or leave bgfx presenting to the previous surface.
+            // Retain ndt so the rendering context uses the window's native display.
             init.swapChain.nwh = nullptr;
             init.swapChain.width = 0;
             init.swapChain.height = 0;
