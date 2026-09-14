@@ -18,7 +18,9 @@ set(ANDROID_EMBEDDING_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Include/Platf
 
 set(SOURCES
     "${ANDROID_EMBEDDING_INCLUDE_ROOT}/Babylon/Embedding/Android/RuntimeHandle.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/BabylonNativeEmbedding.cpp")
+    "${ANDROID_EMBEDDING_INCLUDE_ROOT}/Babylon/Embedding/Android/AudioPlatform.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/BabylonNativeEmbedding.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/AudioPlatformAndroid.cpp")
 
 add_library(BabylonNativeEmbedding SHARED ${SOURCES})
 
@@ -28,6 +30,7 @@ target_include_directories(BabylonNativeEmbedding PUBLIC "${ANDROID_EMBEDDING_IN
 
 target_link_libraries(BabylonNativeEmbedding
     PRIVATE Embedding
+    PRIVATE WebAudio
     PRIVATE AndroidExtensions
     PRIVATE android   # ANativeWindow_fromSurface
     PRIVATE log
