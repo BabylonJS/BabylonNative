@@ -55,6 +55,15 @@ namespace Babylon::Polyfills::Internal
                 value <= static_cast<double>(std::numeric_limits<uint32_t>::max()) &&
                 value == std::trunc(value);
         }
+
+        void ValidateFillRule(Napi::Env env, const Napi::Value& value)
+        {
+            const auto fillRule = value.ToString().Utf8Value();
+            if (fillRule != "nonzero" && fillRule != "evenodd")
+            {
+                throw Napi::TypeError::New(env, "Context2D.fill: the fill rule must be \"nonzero\" or \"evenodd\".");
+            }
+        }
     }
 
     void Context::Initialize(Napi::Env env)
@@ -336,15 +345,19 @@ namespace Babylon::Polyfills::Internal
         SetFilterStack();
 
         // TODO: handle fillRule: nonzero, evenodd
-        // fill(path?, fillRule?) — reject non-Path2D / non-string first arg.
-                const NativeCanvasPath2D* path = nullptr;
+        // fill(path?, fillRule?) — distinguish Path2D from the string-converted enum overload.
+        const NativeCanvasPath2D* path = nullptr;
         if (info.Length() >= 1 && !info[0].IsUndefined())
         {
             path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
-            if (path == nullptr && !info[0].IsString())
+            if (path == nullptr)
             {
-                throw Napi::TypeError::New(info.Env(), "Context2D.fill: the first argument is neither a Path2D nor a fill rule.");
+                ValidateFillRule(info.Env(), info[0]);
             }
+        }
+        if (path != nullptr && info.Length() >= 2 && !info[1].IsUndefined())
+        {
+            ValidateFillRule(info.Env(), info[1]);
         }
 
         // draw Path2D if exists
