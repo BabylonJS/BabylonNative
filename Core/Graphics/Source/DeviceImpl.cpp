@@ -591,7 +591,7 @@ namespace Babylon::Graphics
         ForceMidFrameFlush();
     }
 
-    void DeviceImpl::ForceMidFrameFlush()
+    bool DeviceImpl::ForceMidFrameFlush()
     {
         // The flush advances a bgfx frame, which must happen on the render (bgfx API)
         // thread. This method is only expected to be called from the JS thread while
@@ -599,7 +599,7 @@ namespace Babylon::Graphics
         // render thread (or affinity is unset), there is nothing safe to do here.
         if (m_renderThreadAffinity.check())
         {
-            return;
+            return false;
         }
 
         std::unique_lock lock{m_frameSyncMutex};
@@ -617,12 +617,13 @@ namespace Babylon::Graphics
         // is currently closed (bgfx::frame() in progress).
         if (m_frameBlocked || m_pendingFrameScopes == 0)
         {
-            return;
+            return false;
         }
 
         m_flushRequested = true;
         m_frameSyncCV.notify_all();
         m_flushCompleteCV.wait(lock, [this] { return !m_flushRequested; });
+        return true;
     }
 
     // Called on the render thread from FinishRenderingCurrentFrame while holding

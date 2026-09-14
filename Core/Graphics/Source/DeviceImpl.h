@@ -107,8 +107,8 @@ namespace Babylon::Graphics
         // Unconditionally request a mid-frame bgfx flush when a FrameCompletionScope
         // is active (same handshake as FlushViewsIfNeeded). Used by Canvas GPU
         // readback so bgfx::readTexture can complete without waiting for the end of
-        // the logical frame. No-ops when the render thread cannot service it.
-        void ForceMidFrameFlush();
+        // the logical frame. Returns false when the render thread cannot service it.
+        bool ForceMidFrameFlush();
 
         // Frame completion scope support
         void IncrementPendingFrameScopes();

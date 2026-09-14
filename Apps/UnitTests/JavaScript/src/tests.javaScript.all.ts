@@ -564,6 +564,34 @@ describe("Canvas2D", function () {
     }
   });
 
+  it("recognizes a Canvas source before ImageBitmap-shaped own properties", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#20c060";
+      source.context.fillRect(0, 0, 8, 8);
+      Object.defineProperty(source.canvas, "data", {
+        value: new Uint8Array(8 * 8 * 4),
+      });
+
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      const sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      expect(sample[0]).to.be.within(15, 50);
+      expect(sample[1]).to.be.within(175, 210);
+      expect(sample[2]).to.be.within(75, 115);
+      expect(sample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
   it("applies fractional source crops and destination rectangles on the GPU", function () {
     const source = createCanvas(12, 8);
     const destination = createCanvas(30, 22);

@@ -26,9 +26,10 @@ namespace Babylon::Polyfills::Internal
         float textMetrics[3] = {0, 0, 0};
         nvgTextMetrics(context->GetNVGContext(), &textMetrics[0], &textMetrics[1], &textMetrics[2]);
 
-        // CSS TextMetrics: positive ascent is above the alignment baseline (y=0 here).
-        const float inkAscent = bounds[1] < 0.f ? -bounds[1] : 0.f;
-        const float inkDescent = bounds[3] > 0.f ? bounds[3] : 0.f;
+        // CSS TextMetrics distances are signed when all ink lies on the opposite side
+        // of the alignment baseline.
+        const float inkAscent = -bounds[1];
+        const float inkDescent = bounds[3];
 
         auto obj{Napi::Object::New(env)};
         obj.Set("width", Napi::Value::From(env, advance));

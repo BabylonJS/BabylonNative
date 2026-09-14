@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <regex>
@@ -944,23 +945,43 @@ namespace Babylon::Polyfills::Internal
         srcRegion.init(srcTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
         encoder->blit(blitView, dstRegion, srcRegion);
 
-        std::mutex mutex;
-        std::condition_variable cv;
-        bool done = false;
-        std::exception_ptr error;
+        struct ReadbackState
+        {
+            explicit ReadbackState(std::vector<uint8_t>&& pixels, bgfx::TextureHandle texture)
+                : Pixels(std::move(pixels))
+                , Texture(texture)
+            {
+            }
 
-        m_graphicsContext.ReadTextureAsync(blitTexture, rgba)
+            ~ReadbackState()
+            {
+                if (bgfx::isValid(Texture))
+                {
+                    bgfx::destroy(Texture);
+                }
+            }
+
+            std::vector<uint8_t> Pixels;
+            bgfx::TextureHandle Texture;
+            std::mutex Mutex;
+            std::condition_variable Cv;
+            bool Done{};
+            std::exception_ptr Error;
+        };
+
+        auto readback = std::make_shared<ReadbackState>(std::move(rgba), blitTexture);
+        m_graphicsContext.ReadTextureAsync(blitTexture, readback->Pixels)
             .then(arcana::inline_scheduler, arcana::cancellation::none(),
-                [&](const arcana::expected<void, std::exception_ptr>& result) {
+                [readback](const arcana::expected<void, std::exception_ptr>& result) {
                     {
-                        std::lock_guard lock{mutex};
+                        std::lock_guard lock{readback->Mutex};
                         if (result.has_error())
                         {
-                            error = result.error();
+                            readback->Error = result.error();
                         }
-                        done = true;
+                        readback->Done = true;
                     }
-                    cv.notify_one();
+                    readback->Cv.notify_one();
                 });
 
         // Drive mid-frame flushes until the readback completes. Each flush ends the
@@ -974,34 +995,33 @@ namespace Babylon::Polyfills::Internal
         for (;;)
         {
             {
-                std::lock_guard lock{mutex};
-                if (done)
+                std::lock_guard lock{readback->Mutex};
+                if (readback->Done)
                 {
                     break;
                 }
             }
-            m_graphicsContext.ForceMidFrameFlush();
+            if (!m_graphicsContext.ForceMidFrameFlush())
             {
-                std::unique_lock lock{mutex};
-                if (done)
+                throw std::runtime_error{"Canvas.CaptureRGBA: the render thread cannot service GPU readback."};
+            }
+            {
+                std::unique_lock lock{readback->Mutex};
+                if (readback->Done)
                 {
                     break;
                 }
                 // Yield briefly so a render thread that is between Finish/Start
                 // (unit-test pump) can enter Finish and service flushRequested.
-                cv.wait_for(lock, std::chrono::milliseconds{1}, [&] { return done; });
+                readback->Cv.wait_for(lock, std::chrono::milliseconds{1}, [&] { return readback->Done; });
             }
         }
 
-        if (bgfx::isValid(blitTexture))
+        if (readback->Error)
         {
-            bgfx::destroy(blitTexture);
+            std::rethrow_exception(readback->Error);
         }
-
-        if (error)
-        {
-            std::rethrow_exception(error);
-        }
+        rgba = std::move(readback->Pixels);
 
         if (bgfx::getCaps()->originBottomLeft && height > 1)
         {
@@ -1346,6 +1366,45 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::Object imageObj = info[0].As<Napi::Object>();
 
+        // Check the nominal Canvas type before the structural ImageBitmap shape.
+        // Canvas objects are extensible, so user code may legitimately add a typed
+        // `data` property without changing the object passed to drawImage.
+        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
+        if (canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>()))
+        {
+            NativeCanvas* const srcCanvas = NativeCanvas::Unwrap(imageObj);
+            const uint32_t width = srcCanvas->GetWidth();
+            const uint32_t height = srcCanvas->GetHeight();
+            if (width == 0 || height == 0)
+            {
+                return;
+            }
+
+            // GPU readback of the source canvas (flush + RT blit + readTexture) so
+            // NanoVG draws (fillRect/text/paths) are included — not just the CPU mirror.
+            std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
+            if (Context* const srcContext = srcCanvas->GetBoundContext(); srcContext != nullptr)
+            {
+                try
+                {
+                    rgba = srcContext->CaptureRGBA();
+                }
+                catch (const std::exception& ex)
+                {
+                    throw Napi::Error::New(info.Env(), ex.what());
+                }
+            }
+
+            const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
+            if (imageIndex == 0)
+            {
+                throw Napi::Error::New(info.Env(), "drawImage: failed to create the source image.");
+            }
+            RetainImageUntilFlush(imageIndex);
+            DrawImageCommon(info, imageIndex, rgba.data(), width, height);
+            return;
+        }
+
         // NativeEngine.createImageBitmap() returns a plain object carrying the raw decoded pixels
         // ({data, width, height, format}) rather than a wrapped NativeCanvasImage. Because Babylon
         // Native sets forceBitmapOverHTMLImageElement, LoadImage delivers these bitmaps to drawImage
@@ -1419,44 +1478,6 @@ namespace Babylon::Polyfills::Internal
 #else
             throw Napi::Error::New(info.Env(), "drawImage: image loading disabled in this build.");
 #endif
-        }
-
-        // drawImage(canvas): InstanceOf gate then Unwrap (real canvases only; deliberate
-        // prototype spoofs are out of scope — see #1844 / JsRuntimeHost type tags).
-        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
-        if (canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>()))
-        {
-            NativeCanvas* const srcCanvas = NativeCanvas::Unwrap(imageObj);
-            const uint32_t width = srcCanvas->GetWidth();
-            const uint32_t height = srcCanvas->GetHeight();
-            if (width == 0 || height == 0)
-            {
-                return;
-            }
-
-            // GPU readback of the source canvas (flush + RT blit + readTexture) so
-            // NanoVG draws (fillRect/text/paths) are included — not just the CPU mirror.
-            std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
-            if (Context* const srcContext = srcCanvas->GetBoundContext(); srcContext != nullptr)
-            {
-                try
-                {
-                    rgba = srcContext->CaptureRGBA();
-                }
-                catch (const std::exception& ex)
-                {
-                    throw Napi::Error::New(info.Env(), ex.what());
-                }
-            }
-
-            const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
-            if (imageIndex == 0)
-            {
-                throw Napi::Error::New(info.Env(), "drawImage: failed to create the source image.");
-            }
-            RetainImageUntilFlush(imageIndex);
-            DrawImageCommon(info, imageIndex, rgba.data(), width, height);
-            return;
         }
 
         const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);

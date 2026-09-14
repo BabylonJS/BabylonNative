@@ -28795,6 +28795,34 @@ describe("Canvas2D", function () {
     }
   });
 
+  it("recognizes a Canvas source before ImageBitmap-shaped own properties", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#20c060";
+      source.context.fillRect(0, 0, 8, 8);
+      Object.defineProperty(source.canvas, "data", {
+        value: new Uint8Array(8 * 8 * 4)
+      });
+
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      var sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[0]).to.be.within(15, 50);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[1]).to.be.within(175, 210);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[2]).to.be.within(75, 115);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
   it("applies fractional source crops and destination rectangles on the GPU", function () {
     var source = createCanvas(12, 8);
     var destination = createCanvas(30, 22);

@@ -60,6 +60,35 @@ TEST(CanvasTextMetrics, ExcludesAtlasBorderAndBlurPaddingFromInkBounds)
                     EXPECT_FLOAT_EQ(advance, unblurredAdvance);
                 }
             }
+
         }
+    }
+}
+
+TEST(CanvasTextMetrics, WhitespaceAdvancesWithoutContributingInkBounds)
+{
+    std::ifstream file{CANVAS_TEST_FONT_PATH, std::ios::binary};
+    ASSERT_TRUE(file.is_open());
+    std::vector<unsigned char> bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+    ASSERT_FALSE(bytes.empty());
+
+    for (const auto flags : {FONS_ZERO_TOPLEFT, FONS_ZERO_BOTTOMLEFT})
+    {
+        FONSparams params{};
+        params.width = 512;
+        params.height = 512;
+        params.flags = static_cast<unsigned char>(flags);
+        std::unique_ptr<FONScontext, decltype(&fonsDeleteInternal)> stash{fonsCreateInternal(&params), fonsDeleteInternal};
+        ASSERT_NE(stash, nullptr);
+        const int face = fonsAddFontMem(stash.get(), "test", bytes.data(), static_cast<int>(bytes.size()), 0);
+        ASSERT_NE(face, FONS_INVALID);
+        fonsSetFont(stash.get(), face);
+        fonsSetAlign(stash.get(), FONS_ALIGN_LEFT | FONS_ALIGN_BASELINE);
+        fonsSetSize(stash.get(), 48.0f);
+
+        std::array<float, 4> bounds{};
+        const float advance = fonsTextBounds(stash.get(), 100.0f, 100.0f, " ", nullptr, bounds.data());
+        EXPECT_GT(advance, 0.0f);
+        EXPECT_EQ(bounds, (std::array<float, 4>{100.0f, 100.0f, 100.0f, 100.0f}));
     }
 }

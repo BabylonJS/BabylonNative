@@ -158,6 +158,7 @@ namespace
 
     struct GLNVGtexture
     {
+        int image;
         bgfx::TextureHandle id;
         int width, height;
         int type;
@@ -332,7 +333,7 @@ namespace
         int i;
         for (i = 0; i < gl->ntextures; i++)
         {
-            if (gl->textures[i].id.idx == id)
+            if (gl->textures[i].image == id)
             {
                 return &gl->textures[i];
             }
@@ -345,7 +346,7 @@ namespace
     {
         for (int ii = 0; ii < gl->ntextures; ii++)
         {
-            if (gl->textures[ii].id.idx == id)
+            if (gl->textures[ii].image == id)
             {
                 if (bgfx::isValid(gl->textures[ii].id)
                 && (gl->textures[ii].flags & NVG_IMAGE_NODELETE) == 0)
@@ -449,7 +450,13 @@ namespace
                 );
         }
 
-        return bgfx::isValid(tex->id) ? tex->id.idx : 0;
+        if (!bgfx::isValid(tex->id))
+        {
+            return 0;
+        }
+
+        tex->image = ++gl->textureId;
+        return tex->image;
     }
 
     static int nvgRenderDeleteTexture(void* _userPtr, int image)
@@ -1514,7 +1521,7 @@ bgfx::TextureHandle nvglImageHandle(NVGcontext* _ctx, int32_t _image)
 {
     GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
     GLNVGtexture* tex = glnvg__findTexture(gl, _image);
-    return tex->id;
+    return tex != nullptr ? tex->id : bgfx::TextureHandle{bgfx::kInvalidHandle};
 }
 
 int nvgCreateImageFromHandle(NVGcontext* _ctx, bgfx::TextureHandle _handle, int _width, int _height, int _flags)
@@ -1537,5 +1544,6 @@ int nvgCreateImageFromHandle(NVGcontext* _ctx, bgfx::TextureHandle _handle, int 
     // Do not destroy the caller's texture when nvgDeleteImage runs.
     tex->flags = _flags | NVG_IMAGE_NODELETE;
     tex->id = _handle;
-    return static_cast<int>(tex->id.idx);
+    tex->image = ++gl->textureId;
+    return tex->image;
 }

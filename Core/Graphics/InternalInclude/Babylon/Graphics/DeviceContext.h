@@ -131,7 +131,8 @@ namespace Babylon::Graphics
 
         // Force a mid-frame flush when a FrameCompletionScope is held so pending
         // bgfx::readTexture requests can complete (Canvas toDataURL / drawImage).
-        void ForceMidFrameFlush();
+        // Returns false when the render thread cannot service the request.
+        bool ForceMidFrameFlush();
 
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);

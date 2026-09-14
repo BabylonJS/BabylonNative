@@ -1555,7 +1555,7 @@ float fonsTextBounds(FONScontext* stash,
 	FONSfont* font;
 	float startx, advance;
 	float minx, miny, maxx, maxy;
-	int hasGlyph = 0;
+	int hasInk = 0;
 
 	if (stash == NULL) return 0;
 	if (state->font < 0 || state->font >= stash->nfonts) return 0;
@@ -1586,28 +1586,31 @@ float fonsTextBounds(FONScontext* stash,
 			// getQuad removes one of getGlyph's (blur + 2) border pixels.
 			qx0 = q.x0 + padding;
 			qx1 = q.x1 - padding;
-			if (qx1 < qx0) qx0 = qx1 = (q.x0 + q.x1) * 0.5f;
-			if (!hasGlyph) { minx = qx0; maxx = qx1; }
-			if (qx0 < minx) minx = qx0;
-			if (qx1 > maxx) maxx = qx1;
 			if (stash->params.flags & FONS_ZERO_TOPLEFT) {
 				// q.y0 is the top edge and q.y1 the bottom edge.
 				qy0 = q.y0 + padding;
 				qy1 = q.y1 - padding;
-				if (qy1 < qy0) qy0 = qy1 = (q.y0 + q.y1) * 0.5f;
-				if (!hasGlyph) { miny = qy0; maxy = qy1; }
-				if (qy0 < miny) miny = qy0;
-				if (qy1 > maxy) maxy = qy1;
+				if (qx1 > qx0 && qy1 > qy0) {
+					if (!hasInk) { minx = qx0; maxx = qx1; miny = qy0; maxy = qy1; }
+					if (qx0 < minx) minx = qx0;
+					if (qx1 > maxx) maxx = qx1;
+					if (qy0 < miny) miny = qy0;
+					if (qy1 > maxy) maxy = qy1;
+					hasInk = 1;
+				}
 			} else {
 				// y grows upwards: q.y0 is the top edge and q.y1 the bottom edge.
 				qy0 = q.y0 - padding;
 				qy1 = q.y1 + padding;
-				if (qy0 < qy1) qy0 = qy1 = (q.y0 + q.y1) * 0.5f;
-				if (!hasGlyph) { miny = qy1; maxy = qy0; }
-				if (qy1 < miny) miny = qy1;
-				if (qy0 > maxy) maxy = qy0;
+				if (qx1 > qx0 && qy0 > qy1) {
+					if (!hasInk) { minx = qx0; maxx = qx1; miny = qy1; maxy = qy0; }
+					if (qx0 < minx) minx = qx0;
+					if (qx1 > maxx) maxx = qx1;
+					if (qy1 < miny) miny = qy1;
+					if (qy0 > maxy) maxy = qy0;
+					hasInk = 1;
+				}
 			}
-			hasGlyph = 1;
 		}
 		prevGlyphIndex = glyph != NULL ? glyph->index : -1;
 	}
