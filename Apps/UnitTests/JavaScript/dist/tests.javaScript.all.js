@@ -28384,6 +28384,101 @@ describe("Canvas2D", function () {
     return canvas.getContext("2d");
   }
 
+  (skipCanvasGpuTests ? it.skip : it)("intersects nested clips and restores parent clips on the GPU", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var _loop, _i, _arr;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
+          this.timeout(10000);_loop = /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _loop() {var translated, engine, scene, texture, ctx, pixels, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+                  translated = _arr[_i];
+                  engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.NativeEngine();
+                  scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Scene(engine);_context.prev = 1;
+
+                  texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.DynamicTexture("nested clips", 64, scene, false);
+                  ctx = texture.getContext();
+                  ctx.fillStyle = "white";
+                  ctx.fillRect(0, 0, 64, 64);
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.rect(8, 0, 24, 64);
+                  ctx.clip();
+
+                  ctx.save();
+                  if (translated) {
+                    ctx.translate(16, 0);
+                  }
+                  ctx.beginPath();
+                  ctx.rect(0, 0, 64, 64);
+                  ctx.clip();
+                  ctx.fillStyle = "red";
+                  ctx.fillRect(0, 0, 64, 64);
+                  ctx.restore();
+
+                  ctx.fillStyle = "#00ff00";
+                  ctx.fillRect(24, 0, 16, 64);
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.rect(40, 0, 16, 64);
+                  ctx.clip();
+                  ctx.fillStyle = "magenta";
+                  ctx.fillRect(0, 0, 64, 64);
+                  ctx.restore();
+                  ctx.restore();
+
+                  ctx.fillStyle = "blue";
+                  ctx.fillRect(40, 0, 8, 64);
+                  texture.update(false);_context.next = 2;return (
+                    texture.readPixels());case 2:pixels = _context.sent;if (
+                  pixels instanceof Uint8Array) {_context.next = 3;break;}throw (
+                    new Error("Expected RGBA8 GPU readback for the canvas texture"));case 3:
+
+                  pixel = function pixel(x) {return Array.from(pixels.subarray((32 * 64 + x) * 4, (32 * 64 + x + 1) * 4));};
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(4), "outside parent").to.deep.equal([255, 255, 255, 255]);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(12), "translated child boundary").to.deep.equal(translated ? [255, 255, 255, 255] : [255, 0, 0, 255]);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(20), "inside intersection").to.deep.equal([255, 0, 0, 255]);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(28), "restored parent").to.deep.equal([0, 255, 0, 255]);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(36), "outside restored parent").to.deep.equal([255, 255, 255, 255]);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(44), "restored unclipped state").to.deep.equal([0, 0, 255, 255]);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(52), "disjoint clip").to.deep.equal([255, 255, 255, 255]);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(60), "outside every fill").to.deep.equal([255, 255, 255, 255]);case 4:_context.prev = 4;
+
+                  scene.dispose();
+                  engine.dispose();return _context.finish(4);case 5:case "end":return _context.stop();}}, _loop, null, [[1,, 4, 5]]);});_i = 0, _arr = [false, true];case 1:if (!(_i < _arr.length)) {_context2.next = 3;break;}return _context2.delegateYield(_loop(), "t0", 2);case 2:_i++;_context2.next = 1;break;case 3:case "end":return _context2.stop();}}, _callee, this);}))
+
+
+  );
+
+  (skipCanvasGpuTests ? it.skip : it)("clears only the clipped GPU region and ignores globalAlpha and filters", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee2() {var engine, scene, texture, ctx, _pixels, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context3) {while (1) switch (_context3.prev = _context3.next) {case 0:
+          this.timeout(10000);
+          engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.NativeEngine();
+          scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Scene(engine);_context3.prev = 1;
+
+          texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.DynamicTexture("clipped clear", 64, scene, false);
+          ctx = texture.getContext();
+          ctx.fillStyle = "red";
+          ctx.fillRect(0, 0, 64, 64);
+          texture.update(false);
+
+          ctx.filter = "blur(2px)";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(8, 0, 24, 64);
+          ctx.clip();
+          ctx.globalAlpha = 0.25;
+          ctx.clearRect(0, 0, 64, 64);
+          ctx.restore();
+          texture.update(false);_context3.next = 2;return (
+            texture.readPixels());case 2:_pixels = _context3.sent;if (
+          _pixels instanceof Uint8Array) {_context3.next = 3;break;}throw (
+            new Error("Expected RGBA8 GPU readback for the canvas texture"));case 3:
+
+          pixel = function pixel(x) {return Array.from(_pixels.subarray((32 * 64 + x) * 4, (32 * 64 + x + 1) * 4));};
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(36), "preserved near clip").to.deep.equal([255, 0, 0, 255]);
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(16), "fully cleared inside clip").to.deep.equal([0, 0, 0, 0]);
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixel(44), "preserved after clip").to.deep.equal([255, 0, 0, 255]);case 4:_context3.prev = 4;
+
+          scene.dispose();
+          engine.dispose();return _context3.finish(4);case 5:case "end":return _context3.stop();}}, _callee2, this, [[1,, 4, 5]]);}))
+
+  );
+
   it("round-trips a string fillStyle and strokeStyle", function () {
     var ctx = createContext();
     ctx.fillStyle = "#ff0000";
