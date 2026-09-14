@@ -21,12 +21,14 @@ file(
 	${BIMG_DIR}/src/image_decode*.* #
 	#
 	${LOADPNG_SOURCES} #
+	${MINIZ_SOURCES} #
 )
 
 add_library(bimg_decode STATIC ${BIMG_DECODE_SOURCES})
 
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties(bimg_decode PROPERTIES FOLDER "bgfx")
+
 target_include_directories(
 	bimg_decode
 	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>

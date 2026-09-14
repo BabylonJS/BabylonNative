@@ -52,6 +52,7 @@ option(BGFX_CUSTOM_TARGETS "Include convenience custom targets." ON)
 cmake_dependent_option(BGFX_CONFIG_MULTITHREADED "Build bgfx with multithreaded configuration" ON "NOT CMAKE_SYSTEM_NAME STREQUAL Emscripten" OFF)
 option(BGFX_CONFIG_RENDERER_WEBGPU "Enable the webgpu renderer" OFF)
 option(BGFX_CONFIG_DEBUG_ANNOTATION "Enable gfx debug annotations (default: on in debug)" OFF)
+option(BGFX_CONFIG_VIDEO "Enable hardware video decoder" ON)
 
 set(BGFX_OPENGL_VERSION "" CACHE STRING "Specify minimum opengl version")
 set(BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version")
@@ -102,7 +103,6 @@ bgfx_config_option(DYNAMIC_INDEX_BUFFER_SIZE "Specify dynamic index buffer block
 bgfx_config_option(MAX_TRANSIENT_VERTEX_BUFFER_SIZE "Specify maximum transient vertex buffer size in bytes")
 bgfx_config_option(MAX_TRANSIENT_INDEX_BUFFER_SIZE "Specify maximum transient index buffer size in bytes")
 bgfx_config_option(DEBUG_UNIFORM "Specify whether uniform debug checks are enabled (0 or 1)")
-bgfx_config_option(VIDEO "Specify whether video decoding support is built (0 or 1)")
 bgfx_config_option(C99_API "Specify whether the C99 API is built (0 or 1)")
 
 set(BGFX_CMAKE_USER_SCRIPT "" CACHE STRING "Path to custom cmake script to include")
@@ -140,8 +140,8 @@ file(TO_CMAKE_PATH "${BGFX_DIR}" BGFX_DIR)
 # sets project version from api ver / git rev
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
 if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
-	add_custom_target(tools)
-	set_target_properties(tools PROPERTIES FOLDER "bgfx/tools")
+	add_custom_target(bgfx-tools)
+	set_target_properties(bgfx-tools PROPERTIES FOLDER "bgfx/tools")
 endif()
 
 if(BGFX_INSTALL)

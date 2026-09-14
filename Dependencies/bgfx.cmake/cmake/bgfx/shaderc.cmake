@@ -24,9 +24,7 @@ target_link_libraries(
 	PRIVATE bx
 			bimg
 			bgfx-vertexlayout
-			fcpp
 			glslang
-			glsl-optimizer
 			spirv-opt
 			spirv-cross
 			webgpu
@@ -39,6 +37,7 @@ target_include_directories(
 			${BGFX_DIR}/3rdparty/dawn/src
 )
 
+set(DXCOMPILER_RUNTIME)
 if(UNIX
    AND NOT APPLE
    AND NOT EMSCRIPTEN
@@ -50,6 +49,9 @@ if(UNIX
 				${BGFX_DIR}/3rdparty/directx-headers/include
 				${BGFX_DIR}/3rdparty/directx-headers/include/wsl/stubs
 	)
+	set(DXCOMPILER_RUNTIME ${BGFX_DIR}/tools/bin/linux/libdxcompiler.so)
+elseif(WIN32)
+	set(DXCOMPILER_RUNTIME ${BGFX_DIR}/tools/bin/windows/dxcompiler.dll)
 endif()
 
 if(BGFX_AMALGAMATED)
@@ -64,7 +66,7 @@ set_target_properties(
 if(BGFX_BUILD_TOOLS_SHADER)
 	add_executable(bgfx::shaderc ALIAS shaderc)
 	if(BGFX_CUSTOM_TARGETS)
-		add_dependencies(tools shaderc)
+		add_dependencies(bgfx-tools shaderc)
 	endif()
 endif()
 
@@ -76,4 +78,16 @@ endif()
 
 if(BGFX_INSTALL)
 	install(TARGETS shaderc EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
+
+# DXIL compiler will be dynamically loaded at runtime - no need
+# to link, just install the needed binaries alongside shaderc.exe
+if(DXCOMPILER_RUNTIME)
+	add_custom_command(
+		TARGET shaderc POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DXCOMPILER_RUNTIME} $<TARGET_FILE_DIR:shaderc>
+	)
+	if(BGFX_INSTALL)
+		install(FILES ${DXCOMPILER_RUNTIME} DESTINATION "${CMAKE_INSTALL_BINDIR}")
+	endif()
 endif()

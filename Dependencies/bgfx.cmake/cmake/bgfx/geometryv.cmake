@@ -26,7 +26,7 @@ set_target_properties(
 )
 
 if(BGFX_BUILD_TOOLS_GEOMETRY AND BGFX_CUSTOM_TARGETS)
-	add_dependencies(tools geometryv)
+	add_dependencies(bgfx-tools geometryv)
 endif()
 
 if(ANDROID)

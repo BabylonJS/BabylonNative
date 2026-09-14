@@ -30,7 +30,7 @@ set_target_properties(
 if(BGFX_BUILD_TOOLS_GEOMETRY)
 	add_executable(bgfx::geometryc ALIAS geometryc)
 	if(BGFX_CUSTOM_TARGETS)
-		add_dependencies(tools geometryc)
+		add_dependencies(bgfx-tools geometryc)
 	endif()
 endif()
 

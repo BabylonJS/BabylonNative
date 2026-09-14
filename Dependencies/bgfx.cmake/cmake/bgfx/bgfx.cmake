@@ -29,14 +29,7 @@ file(
 	${BGFX_DIR}/include/bgfx/c99/*.h
 )
 
-if(APPLE)
-	file(GLOB BGFX_OBJC_SOURCES ${BGFX_DIR}/src/*.mm)
-	list(APPEND BGFX_SOURCES ${BGFX_OBJC_SOURCES})
-	list(REMOVE_ITEM BGFX_SOURCES ${BGFX_DIR}/src/amalgamated.cpp)
-	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.mm)
-else()
-	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.cpp)
-endif()
+set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.cpp)
 
 if(BGFX_AMALGAMATED)
 	set(BGFX_NOBUILD ${BGFX_SOURCES})
@@ -59,9 +52,15 @@ endif()
 
 if(BGFX_CONFIG_RENDERER_WEBGPU)
 	include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/webgpu.cmake)
-	target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_WEBGPU=1)
 	if(EMSCRIPTEN)
-		target_link_options(bgfx PRIVATE "-s USE_WEBGPU=1")
+		# Emscripten's built-in WebGPU bindings (-sUSE_WEBGPU) are deprecated and
+		# expose an outdated webgpu.h that lacks the Dawn C API the current
+		# renderer_webgpu.cpp targets (wgpuInstanceWaitAny, wgpuAdapterRequestDevice,
+		# ...), so linking fails with undefined wgpu* symbols. Use Dawn's maintained
+		# emdawnwebgpu port instead. PUBLIC (not PRIVATE) so the port reaches the
+		# final link of executables that link bgfx -- a link option on a static
+		# archive otherwise never propagates to the consumer.
+		target_link_options(bgfx PUBLIC "--use-port=emdawnwebgpu")
 	else()
 		target_link_libraries(bgfx PRIVATE webgpu)
 	endif()
@@ -111,6 +110,7 @@ target_compile_definitions(
 		"BX_CONFIG_DEBUG=$<OR:$<CONFIG:Debug>,$<BOOL:${BX_CONFIG_DEBUG}>>"
 		"BGFX_CONFIG_DEBUG_ANNOTATION=$<AND:$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},WindowsStore>>,$<OR:$<CONFIG:Debug>,$<BOOL:${BGFX_CONFIG_DEBUG_ANNOTATION}>>>"
 		"BGFX_CONFIG_MULTITHREADED=$<BOOL:${BGFX_CONFIG_MULTITHREADED}>"
+		"BGFX_CONFIG_VIDEO=$<BOOL:${BGFX_CONFIG_VIDEO}>"
 )
 
 # directx-headers
@@ -146,6 +146,11 @@ if(${CMAKE_SYSTEM_NAME} MATCHES iOS|tvOS)
 		PUBLIC
 			"-framework OpenGLES -framework Metal -framework UIKit -framework CoreGraphics -framework QuartzCore -framework IOKit -framework CoreFoundation"
 	)
+	if(BGFX_CONFIG_VIDEO)
+		target_link_libraries(
+			bgfx PUBLIC "-framework VideoToolbox -framework CoreMedia -framework CoreVideo"
+		)
+	endif()
 elseif(APPLE)
 	find_library(COCOA_LIBRARY Cocoa)
 	find_library(METAL_LIBRARY Metal)
@@ -160,6 +165,17 @@ elseif(APPLE)
 	target_link_libraries(
 		bgfx PUBLIC ${COCOA_LIBRARY} ${METAL_LIBRARY} ${QUARTZCORE_LIBRARY} ${IOKIT_LIBRARY} ${COREFOUNDATION_LIBRARY}
 	)
+	if(BGFX_CONFIG_VIDEO)
+		find_library(VIDEOTOOLBOX_LIBRARY VideoToolbox)
+		find_library(COREMEDIA_LIBRARY CoreMedia)
+		find_library(COREVIDEO_LIBRARY CoreVideo)
+		mark_as_advanced(VIDEOTOOLBOX_LIBRARY)
+		mark_as_advanced(COREMEDIA_LIBRARY)
+		mark_as_advanced(COREVIDEO_LIBRARY)
+		target_link_libraries(
+			bgfx PUBLIC ${VIDEOTOOLBOX_LIBRARY} ${COREMEDIA_LIBRARY} ${COREVIDEO_LIBRARY}
+		)
+	endif()
 endif()
 
 if(UNIX
@@ -176,13 +192,6 @@ if(UNIX
 	target_link_libraries(bgfx PUBLIC ${X11_LIBRARIES} ${OPENGL_LIBRARIES})
 endif()
 
-# Exclude mm files if not on OS X
-if(NOT APPLE)
-	set_source_files_properties(${BGFX_DIR}/src/glcontext_eagl.mm PROPERTIES HEADER_FILE_ONLY ON)
-	set_source_files_properties(${BGFX_DIR}/src/glcontext_nsgl.mm PROPERTIES HEADER_FILE_ONLY ON)
-	set_source_files_properties(${BGFX_DIR}/src/renderer_mtl.mm PROPERTIES HEADER_FILE_ONLY ON)
-endif()
-
 # Exclude glx context on non-unix
 if(NOT UNIX OR APPLE)
 	set_source_files_properties(${BGFX_DIR}/src/glcontext_glx.cpp PROPERTIES HEADER_FILE_ONLY ON)
@@ -191,10 +200,15 @@ endif()
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties(bgfx PROPERTIES FOLDER "bgfx")
 
-# in Xcode we need to specify this file as objective-c++ (instead of renaming to .mm)
+# in Xcode we need to specify these files as objective-c++ (instead of renaming to .mm)
 if(XCODE)
 	set_source_files_properties(
-		${BGFX_DIR}/src/renderer_vk.cpp PROPERTIES LANGUAGE OBJCXX XCODE_EXPLICIT_FILE_TYPE sourcecode.cpp.objcpp
+		${BGFX_DIR}/src/renderer_vk.cpp
+		${BGFX_DIR}/src/renderer_webgpu.cpp
+		${BGFX_DIR}/src/video_mtl.cpp
+		PROPERTIES
+			LANGUAGE OBJCXX
+			XCODE_EXPLICIT_FILE_TYPE sourcecode.cpp.objcpp
 	)
 endif()
 

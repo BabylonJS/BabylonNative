@@ -19,14 +19,14 @@ else()
 	add_executable(texturev ${TEXTUREV_SOURCES})
 endif()
 
-target_link_libraries(texturev PRIVATE example-common)
+target_link_libraries(texturev PRIVATE example-common l-smash)
 set_target_properties(
 	texturev PROPERTIES FOLDER "bgfx/tools" #
 						OUTPUT_NAME ${BGFX_TOOLS_PREFIX}texturev #
 )
 
 if(BGFX_BUILD_TOOLS_TEXTURE AND BGFX_CUSTOM_TARGETS)
-	add_dependencies(tools texturev)
+	add_dependencies(bgfx-tools texturev)
 endif()
 
 if(ANDROID)

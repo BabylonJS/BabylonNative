@@ -18,6 +18,9 @@ cmake --build cmake-build
 
 If downloading via zip (instead of using git submodules) manually download bx, bimg and bgfx and copy them into the root directory, or locate them via `BX_DIR`, `BIMG_DIR` and `BGFX_DIR` CMake variables.
 
+When tools and custom targets are enabled, `cmake --build cmake-build --target bgfx-tools`
+builds the enabled tools. This target replaces the generic `tools` target.
+
 ### Image parsing
 
 `BIMG_CONFIG_PARSE_ENABLE` defaults to `ON` and controls bimg's default image-format
@@ -108,11 +111,16 @@ bgfx_compile_shaders(
 	VARYING_DEF filename
 	OUTPUT_DIR directory
 	[AS_HEADERS]
+	[NO_SOURCE_GROUP]
+	[PROFILES profiles]
 )
 ```
 This defines a shaderc command to generate binaries or headers for a number of `TYPE` shaders with `SHADERS` files and `VARYING_DEF` file in the `OUTPUT_DIR` directory. There will be one generated shader for each supported rendering API on this current platform according to the `BGFX_EMBEDDED_SHADER` macro in `bgfx/embedded_shader.h` for headers and in the directory expected by `load_shader` in `bgfx_utils.h`.
 
-The generated headers will have names in the format of `${RENDERING_API}/${SHADERS}.bin[.h]` where `RENDERING_API` can be `glsl`, `essl`, `spirv`, `dx11` and `metal` depending on the availability of the platform.
+`PROFILES` overrides the platform's default profile list, for example `PROFILES spirv s_6_0`.
+`NO_SOURCE_GROUP` suppresses the automatic IDE shader source group.
+
+The generated headers will have names in the format of `${RENDERING_API}/${SHADERS}.bin[.h]` where `RENDERING_API` can be `glsl`, `essl`, `spirv`, `dxbc`, `dxil`, `wgsl` and `metal` depending on the selected profiles and platform.
 
 Adding these `SHADERS` as source files to a target will run `shaderc` at build time and they will rebuild if either the contents of the `SHADERS` or the `VARYING_DEF` change.
 
