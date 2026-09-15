@@ -13,6 +13,13 @@ the interpolation border, and fontstash blur padding are excluded from those
 bounds. The no-font fallback exposes the same metric properties, but its values
 are estimates rather than measurements of a loaded face.
 
+The Canvas pixel regressions in `JavaScript.All` require a rendering GPU backend.
+The test host exposes `hasGpuRendering` from the active bgfx renderer; only those
+regressions are reported as pending with the no-op renderer used by macOS CI
+(`BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON`). API, PNG fallback, and text
+metrics tests still run. Configure that option `OFF` on a Metal-capable Mac to
+run the pixel regressions as well.
+
 ## Native Canvas visual baseline
 
 The `native-canvas.png` reference for Playground `#TKVFSA#8` is a Native regression

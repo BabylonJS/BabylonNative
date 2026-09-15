@@ -28263,6 +28263,7 @@ mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
 
 
 
+
 describe("RequestFile", function () {
   this.timeout(0);
   it("should throw when requesting a URL with no protocol", function () {
@@ -28377,6 +28378,9 @@ describe("ColorParsing", function () {
 });
 
 describe("Canvas2D", function () {
+  // No-op renderers accept GPU commands but cannot produce pixels for readback.
+  var itWithGpu = hasGpuRendering ? it : it.skip;
+
   function createContext() {
     var canvas = new _native.Canvas();
     canvas.width = 64;
@@ -28771,7 +28775,7 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(data.height).to.equal(3);
   });
 
-  it("renders a semi-transparent Canvas source through the destination GPU", function () {
+  itWithGpu("renders a semi-transparent Canvas source through the destination GPU", function () {
     var source = createCanvas(8, 8);
     var destination = createCanvas(8, 8);
     try {
@@ -28795,7 +28799,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("recognizes a Canvas source before ImageBitmap-shaped own properties", function () {
+  itWithGpu("recognizes a Canvas source before ImageBitmap-shaped own properties", function () {
     var source = createCanvas(8, 8);
     var destination = createCanvas(8, 8);
     try {
@@ -28823,7 +28827,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("applies fractional source crops and destination rectangles on the GPU", function () {
+  itWithGpu("applies fractional source crops and destination rectangles on the GPU", function () {
     var source = createCanvas(12, 8);
     var destination = createCanvas(30, 22);
     try {
@@ -28897,7 +28901,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("normalizes negative source and destination extents", function () {
+  itWithGpu("normalizes negative source and destination extents", function () {
     var source = createCanvas(12, 8);
     var destination = createCanvas(16, 12);
     try {
@@ -28933,7 +28937,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("clips the source rectangle and adjusts the destination proportionally", function () {
+  itWithGpu("clips the source rectangle and adjusts the destination proportionally", function () {
     var source = createCanvas(8, 8);
     var destination = createCanvas(16, 16);
     try {
@@ -28965,7 +28969,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("keeps temporary Canvas images alive until queued draws flush", function () {
+  itWithGpu("keeps temporary Canvas images alive until queued draws flush", function () {
     var source = createCanvas(8, 8);
     var destination = createCanvas(16, 8);
     try {
@@ -28995,7 +28999,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("keeps ImageData uploads alive through putImageData and drawImage", function () {
+  itWithGpu("keeps ImageData uploads alive through putImageData and drawImage", function () {
     var destination = createCanvas(12, 6);
     try {
       var putData = destination.context.createImageData(4, 4);
@@ -29042,7 +29046,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("preserves transform, rectangular clip, and globalAlpha for Canvas crops", function () {
+  itWithGpu("preserves transform, rectangular clip, and globalAlpha for Canvas crops", function () {
     var source = createCanvas(20, 8);
     var destination = createCanvas(16, 12);
     try {
@@ -29102,7 +29106,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("intersects repeated Canvas draws with a retained non-rectangular clip", function () {
+  itWithGpu("intersects repeated Canvas draws with a retained non-rectangular clip", function () {
     var source = createCanvas(4, 4);
     var destination = createCanvas(16, 12);
     try {
@@ -29144,7 +29148,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  it("keeps fractional drawImage edges out of the CPU mirror", function () {
+  itWithGpu("keeps fractional drawImage edges out of the CPU mirror", function () {
     var source = createCanvas(2, 2);
     var destination = createCanvas(8, 8);
     try {
