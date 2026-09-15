@@ -270,14 +270,15 @@ namespace Babylon::Polyfills::Internal
         bx::MemoryWriter writer{&memoryBlock};
         bx::Error err{};
         bimg::imageWritePng(&writer, width, height, width * 4, rgba.data(), bimg::TextureFormat::RGBA8, false, &err);
-        if (!err.isOk() || memoryBlock.getSize() == 0)
+        // MemoryBlock reports allocation capacity, not the number of encoded bytes.
+        const size_t pngSize = static_cast<size_t>(bx::getSize(&writer));
+        if (!err.isOk() || pngSize == 0)
         {
             throw Napi::Error::New(info.Env(), "Canvas.toDataURL: PNG encode failed.");
         }
 
         // more(0) returns the buffer start without growing (see bx::MemoryBlock).
         const char* pngBytes = static_cast<const char*>(memoryBlock.more(0));
-        const size_t pngSize = memoryBlock.getSize();
         std::string encoded;
         bn::encode_b64(pngBytes, pngBytes + pngSize, std::back_inserter(encoded));
         return Napi::String::New(info.Env(), "data:image/png;base64," + encoded);

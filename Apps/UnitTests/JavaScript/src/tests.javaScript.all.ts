@@ -1,5 +1,6 @@
 import * as Mocha from "mocha";
 import { expect } from "chai";
+import { Buffer } from "buffer";
 import {
   RequestFile,
   NativeEngine,
@@ -1094,6 +1095,36 @@ describe("Canvas2D", function () {
     } finally {
       canvas.dispose();
     }
+  });
+
+  it("ends PNG data URLs at IEND without trailing allocation bytes", function () {
+    [1, 2, 64].forEach(function (size) {
+      const canvas = new _native.Canvas();
+      canvas.width = size;
+      canvas.height = size;
+      try {
+        const url = canvas.toDataURL();
+        const png = Buffer.from(url.substring("data:image/png;base64,".length), "base64");
+        expect(Array.from(png.subarray(0, 8))).to.deep.equal([137, 80, 78, 71, 13, 10, 26, 10]);
+        let offset = 8;
+        let foundEnd = false;
+        while (offset + 12 <= png.length) {
+          const length = png.readUInt32BE(offset);
+          const type = png.toString("ascii", offset + 4, offset + 8);
+          offset += length + 12;
+          expect(offset).to.be.at.most(png.length);
+          if (type === "IEND") {
+            expect(length).to.equal(0);
+            foundEnd = true;
+            break;
+          }
+        }
+        expect(foundEnd).to.equal(true);
+        expect(offset).to.equal(png.length);
+      } finally {
+        canvas.dispose();
+      }
+    });
   });
 
   it("returns ascent and descent in no-font text metrics", function () {

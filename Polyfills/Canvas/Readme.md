@@ -15,6 +15,8 @@ same rendered source snapshot.
 `BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES`, which controls input-image
 loading. Empty, case-variant, and unsupported media types use the same PNG
 fallback; JPEG/WebP encoding is not implemented.
+The data URL contains only the written PNG bytes through `IEND`, not unused
+encoding-buffer capacity.
 
 `drawImage()` validates its arity and normalizes/clips its geometry before
 readback or image upload. Calls that draw nothing do not create temporary images;
