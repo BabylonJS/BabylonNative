@@ -9,12 +9,12 @@
 
 namespace Babylon::Graphics
 {
-    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
+    void DeviceImpl::ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window)
     {
-        pd.nwh = reinterpret_cast<void*>(window);
+        swapChain.nwh = reinterpret_cast<void*>(window);
     }
 
-    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::Init& /*init*/)
     {
     }
 

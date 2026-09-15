@@ -31,7 +31,6 @@ target_link_libraries(NativeEngine
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bx
-    PRIVATE minz
     PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext
     PRIVATE JsRuntime)

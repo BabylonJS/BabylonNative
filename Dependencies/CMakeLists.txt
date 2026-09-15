@@ -37,6 +37,7 @@ set(BGFX_CUSTOM_TARGETS OFF)
 set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
+set(BGFX_CONFIG_VIDEO OFF)
 
 # Keep AVIF opt-in, including caches with bgfx.cmake's empty (inherit) default.
 if(NOT DEFINED BIMG_CONFIG_PARSE_AVIF OR "${BIMG_CONFIG_PARSE_AVIF}" STREQUAL "")
@@ -72,9 +73,6 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CON
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
 
-# Disable video decoding support (not used by Babylon Native).
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_VIDEO=0)
-
 # Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_C99_API=0)
 
@@ -94,7 +92,6 @@ endif()
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 set_property(TARGET bimg_encode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 set_property(TARGET bimg_decode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET minz PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 if(TARGET tinyexr)
     set_property(TARGET tinyexr PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 endif()

@@ -10,5 +10,7 @@ target_link_libraries(ShaderTool
     PRIVATE ShaderCacheInternal
     PRIVATE ShaderCache)
 
+deploy_shader_compiler_runtime(ShaderTool)
+
 set_property(TARGET ShaderTool PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

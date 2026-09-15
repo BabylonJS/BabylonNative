@@ -24,6 +24,13 @@ if(GRAPHICS_API STREQUAL "OpenGL")
         "Include/RendererType/OpenGL/Babylon/Graphics/GL/Texture.h")
 endif()
 
+if(GRAPHICS_API STREQUAL "D3D11")
+    list(APPEND SOURCES
+        "InternalInclude/Babylon/Graphics/D3D11Format.h"
+        "Source/ExternalBackBufferD3D11.h"
+        "Source/ExternalBackBufferD3D11.cpp")
+endif()
+
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
@@ -43,7 +50,6 @@ target_compile_definitions(Graphics
 target_link_libraries(Graphics
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
-    PRIVATE minz
     PRIVATE bx)
 
 if(WINDOWS_STORE)

@@ -352,7 +352,7 @@ namespace Babylon::Plugins
         m_cameraDevice = nullptr;
     }
 
-    bool MediaStream::UpdateTexture(bgfx::TextureHandle textureHandle)
+    bool MediaStream::UpdateTexture(Graphics::Texture& texture)
     {
         bool dimensionsChanged = false;
 
@@ -362,7 +362,7 @@ namespace Babylon::Plugins
             return dimensionsChanged;
         }
 
-        auto cameraDimensions{m_cameraDevice->UpdateCameraTexture(textureHandle)};
+        auto cameraDimensions{m_cameraDevice->UpdateCameraTexture(texture)};
 
         if (this->Width != cameraDimensions.width || this->Height != cameraDimensions.height)
         {
