@@ -8,6 +8,7 @@
 
 #include <array>
 #include <atomic>
+#include <functional>
 #include <future>
 #include <memory>
 #include <optional>
@@ -37,7 +38,8 @@ namespace
     }
 
     std::vector<uint8_t> ClearAndCapture(
-        Babylon::Graphics::Device& device, Babylon::Graphics::DeviceContext& context, uint32_t color)
+        Babylon::Graphics::Device& device, Babylon::Graphics::DeviceContext& context, uint32_t color,
+        const std::function<void(bgfx::Encoder&)>& render = {})
     {
         auto captured = std::make_shared<std::optional<std::vector<uint8_t>>>();
         context.RequestScreenShot([captured](auto pixels) { captured->emplace(std::move(pixels)); });
@@ -46,6 +48,10 @@ namespace
             device.StartRenderingCurrentFrame();
             Babylon::Graphics::FrameBuffer backBuffer{context, BGFX_INVALID_HANDLE, 0, 0, true, true, true};
             backBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, color, 1.0f, 0);
+            if (render)
+            {
+                render(*context.GetActiveEncoder());
+            }
             device.FinishRenderingCurrentFrame();
         }
         if (!captured->has_value())
@@ -70,6 +76,36 @@ namespace
                 break;
             }
         }
+    }
+}
+
+TEST(Device, ExplicitDefaultFrameBufferPreservesTarget)
+{
+    auto config = g_deviceConfig;
+    config.Width = 32;
+    config.Height = 24;
+    Babylon::Graphics::Device device{config};
+    Babylon::AppRuntime runtime{};
+    auto& context = GetContext(device, runtime);
+    Babylon::Graphics::FrameBuffer window{context, BGFX_INVALID_HANDLE, 0, 0, true, true, true};
+    ExpectSolidColor(ClearAndCapture(device, context, 0xff0000ff), 32, 24, 0xff0000ff);
+    EXPECT_EQ(window.Handle().idx, context.GetBackBufferHandle().idx);
+
+    for (bool defaultBackBuffer : {false, true})
+    {
+        const auto handle = bgfx::createFrameBuffer(32, 24, bgfx::TextureFormat::RGBA8);
+        ASSERT_TRUE(bgfx::isValid(handle));
+        Babylon::Graphics::FrameBuffer target{context, handle, 32, 24, defaultBackBuffer, false, false};
+        EXPECT_EQ(target.DefaultBackBuffer(), defaultBackBuffer);
+        EXPECT_EQ(target.Handle().idx, handle.idx);
+        EXPECT_NE(target.Handle().idx, window.Handle().idx);
+
+        ExpectSolidColor(ClearAndCapture(device, context, 0xff0000ff, [&](bgfx::Encoder& encoder) {
+            target.Clear(encoder, BGFX_CLEAR_COLOR, 0x00ff00ff, 1.0f, 0);
+        }), 32, 24, 0xff0000ff);
+
+        target.Dispose();
+        EXPECT_FALSE(bgfx::isValid(target.Handle()));
     }
 }
 

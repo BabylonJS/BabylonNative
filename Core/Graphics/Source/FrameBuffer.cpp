@@ -12,6 +12,8 @@ namespace Babylon::Graphics
         , m_width{width}
         , m_height{height}
         , m_defaultBackBuffer{defaultBackBuffer}
+        // XR uses default framebuffer semantics but supplies an explicit render target.
+        , m_useDeviceBackBuffer{defaultBackBuffer && !bgfx::isValid(handle)}
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
         , m_disposed{false}
@@ -51,7 +53,7 @@ namespace Babylon::Graphics
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
     {
-        return m_defaultBackBuffer ? m_deviceContext.GetBackBufferHandle() : m_handle;
+        return m_useDeviceBackBuffer ? m_deviceContext.GetBackBufferHandle() : m_handle;
     }
 
     uint16_t FrameBuffer::Width() const
