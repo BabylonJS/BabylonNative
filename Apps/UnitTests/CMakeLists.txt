@@ -46,6 +46,7 @@ set(SOURCES
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
+    "Source/Tests.Texture.DeferredUpdate.cpp"
     "Source/Tests.UniformPadding.cpp"
     "Source/Helpers.h"
     "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")

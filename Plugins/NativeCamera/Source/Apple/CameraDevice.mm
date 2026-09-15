@@ -13,6 +13,7 @@
 #include <Babylon/Graphics/Texture.h>
 #include <arcana/threading/task_schedulers.h>
 #include <memory>
+#include <optional>
 #include <Foundation/Foundation.h>
 #include <AVFoundation/AVFoundation.h>
 
@@ -238,8 +239,7 @@ namespace Babylon::Plugins
         id<MTLCommandBuffer> currentCommandBuffer{};
         bool isInitialized{false};
         bool refreshBgfxTexture{true};
-        Graphics::Texture* bgfxTexture{};
-        bgfx::TextureHandle bgfxTextureHandle{bgfx::kInvalidHandle};
+        std::optional<Graphics::Texture::DeferredUpdate> bgfxTextureUpdate{};
 
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
         std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
@@ -582,8 +582,9 @@ namespace Babylon::Plugins
     CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(Graphics::Texture& texture)
     {
         // Hook into AfterRender to copy over the texture without overlapping bgfx's frame encoding.
-        // Capture the cancellation token so that the shared pointer is kept alive when arcana checks internally for cancellation.
-        arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), *m_impl->cancellationSource, [this, texture{&texture}, cancellationSource{m_impl->cancellationSource}] {
+        // The deferred update token owns only shared texture state, so collection or explicit disposal
+        // invalidates the update without leaving a raw Texture pointer in the queued callback.
+        arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), *m_impl->cancellationSource, [this, textureUpdate{texture.CreateDeferredUpdate()}, cancellationSource{m_impl->cancellationSource}]() mutable {
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
@@ -614,8 +615,9 @@ namespace Babylon::Plugins
                 return;
             }
 
-            // Check if we've been handed a different texture or if its bgfx handle was recreated.
-            if (m_impl->bgfxTexture != texture || m_impl->bgfxTextureHandle.idx != texture->Handle().idx)
+            // Check if we've been handed a different texture or if its resource generation changed.
+            if (!m_impl->bgfxTextureUpdate.has_value() ||
+                !m_impl->bgfxTextureUpdate->Matches(textureUpdate))
             {
                 m_impl->refreshBgfxTexture = true;
             }
@@ -633,17 +635,14 @@ namespace Babylon::Plugins
 
             if (m_impl->refreshBgfxTexture && m_impl->textureRGBA != nil)
             {
-                texture->Create2D(
+                if (textureUpdate.TryCreate2D(
                     static_cast<uint16_t>(width),
                     static_cast<uint16_t>(height),
-                    texture->HasMips(),
-                    texture->NumLayers(),
-                    texture->Format(),
-                    texture->Flags(),
-                    reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
-                m_impl->bgfxTexture = texture;
-                m_impl->bgfxTextureHandle = texture->Handle();
-                m_impl->refreshBgfxTexture = false;
+                    reinterpret_cast<uintptr_t>(m_impl->textureRGBA)))
+                {
+                    m_impl->bgfxTextureUpdate = textureUpdate;
+                    m_impl->refreshBgfxTexture = false;
+                }
             }
 
             if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil)

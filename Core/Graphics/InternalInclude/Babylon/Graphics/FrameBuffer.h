@@ -57,6 +57,7 @@ namespace Babylon::Graphics
         const uint16_t m_width{};
         const uint16_t m_height{};
         const bool m_defaultBackBuffer{};
+        const bool m_useDeviceBackBuffer{};
         const bool m_hasDepth{};
         const bool m_hasStencil{};
 
