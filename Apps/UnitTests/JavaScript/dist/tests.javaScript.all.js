@@ -28401,20 +28401,12 @@ describe("Canvas2D", function () {
   }
 
   function captureGpuPixels(canvas) {
-    var probe = createCanvas(canvas.width, canvas.height);
-    try {
-      // drawImage(canvas) captures the source framebuffer, while getImageData only
-      // reads the probe's CPU mirror. This makes assertions observe the source GPU.
-      probe.context.drawImage(canvas, 0, 0);
-      return probe.context.getImageData(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      ).data;
-    } finally {
-      disposeCanvas(probe);
-    }
+    return canvas.getContext("2d").getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    ).data;
   }
 
   function pixelAt(
@@ -28699,8 +28691,7 @@ describe("Canvas2D", function () {
   it("accepts two color stops at the same offset", function () {
     // Only checks that the insertion path accepts the duplicate offset the spec allows;
     // std::map::insert() dropped it by returning {it, false} rather than throwing, so this
-    // does not by itself prove the stop survives. Asserting that needs the rendered ramp,
-    // and gradient fills are not read back by getImageData.
+    // does not by itself prove the stop survives. That needs a separate rendered-ramp assertion.
     var ctx = createContext();
     var gradient = ctx.createLinearGradient(0, 0, 64, 0);
     gradient.addColorStop(0, "red");
@@ -29148,7 +29139,7 @@ describe("Canvas2D", function () {
     }
   });
 
-  itWithGpu("keeps fractional drawImage edges out of the CPU mirror", function () {
+  itWithGpu("reads fractional drawImage edge coverage from the framebuffer", function () {
     var source = createCanvas(2, 2);
     var destination = createCanvas(8, 8);
     try {
@@ -29163,12 +29154,96 @@ describe("Canvas2D", function () {
       pixelAt(pixels, destination.canvas.width, 4, 2),
       pixelAt(pixels, destination.canvas.width, 2, 1),
       pixelAt(pixels, destination.canvas.width, 2, 4)].
-      forEach(function (outside) {
-        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[3]).to.equal(0);
+      forEach(function (edge) {
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(edge[3]).to.be.within(40, 90);
       });
     } finally {
       disposeCanvas(destination);
       disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads new NanoVG draws after getImageData and toDataURL snapshots", function () {
+    var resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(captureGpuPixels(resource.canvas), 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+      resource.canvas.toDataURL();
+
+      resource.context.fillStyle = "#0000ff";
+      resource.context.fillRect(0, 0, 4, 8);
+      var pixels = captureGpuPixels(resource.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([0, 0, 255, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("reads filtered Canvas draws instead of unfiltered source pixels", function () {
+    var source = createCanvas(16, 16);
+    var destination = createCanvas(16, 16);
+    try {
+      source.context.fillStyle = "#ffffff";
+      source.context.fillRect(4, 4, 8, 8);
+      destination.context.filter = "blur(2px)";
+      destination.context.drawImage(source.canvas, 0, 0);
+      var pixels = captureGpuPixels(destination.canvas);
+      var fringe = pixelAt(pixels, 16, 3, 8);
+      var center = pixelAt(pixels, 16, 8, 8);
+      // The unfiltered CPU copy has zero alpha outside the source ink.
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[0]).to.equal(fringe[1]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[1]).to.equal(fringe[2]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[3]).to.be.greaterThan(0);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(center[3]).to.be.greaterThan(fringe[3]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads source dimensions after coercing drawImage coordinates once", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      var conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf: function valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          return 0;
+        }
+      }, 0);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
+      var pixels = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("clips framebuffer readback and normalizes negative region extents", function () {
+    var resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      var positive = resource.context.getImageData(-1, -1, 3, 3);
+      var negative = resource.context.getImageData(2, 2, -3, -3);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(negative.data)).to.deep.equal(Array.from(positive.data));
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(positive.data, 3, 0, 0)).to.deep.equal([0, 0, 0, 0]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(positive.data, 3, 1, 1)).to.deep.equal([255, 0, 0, 255]);
+
+      var outside = resource.context.getImageData(-2147483648, 0, -2, 1);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(outside.data)).to.deep.equal([0, 0, 0, 0, 0, 0, 0, 0]);
+      resource.canvas.width = 4;
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(resource.context.getImageData(0, 0, 1, 1).data)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
     }
   });
 

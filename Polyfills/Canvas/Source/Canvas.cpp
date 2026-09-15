@@ -12,11 +12,9 @@
 #include "Gradient.h"
 #include "Font.h"
 #include <basen.hpp>
-#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/encode.h>
 #include <bx/allocator.h>
 #include <bx/readerwriter.h>
-#endif
 
 namespace
 {
@@ -268,9 +266,6 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
-        throw Napi::Error::New(info.Env(), "Canvas.toDataURL: image encoding is disabled in this build.");
-#else
         bx::MemoryBlock memoryBlock{&Graphics::DeviceContext::GetDefaultAllocator()};
         bx::MemoryWriter writer{&memoryBlock};
         bx::Error err{};
@@ -286,7 +281,6 @@ namespace Babylon::Polyfills::Internal
         std::string encoded;
         bn::encode_b64(pngBytes, pngBytes + pngSize, std::back_inserter(encoded));
         return Napi::String::New(info.Env(), "data:image/png;base64," + encoded);
-#endif
     }
 
     Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)

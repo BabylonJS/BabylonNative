@@ -26,6 +26,7 @@ set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
     "Source/Tests.Canvas.TextMetrics.cpp"
+    "Source/Tests.Canvas.Readback.cpp"
     "Source/Tests.Device.FrameEncoder.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.Lifecycle.cpp"

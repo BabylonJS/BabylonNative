@@ -2,6 +2,7 @@
 #include <arcana/threading/task.h>
 #include <map>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -1058,13 +1059,6 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        // Keep the CPU mirror in sync so getImageData after toDataURL/drawImage sees GPU content.
-        EnsureCpuBuffer();
-        if (!m_cpuPixels.empty() && m_cpuPixels.size() == rgba.size())
-        {
-            m_cpuPixels = rgba;
-        }
-
         return rgba;
     }
 
@@ -1204,10 +1198,6 @@ namespace Babylon::Polyfills::Internal
         nvgFill(*m_nvg);
 
         nvgRestore(*m_nvg);
-
-        // Keep the CPU mirror that getImageData() reads from in sync.
-        BlitPixelsToCpu(patch.data(), copyWidth, copyHeight, 0, 0, copyWidth, copyHeight,
-            destLeft, destTop, copyWidth, copyHeight);
     }
 
     void Context::Arc(const Napi::CallbackInfo& info)
@@ -1222,149 +1212,47 @@ namespace Babylon::Polyfills::Internal
         nvgArc(*m_nvg, x, y, radius, startAngle, endAngle, winding);
     }
 
-    void Context::EnsureCpuBuffer()
-    {
-        const uint32_t width = m_canvas != nullptr ? m_canvas->GetWidth() : 0;
-        const uint32_t height = m_canvas != nullptr ? m_canvas->GetHeight() : 0;
-        if (width != m_cpuWidth || height != m_cpuHeight || m_cpuPixels.empty())
-        {
-            m_cpuWidth = width;
-            m_cpuHeight = height;
-
-            const uint64_t pixelCount = static_cast<uint64_t>(width) * height;
-            if (pixelCount > std::numeric_limits<size_t>::max() / 4)
-            {
-                // Leave the mirror empty; drawImage and getImageData both no-op safely on it.
-                m_cpuPixels.clear();
-                return;
-            }
-
-            m_cpuPixels.assign(static_cast<size_t>(pixelCount) * 4, 0);
-        }
-    }
-
-    void Context::BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, double sx, double sy, double sw, double sh, double dx, double dy, double dw, double dh)
-    {
-        if (src == nullptr || dw <= 0.0 || dh <= 0.0 || sw <= 0.0 || sh <= 0.0 || srcWidth == 0 || srcHeight == 0 ||
-            !std::isfinite(sx) || !std::isfinite(sy) || !std::isfinite(sw) || !std::isfinite(sh) ||
-            !std::isfinite(dx) || !std::isfinite(dy) || !std::isfinite(dw) || !std::isfinite(dh))
-        {
-            return;
-        }
-
-        EnsureCpuBuffer();
-        if (m_cpuPixels.empty())
-        {
-            return;
-        }
-
-        const double destRight = dx + dw;
-        const double destBottom = dy + dh;
-        if (!std::isfinite(destRight) || !std::isfinite(destBottom))
-        {
-            return;
-        }
-
-        const double clippedLeft = std::max(0.0, dx);
-        const double clippedTop = std::max(0.0, dy);
-        const double clippedRight = std::min(static_cast<double>(m_cpuWidth), destRight);
-        const double clippedBottom = std::min(static_cast<double>(m_cpuHeight), destBottom);
-        if (clippedRight <= clippedLeft || clippedBottom <= clippedTop)
-        {
-            return;
-        }
-
-        const uint32_t xBegin = static_cast<uint32_t>(std::floor(clippedLeft));
-        const uint32_t yBegin = static_cast<uint32_t>(std::floor(clippedTop));
-        const uint32_t xEnd = std::min(m_cpuWidth, static_cast<uint32_t>(std::ceil(clippedRight)));
-        const uint32_t yEnd = std::min(m_cpuHeight, static_cast<uint32_t>(std::ceil(clippedBottom)));
-
-        for (uint32_t destY = yBegin; destY < yEnd; ++destY)
-        {
-            const double pixelCenterY = static_cast<double>(destY) + 0.5;
-            if (pixelCenterY < dy || pixelCenterY >= destBottom)
-            {
-                continue;
-            }
-
-            const double sourceY = sy + (pixelCenterY - dy) * sh / dh;
-            if (sourceY < 0.0 || sourceY >= static_cast<double>(srcHeight))
-            {
-                continue;
-            }
-
-            const auto srcY = static_cast<uint32_t>(sourceY);
-            const size_t destRow = static_cast<size_t>(destY) * m_cpuWidth;
-            const size_t srcRow = static_cast<size_t>(srcY) * srcWidth;
-
-            for (uint32_t destX = xBegin; destX < xEnd; ++destX)
-            {
-                const double pixelCenterX = static_cast<double>(destX) + 0.5;
-                if (pixelCenterX < dx || pixelCenterX >= destRight)
-                {
-                    continue;
-                }
-
-                const double sourceX = sx + (pixelCenterX - dx) * sw / dw;
-                if (sourceX < 0.0 || sourceX >= static_cast<double>(srcWidth))
-                {
-                    continue;
-                }
-
-                const auto srcX = static_cast<uint32_t>(sourceX);
-                const size_t srcIndex = (srcRow + srcX) * 4;
-                const size_t destIndex = (destRow + destX) * 4;
-                m_cpuPixels[destIndex + 0] = src[srcIndex + 0];
-                m_cpuPixels[destIndex + 1] = src[srcIndex + 1];
-                m_cpuPixels[destIndex + 2] = src[srcIndex + 2];
-                m_cpuPixels[destIndex + 3] = src[srcIndex + 3];
-            }
-        }
-    }
-
-    void Context::ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst)
+    void Context::ReadPixels(int64_t sx, int64_t sy, uint32_t w, uint32_t h, uint8_t* dst)
     {
         const size_t total = static_cast<size_t>(w) * h * 4;
         std::memset(dst, 0, total);
-
-        // Resync the mirror to the canvas first. Without this, a canvas resize followed by
-        // getImageData with no intervening drawImage would read the old buffer using the old
-        // dimensions and hand back stale pixels; EnsureCpuBuffer reallocates and zero-fills.
-        EnsureCpuBuffer();
-        if (m_cpuPixels.empty())
+        const uint32_t width = m_canvas != nullptr ? m_canvas->GetWidth() : 0;
+        const uint32_t height = m_canvas != nullptr ? m_canvas->GetHeight() : 0;
+        const int64_t left = std::max<int64_t>(0, sx);
+        const int64_t top = std::max<int64_t>(0, sy);
+        const int64_t right = std::min<int64_t>(width, sx + w);
+        const int64_t bottom = std::min<int64_t>(height, sy + h);
+        if (right <= left || bottom <= top)
         {
             return;
         }
 
-        for (uint32_t j = 0; j < h; ++j)
+        const auto rgba = CaptureRGBA();
+        const size_t rowBytes = static_cast<size_t>(right - left) * 4;
+        for (int64_t y = top; y < bottom; ++y)
         {
-            const int32_t srcY = sy + static_cast<int32_t>(j);
-            if (srcY < 0 || srcY >= static_cast<int32_t>(m_cpuHeight))
-            {
-                continue;
-            }
-
-            for (uint32_t i = 0; i < w; ++i)
-            {
-                const int32_t srcX = sx + static_cast<int32_t>(i);
-                if (srcX < 0 || srcX >= static_cast<int32_t>(m_cpuWidth))
-                {
-                    continue;
-                }
-
-                const size_t srcIndex = (static_cast<size_t>(srcY) * m_cpuWidth + srcX) * 4;
-                const size_t destIndex = (static_cast<size_t>(j) * w + i) * 4;
-                dst[destIndex + 0] = m_cpuPixels[srcIndex + 0];
-                dst[destIndex + 1] = m_cpuPixels[srcIndex + 1];
-                dst[destIndex + 2] = m_cpuPixels[srcIndex + 2];
-                dst[destIndex + 3] = m_cpuPixels[srcIndex + 3];
-            }
+            const size_t srcIndex = (static_cast<size_t>(y) * width + static_cast<size_t>(left)) * 4;
+            const size_t destIndex = (static_cast<size_t>(y - sy) * w + static_cast<size_t>(left - sx)) * 4;
+            std::memcpy(dst + destIndex, rgba.data() + srcIndex, rowBytes);
         }
     }
 
     void Context::DrawImage(const Napi::CallbackInfo& info)
     {
+        if (info.Length() != 3 && info.Length() != 5 && info.Length() != 9)
+        {
+            throw Napi::Error::New(info.Env(), "Invalid number of parameters for DrawImage");
+        }
+
         Napi::Object imageObj = info[0].As<Napi::Object>();
+        // Numeric coercion can run JavaScript that resizes the source. Do it once,
+        // before reading source dimensions or creating any graphics resources.
+        std::array<double, 8> coordinates{};
+        for (size_t index = 1; index < info.Length(); ++index)
+        {
+            coordinates[index - 1] = info[index].ToNumber().DoubleValue();
+        }
+        const std::span<const double> arguments{coordinates.data(), info.Length() - 1};
 
         // Check the nominal Canvas type before the structural ImageBitmap shape.
         // Canvas objects are extensible, so user code may legitimately add a typed
@@ -1375,13 +1263,14 @@ namespace Babylon::Polyfills::Internal
             NativeCanvas* const srcCanvas = NativeCanvas::Unwrap(imageObj);
             const uint32_t width = srcCanvas->GetWidth();
             const uint32_t height = srcCanvas->GetHeight();
-            if (width == 0 || height == 0)
+            const auto rectangles = ParseDrawImageRectangles(arguments, width, height);
+            if (!rectangles)
             {
                 return;
             }
 
             // GPU readback of the source canvas (flush + RT blit + readTexture) so
-            // NanoVG draws (fillRect/text/paths) are included — not just the CPU mirror.
+            // NanoVG draws (fillRect/text/paths) are included.
             std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
             if (Context* const srcContext = srcCanvas->GetBoundContext(); srcContext != nullptr)
             {
@@ -1401,7 +1290,7 @@ namespace Babylon::Polyfills::Internal
                 throw Napi::Error::New(info.Env(), "drawImage: failed to create the source image.");
             }
             RetainImageUntilFlush(imageIndex);
-            DrawImageCommon(info, imageIndex, rgba.data(), width, height);
+            DrawImageCommon(imageIndex, *rectangles);
             return;
         }
 
@@ -1410,19 +1299,20 @@ namespace Babylon::Polyfills::Internal
         // Native sets forceBitmapOverHTMLImageElement, LoadImage delivers these bitmaps to drawImage
         // (e.g. Mesh.applyDisplacementMap, height/flow maps). Unwrapping such a plain object as a
         // NativeCanvasImage would dereference garbage and crash, so handle it explicitly by
-        // converting the pixels to RGBA8 and drawing/blitting them directly.
+        // converting the pixels to RGBA8 and drawing them directly.
         if (imageObj.Has("data") && imageObj.Get("data").IsTypedArray())
         {
-#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
-            const auto data = imageObj.Get("data").As<Napi::Uint8Array>();
             const uint32_t width = imageObj.Get("width").As<Napi::Number>().Uint32Value();
             const uint32_t height = imageObj.Get("height").As<Napi::Number>().Uint32Value();
-            const auto format = static_cast<bimg::TextureFormat::Enum>(imageObj.Get("format").As<Napi::Number>().Uint32Value());
-            if (width == 0 || height == 0)
+            const auto rectangles = ParseDrawImageRectangles(arguments, width, height);
+            if (!rectangles)
             {
                 return;
             }
 
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+            const auto data = imageObj.Get("data").As<Napi::Uint8Array>();
+            const auto format = static_cast<bimg::TextureFormat::Enum>(imageObj.Get("format").As<Napi::Number>().Uint32Value());
             // Everything below is caller-supplied. bimg::imageConvert reads the source and writes
             // width*height*4 bytes to the destination without knowing either buffer's real length,
             // so validate both before handing it any pointers.
@@ -1473,7 +1363,7 @@ namespace Babylon::Polyfills::Internal
                 throw Napi::Error::New(info.Env(), "drawImage: failed to create the source image.");
             }
             RetainImageUntilFlush(imageIndex);
-            DrawImageCommon(info, imageIndex, rgba.data(), width, height);
+            DrawImageCommon(imageIndex, *rectangles);
             return;
 #else
             throw Napi::Error::New(info.Env(), "drawImage: image loading disabled in this build.");
@@ -1481,6 +1371,11 @@ namespace Babylon::Polyfills::Internal
         }
 
         const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);
+        const auto rectangles = ParseDrawImageRectangles(arguments, canvasImage->GetWidth(), canvasImage->GetHeight());
+        if (!rectangles)
+        {
+            return;
+        }
 
         int imageIndex{-1};
         const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
@@ -1495,10 +1390,10 @@ namespace Babylon::Polyfills::Internal
         }
         assert(imageIndex != -1);
 
-        DrawImageCommon(info, imageIndex, canvasImage->GetPixels(), canvasImage->GetWidth(), canvasImage->GetHeight());
+        DrawImageCommon(imageIndex, *rectangles);
     }
 
-    void Context::DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, const uint8_t* srcPixels, uint32_t srcWidth, uint32_t srcHeight)
+    std::optional<Context::DrawImageRectangles> Context::ParseDrawImageRectangles(std::span<const double> arguments, uint32_t srcWidth, uint32_t srcHeight)
     {
         double sx{0.0};
         double sy{0.0};
@@ -1508,39 +1403,35 @@ namespace Babylon::Polyfills::Internal
         double dy{};
         double dWidth{sWidth};
         double dHeight{sHeight};
-        if (info.Length() == 3)
+        if (arguments.size() == 2)
         {
-            dx = info[1].ToNumber().DoubleValue();
-            dy = info[2].ToNumber().DoubleValue();
+            dx = arguments[0];
+            dy = arguments[1];
         }
-        else if (info.Length() == 5)
+        else if (arguments.size() == 4)
         {
-            dx = info[1].ToNumber().DoubleValue();
-            dy = info[2].ToNumber().DoubleValue();
-            dWidth = info[3].ToNumber().DoubleValue();
-            dHeight = info[4].ToNumber().DoubleValue();
-        }
-        else if (info.Length() == 9)
-        {
-            sx = info[1].ToNumber().DoubleValue();
-            sy = info[2].ToNumber().DoubleValue();
-            sWidth = info[3].ToNumber().DoubleValue();
-            sHeight = info[4].ToNumber().DoubleValue();
-            dx = info[5].ToNumber().DoubleValue();
-            dy = info[6].ToNumber().DoubleValue();
-            dWidth = info[7].ToNumber().DoubleValue();
-            dHeight = info[8].ToNumber().DoubleValue();
+            dx = arguments[0];
+            dy = arguments[1];
+            dWidth = arguments[2];
+            dHeight = arguments[3];
         }
         else
         {
-            throw Napi::Error::New(info.Env(), "Invalid number of parameters for DrawImage");
+            sx = arguments[0];
+            sy = arguments[1];
+            sWidth = arguments[2];
+            sHeight = arguments[3];
+            dx = arguments[4];
+            dy = arguments[5];
+            dWidth = arguments[6];
+            dHeight = arguments[7];
         }
 
         if (srcWidth == 0 || srcHeight == 0 ||
             !std::isfinite(sx) || !std::isfinite(sy) || !std::isfinite(sWidth) || !std::isfinite(sHeight) ||
             !std::isfinite(dx) || !std::isfinite(dy) || !std::isfinite(dWidth) || !std::isfinite(dHeight))
         {
-            return;
+            return std::nullopt;
         }
 
         // Negative extents grow in the opposite direction without flipping the pixels.
@@ -1567,14 +1458,14 @@ namespace Babylon::Polyfills::Internal
 
         if (sWidth == 0.0 || sHeight == 0.0 || dWidth == 0.0 || dHeight == 0.0)
         {
-            return;
+            return std::nullopt;
         }
 
         const double sourceRight = sx + sWidth;
         const double sourceBottom = sy + sHeight;
         if (!std::isfinite(sourceRight) || !std::isfinite(sourceBottom))
         {
-            return;
+            return std::nullopt;
         }
 
         const double clippedSx = std::max(0.0, sx);
@@ -1585,7 +1476,7 @@ namespace Babylon::Polyfills::Internal
         const double clippedSHeight = clippedSourceBottom - clippedSy;
         if (clippedSWidth <= 0.0 || clippedSHeight <= 0.0)
         {
-            return;
+            return std::nullopt;
         }
 
         const double scaleX = dWidth / sWidth;
@@ -1596,8 +1487,6 @@ namespace Babylon::Polyfills::Internal
         dHeight = clippedSHeight * scaleY;
         sx = clippedSx;
         sy = clippedSy;
-        sWidth = clippedSWidth;
-        sHeight = clippedSHeight;
 
         // Map the full source image into paint space, then fill only the clipped
         // destination rectangle. This crops through UVs without changing the current
@@ -1613,7 +1502,7 @@ namespace Babylon::Polyfills::Internal
         if (!fitsFloat(dx) || !fitsFloat(dy) || !fitsFloat(dWidth) || !fitsFloat(dHeight) ||
             !fitsFloat(patternX) || !fitsFloat(patternY) || !fitsFloat(patternWidth) || !fitsFloat(patternHeight))
         {
-            return;
+            return std::nullopt;
         }
 
         const float drawX = static_cast<float>(dx);
@@ -1624,15 +1513,22 @@ namespace Babylon::Polyfills::Internal
         const float paintHeight = static_cast<float>(patternHeight);
         if (drawWidth <= 0.f || drawHeight <= 0.f || paintWidth <= 0.f || paintHeight <= 0.f)
         {
-            return;
+            return std::nullopt;
         }
 
+        return DrawImageRectangles{
+            drawX, drawY, drawWidth, drawHeight,
+            static_cast<float>(patternX), static_cast<float>(patternY), paintWidth, paintHeight};
+    }
+
+    void Context::DrawImageCommon(int imageIndex, const DrawImageRectangles& rectangles)
+    {
         NVGpaint imagePaint = nvgImagePattern(
             *m_nvg,
-            static_cast<float>(patternX),
-            static_cast<float>(patternY),
-            paintWidth,
-            paintHeight,
+            rectangles.PatternX,
+            rectangles.PatternY,
+            rectangles.PatternWidth,
+            rectangles.PatternHeight,
             0.f,
             imageIndex,
             1.f);
@@ -1643,7 +1539,7 @@ namespace Babylon::Polyfills::Internal
             // the destination rectangle with a temporary scissor instead of appending
             // the rectangle to the path, which would fill and retain their union.
             nvgSave(*m_nvg);
-            nvgIntersectScissor(*m_nvg, drawX, drawY, drawWidth, drawHeight);
+            nvgIntersectScissor(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
@@ -1654,13 +1550,11 @@ namespace Babylon::Polyfills::Internal
             // Rectangular clips live in NanoVG's scissor state and survive resetting
             // the temporary draw path. Keep the wrapper's path flags in sync as well.
             ResetPathState();
-            nvgRect(*m_nvg, drawX, drawY, drawWidth, drawHeight);
+            nvgRect(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
         }
-
-        BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
     }
 
     void Context::RetainImageUntilFlush(int imageIndex)
@@ -1760,8 +1654,8 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "Context2D.getImageData: invalid number of parameters");
         }
 
-        auto sx = info[0].As<Napi::Number>().Int32Value();
-        auto sy = info[1].As<Napi::Number>().Int32Value();
+        int64_t sx = info[0].As<Napi::Number>().Int32Value();
+        int64_t sy = info[1].As<Napi::Number>().Int32Value();
         const auto swInt = info[2].As<Napi::Number>().Int32Value();
         const auto shInt = info[3].As<Napi::Number>().Int32Value();
 

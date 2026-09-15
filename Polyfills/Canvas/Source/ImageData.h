@@ -9,7 +9,7 @@ namespace Babylon::Polyfills::Internal
     class ImageData final : public Napi::ObjectWrap<ImageData>
     {
     public:
-        static Napi::Value CreateInstance(Napi::Env env, Context* context, int32_t sx, int32_t sy, uint32_t width, uint32_t height);
+        static Napi::Value CreateInstance(Napi::Env env, Context* context, int64_t sx, int64_t sy, uint32_t width, uint32_t height);
 
         explicit ImageData(const Napi::CallbackInfo& info);
 

@@ -456,7 +456,7 @@ namespace
         }
 
         // NanoVG-created textures retain their existing bgfx-index image IDs.
-        // nvgCreateImageFromHandle uses a separate negative ID namespace below.
+        // nvgCreateImageFromHandle uses positive IDs above the uint16_t bgfx handle range.
         tex->image = static_cast<int>(tex->id.idx);
         return tex->image;
     }
