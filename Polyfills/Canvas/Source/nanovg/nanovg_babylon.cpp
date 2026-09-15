@@ -455,7 +455,9 @@ namespace
             return 0;
         }
 
-        tex->image = ++gl->textureId;
+        // NanoVG-created textures retain their existing bgfx-index image IDs.
+        // nvgCreateImageFromHandle uses a separate negative ID namespace below.
+        tex->image = static_cast<int>(tex->id.idx);
         return tex->image;
     }
 
@@ -1461,6 +1463,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     gl->th = BGFX_INVALID_HANDLE;
     gl->th2 = BGFX_INVALID_HANDLE;
     gl->texMissing = BGFX_INVALID_HANDLE;
+    gl->textureId = static_cast<int>(bgfx::kInvalidHandle);
 
     bx::memSet(&params, 0, sizeof(params) );
     params.renderCreate         = nvgRenderCreate;
@@ -1544,6 +1547,8 @@ int nvgCreateImageFromHandle(NVGcontext* _ctx, bgfx::TextureHandle _handle, int 
     // Do not destroy the caller's texture when nvgDeleteImage runs.
     tex->flags = _flags | NVG_IMAGE_NODELETE;
     tex->id = _handle;
+    // Keep externally registered handles above the uint16_t bgfx handle range,
+    // away from NanoVG's zero sentinel and NanoVG-created texture IDs.
     tex->image = ++gl->textureId;
     return tex->image;
 }
