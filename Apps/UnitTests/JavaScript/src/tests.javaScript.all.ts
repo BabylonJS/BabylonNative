@@ -996,6 +996,66 @@ describe("Canvas2D", function () {
     }
   });
 
+  itWithGpu("retains the Canvas source kind across coordinate coercion", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    const prototype = Object.getPrototypeOf(source.canvas);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      let conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          Object.setPrototypeOf(source.canvas, null);
+          source.canvas.data = new Uint8Array(0);
+          return 0;
+        },
+      }, 0);
+      expect(conversions).to.equal(1);
+      const pixels = captureGpuPixels(destination.canvas);
+      expect(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      expect(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      Object.setPrototypeOf(source.canvas, prototype);
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  it("retains the ImageBitmap source kind when coercion removes its data", function () {
+    const destination = createCanvas(8, 8);
+    try {
+      [false, true].forEach(function (noOp) {
+        const bitmap = {
+          width: 8,
+          height: 8,
+          format: 74,
+          data: new Uint8Array(8 * 8 * 4),
+        };
+        let conversions = 0;
+        const draw = function () {
+          destination.context.drawImage(bitmap, {
+            valueOf() {
+              ++conversions;
+              delete bitmap.data;
+              return 0;
+            },
+          }, 0, noOp ? 0 : 8, 8);
+        };
+        if (noOp) {
+          expect(draw).not.to.throw();
+        } else {
+          expect(draw).to.throw("drawImage: ImageBitmap data must be a typed array.");
+        }
+        expect(conversions).to.equal(1);
+      });
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
   itWithGpu("clips framebuffer readback and normalizes negative region extents", function () {
     const resource = createCanvas(8, 8);
     try {

@@ -180,7 +180,7 @@ namespace Babylon::Polyfills::Internal
         bool needClear = m_clear;
         m_clear = false;
 
-        if (m_dirty)
+        if (m_dirty || !m_frameBuffer)
         {
             // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
             const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * 4);

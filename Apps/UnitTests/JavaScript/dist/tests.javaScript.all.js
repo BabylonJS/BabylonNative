@@ -29227,6 +29227,66 @@ describe("Canvas2D", function () {
     }
   });
 
+  itWithGpu("retains the Canvas source kind across coordinate coercion", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(8, 8);
+    var prototype = Object.getPrototypeOf(source.canvas);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      var conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf: function valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          Object.setPrototypeOf(source.canvas, null);
+          source.canvas.data = new Uint8Array(0);
+          return 0;
+        }
+      }, 0);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
+      var pixels = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      Object.setPrototypeOf(source.canvas, prototype);
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  it("retains the ImageBitmap source kind when coercion removes its data", function () {
+    var destination = createCanvas(8, 8);
+    try {
+      [false, true].forEach(function (noOp) {
+        var bitmap = {
+          width: 8,
+          height: 8,
+          format: 74,
+          data: new Uint8Array(8 * 8 * 4)
+        };
+        var conversions = 0;
+        var draw = function draw() {
+          destination.context.drawImage(bitmap, {
+            valueOf: function valueOf() {
+              ++conversions;
+              delete bitmap.data;
+              return 0;
+            }
+          }, 0, noOp ? 0 : 8, 8);
+        };
+        if (noOp) {
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(draw).not.to.throw();
+        } else {
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(draw).to.throw("drawImage: ImageBitmap data must be a typed array.");
+        }
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
+      });
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
   itWithGpu("clips framebuffer readback and normalizes negative region extents", function () {
     var resource = createCanvas(8, 8);
     try {

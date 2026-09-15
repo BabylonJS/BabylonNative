@@ -5,6 +5,8 @@ Implements parts of the 2D Canvas API using bgfx. Still a very early WIP; many m
 
 `getImageData()` and `toDataURL()` flush pending draws and read the rendered
 framebuffer, including transforms, clips, alpha, filters, and GPU sampling.
+An untouched Canvas with a 2D context lazily creates a transparent render target
+on its first readback; no resize or drawing call is required.
 `getImageData()` returns straight-alpha RGBA8 and transparent black outside the
 canvas; it does not use a CPU drawing mirror. `drawImage(canvas, ...)` uses the
 same rendered source snapshot.
@@ -17,6 +19,9 @@ fallback; JPEG/WebP encoding is not implemented.
 `drawImage()` validates its arity and normalizes/clips its geometry before
 readback or image upload. Calls that draw nothing do not create temporary images;
 images referenced by queued draws remain alive until the NanoVG flush.
+The source kind is retained before numeric argument coercion, even if that
+coercion changes its prototype or properties. Source dimensions are read after
+coercion so a resize takes effect; changed ImageBitmap data is validated before use.
 
 `measureText()` uses em-scaled font sizes and glyph ink bounds. Atlas SDF padding,
 the interpolation border, and fontstash blur padding are excluded from those

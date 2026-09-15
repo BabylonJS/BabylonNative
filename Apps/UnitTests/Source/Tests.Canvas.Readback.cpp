@@ -121,6 +121,43 @@ TEST(CanvasReadback, DrawImageRejectsArityAndNoOpGeometryBeforeReadbackOrUpload)
     });
 }
 
+TEST(CanvasReadback, UntouchedCanvasReadbackCreatesRenderTarget)
+{
+    RunCanvasTest([](Napi::Env env) {
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+        for (const bool readImageData : {true, false})
+        {
+            auto canvas = constructor.New({});
+            const auto blankPng = canvas.Get("toDataURL").As<Napi::Function>().Call(canvas, {}).As<Napi::String>().Utf8Value();
+            auto context = canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+            auto* nativeCanvas = Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas);
+            ASSERT_FALSE(nativeCanvas->HasFrameBuffer());
+
+            if (readImageData)
+            {
+                const auto image = context.Get("getImageData").As<Napi::Function>().Call(context, {
+                    Napi::Number::New(env, 0), Napi::Number::New(env, 0),
+                    Napi::Number::New(env, 1), Napi::Number::New(env, 1)}).As<Napi::Object>();
+                EXPECT_EQ(image.Get("width").As<Napi::Number>().Uint32Value(), 1u);
+                EXPECT_EQ(image.Get("height").As<Napi::Number>().Uint32Value(), 1u);
+                const auto pixels = image.Get("data").As<Napi::Uint8Array>();
+                ASSERT_EQ(pixels.ElementLength(), 4u);
+                for (size_t index = 0; index < pixels.ElementLength(); ++index)
+                {
+                    EXPECT_EQ(pixels[index], 0u);
+                }
+            }
+            else
+            {
+                const auto png = canvas.Get("toDataURL").As<Napi::Function>().Call(canvas, {}).As<Napi::String>().Utf8Value();
+                EXPECT_EQ(png.find("data:image/png;base64,iVBORw0KGgo"), 0u);
+                EXPECT_EQ(png, blankPng);
+            }
+            EXPECT_TRUE(nativeCanvas->HasFrameBuffer());
+        }
+    });
+}
+
 TEST(CanvasReadback, EncodesPngWithoutInputImageLoading)
 {
     RunCanvasTest([](Napi::Env env) {

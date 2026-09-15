@@ -1245,8 +1245,16 @@ namespace Babylon::Polyfills::Internal
         }
 
         Napi::Object imageObj = info[0].As<Napi::Object>();
-        // Numeric coercion can run JavaScript that resizes the source. Do it once,
-        // before reading source dimensions or creating any graphics resources.
+        // Retain the source kind before coercion can change its prototype or properties.
+        // Canvas takes precedence over the structural ImageBitmap shape.
+        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
+        NativeCanvas* const srcCanvas = canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>())
+            ? NativeCanvas::Unwrap(imageObj)
+            : nullptr;
+        const bool isImageBitmap = srcCanvas == nullptr && imageObj.Has("data") && imageObj.Get("data").IsTypedArray();
+
+        // Coercion can also resize the source. Do it once, before reading dimensions
+        // or creating any graphics resources.
         std::array<double, 8> coordinates{};
         for (size_t index = 1; index < info.Length(); ++index)
         {
@@ -1254,13 +1262,8 @@ namespace Babylon::Polyfills::Internal
         }
         const std::span<const double> arguments{coordinates.data(), info.Length() - 1};
 
-        // Check the nominal Canvas type before the structural ImageBitmap shape.
-        // Canvas objects are extensible, so user code may legitimately add a typed
-        // `data` property without changing the object passed to drawImage.
-        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
-        if (canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>()))
+        if (srcCanvas != nullptr)
         {
-            NativeCanvas* const srcCanvas = NativeCanvas::Unwrap(imageObj);
             const uint32_t width = srcCanvas->GetWidth();
             const uint32_t height = srcCanvas->GetHeight();
             const auto rectangles = ParseDrawImageRectangles(arguments, width, height);
@@ -1300,7 +1303,7 @@ namespace Babylon::Polyfills::Internal
         // (e.g. Mesh.applyDisplacementMap, height/flow maps). Unwrapping such a plain object as a
         // NativeCanvasImage would dereference garbage and crash, so handle it explicitly by
         // converting the pixels to RGBA8 and drawing them directly.
-        if (imageObj.Has("data") && imageObj.Get("data").IsTypedArray())
+        if (isImageBitmap)
         {
             const uint32_t width = imageObj.Get("width").As<Napi::Number>().Uint32Value();
             const uint32_t height = imageObj.Get("height").As<Napi::Number>().Uint32Value();
@@ -1311,7 +1314,12 @@ namespace Babylon::Polyfills::Internal
             }
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
-            const auto data = imageObj.Get("data").As<Napi::Uint8Array>();
+            const auto dataValue = imageObj.Get("data");
+            if (!dataValue.IsTypedArray())
+            {
+                throw Napi::TypeError::New(info.Env(), "drawImage: ImageBitmap data must be a typed array.");
+            }
+            const auto data = dataValue.As<Napi::Uint8Array>();
             const auto format = static_cast<bimg::TextureFormat::Enum>(imageObj.Get("format").As<Napi::Number>().Uint32Value());
             // Everything below is caller-supplied. bimg::imageConvert reads the source and writes
             // width*height*4 bytes to the destination without knowing either buffer's real length,
