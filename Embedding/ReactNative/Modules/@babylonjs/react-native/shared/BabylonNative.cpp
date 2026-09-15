@@ -28,7 +28,6 @@ namespace BabylonNative
     {
         Dispatcher g_inlineDispatcher{ [](const std::function<void()>& func) { func(); } };
         std::optional<Babylon::Graphics::Device> g_graphicsDevice{};
-        std::optional<Babylon::Graphics::DeviceUpdate> g_update{};
         std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
     }
 
@@ -98,7 +97,6 @@ namespace BabylonNative
             if (!g_graphicsDevice)
             {
                 g_graphicsDevice.emplace(m_graphicsConfig);
-                g_update.emplace(g_graphicsDevice->GetUpdate("update"));
             }
             else
             {
@@ -159,8 +157,6 @@ namespace BabylonNative
             if (g_graphicsDevice && m_isRenderingEnabled)
             {
                 g_graphicsDevice->StartRenderingCurrentFrame();
-                g_update->Start();
-                g_update->Finish();
                 g_graphicsDevice->FinishRenderingCurrentFrame();
             }
         }

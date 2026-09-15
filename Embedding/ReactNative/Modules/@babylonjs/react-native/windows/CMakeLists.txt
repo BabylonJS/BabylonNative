@@ -1,30 +1,26 @@
 cmake_minimum_required(VERSION 3.15.3)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# The RNW project generates projections with its resolved Microsoft.Windows.CppWinRT
+# package. Reuse that exact tree for every CMake target that can enter the final link.
+if(NOT DEFINED CPPWINRT_INCLUDE_PATH OR
+   NOT EXISTS "${CPPWINRT_INCLUDE_PATH}/winrt/base.h")
+    message(FATAL_ERROR
+        "CPPWINRT_INCLUDE_PATH must point to the RNW project's generated C++/WinRT "
+        "projection directory (the directory containing winrt/base.h).")
+endif()
+
 project(ReactNativeBabylon)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # BabylonNative CMake entry
 set(BABYLON_NATIVE_BUILD_APPS OFF CACHE BOOL "")
 set(BABYLON_NATIVE_USE_SWAPCHAINPANEL ON CACHE BOOL "")
 
-# Force all cmake-built targets to use the same C++/WinRT headers as the vcxproj.
-# The vcxproj uses the CppWinRT NuGet package version pinned by react-native-windows
-# (CppWinRTVersion, typically 2.0.230706.1).
-# (CppWinRTVersion, typically 2.0.230706.1). Without this, cmake falls back to the
-# Windows SDK CppWinRT which may be a newer version, causing a #pragma detect_mismatch
-# link error ("C++/WinRT version" mismatch at link time).
-# CPPWINRT_INCLUDE_PATH is passed by the BabylonNativeBuild MSBuild target in the vcxproj:
-#   -DCPPWINRT_INCLUDE_PATH="$(NuGetPackageRoot)microsoft.windows.cppwinrt\$(CppWinRTVersion)\build\native\include"
-if(DEFINED CPPWINRT_INCLUDE_PATH AND EXISTS "${CPPWINRT_INCLUDE_PATH}")
-    message("-- CppWinRT: Forcing include path: ${CPPWINRT_INCLUDE_PATH}")
-    include_directories(BEFORE "${CPPWINRT_INCLUDE_PATH}")
-else()
-    message(WARNING "CppWinRT: CPPWINRT_INCLUDE_PATH not set or not found ('${CPPWINRT_INCLUDE_PATH}'). "
-        "cmake-built targets may use a different CppWinRT version than the vcxproj, "
-        "causing a C++/WinRT version detect_mismatch link error.")
-endif()
+message(STATUS "Using C++/WinRT projections from ${CPPWINRT_INCLUDE_PATH}")
+include_directories(BEFORE "${CPPWINRT_INCLUDE_PATH}")
 
 # Configure Babylon Native to use JSI
 # Note: We should avoid installing node_modules in the Module\@babylonjs\react-native folder.
@@ -81,4 +77,3 @@ target_link_libraries(BabylonNative
     ShaderCache
     Canvas
     ${ADDITIONAL_LIBRARIES})
-

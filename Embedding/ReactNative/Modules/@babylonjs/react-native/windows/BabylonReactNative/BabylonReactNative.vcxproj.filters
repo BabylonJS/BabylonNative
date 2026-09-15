@@ -30,7 +30,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="BabylonReactNative.def" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PropertySheet.props" />

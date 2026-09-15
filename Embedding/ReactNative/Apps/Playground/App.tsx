@@ -58,6 +58,8 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
   const [engineViewCallbacks, setEngineViewCallbacks] =
     useState<EngineViewCallbacks>();
   const [trackingState, setTrackingState] = useState<WebXRTrackingState>();
+  const [xrError, setXrError] = useState<string>();
+  const [controlsHeight, setControlsHeight] = useState(0);
 
   useEffect(() => {
     if (engine) {
@@ -136,44 +138,53 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
     return trackingState === undefined ? "" : WebXRTrackingState[trackingState];
   };
 
-  const onToggleXr = useCallback(() => {
-    (async () => {
+  const onToggleXr = useCallback(async () => {
+    setXrError(undefined);
+    const action = xrSession ? "stop" : "start";
+
+    try {
       if (xrSession) {
         await xrSession.exitXRAsync();
-      } else {
-        if (rootNode !== undefined && scene !== undefined) {
-          const xr = await scene.createDefaultXRExperienceAsync({
-            disableDefaultUI: true,
-            disableTeleportation: true,
-          });
-          const session = await xr.baseExperience.enterXRAsync(
-            "immersive-ar",
-            "unbounded",
-            xr.renderTarget
-          );
-          setXrSession(session);
-          session.onXRSessionEnded.add(() => {
-            setXrSession(undefined);
-            setTrackingState(undefined);
-          });
-
-          setTrackingState(xr.baseExperience.camera.trackingState);
-          xr.baseExperience.camera.onTrackingStateChanged.add(
-            (newTrackingState) => {
-              setTrackingState(newTrackingState);
-            }
-          );
-
-          // TODO: Figure out why getFrontPosition stopped working
-          //box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
-          const cameraRay = scene.activeCamera!.getForwardRay(1);
-          rootNode.position = cameraRay.origin.add(
-            cameraRay.direction.scale(cameraRay.length)
-          );
-          rootNode.rotate(Vector3.Up(), 3.14159);
-        }
+        return;
       }
-    })();
+
+      if (rootNode === undefined || scene === undefined) {
+        throw new Error("The scene is still initializing.");
+      }
+
+      const xr = await scene.createDefaultXRExperienceAsync({
+        disableDefaultUI: true,
+        disableTeleportation: true,
+      });
+      const session = await xr.baseExperience.enterXRAsync(
+        "immersive-ar",
+        "unbounded",
+        xr.renderTarget
+      );
+      setXrSession(session);
+      session.onXRSessionEnded.add(() => {
+        setXrSession(undefined);
+        setTrackingState(undefined);
+      });
+
+      setTrackingState(xr.baseExperience.camera.trackingState);
+      xr.baseExperience.camera.onTrackingStateChanged.add(
+        (newTrackingState) => {
+          setTrackingState(newTrackingState);
+        }
+      );
+
+      // TODO: Figure out why getFrontPosition stopped working
+      //box.position = (scene.activeCamera as TargetCamera).getFrontPosition(2);
+      const cameraRay = scene.activeCamera!.getForwardRay(1);
+      rootNode.position = cameraRay.origin.add(
+        cameraRay.direction.scale(cameraRay.length)
+      );
+      rootNode.rotate(Vector3.Up(), 3.14159);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setXrError(`Unable to ${action} XR: ${message}`);
+    }
   }, [rootNode, scene, xrSession]);
 
   const onInitialized = useCallback(
@@ -193,17 +204,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
 
   return (
     <>
-      <View style={props.style}>
-        <Button
-          title="Toggle EngineView"
-          onPress={() => {
-            setToggleView(!toggleView);
-          }}
-        />
-        <Button
-          title={xrSession ? "Stop XR" : "Start XR"}
-          onPress={onToggleXr}
-        />
+      <View style={[props.style, { paddingTop: controlsHeight }]}>
         {!toggleView && (
           <View style={{ flex: 1 }}>
             {enableSnapshots && (
@@ -248,6 +249,42 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
             </Text>
           </View>
         )}
+        <View
+          testID="engine-controls"
+          pointerEvents="box-none"
+          onLayout={(event) => {
+            setControlsHeight(event.nativeEvent.layout.height);
+          }}
+          style={{
+            position: "absolute",
+            zIndex: 1,
+            elevation: 1,
+            top: 0,
+            left: 0,
+            right: 0,
+          }}
+        >
+          <Button
+            title="Toggle EngineView"
+            color="#0078d4"
+            onPress={() => {
+              setToggleView(!toggleView);
+            }}
+          />
+          <Button
+            title={xrSession ? "Stop XR" : "Start XR"}
+            color="#0078d4"
+            onPress={onToggleXr}
+          />
+          {xrError !== undefined && (
+            <Text
+              testID="xr-error"
+              style={{ color: "red", backgroundColor: "white", padding: 4 }}
+            >
+              {xrError}
+            </Text>
+          )}
+        </View>
       </View>
     </>
   );
@@ -255,11 +292,18 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
 
 const App = () => {
   const [toggleScreen, setToggleScreen] = useState(false);
+  const [controlsHeight, setControlsHeight] = useState(0);
 
   return (
     <>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          paddingBottom: controlsHeight,
+          backgroundColor: "white",
+        }}
+      >
         {!toggleScreen && <EngineScreen style={{ flex: 1 }} />}
         {toggleScreen && (
           <View
@@ -271,12 +315,28 @@ const App = () => {
             </Text>
           </View>
         )}
-        <Button
-          title="Toggle EngineScreen"
-          onPress={() => {
-            setToggleScreen(!toggleScreen);
+        <View
+          pointerEvents="box-none"
+          onLayout={(event) => {
+            setControlsHeight(event.nativeEvent.layout.height);
           }}
-        />
+          style={{
+            position: "absolute",
+            zIndex: 1,
+            elevation: 1,
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }}
+        >
+          <Button
+            title="Toggle EngineScreen"
+            color="#0078d4"
+            onPress={() => {
+              setToggleScreen(!toggleScreen);
+            }}
+          />
+        </View>
       </SafeAreaView>
     </>
   );

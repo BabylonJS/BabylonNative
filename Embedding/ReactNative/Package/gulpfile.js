@@ -109,7 +109,22 @@ const copyAndroidFiles = () => {
 };
 
 const copyWindowsFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/windows/**')
+  return gulp.src([
+    '../Modules/@babylonjs/react-native/windows/**',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/Generated Files',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/Generated Files/**',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/obj',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/obj/**',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/x64',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/x64/**',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/Win32',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/Win32/**',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/ARM',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/ARM/**',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/ARM64',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/ARM64/**',
+    '!../Modules/@babylonjs/react-native/windows/BabylonReactNative/packages.lock.json',
+  ], { nodir: true })
     .pipe(gulp.dest(`Assembled/windows`));
 };
 
@@ -211,7 +226,6 @@ const validateAssembled = async () => {
     'Assembled/windows/BabylonReactNative/EngineView.idl',
     'Assembled/windows/BabylonReactNative/EngineViewManager.cpp',
     'Assembled/windows/BabylonReactNative/EngineViewManager.h',
-    'Assembled/windows/BabylonReactNative/packages.config',
     'Assembled/windows/BabylonReactNative/pch.cpp',
     'Assembled/windows/BabylonReactNative/pch.h',
     'Assembled/windows/BabylonReactNative/PropertySheet.props',
@@ -222,7 +236,16 @@ const validateAssembled = async () => {
     'Assembled/windows/CMakeLists.txt'
   ];
 
-  const actual = glob.sync('Assembled/**/*', {ignore: ['Assembled/shared/BabylonNative/Repo/**', 'Assembled/shared/BabylonNative/deps/**']});
+  const actual = glob.sync('Assembled/**/*', {ignore: [
+    'Assembled/shared/BabylonNative/Repo/**',
+    'Assembled/shared/BabylonNative/deps/**',
+    'Assembled/windows/BabylonReactNative/Generated Files',
+    'Assembled/windows/BabylonReactNative/obj',
+    'Assembled/windows/BabylonReactNative/x64',
+    'Assembled/windows/BabylonReactNative/Win32',
+    'Assembled/windows/BabylonReactNative/ARM',
+    'Assembled/windows/BabylonReactNative/ARM64',
+  ]});
   checkDirectory(actual, expected, `Assembled`);
 }
 
