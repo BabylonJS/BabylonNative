@@ -14,11 +14,14 @@ bounds. The no-font fallback exposes the same metric properties, but its values
 are estimates rather than measurements of a loaded face.
 
 The Canvas pixel regressions in `JavaScript.All` require a rendering GPU backend.
-The test host exposes `hasGpuRendering` from the active bgfx renderer; only those
-regressions are reported as pending with the no-op renderer used by macOS CI
-(`BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON`). API, PNG fallback, and text
-metrics tests still run. Configure that option `OFF` on a Metal-capable Mac to
-run the pixel regressions as well.
+The test host sets `hasGpuRendering` to false only for the explicit no-op Metal
+test configuration (`BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON`), using the
+same `USE_NOOP_METAL_DEVICE` definition as the Apple test host. This keeps the
+shared tests compatible with installed public headers without exposing bgfx.
+Only the pixel regressions are reported as pending in that configuration; API,
+PNG fallback, and text metrics tests still run. Configure that option `OFF` on a
+Metal-capable Mac to run the pixel regressions as well. Windows and Linux retain
+the pixel assertions.
 
 ## Native Canvas visual baseline
 

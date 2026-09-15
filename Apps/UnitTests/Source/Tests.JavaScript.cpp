@@ -17,7 +17,6 @@
 #endif
 #include <Babylon/ScriptLoader.h>
 
-#include <bgfx/bgfx.h>
 #include <cstdlib>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -75,7 +74,11 @@ TEST(JavaScript, All)
 
     runtime.Dispatch([&exitCodePromise, &device, &nativeCanvas](Napi::Env env) {
         device.AddToJavaScript(env);
-        env.Global().Set("hasGpuRendering", bgfx::getRendererType() != bgfx::RendererType::Noop);
+#ifdef USE_NOOP_METAL_DEVICE
+        env.Global().Set("hasGpuRendering", false);
+#else
+        env.Global().Set("hasGpuRendering", true);
+#endif
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
