@@ -12,6 +12,10 @@ on:
       js-engine:
         required: true
         type: string
+      graphics-api:
+        required: false
+        type: string
+        default: OpenGL
       enable-sanitizers:
         required: false
         type: boolean
@@ -34,11 +38,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-
       - name: Install packages
         run: |
           sudo apt-get update
           sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build
+          if [ "${{ inputs.graphics-api }}" = "Vulkan" ]; then
+            sudo apt-get install -y libvulkan-dev mesa-vulkan-drivers xvfb xauth
+          fi
 
       - name: Build X11
         run: |
@@ -47,6 +53,7 @@ jobs:
             -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
             -D BX_CONFIG_DEBUG=ON \
+            -D GRAPHICS_API=${{ inputs.graphics-api }} \
             -D OpenGL_GL_PREFERENCE=GLVND \
             -D BABYLON_DEBUG_TRACE=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
@@ -58,46 +65,118 @@ jobs:
       - name: Enable Core Dump
         run: sudo sysctl -w kernel.core_pattern=core.%p
 
+      - name: Select Vulkan software renderer
+        if: ${{ inputs.graphics-api == 'Vulkan' }}
+        run: |
+          VK_ICD_FILENAMES=$(find /usr/share/vulkan/icd.d -maxdepth 1 -name 'lvp_icd*.json' -print -quit)
+          test -n "$VK_ICD_FILENAMES"
+          echo "VK_ICD_FILENAMES=$VK_ICD_FILENAMES" >> "$GITHUB_ENV"
+
       - name: Validation Tests
+        if: ${{ inputs.graphics-api != 'Vulkan' }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
           xvfb-run ./Playground app:///Scripts/validation_native.js
 
+      # The full Vulkan suite currently has broad reference-image differences and
+      # crashes in Glow layer and LODs: https://github.com/BabylonJS/BabylonNative/issues/1878
+      - name: Vulkan Validation Tests
+        if: ${{ inputs.graphics-api == 'Vulkan' }}
+        timeout-minutes: 5
+        run: |
+          cd build/Linux/Apps/Playground
+          ulimit -c unlimited
+          printf '%s\n' \
+            'globalThis._playgroundOptions = { saveResults: false, testIndices: [46, 50] };' \
+            > Scripts/vulkan_ci_options.js
+          set -o pipefail
+          xvfb-run --auto-servernum ./Playground \
+            app:///Scripts/vulkan_ci_options.js \
+            app:///Scripts/validation_native.js | tee vulkan-validation.log
+          test "$(grep -c '^Running ' vulkan-validation.log)" -eq 2
+          grep -Fx 'Running Capsule' vulkan-validation.log
+          grep -Fx 'Running Multi camera rendering' vulkan-validation.log
+          grep -Fx 'Run complete. ran=2 passed=2 failed=0 missingRef=0 skipped=0' vulkan-validation.log
+
       - name: Unit Tests
         run: |
           cd build/Linux/Apps/UnitTests
           ulimit -c unlimited
-          xvfb-run ./UnitTests
+          if [ "${{ inputs.graphics-api }}" = "Vulkan" ]; then
+            # CompileComprehensiveGLSL currently hangs after its Vulkan shader
+            # compilation fails: https://github.com/BabylonJS/BabylonNative/issues/1877
+            xvfb-run --auto-servernum ./UnitTests \
+              --gtest_filter=-ShaderCompilation.CompileComprehensiveGLSL \
+              --gtest_output=xml:vulkan-unit-test-results.xml
+          else
+            xvfb-run ./UnitTests
+          fi
+
+      - name: Verify Vulkan Unit Test Results
+        if: ${{ inputs.graphics-api == 'Vulkan' }}
+        run: |
+          cd build/Linux/Apps/UnitTests
+          # A missing or skipped boundary test must not produce a green lane.
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          report = ET.parse("vulkan-unit-test-results.xml").getroot()
+          cases = report.findall(".//testcase")
+          if len(cases) != 29:
+              raise SystemExit(f"Expected 29 Vulkan unit-test cases, found {len(cases)}")
+          expected = {
+              "ShaderCompilation.VulkanAcceptsSixteenSamplers",
+              "ShaderCompilation.VulkanRejectsMoreThanSixteenSamplers",
+          }
+          completed = {
+              f"{case.get('classname')}.{case.get('name')}"
+              for case in cases
+              if case.get("status") == "run" and case.get("result") == "completed"
+              and case.find("failure") is None and case.find("skipped") is None
+          }
+          if not expected.issubset(completed):
+              raise SystemExit("Both Vulkan sampler boundary tests must run and pass")
+          PY
 
       - name: Module Load Test
         if: ${{ !inputs.enable-sanitizers }}
         run: |
           cd build/Linux/Apps/ModuleLoadTest
           ulimit -c unlimited
-          xvfb-run ./ModuleLoadTest
+          xvfb-run --auto-servernum ./ModuleLoadTest
 
-      - name: Upload Rendered Pictures
-        if: always()
+      - name: Upload Vulkan Test Results
+        if: ${{ always() && inputs.graphics-api == 'Vulkan' }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-test-results
+          path: |
+            build/Linux/Apps/Playground/vulkan-validation.log
+            build/Linux/Apps/UnitTests/vulkan-unit-test-results.xml
+
+      - name: Upload Rendered Pictures
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/Linux/Apps/Playground/Results
 
       - name: Upload Error Pictures
-        if: failure()
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
           path: build/Linux/Apps/Playground/Errors
 
       - name: Upload Core Dumps
-        if: failure()
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
             build/Linux/Apps/Playground/Playground
             build/Linux/Apps/Playground/core.*
             build/Linux/Apps/UnitTests/UnitTests
             build/Linux/Apps/UnitTests/core.*
+            build/Linux/Apps/ModuleLoadTest/ModuleLoadTest
+            build/Linux/Apps/ModuleLoadTest/core.*
