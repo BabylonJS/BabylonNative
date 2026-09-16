@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <gsl/util>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -10,6 +11,7 @@
 
 #include "Helpers.h"
 
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <future>
@@ -29,6 +31,67 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 // is corrected by the shader compiler (FragCoordYFlipTraverser).
 namespace
 {
+    class TestCompletion
+    {
+    public:
+        std::future<void> GetFuture()
+        {
+            return m_promise.get_future();
+        }
+
+        void Complete(std::exception_ptr error = {})
+        {
+            if (!m_completed.exchange(true))
+            {
+                if (error)
+                {
+                    m_promise.set_exception(std::move(error));
+                }
+                else
+                {
+                    m_promise.set_value();
+                }
+            }
+        }
+
+    private:
+        std::promise<void> m_promise;
+        std::atomic<bool> m_completed{};
+    };
+
+    std::string GetTestErrorString(const Napi::Error& error)
+    {
+        const auto message = error.Message();
+        const auto stack = Napi::GetErrorString(error);
+        return stack.find(message) == std::string::npos ? message + "\n" + stack : stack;
+    }
+
+    std::exception_ptr CaptureTestException()
+    {
+        try
+        {
+            throw;
+        }
+        catch (const Napi::Error& error)
+        {
+            // Do not retain a JS-backed exception beyond the runtime's lifetime.
+            return std::make_exception_ptr(std::runtime_error{GetTestErrorString(error)});
+        }
+        catch (...)
+        {
+            return std::current_exception();
+        }
+    }
+
+    void WaitForTestCompletion(std::future<void>& future, std::chrono::milliseconds timeout, const char* timeoutMessage)
+    {
+        if (future.wait_for(timeout) != std::future_status::ready)
+        {
+            throw std::runtime_error{timeoutMessage};
+        }
+        future.get();
+    }
+
     // Renders a full-screen quad into a width x height render target, returning RGBA8
     // pixels in memory order. The fragment shader may declare `uniform vec2 targetSize`
     // and, when withInputTexture is set, `uniform sampler2D inputSampler` bound to a
@@ -39,22 +102,53 @@ namespace
         const std::string& vertexShader,
         const std::string& fragmentShader,
         bool withInputTexture,
-        const std::string& setupScript = {})
+        const std::string& setupScript = {},
+        std::chrono::milliseconds renderTimeout = std::chrono::seconds{30})
     {
         Babylon::Graphics::Device device{g_deviceConfig};
+        Babylon::Graphics::TextureT outputTexture{};
+        const auto releaseOutput = gsl::finally([&outputTexture] {
+            if (outputTexture)
+            {
+                Helpers::DestroyTexture(outputTexture);
+            }
+        });
+        bool frameOpen{};
+        const auto finishFrame = gsl::finally([&device, &frameOpen] {
+            if (frameOpen)
+            {
+                device.FinishRenderingCurrentFrame();
+            }
+        });
         device.StartRenderingCurrentFrame();
+        frameOpen = true;
 
-        auto outputTexture = Helpers::CreateTexture(
+        outputTexture = Helpers::CreateTexture(
             device.GetPlatformInfo().Device, width, height, 1, true);
         Babylon::Plugins::ExternalTexture outputExternalTexture{outputTexture};
 
+        auto startupDone = std::make_shared<TestCompletion>();
+        auto renderDone = std::make_shared<TestCompletion>();
+        auto startupFuture = startupDone->GetFuture();
+        auto renderFuture = renderDone->GetFuture();
         Babylon::AppRuntime::Options options{};
-        options.UnhandledExceptionHandler = [](const Napi::Error& error) {
-            std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
+        options.UnhandledExceptionHandler = [startupDone, renderDone](const Napi::Error& error) {
+            std::cerr << "[Uncaught Error] " << GetTestErrorString(error) << std::endl;
             std::cerr.flush();
+            auto exception = std::make_exception_ptr(std::runtime_error{GetTestErrorString(error)});
+            startupDone->Complete(exception);
+            renderDone->Complete(exception);
         };
 
         Babylon::AppRuntime runtime{options};
+        // Late callbacks must be able to acquire a frame scope while runtime teardown joins them.
+        const auto reopenFrame = gsl::finally([&device, &frameOpen] {
+            if (!frameOpen)
+            {
+                device.StartRenderingCurrentFrame();
+                frameOpen = true;
+            }
+        });
         runtime.Dispatch([&device](Napi::Env env) {
             env.Global().Set("globalThis", env.Global());
             device.AddToJavaScript(env);
@@ -174,7 +268,9 @@ namespace
 
                 globalThis.render = function () {
                     var scene = globalThis.__scene;
-                    var preparation = Promise.resolve(globalThis.__prepare ? globalThis.__prepare() : undefined);
+                    var preparation = Promise.resolve().then(function () {
+                        return globalThis.__prepare ? globalThis.__prepare() : undefined;
+                    });
                     return preparation.then(function () {
                         return scene.whenReadyAsync();
                     }).then(function () {
@@ -226,44 +322,111 @@ namespace
 
         loader.Eval(finalScript, "frag_coord_orientation_test.js");
 
-        std::promise<void> startupDone;
-        loader.Dispatch([&outputExternalTexture, &startupDone, width, height](Napi::Env env) {
-            auto jsOutput = outputExternalTexture.CreateForJavaScript(env);
-            env.Global().Get("startup").As<Napi::Function>().Call({
-                jsOutput,
-                Napi::Number::New(env, width),
-                Napi::Number::New(env, height),
-            });
-            startupDone.set_value();
+        loader.Dispatch([&outputExternalTexture, startupDone, width, height](Napi::Env env) {
+            try
+            {
+                auto jsOutput = outputExternalTexture.CreateForJavaScript(env);
+                env.Global().Get("startup").As<Napi::Function>().Call({
+                    jsOutput,
+                    Napi::Number::New(env, width),
+                    Napi::Number::New(env, height),
+                });
+                startupDone->Complete();
+            }
+            catch (...)
+            {
+                startupDone->Complete(CaptureTestException());
+            }
         });
-        startupDone.get_future().wait();
+        WaitForTestCompletion(startupFuture, std::chrono::seconds{30}, "quad setup dispatch timed out");
 
         device.FinishRenderingCurrentFrame();
+        frameOpen = false;
         device.StartRenderingCurrentFrame();
+        frameOpen = true;
 
-        std::promise<void> renderDone;
-        loader.Dispatch([&renderDone](Napi::Env env) {
-            auto jsPromise = env.Global().Get("render").As<Napi::Function>().Call({}).As<Napi::Promise>();
+        loader.Dispatch([renderDone](Napi::Env env) {
+            try
+            {
+                auto jsPromise = env.Global().Get("render").As<Napi::Function>().Call({}).As<Napi::Promise>();
 
-            auto jsOnFulfilled = Napi::Function::New(env, [&renderDone](const Napi::CallbackInfo&) {
-                renderDone.set_value();
-            });
-            auto jsOnRejected = Napi::Function::New(env, [&renderDone](const Napi::CallbackInfo& info) {
-                renderDone.set_exception(std::make_exception_ptr(
-                    std::runtime_error{Napi::GetErrorString(info[0].As<Napi::Error>())}));
-            });
+                auto jsOnFulfilled = Napi::Function::New(env, [renderDone](const Napi::CallbackInfo&) {
+                    renderDone->Complete();
+                });
+                auto jsOnRejected = Napi::Function::New(env, [renderDone](const Napi::CallbackInfo& info) {
+                    try
+                    {
+                        const auto reason = info[0];
+                        const bool isError = reason.IsObject() &&
+                                             reason.As<Napi::Object>().InstanceOf(info.Env().Global().Get("Error").As<Napi::Function>());
+                        const auto message = isError
+                                                 ? GetTestErrorString(reason.As<Napi::Error>())
+                                                 : reason.ToString().Utf8Value();
+                        renderDone->Complete(std::make_exception_ptr(std::runtime_error{message}));
+                    }
+                    catch (...)
+                    {
+                        renderDone->Complete(CaptureTestException());
+                    }
+                });
 
-            jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
+                jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
+            }
+            catch (...)
+            {
+                renderDone->Complete(CaptureTestException());
+            }
         });
 
-        renderDone.get_future().get();
+        WaitForTestCompletion(renderFuture, renderTimeout, "quad preparation/render timed out");
 
         device.FinishRenderingCurrentFrame();
+        frameOpen = false;
 
-        auto pixels = Helpers::ReadPixels(device.GetPlatformInfo(), outputTexture, width, height);
-        Helpers::DestroyTexture(outputTexture);
-        return pixels;
+        return Helpers::ReadPixels(device.GetPlatformInfo(), outputTexture, width, height);
     }
+}
+
+TEST(ShaderCompilation, FragCoordSetupAndPreparationFailuresPropagate)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "void main(void) { gl_Position = vec4(position, 1.0); }\n";
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "void main(void) { gl_FragColor = vec4(1.0); }\n";
+    struct FailureCase
+    {
+        std::string SetupScript;
+        std::string ExpectedError;
+        std::chrono::milliseconds Timeout{std::chrono::seconds{30}};
+    };
+    const std::vector<FailureCase> cases{
+        {"throw new Error('setup hook failure');", "setup hook failure"},
+        {"globalThis.__prepare = function () { throw new Error('synchronous preparation failure'); };", "synchronous preparation failure"},
+        {"globalThis.__prepare = function () { return Promise.reject(new Error('asynchronous preparation failure')); };", "asynchronous preparation failure"},
+        {"globalThis.__prepare = function () { return Promise.reject('non-Error rejection'); };", "non-Error rejection"},
+        {"globalThis.__prepare = function () { return new Promise(function () {}); };", "quad preparation/render timed out", std::chrono::milliseconds{100}},
+        {"globalThis.__prepare = function () { return new Promise(function (resolve) { setTimeout(resolve, 300); }); };", "quad preparation/render timed out", std::chrono::milliseconds{100}},
+    };
+    for (const auto& [setupScript, expectedError, timeout] : cases)
+    {
+        SCOPED_TRACE(setupScript);
+        try
+        {
+            RenderFullScreenQuad(1, 1, vertexShader, fragmentShader, false, setupScript, timeout);
+            FAIL() << "expected setup/preparation failure";
+        }
+        catch (const std::runtime_error& error)
+        {
+            EXPECT_NE(std::string{error.what()}.find(expectedError), std::string::npos) << error.what();
+        }
+    }
+#endif
 }
 
 TEST(NativeEngineClear, PreservesTextureBindings)
@@ -394,9 +557,24 @@ TEST(NativeEngineInstanceData, QueuedDrawRetainsDataBeforeUpdate)
 TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWaitForFrame)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
+    bool frameOpen{};
+    const auto finishFrame = gsl::finally([&device, &frameOpen] {
+        if (frameOpen)
+        {
+            device.FinishRenderingCurrentFrame();
+        }
+    });
     device.StartRenderingCurrentFrame();
+    frameOpen = true;
 
     Babylon::AppRuntime runtime{};
+    const auto reopenFrame = gsl::finally([&device, &frameOpen] {
+        if (!frameOpen)
+        {
+            device.StartRenderingCurrentFrame();
+            frameOpen = true;
+        }
+    });
     runtime.Dispatch([&device](Napi::Env env) {
         env.Global().Set("globalThis", env.Global());
         device.AddToJavaScript(env);
@@ -424,13 +602,12 @@ TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWa
         }
         catch (...)
         {
-            setupDone->set_exception(std::current_exception());
+            setupDone->set_exception(CaptureTestException());
         }
     });
 
     if (setupFuture.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
     {
-        device.FinishRenderingCurrentFrame();
         FAIL() << "dynamic vertex-buffer setup dispatch timed out";
     }
     try
@@ -439,16 +616,15 @@ TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWa
     }
     catch (const std::exception& exception)
     {
-        device.FinishRenderingCurrentFrame();
         FAIL() << "dynamic vertex-buffer setup failed: " << exception.what();
     }
     catch (...)
     {
-        device.FinishRenderingCurrentFrame();
         FAIL() << "dynamic vertex-buffer setup failed with a non-standard exception";
     }
 
     device.FinishRenderingCurrentFrame();
+    frameOpen = false;
 
     auto updateStarted = std::make_shared<std::promise<void>>();
     auto updateDone = std::make_shared<std::promise<void>>();
@@ -465,21 +641,25 @@ TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWa
         }
         catch (...)
         {
-            updateDone->set_exception(std::current_exception());
+            updateDone->set_exception(CaptureTestException());
         }
     });
 
-    ASSERT_EQ(updateStartedFuture.wait_for(std::chrono::seconds{30}), std::future_status::ready);
-    const auto updateStatus = updateFuture.wait_for(std::chrono::milliseconds{250});
+    const auto updateStartedStatus = updateStartedFuture.wait_for(std::chrono::seconds{30});
+    const auto updateStatus = updateStartedStatus == std::future_status::ready
+                                  ? updateFuture.wait_for(std::chrono::milliseconds{250})
+                                  : std::future_status::timeout;
 
-    // Start another frame even on failure so the blocked runtime thread can unwind cleanly.
+    // Keep the gate open through runtime teardown, including when the callback starts late.
     device.StartRenderingCurrentFrame();
+    frameOpen = true;
     const auto updateCompletionStatus = updateFuture.wait_for(std::chrono::seconds{30});
-    device.FinishRenderingCurrentFrame();
 
     ASSERT_EQ(updateCompletionStatus, std::future_status::ready)
         << "dynamic vertex-buffer update did not complete after the next frame started";
     ASSERT_NO_THROW(updateFuture.get());
+    EXPECT_EQ(updateStartedStatus, std::future_status::ready)
+        << "dynamic vertex-buffer update dispatch timed out";
     EXPECT_EQ(updateStatus, std::future_status::ready)
         << "an update with no queued commands must not wait for the next frame";
 }
