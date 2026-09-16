@@ -61,6 +61,8 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
 
+        static NativeCanvas* TryUnwrap(Napi::Env env, const Napi::Value& value);
+
         explicit NativeCanvas(const Napi::CallbackInfo& info);
         virtual ~NativeCanvas();
 
