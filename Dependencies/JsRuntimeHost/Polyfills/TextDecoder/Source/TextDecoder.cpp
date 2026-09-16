@@ -113,17 +113,64 @@ namespace
 
         Napi::Value DecodeUtf16(Napi::Env env, const std::string& data) const
         {
-            // Trailing odd byte is dropped: the WHATWG decoder would emit U+FFFD for it, but
-            // every producer we care about hands over whole code units.
-            const size_t unitCount = data.size() / 2;
-            std::u16string units(unitCount, u'\0');
-            for (size_t index = 0; index < unitCount; ++index)
+            // WHATWG UTF-16 decoder in replacement mode: unpaired surrogates and a
+            // leftover odd byte become U+FFFD. A lead surrogate followed by a
+            // non-trail is one replacement, then the second unit is reprocessed.
+            const bool littleEndian = m_encoding == Encoding::Utf16LittleEndian;
+            std::u16string units;
+            units.reserve(data.size() / 2 + 1);
+
+            constexpr char16_t LEAD_MIN = 0xD800;
+            constexpr char16_t LEAD_MAX = 0xDBFF;
+            constexpr char16_t TRAIL_MIN = 0xDC00;
+            constexpr char16_t TRAIL_MAX = 0xDFFF;
+            constexpr char16_t REPLACEMENT = 0xFFFD;
+
+            bool pendingLead = false;
+            char16_t lead = 0;
+            size_t byteIndex = 0;
+            while (byteIndex + 1 < data.size())
             {
-                const auto first = static_cast<unsigned char>(data[index * 2]);
-                const auto second = static_cast<unsigned char>(data[index * 2 + 1]);
-                units[index] = m_encoding == Encoding::Utf16LittleEndian
+                const auto first = static_cast<unsigned char>(data[byteIndex]);
+                const auto second = static_cast<unsigned char>(data[byteIndex + 1]);
+                byteIndex += 2;
+                const auto unit = littleEndian
                     ? static_cast<char16_t>(first | (second << 8))
                     : static_cast<char16_t>(second | (first << 8));
+
+                if (pendingLead)
+                {
+                    pendingLead = false;
+                    if (unit >= TRAIL_MIN && unit <= TRAIL_MAX)
+                    {
+                        units.push_back(lead);
+                        units.push_back(unit);
+                        continue;
+                    }
+
+                    units.push_back(REPLACEMENT);
+                    // Fall through and reprocess `unit` as a standalone code unit.
+                }
+
+                if (unit >= LEAD_MIN && unit <= LEAD_MAX)
+                {
+                    pendingLead = true;
+                    lead = unit;
+                }
+                else if (unit >= TRAIL_MIN && unit <= TRAIL_MAX)
+                {
+                    units.push_back(REPLACEMENT);
+                }
+                else
+                {
+                    units.push_back(unit);
+                }
+            }
+
+            // End-of-queue: an unpaired lead and/or leftover odd byte is one error.
+            if (pendingLead || byteIndex < data.size())
+            {
+                units.push_back(REPLACEMENT);
             }
 
             if (!units.empty() && units.front() == u'\uFEFF')

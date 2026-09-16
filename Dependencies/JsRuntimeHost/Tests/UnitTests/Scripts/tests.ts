@@ -1852,6 +1852,28 @@ describe("TextDecoder", function () {
         expect(result).to.equal("\u{1F600}\0A");
         expect(result.length).to.equal(4);
     });
+
+    it("should replace a trailing odd UTF-16 byte with U+FFFD", function () {
+        expect(new TextDecoder("utf-16le").decode(new Uint8Array([0x48, 0x00, 0x00]))).to.equal("H\uFFFD");
+        expect(new TextDecoder("utf-16be").decode(new Uint8Array([0x00, 0x48, 0x00]))).to.equal("H\uFFFD");
+        expect(new TextDecoder("utf-16le").decode(new Uint8Array([0x00]))).to.equal("\uFFFD");
+        expect(new TextDecoder("utf-16be").decode(new Uint8Array([0x00]))).to.equal("\uFFFD");
+    });
+
+    it("should replace unpaired UTF-16 surrogates with U+FFFD", function () {
+        // Lone lead U+D800.
+        expect(new TextDecoder("utf-16le").decode(new Uint8Array([0x00, 0xD8]))).to.equal("\uFFFD");
+        expect(new TextDecoder("utf-16be").decode(new Uint8Array([0xD8, 0x00]))).to.equal("\uFFFD");
+        // Lone trail U+DC00.
+        expect(new TextDecoder("utf-16le").decode(new Uint8Array([0x00, 0xDC]))).to.equal("\uFFFD");
+        expect(new TextDecoder("utf-16be").decode(new Uint8Array([0xDC, 0x00]))).to.equal("\uFFFD");
+        // Lead followed by BMP 'A': replacement, then reprocess 'A'.
+        expect(new TextDecoder("utf-16le").decode(new Uint8Array([0x00, 0xD8, 0x41, 0x00]))).to.equal("\uFFFDA");
+        expect(new TextDecoder("utf-16be").decode(new Uint8Array([0xD8, 0x00, 0x00, 0x41]))).to.equal("\uFFFDA");
+        // Unpaired lead plus leftover odd byte is a single end-of-queue replacement.
+        expect(new TextDecoder("utf-16le").decode(new Uint8Array([0x00, 0xD8, 0x00]))).to.equal("\uFFFD");
+        expect(new TextDecoder("utf-16be").decode(new Uint8Array([0xD8, 0x00, 0x00]))).to.equal("\uFFFD");
+    });
 });
 
 describe("TextEncoder", function () {
