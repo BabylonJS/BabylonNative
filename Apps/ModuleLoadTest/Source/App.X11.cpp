@@ -105,8 +105,9 @@ namespace ModuleLoadTest
             // AMD proprietary
             "libamdgpu",
             "libdrm_amdgpu",
-            // Vulkan ICD loaders
+            // Vulkan loader and implicit/explicit layers
             "libvulkan",
+            "libvklayer_",
             // Mesa shared renderer shim (libgallium-<mesa>-<ubuntu>.so) and
             // the LLVM library it uses for shader compilation — both carry a
             // version suffix that drifts with Ubuntu image updates.
