@@ -28245,9 +28245,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var mocha__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! mocha */ "../../node_modules/mocha/browser-entry.js");
 /* harmony import */ var mocha__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(mocha__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var chai__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! chai */ "../../node_modules/chai/index.js");
-/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @babylonjs/materials */ "@babylonjs/core");
-/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var buffer__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! buffer */ "../../node_modules/buffer/index.js");
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @babylonjs/materials */ "@babylonjs/core");
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_5__);
 function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];if (!t) {if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {t && (r = t);var _n = 0,F = function F() {};return { s: F, n: function n() {return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] };}, e: function e(r) {throw r;}, f: F };}throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");}var o,a = !0,u = !1;return { s: function s() {t = t.call(r);}, n: function n() {var r = t.next();return a = r.done, r;}, e: function e(r) {u = !0, o = r;}, f: function f() {try {a || null == t.return || t.return();} finally {if (u) throw o;}} };}function _unsupportedIterableToArray(r, a) {if (r) {if ("string" == typeof r) return _arrayLikeToArray(r, a);var t = {}.toString.call(r).slice(8, -1);return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;}}function _arrayLikeToArray(r, a) {(null == a || a > r.length) && (a = r.length);for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];return n;}
+
 
 
 
@@ -28263,11 +28265,12 @@ mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
 
 
 
+
 describe("RequestFile", function () {
   this.timeout(0);
   it("should throw when requesting a URL with no protocol", function () {
     function requestFile() {
-      (0,_babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.RequestFile)("noprotocol.gltf", function () {});
+      (0,_babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.RequestFile)("noprotocol.gltf", function () {});
     }
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(requestFile).to.throw();
   });
@@ -28377,11 +28380,50 @@ describe("ColorParsing", function () {
 });
 
 describe("Canvas2D", function () {
+  // No-op renderers accept GPU commands but cannot produce pixels for readback.
+  var itWithGpu = hasGpuRendering ? it : it.skip;
+
   function createContext() {
     var canvas = new _native.Canvas();
     canvas.width = 64;
     canvas.height = 64;
     return canvas.getContext("2d");
+  }
+
+  function createCanvas(width, height) {
+    var canvas = new _native.Canvas();
+    canvas.width = width;
+    canvas.height = height;
+    return { canvas: canvas, context: canvas.getContext("2d") };
+  }
+
+  function disposeCanvas(resource) {
+    resource.context.dispose();
+    resource.canvas.dispose();
+  }
+
+  function captureGpuPixels(canvas) {
+    return canvas.getContext("2d").getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    ).data;
+  }
+
+  function pixelAt(
+  pixels,
+  width,
+  x,
+  y)
+  {
+    var offset = (y * width + x) * 4;
+    return [
+    pixels[offset],
+    pixels[offset + 1],
+    pixels[offset + 2],
+    pixels[offset + 3]];
+
   }
 
   it("round-trips a string fillStyle and strokeStyle", function () {
@@ -28651,8 +28693,7 @@ describe("Canvas2D", function () {
   it("accepts two color stops at the same offset", function () {
     // Only checks that the insertion path accepts the duplicate offset the spec allows;
     // std::map::insert() dropped it by returning {it, false} rather than throwing, so this
-    // does not by itself prove the stop survives. Asserting that needs the rendered ramp,
-    // and gradient fills are not read back by getImageData.
+    // does not by itself prove the stop survives. That needs a separate rendered-ramp assertion.
     var ctx = createContext();
     var gradient = ctx.createLinearGradient(0, 0, 64, 0);
     gradient.addColorStop(0, "red");
@@ -28726,11 +28767,616 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(data.width).to.equal(4);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(data.height).to.equal(3);
   });
+
+  itWithGpu("renders a semi-transparent Canvas source through the destination GPU", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "rgba(240, 120, 60, 0.5)";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      var sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[0]).to.be.within(220, 255);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[1]).to.be.within(100, 140);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[2]).to.be.within(40, 80);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[3]).to.be.within(110, 145);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("recognizes a Canvas source before ImageBitmap-shaped own properties", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#20c060";
+      source.context.fillRect(0, 0, 8, 8);
+      Object.defineProperty(source.canvas, "data", {
+        value: new Uint8Array(8 * 8 * 4)
+      });
+
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      var sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[0]).to.be.within(15, 50);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[1]).to.be.within(175, 210);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[2]).to.be.within(75, 115);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(sample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("applies fractional source crops and destination rectangles on the GPU", function () {
+    var source = createCanvas(12, 8);
+    var destination = createCanvas(30, 22);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 6, 4);
+      source.context.fillStyle = "#00ff00";
+      source.context.fillRect(6, 0, 6, 4);
+      source.context.fillStyle = "#0000ff";
+      source.context.fillRect(0, 4, 6, 4);
+      source.context.fillStyle = "#ffff00";
+      source.context.fillRect(6, 4, 6, 4);
+
+      // A narrow crop straddling x=6 amplifies fractional-coordinate handling.
+      destination.context.drawImage(
+        source.canvas,
+        5.99,
+        0,
+        1.01,
+        4,
+        2.75,
+        1.25,
+        24.5,
+        8.5
+      );
+      // Do the same across y=4 in a separate destination region.
+      destination.context.drawImage(
+        source.canvas,
+        0,
+        3.99,
+        6,
+        1.01,
+        1.25,
+        11.75,
+        12.5,
+        8.5
+      );
+
+      var pixels = captureGpuPixels(destination.canvas);
+      // Pixel (12,3), sampled at its center (12.5,3.5), maps to source
+      // x = 5.99 + (12.5 - 2.75) * 1.01 / 24.5 = 6.39194.
+      // Between red texel center 5.5 and green center 6.5, ideal bilinear
+      // weights are 10.8% red / 89.2% green (R~28, G~227).
+      // Integer truncation maps x to 5.4375; ignoring the crop maps x to
+      // 5.25. Both negative controls are solid red at this sample.
+      var green = pixelAt(pixels, destination.canvas.width, 12, 3);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(green[1] - green[0]).to.be.greaterThan(100);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(green[3]).to.be.greaterThan(200);
+
+      // Pixel (3,14), sampled at (3.5,14.5), maps to source
+      // y = 3.99 + (14.5 - 11.75) * 1.01 / 8.5 = 4.31676.
+      // That is 18.3% top red / 81.7% bottom blue (R~47, B~208).
+      // Integer truncation maps y to 3.4375 and ignoring the crop maps y
+      // to 3.5, both solid red rather than blue.
+      var blue = pixelAt(pixels, destination.canvas.width, 3, 14);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blue[2] - blue[0]).to.be.greaterThan(80);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(blue[3]).to.be.greaterThan(200);
+
+      var fractionalEdge = pixelAt(
+        pixels,
+        destination.canvas.width,
+        26,
+        3
+      );
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fractionalEdge[0]).to.be.lessThan(80);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fractionalEdge[1]).to.be.greaterThan(180);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fractionalEdge[2]).to.be.lessThan(50);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fractionalEdge[3]).to.be.greaterThan(150);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("normalizes negative source and destination extents", function () {
+    var source = createCanvas(12, 8);
+    var destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 12, 8);
+      source.context.fillStyle = "#ffff00";
+      source.context.fillRect(6, 4, 4, 3);
+
+      destination.context.drawImage(
+        source.canvas,
+        10,
+        7,
+        -4,
+        -3,
+        12,
+        10,
+        -8,
+        -6
+      );
+
+      var pixels = captureGpuPixels(destination.canvas);
+      var inside = pixelAt(pixels, destination.canvas.width, 7, 7);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[0]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[1]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[2]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[3]).to.be.greaterThan(220);
+
+      var outside = pixelAt(pixels, destination.canvas.width, 2, 7);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[3]).to.equal(0);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("clips the source rectangle and adjusts the destination proportionally", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(16, 16);
+    try {
+      source.context.fillStyle = "#00ffff";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(
+        source.canvas,
+        -2,
+        -2,
+        4,
+        4,
+        2,
+        2,
+        12,
+        12
+      );
+
+      var pixels = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, destination.canvas.width, 5, 5)[3]).to.equal(0);
+
+      var inside = pixelAt(pixels, destination.canvas.width, 10, 10);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[0]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[1]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[2]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(inside[3]).to.be.greaterThan(220);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("keeps temporary Canvas images alive until queued draws flush", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(16, 8);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 0, 0, 8, 8);
+
+      source.context.fillStyle = "#0000ff";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 8, 0, 8, 8);
+
+      var pixels = captureGpuPixels(destination.canvas);
+      var first = pixelAt(pixels, destination.canvas.width, 4, 4);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[0]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[1]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[2]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(first[3]).to.be.greaterThan(220);
+
+      var second = pixelAt(pixels, destination.canvas.width, 12, 4);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(second[0]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(second[1]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(second[2]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(second[3]).to.be.greaterThan(220);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("keeps ImageData uploads alive through putImageData and drawImage", function () {
+    var destination = createCanvas(12, 6);
+    try {
+      var putData = destination.context.createImageData(4, 4);
+      var drawData = destination.context.createImageData(4, 4);
+      for (var i = 0; i < putData.data.length; i += 4) {
+        putData.data[i] = 240;
+        putData.data[i + 1] = 96;
+        putData.data[i + 2] = 32;
+        putData.data[i + 3] = 255;
+
+        drawData.data[i] = 96;
+        drawData.data[i + 1] = 48;
+        drawData.data[i + 2] = 240;
+        drawData.data[i + 3] = 255;
+      }
+
+      destination.context.putImageData(putData, 1, 1);
+      destination.context.drawImage(
+        {
+          data: drawData.data,
+          width: drawData.width,
+          height: drawData.height,
+          // NativeEngine image bitmaps expose bimg::TextureFormat::RGBA8.
+          format: 74
+        },
+        7,
+        1
+      );
+
+      var pixels = captureGpuPixels(destination.canvas);
+      var putSample = pixelAt(pixels, destination.canvas.width, 2, 2);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[0]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[1]).to.be.within(75, 115);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[2]).to.be.within(15, 50);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(putSample[3]).to.be.greaterThan(240);
+
+      var drawSample = pixelAt(pixels, destination.canvas.width, 8, 2);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(drawSample[0]).to.be.within(75, 115);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(drawSample[1]).to.be.within(30, 70);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(drawSample[2]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(drawSample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
+  itWithGpu("preserves transform, rectangular clip, and globalAlpha for Canvas crops", function () {
+    var source = createCanvas(20, 8);
+    var destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#00ffff";
+      source.context.fillRect(12, 0, 8, 8);
+
+      destination.context.fillStyle = "#000000";
+      destination.context.fillRect(0, 0, 16, 12);
+      destination.context.beginPath();
+      destination.context.rect(4, 2, 6, 6);
+      destination.context.clip();
+      destination.context.translate(2, 1);
+      destination.context.globalAlpha = 0.5;
+      destination.context.drawImage(
+        source.canvas,
+        12,
+        0,
+        4,
+        8,
+        0,
+        0,
+        8,
+        8
+      );
+
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(destination.context.globalAlpha).to.equal(0.5);
+      var transform = destination.context.getTransform();
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(transform.e).to.equal(2);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(transform.f).to.equal(1);
+
+      var pixels = captureGpuPixels(destination.canvas);
+      var cropped = pixelAt(pixels, destination.canvas.width, 5, 4);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[0]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[1]).to.be.within(100, 155);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[2]).to.be.within(100, 155);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(cropped[3]).to.be.greaterThan(240);
+
+      var translatedEdge = pixelAt(
+        pixels,
+        destination.canvas.width,
+        8,
+        4
+      );
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(translatedEdge[0]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(translatedEdge[1]).to.be.within(100, 155);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(translatedEdge[2]).to.be.within(100, 155);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(translatedEdge[3]).to.be.greaterThan(240);
+
+      var clippedOut = pixelAt(pixels, destination.canvas.width, 5, 8);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(clippedOut[0]).to.be.lessThan(10);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(clippedOut[1]).to.be.lessThan(10);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(clippedOut[2]).to.be.lessThan(10);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(clippedOut[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("intersects repeated Canvas draws with a retained non-rectangular clip", function () {
+    var source = createCanvas(4, 4);
+    var destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 4, 4);
+
+      destination.context.fillStyle = "#000000";
+      destination.context.fillRect(0, 0, 16, 12);
+      destination.context.beginPath();
+      destination.context.moveTo(1, 1);
+      destination.context.lineTo(13, 1);
+      destination.context.lineTo(1, 11);
+      destination.context.closePath();
+      destination.context.clip();
+      destination.context.drawImage(source.canvas, 2, 2, 4, 4);
+      destination.context.drawImage(source.canvas, 10, 8, 4, 4);
+
+      var pixels = captureGpuPixels(destination.canvas);
+      var firstDraw = pixelAt(pixels, destination.canvas.width, 3, 3);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(firstDraw[0]).to.be.greaterThan(220);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(firstDraw[1]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(firstDraw[2]).to.be.lessThan(30);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(firstDraw[3]).to.be.greaterThan(240);
+
+      [
+      // Inside the triangle but outside both destination rectangles.
+      pixelAt(pixels, destination.canvas.width, 2, 8),
+      // Inside the second destination rectangle but outside the triangle.
+      pixelAt(pixels, destination.canvas.width, 12, 9)].
+      forEach(function (outside) {
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[0]).to.be.lessThan(10);
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[1]).to.be.lessThan(10);
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[2]).to.be.lessThan(10);
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(outside[3]).to.be.greaterThan(240);
+      });
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads fractional drawImage edge coverage from the framebuffer", function () {
+    var source = createCanvas(2, 2);
+    var destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#ffffff";
+      source.context.fillRect(0, 0, 2, 2);
+      destination.context.drawImage(source.canvas, 1.75, 1.75, 2.5, 2.5);
+
+      var pixels = destination.context.getImageData(0, 0, 8, 8).data;
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, destination.canvas.width, 2, 2)[3]).to.equal(255);
+      [
+      pixelAt(pixels, destination.canvas.width, 1, 2),
+      pixelAt(pixels, destination.canvas.width, 4, 2),
+      pixelAt(pixels, destination.canvas.width, 2, 1),
+      pixelAt(pixels, destination.canvas.width, 2, 4)].
+      forEach(function (edge) {
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(edge[3]).to.be.within(40, 90);
+      });
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads new NanoVG draws after getImageData and toDataURL snapshots", function () {
+    var resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(captureGpuPixels(resource.canvas), 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+      resource.canvas.toDataURL();
+
+      resource.context.fillStyle = "#0000ff";
+      resource.context.fillRect(0, 0, 4, 8);
+      var pixels = captureGpuPixels(resource.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([0, 0, 255, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("reads filtered Canvas draws instead of unfiltered source pixels", function () {
+    var source = createCanvas(16, 16);
+    var destination = createCanvas(16, 16);
+    try {
+      source.context.fillStyle = "#ffffff";
+      source.context.fillRect(4, 4, 8, 8);
+      destination.context.filter = "blur(2px)";
+      destination.context.drawImage(source.canvas, 0, 0);
+      var pixels = captureGpuPixels(destination.canvas);
+      var fringe = pixelAt(pixels, 16, 3, 8);
+      var center = pixelAt(pixels, 16, 8, 8);
+      // The unfiltered CPU copy has zero alpha outside the source ink.
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[0]).to.equal(fringe[1]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[1]).to.equal(fringe[2]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(fringe[3]).to.be.greaterThan(0);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(center[3]).to.be.greaterThan(fringe[3]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads source dimensions after coercing drawImage coordinates once", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      var conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf: function valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          return 0;
+        }
+      }, 0);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
+      var pixels = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("retains the Canvas source kind across coordinate coercion", function () {
+    var source = createCanvas(8, 8);
+    var destination = createCanvas(8, 8);
+    var prototype = Object.getPrototypeOf(source.canvas);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      var conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf: function valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          Object.setPrototypeOf(source.canvas, null);
+          source.canvas.data = new Uint8Array(0);
+          return 0;
+        }
+      }, 0);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
+      var pixels = captureGpuPixels(destination.canvas);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      Object.setPrototypeOf(source.canvas, prototype);
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  it("retains the ImageBitmap source kind when coercion removes its data", function () {
+    var destination = createCanvas(8, 8);
+    try {
+      [false, true].forEach(function (noOp) {
+        var bitmap = {
+          width: 8,
+          height: 8,
+          format: 74,
+          data: new Uint8Array(8 * 8 * 4)
+        };
+        var conversions = 0;
+        var draw = function draw() {
+          destination.context.drawImage(bitmap, {
+            valueOf: function valueOf() {
+              ++conversions;
+              delete bitmap.data;
+              return 0;
+            }
+          }, 0, noOp ? 0 : 8, 8);
+        };
+        if (noOp) {
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(draw).not.to.throw();
+        } else {
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(draw).to.throw("drawImage: ImageBitmap data must be a typed array.");
+        }
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(conversions).to.equal(1);
+      });
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
+  itWithGpu("clips framebuffer readback and normalizes negative region extents", function () {
+    var resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      var positive = resource.context.getImageData(-1, -1, 3, 3);
+      var negative = resource.context.getImageData(2, 2, -3, -3);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(negative.data)).to.deep.equal(Array.from(positive.data));
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(positive.data, 3, 0, 0)).to.deep.equal([0, 0, 0, 0]);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(pixelAt(positive.data, 3, 1, 1)).to.deep.equal([255, 0, 0, 255]);
+
+      var outside = resource.context.getImageData(-2147483648, 0, -2, 1);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(outside.data)).to.deep.equal([0, 0, 0, 0, 0, 0, 0, 0]);
+      resource.canvas.width = 4;
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(resource.context.getImageData(0, 0, 1, 1).data)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  it("falls back to PNG for default, empty, case-variant, and unsupported MIME types", function () {
+    var canvas = new _native.Canvas();
+    canvas.width = 2;
+    canvas.height = 2;
+    try {
+      [
+      canvas.toDataURL(),
+      canvas.toDataURL(""),
+      canvas.toDataURL("image/png"),
+      canvas.toDataURL("IMAGE/PNG"),
+      canvas.toDataURL("image/jpeg")].
+      forEach(function (url) {
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(url.indexOf("data:image/png;base64,")).to.equal(0);
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(url.length).to.be.greaterThan(32);
+      });
+    } finally {
+      canvas.dispose();
+    }
+  });
+
+  it("ends PNG data URLs at IEND without trailing allocation bytes", function () {
+    [1, 2, 64].forEach(function (size) {
+      var canvas = new _native.Canvas();
+      canvas.width = size;
+      canvas.height = size;
+      try {
+        var url = canvas.toDataURL();
+        var png = buffer__WEBPACK_IMPORTED_MODULE_4__.Buffer.from(url.substring("data:image/png;base64,".length), "base64");
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(Array.from(png.subarray(0, 8))).to.deep.equal([137, 80, 78, 71, 13, 10, 26, 10]);
+        var offset = 8;
+        var foundEnd = false;
+        while (offset + 12 <= png.length) {
+          var length = png.readUInt32BE(offset);
+          var type = png.toString("ascii", offset + 4, offset + 8);
+          offset += length + 12;
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(offset).to.be.at.most(png.length);
+          if (type === "IEND") {
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(length).to.equal(0);
+            foundEnd = true;
+            break;
+          }
+        }
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(foundEnd).to.equal(true);
+        (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(offset).to.equal(png.length);
+      } finally {
+        canvas.dispose();
+      }
+    });
+  });
+
+  it("returns ascent and descent in no-font text metrics", function () {
+    var resource = createCanvas(8, 8);
+    try {
+      resource.context.font = "20px MissingFontForCanvasMetrics";
+      var metrics = resource.context.measureText("test");
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(metrics).to.have.property("actualBoundingBoxAscent");
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(metrics).to.have.property("actualBoundingBoxDescent");
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(metrics.actualBoundingBoxAscent).to.equal(15);
+      (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(metrics.actualBoundingBoxDescent).to.equal(5);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
 });
 
 function createSceneAndWait(callback, done) {
-  var engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.NativeEngine();
-  var scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Scene(engine);
+  var engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.NativeEngine();
+  var scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Scene(engine);
   scene.createDefaultCamera();
   callback(engine, scene);
   scene.executeWhenReady(function () {
@@ -28743,7 +29389,7 @@ describe("Materials", function () {
   it("Empty ShaderMaterial should compile", function (done) {
     function createEmptyShaderMat() {
       createSceneAndWait(function (engine, scene) {
-        var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.MeshBuilder.CreateSphere(
+        var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.MeshBuilder.CreateSphere(
           "sphere",
           { diameter: 2, segments: 32 },
           scene
@@ -28752,7 +29398,7 @@ describe("Materials", function () {
           vertexSource: "void main() {}",
           fragmentSource: "void main() {}"
         };
-        var mat = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ShaderMaterial("shader", scene, shaders, {});
+        var mat = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ShaderMaterial("shader", scene, shaders, {});
         sphere.material = mat;
       }, done);
     }
@@ -28760,12 +29406,12 @@ describe("Materials", function () {
   });
   it("GradientMaterial should compile", function (done) {
     createSceneAndWait(function (engine, scene) {
-      var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.MeshBuilder.CreateSphere(
+      var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.MeshBuilder.CreateSphere(
         "sphere",
         { diameter: 2, segments: 32 },
         scene
       );
-      var gradientMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.GradientMaterial("grad", scene);
+      var gradientMaterial = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.GradientMaterial("grad", scene);
       sphere.material = gradientMaterial;
     }, done);
   });
@@ -28776,21 +29422,21 @@ describe("PostProcesses", function () {
   it("PassPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.PassPostProcess("Scene copy", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.PassPostProcess("Scene copy", 1.0, camera);
     }, done);
   });
   it("BlackAndWhitePostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.BlackAndWhitePostProcess("bandw", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.BlackAndWhitePostProcess("bandw", 1.0, camera);
     }, done);
   });
   it("BlurPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.BlurPostProcess(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.BlurPostProcess(
         "Horizontal blur",
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Vector2(1.0, 0),
+        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Vector2(1.0, 0),
         32,
         0.25,
         camera
@@ -28800,9 +29446,9 @@ describe("PostProcesses", function () {
   it("ConvolutionPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ConvolutionPostProcess(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ConvolutionPostProcess(
         "Sepia",
-        _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ConvolutionPostProcess.EmbossKernel,
+        _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ConvolutionPostProcess.EmbossKernel,
         1.0,
         camera
       );
@@ -28811,28 +29457,28 @@ describe("PostProcesses", function () {
   it("HighlightsPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.HighlightsPostProcess("highlights", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.HighlightsPostProcess("highlights", 1.0, camera);
     }, done);
   });
   it("TonemapPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.TonemapPostProcess("tonemap", _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.TonemappingOperator.Hable, 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.TonemapPostProcess("tonemap", _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.TonemappingOperator.Hable, 1.0, camera);
     }, done);
   });
   it("ImageProcessingPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.ImageProcessingPostProcess("processing", 1.0, camera);
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.ImageProcessingPostProcess("processing", 1.0, camera);
     }, done);
   });
   it("RefractionPostProcess", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.RefractionPostProcess(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.RefractionPostProcess(
         "Refraction",
         "https://playground.babylonjs.com/textures/grass.jpg",
-        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.Color3(1.0, 1.0, 1.0),
+        new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.Color3(1.0, 1.0, 1.0),
         0.5,
         0.5,
         1.0,
@@ -28843,7 +29489,7 @@ describe("PostProcesses", function () {
   it("DefaultPipeline", function (done) {
     createSceneAndWait(function (engine, scene) {
       var camera = scene._activeCamera;
-      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_4__.DefaultRenderingPipeline(
+      new _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__.DefaultRenderingPipeline(
         "defaultPipeline", // The name of the pipeline
         true, // Do you want the pipeline to use HDR texture?
         scene, // The scene instance

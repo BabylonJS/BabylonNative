@@ -25,6 +25,8 @@ set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
+    "Source/Tests.Canvas.TextMetrics.cpp"
+    "Source/Tests.Canvas.Readback.cpp"
     "Source/Tests.Device.FrameEncoder.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.Lifecycle.cpp"
@@ -73,6 +75,8 @@ endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
+target_include_directories(UnitTests PRIVATE "${BGFX_DIR}/3rdparty")
+target_compile_definitions(UnitTests PRIVATE CANVAS_TEST_FONT_PATH="${BGFX_DIR}/examples/runtime/font/droidsans.ttf")
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
     PRIVATE Blob

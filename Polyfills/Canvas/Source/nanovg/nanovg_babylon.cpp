@@ -158,6 +158,7 @@ namespace
 
     struct GLNVGtexture
     {
+        int image;
         bgfx::TextureHandle id;
         int width, height;
         int type;
@@ -332,7 +333,7 @@ namespace
         int i;
         for (i = 0; i < gl->ntextures; i++)
         {
-            if (gl->textures[i].id.idx == id)
+            if (gl->textures[i].image == id)
             {
                 return &gl->textures[i];
             }
@@ -345,7 +346,7 @@ namespace
     {
         for (int ii = 0; ii < gl->ntextures; ii++)
         {
-            if (gl->textures[ii].id.idx == id)
+            if (gl->textures[ii].image == id)
             {
                 if (bgfx::isValid(gl->textures[ii].id)
                 && (gl->textures[ii].flags & NVG_IMAGE_NODELETE) == 0)
@@ -449,7 +450,15 @@ namespace
                 );
         }
 
-        return bgfx::isValid(tex->id) ? tex->id.idx : 0;
+        if (!bgfx::isValid(tex->id))
+        {
+            return 0;
+        }
+
+        // NanoVG-created textures retain their existing bgfx-index image IDs.
+        // nvgCreateImageFromHandle uses positive IDs above the uint16_t bgfx handle range.
+        tex->image = static_cast<int>(tex->id.idx);
+        return tex->image;
     }
 
     static int nvgRenderDeleteTexture(void* _userPtr, int image)
@@ -1016,7 +1025,7 @@ namespace
         // The canvas framebuffer is bound with a fresh view by Context::Flush before this
         // flush runs, so the first draw call can reuse that view without re-binding.
         gl->canvasViewNeedsRefresh = false;
-        if (!gl->prog.idx)
+        if (!bgfx::isValid(gl->prog))
         {
             bgfx::RendererType::Enum type = bgfx::getRendererType();
             gl->prog = bgfx::createProgram(
@@ -1344,26 +1353,60 @@ namespace
             return;
         }
 
-        // gl->prog.idx can be 0 is a context is destroyed without a call to flush
-        if (gl->prog.idx)
+        // Handles are initialized to BGFX_INVALID_HANDLE; prog is lazy-created on flush.
+        // Guard every destroy so a partially-initialized or never-flushed context is safe.
+        if (bgfx::isValid(gl->prog))
         {
             bgfx::destroy(gl->prog);
         }
-        bgfx::destroy(gl->texMissing);
+        if (bgfx::isValid(gl->texMissing))
+        {
+            bgfx::destroy(gl->texMissing);
+        }
 
-        bgfx::destroy(gl->u_scissorMat);
-        bgfx::destroy(gl->u_paintMat);
-        bgfx::destroy(gl->u_innerCol);
-        bgfx::destroy(gl->u_outerCol);
-        bgfx::destroy(gl->u_scissorExtScale);
-        bgfx::destroy(gl->u_extentRadius);
-        bgfx::destroy(gl->u_params);
-        bgfx::destroy(gl->u_sdf);
-        bgfx::destroy(gl->s_tex);
-        bgfx::destroy(gl->s_tex2);
+        if (bgfx::isValid(gl->u_scissorMat))
+        {
+            bgfx::destroy(gl->u_scissorMat);
+        }
+        if (bgfx::isValid(gl->u_paintMat))
+        {
+            bgfx::destroy(gl->u_paintMat);
+        }
+        if (bgfx::isValid(gl->u_innerCol))
+        {
+            bgfx::destroy(gl->u_innerCol);
+        }
+        if (bgfx::isValid(gl->u_outerCol))
+        {
+            bgfx::destroy(gl->u_outerCol);
+        }
+        if (bgfx::isValid(gl->u_scissorExtScale))
+        {
+            bgfx::destroy(gl->u_scissorExtScale);
+        }
+        if (bgfx::isValid(gl->u_extentRadius))
+        {
+            bgfx::destroy(gl->u_extentRadius);
+        }
+        if (bgfx::isValid(gl->u_params))
+        {
+            bgfx::destroy(gl->u_params);
+        }
+        if (bgfx::isValid(gl->u_sdf))
+        {
+            bgfx::destroy(gl->u_sdf);
+        }
+        if (bgfx::isValid(gl->s_tex))
+        {
+            bgfx::destroy(gl->s_tex);
+        }
+        if (bgfx::isValid(gl->s_tex2))
+        {
+            bgfx::destroy(gl->s_tex2);
+        }
         nanovg_filterstack::DisposeBgfx();
 
-        if (bgfx::isValid(gl->u_halfTexel) )
+        if (bgfx::isValid(gl->u_halfTexel))
         {
             bgfx::destroy(gl->u_halfTexel);
         }
@@ -1403,6 +1446,24 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     }
 
     bx::memSet(gl, 0, sizeof(struct GLNVGcontext) );
+    // memSet leaves handle idx at 0; bgfx treats 0 as a valid first handle, so mark
+    // resources invalid until create* runs (prog is also lazy-created on first flush).
+    gl->prog = BGFX_INVALID_HANDLE;
+    gl->u_scissorMat = BGFX_INVALID_HANDLE;
+    gl->u_paintMat = BGFX_INVALID_HANDLE;
+    gl->u_innerCol = BGFX_INVALID_HANDLE;
+    gl->u_outerCol = BGFX_INVALID_HANDLE;
+    gl->u_scissorExtScale = BGFX_INVALID_HANDLE;
+    gl->u_extentRadius = BGFX_INVALID_HANDLE;
+    gl->u_params = BGFX_INVALID_HANDLE;
+    gl->u_halfTexel = BGFX_INVALID_HANDLE;
+    gl->u_sdf = BGFX_INVALID_HANDLE;
+    gl->s_tex = BGFX_INVALID_HANDLE;
+    gl->s_tex2 = BGFX_INVALID_HANDLE;
+    gl->th = BGFX_INVALID_HANDLE;
+    gl->th2 = BGFX_INVALID_HANDLE;
+    gl->texMissing = BGFX_INVALID_HANDLE;
+    gl->textureId = static_cast<int>(bgfx::kInvalidHandle);
 
     bx::memSet(&params, 0, sizeof(params) );
     params.renderCreate         = nvgRenderCreate;
@@ -1463,5 +1524,31 @@ bgfx::TextureHandle nvglImageHandle(NVGcontext* _ctx, int32_t _image)
 {
     GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
     GLNVGtexture* tex = glnvg__findTexture(gl, _image);
-    return tex->id;
+    return tex != nullptr ? tex->id : bgfx::TextureHandle{bgfx::kInvalidHandle};
+}
+
+int nvgCreateImageFromHandle(NVGcontext* _ctx, bgfx::TextureHandle _handle, int _width, int _height, int _flags)
+{
+    if (_ctx == nullptr || !bgfx::isValid(_handle) || _width <= 0 || _height <= 0)
+    {
+        return 0;
+    }
+
+    GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
+    GLNVGtexture* tex = glnvg__allocTexture(gl);
+    if (tex == nullptr)
+    {
+        return 0;
+    }
+
+    tex->width = _width;
+    tex->height = _height;
+    tex->type = NVG_TEXTURE_RGBA;
+    // Do not destroy the caller's texture when nvgDeleteImage runs.
+    tex->flags = _flags | NVG_IMAGE_NODELETE;
+    tex->id = _handle;
+    // Keep externally registered handles above the uint16_t bgfx handle range,
+    // away from NanoVG's zero sentinel and NanoVG-created texture IDs.
+    tex->image = ++gl->textureId;
+    return tex->image;
 }

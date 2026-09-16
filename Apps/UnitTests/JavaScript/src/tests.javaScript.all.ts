@@ -1,5 +1,6 @@
 import * as Mocha from "mocha";
 import { expect } from "chai";
+import { Buffer } from "buffer";
 import {
   RequestFile,
   NativeEngine,
@@ -29,6 +30,7 @@ Mocha.setup("bdd");
 Mocha.reporter("spec");
 
 declare const hostPlatform: string;
+declare const hasGpuRendering: boolean;
 declare const setExitCode: (code: number) => void;
 declare const _native: any;
 
@@ -146,11 +148,50 @@ describe("ColorParsing", function () {
 });
 
 describe("Canvas2D", function () {
+  // No-op renderers accept GPU commands but cannot produce pixels for readback.
+  const itWithGpu = hasGpuRendering ? it : it.skip;
+
   function createContext(): any {
     const canvas = new _native.Canvas();
     canvas.width = 64;
     canvas.height = 64;
     return canvas.getContext("2d");
+  }
+
+  function createCanvas(width: number, height: number): any {
+    const canvas = new _native.Canvas();
+    canvas.width = width;
+    canvas.height = height;
+    return { canvas, context: canvas.getContext("2d") };
+  }
+
+  function disposeCanvas(resource: any): void {
+    resource.context.dispose();
+    resource.canvas.dispose();
+  }
+
+  function captureGpuPixels(canvas: any): any {
+    return canvas.getContext("2d").getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    ).data;
+  }
+
+  function pixelAt(
+    pixels: any,
+    width: number,
+    x: number,
+    y: number
+  ): number[] {
+    const offset = (y * width + x) * 4;
+    return [
+      pixels[offset],
+      pixels[offset + 1],
+      pixels[offset + 2],
+      pixels[offset + 3],
+    ];
   }
 
   it("round-trips a string fillStyle and strokeStyle", function () {
@@ -420,8 +461,7 @@ describe("Canvas2D", function () {
   it("accepts two color stops at the same offset", function () {
     // Only checks that the insertion path accepts the duplicate offset the spec allows;
     // std::map::insert() dropped it by returning {it, false} rather than throwing, so this
-    // does not by itself prove the stop survives. Asserting that needs the rendered ramp,
-    // and gradient fills are not read back by getImageData.
+    // does not by itself prove the stop survives. That needs a separate rendered-ramp assertion.
     const ctx = createContext();
     const gradient = ctx.createLinearGradient(0, 0, 64, 0);
     gradient.addColorStop(0, "red");
@@ -494,6 +534,611 @@ describe("Canvas2D", function () {
     const data = ctx.createImageData({ width: 4, height: 3 });
     expect(data.width).to.equal(4);
     expect(data.height).to.equal(3);
+  });
+
+  itWithGpu("renders a semi-transparent Canvas source through the destination GPU", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "rgba(240, 120, 60, 0.5)";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      const sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      expect(sample[0]).to.be.within(220, 255);
+      expect(sample[1]).to.be.within(100, 140);
+      expect(sample[2]).to.be.within(40, 80);
+      expect(sample[3]).to.be.within(110, 145);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("recognizes a Canvas source before ImageBitmap-shaped own properties", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#20c060";
+      source.context.fillRect(0, 0, 8, 8);
+      Object.defineProperty(source.canvas, "data", {
+        value: new Uint8Array(8 * 8 * 4),
+      });
+
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      const sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      expect(sample[0]).to.be.within(15, 50);
+      expect(sample[1]).to.be.within(175, 210);
+      expect(sample[2]).to.be.within(75, 115);
+      expect(sample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("applies fractional source crops and destination rectangles on the GPU", function () {
+    const source = createCanvas(12, 8);
+    const destination = createCanvas(30, 22);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 6, 4);
+      source.context.fillStyle = "#00ff00";
+      source.context.fillRect(6, 0, 6, 4);
+      source.context.fillStyle = "#0000ff";
+      source.context.fillRect(0, 4, 6, 4);
+      source.context.fillStyle = "#ffff00";
+      source.context.fillRect(6, 4, 6, 4);
+
+      // A narrow crop straddling x=6 amplifies fractional-coordinate handling.
+      destination.context.drawImage(
+        source.canvas,
+        5.99,
+        0,
+        1.01,
+        4,
+        2.75,
+        1.25,
+        24.5,
+        8.5
+      );
+      // Do the same across y=4 in a separate destination region.
+      destination.context.drawImage(
+        source.canvas,
+        0,
+        3.99,
+        6,
+        1.01,
+        1.25,
+        11.75,
+        12.5,
+        8.5
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      // Pixel (12,3), sampled at its center (12.5,3.5), maps to source
+      // x = 5.99 + (12.5 - 2.75) * 1.01 / 24.5 = 6.39194.
+      // Between red texel center 5.5 and green center 6.5, ideal bilinear
+      // weights are 10.8% red / 89.2% green (R~28, G~227).
+      // Integer truncation maps x to 5.4375; ignoring the crop maps x to
+      // 5.25. Both negative controls are solid red at this sample.
+      const green = pixelAt(pixels, destination.canvas.width, 12, 3);
+      expect(green[1] - green[0]).to.be.greaterThan(100);
+      expect(green[3]).to.be.greaterThan(200);
+
+      // Pixel (3,14), sampled at (3.5,14.5), maps to source
+      // y = 3.99 + (14.5 - 11.75) * 1.01 / 8.5 = 4.31676.
+      // That is 18.3% top red / 81.7% bottom blue (R~47, B~208).
+      // Integer truncation maps y to 3.4375 and ignoring the crop maps y
+      // to 3.5, both solid red rather than blue.
+      const blue = pixelAt(pixels, destination.canvas.width, 3, 14);
+      expect(blue[2] - blue[0]).to.be.greaterThan(80);
+      expect(blue[3]).to.be.greaterThan(200);
+
+      const fractionalEdge = pixelAt(
+        pixels,
+        destination.canvas.width,
+        26,
+        3
+      );
+      expect(fractionalEdge[0]).to.be.lessThan(80);
+      expect(fractionalEdge[1]).to.be.greaterThan(180);
+      expect(fractionalEdge[2]).to.be.lessThan(50);
+      expect(fractionalEdge[3]).to.be.greaterThan(150);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("normalizes negative source and destination extents", function () {
+    const source = createCanvas(12, 8);
+    const destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 12, 8);
+      source.context.fillStyle = "#ffff00";
+      source.context.fillRect(6, 4, 4, 3);
+
+      destination.context.drawImage(
+        source.canvas,
+        10,
+        7,
+        -4,
+        -3,
+        12,
+        10,
+        -8,
+        -6
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const inside = pixelAt(pixels, destination.canvas.width, 7, 7);
+      expect(inside[0]).to.be.greaterThan(220);
+      expect(inside[1]).to.be.greaterThan(220);
+      expect(inside[2]).to.be.lessThan(30);
+      expect(inside[3]).to.be.greaterThan(220);
+
+      const outside = pixelAt(pixels, destination.canvas.width, 2, 7);
+      expect(outside[3]).to.equal(0);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("clips the source rectangle and adjusts the destination proportionally", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(16, 16);
+    try {
+      source.context.fillStyle = "#00ffff";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(
+        source.canvas,
+        -2,
+        -2,
+        4,
+        4,
+        2,
+        2,
+        12,
+        12
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      expect(pixelAt(pixels, destination.canvas.width, 5, 5)[3]).to.equal(0);
+
+      const inside = pixelAt(pixels, destination.canvas.width, 10, 10);
+      expect(inside[0]).to.be.lessThan(30);
+      expect(inside[1]).to.be.greaterThan(220);
+      expect(inside[2]).to.be.greaterThan(220);
+      expect(inside[3]).to.be.greaterThan(220);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("keeps temporary Canvas images alive until queued draws flush", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(16, 8);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 0, 0, 8, 8);
+
+      source.context.fillStyle = "#0000ff";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 8, 0, 8, 8);
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const first = pixelAt(pixels, destination.canvas.width, 4, 4);
+      expect(first[0]).to.be.greaterThan(220);
+      expect(first[1]).to.be.lessThan(30);
+      expect(first[2]).to.be.lessThan(30);
+      expect(first[3]).to.be.greaterThan(220);
+
+      const second = pixelAt(pixels, destination.canvas.width, 12, 4);
+      expect(second[0]).to.be.lessThan(30);
+      expect(second[1]).to.be.lessThan(30);
+      expect(second[2]).to.be.greaterThan(220);
+      expect(second[3]).to.be.greaterThan(220);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("keeps ImageData uploads alive through putImageData and drawImage", function () {
+    const destination = createCanvas(12, 6);
+    try {
+      const putData = destination.context.createImageData(4, 4);
+      const drawData = destination.context.createImageData(4, 4);
+      for (let i = 0; i < putData.data.length; i += 4) {
+        putData.data[i] = 240;
+        putData.data[i + 1] = 96;
+        putData.data[i + 2] = 32;
+        putData.data[i + 3] = 255;
+
+        drawData.data[i] = 96;
+        drawData.data[i + 1] = 48;
+        drawData.data[i + 2] = 240;
+        drawData.data[i + 3] = 255;
+      }
+
+      destination.context.putImageData(putData, 1, 1);
+      destination.context.drawImage(
+        {
+          data: drawData.data,
+          width: drawData.width,
+          height: drawData.height,
+          // NativeEngine image bitmaps expose bimg::TextureFormat::RGBA8.
+          format: 74,
+        },
+        7,
+        1
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const putSample = pixelAt(pixels, destination.canvas.width, 2, 2);
+      expect(putSample[0]).to.be.greaterThan(220);
+      expect(putSample[1]).to.be.within(75, 115);
+      expect(putSample[2]).to.be.within(15, 50);
+      expect(putSample[3]).to.be.greaterThan(240);
+
+      const drawSample = pixelAt(pixels, destination.canvas.width, 8, 2);
+      expect(drawSample[0]).to.be.within(75, 115);
+      expect(drawSample[1]).to.be.within(30, 70);
+      expect(drawSample[2]).to.be.greaterThan(220);
+      expect(drawSample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
+  itWithGpu("preserves transform, rectangular clip, and globalAlpha for Canvas crops", function () {
+    const source = createCanvas(20, 8);
+    const destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#00ffff";
+      source.context.fillRect(12, 0, 8, 8);
+
+      destination.context.fillStyle = "#000000";
+      destination.context.fillRect(0, 0, 16, 12);
+      destination.context.beginPath();
+      destination.context.rect(4, 2, 6, 6);
+      destination.context.clip();
+      destination.context.translate(2, 1);
+      destination.context.globalAlpha = 0.5;
+      destination.context.drawImage(
+        source.canvas,
+        12,
+        0,
+        4,
+        8,
+        0,
+        0,
+        8,
+        8
+      );
+
+      expect(destination.context.globalAlpha).to.equal(0.5);
+      const transform = destination.context.getTransform();
+      expect(transform.e).to.equal(2);
+      expect(transform.f).to.equal(1);
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const cropped = pixelAt(pixels, destination.canvas.width, 5, 4);
+      expect(cropped[0]).to.be.lessThan(30);
+      expect(cropped[1]).to.be.within(100, 155);
+      expect(cropped[2]).to.be.within(100, 155);
+      expect(cropped[3]).to.be.greaterThan(240);
+
+      const translatedEdge = pixelAt(
+        pixels,
+        destination.canvas.width,
+        8,
+        4
+      );
+      expect(translatedEdge[0]).to.be.lessThan(30);
+      expect(translatedEdge[1]).to.be.within(100, 155);
+      expect(translatedEdge[2]).to.be.within(100, 155);
+      expect(translatedEdge[3]).to.be.greaterThan(240);
+
+      const clippedOut = pixelAt(pixels, destination.canvas.width, 5, 8);
+      expect(clippedOut[0]).to.be.lessThan(10);
+      expect(clippedOut[1]).to.be.lessThan(10);
+      expect(clippedOut[2]).to.be.lessThan(10);
+      expect(clippedOut[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("intersects repeated Canvas draws with a retained non-rectangular clip", function () {
+    const source = createCanvas(4, 4);
+    const destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 4, 4);
+
+      destination.context.fillStyle = "#000000";
+      destination.context.fillRect(0, 0, 16, 12);
+      destination.context.beginPath();
+      destination.context.moveTo(1, 1);
+      destination.context.lineTo(13, 1);
+      destination.context.lineTo(1, 11);
+      destination.context.closePath();
+      destination.context.clip();
+      destination.context.drawImage(source.canvas, 2, 2, 4, 4);
+      destination.context.drawImage(source.canvas, 10, 8, 4, 4);
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const firstDraw = pixelAt(pixels, destination.canvas.width, 3, 3);
+      expect(firstDraw[0]).to.be.greaterThan(220);
+      expect(firstDraw[1]).to.be.lessThan(30);
+      expect(firstDraw[2]).to.be.lessThan(30);
+      expect(firstDraw[3]).to.be.greaterThan(240);
+
+      [
+        // Inside the triangle but outside both destination rectangles.
+        pixelAt(pixels, destination.canvas.width, 2, 8),
+        // Inside the second destination rectangle but outside the triangle.
+        pixelAt(pixels, destination.canvas.width, 12, 9),
+      ].forEach(function (outside) {
+        expect(outside[0]).to.be.lessThan(10);
+        expect(outside[1]).to.be.lessThan(10);
+        expect(outside[2]).to.be.lessThan(10);
+        expect(outside[3]).to.be.greaterThan(240);
+      });
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads fractional drawImage edge coverage from the framebuffer", function () {
+    const source = createCanvas(2, 2);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#ffffff";
+      source.context.fillRect(0, 0, 2, 2);
+      destination.context.drawImage(source.canvas, 1.75, 1.75, 2.5, 2.5);
+
+      const pixels = destination.context.getImageData(0, 0, 8, 8).data;
+      expect(pixelAt(pixels, destination.canvas.width, 2, 2)[3]).to.equal(255);
+      [
+        pixelAt(pixels, destination.canvas.width, 1, 2),
+        pixelAt(pixels, destination.canvas.width, 4, 2),
+        pixelAt(pixels, destination.canvas.width, 2, 1),
+        pixelAt(pixels, destination.canvas.width, 2, 4),
+      ].forEach(function (edge) {
+        expect(edge[3]).to.be.within(40, 90);
+      });
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads new NanoVG draws after getImageData and toDataURL snapshots", function () {
+    const resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      expect(pixelAt(captureGpuPixels(resource.canvas), 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+      resource.canvas.toDataURL();
+
+      resource.context.fillStyle = "#0000ff";
+      resource.context.fillRect(0, 0, 4, 8);
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 8, 2, 2)).to.deep.equal([0, 0, 255, 255]);
+      expect(pixelAt(pixels, 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("reads filtered Canvas draws instead of unfiltered source pixels", function () {
+    const source = createCanvas(16, 16);
+    const destination = createCanvas(16, 16);
+    try {
+      source.context.fillStyle = "#ffffff";
+      source.context.fillRect(4, 4, 8, 8);
+      destination.context.filter = "blur(2px)";
+      destination.context.drawImage(source.canvas, 0, 0);
+      const pixels = captureGpuPixels(destination.canvas);
+      const fringe = pixelAt(pixels, 16, 3, 8);
+      const center = pixelAt(pixels, 16, 8, 8);
+      // The unfiltered CPU copy has zero alpha outside the source ink.
+      expect(fringe[0]).to.equal(fringe[1]);
+      expect(fringe[1]).to.equal(fringe[2]);
+      expect(fringe[3]).to.be.greaterThan(0);
+      expect(center[3]).to.be.greaterThan(fringe[3]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads source dimensions after coercing drawImage coordinates once", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      let conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          return 0;
+        },
+      }, 0);
+      expect(conversions).to.equal(1);
+      const pixels = captureGpuPixels(destination.canvas);
+      expect(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      expect(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("retains the Canvas source kind across coordinate coercion", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    const prototype = Object.getPrototypeOf(source.canvas);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      let conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          Object.setPrototypeOf(source.canvas, null);
+          source.canvas.data = new Uint8Array(0);
+          return 0;
+        },
+      }, 0);
+      expect(conversions).to.equal(1);
+      const pixels = captureGpuPixels(destination.canvas);
+      expect(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      expect(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      Object.setPrototypeOf(source.canvas, prototype);
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  it("retains the ImageBitmap source kind when coercion removes its data", function () {
+    const destination = createCanvas(8, 8);
+    try {
+      [false, true].forEach(function (noOp) {
+        const bitmap = {
+          width: 8,
+          height: 8,
+          format: 74,
+          data: new Uint8Array(8 * 8 * 4),
+        };
+        let conversions = 0;
+        const draw = function () {
+          destination.context.drawImage(bitmap, {
+            valueOf() {
+              ++conversions;
+              delete bitmap.data;
+              return 0;
+            },
+          }, 0, noOp ? 0 : 8, 8);
+        };
+        if (noOp) {
+          expect(draw).not.to.throw();
+        } else {
+          expect(draw).to.throw("drawImage: ImageBitmap data must be a typed array.");
+        }
+        expect(conversions).to.equal(1);
+      });
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
+  itWithGpu("clips framebuffer readback and normalizes negative region extents", function () {
+    const resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      const positive = resource.context.getImageData(-1, -1, 3, 3);
+      const negative = resource.context.getImageData(2, 2, -3, -3);
+      expect(Array.from(negative.data)).to.deep.equal(Array.from(positive.data));
+      expect(pixelAt(positive.data, 3, 0, 0)).to.deep.equal([0, 0, 0, 0]);
+      expect(pixelAt(positive.data, 3, 1, 1)).to.deep.equal([255, 0, 0, 255]);
+
+      const outside = resource.context.getImageData(-2147483648, 0, -2, 1);
+      expect(Array.from(outside.data)).to.deep.equal([0, 0, 0, 0, 0, 0, 0, 0]);
+      resource.canvas.width = 4;
+      expect(Array.from(resource.context.getImageData(0, 0, 1, 1).data)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  it("falls back to PNG for default, empty, case-variant, and unsupported MIME types", function () {
+    const canvas = new _native.Canvas();
+    canvas.width = 2;
+    canvas.height = 2;
+    try {
+      [
+        canvas.toDataURL(),
+        canvas.toDataURL(""),
+        canvas.toDataURL("image/png"),
+        canvas.toDataURL("IMAGE/PNG"),
+        canvas.toDataURL("image/jpeg"),
+      ].forEach(function (url) {
+        expect(url.indexOf("data:image/png;base64,")).to.equal(0);
+        expect(url.length).to.be.greaterThan(32);
+      });
+    } finally {
+      canvas.dispose();
+    }
+  });
+
+  it("ends PNG data URLs at IEND without trailing allocation bytes", function () {
+    [1, 2, 64].forEach(function (size) {
+      const canvas = new _native.Canvas();
+      canvas.width = size;
+      canvas.height = size;
+      try {
+        const url = canvas.toDataURL();
+        const png = Buffer.from(url.substring("data:image/png;base64,".length), "base64");
+        expect(Array.from(png.subarray(0, 8))).to.deep.equal([137, 80, 78, 71, 13, 10, 26, 10]);
+        let offset = 8;
+        let foundEnd = false;
+        while (offset + 12 <= png.length) {
+          const length = png.readUInt32BE(offset);
+          const type = png.toString("ascii", offset + 4, offset + 8);
+          offset += length + 12;
+          expect(offset).to.be.at.most(png.length);
+          if (type === "IEND") {
+            expect(length).to.equal(0);
+            foundEnd = true;
+            break;
+          }
+        }
+        expect(foundEnd).to.equal(true);
+        expect(offset).to.equal(png.length);
+      } finally {
+        canvas.dispose();
+      }
+    });
+  });
+
+  it("returns ascent and descent in no-font text metrics", function () {
+    const resource = createCanvas(8, 8);
+    try {
+      resource.context.font = "20px MissingFontForCanvasMetrics";
+      const metrics = resource.context.measureText("test");
+      expect(metrics).to.have.property("actualBoundingBoxAscent");
+      expect(metrics).to.have.property("actualBoundingBoxDescent");
+      expect(metrics.actualBoundingBoxAscent).to.equal(15);
+      expect(metrics.actualBoundingBoxDescent).to.equal(5);
+    } finally {
+      disposeCanvas(resource);
+    }
   });
 });
 

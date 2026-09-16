@@ -10,16 +10,23 @@ class nanovg_filterstack
 public:
     nanovg_filterstack();
 
+    // Shared bgfx blur resources; Init/Dispose are refcounted across canvases.
     static void InitBgfx();
     static void DisposeBgfx();
-    inline static bgfx::ProgramHandle s_gaussBlurProg;
-    inline static bgfx::ProgramHandle s_boxBlurProg;
-    inline struct Uniforms
+
+    // No default member initializers here: GCC rejects them when the nested type is
+    // used as an inline static member of the enclosing class (complete-type rule).
+    struct Uniforms
     {
         bgfx::UniformHandle u_strength;
         bgfx::UniformHandle u_direction;
         bgfx::UniformHandle u_weights;
-    } static m_uniforms;
+    };
+
+    inline static bgfx::ProgramHandle s_gaussBlurProg;
+    inline static bgfx::ProgramHandle s_boxBlurProg;
+    inline static int s_bgfxRefCount = 0;
+    inline static Uniforms m_uniforms{};
 
     void AddSepia(float strength) {}
     void AddContrast(float strength) {}
@@ -37,9 +44,6 @@ public:
     );
     void Render(std::function<void()> element);
 
-    // Returns true if this stack has any filter elements (blur/sepia/etc.) that
-    // require intermediate pool framebuffers. When false, draws render straight
-    // into the final (canvas) framebuffer and can share a single bgfx view.
     bool HasFilters() const { return stackElementCount > 0; }
 
     void ParseString(const std::string& string);

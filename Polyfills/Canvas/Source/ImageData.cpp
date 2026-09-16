@@ -2,6 +2,7 @@
 #include <map>
 #include <cstring>
 #include <limits>
+#include <exception>
 #include "Canvas.h"
 #include "Context.h"
 #include "ImageData.h"
@@ -21,7 +22,7 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_IMAGEDATA_CONSTRUCTOR_NAME = "ImageData";
 
-    Napi::Value ImageData::CreateInstance(Napi::Env env, Context* context, int32_t sx, int32_t sy, uint32_t width, uint32_t height)
+    Napi::Value ImageData::CreateInstance(Napi::Env env, Context* context, int64_t sx, int64_t sy, uint32_t width, uint32_t height)
     {
         // No Napi::HandleScope here: the object created by func.New() is returned to the caller.
         // A plain HandleScope would free the handle on close, which under the reference-counted
@@ -45,8 +46,8 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<ImageData>{info}
     {
         auto context{info[0].As<Napi::External<Context>>().Data()};
-        const auto sx{info[1].As<Napi::Number>().Int32Value()};
-        const auto sy{info[2].As<Napi::Number>().Int32Value()};
+        const auto sx{info[1].As<Napi::Number>().Int64Value()};
+        const auto sy{info[2].As<Napi::Number>().Int64Value()};
         m_width = info[3].As<Napi::Number>().Uint32Value();
         m_height = info[4].As<Napi::Number>().Uint32Value();
 
@@ -66,7 +67,14 @@ namespace Babylon::Polyfills::Internal
         auto data{Napi::Uint8Array::New(info.Env(), byteLength, napi_uint8_clamped_array)};
         if (context != nullptr && byteLength > 0)
         {
-            context->ReadPixels(sx, sy, m_width, m_height, data.Data());
+            try
+            {
+                context->ReadPixels(sx, sy, m_width, m_height, data.Data());
+            }
+            catch (const std::exception& ex)
+            {
+                throw Napi::Error::New(info.Env(), ex.what());
+            }
         }
 
         m_data = Napi::Persistent(data);

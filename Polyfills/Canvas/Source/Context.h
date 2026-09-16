@@ -3,7 +3,6 @@
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include "Image.h"
 #include "Path2D.h"
 #include "Font.h"
 #include "nanovg/nanovg_filterstack.h"
@@ -11,12 +10,17 @@
 #include <vector>
 #include <cstdint>
 #include <memory>
+#include <map>
+#include <unordered_map>
+#include <optional>
+#include <span>
 
 struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
     class CanvasGradient;
+    class NativeCanvasImage;
 
     class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
     {
@@ -29,9 +33,17 @@ namespace Babylon::Polyfills::Internal
 
         NVGcontext* GetNVGContext() const { return *m_nvg.get(); }
 
-        // Copies a region of the CPU-side pixel mirror (populated by DrawImage) into dst (w*h*4 RGBA8 bytes).
-        // Out-of-range pixels are written as zero. Used to implement getImageData without a GPU readback.
-        void ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst);
+        // Flushes and reads the rendered region into dst (w*h*4 straight-alpha RGBA8 bytes).
+        // Pixels outside the canvas are transparent black.
+        void ReadPixels(int64_t sx, int64_t sy, uint32_t w, uint32_t h, uint8_t* dst);
+
+        // Flush pending NanoVG draws to the canvas framebuffer, then read the full
+        // RGBA8 contents back from the GPU. Shared by all Canvas pixel-readback APIs.
+        std::vector<uint8_t> CaptureRGBA();
+
+        // Called by NativeCanvas when the canvas wrapper is destroyed so this context
+        // does not keep a dangling m_canvas pointer across JS finalizer ordering.
+        void DetachCanvas();
 
     private:
         void FillRect(const Napi::CallbackInfo&);
@@ -103,6 +115,10 @@ namespace Babylon::Polyfills::Internal
         bool SetFontFaceId();
         void EnsureFontsLoaded();
         void Flush(const Napi::CallbackInfo&);
+        // Shared body of Flush() for C++ callers (CaptureRGBA). Throws std::exception on failure.
+        void FlushCore();
+        void RetainImageUntilFlush(int imageIndex);
+        void ReleaseImagesAfterFlush();
 
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
@@ -184,6 +200,9 @@ namespace Babylon::Polyfills::Internal
         JsRuntimeScheduler m_runtimeScheduler;
 
         std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
+        // Transient ImageData/canvas snapshots stay alive until nvgEndFrame has
+        // consumed every queued draw that references them.
+        std::vector<int> m_imagesPendingFlush;
         void BindFillStyle(const Napi::CallbackInfo& info);
         void BindStrokeStyle(const Napi::CallbackInfo& info);
         void FlushGraphicResources() override;
@@ -198,16 +217,13 @@ namespace Babylon::Polyfills::Internal
         // take the emulated branch on what is now a plain rect.
         void ResetPathState();
 
-        // CPU-side RGBA8 mirror of the canvas, sized to the canvas, populated by DrawImage so that
-        // getImageData can return the exact decoded pixels (the GPU nanovg framebuffer is not read back).
-        std::vector<uint8_t> m_cpuPixels;
-        uint32_t m_cpuWidth{0};
-        uint32_t m_cpuHeight{0};
-        void EnsureCpuBuffer();
-        // Core RGBA8 blit used by both the NativeCanvasImage and (plain) ImageBitmap drawImage paths.
-        void BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh);
-        // Shared drawImage body: draws the nanovg image (arity 3/5/9) and mirrors it to the CPU buffer.
-        void DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, const uint8_t* srcPixels, uint32_t srcWidth, uint32_t srcHeight);
+        struct DrawImageRectangles
+        {
+            float X, Y, Width, Height;
+            float PatternX, PatternY, PatternWidth, PatternHeight;
+        };
+        static std::optional<DrawImageRectangles> ParseDrawImageRectangles(std::span<const double> arguments, uint32_t srcWidth, uint32_t srcHeight);
+        void DrawImageCommon(int imageIndex, const DrawImageRectangles& rectangles);
 
         friend class Canvas;
     };
