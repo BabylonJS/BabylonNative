@@ -1,0 +1,178 @@
+# https://github.com/openblack/bgfx.cmake/blob/master/.github/workflows/release.yml
+
+name: Release
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    outputs:
+      revision: ${{ steps.version.outputs.revision }}
+      sha: ${{ steps.version.outputs.sha }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - id: version
+        run: |
+          API_VERSION=$(grep -Eo "BGFX_API_VERSION UINT32_C\([0-9]+\)" bgfx/include/bgfx/defines.h | grep -Eo "[0-9]+" | tail -1)
+          BGFX_REVISION=$(cd bgfx && git rev-list HEAD --count)
+          BGFX_CMAKE_REVISION=$(git rev-list HEAD --count)
+          SHA=$(cd bgfx && git rev-parse HEAD)
+          TAG="v1.${API_VERSION}.${BGFX_REVISION}-${BGFX_CMAKE_REVISION}"
+          echo "revision=${BGFX_REVISION}" >> $GITHUB_OUTPUT
+          echo "sha=${SHA}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+  build:
+    name: ${{ matrix.os }}
+    needs: [ version ]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+          - os: macos-latest
+
+    env:
+      # Indicates the CMake build directory where project files and binaries are being produced.
+      CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
+      CMAKE_INSTALL_DIR: ${{ github.workspace }}/install/
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+        if: matrix.os == 'ubuntu-latest'
+      # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
+      - uses: lukka/get-cmake@latest
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # Update version
+      - name: Update version.h
+        run: |
+          sed "s/ BGFX_REV_NUMBER .*/ BGFX_REV_NUMBER ${{ needs.version.outputs.revision }}/g" bgfx/src/version.h > version.tmp && mv version.tmp bgfx/src/version.h
+          sed "s/ BGFX_REV_SHA1 .*/ BGFX_REV_SHA1 \"${{ needs.version.outputs.sha }}\"/g" bgfx/src/version.h > version.tmp && mv version.tmp bgfx/src/version.h
+        shell: bash
+
+      # Run CMake to generate project files
+      - name: Generate project files
+        run: |
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" "-DCMAKE_INSTALL_PREFIX=${{ env.CMAKE_INSTALL_DIR }}" -DCMAKE_DEBUG_POSTFIX=d -DBGFX_BUILD_EXAMPLES=OFF -DBGFX_BUILD_TOOLS=ON -DBGFX_INSTALL=ON -DBGFX_AMALGAMATED=ON -DCMAKE_BUILD_TYPE=Release
+      # Build the install targets
+      - name: Build
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target install --config Release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}
+          path: ${{ github.workspace }}/install/
+
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    needs: [ version, build ]
+    if: github.repository == 'bkaradzic/bgfx.cmake' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          path: src/bgfx.cmake
+      - run: |
+          find src/bgfx.cmake -name ".git*" -exec rm -rf {} +
+          find src/bgfx.cmake -name ".editorconfig" -delete
+          rm src/bgfx.cmake/.cmake-format.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-latest
+          path: ${{ github.workspace }}/install/windows/bgfx.cmake
+      - uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-latest
+          path: ${{ github.workspace }}/install/linux/bgfx.cmake
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-latest
+          path: ${{ github.workspace }}/install/macos/bgfx.cmake
+      - name: Create Source Zip
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'zip'
+          filename: 'bgfx.cmake.${{ needs.version.outputs.tag }}.zip'
+          directory: 'src'
+          path: 'bgfx.cmake'
+      - name: Create Source Tar
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'tar'
+          filename: 'bgfx.cmake.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: 'src'
+          path: 'bgfx.cmake'
+      - name: Create Windows Zip
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'zip'
+          filename: 'bgfx.cmake.binary.windows.${{ needs.version.outputs.tag }}.zip'
+          directory: 'install/windows'
+          path: 'bgfx.cmake'
+      - name: Create Windows Tar
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'tar'
+          filename: 'bgfx.cmake.binary.windows.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: 'install/windows'
+          path: 'bgfx.cmake'
+      - name: Create Linux Zip
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'zip'
+          filename: 'bgfx.cmake.binary.linux.${{ needs.version.outputs.tag }}.zip'
+          directory: 'install/linux'
+          path: 'bgfx.cmake'
+      - name: Create Linux Tar
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'tar'
+          filename: 'bgfx.cmake.binary.linux.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: 'install/linux'
+          path: 'bgfx.cmake'
+      - name: Create MacOS Zip
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'zip'
+          filename: 'bgfx.cmake.binary.macos.${{ needs.version.outputs.tag }}.zip'
+          directory: 'install/macos'
+          path: 'bgfx.cmake'
+      - name: Create MacOS Tar
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'tar'
+          filename: 'bgfx.cmake.binary.macos.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: 'install/macos'
+          path: 'bgfx.cmake'
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.version.outputs.tag }}
+          artifacts: "src/bgfx.cmake.${{ needs.version.outputs.tag }}.zip,src/bgfx.cmake.${{ needs.version.outputs.tag }}.tar.gz,install/*/*.${{ needs.version.outputs.tag }}.zip,install/*/*.${{ needs.version.outputs.tag }}.tar.gz"
+          generateReleaseNotes: true

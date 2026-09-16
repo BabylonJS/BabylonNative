@@ -6,16 +6,26 @@ endif()
 
 include(FetchContent)
 
+# Resolve Babylon Native's imported dependency subtrees through the normal
+# FetchContent declarations, including declarations made by nested consumers.
+# Cache entries preserve explicit user-provided source-directory overrides.
+set(FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS "${CMAKE_CURRENT_LIST_DIR}/Dependencies/CMakeExtensions" CACHE PATH "Location of the in-tree CMakeExtensions sources.")
+set(FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS "${CMAKE_CURRENT_LIST_DIR}/Dependencies/AndroidExtensions" CACHE PATH "Location of the in-tree AndroidExtensions sources.")
+set(FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE "${CMAKE_CURRENT_LIST_DIR}/Dependencies/bgfx.cmake" CACHE PATH "Location of the in-tree bgfx.cmake sources.")
+set(FETCHCONTENT_SOURCE_DIR_GLSLANG "${CMAKE_CURRENT_LIST_DIR}/Dependencies/glslang" CACHE PATH "Location of the in-tree glslang sources.")
+set(FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST "${CMAKE_CURRENT_LIST_DIR}/Dependencies/JsRuntimeHost" CACHE PATH "Location of the in-tree JsRuntimeHost sources.")
+set(FETCHCONTENT_SOURCE_DIR_SPIRV-CROSS "${CMAKE_CURRENT_LIST_DIR}/Dependencies/SPIRV-Cross" CACHE PATH "Location of the in-tree SPIRV-Cross sources.")
+set(FETCHCONTENT_SOURCE_DIR_URLLIB "${CMAKE_CURRENT_LIST_DIR}/Dependencies/UrlLib" CACHE PATH "Location of the in-tree UrlLib sources.")
+
+# bgfx.cmake owns these as git submodules upstream. Babylon Native supplies
+# the corresponding sibling subtrees instead, without initializing gitlinks.
+set(BGFX_DIR "${CMAKE_CURRENT_LIST_DIR}/Dependencies/bgfx" CACHE PATH "Location of the in-tree bgfx sources.")
+set(BIMG_DIR "${CMAKE_CURRENT_LIST_DIR}/Dependencies/bimg" CACHE PATH "Location of the in-tree bimg sources.")
+set(BX_DIR "${CMAKE_CURRENT_LIST_DIR}/Dependencies/bx" CACHE PATH "Location of the in-tree bx sources.")
+
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-
-# EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
-# targets to the ALL_BUILD target.  We do this for all dependencies except
-# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
-# that are part of the Babylon Native contract. When adding dependencies using
-# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
-# targets that are part of the Babylon Native contract.
 
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
@@ -41,13 +51,13 @@ FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(glslang
-    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(draco
     GIT_REPOSITORY https://github.com/google/draco.git
     GIT_TAG 1.5.7
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(glslang
+    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
+    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(meshoptimizer
     GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
@@ -71,7 +81,6 @@ FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 7c8705749fc1e234119c20695f82179b30d90914
     EXCLUDE_FROM_ALL)
-
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
