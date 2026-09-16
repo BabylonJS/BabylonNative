@@ -28626,7 +28626,7 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill("evenodd");}).to.not.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(new String("evenodd"));}).to.not.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {
-      ctx.fill({ toString: function () {return "nonzero";} });
+      ctx.fill({ toString: function toString() {return "nonzero";} });
     }).to.not.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path);}).to.not.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.fill(path, "nonzero");}).to.not.throw();
@@ -28647,13 +28647,16 @@ describe("Canvas2D", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {path.addPath(new Path2D("M0 0 L5 5"));}).to.not.throw();
   });
 
-  it("rejects a non-Image argument to drawImage", function () {
-    // Non-Image sources must throw, not AV via Unwrap.
+  it("rejects an invalid native source argument to drawImage", function () {
+    // Native-looking impostors must throw, not AV via an unchecked Unwrap.
     var ctx = createContext();
-    var otherCanvas = new _native.Canvas();
+    var realCanvas = new _native.Canvas();
+    var spoofedCanvas = Object.create(Object.getPrototypeOf(realCanvas));
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(spoofedCanvas instanceof _native.Canvas).to.equal(true);
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.drawImage({}, 0, 0);}).to.throw();
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.drawImage(new Path2D(), 0, 0);}).to.throw();
-    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.drawImage(otherCanvas, 0, 0);}).to.throw();
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(function () {ctx.drawImage(spoofedCanvas, 0, 0);}).to.throw();
+    realCanvas.dispose();
   });
 
   it("treats a non-Path2D Path2D() argument as path data", function () {

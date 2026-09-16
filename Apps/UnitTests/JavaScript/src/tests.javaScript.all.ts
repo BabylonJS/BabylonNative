@@ -301,13 +301,16 @@ describe("Canvas2D", function () {
     expect(function () { path.addPath(new Path2D("M0 0 L5 5")); }).to.not.throw();
   });
 
-  it("rejects a non-Image argument to drawImage", function () {
-    // Non-Image sources must throw, not AV via Unwrap.
-        const ctx = createContext();
-    const otherCanvas = new _native.Canvas();
+  it("rejects an invalid native source argument to drawImage", function () {
+    // Native-looking impostors must throw, not AV via an unchecked Unwrap.
+    const ctx = createContext();
+    const realCanvas = new _native.Canvas();
+    const spoofedCanvas = Object.create(Object.getPrototypeOf(realCanvas));
+    expect(spoofedCanvas instanceof _native.Canvas).to.equal(true);
     expect(function () { ctx.drawImage({}, 0, 0); }).to.throw();
     expect(function () { ctx.drawImage(new Path2D(), 0, 0); }).to.throw();
-    expect(function () { ctx.drawImage(otherCanvas, 0, 0); }).to.throw();
+    expect(function () { ctx.drawImage(spoofedCanvas, 0, 0); }).to.throw();
+    realCanvas.dispose();
   });
 
   it("treats a non-Path2D Path2D() argument as path data", function () {

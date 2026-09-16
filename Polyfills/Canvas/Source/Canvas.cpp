@@ -11,6 +11,7 @@
 #include "Colors.h"
 #include "Gradient.h"
 #include "Font.h"
+#include "NativeInstanceRegistry.h"
 #include <basen.hpp>
 #include <bimg/encode.h>
 #include <bx/allocator.h>
@@ -47,15 +48,23 @@ namespace Babylon::Polyfills::Internal
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
 
+    NativeCanvas* NativeCanvas::TryUnwrap(Napi::Env env, const Napi::Value& value)
+    {
+        return NativeInstanceRegistry<NativeCanvas>::TryUnwrap(env, value);
+    }
+
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
         , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
+        NativeInstanceRegistry<NativeCanvas>::Add(info, this);
     }
 
     NativeCanvas::~NativeCanvas()
     {
+        NativeInstanceRegistry<NativeCanvas>::Remove(this);
+
         // Canvas and Context form a JS cycle; finalizer order is not guaranteed.
         // Clear the reverse pointer first so Context::~Context cannot touch us.
         if (m_context != nullptr)
