@@ -1399,9 +1399,73 @@ function hexToBytes(hex: string): Uint8Array {
   const SPHERE_VERTICES = 62;
   const SPHERE_INDICES = 273;
 
+  function expectDecodedQuad(decoded: any) {
+    expect(decoded.totalVertices).to.equal(positions.length / 3);
+    expect(decoded.indices.length).to.equal(indices.length);
+
+    const attribute = decoded.attributes.find((a: any) => a.kind === "position");
+    expect(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    const corner = (buffer: any, i: number) =>
+      [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]]
+        .map((v: number) => v.toFixed(2))
+        .join(",");
+
+    const expectedCorners: string[] = [];
+    const actualCorners: string[] = [];
+    for (let i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    expect(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  }
+
+  function captureError(callback: () => unknown): string {
+    try {
+      callback();
+    } catch (error) {
+      if (error instanceof Error) {
+        return `${error.name}: ${error.message}`;
+      }
+      throw new Error(`Expected an Error object, received ${String(error)}`);
+    }
+    throw new Error("Expected callback to throw");
+  }
+
   it("publishes the codec version it was built against", function () {
     expect(_native.DracoCodec.Version).to.be.a("string");
     expect(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("keeps the compatibility entry points interoperable with DracoCodec", function () {
+    expect(_native.decodeDracoMesh).to.be.a("function");
+    expect(_native.encodeDracoMesh).to.be.a("function");
+
+    const compatibilityEncoded = _native.encodeDracoMesh(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices,
+      {});
+    expectDecodedQuad(_native.DracoCodec.Decode(
+      compatibilityEncoded.data,
+      { position: compatibilityEncoded.attributeIds.position }));
+
+    const groupedEncoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices,
+      {});
+    expectDecodedQuad(_native.decodeDracoMesh(
+      groupedEncoded.data,
+      { position: groupedEncoded.attributeIds.position }));
+  });
+
+  it("propagates compatibility entry point errors", function () {
+    const emptyData = new Uint8Array(0);
+    expect(captureError(() => _native.decodeDracoMesh(emptyData)))
+      .to.equal(captureError(() => _native.DracoCodec.Decode(emptyData)));
+
+    const noAttributes: any[] = [];
+    expect(captureError(() => _native.encodeDracoMesh(noAttributes, null, {})))
+      .to.equal(captureError(() => _native.DracoCodec.Encode(noAttributes, null, {})));
   });
 
   it("decodes a mesh produced by the reference glTF encoder", function () {

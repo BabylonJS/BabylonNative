@@ -29631,9 +29631,73 @@ function hexToBytes(hex) {
   var SPHERE_VERTICES = 62;
   var SPHERE_INDICES = 273;
 
+  function expectDecodedQuad(decoded) {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.totalVertices).to.equal(positions.length / 3);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(decoded.indices.length).to.equal(indices.length);
+
+    var attribute = decoded.attributes.find(function (a) {return a.kind === "position";});
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    var corner = function corner(buffer, i) {return (
+        [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]].
+        map(function (v) {return v.toFixed(2);}).
+        join(","));};
+
+    var expectedCorners = [];
+    var actualCorners = [];
+    for (var i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  }
+
+  function captureError(callback) {
+    try {
+      callback();
+    } catch (error) {
+      if (error instanceof Error) {
+        return "".concat(error.name, ": ").concat(error.message);
+      }
+      throw new Error("Expected an Error object, received ".concat(String(error)));
+    }
+    throw new Error("Expected callback to throw");
+  }
+
   it("publishes the codec version it was built against", function () {
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.be.a("string");
     (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("keeps the compatibility entry points interoperable with DracoCodec", function () {
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.decodeDracoMesh).to.be.a("function");
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(_native.encodeDracoMesh).to.be.a("function");
+
+    var compatibilityEncoded = _native.encodeDracoMesh(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices,
+      {});
+    expectDecodedQuad(_native.DracoCodec.Decode(
+      compatibilityEncoded.data,
+      { position: compatibilityEncoded.attributeIds.position }));
+
+    var groupedEncoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices,
+      {});
+    expectDecodedQuad(_native.decodeDracoMesh(
+      groupedEncoded.data,
+      { position: groupedEncoded.attributeIds.position }));
+  });
+
+  it("propagates compatibility entry point errors", function () {
+    var emptyData = new Uint8Array(0);
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(captureError(function () {return _native.decodeDracoMesh(emptyData);})).
+    to.equal(captureError(function () {return _native.DracoCodec.Decode(emptyData);}));
+
+    var noAttributes = [];
+    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(captureError(function () {return _native.encodeDracoMesh(noAttributes, null, {});})).
+    to.equal(captureError(function () {return _native.DracoCodec.Encode(noAttributes, null, {});}));
   });
 
   it("decodes a mesh produced by the reference glTF encoder", function () {
