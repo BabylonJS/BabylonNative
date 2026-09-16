@@ -117,13 +117,11 @@ jobs:
         if: ${{ inputs.graphics-api == 'Vulkan' }}
         run: |
           cd build/Linux/Apps/UnitTests
-          # A missing or skipped boundary test must not produce a green lane.
+          # Require both boundary tests, independent of unrelated additions to the suite.
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           report = ET.parse("vulkan-unit-test-results.xml").getroot()
           cases = report.findall(".//testcase")
-          if len(cases) != 29:
-              raise SystemExit(f"Expected 29 Vulkan unit-test cases, found {len(cases)}")
           expected = {
               "ShaderCompilation.VulkanAcceptsSixteenSamplers",
               "ShaderCompilation.VulkanRejectsMoreThanSixteenSamplers",
