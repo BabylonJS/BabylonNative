@@ -1293,10 +1293,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Object imageObj = info[0].As<Napi::Object>();
         // Retain the source kind before coercion can change its prototype or properties.
         // Canvas takes precedence over the structural ImageBitmap shape.
-        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
-        NativeCanvas* const srcCanvas = canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>())
-            ? NativeCanvas::Unwrap(imageObj)
-            : nullptr;
+        NativeCanvas* const srcCanvas = NativeCanvas::TryUnwrap(info.Env(), imageObj);
         const NativeCanvasImage* const canvasImage = srcCanvas == nullptr
             ? NativeCanvasImage::TryUnwrap(info.Env(), imageObj)
             : nullptr;
