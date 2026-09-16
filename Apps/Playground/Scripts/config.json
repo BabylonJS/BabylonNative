@@ -3766,6 +3766,7 @@
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#134",
+            "replace": "BABYLON.ImportMeshAsync, var meshLoad = BABYLON.ImportMeshAsync, return scene;, return Promise.resolve(meshLoad).then(function () { return scene; });",
             "referenceImage": "OpenPBR-Transmission-Roughness-vs-IOR---Analytic-Lights.png"
         },
         {
