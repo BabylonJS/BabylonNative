@@ -10,9 +10,11 @@
 
 #include "Helpers.h"
 
+#include <chrono>
 #include <cstdlib>
 #include <future>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -36,7 +38,8 @@ namespace
         uint32_t height,
         const std::string& vertexShader,
         const std::string& fragmentShader,
-        bool withInputTexture)
+        bool withInputTexture,
+        const std::string& setupScript = {})
     {
         Babylon::Graphics::Device device{g_deviceConfig};
         device.StartRenderingCurrentFrame();
@@ -165,12 +168,16 @@ namespace
                     }
 
                     quad.material = material;
+                    SETUP_SCRIPT
                     globalThis.__scene = scene;
                 };
 
                 globalThis.render = function () {
                     var scene = globalThis.__scene;
-                    return scene.whenReadyAsync().then(function () {
+                    var preparation = Promise.resolve(globalThis.__prepare ? globalThis.__prepare() : undefined);
+                    return preparation.then(function () {
+                        return scene.whenReadyAsync();
+                    }).then(function () {
                         scene.render();
                     });
                 };
@@ -215,6 +222,7 @@ namespace
         replaceToken(finalScript, "VERTEX_SHADER_SOURCE", toJsStringLiteral(vertexShader));
         replaceToken(finalScript, "FRAGMENT_SHADER_SOURCE", toJsStringLiteral(fragmentShader));
         replaceToken(finalScript, "WITH_INPUT_TEXTURE", withInputTexture ? "true" : "false");
+        replaceToken(finalScript, "SETUP_SCRIPT", setupScript);
 
         loader.Eval(finalScript, "frag_coord_orientation_test.js");
 
@@ -256,6 +264,140 @@ namespace
         Helpers::DestroyTexture(outputTexture);
         return pixels;
     }
+}
+
+TEST(NativeEngineInstanceData, QueuedDrawRetainsDataBeforeUpdate)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "#include<instancesDeclaration>\n"
+        "varying float vValue;\n"
+        "void main(void) {\n"
+        "#include<instancesVertex>\n"
+        "vValue = finalWorld[3].x; gl_Position = vec4(position, 1.0); }\n";
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "varying float vValue;\n"
+        "void main(void) { gl_FragColor = vec4(vValue, 0.0, 0.0, 1.0); }\n";
+    const std::string setupScript = R"(
+        material.options.uniforms.push("world");
+        var matrices = new Float32Array(BABYLON.Matrix.Translation(0.25, 0, 0).m);
+        quad.thinInstanceSetBuffer("matrix", matrices, 16, false);
+        globalThis.__prepare = function () {
+            return material.forceCompilationAsync(quad, { useInstances: true });
+        };
+        quad.onAfterRenderObservable.add(function () {
+            matrices[12] = 0.75;
+            quad.thinInstanceBufferUpdated("matrix");
+        });
+    )";
+    const auto pixels = RenderFullScreenQuad(2, 1, vertexShader, fragmentShader, false, setupScript);
+    ASSERT_EQ(pixels.size(), 8u);
+    for (size_t offset = 0; offset < pixels.size(); offset += 4)
+    {
+        EXPECT_NEAR(pixels[offset], 64, 1);
+        EXPECT_EQ(pixels[offset + 1], 0);
+        EXPECT_EQ(pixels[offset + 2], 0);
+        EXPECT_EQ(pixels[offset + 3], 255);
+    }
+#endif
+}
+
+TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWaitForFrame)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&device](Napi::Env env) {
+        env.Global().Set("globalThis", env.Global());
+        device.AddToJavaScript(env);
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+        });
+        Babylon::Polyfills::Window::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env);
+    });
+
+    Babylon::ScriptLoader loader{runtime};
+    loader.LoadScript("app:///Assets/babylon.max.js");
+
+    auto setupDone = std::make_shared<std::promise<void>>();
+    auto setupFuture = setupDone->get_future();
+    loader.Dispatch([setupDone](Napi::Env env) {
+        try
+        {
+            auto nativeEngine = env.Global().Get("BABYLON").As<Napi::Object>().Get("NativeEngine").As<Napi::Function>();
+            env.Global().Set("__engine", nativeEngine.New({}));
+            auto engine = env.Global().Get("__engine").As<Napi::Object>();
+            auto data = Napi::Float32Array::New(env, 3);
+            engine.Set("__buffer", engine.Get("createDynamicVertexBuffer").As<Napi::Function>().Call(engine, {data}));
+            setupDone->set_value();
+        }
+        catch (...)
+        {
+            setupDone->set_exception(std::current_exception());
+        }
+    });
+
+    if (setupFuture.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        FAIL() << "dynamic vertex-buffer setup dispatch timed out";
+    }
+    try
+    {
+        setupFuture.get();
+    }
+    catch (const std::exception& exception)
+    {
+        device.FinishRenderingCurrentFrame();
+        FAIL() << "dynamic vertex-buffer setup failed: " << exception.what();
+    }
+    catch (...)
+    {
+        device.FinishRenderingCurrentFrame();
+        FAIL() << "dynamic vertex-buffer setup failed with a non-standard exception";
+    }
+
+    device.FinishRenderingCurrentFrame();
+
+    auto updateStarted = std::make_shared<std::promise<void>>();
+    auto updateDone = std::make_shared<std::promise<void>>();
+    auto updateStartedFuture = updateStarted->get_future();
+    auto updateFuture = updateDone->get_future();
+    loader.Dispatch([updateStarted, updateDone](Napi::Env env) {
+        updateStarted->set_value();
+        try
+        {
+            auto engine = env.Global().Get("__engine").As<Napi::Object>();
+            auto data = Napi::Float32Array::New(env, 3);
+            engine.Get("updateDynamicVertexBuffer").As<Napi::Function>().Call(engine, {engine.Get("__buffer"), data});
+            updateDone->set_value();
+        }
+        catch (...)
+        {
+            updateDone->set_exception(std::current_exception());
+        }
+    });
+
+    ASSERT_EQ(updateStartedFuture.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    const auto updateStatus = updateFuture.wait_for(std::chrono::milliseconds{250});
+
+    // Start another frame even on failure so the blocked runtime thread can unwind cleanly.
+    device.StartRenderingCurrentFrame();
+    const auto updateCompletionStatus = updateFuture.wait_for(std::chrono::seconds{30});
+    device.FinishRenderingCurrentFrame();
+
+    ASSERT_EQ(updateCompletionStatus, std::future_status::ready)
+        << "dynamic vertex-buffer update did not complete after the next frame started";
+    ASSERT_NO_THROW(updateFuture.get());
+    EXPECT_EQ(updateStatus, std::future_status::ready)
+        << "an update with no queued commands must not wait for the next frame";
 }
 
 // gl_FragCoord.y must increase towards +Y in clip space, like the interpolated vUV.y
