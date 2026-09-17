@@ -18,6 +18,8 @@
 #include <utility>
 #include <vector>
 
+extern Babylon::Graphics::Configuration g_deviceConfig;
+
 namespace
 {
     winrt::com_ptr<ID3D11Device> CreateDevice()
@@ -129,6 +131,25 @@ namespace
         viewDesc.Texture2DArray.FirstArraySlice = 1;
         viewDesc.Texture2DArray.ArraySize = 1;
 
+        winrt::com_ptr<ID3D11DepthStencilView> view;
+        EXPECT_HRESULT_SUCCEEDED(device->CreateDepthStencilView(texture.get(), &viewDesc, view.put()));
+        return {texture, view};
+    }
+
+    DepthTexture CreateWindowDepthTexture(ID3D11Device* device, const D3D11_DEPTH_STENCIL_VIEW_DESC& viewDesc, uint32_t arraySize = 1)
+    {
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width = 32;
+        desc.Height = 24;
+        desc.MipLevels = 2;
+        desc.ArraySize = arraySize;
+        desc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+
+        winrt::com_ptr<ID3D11Texture2D> texture;
+        EXPECT_HRESULT_SUCCEEDED(device->CreateTexture2D(&desc, nullptr, texture.put()));
         winrt::com_ptr<ID3D11DepthStencilView> view;
         EXPECT_HRESULT_SUCCEEDED(device->CreateDepthStencilView(texture.get(), &viewDesc, view.put()));
         return {texture, view};
@@ -336,6 +357,89 @@ TEST(Device, BackBufferMsaaCaptureUsesActualViewSampleCount)
     config.BackBufferDepthStencilFormat = Babylon::Graphics::DepthStencilFormat::Depth24Stencil8;
 
     Babylon::Graphics::Device device{config};
+    Babylon::AppRuntime runtime{};
+    auto& context = GetContext(device, runtime);
+    ExpectSolidColor(ClearAndCapture(device, context, 0x4080c0ff), 32, 24, 0x4080c0ff);
+}
+
+TEST(Device, WindowDepthBackBufferRejectsReadOnlyViews)
+{
+    auto d3dDevice = CreateDevice();
+    for (UINT flags : std::array<UINT, 3>{D3D11_DSV_READ_ONLY_DEPTH, D3D11_DSV_READ_ONLY_STENCIL,
+             D3D11_DSV_READ_ONLY_DEPTH | D3D11_DSV_READ_ONLY_STENCIL})
+    {
+        SCOPED_TRACE(flags);
+        D3D11_DEPTH_STENCIL_VIEW_DESC viewDesc{};
+        viewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        viewDesc.Flags = flags;
+        auto depth = CreateWindowDepthTexture(d3dDevice.get(), viewDesc);
+
+        auto config = g_deviceConfig;
+        config.Device = d3dDevice.get();
+        config.Width = 32;
+        config.Height = 24;
+        config.BackBufferColor = nullptr;
+        config.BackBufferDepthStencil = depth.View.get();
+        Babylon::Graphics::Device device{config};
+        EXPECT_THROW(device.EnableRendering(), std::runtime_error);
+    }
+}
+
+TEST(Device, WindowDepthBackBufferRejectsNonDefaultSubresources)
+{
+    auto d3dDevice = CreateDevice();
+    for (uint32_t arraySize : {0u, 1u, 2u})
+    {
+        SCOPED_TRACE(arraySize);
+        const bool arrayView = arraySize != 0;
+        D3D11_DEPTH_STENCIL_VIEW_DESC viewDesc{};
+        viewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        viewDesc.ViewDimension = arrayView ? D3D11_DSV_DIMENSION_TEXTURE2DARRAY : D3D11_DSV_DIMENSION_TEXTURE2D;
+        if (arrayView)
+        {
+            viewDesc.Texture2DArray.FirstArraySlice = arraySize - 1;
+            viewDesc.Texture2DArray.ArraySize = 1;
+        }
+        else
+        {
+            viewDesc.Texture2D.MipSlice = 1;
+        }
+        auto depth = CreateWindowDepthTexture(d3dDevice.get(), viewDesc, arrayView ? arraySize : 1);
+
+        auto config = g_deviceConfig;
+        config.Device = d3dDevice.get();
+        config.Width = arrayView ? 32 : 16;
+        config.Height = arrayView ? 24 : 12;
+        config.BackBufferColor = nullptr;
+        config.BackBufferDepthStencil = depth.View.get();
+        Babylon::Graphics::Device device{config};
+        EXPECT_THROW(device.EnableRendering(), std::runtime_error);
+    }
+}
+
+TEST(Device, WindowDepthBackBufferAcceptsDefaultViewAfterRejection)
+{
+    auto d3dDevice = CreateDevice();
+    D3D11_DEPTH_STENCIL_VIEW_DESC viewDesc{};
+    viewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    viewDesc.Flags = D3D11_DSV_READ_ONLY_DEPTH;
+    auto rejected = CreateWindowDepthTexture(d3dDevice.get(), viewDesc);
+    viewDesc.Flags = 0;
+    auto depth = CreateWindowDepthTexture(d3dDevice.get(), viewDesc);
+
+    auto config = g_deviceConfig;
+    config.Device = d3dDevice.get();
+    config.Width = 32;
+    config.Height = 24;
+    config.BackBufferColor = nullptr;
+    config.BackBufferDepthStencil = rejected.View.get();
+    Babylon::Graphics::Device device{config};
+    EXPECT_THROW(device.EnableRendering(), std::runtime_error);
+    device.UpdateBackBuffer(nullptr, depth.View.get());
+    ASSERT_NO_THROW(device.EnableRendering());
+
     Babylon::AppRuntime runtime{};
     auto& context = GetContext(device, runtime);
     ExpectSolidColor(ClearAndCapture(device, context, 0x4080c0ff), 32, 24, 0x4080c0ff);

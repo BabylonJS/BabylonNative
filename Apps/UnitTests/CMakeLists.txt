@@ -106,7 +106,6 @@ target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
     target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal)
     target_compile_definitions(UnitTests PRIVATE HAS_SHADER_COMPILER)
-    deploy_shader_compiler_runtime(UnitTests)
 endif()
 
 # NativeDraco and NativeMeshopt default to OFF, so link and exercise them only when the

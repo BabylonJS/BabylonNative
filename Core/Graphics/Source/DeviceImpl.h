@@ -26,10 +26,6 @@
 
 namespace Babylon::Graphics
 {
-#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-    class ExternalBackBufferD3D11;
-#endif
-
     class DeviceImpl
     {
     public:
@@ -196,7 +192,20 @@ namespace Babylon::Graphics
         void* m_windowHandle{};
         void* m_displayHandle{};
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        std::unique_ptr<ExternalBackBufferD3D11> m_externalBackBuffer;
+        void CreateExternalBackBuffer(const bgfx::SwapChain& descriptor);
+        void DestroyExternalBackBuffer();
+        void ReadExternalBackBuffer();
+
+        struct
+        {
+            winrt::com_ptr<ID3D11RenderTargetView> Color;
+            winrt::com_ptr<ID3D11DepthStencilView> Depth;
+            winrt::com_ptr<ID3D11Texture2D> ColorTexture;
+            winrt::com_ptr<ID3D11Texture2D> DepthTexture;
+            bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
+            bgfx::TextureHandle ColorHandle{bgfx::kInvalidHandle};
+            bgfx::TextureHandle DepthHandle{bgfx::kInvalidHandle};
+        } m_externalBackBuffer;
 #endif
 
         struct

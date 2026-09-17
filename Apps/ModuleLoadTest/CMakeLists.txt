@@ -37,10 +37,6 @@ target_link_libraries(ModuleLoadTest
     PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES})
 
-if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
-    deploy_shader_compiler_runtime(ModuleLoadTest)
-endif()
-
 add_test(NAME ModuleLoadTest COMMAND ModuleLoadTest CONFIGURATIONS Release RelWithDebInfo)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543

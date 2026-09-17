@@ -36,6 +36,7 @@ namespace Babylon::Graphics
 
         // Depth stencil back buffer to use instead of creating one internally.
         // @remarks Only available for D3D11. BackBufferDepthStencilFormat is ignored when specified.
+        // With a window and no BackBufferColor, only writable, non-array, mip-0 views are supported.
         BackBufferDepthStencilT BackBufferDepthStencil{};
 #endif
 
@@ -113,6 +114,7 @@ namespace Babylon::Graphics
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
         // Retains the supplied views while in use. Changes take effect at the next frame boundary.
+        // The same depth-view restrictions as Configuration::BackBufferDepthStencil apply.
         void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil = {});
 #endif
 

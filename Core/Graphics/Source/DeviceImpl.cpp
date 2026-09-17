@@ -11,10 +11,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-#include "ExternalBackBufferD3D11.h"
-#endif
-
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
@@ -146,9 +142,9 @@ namespace Babylon::Graphics
     bgfx::FrameBufferHandle DeviceImpl::GetBackBufferHandle() const
     {
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        if (m_externalBackBuffer && bgfx::isValid(m_externalBackBuffer->GetFrameBuffer()))
+        if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
         {
-            return m_externalBackBuffer->GetFrameBuffer();
+            return m_externalBackBuffer.FrameBuffer;
         }
 #endif
         return m_windowFrameBuffer;
@@ -747,7 +743,7 @@ namespace Babylon::Graphics
         m_windowHandle = nullptr;
         m_displayHandle = nullptr;
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        m_externalBackBuffer.reset();
+        DestroyExternalBackBuffer();
 #endif
     }
 
@@ -758,20 +754,19 @@ namespace Babylon::Graphics
         swapChain.height = std::max(1u, swapChain.height);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        if (m_externalBackBuffer || m_state.BackBufferColor || m_state.BackBufferDepthStencil)
+        if (m_externalBackBuffer.Color || m_externalBackBuffer.Depth || m_state.BackBufferColor || m_state.BackBufferDepthStencil)
         {
             DestroyBackBuffer();
             // Release the old native swap chain before another one can bind its window.
             bgfx::frame(BGFX_FRAME_DISCARD);
             if (m_state.BackBufferColor || m_state.BackBufferDepthStencil)
             {
-                m_externalBackBuffer = std::make_unique<ExternalBackBufferD3D11>(
-                    m_state.BackBufferColor.get(), m_state.BackBufferDepthStencil.get(), swapChain);
-                if (bgfx::isValid(m_externalBackBuffer->GetFrameBuffer()))
+                CreateExternalBackBuffer(swapChain);
+                if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
                 {
                     return;
                 }
-                swapChain.depth = m_externalBackBuffer->GetDepthTexture();
+                swapChain.depth = m_externalBackBuffer.DepthHandle;
             }
         }
 #endif
@@ -828,7 +823,7 @@ namespace Babylon::Graphics
             throw std::runtime_error{"Cannot capture without a window or an external back buffer."};
         }
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        if (m_externalBackBuffer && bgfx::isValid(m_externalBackBuffer->GetFrameBuffer()))
+        if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
         {
             return true;
         }
@@ -855,9 +850,7 @@ namespace Babylon::Graphics
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
         if (externalScreenShot)
         {
-            m_externalBackBuffer->ReadPixels([this](const auto& data) {
-                m_bgfxCallback.CompleteScreenShot(data);
-            });
+            ReadExternalBackBuffer();
         }
 #endif
 

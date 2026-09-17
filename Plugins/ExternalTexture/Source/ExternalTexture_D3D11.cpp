@@ -1,5 +1,5 @@
 #include <Babylon/Plugins/ExternalTexture.h>
-#include <Babylon/Graphics/D3D11Format.h>
+#include <Babylon/Graphics/DeviceQueries.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/Texture.h>
 #include <napi/pointer.h>
