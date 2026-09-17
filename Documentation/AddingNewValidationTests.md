@@ -35,6 +35,10 @@ defines with ready effects in the active camera's render pass. Utility scenes us
 the main scene's camera participate in the same check. Inspection restores the
 previous render pass, including on errors.
 
+The initial readiness wait and its 10-minute timeout cover both the main scene
+and associated utility scenes. Their pending model/texture loads do not consume
+the subsequent convergence checks.
+
 Readiness polling does not render extra frames or consume `renderCount`. It refreshes
 scene render IDs so material readiness is checked again on the next tick. A scene
 that still has not converged after 240 waiting render-loop ticks fails explicitly
