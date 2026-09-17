@@ -79,6 +79,11 @@ TEST(JavaScript, All)
 #else
         env.Global().Set("hasNativeImageLoading", false);
 #endif
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+        env.Global().Set("hasNativeRendering", false);
+#else
+        env.Global().Set("hasNativeRendering", true);
+#endif
 #ifdef USE_NOOP_METAL_DEVICE
         env.Global().Set("hasGpuRendering", false);
 #else

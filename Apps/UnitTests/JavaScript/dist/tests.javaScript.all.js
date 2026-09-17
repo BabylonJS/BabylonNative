@@ -1,6 +1,99 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./src/tests.nativeEngine.attributeLessInstancing.ts"
+/*!***********************************************************!*\
+  !*** ./src/tests.nativeEngine.attributeLessInstancing.ts ***!
+  \***********************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   registerAttributeLessInstancingTests: () => (/* binding */ registerAttributeLessInstancingTests)
+/* harmony export */ });
+/* harmony import */ var _babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/asyncToGenerator */ "../../node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/regenerator */ "../../node_modules/@babel/runtime/regenerator/index.js");
+/* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var chai__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! chai */ "../../node_modules/chai/index.js");
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babylonjs/core */ "@babylonjs/core");
+/* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_3__);
+
+
+
+
+function registerAttributeLessInstancingTests(
+describe,
+it,
+enabled)
+{
+  describe("NativeEngine attribute-less instancing", function () {
+    (enabled ? it : it.skip)("draws every instance without an instance buffer", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var engine, scene, camera, material, target, _i, _arr, unIndexed, mesh, _i2, _arr2, count, pixels, expected, centers, index, offset;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+            this.timeout(15000);
+            engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.NativeEngine();
+            scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Scene(engine);_context.prev = 1;
+
+            scene.clearColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Color4(0, 0, 0, 1);
+            camera = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.FreeCamera("camera", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Vector3(0, 0, -5), scene);
+            camera.setTarget(_babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Vector3.Zero());
+            material = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.ShaderMaterial("instances", scene, {
+              vertexSource: "\n            precision highp float;\n            attribute vec3 position;\n            varying vec3 instanceColor;\n            void main() {\n              float offset = (float(gl_InstanceID) - 1.0) * 0.6;\n              gl_Position = vec4(position.x * 0.2 + offset, position.y * 0.2, 0.5, 1.0);\n              instanceColor = vec3(float(gl_InstanceID == 0), float(gl_InstanceID == 1), float(gl_InstanceID == 2));\n            }",
+
+
+
+
+
+
+
+
+              fragmentSource: "\n            precision highp float;\n            varying vec3 instanceColor;\n            void main() { gl_FragColor = vec4(instanceColor, 1.0); }"
+
+
+
+            }, { attributes: ["position"], uniforms: [] });
+            material.backFaceCulling = false;
+            target = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.RenderTargetTexture("instances", 64, scene, false);_i = 0, _arr =
+            [false, true];case 2:if (!(_i < _arr.length)) {_context.next = 11;break;}unIndexed = _arr[_i];
+            mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.MeshBuilder.CreatePlane("plane", { size: 2 }, scene);
+            if (unIndexed) {
+              mesh.convertToUnIndexedMesh();
+            }
+            mesh.material = material;
+            target.renderList = [mesh];_i2 = 0, _arr2 =
+            [0, 1, 3];case 3:if (!(_i2 < _arr2.length)) {_context.next = 9;break;}count = _arr2[_i2];
+            mesh.forcedInstanceCount = count;_context.next = 4;return (
+              material.forceCompilationAsync(mesh, { useInstances: count > 0 }));case 4:_context.next = 5;return (
+              scene.whenReadyAsync());case 5:
+            target.render();_context.next = 6;return (
+              target.readPixels());case 6:pixels = _context.sent;if (
+            pixels instanceof Uint8Array) {_context.next = 7;break;}throw (
+              new Error("Expected RGBA8 instance rendering readback"));case 7:
+
+            expected = [
+            [255, 0, 0, 255],
+            count === 3 ? [0, 255, 0, 255] : [0, 0, 0, 255],
+            count === 3 ? [0, 0, 255, 255] : [0, 0, 0, 255]];
+
+            centers = [13, 32, 51];
+            for (index = 0; index < centers.length; ++index) {
+              offset = (32 * 64 + centers[index]) * 4;
+              (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(Array.from(pixels.subarray(offset, offset + 4)), "unIndexed=".concat(
+                unIndexed, ", count=").concat(count, ", instance=").concat(index)).
+              to.deep.equal(expected[index]);
+            }case 8:_i2++;_context.next = 3;break;case 9:
+
+            mesh.dispose();case 10:_i++;_context.next = 2;break;case 11:_context.prev = 11;
+
+
+            scene.dispose();
+            engine.dispose();return _context.finish(11);case 12:case "end":return _context.stop();}}, _callee, this, [[1,, 11, 12]]);}))
+
+    );
+  });
+}
+
+/***/ },
+
 /***/ "./src/tests.nativeEngine.png.ts"
 /*!***************************************!*\
   !*** ./src/tests.nativeEngine.png.ts ***!
@@ -28362,7 +28455,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @babylonjs/materials */ "@babylonjs/core");
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_5__);
 /* harmony import */ var _tests_nativeEngine_png__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./tests.nativeEngine.png */ "./src/tests.nativeEngine.png.ts");
+/* harmony import */ var _tests_nativeEngine_attributeLessInstancing__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./tests.nativeEngine.attributeLessInstancing */ "./src/tests.nativeEngine.attributeLessInstancing.ts");
 function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];if (!t) {if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {t && (r = t);var _n = 0,F = function F() {};return { s: F, n: function n() {return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] };}, e: function e(r) {throw r;}, f: F };}throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");}var o,a = !0,u = !1;return { s: function s() {t = t.call(r);}, n: function n() {var r = t.next();return a = r.done, r;}, e: function e(r) {u = !0, o = r;}, f: function f() {try {a || null == t.return || t.return();} finally {if (u) throw o;}} };}function _unsupportedIterableToArray(r, a) {if (r) {if ("string" == typeof r) return _arrayLikeToArray(r, a);var t = {}.toString.call(r).slice(8, -1);return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;}}function _arrayLikeToArray(r, a) {(null == a || a > r.length) && (a = r.length);for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];return n;}
+
 
 
 
@@ -28384,6 +28479,7 @@ mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
 
 
 (0,_tests_nativeEngine_png__WEBPACK_IMPORTED_MODULE_6__.registerPngTests)(describe, it, hasGpuRendering && hasNativeImageLoading);
+(0,_tests_nativeEngine_attributeLessInstancing__WEBPACK_IMPORTED_MODULE_7__.registerAttributeLessInstancingTests)(describe, it, hasNativeRendering);
 
 describe("RequestFile", function () {
   this.timeout(0);
