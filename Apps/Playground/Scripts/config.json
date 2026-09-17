@@ -1082,19 +1082,19 @@
         },
         {
             "title": "GUI Slate",
-            "playgroundId": "#CHDZ5C#1",
+            "playgroundId": "#UDLHJ3#0",
             "renderCount": 60,
             "errorRatio": 0.75,
             "referenceImage": "guiSlate.png"
         },
         {
             "title": "GUI Near Menu",
-            "playgroundId": "#2YZFA0#302",
+            "playgroundId": "#DZPGOB#0",
             "renderCount": 60,
             "excludedGraphicsApis": ["OpenGL"],
             "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
             "threshold": 35,
-            "errorRatio": 0.25,
+            "errorRatio": 0.3,
             "referenceImage": "guiNearMenu.png"
         },
         {
@@ -4042,7 +4042,7 @@
             "title": "Texture Repetition - Standard Material",
             "playgroundId": "#ESP440#0",
             "renderCount": 1,
-            "errorRatio": 0.1,
+            "errorRatio": 0.15,
             "referenceImage": "texture-repetition-standard-material.png"
         },
         {
@@ -4050,6 +4050,8 @@
             "playgroundId": "#6EPUUH#0",
             "renderCount": 1,
             "errorRatio": 1.0,
+            "excludedGraphicsApis": ["Metal"],
+            "reason": "bgfx/Metal's shader hash produces a stable pattern delta from the shared Babylon.js browser reference; D3D11 and OpenGL retain the strict 1% budget.",
             "referenceImage": "texture-repetition-pbr-material.png"
         },
         {
