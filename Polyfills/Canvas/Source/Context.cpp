@@ -553,10 +553,13 @@ namespace Babylon::Polyfills::Internal
         //By default m_rectangleClipping is not set, in this case we use the canvas width and height.
         auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetWidth();
         auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
+        // Canvas rectangles can extend left/up; NanoVG scissors require positive extents.
+        const auto left = m_rectangleClipping.left + std::min(w, 0.f);
+        const auto top = m_rectangleClipping.top + std::min(h, 0.f);
 
         // Extend the clip one pixel toward the left/top because NanoVG AA gets cut a bit short.
         // A nested clip must not expand its parent's clipping region.
-        nvgIntersectScissor(*m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, w + 1, h + 1);
+        nvgIntersectScissor(*m_nvg, left - 1, top - 1, std::abs(w) + 1, std::abs(h) + 1);
     }
 
     void Context::StrokeRect(const Napi::CallbackInfo& info)
