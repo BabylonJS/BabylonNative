@@ -82,8 +82,11 @@ namespace Babylon::Graphics
         // Create Babylon-owned textures with BGFX_TEXTURE_BLIT_DST to match web behavior.
         const auto createFlags = nativeTextureHandle == 0 ? flags | BGFX_TEXTURE_BLIT_DST : flags;
 
-        // Make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-        const auto* mem = nativeTextureHandle == 0 && (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
+        const bool renderTarget = (flags & BGFX_TEXTURE_RT_MASK) != 0;
+        const bool msaaSample = (flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 &&
+            (flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
+        // D3D11 forbids initial data for multisampled storage; it must be initialized by a framebuffer clear.
+        const auto* mem = nativeTextureHandle == 0 && renderTarget && !msaaSample ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
 
         m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, createFlags, mem, nativeTextureHandle);
         if (!bgfx::isValid(m_handle))
