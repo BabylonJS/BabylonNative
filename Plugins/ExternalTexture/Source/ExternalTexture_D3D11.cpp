@@ -3,6 +3,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/Texture.h>
 #include <napi/pointer.h>
+#include <bx/bx.h>
 #include <winrt/base.h>
 
 #include "ExternalTexture_Base.h"
@@ -57,7 +58,7 @@ namespace Babylon::Plugins
                 }
             }
 
-            const DXGI_FORMAT targetFormat = overrideFormat.value_or(desc.Format);
+            DXGI_FORMAT targetFormat = overrideFormat.has_value() ? overrideFormat.value() : desc.Format;
             if (const auto format = Graphics::D3D11TextureFormats::TryGetBgfxTextureFormat(targetFormat))
             {
                 info.Format = format->Format;
