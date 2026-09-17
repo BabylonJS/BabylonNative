@@ -453,3 +453,61 @@ test("an initial readiness timeout prevents a late callback from starting render
     assert.equal(runner.scenes[0].disposed, 1);
     assert.deepEqual(runner.exits, [-1]);
 });
+
+for (const firstReady of ["main", "utility"]) {
+    test(`initial readiness waits for main and utility resources (${firstReady} first)`, () => {
+        let utility;
+        const runner = createRunner({
+            createScene(engine) {
+                const scene = makeScene(engine);
+                scene.deferReady = true;
+                utility = makeScene(engine);
+                utility.deferReady = true;
+                utility.activeCamera = scene.activeCamera;
+                engine._virtualScenes.push(utility);
+                return scene;
+            },
+        });
+        const main = runner.scenes[0];
+        const first = firstReady === "main" ? main : utility;
+        const second = firstReady === "main" ? utility : main;
+        assert.equal(runner.callbacks.length, 0);
+        first.readyCallback();
+        runner.tick();
+        assert.equal(runner.callbacks.length, 0);
+        assert.equal(main.rendered, 0);
+        assert.equal(main.renderId, 0);
+        assert.equal(utility.renderId, 0);
+        second.readyCallback();
+        runner.tick();
+        runner.flushTimers();
+        assert.equal(runner.callbacks.length, 1);
+        assert.equal(main.rendered, 1);
+        assert.deepEqual(runner.reads, [1]);
+        assert.deepEqual(runner.exits, [0]);
+    });
+}
+
+test("an initial utility readiness timeout stops all late callbacks", () => {
+    let utility;
+    const runner = createRunner({
+        createScene(engine) {
+            const scene = makeScene(engine);
+            scene.deferReady = true;
+            utility = makeScene(engine);
+            utility.deferReady = true;
+            utility.activeCamera = scene.activeCamera;
+            engine._virtualScenes.push(utility);
+            return scene;
+        },
+    });
+    assert.equal(utility.onReadyTimeoutDuration, 10 * 60 * 1000);
+    utility.readyTimeout();
+    runner.scenes[0].readyCallback();
+    utility.readyCallback();
+    assert.equal(runner.callbacks.length, 0);
+    assert.equal(runner.scenes[0].disposed, 1);
+    assert.equal(runner.errors.length, 1);
+    assert.deepEqual(runner.reads, []);
+    assert.deepEqual(runner.exits, [-1]);
+});

@@ -400,28 +400,7 @@
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
         };
 
-        // Babylon's Scene.executeWhenReady gives up after Scene.onReadyTimeoutDuration
-        // (default 120s): once that elapses it fires onReadyTimeoutObservable and
-        // silently drops the executeWhenReady callback. Some validation scenes load
-        // very large assets (e.g. the EXR Loader's 3240x4800 RGBA32F image, whose
-        // gamma-correct CPU mip generation takes ~3 min under ASAN on the 2-core CI
-        // runner), which legitimately exceeds 120s. Without this the callback is
-        // dropped, the render loop never starts, and the test hangs until the CI
-        // job times out. Extend the budget generously and convert a genuine
-        // never-ready scene into a fast test failure instead of a silent hang.
-        currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
-        currentScene.onReadyTimeoutObservable.addOnce(function () {
-            if (stopped) {
-                return;
-            }
-            stopped = true;
-            evaluated = true;
-            console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
-                (currentScene.onReadyTimeoutDuration / 1000) + "s.");
-            failTest(done);
-        });
-
-        currentScene.executeWhenReady(function () {
+        const startRendering = function () {
             if (stopped) {
                 return;
             }
@@ -490,7 +469,37 @@
                     failTest(done);
                 }
             });
-        }, true);
+        };
+
+        // Resource loading belongs to the initial readiness budget, including
+        // utility-scene models/textures; it must not consume convergence ticks.
+        const readinessScenes = getConvergenceScenes(currentScene);
+        let pendingReadyScenes = readinessScenes.length;
+        for (let i = 0; i < readinessScenes.length; i++) {
+            const scene = readinessScenes[i];
+            // Scene.executeWhenReady drops its callback on timeout. Large EXR
+            // loads can exceed the default 120s under ASAN; retain the 10m budget
+            // and turn a genuine timeout into explicit, once-only failure.
+            scene.onReadyTimeoutDuration = 10 * 60 * 1000;
+            scene.onReadyTimeoutObservable.addOnce(function () {
+                if (stopped) {
+                    return;
+                }
+                stopped = true;
+                evaluated = true;
+                console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
+                    (scene.onReadyTimeoutDuration / 1000) + "s.");
+                failTest(done);
+            });
+            scene.executeWhenReady(function () {
+                if (stopped) {
+                    return;
+                }
+                if (--pendingReadyScenes === 0) {
+                    startRendering();
+                }
+            }, true);
+        }
     }
 
     function loadPlayground(test, done, referenceImage, compareFunction) {
