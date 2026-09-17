@@ -99,6 +99,7 @@ namespace Babylon::Plugins
 
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
+        // Access to the supplied Texture wrapper must complete before this call returns.
         CameraDimensions UpdateCameraTexture(Graphics::Texture& texture);
         TakePhotoTask TakePhotoAsync(PhotoSettings photoSettings);
 

@@ -1,47 +1,15 @@
 #pragma once
 
 #include <bgfx/bgfx.h>
-#include <cstdint>
-#include <memory>
 
 namespace Babylon::Graphics
 {
     class DeviceContext;
 
+    // This class is not thread-safe. Callers must serialize all access.
     class Texture final
     {
-        struct DeferredUpdateState;
-
     public:
-        class DeferredUpdate final
-        {
-        public:
-            // Matches only the texture state and generation captured by each token.
-            bool Matches(const DeferredUpdate& other) const;
-
-            // Returns false if the texture was disposed, destroyed, or recreated since
-            // this update was captured. The token does not keep the Texture wrapper alive.
-            bool TryCreate2D(uint16_t width, uint16_t height, uintptr_t nativeTextureHandle);
-
-        private:
-            friend class Texture;
-
-            DeferredUpdate(
-                std::shared_ptr<DeferredUpdateState> state,
-                uint64_t generation,
-                bool hasMips,
-                uint16_t numLayers,
-                bgfx::TextureFormat::Enum format,
-                uint64_t flags);
-
-            std::shared_ptr<DeferredUpdateState> m_state;
-            uint64_t m_generation;
-            bool m_hasMips;
-            uint16_t m_numLayers;
-            bgfx::TextureFormat::Enum m_format;
-            uint64_t m_flags;
-        };
-
         Texture(DeviceContext& deviceContext);
         ~Texture();
 
@@ -51,7 +19,6 @@ namespace Babylon::Graphics
         void Dispose();
 
         bool IsValid() const;
-        DeferredUpdate CreateDeferredUpdate() const;
 
         void Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle = 0);
         void Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch = UINT16_MAX);
@@ -89,16 +56,16 @@ namespace Babylon::Graphics
         // means "unset"; a generation mismatch means a mid-frame view flush has since reset the
         // view counter and the reservation no longer orders before later views. In both cases
         // consumers fall back to a freshly peeked view.
-        bgfx::ViewId BlitViewId() const;
-        uint32_t BlitViewIdGeneration() const;
-        void BlitViewId(bgfx::ViewId viewId, uint32_t generation);
+        bgfx::ViewId BlitViewId() const { return m_blitViewId; }
+        uint32_t BlitViewIdGeneration() const { return m_blitViewIdGeneration; }
+        void BlitViewId(bgfx::ViewId viewId, uint32_t generation)
+        {
+            m_blitViewId = viewId;
+            m_blitViewIdGeneration = generation;
+        }
 
     private:
-        static void DisposeHandle(DeferredUpdateState& state);
-        static void Create2DLocked(DeferredUpdateState& state, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle);
-
-        static void SetMetadata(
-            DeferredUpdateState& state,
+        void SetMetadata(
             uint16_t width,
             uint16_t height,
             uint16_t depth,
@@ -109,6 +76,23 @@ namespace Babylon::Graphics
             bgfx::TextureFormat::Enum format,
             uint64_t flags);
 
-        std::shared_ptr<DeferredUpdateState> m_deferredUpdateState;
+        bgfx::TextureHandle m_handle{bgfx::kInvalidHandle};
+        bool m_ownsHandle{false};
+        uint16_t m_width{0};
+        uint16_t m_height{0};
+        bool m_hasMips{false};
+        bool m_isCube{false};
+        bool m_is3D{false};
+        uint16_t m_numLayers{0};
+        uint16_t m_depth{0};
+        bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Enum::Unknown};
+        uint64_t m_flags{BGFX_TEXTURE_NONE};
+        uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
+        uint16_t m_viewFirstLayer{0};
+        uint16_t m_viewNumLayers{0};
+        bgfx::ViewId m_blitViewId{UINT16_MAX};
+        uint32_t m_blitViewIdGeneration{0};
+        uintptr_t m_deviceID;
+        DeviceContext& m_deviceContext;
     };
 }

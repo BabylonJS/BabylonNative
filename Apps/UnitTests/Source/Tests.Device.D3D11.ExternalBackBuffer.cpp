@@ -4,6 +4,7 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/FrameBuffer.h>
+#include <Babylon/Graphics/Texture.h>
 
 #include "Helpers.h"
 
@@ -443,4 +444,54 @@ TEST(Device, WindowDepthBackBufferAcceptsDefaultViewAfterRejection)
     Babylon::AppRuntime runtime{};
     auto& context = GetContext(device, runtime);
     ExpectSolidColor(ClearAndCapture(device, context, 0x4080c0ff), 32, 24, 0x4080c0ff);
+}
+
+TEST(Device, NativeImportRetainsResourceWithoutDeferringWrapperAccess)
+{
+    for (uint32_t action : {0u, 1u, 2u})
+    {
+        SCOPED_TRACE(action);
+        Babylon::Graphics::Device device{g_deviceConfig};
+        Babylon::AppRuntime runtime{};
+        auto& context = GetContext(device, runtime);
+        device.StartRenderingCurrentFrame();
+
+        auto native = std::shared_ptr<ID3D11Resource>{
+            Helpers::CreateTexture(device.GetPlatformInfo().Device, 4, 4),
+            [](ID3D11Resource* resource) { Helpers::DestroyTexture(resource); }};
+        std::weak_ptr<ID3D11Resource> retained = native;
+        auto texture = std::make_unique<Babylon::Graphics::Texture>(context);
+        texture->Create2D(4, 4, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_NONE,
+            reinterpret_cast<uintptr_t>(native.get()));
+        arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation::none(),
+            [native] { (void)native; });
+        native.reset();
+        EXPECT_FALSE(retained.expired());
+
+        if (action == 0)
+        {
+            texture->Dispose();
+        }
+        else if (action == 1)
+        {
+            texture.reset();
+        }
+        else
+        {
+            texture->Create2D(8, 8, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_NONE);
+        }
+
+        device.FinishRenderingCurrentFrame();
+        EXPECT_TRUE(retained.expired());
+        if (action == 0)
+        {
+            EXPECT_FALSE(texture->IsValid());
+        }
+        else if (action == 2)
+        {
+            EXPECT_TRUE(texture->IsValid());
+            EXPECT_EQ(texture->Width(), 8);
+            EXPECT_EQ(texture->Height(), 8);
+        }
+    }
 }
