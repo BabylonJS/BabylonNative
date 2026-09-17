@@ -19,6 +19,7 @@
     const cliCaptureFrame = (typeof opts.captureFrame === "number" && opts.captureFrame > 0) ? (opts.captureFrame | 0) : 0;
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
+    const MAX_CONVERGENCE_TICKS = 240;
 
     function shouldRunTest(test, index) {
         if (testIndices.length > 0 && testIndices.indexOf(index) === -1) {
@@ -223,10 +224,11 @@
 
     // Random replacement
     let seed = 1;
-    Math.random = function () {
+    function seededRandom() {
         const x = Math.sin(seed++) * 10000;
         return x - Math.floor(x);
     }
+    Math.random = seededRandom;
 
     function compare(test, renderData, referenceImage, threshold, errorRatio) {
         const referenceData = TestUtils.getImageData(referenceImage);
@@ -312,6 +314,59 @@
         });
     }
 
+    function isSceneConverged(scene) {
+        if (!scene.isReady()) {
+            return false;
+        }
+        for (let i = 0; i < scene.textures.length; i++) {
+            const texture = scene.textures[i];
+            if (typeof texture.guiIsReady === "function" && !texture.guiIsReady()) {
+                return false;
+            }
+        }
+
+        // Hot-swapping materials may report ready while their replacement effect is
+        // still compiling. Inspect the camera's draw wrappers, not an unused pass.
+        const engine = scene.getEngine();
+        const previousRenderPassId = engine.currentRenderPassId;
+        engine.currentRenderPassId = scene.activeCamera ? scene.activeCamera.renderPassId : previousRenderPassId;
+        try {
+            for (let i = 0; i < scene.meshes.length; i++) {
+                const mesh = scene.meshes[i];
+                if (!mesh.isEnabled() || !mesh.subMeshes || mesh.subMeshes.length === 0) {
+                    continue;
+                }
+                for (let j = 0; j < mesh.subMeshes.length; j++) {
+                    const subMesh = mesh.subMeshes[j];
+                    const defines = subMesh.materialDefines;
+                    if (defines && defines.isDirty) {
+                        return false;
+                    }
+                    const effect = subMesh.effect;
+                    if (effect && !effect.isReady()) {
+                        return false;
+                    }
+                }
+            }
+        } finally {
+            engine.currentRenderPassId = previousRenderPassId;
+        }
+        return true;
+    }
+
+    function getConvergenceScenes(scene) {
+        const scenes = [scene];
+        const virtualScenes = scene.getEngine()._virtualScenes;
+        for (let i = 0; i < virtualScenes.length; i++) {
+            const virtualScene = virtualScenes[i];
+            // Utility layers share the main scene's camera but own their pending resources.
+            if (virtualScene !== scene && virtualScene.activeCamera && virtualScene.activeCamera.getScene() === scene) {
+                scenes.push(virtualScene);
+            }
+        }
+        return scenes;
+    }
+
     function processCurrentScene(test, renderImage, done, compareFunction) {
         currentScene.useConstantAnimationDeltaTime = true;
         // Frame at which to read back the framebuffer & validate. This is the
@@ -335,6 +390,7 @@
         let stopped = false;
         let pendingScreenshot = null;
         let evaluated = false;
+        let convergenceTicks = 0;
 
         const runEvaluation = function (screenshot) {
             if (evaluated) {
@@ -355,17 +411,43 @@
         // never-ready scene into a fast test failure instead of a silent hang.
         currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
         currentScene.onReadyTimeoutObservable.addOnce(function () {
+            if (stopped) {
+                return;
+            }
+            stopped = true;
             console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
                 (currentScene.onReadyTimeoutDuration / 1000) + "s.");
             failTest(done);
         });
 
         currentScene.executeWhenReady(function () {
+            if (stopped) {
+                return;
+            }
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
             }
             engine.runRenderLoop(function () {
                 try {
+                    if (stopped) {
+                        return;
+                    }
+                    const convergenceScenes = getConvergenceScenes(currentScene);
+                    if (!convergenceScenes.every(isSceneConverged)) {
+                        if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
+                            stopped = true;
+                            console.error("Scene '" + (test.title || "?") + "' did not converge within " +
+                                MAX_CONVERGENCE_TICKS + " render-loop ticks (scene, material, or GUI readiness).");
+                            failTest(done);
+                            return;
+                        }
+                        convergenceTicks++;
+                        // Refresh material readiness without rendering extra animation/particle frames.
+                        for (let i = 0; i < convergenceScenes.length; i++) {
+                            convergenceScenes[i].incrementRenderId();
+                        }
+                        return;
+                    }
                     frameIndex++;
 
                     if (captureFrame > 0 && frameIndex === captureFrame && TestUtils.captureNextFrame) {
@@ -400,6 +482,7 @@
                     }
                 }
                 catch (e) {
+                    stopped = true;
                     console.error(e);
                     failTest(done);
                 }
@@ -633,6 +716,7 @@
         TestUtils.setTitle(testInfo);
 
         seed = 1;
+        Math.random = seededRandom;
 
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);

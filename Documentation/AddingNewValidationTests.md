@@ -28,6 +28,27 @@ In order to add a new test scene, first thing to do is to add a few lines in `Ap
 `playgroundId` : the snippet id of the playground you want to test
 `referenceImage` : the reference image name you want to compare to. You don't have a reference yet, so choose a self-explanatory name with .png extension.
 
+# Readiness and deterministic capture
+
+The Native runner waits for scene readiness, GUI image readiness, and clean material
+defines with ready effects in the active camera's render pass. Utility scenes using
+the main scene's camera participate in the same check. Inspection restores the
+previous render pass, including on errors.
+
+Readiness polling does not render extra frames or consume `renderCount`. It refreshes
+scene render IDs so material readiness is checked again on the next tick. A scene
+that still has not converged after 240 waiting render-loop ticks fails explicitly
+and follows normal once-only cleanup and suite continuation. Screenshot and
+RenderDoc capture indices still count rendered frames only.
+
+Each test restores both the seeded `Math.random` function and its seed, so a snippet
+that replaces `Math.random` cannot change the sequence used by the next test.
+
+The host-independent runner regressions execute the complete script with simulated
+host services. Run them from the repository root with
+`node --test Apps/Playground/Tests/validation_native.test.cjs`; CI runs them separately
+from GPU validation.
+
 # Generate Reference Images
 
 Your test list is updated and your playground is ready to test. it's now time to generate a reference image.
