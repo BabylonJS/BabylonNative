@@ -2467,10 +2467,16 @@ namespace Babylon
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
 
         // A single render target is just the zero-or-one color attachment case of the shared implementation.
+        const bool requestDepthStencilTexture = texture != nullptr && !texture->IsValid();
+        if (requestDepthStencilTexture && !generateDepth && !generateStencilBuffer)
+        {
+            throw Napi::Error::New(info.Env(), "An uninitialized texture requires a depth/stencil attachment");
+        }
         Graphics::Texture* const colorTextures[]{texture};
-        const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr ? 1u : 0u};
+        const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr && !requestDepthStencilTexture ? 1u : 0u};
 
-        return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples);
+        return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples,
+            requestDepthStencilTexture ? texture : nullptr);
     }
 
     Napi::Value NativeEngine::CreateMultiFrameBuffer(const Napi::CallbackInfo& info)
@@ -2498,7 +2504,7 @@ namespace Babylon
         return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples);
     }
 
-    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples)
+    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, Graphics::Texture* depthStencilTexture)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
         const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
@@ -2527,6 +2533,8 @@ namespace Babylon
 
         bgfx::TextureHandle depthStencilTextureHandle = BGFX_INVALID_HANDLE;
         int8_t depthStencilAttachmentIndex = -1;
+        bgfx::TextureFormat::Enum depthStencilTextureFormat = bgfx::TextureFormat::Unknown;
+        uint64_t depthStencilTextureFlags = BGFX_TEXTURE_NONE;
         if (generateStencilBuffer || generateDepth)
         {
             if (generateStencilBuffer && !generateDepth)
@@ -2534,7 +2542,13 @@ namespace Babylon
                 JsConsoleLogger::LogWarn(env, "Stencil without depth is not supported, assuming depth and stencil");
             }
 
-            auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | RenderTargetSamplesToBgfxMsaaFlag(samples);
+            const auto msaaFlag = RenderTargetSamplesToBgfxMsaaFlag(samples);
+            auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | msaaFlag;
+            if (depthStencilTexture != nullptr)
+            {
+                // A standalone texture must be readable. Multisampled depth is sampled directly, not resolved.
+                flags = msaaFlag == BGFX_TEXTURE_NONE ? BGFX_TEXTURE_RT : msaaFlag | BGFX_TEXTURE_MSAA_SAMPLE;
+            }
 
             // Pick a depth(/stencil) format the active renderer actually supports as an RT.
             // Plain D32 is not a valid D3D11 depth RT (bgfx maps it to R24G8 with no DSV), and
@@ -2561,6 +2575,8 @@ namespace Babylon
                 throw Napi::Error::New(env, "No supported depth/stencil texture format for frame buffer");
             }
             depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags);
+            depthStencilTextureFormat = depthStencilFormat;
+            depthStencilTextureFlags = flags;
 
             // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
             // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
@@ -2581,7 +2597,13 @@ namespace Babylon
             throw Napi::Error::New(env, "Failed to create frame buffer");
         }
 
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer, depthStencilAttachmentIndex);
+        const bool hasDepthAttachment = generateDepth || generateStencilBuffer;
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, depthStencilAttachmentIndex);
+        if (depthStencilTexture != nullptr)
+        {
+            // The framebuffer owns its depth attachment; expose a non-owning texture for sampling.
+            depthStencilTexture->Attach(depthStencilTextureHandle, width, height, false, 1, depthStencilTextureFormat, depthStencilTextureFlags);
+        }
         return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
