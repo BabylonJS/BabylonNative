@@ -7,6 +7,18 @@ on:
     branches: [master]
 
 jobs:
+  ValidationRunner:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Test validation runner
+        run: node --test Apps/Playground/Tests/validation_native.test.cjs
+
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
     uses: ./.github/workflows/build-macos.yml
