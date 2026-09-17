@@ -18,8 +18,8 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 TEST(NativeEngineCubeRenderTargets, ClearsEachFaceIndependentlyAndPreserves2DDefaults)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
-#ifdef USE_NOOP_METAL_DEVICE
-    GTEST_SKIP() << "GPU readback requires a rendering device";
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP() << "GPU rendering/readback is unavailable in this test configuration";
 #endif
     device.StartRenderingCurrentFrame();
     Babylon::AppRuntime runtime{};
