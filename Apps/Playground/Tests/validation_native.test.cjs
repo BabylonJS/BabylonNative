@@ -37,7 +37,7 @@ function makeScene(engine) {
 }
 
 function createRunner(options = {}) {
-    const state = { scenes: [], callbacks: [], timers: [], errors: [], logs: [], exits: [], reads: [], captures: [] };
+    const state = { scenes: [], callbacks: [], timers: [], errors: [], logs: [], exits: [], reads: [], readbacks: [], captures: [] };
     let math;
     const definitions = options.tests || [{ title: "test", renderCount: options.renderCount || 1 }];
     class Engine {
@@ -77,7 +77,11 @@ function createRunner(options = {}) {
             getImageData: image => image,
             getFrameBufferData(callback) {
                 state.reads.push(context.engine.rendered);
-                callback(new Uint8Array([0, 0, 0, 255]));
+                if (options.deferReadback) {
+                    state.readbacks.push(callback);
+                } else {
+                    callback(new Uint8Array([0, 0, 0, 255]));
+                }
             },
             captureNextFrame: () => state.captures.push(context.engine.rendered + 1),
             writePNG() { throw new Error("Unexpected image write"); },
@@ -242,6 +246,91 @@ test("readiness exceptions restore the render pass and stop stale callbacks", ()
     assert.match(runner.errors[0], /readiness failure/);
     assert.deepEqual(runner.exits, [-1]);
     assert.deepEqual(runner.reads, []);
+});
+
+for (const hook of ["scene", "GUI"]) {
+    test(`${hook} readiness exceptions restore the render pass before cleanup`, () => {
+        const runner = createRunner({
+            createScene(engine) {
+                const scene = makeScene(engine);
+                const throwFromReadiness = () => {
+                    engine.currentRenderPassId = scene.activeCamera.renderPassId;
+                    throw new Error(`${hook} readiness failure`);
+                };
+                if (hook === "scene") {
+                    scene.isReady = throwFromReadiness;
+                } else {
+                    scene.textures.push({ guiIsReady: throwFromReadiness });
+                }
+                return scene;
+            },
+        });
+        runner.tick();
+        assert.equal(runner.engine.currentRenderPassId, 91);
+        runner.flushTimers();
+        runner.callbacks[0]();
+        assert.equal(runner.errors.length, 1);
+        assert.match(runner.errors[0], /readiness failure/);
+        assert.equal(runner.scenes[0].disposed, 1);
+        assert.deepEqual(runner.exits, [-1]);
+        assert.deepEqual(runner.reads, []);
+    });
+}
+
+for (const failure of ["render", "readiness", "convergence", "initial timeout"]) {
+    test(`a pending screenshot cannot evaluate after ${failure} failure`, () => {
+        const runner = createRunner({
+            tests: [{ title: "fails after compare frame" }, { title: "next scene" }],
+            captureFrame: 3,
+            deferReadback: true,
+        });
+        runner.tick();
+        assert.equal(runner.readbacks.length, 1);
+        const scene = runner.scenes[0];
+        if (failure === "initial timeout") {
+            scene.readyTimeout();
+        } else if (failure === "convergence") {
+            scene.ready = false;
+            for (let index = 0; index <= 240; ++index) {
+                runner.tick();
+            }
+        } else {
+            scene[failure === "render" ? "render" : "isReady"] = () => {
+                throw new Error(`${failure} failure`);
+            };
+            runner.tick();
+        }
+        runner.flushTimers();
+        assert.equal(scene.disposed, 1);
+        assert.equal(runner.scenes.length, 2);
+        assert.equal(runner.errors.length, 1);
+        const logsBeforeReadback = runner.logs.slice();
+        assert.doesNotThrow(() => runner.readbacks[0](new Uint8Array([255, 0, 0, 255])));
+        assert.deepEqual(runner.logs, logsBeforeReadback);
+        for (let index = 0; index < 8; ++index) {
+            runner.tick();
+        }
+        runner.readbacks[1](new Uint8Array([0, 0, 0, 255]));
+        runner.flushTimers();
+        assert.deepEqual(runner.exits, [-1]);
+        assert.ok(runner.logs.some(line => /ran=2 passed=1 failed=1/.test(line)));
+    });
+}
+
+test("a delayed screenshot still evaluates after normal rendering completion", () => {
+    const runner = createRunner({ deferReadback: true, captureFrame: 3 });
+    for (let index = 0; index < 8; ++index) {
+        runner.tick();
+    }
+    assert.equal(runner.engine.loop, null);
+    assert.equal(runner.scenes[0].disposed, 0);
+    runner.readbacks[0](new Uint8Array([0, 0, 0, 255]));
+    runner.flushTimers();
+    assert.deepEqual(runner.reads, [1]);
+    assert.deepEqual(runner.captures, [3]);
+    assert.equal(runner.scenes[0].rendered, 8);
+    assert.equal(runner.scenes[0].disposed, 1);
+    assert.deepEqual(runner.exits, [0]);
 });
 
 test("only associated utility scenes participate in convergence", () => {

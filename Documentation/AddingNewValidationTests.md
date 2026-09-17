@@ -39,7 +39,9 @@ Readiness polling does not render extra frames or consume `renderCount`. It refr
 scene render IDs so material readiness is checked again on the next tick. A scene
 that still has not converged after 240 waiting render-loop ticks fails explicitly
 and follows normal once-only cleanup and suite continuation. Screenshot and
-RenderDoc capture indices still count rendered frames only.
+RenderDoc capture indices still count rendered frames only. Failures invalidate
+pending screenshot callbacks so they cannot evaluate after cleanup or during the
+next scene.
 
 Each test restores both the seeded `Math.random` function and its seed, so a snippet
 that replaces `Math.random` cannot change the sequence used by the next test.

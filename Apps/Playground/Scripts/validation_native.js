@@ -315,22 +315,22 @@
     }
 
     function isSceneConverged(scene) {
-        if (!scene.isReady()) {
-            return false;
-        }
-        for (let i = 0; i < scene.textures.length; i++) {
-            const texture = scene.textures[i];
-            if (typeof texture.guiIsReady === "function" && !texture.guiIsReady()) {
-                return false;
-            }
-        }
-
-        // Hot-swapping materials may report ready while their replacement effect is
-        // still compiling. Inspect the camera's draw wrappers, not an unused pass.
         const engine = scene.getEngine();
         const previousRenderPassId = engine.currentRenderPassId;
-        engine.currentRenderPassId = scene.activeCamera ? scene.activeCamera.renderPassId : previousRenderPassId;
         try {
+            if (!scene.isReady()) {
+                return false;
+            }
+            for (let i = 0; i < scene.textures.length; i++) {
+                const texture = scene.textures[i];
+                if (typeof texture.guiIsReady === "function" && !texture.guiIsReady()) {
+                    return false;
+                }
+            }
+
+            // Hot-swapping materials may report ready while their replacement effect is
+            // still compiling. Inspect the camera's draw wrappers, not an unused pass.
+            engine.currentRenderPassId = scene.activeCamera ? scene.activeCamera.renderPassId : previousRenderPassId;
             for (let i = 0; i < scene.meshes.length; i++) {
                 const mesh = scene.meshes[i];
                 if (!mesh.isEnabled() || !mesh.subMeshes || mesh.subMeshes.length === 0) {
@@ -415,6 +415,7 @@
                 return;
             }
             stopped = true;
+            evaluated = true;
             console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
                 (currentScene.onReadyTimeoutDuration / 1000) + "s.");
             failTest(done);
@@ -436,6 +437,7 @@
                     if (!convergenceScenes.every(isSceneConverged)) {
                         if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
                             stopped = true;
+                            evaluated = true;
                             console.error("Scene '" + (test.title || "?") + "' did not converge within " +
                                 MAX_CONVERGENCE_TICKS + " render-loop ticks (scene, material, or GUI readiness).");
                             failTest(done);
@@ -483,6 +485,7 @@
                 }
                 catch (e) {
                     stopped = true;
+                    evaluated = true;
                     console.error(e);
                     failTest(done);
                 }
