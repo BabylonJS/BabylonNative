@@ -18,6 +18,7 @@
 #include <bgfx/bgfx.h>
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+#include <Babylon/Graphics/ImageFormat.h>
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -209,6 +210,12 @@ namespace Babylon
             if (image == nullptr)
             {
                 throw std::runtime_error{"Failed to parse image."};
+            }
+
+            image = Graphics::NormalizePngImage(allocator, image);
+            if (image == nullptr)
+            {
+                throw std::runtime_error{"Failed to normalize PNG image."};
             }
 
             assert(image->m_offset == 0);
