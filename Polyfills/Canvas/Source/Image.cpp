@@ -1,5 +1,6 @@
 #include "Image.h"
 #include "NativeInstanceRegistry.h"
+#include <bx/error.h>
 #include <iterator>
 #include <vector>
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
@@ -117,7 +118,7 @@ namespace Babylon::Polyfills::Internal
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         ReleaseImage();
         auto& allocator = Graphics::DeviceContext::GetDefaultAllocator();
-        m_imageContainer = bimg::imageParse(&allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
+        m_imageContainer = bimg::imageParse(&allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::Count, bx::ErrorIgnore{});
         if (m_imageContainer != nullptr)
         {
             m_imageContainer = Graphics::NormalizePngImage(allocator, m_imageContainer);
