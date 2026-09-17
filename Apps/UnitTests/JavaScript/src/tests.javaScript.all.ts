@@ -34,12 +34,12 @@ Mocha.reporter("spec");
 declare const hostPlatform: string;
 declare const hasGpuRendering: boolean;
 declare const hasNativeImageLoading: boolean;
-declare const hasNativeRendering: boolean;
+declare const hasAttributeLessInstancing: boolean;
 declare const setExitCode: (code: number) => void;
 declare const _native: any;
 
 registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
-registerAttributeLessInstancingTests(describe, it, hasNativeRendering);
+registerAttributeLessInstancingTests(describe, it, hasAttributeLessInstancing);
 
 describe("RequestFile", function () {
   this.timeout(0);
