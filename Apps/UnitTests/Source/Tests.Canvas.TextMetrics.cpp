@@ -1,6 +1,6 @@
-#include "App.h"
-
 #include <gtest/gtest.h>
+
+#include "App.h"
 
 #include "../../../Polyfills/Canvas/Source/nanovg/fontstash.h"
 #include <stb/stb_truetype.h>
