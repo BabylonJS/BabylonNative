@@ -6,6 +6,7 @@
 #include <functional>
 #include <sstream>
 #include <assert.h>
+#include <bx/error.h>
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
@@ -105,7 +106,11 @@ namespace Babylon::Polyfills::Internal
     bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
     {
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
-        m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+        // Avoid bimg's internal BX_ERROR_SCOPE assert for malformed or
+        // unsupported image data. SetSrc handles a null container by invoking
+        // the JavaScript onerror callback.
+        bx::ErrorIgnore parseError;
+        m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8, &parseError);
 
         if (m_imageContainer == nullptr)
         {
