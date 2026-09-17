@@ -41,6 +41,7 @@ set(SOURCES
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
     "Source/Tests.NativeEngine.Teardown.cpp"
+    "Source/Tests.NativeXr.ImageTracking.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
@@ -66,7 +67,7 @@ if(APPLE)
             PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
     endif()
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
-    set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
+    set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY} "-framework CoreGraphics")
 elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App.X11.cpp")
 elseif(WIN32)
@@ -79,9 +80,11 @@ endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
+target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/xr/Include")
 target_include_directories(UnitTests PRIVATE "${BGFX_DIR}/3rdparty")
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
+    PRIVATE arcana
     PRIVATE Blob
     PRIVATE Canvas
     PRIVATE Console

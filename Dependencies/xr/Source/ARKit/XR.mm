@@ -11,6 +11,8 @@
 #import <MetalKit/MetalKit.h>
 
 #import "Include/IXrContextARKit.h"
+#include "ImageTrackingData.h"
+#include "ImageTrackingValidationState.h"
 
 @interface SessionDelegate : NSObject <ARSessionDelegate, MTKViewDelegate>
 @end
@@ -755,6 +757,8 @@ namespace xr {
         }
 
         ~Impl() {
+            imageTrackingValidationState->Deactivate();
+
             if (currentCommandBuffer != nil) {
                 [currentCommandBuffer waitUntilCompleted];
             }
@@ -1398,11 +1402,7 @@ namespace xr {
         }
         
         std::vector<ImageTrackingScore>* GetImageTrackingScores() {
-            if (imageTrackingScoresValid) {
-                return &imageTrackingScores;
-            } else {
-                return nil;
-            }
+            return imageTrackingValidationState->GetScores();
         }
         
         void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>& requests) {
@@ -1411,20 +1411,24 @@ namespace xr {
             }
 
             // Create and resize vectors to hold request results.
-            std::vector<arcana::task<ARReferenceImage*, std::exception_ptr>> validationTasks{};
+            imageTrackingValidationState->Deactivate();
+            auto validationState{std::make_shared<ImageTrackingValidationState>()};
+            imageTrackingValidationState = validationState;
+
+            std::vector<arcana::task<NSInteger, std::exception_ptr>> validationTasks{};
             validationTasks.resize(requests.size());
-            imageTrackingScores.resize(requests.size());
+            validationState->Scores.resize(requests.size());
+            NSMutableArray<ARReferenceImage*>* retainedReferenceImages{[NSMutableArray arrayWithCapacity:requests.size()]};
 
             // Loop over every requested image, and add it to the image database.
             for (size_t i{0}; i < requests.size(); i++) {
                 const ImageTrackingRequest& request{requests[i]};
                 
                 // Convert each image request from a bitmap to a CGImage, and prepare to pass that to the ARKit configuration.
-                const size_t imageBytes{request.stride * request.height};
                 const size_t pixelStride{request.stride / request.width};
                 const size_t bitsPerComponent{static_cast<size_t>(pixelStride == 2 || pixelStride == 6 || pixelStride == 8 ? 16 : 8)};
                 const CGColorSpaceRef colorSpace{pixelStride > 2 ? CGColorSpaceCreateDeviceRGB() : CGColorSpaceCreateDeviceGray()};
-                const CGDataProviderRef provider{CGDataProviderCreateWithData(nil, request.data, imageBytes, nil)};
+                const CGDataProviderRef provider{CreateImageTrackingDataProvider(request.data)};
                 const CGImageRef image{
                     CGImageCreate(
                        request.width,
@@ -1448,25 +1452,24 @@ namespace xr {
                 
                 // Store the index in the name field.
                 referenceImage.name = [NSString stringWithFormat:@"%zu", i];
+                [retainedReferenceImages addObject:referenceImage];
                 
                 // Queue image validation
-                __block arcana::task_completion_source<ARReferenceImage*, std::exception_ptr> tcs{};
+                __block arcana::task_completion_source<NSInteger, std::exception_ptr> tcs{};
                 validationTasks[i] = tcs.as_task();
                 if (@available(iOS 13.0, *)) {
                     [referenceImage validateWithCompletionHandler:^(NSError * _Nullable error) {
                         if (error != nil) {
-                                imageTrackingScores[i] = ImageTrackingScore::UNTRACKABLE;
-                                tcs.complete(nullptr);
+                                validationState->Scores[i] = ImageTrackingScore::UNTRACKABLE;
+                                tcs.complete(-1);
                             } else {
-                                imageTrackingScores[i] = ImageTrackingScore::TRACKABLE;
-                                
-                                // Add image to our image set if it is trackable.
-                                tcs.complete(referenceImage);
+                                validationState->Scores[i] = ImageTrackingScore::TRACKABLE;
+                                tcs.complete(static_cast<NSInteger>(i));
                             }
                     }];
                 } else {
-                    imageTrackingScores[i] = ImageTrackingScore::TRACKABLE;
-                    tcs.complete(referenceImage);
+                    validationState->Scores[i] = ImageTrackingScore::TRACKABLE;
+                    tcs.complete(static_cast<NSInteger>(i));
                 }
                 
                 CGImageRelease(image);
@@ -1475,19 +1478,22 @@ namespace xr {
             }
                 
             // Wait for all scores to calculated on a separate scheduler.
+            ARSession* arSession{SystemImpl.XrContext->Session};
+            SessionDelegate* imageSessionDelegate{sessionDelegate};
             arcana::when_all(gsl::make_span(validationTasks))
-                .then(arcana::inline_scheduler, arcana::cancellation::none(), [this](std::vector<ARReferenceImage*> referenceImages) {
+                .then(arcana::inline_scheduler, arcana::cancellation::none(), [validationState, arSession, imageSessionDelegate, retainedReferenceImages](std::vector<NSInteger> referenceImageIndices) {
+                  validationState->Complete([&] {
                     size_t imageCount{0};
-                    NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:imageTrackingScores.size()]};
-                    for (ARReferenceImage* referenceImage : referenceImages) {
-                        if (referenceImage != nullptr) {
-                            [imageSet addObject: referenceImage];
+                    NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:validationState->Scores.size()]};
+                    for (NSInteger referenceImageIndex : referenceImageIndices) {
+                        if (referenceImageIndex >= 0) {
+                            [imageSet addObject:retainedReferenceImages[static_cast<NSUInteger>(referenceImageIndex)]];
                             imageCount++;
                         }
                     }
                                        
                     // If we have any images that qualified for tracking then enable image detection.
-                    ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(SystemImpl.XrContext->Session.configuration)};
+                    ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(arSession.configuration)};
                     if (imageCount > 0 && configuration != nil) {
                         configuration.detectionImages = imageSet;
                         
@@ -1499,10 +1505,10 @@ namespace xr {
                         // Any additional images will be tracked infrequently at 1 tick every 1-2 seconds.
                         // See: https://developer.apple.com/documentation/arkit/arworldtrackingconfiguration/2968182-maximumnumberoftrackedimages
                         configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
-                        [SystemImpl.XrContext->Session runWithConfiguration: configuration];
-                        [sessionDelegate SetImageDetectionEnabled:true];
-                        imageTrackingScoresValid = true;
+                        [arSession runWithConfiguration: configuration];
+                        [imageSessionDelegate SetImageDetectionEnabled:true];
                     }
+                  });
             });
         }
 
@@ -1531,8 +1537,7 @@ namespace xr {
         std::unordered_map<std::string, Frame::Mesh::Identifier> meshMap{};
         std::unordered_map<uint64_t, FeaturePoint::Identifier> featurePointIDMap{};
         
-        bool imageTrackingScoresValid{ false };
-        std::vector<ImageTrackingScore> imageTrackingScores{};
+        std::shared_ptr<ImageTrackingValidationState> imageTrackingValidationState{std::make_shared<ImageTrackingValidationState>()};
         std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
         std::unordered_map<std::string, Frame::ImageTrackingResult::Identifier> imageTrackingMap{};
         
