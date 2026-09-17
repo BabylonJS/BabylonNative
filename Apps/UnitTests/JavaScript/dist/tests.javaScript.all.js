@@ -28,10 +28,10 @@ it,
 enabled)
 {
   describe("NativeEngine attribute-less instancing", function () {
-    (enabled ? it : it.skip)("draws every instance without an instance buffer", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var engine, scene, camera, material, target, _i, _arr, unIndexed, mesh, _i2, _arr2, count, pixels, expected, centers, index, offset;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+    (enabled ? it : it.skip)("draws every instance without an instance buffer", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var engine, scene, camera, material, target, _i, _arr, unIndexed, mesh, _loop, _i2, _arr2;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
             this.timeout(15000);
             engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.NativeEngine();
-            scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Scene(engine);_context.prev = 1;
+            scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Scene(engine);_context2.prev = 1;
 
             scene.clearColor = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Color4(0, 0, 0, 1);
             camera = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.FreeCamera("camera", new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.Vector3(0, 0, -5), scene);
@@ -53,40 +53,46 @@ enabled)
             }, { attributes: ["position"], uniforms: [] });
             material.backFaceCulling = false;
             target = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.RenderTargetTexture("instances", 64, scene, false);_i = 0, _arr =
-            [false, true];case 2:if (!(_i < _arr.length)) {_context.next = 11;break;}unIndexed = _arr[_i];
+            [false, true];case 2:if (!(_i < _arr.length)) {_context2.next = 7;break;}unIndexed = _arr[_i];
             mesh = _babylonjs_core__WEBPACK_IMPORTED_MODULE_3__.MeshBuilder.CreatePlane("plane", { size: 2 }, scene);
             if (unIndexed) {
               mesh.convertToUnIndexedMesh();
             }
             mesh.material = material;
-            target.renderList = [mesh];_i2 = 0, _arr2 =
-            [0, 1, 3];case 3:if (!(_i2 < _arr2.length)) {_context.next = 9;break;}count = _arr2[_i2];
-            mesh.forcedInstanceCount = count;_context.next = 4;return (
-              material.forceCompilationAsync(mesh, { useInstances: count > 0 }));case 4:_context.next = 5;return (
-              scene.whenReadyAsync());case 5:
-            target.render();_context.next = 6;return (
-              target.readPixels());case 6:pixels = _context.sent;if (
-            pixels instanceof Uint8Array) {_context.next = 7;break;}throw (
-              new Error("Expected RGBA8 instance rendering readback"));case 7:
+            target.renderList = [mesh];_loop = /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _loop() {var count, readinessDeadline, pixels, expected, centers, actual;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+                    count = _arr2[_i2];
+                    mesh.forcedInstanceCount = count;_context.next = 1;return (
+                      material.forceCompilationAsync(mesh, { useInstances: count > 0 }));case 1:_context.next = 2;return (
+                      scene.whenReadyAsync());case 2:
+                    readinessDeadline = Date.now() + 10000;case 3:if (
+                    target.isReadyForRendering()) {_context.next = 6;break;}if (!(
+                    Date.now() >= readinessDeadline)) {_context.next = 4;break;}throw (
+                      new Error("Render target did not become ready: unIndexed=".concat(unIndexed, ", count=").concat(count)));case 4:_context.next = 5;return (
 
-            expected = [
-            [255, 0, 0, 255],
-            count === 3 ? [0, 255, 0, 255] : [0, 0, 0, 255],
-            count === 3 ? [0, 0, 255, 255] : [0, 0, 0, 255]];
+                      new Promise(function (resolve) {return setTimeout(resolve, 10);}));case 5:_context.next = 3;break;case 6:
 
-            centers = [13, 32, 51];
-            for (index = 0; index < centers.length; ++index) {
-              offset = (32 * 64 + centers[index]) * 4;
-              (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(Array.from(pixels.subarray(offset, offset + 4)), "unIndexed=".concat(
-                unIndexed, ", count=").concat(count, ", instance=").concat(index)).
-              to.deep.equal(expected[index]);
-            }case 8:_i2++;_context.next = 3;break;case 9:
+                    target.render();_context.next = 7;return (
+                      target.readPixels());case 7:pixels = _context.sent;if (
+                    pixels instanceof Uint8Array) {_context.next = 8;break;}throw (
+                      new Error("Expected RGBA8 instance rendering readback"));case 8:
 
-            mesh.dispose();case 10:_i++;_context.next = 2;break;case 11:_context.prev = 11;
+                    expected = [
+                    [255, 0, 0, 255],
+                    count === 3 ? [0, 255, 0, 255] : [0, 0, 0, 255],
+                    count === 3 ? [0, 0, 255, 255] : [0, 0, 0, 255]];
+
+                    centers = [13, 32, 51];
+                    actual = centers.map(function (center) {
+                      var offset = (32 * 64 + center) * 4;
+                      return Array.from(pixels.subarray(offset, offset + 4));
+                    });
+                    (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(actual, "unIndexed=".concat(unIndexed, ", count=").concat(count)).to.deep.equal(expected);case 9:case "end":return _context.stop();}}, _loop);});_i2 = 0, _arr2 = [0, 1, 3];case 3:if (!(_i2 < _arr2.length)) {_context2.next = 5;break;}return _context2.delegateYield(_loop(), "t0", 4);case 4:_i2++;_context2.next = 3;break;case 5:
+
+            mesh.dispose();case 6:_i++;_context2.next = 2;break;case 7:_context2.prev = 7;
 
 
             scene.dispose();
-            engine.dispose();return _context.finish(11);case 12:case "end":return _context.stop();}}, _callee, this, [[1,, 11, 12]]);}))
+            engine.dispose();return _context2.finish(7);case 8:case "end":return _context2.stop();}}, _callee, this, [[1,, 7, 8]]);}))
 
     );
   });
@@ -28479,7 +28485,7 @@ mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
 
 
 (0,_tests_nativeEngine_png__WEBPACK_IMPORTED_MODULE_6__.registerPngTests)(describe, it, hasGpuRendering && hasNativeImageLoading);
-(0,_tests_nativeEngine_attributeLessInstancing__WEBPACK_IMPORTED_MODULE_7__.registerAttributeLessInstancingTests)(describe, it, hasNativeRendering);
+(0,_tests_nativeEngine_attributeLessInstancing__WEBPACK_IMPORTED_MODULE_7__.registerAttributeLessInstancingTests)(describe, it, hasAttributeLessInstancing);
 
 describe("RequestFile", function () {
   this.timeout(0);
