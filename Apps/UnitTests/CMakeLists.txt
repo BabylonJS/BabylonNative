@@ -19,6 +19,10 @@ set(TEST_ASSETS
     "JavaScript/dist/tests.shaderCache.basicScene.js"
     "JavaScript/dist/tests.shaderCompilation.comprehensiveGLSL.js")
 
+set(PACKAGED_TEST_ASSETS
+    "Assets/droidsans.ttf"
+    "Assets/droidsans.LICENSE.txt")
+
 file(GLOB TEST_SCRIPTS "JavaScript/src/*.ts")
 set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 
@@ -73,10 +77,9 @@ elseif(WIN32)
     set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
-add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
 target_include_directories(UnitTests PRIVATE "${BGFX_DIR}/3rdparty")
-target_compile_definitions(UnitTests PRIVATE CANVAS_TEST_FONT_PATH="${BGFX_DIR}/examples/runtime/font/droidsans.ttf")
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
     PRIVATE Blob
@@ -152,7 +155,7 @@ if(ANGLE_LIBEGL)
     )
 endif()
 
-foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS})
+foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS})
     get_filename_component(ASSET_NAME "${ASSET}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
@@ -166,4 +169,5 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Assets PREFIX Assets FILES ${PACKAGED_TEST_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src PREFIX TypeScript FILES ${TEST_SCRIPTS})

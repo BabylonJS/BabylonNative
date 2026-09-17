@@ -36,6 +36,16 @@ jobs:
       configuration: 'RelWithDebInfo'
     displayName: 'Build'
 
+  - powershell: |
+      $assetDirectory = "build\Apps\UnitTests\RelWithDebInfo\Assets"
+      @("droidsans.ttf", "droidsans.LICENSE.txt") | ForEach-Object {
+        $assetPath = Join-Path $assetDirectory $_
+        if (!(Test-Path -LiteralPath $assetPath -PathType Leaf) -or (Get-Item -LiteralPath $assetPath).Length -eq 0) {
+          throw "Required packaged UnitTests asset is missing or empty: $assetPath"
+        }
+      }
+    displayName: 'Validate packaged UnitTests font'
+
   - script: |
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
