@@ -47,6 +47,13 @@ export function registerAttributeLessInstancingTests(
             mesh.forcedInstanceCount = count;
             await material.forceCompilationAsync(mesh, { useInstances: count > 0 });
             await scene.whenReadyAsync();
+            const readinessDeadline = Date.now() + 10000;
+            while (!target.isReadyForRendering()) {
+              if (Date.now() >= readinessDeadline) {
+                throw new Error(`Render target did not become ready: unIndexed=${unIndexed}, count=${count}`);
+              }
+              await new Promise<void>(resolve => setTimeout(resolve, 10));
+            }
             target.render();
             const pixels = await target.readPixels();
             if (!(pixels instanceof Uint8Array)) {
@@ -58,12 +65,11 @@ export function registerAttributeLessInstancingTests(
               count === 3 ? [0, 0, 255, 255] : [0, 0, 0, 255]
             ];
             const centers = [13, 32, 51];
-            for (let index = 0; index < centers.length; ++index) {
-              const offset = (32 * 64 + centers[index]) * 4;
-              expect(Array.from(pixels.subarray(offset, offset + 4)),
-                `unIndexed=${unIndexed}, count=${count}, instance=${index}`)
-                .to.deep.equal(expected[index]);
-            }
+            const actual = centers.map(center => {
+              const offset = (32 * 64 + center) * 4;
+              return Array.from(pixels.subarray(offset, offset + 4));
+            });
+            expect(actual, `unIndexed=${unIndexed}, count=${count}`).to.deep.equal(expected);
           }
           mesh.dispose();
         }
