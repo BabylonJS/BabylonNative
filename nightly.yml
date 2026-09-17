@@ -36,6 +36,48 @@ jobs:
       configuration: 'RelWithDebInfo'
     displayName: 'Build'
 
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: '$(Build.SourcesDirectory)\build\Apps\Playground'
+      includeRootFolder: false
+      archiveType: zip
+      archiveFile: '$(Build.ArtifactStagingDirectory)\BabylonNativeNightlyPlayground.zip'
+      replaceExistingArchive: true
+    displayName: 'Archive Playground'
+
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: '$(Build.SourcesDirectory)\build\Apps\UnitTests'
+      includeRootFolder: false
+      archiveType: zip
+      archiveFile: '$(Build.ArtifactStagingDirectory)\BabylonNativeNightlyUnitTests.zip'
+      replaceExistingArchive: true
+    displayName: 'Archive UnitTests'
+
+  - task: ExtractFiles@1
+    inputs:
+      archiveFilePatterns: '$(Build.ArtifactStagingDirectory)\BabylonNativeNightlyPlayground.zip'
+      destinationFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground'
+      cleanDestinationFolder: true
+    displayName: 'Extract Playground'
+
+  - task: ExtractFiles@1
+    inputs:
+      archiveFilePatterns: '$(Build.ArtifactStagingDirectory)\BabylonNativeNightlyUnitTests.zip'
+      destinationFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests'
+      cleanDestinationFolder: true
+    displayName: 'Extract UnitTests'
+
+  - powershell: |
+      $assetDirectory = "$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests\RelWithDebInfo\Assets"
+      @("droidsans.ttf", "droidsans.LICENSE.txt") | ForEach-Object {
+        $assetPath = Join-Path $assetDirectory $_
+        if (!(Test-Path -LiteralPath $assetPath -PathType Leaf) -or (Get-Item -LiteralPath $assetPath).Length -eq 0) {
+          throw "Required packaged UnitTests asset is missing or empty: $assetPath"
+        }
+      }
+    displayName: 'Validate packaged UnitTests font'
+
   - script: |
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
@@ -48,25 +90,25 @@ jobs:
     displayName: 'Enable Crash Dump'
 
   - script: |
-      Playground.exe app:///Scripts/validation_native.js
-    workingDirectory: build/Apps/Playground/RelWithDebInfo
-    displayName: 'Run VisualizationTests'
+      Playground.exe --headless app:///Scripts/validation_native.js
+    workingDirectory: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground\RelWithDebInfo'
+    displayName: 'Run packaged VisualizationTests'
 
   - script: |
       UnitTests.exe
-    workingDirectory: build/Apps/UnitTests/RelWithDebInfo
-    displayName: 'Run UnitTests'
+    workingDirectory: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests\RelWithDebInfo'
+    displayName: 'Run packaged UnitTests'
 
   - task: PublishBuildArtifacts@1
     displayName: Upload Errors images artifact
     condition: failed()
     inputs:
-      PathtoPublish: build/Apps/Playground/Errors
+      PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground\Errors'
       ArtifactName: ErrorImages
 
   - task: CopyFiles@2
     inputs:
-      sourceFolder: "build/Apps/Playground/RelWithDebInfo"
+      sourceFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground\RelWithDebInfo'
       contents: Playground.*
       targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
       cleanTargetFolder: false
@@ -75,7 +117,7 @@ jobs:
 
   - task: CopyFiles@2
     inputs:
-      sourceFolder: "build/Apps/UnitTests/RelWithDebInfo"
+      sourceFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests\RelWithDebInfo'
       contents: UnitTests.*
       targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
       cleanTargetFolder: false
@@ -91,12 +133,14 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     displayName: Upload Playground
+    condition: succeeded()
     inputs:
-      PathtoPublish: build/Apps/Playground
+      PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground'
       ArtifactName: BabylonNativeNightlyPlayground
 
   - task: PublishBuildArtifacts@1
     displayName: Upload UnitTests
+    condition: succeeded()
     inputs:
-      PathtoPublish: build/Apps/UnitTests
+      PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests'
       ArtifactName: BabylonNativeNightlyUnitTests
