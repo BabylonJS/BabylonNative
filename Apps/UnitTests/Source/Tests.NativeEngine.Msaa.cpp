@@ -10,6 +10,7 @@
 #include <array>
 #include <chrono>
 #include <future>
+#include <iostream>
 #include <string>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -18,6 +19,12 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
     device.StartRenderingCurrentFrame();
+    if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT) ||
+        !bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT_WRITE_ONLY))
+    {
+        device.FinishRenderingCurrentFrame();
+        GTEST_SKIP() << "The backend does not support the required color/depth framebuffer formats";
+    }
     Babylon::AppRuntime runtime{};
     std::promise<std::string> completed;
     auto future = completed.get_future();
@@ -35,6 +42,13 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
             {
                 const uint32_t samples = 1u << index;
                 SCOPED_TRACE(samples);
+                const uint64_t depthFlags = BGFX_TEXTURE_RT_WRITE_ONLY | (index == 0 ? BGFX_TEXTURE_NONE : flags[index]);
+                if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, flags[index]) ||
+                    !bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24S8, depthFlags))
+                {
+                    std::cout << "Skipping unsupported color/depth MSAA sample count: " << samples << std::endl;
+                    continue;
+                }
                 auto value = engine.Get("createTexture").As<Napi::Function>().Call(engine, {});
                 auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
                 engine.Get("initializeTexture").As<Napi::Function>().Call(engine, {
@@ -61,6 +75,7 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
                 const uint64_t sampledFlags = rtFlag | BGFX_TEXTURE_MSAA_SAMPLE;
                 if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, sampledFlags))
                 {
+                    std::cout << "Skipping unsupported sampled MSAA flags: " << sampledFlags << std::endl;
                     continue;
                 }
                 Babylon::Graphics::Texture sampled{context};
