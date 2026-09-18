@@ -65,6 +65,7 @@ else()
 endif()
 
 add_executable(TestInstall ${SOURCES})
+target_compile_definitions(TestInstall PRIVATE TEST_INSTALLED_SDK)
 
 message(STATUS "Install include directory: ${INSTALL_DIR}/include")
 target_include_directories(TestInstall PRIVATE "${INSTALL_DIR}/include")

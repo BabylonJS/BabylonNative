@@ -129,6 +129,7 @@ if(GRAPHICS_API STREQUAL "D3D12")
 endif()
 
 if(GRAPHICS_API STREQUAL "Vulkan")
+    target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal spirv-cross-core glslang)
     # Vulkan packaging paths (e.g. the >16 sampler rejection) are gated on this define.
     # ExternalTexture / native-texture helpers are not implemented for Vulkan yet, so skip
     # those tests rather than failing at link or runtime.
