@@ -344,7 +344,7 @@ for (const hook of ["scene", "GUI"]) {
     });
 }
 
-for (const failure of ["render", "readiness", "convergence", "initial timeout"]) {
+for (const failure of ["render", "readiness", "convergence"]) {
     test(`a pending screenshot cannot evaluate after ${failure} failure`, () => {
         const runner = createRunner({
             tests: [{ title: "fails after compare frame" }, { title: "next scene" }],
@@ -354,9 +354,7 @@ for (const failure of ["render", "readiness", "convergence", "initial timeout"])
         runner.tick();
         assert.equal(runner.readbacks.length, 1);
         const scene = runner.scenes[0];
-        if (failure === "initial timeout") {
-            scene.readyTimeout();
-        } else if (failure === "convergence") {
+        if (failure === "convergence") {
             scene.ready = false;
             for (let index = 0; index <= 240; ++index) {
                 runner.tick();
@@ -383,6 +381,21 @@ for (const failure of ["render", "readiness", "convergence", "initial timeout"])
         assert.ok(runner.logs.some(line => /ran=2 passed=1 failed=1/.test(line)));
     });
 }
+
+test("a stale initial readiness timeout cannot invalidate a pending screenshot", () => {
+    const runner = createRunner({ deferReadback: true, captureFrame: 3 });
+    runner.tick();
+    assert.equal(runner.readbacks.length, 1);
+    runner.scenes[0].readyTimeout();
+    assert.deepEqual(runner.errors, []);
+    for (let index = 0; index < 7; ++index) {
+        runner.tick();
+    }
+    assert.equal(runner.engine.loop, null);
+    runner.readbacks[0](new Uint8Array([0, 0, 0, 255]));
+    runner.flushTimers();
+    assert.deepEqual(runner.exits, [0]);
+});
 
 test("a delayed screenshot still evaluates after normal rendering completion", () => {
     const runner = createRunner({ deferReadback: true, captureFrame: 3 });
@@ -583,6 +596,80 @@ for (const firstReady of ["main", "utility"]) {
         assert.deepEqual(runner.exits, [0]);
     });
 }
+
+for (const removal of ["disposed", "detached"]) {
+    test(`initial readiness drops a ${removal} utility scene`, () => {
+        let utility;
+        const runner = createRunner({
+            createScene(engine) {
+                const scene = makeScene(engine);
+                utility = makeScene(engine);
+                utility.deferReady = true;
+                utility.activeCamera = scene.activeCamera;
+                engine._virtualScenes.push(utility);
+                return scene;
+            },
+        });
+        const staleReadyCallback = utility.readyCallback;
+        runner.engine._virtualScenes = runner.engine._virtualScenes.filter(scene => scene !== utility);
+        if (removal === "disposed") {
+            utility.disposed++;
+            utility.readyCallback = null;
+            utility.readyTimeout = null;
+        }
+        runner.advanceTimers(100);
+        assert.equal(runner.callbacks.length, 1);
+        runner.tick();
+        runner.flushTimers();
+        assert.deepEqual(runner.reads, [1]);
+        assert.deepEqual(runner.exits, [0]);
+        assert.doesNotThrow(() => staleReadyCallback());
+        assert.equal(runner.callbacks.length, 1);
+        assert.deepEqual(runner.exits, [0]);
+    });
+}
+
+test("initial readiness enrolls a utility scene attached while waiting", () => {
+    const runner = createRunner({
+        createScene(engine) {
+            const scene = makeScene(engine);
+            scene.deferReady = true;
+            return scene;
+        },
+    });
+    const utility = makeScene(runner.engine);
+    utility.deferReady = true;
+    utility.activeCamera = runner.scenes[0].activeCamera;
+    runner.engine._virtualScenes.push(utility);
+    assert.equal(utility.readyCallback, undefined);
+    runner.advanceTimers(100);
+    assert.equal(typeof utility.readyCallback, "function");
+    runner.scenes[0].readyCallback();
+    assert.equal(runner.callbacks.length, 0);
+    utility.readyCallback();
+    assert.equal(runner.callbacks.length, 1);
+    runner.tick();
+    runner.flushTimers();
+    assert.deepEqual(runner.reads, [1]);
+    assert.deepEqual(runner.exits, [0]);
+});
+
+test("the runner owns the initial readiness timeout", () => {
+    const runner = createRunner({
+        createScene(engine) {
+            const scene = makeScene(engine);
+            scene.deferReady = true;
+            return scene;
+        },
+    });
+    runner.scenes[0].readyCallback = null;
+    runner.scenes[0].readyTimeout = null;
+    runner.advanceTimers(10 * 60 * 1000);
+    assert.equal(runner.errors.length, 1);
+    assert.match(runner.errors[0], /did not become ready within 600s/);
+    assert.equal(runner.scenes[0].disposed, 1);
+    assert.deepEqual(runner.exits, [-1]);
+});
 
 test("an initial utility readiness timeout stops all late callbacks", () => {
     let utility;

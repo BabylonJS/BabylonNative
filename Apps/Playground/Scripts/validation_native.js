@@ -20,6 +20,8 @@
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
     const MAX_CONVERGENCE_TICKS = 240;
+    const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
+    const READINESS_RECONCILE_INTERVAL_MS = 100;
 
     function shouldRunTest(test, index) {
         if (testIndices.length > 0 && testIndices.indexOf(index) === -1) {
@@ -394,6 +396,11 @@
         let pendingScreenshot = null;
         let evaluated = false;
         let convergenceTicks = 0;
+        let readinessScenes = [];
+        let readyScenes = [];
+        let readinessReconcileTimer = null;
+        let readinessTimeoutTimer = null;
+        let waitingForReadiness = true;
 
         const runEvaluation = function (screenshot) {
             if (evaluated) {
@@ -403,10 +410,37 @@
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
         };
 
+        const stopReadinessWait = function () {
+            waitingForReadiness = false;
+            if (readinessReconcileTimer !== null) {
+                clearTimeout(readinessReconcileTimer);
+                readinessReconcileTimer = null;
+            }
+            if (readinessTimeoutTimer !== null) {
+                clearTimeout(readinessTimeoutTimer);
+                readinessTimeoutTimer = null;
+            }
+            readinessScenes.length = 0;
+            readyScenes.length = 0;
+        };
+
+        const failInitialReadiness = function () {
+            if (stopped) {
+                return;
+            }
+            stopped = true;
+            evaluated = true;
+            stopReadinessWait();
+            console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
+                (INITIAL_READINESS_TIMEOUT_MS / 1000) + "s.");
+            failTest(done);
+        };
+
         const startRendering = function () {
             if (stopped) {
                 return;
             }
+            stopReadinessWait();
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
             }
@@ -478,33 +512,90 @@
 
         // Resource loading belongs to the initial readiness budget, including
         // utility-scene models/textures; it must not consume convergence ticks.
-        const readinessScenes = getConvergenceScenes(currentScene);
-        let pendingReadyScenes = readinessScenes.length;
-        for (let i = 0; i < readinessScenes.length; i++) {
-            const scene = readinessScenes[i];
-            // Scene.executeWhenReady drops its callback on timeout. Large EXR
-            // loads can exceed the default 120s under ASAN; retain the 10m budget
-            // and turn a genuine timeout into explicit, once-only failure.
-            scene.onReadyTimeoutDuration = 10 * 60 * 1000;
-            scene.onReadyTimeoutObservable.addOnce(function () {
-                if (stopped) {
-                    return;
+        const reconcileReadinessScenes = function () {
+            if (stopped || !waitingForReadiness) {
+                return;
+            }
+            try {
+                if (readinessReconcileTimer !== null) {
+                    clearTimeout(readinessReconcileTimer);
+                    readinessReconcileTimer = null;
                 }
+
+                const scenes = getConvergenceScenes(currentScene);
+                const newScenes = [];
+                for (let i = 0; i < scenes.length; i++) {
+                    if (readinessScenes.indexOf(scenes[i]) === -1) {
+                        newScenes.push(scenes[i]);
+                    }
+                }
+                const retainedReadyScenes = [];
+                for (let i = 0; i < readyScenes.length; i++) {
+                    if (scenes.indexOf(readyScenes[i]) !== -1) {
+                        retainedReadyScenes.push(readyScenes[i]);
+                    }
+                }
+                readinessScenes = scenes;
+                readyScenes = retainedReadyScenes;
+
+                for (let i = 0; i < newScenes.length; i++) {
+                    const scene = newScenes[i];
+                    // Scene.executeWhenReady drops its callbacks on timeout or disposal.
+                    // Keep a runner-owned deadline and reconcile virtual-scene membership
+                    // independently so removed scenes cannot strand this wait.
+                    scene.onReadyTimeoutDuration = INITIAL_READINESS_TIMEOUT_MS;
+                    scene.onReadyTimeoutObservable.addOnce(function () {
+                        if (!waitingForReadiness || readinessScenes.indexOf(scene) === -1) {
+                            return;
+                        }
+                        reconcileReadinessScenes();
+                        if (waitingForReadiness &&
+                            readinessScenes.indexOf(scene) !== -1 &&
+                            readyScenes.indexOf(scene) === -1) {
+                            failInitialReadiness();
+                        }
+                    });
+                    scene.executeWhenReady(function () {
+                        if (!waitingForReadiness || readinessScenes.indexOf(scene) === -1) {
+                            return;
+                        }
+                        if (readyScenes.indexOf(scene) === -1) {
+                            readyScenes.push(scene);
+                        }
+                        reconcileReadinessScenes();
+                    }, true);
+                    if (!waitingForReadiness) {
+                        return;
+                    }
+                }
+
+                let allReady = readinessScenes.length > 0;
+                for (let i = 0; i < readinessScenes.length; i++) {
+                    if (readyScenes.indexOf(readinessScenes[i]) === -1) {
+                        allReady = false;
+                        break;
+                    }
+                }
+                if (allReady) {
+                    startRendering();
+                } else if (readinessReconcileTimer === null) {
+                    readinessReconcileTimer = setTimeout(function () {
+                        readinessReconcileTimer = null;
+                        reconcileReadinessScenes();
+                    }, READINESS_RECONCILE_INTERVAL_MS);
+                }
+            }
+            catch (e) {
                 stopped = true;
                 evaluated = true;
-                console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
-                    (scene.onReadyTimeoutDuration / 1000) + "s.");
+                stopReadinessWait();
+                console.error(e);
                 failTest(done);
-            });
-            scene.executeWhenReady(function () {
-                if (stopped) {
-                    return;
-                }
-                if (--pendingReadyScenes === 0) {
-                    startRendering();
-                }
-            }, true);
-        }
+            }
+        };
+
+        readinessTimeoutTimer = setTimeout(failInitialReadiness, INITIAL_READINESS_TIMEOUT_MS);
+        reconcileReadinessScenes();
     }
 
     function loadPlayground(test, done, referenceImage, compareFunction) {
