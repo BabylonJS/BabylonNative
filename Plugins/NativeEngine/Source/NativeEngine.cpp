@@ -2350,6 +2350,12 @@ namespace Babylon
         {
             deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
         }
+        else if (width == 0 || height == 0 ||
+            static_cast<uint32_t>(x) + width > std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel) ||
+            static_cast<uint32_t>(y) + height > std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel))
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture rectangle is out of range for this mip level.").Value());
+        }
         else if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture face/layer index is out of range for this texture.").Value());
@@ -2382,6 +2388,8 @@ namespace Babylon
             // shifts are well defined here; they floor at 1 to match how bgfx sizes the tail of the chain.
             const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel)};
             const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
+            // WebGL readPixels coordinates start at the bottom, unlike D3D/Metal/Vulkan blit coordinates.
+            const uint16_t blitY{bgfx::getCaps()->originBottomLeft ? y : static_cast<uint16_t>(mipHeight - y - height)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
             // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
@@ -2395,7 +2403,7 @@ namespace Babylon
                 bgfx::TextureRegion dstRegion{};
                 dstRegion.init(blitTextureHandle, /*x*/ 0, /*y*/ 0, width, height);
                 bgfx::TextureRegion srcRegion{};
-                srcRegion.init(sourceTextureHandle, x, y, width, height);
+                srcRegion.init(sourceTextureHandle, x, blitY, width, height);
                 srcRegion.mip = mipLevel;
                 srcRegion.z = srcZ;
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
@@ -2425,7 +2433,8 @@ namespace Babylon
 #endif
                     }
                     assert(textureBuffer.size() == targetTextureInfo.storageSize);
-                    if (bgfx::getCaps()->originBottomLeft)
+                    // Return bottom-up rows, matching WebGL readPixels on every backend.
+                    if (!bgfx::getCaps()->originBottomLeft)
                     {
                         FlipImage(textureBuffer, targetTextureInfo.height);
                     }
