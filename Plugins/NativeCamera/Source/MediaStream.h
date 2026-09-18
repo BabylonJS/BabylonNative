@@ -33,7 +33,7 @@ namespace Babylon::Plugins
         void Stop(const Napi::CallbackInfo& info);
 
         // Update the camera texture and return true if the dimensions have changed, false otherwise
-        bool UpdateTexture(bgfx::TextureHandle textureHandle);
+        bool UpdateTexture(Graphics::Texture& texture);
 
         std::shared_ptr<Babylon::Plugins::CameraDevice> CameraDevice() const
         {

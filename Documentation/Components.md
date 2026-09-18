@@ -39,6 +39,17 @@ internally by Babylon Native components that need a cross-platform
 abstraction for GPU access and rendering work. However, no bgfx types are
 exposed by Babylon Native's APIs. 
 
+The Graphics device owns its window framebuffer separately from the underlying
+bgfx device. Resizing or replacing a window updates that surface without
+invalidating GPU resources. D3D11 caller-provided back-buffer views are imported
+as texture attachments rather than replacing bgfx platform data. Screenshots and
+continuous capture use the active back buffer; multiple requests in one frame
+share a single readback.
+
+Only default framebuffer wrappers created without an explicit handle follow the
+device's current window framebuffer. Explicit targets, including XR eye
+framebuffers with default-back-buffer semantics, retain their supplied handles.
+
 ### glslang
 
 [glslang](https://github.com/KhronosGroup/glslang) is the reference compiler

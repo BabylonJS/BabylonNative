@@ -28,6 +28,16 @@ namespace Babylon::Graphics
         m_screenShotCallbacks.emplace(std::move(callback));
     }
 
+    void BgfxCallback::CaptureNextScreenShot()
+    {
+        m_captureScreenShot = true;
+    }
+
+    void BgfxCallback::CompleteScreenShot(const CaptureData& data)
+    {
+        screenShot("", data.Width, data.Height, data.Pitch, data.Format, data.Data, data.DataSize, data.YFlip);
+    }
+
     void BgfxCallback::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         m_outputFunction = std::move(outputFunction);
@@ -116,9 +126,18 @@ namespace Babylon::Graphics
     {
     }
 
-    void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, const void* data, uint32_t /*size*/, bool yflip)
+    void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, const void* data, uint32_t size, bool yflip)
     {
-        assert(!m_screenShotCallbacks.empty()); // addScreenShotCallback not called before doing the screenshot call on bgfx
+        assert(m_captureScreenShot || !m_screenShotCallbacks.empty());
+        if (m_captureScreenShot)
+        {
+            m_captureScreenShot = false;
+            m_captureCallback(CaptureData{width, height, pitch, format, yflip, data, size});
+        }
+        if (m_screenShotCallbacks.empty())
+        {
+            return;
+        }
 
         std::vector<uint8_t> array(width * height * 4); // do not use pitch to define output size because it's padded
         uint8_t* bitmap{array.data()};
@@ -158,8 +177,13 @@ namespace Babylon::Graphics
             throw std::runtime_error{"Unsupported format for screenshot"};
         }
 
-        m_screenShotCallbacks.front()(std::move(array));
-        m_screenShotCallbacks.pop();
+        const auto count = m_screenShotCallbacks.size();
+        for (size_t i = 0; i < count; ++i)
+        {
+            auto callback = std::move(m_screenShotCallbacks.front());
+            m_screenShotCallbacks.pop();
+            callback(i + 1 == count ? std::move(array) : array);
+        }
     }
 
     void BgfxCallback::captureBegin(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yflip)

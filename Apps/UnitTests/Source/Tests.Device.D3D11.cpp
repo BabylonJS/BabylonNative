@@ -6,6 +6,10 @@
 
 #include <winrt/base.h>
 
+#include <iterator>
+#include <stdexcept>
+#include <vector>
+
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
 namespace

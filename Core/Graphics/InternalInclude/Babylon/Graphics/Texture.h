@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bgfx/bgfx.h>
+#include <memory>
 
 namespace Babylon::Graphics
 {
@@ -20,7 +21,8 @@ namespace Babylon::Graphics
 
         bool IsValid() const;
 
-        void Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle = 0);
+        // nativeTextureOwner retains a borrowed native resource through disposal and its destruction frame.
+        void Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle = 0, std::shared_ptr<void> nativeTextureOwner = {});
         void Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch = UINT16_MAX);
 
         void Create3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMips, bgfx::TextureFormat::Enum format, uint64_t flags);
@@ -78,6 +80,7 @@ namespace Babylon::Graphics
 
         bgfx::TextureHandle m_handle{bgfx::kInvalidHandle};
         bool m_ownsHandle{false};
+        std::shared_ptr<void> m_nativeTextureOwner{};
         uint16_t m_width{0};
         uint16_t m_height{0};
         bool m_hasMips{false};

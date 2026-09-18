@@ -43,7 +43,6 @@ target_compile_definitions(Graphics
 target_link_libraries(Graphics
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
-    PRIVATE minz
     PRIVATE bx)
 
 if(WINDOWS_STORE)
