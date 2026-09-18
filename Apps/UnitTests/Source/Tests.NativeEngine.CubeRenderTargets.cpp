@@ -10,6 +10,7 @@
 #include <array>
 #include <chrono>
 #include <future>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 
@@ -51,9 +52,22 @@ TEST(NativeEngineCubeRenderTargets, ClearsEachFaceIndependentlyAndPreserves2DDef
                 plain, Napi::Number::New(env, size), Napi::Number::New(env, size),
                 Napi::Boolean::New(env, false), Napi::Boolean::New(env, false)});
             EXPECT_TRUE(bgfx::isValid(plainFrameBuffer.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get()->Handle()));
+            auto depthOnlyFrameBuffer = createFrameBuffer.Call(engine, {
+                env.Null(), Napi::Number::New(env, size), Napi::Number::New(env, size),
+                Napi::Boolean::New(env, false), Napi::Boolean::New(env, true)});
+            EXPECT_TRUE(bgfx::isValid(depthOnlyFrameBuffer.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get()->Handle()));
 
             auto value = createTexture.Call(engine, {});
             env.Global().Set("_testCube", value);
+            for (const uint32_t height : {uint32_t{size} * 2, uint32_t{size} + 65536})
+            {
+                SCOPED_TRACE(height);
+                EXPECT_THROW(initializeTexture.Call(engine, {
+                    value, Napi::Number::New(env, size), Napi::Number::New(env, height),
+                    Napi::Boolean::New(env, false), Napi::Number::New(env, bgfx::TextureFormat::RGBA8),
+                    Napi::Boolean::New(env, true), Napi::Boolean::New(env, false),
+                    Napi::Number::New(env, 1), Napi::Boolean::New(env, true)}), Napi::Error);
+            }
             initializeTexture.Call(engine, {
                 value, Napi::Number::New(env, size), Napi::Number::New(env, size),
                 Napi::Boolean::New(env, false), Napi::Number::New(env, bgfx::TextureFormat::RGBA8),
@@ -76,10 +90,25 @@ TEST(NativeEngineCubeRenderTargets, ClearsEachFaceIndependentlyAndPreserves2DDef
                 auto* frameBuffer = frameBufferValue.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();
                 frameBuffer->Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, colors[face], 1.0f, 0);
             }
-            EXPECT_THROW(createFrameBuffer.Call(engine, {
-                value, Napi::Number::New(env, size), Napi::Number::New(env, size),
-                Napi::Boolean::New(env, false), Napi::Boolean::New(env, false),
-                Napi::Number::New(env, 1), Napi::Number::New(env, 6)}), Napi::Error);
+            const auto expectInvalidLayer = [&](Napi::Value texture, double layer) {
+                SCOPED_TRACE(layer);
+                EXPECT_THROW(createFrameBuffer.Call(engine, {
+                    texture, Napi::Number::New(env, size), Napi::Number::New(env, size),
+                    Napi::Boolean::New(env, false), Napi::Boolean::New(env, true),
+                    Napi::Number::New(env, 1), Napi::Number::New(env, layer)}), Napi::Error);
+            };
+            for (const double layer : {-1.0, 0.5, 6.0, 65536.0, 4294967296.0,
+                     std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()})
+            {
+                expectInvalidLayer(value, layer);
+                expectInvalidLayer(plain, layer);
+                expectInvalidLayer(env.Null(), layer);
+            }
+            for (const double layer : {1.0, 5.0})
+            {
+                expectInvalidLayer(plain, layer);
+                expectInvalidLayer(env.Null(), layer);
+            }
             auto readback = std::make_shared<Babylon::Graphics::Texture>(context);
             readback->Create2D(size * colors.size(), size, false, 1, bgfx::TextureFormat::RGBA8,
                 BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
