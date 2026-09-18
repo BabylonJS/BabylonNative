@@ -161,6 +161,8 @@ namespace Babylon::Polyfills::Internal
         const auto pos = text.find(base64);
         if (pos != std::string::npos)
         {
+            // SetSrc, disposal, decoding and event delivery share the JS runtime thread;
+            // cancellation cannot interleave with this synchronous decode.
             arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, text{std::move(text)}, pos]() {
                 if (cancellationSource->cancelled())
                 {

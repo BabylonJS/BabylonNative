@@ -35,6 +35,7 @@ declare const hostPlatform: string;
 declare const hasGpuRendering: boolean;
 declare const hasNativeImageLoading: boolean;
 declare const setExitCode: (code: number) => void;
+declare const setImageReloadTestResponse: (bytes: Uint8Array) => void;
 declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
 
@@ -1998,22 +1999,29 @@ describe("Canvas image reloads", function () {
     expect(image.src).to.equal(dataUrl);
   });
 
-  for (const firstSource of [url, dataUrl]) {
-    test(`only delivers the latest assignment after a pending ${firstSource === url ? "URL" : "data"} load`, async function () {
+  for (const fromUrl of [true, false]) {
+    test(`only delivers the latest assignment after a pending ${fromUrl ? "URL" : "data"} load`, async function () {
+      setImageReloadTestResponse(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=", "base64"));
       const image = new _native.Image();
+      const barrier = new _native.Image();
       const loaded: number[] = [];
       const errors: unknown[] = [];
       await new Promise<void>((resolve, reject) => {
-        image.onload = () => { loaded.push(image.width); resolve(); };
+        image.onload = () => { loaded.push(image.width); };
         image.onerror = (error: unknown) => { errors.push(error); reject(error); };
-        image.src = firstSource;
+        barrier.onload = resolve;
+        barrier.onerror = reject;
+        // The in-memory URL resolver queues completion synchronously. The final data load
+        // is a runtime-queue barrier after both candidate callbacks, not a timing estimate.
+        image.src = fromUrl ? "image-reload-test:///image.png" : dataUrl;
         image.src = dataUrl;
+        barrier.src = dataUrl;
       });
-      await new Promise(resolve => setTimeout(resolve, 50));
       expect(image.src).to.equal(dataUrl);
       expect(loaded).to.deep.equal([3]);
       expect(errors).to.deep.equal([]);
       expect(image.width).to.equal(3);
+      expect(barrier.width).to.equal(3);
     });
   }
 

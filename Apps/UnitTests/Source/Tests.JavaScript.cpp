@@ -16,8 +16,12 @@
 #include <Babylon/Plugins/NativeMeshopt.h>
 #endif
 #include <Babylon/ScriptLoader.h>
+#include <UrlLib/UrlLib.h>
+#include <gsl/util>
 
 #include <cstdlib>
+#include <memory>
+#include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -43,6 +47,10 @@ TEST(JavaScript, All)
 {
     // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
     constexpr const bool waitForDebugger = false;
+
+    const auto unregisterImageTestScheme = gsl::finally([] {
+        UrlLib::UrlRequest::UnregisterSchemeResolver("image-reload-test");
+    });
 
     Babylon::Graphics::Device device{g_deviceConfig};
 
@@ -113,6 +121,19 @@ TEST(JavaScript, All)
             },
             "setExitCode");
         env.Global().Set("setExitCode", setExitCodeCallback);
+        env.Global().Set("setImageReloadTestResponse", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+            const auto bytes = info[0].As<Napi::Uint8Array>();
+            const auto begin = reinterpret_cast<const std::byte*>(bytes.Data());
+            auto body = std::make_shared<const std::vector<std::byte>>(begin, begin + bytes.ElementLength());
+            UrlLib::UrlRequest::RegisterSchemeResolver("image-reload-test", [body](const std::string&) {
+                UrlLib::UrlSchemeResolverResult result;
+                result.handled = true;
+                result.statusCode = UrlLib::UrlStatusCode::Ok;
+                result.contentType = "image/png";
+                result.body = body;
+                return result;
+            });
+        }));
     });
 
     Babylon::ScriptLoader loader{runtime};

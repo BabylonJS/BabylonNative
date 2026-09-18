@@ -28383,6 +28383,7 @@ mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
 
 
 
+
 (0,_tests_nativeEngine_png__WEBPACK_IMPORTED_MODULE_6__.registerPngTests)(describe, it, hasGpuRendering && hasNativeImageLoading);
 
 describe("RequestFile", function () {
@@ -30343,24 +30344,31 @@ describe("Canvas image reloads", function () {
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.src).to.equal(dataUrl);case 2:case "end":return _context0.stop();}}, _callee8);}))
   );var _loop4 = function _loop4()
 
-  {var firstSource = _arr5[_i5];
-    test("only delivers the latest assignment after a pending ".concat(firstSource === url ? "URL" : "data", " load"), /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee9() {var image, loaded, errors;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context1) {while (1) switch (_context1.prev = _context1.next) {case 0:
+  {var fromUrl = _arr5[_i5];
+    test("only delivers the latest assignment after a pending ".concat(fromUrl ? "URL" : "data", " load"), /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee9() {var image, barrier, loaded, errors;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context1) {while (1) switch (_context1.prev = _context1.next) {case 0:
+            setImageReloadTestResponse(buffer__WEBPACK_IMPORTED_MODULE_4__.Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=", "base64"));
             image = new _native.Image();
+            barrier = new _native.Image();
             loaded = [];
             errors = [];_context1.next = 1;return (
               new Promise(function (resolve, reject) {
-                image.onload = function () {loaded.push(image.width);resolve();};
+                image.onload = function () {loaded.push(image.width);};
                 image.onerror = function (error) {errors.push(error);reject(error);};
-                image.src = firstSource;
+                barrier.onload = resolve;
+                barrier.onerror = reject;
+                // The in-memory URL resolver queues completion synchronously. The final data load
+                // is a runtime-queue barrier after both candidate callbacks, not a timing estimate.
+                image.src = fromUrl ? "image-reload-test:///image.png" : dataUrl;
                 image.src = dataUrl;
-              }));case 1:_context1.next = 2;return (
-              new Promise(function (resolve) {return setTimeout(resolve, 50);}));case 2:
+                barrier.src = dataUrl;
+              }));case 1:
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.src).to.equal(dataUrl);
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(loaded).to.deep.equal([3]);
             (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(errors).to.deep.equal([]);
-            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.width).to.equal(3);case 3:case "end":return _context1.stop();}}, _callee9);}))
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.width).to.equal(3);
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(barrier.width).to.equal(3);case 2:case "end":return _context1.stop();}}, _callee9);}))
     );
-  };for (var _i5 = 0, _arr5 = [url, dataUrl]; _i5 < _arr5.length; _i5++) {_loop4();}
+  };for (var _i5 = 0, _arr5 = [true, false]; _i5 < _arr5.length; _i5++) {_loop4();}
 
   test("reports load errors and can recover with data and URL loads", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee0() {var image, errorCount, _loop5, _i6, _arr6;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context11) {while (1) switch (_context11.prev = _context11.next) {case 0:
           image = new _native.Image();
