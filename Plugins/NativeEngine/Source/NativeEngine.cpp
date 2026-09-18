@@ -1639,8 +1639,10 @@ namespace Babylon
     void NativeEngine::InitializeTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        const auto widthValue = info[1].As<Napi::Number>();
+        const auto heightValue = info[2].As<Napi::Number>();
+        const uint16_t width = static_cast<uint16_t>(widthValue.Uint32Value());
+        const uint16_t height = static_cast<uint16_t>(heightValue.Uint32Value());
         const bool hasMips = info[3].As<Napi::Boolean>();
         const double formatValue = info[4].As<Napi::Number>().DoubleValue();
         if (!std::isfinite(formatValue) || formatValue < 0 || formatValue >= static_cast<double>(bgfx::TextureFormat::Count) ||
@@ -1686,6 +1688,10 @@ namespace Babylon
 
         if (isCube)
         {
+            if (widthValue.DoubleValue() != heightValue.DoubleValue())
+            {
+                throw Napi::RangeError::New(info.Env(), "Cube texture width and height must be equal");
+            }
             texture->CreateCube(width, hasMips, 1, format, flags);
         }
         else
@@ -2499,10 +2505,13 @@ namespace Babylon
         const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
         const bool generateDepth = info[4].As<Napi::Boolean>();
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
-        const uint32_t layer = info[6].IsUndefined() ? 0 : info[6].As<Napi::Number>().Uint32Value();
-        if (texture != nullptr && texture->IsCube() && layer >= 6)
+        const double layer = info[6].IsUndefined() ? 0 : info[6].As<Napi::Number>().DoubleValue();
+        const bool isCube = texture != nullptr && texture->IsCube();
+        if (!std::isfinite(layer) || layer != std::floor(layer) || layer < 0 || layer > (isCube ? 5 : 0))
         {
-            throw Napi::RangeError::New(info.Env(), "Cube frame buffer face must be between 0 and 5");
+            throw Napi::RangeError::New(info.Env(), isCube
+                ? "Cube frame buffer face must be an integer between 0 and 5"
+                : "Non-cube frame buffer layer must be 0");
         }
 
         // A single render target is just the zero-or-one color attachment case of the shared implementation.
