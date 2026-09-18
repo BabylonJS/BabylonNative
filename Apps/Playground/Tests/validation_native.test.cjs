@@ -41,10 +41,21 @@ function createRunner(options = {}) {
     let nextTimerId = 0;
     let now = 0;
     let math;
+    class UtilityLayerRenderer {
+        constructor(originalScene) {
+            this.originalScene = originalScene;
+            this.utilityLayerScene = makeScene(originalScene.getEngine());
+            originalScene.getEngine()._virtualScenes.push(this.utilityLayerScene);
+            this._updateCamera();
+        }
+        _updateCamera() {
+            this.utilityLayerScene.activeCamera = this.originalScene.activeCamera;
+        }
+    }
     const definitions = options.tests || [{ title: "test", renderCount: options.renderCount || 1 }];
     function createScene(engine) {
         const scene = options.createScene
-            ? options.createScene(engine, state.scenes.length, math)
+            ? options.createScene(engine, state.scenes.length, math, UtilityLayerRenderer)
             : makeScene(engine);
         state.scenes.push(scene);
         engine.scenes.push(scene);
@@ -104,6 +115,7 @@ function createRunner(options = {}) {
         },
         BABYLON: {
             NativeEngine: Engine,
+            UtilityLayerRenderer,
             Tools: {
                 LoadFile(url, onload) {
                     onload(url.startsWith("https://snippet.babylonjs.com/")
@@ -437,6 +449,33 @@ test("only associated utility scenes participate in convergence", () => {
     guiReady = true;
     runner.tick();
     runner.flushTimers();
+    assert.deepEqual(runner.exits, [0]);
+});
+
+test("a utility layer created before the main camera participates in readiness", () => {
+    let utility;
+    let unrelated;
+    const runner = createRunner({
+        createScene(engine, index, math, UtilityLayerRenderer) {
+            const scene = makeScene(engine);
+            scene.activeCamera = null;
+            utility = new UtilityLayerRenderer(scene).utilityLayerScene;
+            utility.deferReady = true;
+            unrelated = makeScene(engine);
+            unrelated.activeCamera = null;
+            unrelated.deferReady = true;
+            engine._virtualScenes.push(unrelated);
+            scene.activeCamera = { renderPassId: 7, getScene: () => scene };
+            return scene;
+        },
+    });
+    assert.equal(runner.callbacks.length, 0);
+    assert.equal(typeof utility.readyCallback, "function");
+    assert.equal(unrelated.readyCallback, undefined);
+    utility.readyCallback();
+    runner.tick();
+    runner.flushTimers();
+    assert.deepEqual(runner.reads, [1]);
     assert.deepEqual(runner.exits, [0]);
 });
 

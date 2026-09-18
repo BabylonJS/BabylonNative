@@ -22,6 +22,16 @@
     const MAX_CONVERGENCE_TICKS = 240;
     const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
+    const utilityLayerOwners = new WeakMap();
+
+    // UtilityLayerRenderer exposes both sides of the association, but its utility
+    // scene can have no active camera when the layer is created before the main camera.
+    const updateUtilityLayerCamera = BABYLON.UtilityLayerRenderer.prototype._updateCamera;
+    BABYLON.UtilityLayerRenderer.prototype._updateCamera = function () {
+        const result = updateUtilityLayerCamera.apply(this, arguments);
+        utilityLayerOwners.set(this.utilityLayerScene, this.originalScene);
+        return result;
+    };
 
     function shouldRunTest(test, index) {
         if (testIndices.length > 0 && testIndices.indexOf(index) === -1) {
@@ -364,8 +374,12 @@
         const virtualScenes = scene.getEngine()._virtualScenes;
         for (let i = 0; i < virtualScenes.length; i++) {
             const virtualScene = virtualScenes[i];
-            // Utility layers share the main scene's camera but own their pending resources.
-            if (virtualScene !== scene && virtualScene.activeCamera && virtualScene.activeCamera.getScene() === scene) {
+            const utilityLayerOwner = utilityLayerOwners.get(virtualScene);
+            // Non-utility virtual scenes can still be associated through a shared camera.
+            const sharesCamera = utilityLayerOwner === undefined &&
+                virtualScene.activeCamera &&
+                virtualScene.activeCamera.getScene() === scene;
+            if (virtualScene !== scene && (utilityLayerOwner === scene || sharesCamera)) {
                 scenes.push(virtualScene);
             }
         }
