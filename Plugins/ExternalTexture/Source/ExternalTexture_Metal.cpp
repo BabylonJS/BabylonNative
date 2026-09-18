@@ -288,11 +288,11 @@ namespace Babylon::Plugins
 
             if ((ptr->usage() & MTL::TextureUsageRenderTarget) != 0)
             {
-                info.Flags |= BGFX_TEXTURE_RT;
+                info.Flags |= RenderTargetSamplesToBgfxRtFlag(ptr->sampleCount());
 
                 if (ptr->sampleCount() > 1)
                 {
-                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(ptr->sampleCount());
+                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE;
                 }
             }
 

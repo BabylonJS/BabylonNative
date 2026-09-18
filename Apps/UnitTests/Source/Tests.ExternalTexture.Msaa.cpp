@@ -2,18 +2,23 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/Texture.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/ExternalTexture.h>
 #include <Babylon/ScriptLoader.h>
+#include <napi/pointer.h>
 
 #include "Helpers.h"
 
+#include <array>
+#include <chrono>
 #include <cstdlib>
 #include <future>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -134,6 +139,62 @@ namespace
         }
         return stats;
     }
+}
+
+TEST(ExternalTexture, PreservesWrappedMsaaFlags)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_MULTISAMPLE_TESTS)
+    GTEST_SKIP() << "Native multisample texture wrapping is unavailable in this test configuration";
+#else
+    Babylon::Graphics::Device device{g_deviceConfig};
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&device](Napi::Env env) { device.AddToJavaScript(env); });
+
+    const std::array<uint64_t, 3> rtFlags{
+        BGFX_TEXTURE_RT, BGFX_TEXTURE_RT_MSAA_X2, BGFX_TEXTURE_RT_MSAA_X4};
+    for (size_t index = 0; index < rtFlags.size(); ++index)
+    {
+        const uint32_t samples = 1u << index;
+        const uint64_t expectedFlags = rtFlags[index] | (samples > 1 ? BGFX_TEXTURE_MSAA_SAMPLE : BGFX_TEXTURE_NONE);
+        device.StartRenderingCurrentFrame();
+        if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, expectedFlags))
+        {
+            device.FinishRenderingCurrentFrame();
+            std::cout << "Skipping unsupported external MSAA sample count: " << samples << std::endl;
+            continue;
+        }
+        auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 16, 16, 1, true, samples);
+        Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+        Helpers::DestroyTexture(nativeTexture);
+        std::promise<std::string> completed;
+        auto future = completed.get_future();
+        runtime.Dispatch([&](Napi::Env env) {
+            SCOPED_TRACE(samples);
+            std::string error;
+            try
+            {
+                auto value = externalTexture.CreateForJavaScript(env);
+                auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+                EXPECT_EQ(texture->Flags() & BGFX_TEXTURE_RT_MSAA_MASK, rtFlags[index]);
+                EXPECT_EQ(texture->Flags() & BGFX_TEXTURE_MSAA_SAMPLE, expectedFlags & BGFX_TEXTURE_MSAA_SAMPLE);
+                texture->Dispose();
+            }
+            catch (const std::exception& ex)
+            {
+                error = ex.what();
+            }
+            completed.set_value(std::move(error));
+        });
+        if (future.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
+        {
+            ADD_FAILURE() << "Timed out inspecting external MSAA texture flags after 30 seconds";
+            // The pending callback can still reference this iteration's resources.
+            std::quick_exit(1);
+        }
+        EXPECT_EQ(future.get(), "");
+        device.FinishRenderingCurrentFrame();
+    }
+#endif
 }
 
 // samples=1 discriminator: with no MSAA the rotated edges must be aliased -- pure red or pure
