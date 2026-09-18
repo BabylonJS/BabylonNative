@@ -50,11 +50,11 @@ namespace Babylon::Plugins
 
             if ((desc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0)
             {
-                info.Flags |= BGFX_TEXTURE_RT;
+                info.Flags |= RenderTargetSamplesToBgfxRtFlag(desc.SampleDesc.Count);
 
                 if (desc.SampleDesc.Count > 1)
                 {
-                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(desc.SampleDesc.Count);
+                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE;
                 }
             }
 

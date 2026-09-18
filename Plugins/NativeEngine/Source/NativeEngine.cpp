@@ -1650,7 +1650,9 @@ namespace Babylon
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
         {
-            flags |= BGFX_TEXTURE_RT | RenderTargetSamplesToBgfxMsaaFlag(samples);
+            // RT and the MSAA levels are values in the same field, not independent bits.
+            const auto msaaFlag = RenderTargetSamplesToBgfxMsaaFlag(samples);
+            flags |= msaaFlag != BGFX_TEXTURE_NONE ? msaaFlag : BGFX_TEXTURE_RT;
         }
         if (srgb)
         {
