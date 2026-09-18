@@ -201,8 +201,8 @@ namespace Babylon
 
             bool shouldEndSession{};
             bool shouldRestartSession{};
-            m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
-                return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
+            m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this, thisRef{shared_from_this()}](void* texturePointer) {
+                return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer, thisRef] {
                     const auto itViewConfig{m_sessionState->TextureToViewConfigurationMap.find(texturePointer)};
                     if (itViewConfig != m_sessionState->TextureToViewConfigurationMap.end())
                     {

@@ -775,15 +775,16 @@ namespace xr
             int32_t trackableImagesCount{0};
 
             // Loop over each image in the request, and add it to the image database.
-            for (System::Session::ImageTrackingRequest image : requests)
+            for (const System::Session::ImageTrackingRequest& image : requests)
             {
                 int32_t index{0};
                 ArStatus status{};
                 std::vector<uint8_t> grayscaleBuffer{};
+                const auto* imageData{image.data->data()};
                 if (image.width != image.stride)
                 {
-                    grayscaleBuffer.reserve(image.width * image.height);
-                    ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride,
+                    grayscaleBuffer.resize(static_cast<size_t>(image.width) * image.height);
+                    ConvertBitmapToGrayscale(imageData, image.width, image.height, image.stride,
                          grayscaleBuffer.data());
                 }
 
@@ -794,7 +795,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        image.width == image.stride ? image.data : grayscaleBuffer.data(),
+                        image.width == image.stride ? imageData : grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
@@ -807,7 +808,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        image.width == image.stride ? image.data : grayscaleBuffer.data(),
+                        image.width == image.stride ? imageData : grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
