@@ -86,6 +86,7 @@ endif()
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_IMAGE_LOADING)
+    target_link_libraries(UnitTests PRIVATE UrlLib)
 endif()
 target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
 target_include_directories(UnitTests PRIVATE "${BGFX_DIR}/3rdparty")
@@ -101,7 +102,6 @@ target_link_libraries(UnitTests
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
-    PRIVATE UrlLib
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
