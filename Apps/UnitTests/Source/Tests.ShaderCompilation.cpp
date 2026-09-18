@@ -558,6 +558,63 @@ TEST(ShaderCompilation, VulkanReservesMatrixArrayLocations)
     EXPECT_EQ(vertex.get_decoration(inputs[0].id, spv::DecorationLocation), 0u);
 }
 
+TEST(ShaderCompilation, VulkanLinksBlocksWithDifferentInstanceNames)
+{
+#if defined(GLSLANG_WEB)
+    GTEST_SKIP() << "Interface blocks require BABYLON_NATIVE_DISABLE_WEBMIN";
+#else
+    Babylon::Plugins::ShaderCompiler compiler;
+    for (const std::string fragmentLocation : {"", "layout(location = 4) "})
+    {
+        SCOPED_TRACE(fragmentLocation);
+        const auto info = compiler.Compile(
+            R"(#version 310 es
+                #extension GL_EXT_shader_io_blocks : require
+                precision highp float;
+                in vec3 position;
+                out Payload { mat2 transform; vec3 tint; } vertexData;
+                out vec2 extraValue;
+                void main() {
+                    gl_Position = vec4(position, 1.0);
+                    vertexData.transform = mat2(1.0);
+                    vertexData.tint = position;
+                    extraValue = position.xy;
+                })",
+            "#version 310 es\n#extension GL_EXT_shader_io_blocks : require\n"
+            "precision highp float;\nin vec2 extraValue;\n" +
+                fragmentLocation + R"(in Payload { mat2 transform; vec3 tint; } fragmentData;
+                layout(location = 0) out vec4 color;
+                void main() { color = vec4(fragmentData.transform * extraValue, fragmentData.tint.z, 1.0); })");
+        auto vertex = ReadVulkanShader(info.VertexBytes);
+        auto fragment = ReadVulkanShader(info.FragmentBytes);
+        std::map<std::string, unsigned> vertexLocations;
+        std::map<std::string, unsigned> fragmentLocations;
+        for (const auto* stage : {&vertex, &fragment})
+        {
+            const auto resources = stage->get_shader_resources();
+            const auto& varyings = stage == &vertex ? resources.stage_outputs : resources.stage_inputs;
+            ASSERT_EQ(varyings.size(), 2u);
+            auto& locations = stage == &vertex ? vertexLocations : fragmentLocations;
+            for (const auto& varying : varyings)
+            {
+                ASSERT_TRUE(stage->has_decoration(varying.id, spv::DecorationLocation));
+                locations[varying.name] = stage->get_decoration(varying.id, spv::DecorationLocation);
+            }
+        }
+        ASSERT_EQ(vertexLocations.count("Payload"), 1u);
+        ASSERT_EQ(vertexLocations.count("extraValue"), 1u);
+        EXPECT_EQ(vertexLocations, fragmentLocations);
+        const auto blockLocation = vertexLocations.at("Payload");
+        const auto extraLocation = vertexLocations.at("extraValue");
+        EXPECT_TRUE(extraLocation < blockLocation || extraLocation >= blockLocation + 3);
+        if (!fragmentLocation.empty())
+        {
+            EXPECT_EQ(blockLocation, 4u);
+        }
+    }
+#endif
+}
+
 TEST(ShaderCompilation, VulkanUsesVertexAndInstanceIndexBuiltins)
 {
     Babylon::Plugins::ShaderCompiler compiler;

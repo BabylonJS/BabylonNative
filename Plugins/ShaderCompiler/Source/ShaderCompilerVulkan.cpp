@@ -103,7 +103,9 @@ namespace
             {
                 return;
             }
-            m_symbols[symbol->getName().c_str()].push_back(symbol);
+            // Block instance names are stage-local; the block type identifies the interface.
+            const auto& name = type.getBasicType() == EbtBlock ? type.getTypeName() : symbol->getName();
+            m_symbols[name.c_str()].push_back(symbol);
         }
 
         TStorageQualifier m_storage{};
