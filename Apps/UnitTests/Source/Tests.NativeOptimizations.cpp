@@ -56,6 +56,18 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                             _native.sortSplats(modelView, new Float32Array(0), new Float32Array(0), rightHanded);
                         }
                     }
+                    for (const matrix of [undefined, null, {}, 42, new Uint8Array(16), new Float64Array(16)]) {
+                        let error;
+                        try {
+                            _native.sortSplats({ _m: matrix }, positions, new Float32Array(5), false);
+                        } catch (caught) {
+                            error = caught;
+                        }
+                        if (!(error instanceof TypeError) ||
+                            error.message !== "sortSplats requires modelView._m to be a Float32Array or Array.") {
+                            throw new Error("Invalid matrix storage must produce an actionable TypeError");
+                        }
+                    }
                 })();
             )", "native-splat-matrix-storage.js");
             completed.set_value();
@@ -71,6 +83,7 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
     });
     if (completion.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
     {
+        // AppRuntime teardown joins the worker; returning would hang if that worker is stuck.
         std::cerr << "Timed out waiting for NativeOptimizations matrix storage regression" << std::endl;
         std::quick_exit(1);
     }
