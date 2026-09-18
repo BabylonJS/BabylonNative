@@ -1642,7 +1642,14 @@ namespace Babylon
         const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         const bool hasMips = info[3].As<Napi::Boolean>();
-        const bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
+        const double formatValue = info[4].As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(formatValue) || formatValue < 0 || formatValue >= static_cast<double>(bgfx::TextureFormat::Count) ||
+            std::floor(formatValue) != formatValue)
+        {
+            throw Napi::Error::New(info.Env(), "Invalid texture format " + info[4].ToString().Utf8Value() +
+                ": expected a finite integer in [0, " + std::to_string(bgfx::TextureFormat::Count) + ")");
+        }
+        auto format = static_cast<bgfx::TextureFormat::Enum>(formatValue);
         const bool renderTarget = info[5].As<Napi::Boolean>();
         const bool srgb = info[6].As<Napi::Boolean>();
         const uint32_t samples = info[7].IsUndefined() ? 1 : info[7].As<Napi::Number>().Uint32Value();
@@ -1655,6 +1662,25 @@ namespace Babylon
         if (srgb)
         {
             flags |= BGFX_TEXTURE_SRGB;
+        }
+
+        // Texture::Create2D also adds BLIT_DST for Babylon-owned textures.
+        const auto createFlags = flags | BGFX_TEXTURE_BLIT_DST;
+        if (!bgfx::isTextureValid(0, false, 1, format, createFlags))
+        {
+            // Some backends support 24-bit depth only with packed stencil storage.
+            if (renderTarget && format == bgfx::TextureFormat::D24 &&
+                bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24S8, createFlags))
+            {
+                format = bgfx::TextureFormat::D24S8;
+            }
+            else
+            {
+                throw Napi::Error::New(info.Env(), "Unsupported texture format " + std::to_string(format) +
+                    " for requested flags (renderTarget=" + (renderTarget ? "true" : "false") +
+                    ", srgb=" + (srgb ? "true" : "false") + ", samples=" + std::to_string(samples) +
+                    ", createFlags=" + std::to_string(createFlags) + ")");
+            }
         }
 
         texture->Create2D(width, height, hasMips, 1, format, flags);
