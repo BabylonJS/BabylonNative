@@ -291,7 +291,7 @@ namespace
     void sortSplats(const Napi::CallbackInfo& info)
     {
         const auto modelView{ info[0].As<Napi::Object>() };
-        const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
+        const auto m{ modelView.Get("_m").As<Napi::Object>() };
 
         auto positions{ info[1].As<Napi::Float32Array>() };
 
@@ -306,7 +306,12 @@ namespace
         }
 
         const auto splatCount = indices.ElementLength();
-        float vp[3] = { m[2u], m[6u], m[10u] };
+        // High-precision Babylon matrices use ordinary number arrays.
+        float vp[3] = {
+            m.Get(2u).As<Napi::Number>().FloatValue(),
+            m.Get(6u).As<Napi::Number>().FloatValue(),
+            m.Get(10u).As<Napi::Number>().FloatValue()
+        };
         static std::vector<float> depthMix;
 
         depthMix.resize(splatCount * 2);
