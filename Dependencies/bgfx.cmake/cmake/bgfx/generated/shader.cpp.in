@@ -1,0 +1,3 @@
+#include "@BGFX_DIR@/src/shader.cpp"
+#include "@BGFX_DIR@/src/shader_dxbc.cpp"
+#include "@BGFX_DIR@/src/shader_spirv.cpp"

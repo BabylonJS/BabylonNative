@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      # Name of the group
+      submodules:
+        patterns:
+          - "*"

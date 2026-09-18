@@ -1,0 +1,52 @@
+name: Build Win32
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure CMake
+        run: cmake -B Build/Win32 -A ${{ inputs.platform }}
+
+      - name: Build Solution
+        run: cmake --build Build/Win32 --config RelWithDebInfo -- /m
+
+      - name: Enable Crash Dumps
+        shell: cmd
+        run: |
+          rem WER does not reliably create a custom DumpFolder at crash time; make sure it
+          rem exists before the registry points at it.
+          if not exist "%RUNNER_TEMP%\Dumps" mkdir "%RUNNER_TEMP%\Dumps"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UrlLibTests.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UrlLibTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UrlLibTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UrlLibTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+
+      - name: Run Tests
+        shell: cmd
+        working-directory: Build/Win32/Tests/RelWithDebInfo
+        run: UrlLibTests.exe
+
+      - name: Stage Test App for Crash Dumps
+        if: failure()
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\Dumps" | Out-Null
+          Copy-Item -Path "Build\Win32\Tests\RelWithDebInfo\UrlLibTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+
+      - name: Upload Crash Dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.platform }}-crash-dumps
+          path: ${{ runner.temp }}/Dumps/
+          if-no-files-found: ignore

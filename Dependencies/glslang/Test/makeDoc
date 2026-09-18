@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+./glslang -p > instDesc
+asciidoc --backend=html5 instDesc
