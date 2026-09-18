@@ -4,6 +4,7 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <bgfx/bgfx.h>
 #include <napi/env.h>
 #include <napi/pointer.h>
 
@@ -140,7 +141,10 @@ TEST(NativeEngineTextureFormats, DoesNotSubstituteNonRenderTargetD24)
         auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
         if (!IsSupported(bgfx::TextureFormat::D24, BGFX_TEXTURE_NONE))
         {
-            ExpectInitializationError(engine, value, bgfx::TextureFormat::D24, false, false, "Unsupported texture format");
+            ExpectInitializationError(engine, value, bgfx::TextureFormat::D24, false, false,
+                "Unsupported texture format " + std::to_string(bgfx::TextureFormat::D24) +
+                " for requested flags (renderTarget=false, srgb=false, samples=1, createFlags=" +
+                std::to_string(BGFX_TEXTURE_BLIT_DST) + ")");
             EXPECT_FALSE(texture->IsValid());
             return;
         }
@@ -188,7 +192,10 @@ TEST(NativeEngineTextureFormats, RejectedInitializationPreservesExistingTexture)
         const auto flags = BGFX_TEXTURE_RT | BGFX_TEXTURE_SRGB;
         if (!IsSupported(bgfx::TextureFormat::D24, flags) && !IsSupported(bgfx::TextureFormat::D24S8, flags))
         {
-            ExpectInitializationError(engine, value, bgfx::TextureFormat::D24, true, true, "Unsupported texture format");
+            ExpectInitializationError(engine, value, bgfx::TextureFormat::D24, true, true,
+                "Unsupported texture format " + std::to_string(bgfx::TextureFormat::D24) +
+                " for requested flags (renderTarget=true, srgb=true, samples=1, createFlags=" +
+                std::to_string(flags | BGFX_TEXTURE_BLIT_DST) + ")");
             EXPECT_EQ(texture->Handle().idx, originalHandle.idx);
             EXPECT_EQ(texture->Format(), bgfx::TextureFormat::RGBA8);
         }

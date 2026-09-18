@@ -1676,7 +1676,10 @@ namespace Babylon
             }
             else
             {
-                throw Napi::Error::New(info.Env(), "Unsupported texture format for requested flags");
+                throw Napi::Error::New(info.Env(), "Unsupported texture format " + std::to_string(format) +
+                    " for requested flags (renderTarget=" + (renderTarget ? "true" : "false") +
+                    ", srgb=" + (srgb ? "true" : "false") + ", samples=" + std::to_string(samples) +
+                    ", createFlags=" + std::to_string(createFlags) + ")");
             }
         }
 
