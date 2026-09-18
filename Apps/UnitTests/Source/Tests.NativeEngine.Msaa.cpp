@@ -9,6 +9,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <future>
 #include <iostream>
 #include <string>
@@ -19,7 +20,7 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
     device.StartRenderingCurrentFrame();
-    if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT) ||
+    if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_TEXTURE_BLIT_DST) ||
         !bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT_WRITE_ONLY))
     {
         device.FinishRenderingCurrentFrame();
@@ -43,7 +44,7 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
                 const uint32_t samples = 1u << index;
                 SCOPED_TRACE(samples);
                 const uint64_t depthFlags = BGFX_TEXTURE_RT_WRITE_ONLY | (index == 0 ? BGFX_TEXTURE_NONE : flags[index]);
-                if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, flags[index]) ||
+                if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, flags[index] | BGFX_TEXTURE_BLIT_DST) ||
                     !bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24S8, depthFlags))
                 {
                     std::cout << "Skipping unsupported color/depth MSAA sample count: " << samples << std::endl;
@@ -73,7 +74,7 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
             for (const auto rtFlag : {BGFX_TEXTURE_RT_MSAA_X2, BGFX_TEXTURE_RT_MSAA_X4})
             {
                 const uint64_t sampledFlags = rtFlag | BGFX_TEXTURE_MSAA_SAMPLE;
-                if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, sampledFlags))
+                if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA8, sampledFlags | BGFX_TEXTURE_BLIT_DST))
                 {
                     std::cout << "Skipping unsupported sampled MSAA flags: " << sampledFlags << std::endl;
                     continue;
@@ -83,7 +84,10 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
                 auto handle = sampled.Handle();
                 auto frameBuffer = bgfx::createFrameBuffer(1, &handle);
                 EXPECT_TRUE(bgfx::isValid(frameBuffer));
-                bgfx::destroy(frameBuffer);
+                if (bgfx::isValid(frameBuffer))
+                {
+                    bgfx::destroy(frameBuffer);
+                }
             }
             engine.Get("dispose").As<Napi::Function>().Call(engine, {});
         }
@@ -93,8 +97,15 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
         }
         completed.set_value(std::move(error));
     });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{30};
     while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
     {
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            ADD_FAILURE() << "Timed out waiting for the MSAA allocation task after 30 seconds";
+            // Do not unwind resources still referenced by a potentially stuck runtime task.
+            std::quick_exit(1);
+        }
         device.FinishRenderingCurrentFrame();
         device.StartRenderingCurrentFrame();
     }
