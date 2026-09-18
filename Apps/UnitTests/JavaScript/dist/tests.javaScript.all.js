@@ -30309,6 +30309,80 @@ function hexToBytes(hex) {
   });
 });
 
+describe("Canvas image reloads", function () {
+  this.timeout(5000);
+  var test = hasNativeImageLoading ? it : it.skip;
+  var url = "app:///Assets/image-reload.png";
+  var dataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAABCAAAAAA+i0toAAAADElEQVR42mNgqP8PAAIBAX+LG2RhAAAAAElFTkSuQmCC";var _loop2 = function _loop2()
+
+  {var sources = _arr4[_i4];
+    test("loads the same image again (".concat(sources.map(function (source) {return source === url ? "URL" : "data";}).join(" to "), ")"), /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee7() {var image, _iterator2, _step2, _loop3, _t;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context9) {while (1) switch (_context9.prev = _context9.next) {case 0:
+            image = new _native.Image();_iterator2 = _createForOfIteratorHelper(
+              sources);_context9.prev = 1;_loop3 = /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _loop3() {var source;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context8) {while (1) switch (_context8.prev = _context8.next) {case 0:source = _step2.value;_context8.next = 1;return (
+                      new Promise(function (resolve, reject) {
+                        image.onload = resolve;
+                        image.onerror = reject;
+                        image.src = source;
+                      }));case 1:
+                    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.width).to.equal(source === url ? 2 : 3);
+                    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.naturalWidth).to.equal(image.width);
+                    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.height).to.equal(1);
+                    (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.naturalHeight).to.equal(1);case 2:case "end":return _context8.stop();}}, _loop3);});_iterator2.s();case 2:if ((_step2 = _iterator2.n()).done) {_context9.next = 4;break;}return _context9.delegateYield(_loop3(), "t0", 3);case 3:_context9.next = 2;break;case 4:_context9.next = 6;break;case 5:_context9.prev = 5;_t = _context9["catch"](1);_iterator2.e(_t);case 6:_context9.prev = 6;_iterator2.f();return _context9.finish(6);case 7:case "end":return _context9.stop();}}, _callee7, null, [[1, 5, 6, 7]]);}))
+
+    );
+  };for (var _i4 = 0, _arr4 = [[url, url], [url, dataUrl], [dataUrl, url], [dataUrl, dataUrl]]; _i4 < _arr4.length; _i4++) {_loop2();}
+
+  test("reflects the assigned src immediately", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee8() {var image;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context0) {while (1) switch (_context0.prev = _context0.next) {case 0:
+          image = new _native.Image();_context0.next = 1;return (
+            new Promise(function (resolve, reject) {
+              image.onload = resolve;
+              image.onerror = reject;
+              image.src = dataUrl;
+              (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.src).to.equal(dataUrl);
+            }));case 1:
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.src).to.equal(dataUrl);case 2:case "end":return _context0.stop();}}, _callee8);}))
+  );var _loop4 = function _loop4()
+
+  {var firstSource = _arr5[_i5];
+    test("only delivers the latest assignment after a pending ".concat(firstSource === url ? "URL" : "data", " load"), /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee9() {var image, loaded, errors;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context1) {while (1) switch (_context1.prev = _context1.next) {case 0:
+            image = new _native.Image();
+            loaded = [];
+            errors = [];_context1.next = 1;return (
+              new Promise(function (resolve, reject) {
+                image.onload = function () {loaded.push(image.width);resolve();};
+                image.onerror = function (error) {errors.push(error);reject(error);};
+                image.src = firstSource;
+                image.src = dataUrl;
+              }));case 1:_context1.next = 2;return (
+              new Promise(function (resolve) {return setTimeout(resolve, 50);}));case 2:
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.src).to.equal(dataUrl);
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(loaded).to.deep.equal([3]);
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(errors).to.deep.equal([]);
+            (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.width).to.equal(3);case 3:case "end":return _context1.stop();}}, _callee9);}))
+    );
+  };for (var _i5 = 0, _arr5 = [url, dataUrl]; _i5 < _arr5.length; _i5++) {_loop4();}
+
+  test("reports load errors and can recover with data and URL loads", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee0() {var image, errorCount, _loop5, _i6, _arr6;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context11) {while (1) switch (_context11.prev = _context11.next) {case 0:
+          image = new _native.Image();
+          errorCount = 0;_context11.next = 1;return (
+            new Promise(function (resolve, reject) {
+              image.onload = function () {return reject(new Error("A missing file unexpectedly loaded"));};
+              image.onerror = function () {++errorCount;resolve();};
+              image.src = "app:///Assets/nonexistent-image-reload.png";
+            }));case 1:
+          (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(errorCount).to.equal(1);_loop5 = /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _loop5() {var source;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context10) {while (1) switch (_context10.prev = _context10.next) {case 0:
+                  source = _arr6[_i6];_context10.next = 1;return (
+                    new Promise(function (resolve, reject) {
+                      image.onload = resolve;
+                      image.onerror = reject;
+                      image.src = source;
+                    }));case 1:
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.src).to.equal(source);
+                  (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(image.width).to.equal(source === url ? 2 : 3);case 2:case "end":return _context10.stop();}}, _loop5);});_i6 = 0, _arr6 = [dataUrl, url];case 2:if (!(_i6 < _arr6.length)) {_context11.next = 4;break;}return _context11.delegateYield(_loop5(), "t0", 3);case 3:_i6++;_context11.next = 2;break;case 4:case "end":return _context11.stop();}}, _callee0);}))
+
+  );
+});
+
 mocha.run(function (failures) {
   // Test program will wait for code to be set before exiting
   if (failures > 0) {
