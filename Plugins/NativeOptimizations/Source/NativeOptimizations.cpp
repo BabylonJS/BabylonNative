@@ -313,10 +313,17 @@ namespace
 
         const auto splatCount = indices.ElementLength();
         // High-precision Babylon matrices use ordinary number arrays.
+        const auto m2{m.Get(2u)};
+        const auto m6{m.Get(6u)};
+        const auto m10{m.Get(10u)};
+        if (!m2.IsNumber() || !m6.IsNumber() || !m10.IsNumber())
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+        }
         float vp[3] = {
-            m.Get(2u).As<Napi::Number>().FloatValue(),
-            m.Get(6u).As<Napi::Number>().FloatValue(),
-            m.Get(10u).As<Napi::Number>().FloatValue()
+            m2.As<Napi::Number>().FloatValue(),
+            m6.As<Napi::Number>().FloatValue(),
+            m10.As<Napi::Number>().FloatValue()
         };
         static std::vector<float> depthMix;
 
