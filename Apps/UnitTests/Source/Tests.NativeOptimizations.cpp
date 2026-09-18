@@ -7,7 +7,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <future>
-#include <iostream>
 #include <stdexcept>
 #endif
 
@@ -41,6 +40,7 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                         for (const rightHanded of [false, true]) {
                             const indices = new Float32Array(5);
                             _native.sortSplats(modelView, positions, indices, rightHanded);
+                            // Distinct depths [2, -3, 5, 4, -7] give an algorithm-independent ordering.
                             const expected = rightHanded ? [4, 1, 0, 3, 2] : [2, 3, 0, 1, 4];
                             for (let index = 0; index < indices.length; ++index) {
                                 if (indices[index] !== expected[index]) {
@@ -56,16 +56,27 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                             _native.sortSplats(modelView, new Float32Array(0), new Float32Array(0), rightHanded);
                         }
                     }
-                    for (const matrix of [undefined, null, {}, 42, new Uint8Array(16), new Float64Array(16)]) {
+                    function expectTypeError(matrix, message) {
                         let error;
                         try {
                             _native.sortSplats({ _m: matrix }, positions, new Float32Array(5), false);
                         } catch (caught) {
                             error = caught;
                         }
-                        if (!(error instanceof TypeError) ||
-                            error.message !== "sortSplats requires modelView._m to be a Float32Array or Array.") {
-                            throw new Error("Invalid matrix storage must produce an actionable TypeError");
+                        if (!(error instanceof TypeError) || error.message !== message) {
+                            throw new Error("Invalid matrix must produce TypeError: " + message);
+                        }
+                    }
+                    for (const matrix of [undefined, null, {}, 42, new Uint8Array(16), new Float64Array(16)]) {
+                        expectTypeError(matrix, "sortSplats requires modelView._m to be a Float32Array or Array.");
+                    }
+                    for (const component of [2, 6, 10]) {
+                        const matrix = new Array(16).fill(0);
+                        delete matrix[component];
+                        expectTypeError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+                        for (const value of [undefined, null, "2", false, {}]) {
+                            matrix[component] = value;
+                            expectTypeError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
                         }
                     }
                 })();
@@ -84,7 +95,7 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
     if (completion.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
     {
         // AppRuntime teardown joins the worker; returning would hang if that worker is stuck.
-        std::cerr << "Timed out waiting for NativeOptimizations matrix storage regression" << std::endl;
+        ADD_FAILURE() << "Timed out waiting for NativeOptimizations matrix storage regression";
         std::quick_exit(1);
     }
     EXPECT_NO_THROW(completion.get());
