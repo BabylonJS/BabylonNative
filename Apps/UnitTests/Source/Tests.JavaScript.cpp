@@ -74,6 +74,11 @@ TEST(JavaScript, All)
 
     runtime.Dispatch([&exitCodePromise, &device, &nativeCanvas](Napi::Env env) {
         device.AddToJavaScript(env);
+#ifdef HAS_NATIVE_IMAGE_LOADING
+        env.Global().Set("hasNativeImageLoading", true);
+#else
+        env.Global().Set("hasNativeImageLoading", false);
+#endif
 #ifdef USE_NOOP_METAL_DEVICE
         env.Global().Set("hasGpuRendering", false);
 #else

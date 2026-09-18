@@ -42,6 +42,7 @@ set(SOURCES
     "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
+    "Source/Tests.NativeEngine.ImageFormats.cpp"
     "Source/Tests.NativeEngine.Teardown.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"
@@ -81,6 +82,9 @@ elseif(WIN32)
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_IMAGE_LOADING)
+endif()
 target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
 target_include_directories(UnitTests PRIVATE "${BGFX_DIR}/3rdparty")
 target_link_libraries(UnitTests
@@ -98,6 +102,7 @@ target_link_libraries(UnitTests
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
+    PRIVATE bimg
     ${ADDITIONAL_LIBRARIES})
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})

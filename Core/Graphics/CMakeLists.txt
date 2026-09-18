@@ -7,6 +7,7 @@ set(SOURCES
     "InternalInclude/Babylon/Graphics/DeviceContext.h"
     "InternalInclude/Babylon/Graphics/DeviceQueries.h"
     "InternalInclude/Babylon/Graphics/FrameBuffer.h"
+    "InternalInclude/Babylon/Graphics/ImageFormat.h"
     "InternalInclude/Babylon/Graphics/Texture.h"
     "Source/BgfxCallback.cpp"
     "Source/FrameBuffer.cpp"
