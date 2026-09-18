@@ -291,7 +291,13 @@ namespace
     void sortSplats(const Napi::CallbackInfo& info)
     {
         const auto modelView{ info[0].As<Napi::Object>() };
-        const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
+        const auto matrixStorage{ modelView.Get("_m") };
+        if (!matrixStorage.IsArray() &&
+            !(matrixStorage.IsTypedArray() && matrixStorage.As<Napi::TypedArray>().TypedArrayType() == napi_float32_array))
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m to be a Float32Array or Array.");
+        }
+        const auto m{ matrixStorage.As<Napi::Object>() };
 
         auto positions{ info[1].As<Napi::Float32Array>() };
 
@@ -306,7 +312,19 @@ namespace
         }
 
         const auto splatCount = indices.ElementLength();
-        float vp[3] = { m[2u], m[6u], m[10u] };
+        // High-precision Babylon matrices use ordinary number arrays.
+        const auto m2{m.Get(2u)};
+        const auto m6{m.Get(6u)};
+        const auto m10{m.Get(10u)};
+        if (!m2.IsNumber() || !m6.IsNumber() || !m10.IsNumber())
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+        }
+        float vp[3] = {
+            m2.As<Napi::Number>().FloatValue(),
+            m6.As<Napi::Number>().FloatValue(),
+            m10.As<Napi::Number>().FloatValue()
+        };
         static std::vector<float> depthMix;
 
         depthMix.resize(splatCount * 2);
