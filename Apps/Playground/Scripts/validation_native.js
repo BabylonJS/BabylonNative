@@ -19,6 +19,19 @@
     const cliCaptureFrame = (typeof opts.captureFrame === "number" && opts.captureFrame > 0) ? (opts.captureFrame | 0) : 0;
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
+    const MAX_CONVERGENCE_TICKS = 240;
+    const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
+    const READINESS_RECONCILE_INTERVAL_MS = 100;
+    const utilityLayerOwners = new WeakMap();
+
+    // UtilityLayerRenderer exposes both sides of the association, but its utility
+    // scene can have no active camera when the layer is created before the main camera.
+    const updateUtilityLayerCamera = BABYLON.UtilityLayerRenderer.prototype._updateCamera;
+    BABYLON.UtilityLayerRenderer.prototype._updateCamera = function () {
+        const result = updateUtilityLayerCamera.apply(this, arguments);
+        utilityLayerOwners.set(this.utilityLayerScene, this.originalScene);
+        return result;
+    };
 
     function shouldRunTest(test, index) {
         if (testIndices.length > 0 && testIndices.indexOf(index) === -1) {
@@ -223,10 +236,11 @@
 
     // Random replacement
     let seed = 1;
-    Math.random = function () {
+    function seededRandom() {
         const x = Math.sin(seed++) * 10000;
         return x - Math.floor(x);
     }
+    Math.random = seededRandom;
 
     function compare(test, renderData, referenceImage, threshold, errorRatio) {
         const referenceData = TestUtils.getImageData(referenceImage);
@@ -312,6 +326,66 @@
         });
     }
 
+    function isSceneConverged(scene) {
+        const engine = scene.getEngine();
+        const previousRenderPassId = engine.currentRenderPassId;
+        try {
+            if (!scene.isReady()) {
+                return false;
+            }
+            for (let i = 0; i < scene.textures.length; i++) {
+                const texture = scene.textures[i];
+                if (typeof texture.guiIsReady === "function" && !texture.guiIsReady()) {
+                    return false;
+                }
+            }
+
+            // Hot-swapping materials may report ready while their replacement effect is
+            // still compiling. Inspect the camera's draw wrappers, not an unused pass.
+            const cameraRenderPassId = scene.activeCamera && scene.activeCamera.renderPassId;
+            engine.currentRenderPassId = cameraRenderPassId === null || cameraRenderPassId === undefined
+                ? previousRenderPassId
+                : cameraRenderPassId;
+            for (let i = 0; i < scene.meshes.length; i++) {
+                const mesh = scene.meshes[i];
+                if (!mesh.isEnabled() || !mesh.subMeshes || mesh.subMeshes.length === 0) {
+                    continue;
+                }
+                for (let j = 0; j < mesh.subMeshes.length; j++) {
+                    const subMesh = mesh.subMeshes[j];
+                    const defines = subMesh.materialDefines;
+                    if (defines && defines.isDirty) {
+                        return false;
+                    }
+                    const effect = subMesh.effect;
+                    if (effect && !effect.isReady()) {
+                        return false;
+                    }
+                }
+            }
+        } finally {
+            engine.currentRenderPassId = previousRenderPassId;
+        }
+        return true;
+    }
+
+    function getConvergenceScenes(scene) {
+        const scenes = [scene];
+        const virtualScenes = scene.getEngine()._virtualScenes;
+        for (let i = 0; i < virtualScenes.length; i++) {
+            const virtualScene = virtualScenes[i];
+            const utilityLayerOwner = utilityLayerOwners.get(virtualScene);
+            // Non-utility virtual scenes can still be associated through a shared camera.
+            const sharesCamera = utilityLayerOwner === undefined &&
+                virtualScene.activeCamera &&
+                virtualScene.activeCamera.getScene() === scene;
+            if (virtualScene !== scene && (utilityLayerOwner === scene || sharesCamera)) {
+                scenes.push(virtualScene);
+            }
+        }
+        return scenes;
+    }
+
     function processCurrentScene(test, renderImage, done, compareFunction) {
         currentScene.useConstantAnimationDeltaTime = true;
         // Frame at which to read back the framebuffer & validate. This is the
@@ -335,6 +409,12 @@
         let stopped = false;
         let pendingScreenshot = null;
         let evaluated = false;
+        let convergenceTicks = 0;
+        let readinessScenes = [];
+        let readyScenes = [];
+        let readinessReconcileTimer = null;
+        let readinessTimeoutTimer = null;
+        let waitingForReadiness = true;
 
         const runEvaluation = function (screenshot) {
             if (evaluated) {
@@ -344,28 +424,64 @@
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
         };
 
-        // Babylon's Scene.executeWhenReady gives up after Scene.onReadyTimeoutDuration
-        // (default 120s): once that elapses it fires onReadyTimeoutObservable and
-        // silently drops the executeWhenReady callback. Some validation scenes load
-        // very large assets (e.g. the EXR Loader's 3240x4800 RGBA32F image, whose
-        // gamma-correct CPU mip generation takes ~3 min under ASAN on the 2-core CI
-        // runner), which legitimately exceeds 120s. Without this the callback is
-        // dropped, the render loop never starts, and the test hangs until the CI
-        // job times out. Extend the budget generously and convert a genuine
-        // never-ready scene into a fast test failure instead of a silent hang.
-        currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
-        currentScene.onReadyTimeoutObservable.addOnce(function () {
-            console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
-                (currentScene.onReadyTimeoutDuration / 1000) + "s.");
-            failTest(done);
-        });
+        const stopReadinessWait = function () {
+            waitingForReadiness = false;
+            if (readinessReconcileTimer !== null) {
+                clearTimeout(readinessReconcileTimer);
+                readinessReconcileTimer = null;
+            }
+            if (readinessTimeoutTimer !== null) {
+                clearTimeout(readinessTimeoutTimer);
+                readinessTimeoutTimer = null;
+            }
+            readinessScenes.length = 0;
+            readyScenes.length = 0;
+        };
 
-        currentScene.executeWhenReady(function () {
+        const failInitialReadiness = function () {
+            if (stopped) {
+                return;
+            }
+            stopped = true;
+            evaluated = true;
+            stopReadinessWait();
+            console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
+                (INITIAL_READINESS_TIMEOUT_MS / 1000) + "s.");
+            failTest(done);
+        };
+
+        const startRendering = function () {
+            if (stopped) {
+                return;
+            }
+            stopReadinessWait();
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
             }
             engine.runRenderLoop(function () {
                 try {
+                    if (stopped) {
+                        return;
+                    }
+                    // Recompute because utility layers can be attached or disposed while
+                    // convergence is pending, updating the engine's virtual-scene list.
+                    const convergenceScenes = getConvergenceScenes(currentScene);
+                    if (!convergenceScenes.every(isSceneConverged)) {
+                        if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
+                            stopped = true;
+                            evaluated = true;
+                            console.error("Scene '" + (test.title || "?") + "' did not converge within " +
+                                MAX_CONVERGENCE_TICKS + " render-loop ticks (scene, material, or GUI readiness).");
+                            failTest(done);
+                            return;
+                        }
+                        convergenceTicks++;
+                        // Refresh material readiness without rendering extra animation/particle frames.
+                        for (let i = 0; i < convergenceScenes.length; i++) {
+                            convergenceScenes[i].incrementRenderId();
+                        }
+                        return;
+                    }
                     frameIndex++;
 
                     if (captureFrame > 0 && frameIndex === captureFrame && TestUtils.captureNextFrame) {
@@ -400,18 +516,154 @@
                     }
                 }
                 catch (e) {
+                    stopped = true;
+                    evaluated = true;
                     console.error(e);
                     failTest(done);
                 }
             });
-        }, true);
+        };
+
+        // Resource loading belongs to the initial readiness budget, including
+        // utility-scene models/textures; it must not consume convergence ticks.
+        const reconcileReadinessScenes = function () {
+            if (stopped || !waitingForReadiness) {
+                return;
+            }
+            try {
+                if (readinessReconcileTimer !== null) {
+                    clearTimeout(readinessReconcileTimer);
+                    readinessReconcileTimer = null;
+                }
+
+                const scenes = getConvergenceScenes(currentScene);
+                const newScenes = [];
+                for (let i = 0; i < scenes.length; i++) {
+                    if (readinessScenes.indexOf(scenes[i]) === -1) {
+                        newScenes.push(scenes[i]);
+                    }
+                }
+                const retainedReadyScenes = [];
+                for (let i = 0; i < readyScenes.length; i++) {
+                    if (scenes.indexOf(readyScenes[i]) !== -1) {
+                        retainedReadyScenes.push(readyScenes[i]);
+                    }
+                }
+                readinessScenes = scenes;
+                readyScenes = retainedReadyScenes;
+
+                for (let i = 0; i < newScenes.length; i++) {
+                    const scene = newScenes[i];
+                    // Scene.executeWhenReady drops its callbacks on timeout or disposal.
+                    // Keep a runner-owned deadline and reconcile virtual-scene membership
+                    // independently so removed scenes cannot strand this wait.
+                    scene.onReadyTimeoutDuration = INITIAL_READINESS_TIMEOUT_MS;
+                    scene.onReadyTimeoutObservable.addOnce(function () {
+                        if (!waitingForReadiness || readinessScenes.indexOf(scene) === -1) {
+                            return;
+                        }
+                        reconcileReadinessScenes();
+                        if (waitingForReadiness &&
+                            readinessScenes.indexOf(scene) !== -1 &&
+                            readyScenes.indexOf(scene) === -1) {
+                            failInitialReadiness();
+                        }
+                    });
+                    scene.executeWhenReady(function () {
+                        if (!waitingForReadiness || readinessScenes.indexOf(scene) === -1) {
+                            return;
+                        }
+                        if (readyScenes.indexOf(scene) === -1) {
+                            readyScenes.push(scene);
+                        }
+                        reconcileReadinessScenes();
+                    }, true);
+                    if (!waitingForReadiness) {
+                        return;
+                    }
+                }
+
+                let allReady = readinessScenes.length > 0;
+                for (let i = 0; i < readinessScenes.length; i++) {
+                    if (readyScenes.indexOf(readinessScenes[i]) === -1) {
+                        allReady = false;
+                        break;
+                    }
+                }
+                if (allReady) {
+                    startRendering();
+                } else if (readinessReconcileTimer === null) {
+                    readinessReconcileTimer = setTimeout(function () {
+                        readinessReconcileTimer = null;
+                        reconcileReadinessScenes();
+                    }, READINESS_RECONCILE_INTERVAL_MS);
+                }
+            }
+            catch (e) {
+                stopped = true;
+                evaluated = true;
+                stopReadinessWait();
+                console.error(e);
+                failTest(done);
+            }
+        };
+
+        readinessTimeoutTimer = setTimeout(failInitialReadiness, INITIAL_READINESS_TIMEOUT_MS);
+        reconcileReadinessScenes();
+        return function () {
+            stopped = true;
+            evaluated = true;
+            pendingScreenshot = null;
+            stopReadinessWait();
+        };
     }
 
     function loadPlayground(test, done, referenceImage, compareFunction) {
+        const outerDone = done;
+        const testEngine = engine;
+        let finished = false;
+        let shaderFailure;
+        let failureTimeoutId;
+        let rejectSceneCreation;
+        let stopSceneProcessing;
+        const effectErrorObserver = testEngine.onEffectErrorObservable.add(function (event) {
+            if (finished || shaderFailure || event.effect.isDisposed || !event.effect.allFallbacksProcessed() || event.effect.isReady()) {
+                return;
+            }
+            shaderFailure = new Error("Shader compilation failed for '" + test.title + "': " + event.errors);
+            console.error(shaderFailure.message);
+            // Scene/effect disposal must run outside the compiler's notification stack.
+            failureTimeoutId = setTimeout(function () {
+                if (rejectSceneCreation) {
+                    rejectSceneCreation(shaderFailure);
+                } else {
+                    failTest(done);
+                }
+            }, 0);
+        });
+        done = function (status) {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            testEngine.onEffectErrorObservable.remove(effectErrorObserver);
+            clearTimeout(failureTimeoutId);
+            if (stopSceneProcessing) {
+                stopSceneProcessing();
+            }
+            outerDone(shaderFailure ? false : status);
+        };
+
         if (test.sceneFolder) {
             BABYLON.SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function (newScene) {
+                if (finished) {
+                    if (!newScene.isDisposed) {
+                        newScene.dispose();
+                    }
+                    return;
+                }
                 currentScene = newScene;
-                processCurrentScene(test, referenceImage, done, compareFunction);
+                stopSceneProcessing = processCurrentScene(test, referenceImage, done, compareFunction);
             },
                 null,
                 function (loadedScene, msg) {
@@ -432,6 +684,9 @@
                 BABYLON.Tools.LoadFile(
                     url,
                     function (responseText) {
+                        if (finished) {
+                            return;
+                        }
                         try {
                             const snippet = JSON.parse(responseText);
                             let code = JSON.parse(snippet.jsonPayload).code.toString();
@@ -477,14 +732,17 @@
                             // native XHR dispatch frames and can overflow engines
                             // with a small C stack (e.g. QuickJS).
                             setTimeout(async function () {
+                                if (finished) {
+                                    return;
+                                }
                                 // eslint-disable-next-line no-unused-vars
                                 var name = ""; // see the note on the scriptToRun eval below
                                 try {
                                     // Runs before the first await, so the eval still happens at the
                                     // shallow stack depth this setTimeout exists to provide.
-                                    currentScene = eval(pgCode);
+                                    let createdScene = eval(pgCode);
 
-                                    if (currentScene && currentScene.then) {
+                                    if (createdScene && createdScene.then) {
                                         // Handle if createScene returns a promise. Guard against a
                                         // snippet whose promise never resolves (e.g. a scene whose
                                         // utility-layer executeWhenReady never fires on Native): the
@@ -498,9 +756,15 @@
                                         const createSceneTimeoutMs = 10 * 60 * 1000;
                                         let createSceneTimeoutId;
                                         try {
-                                            currentScene = await Promise.race([
-                                                currentScene,
+                                            createdScene = await Promise.race([
+                                                Promise.resolve(createdScene).then(function (scene) {
+                                                    if (finished && scene && !scene.isDisposed) {
+                                                        scene.dispose();
+                                                    }
+                                                    return scene;
+                                                }),
                                                 new Promise(function (resolve, reject) {
+                                                    rejectSceneCreation = reject;
                                                     createSceneTimeoutId = setTimeout(function () {
                                                         reject(new Error("createScene promise for " + test.playgroundId +
                                                             " did not resolve within " + (createSceneTimeoutMs / 1000) + "s."));
@@ -513,10 +777,15 @@
                                             // event loop alive for the full timeout after a scene that
                                             // resolved normally.
                                             clearTimeout(createSceneTimeoutId);
+                                            rejectSceneCreation = undefined;
                                         }
                                     }
 
-                                    processCurrentScene(test, referenceImage, done, compareFunction);
+                                    if (finished) {
+                                        return;
+                                    }
+                                    currentScene = createdScene;
+                                    stopSceneProcessing = processCurrentScene(test, referenceImage, done, compareFunction);
                                 }
                                 catch (e) {
                                     console.error("Failed to evaluate playground snippet " + test.playgroundId + ": " + e);
@@ -554,6 +823,9 @@
 
             request.onreadystatechange = function () {
                 if (request.readyState === 4) {
+                    if (finished) {
+                        return;
+                    }
                     try {
                         request.onreadystatechange = null;
 
@@ -587,6 +859,9 @@
                         // the native XHR dispatch frames and can overflow engines
                         // with a small C stack (e.g. QuickJS).
                         setTimeout(function () {
+                            if (finished) {
+                                return;
+                            }
                             // Browser scripts sometimes reference `name` without declaring it. In a
                             // page that silently resolves to window.name (""), so the mistake is
                             // invisible there but throws "ReferenceError: name is not defined"
@@ -598,7 +873,7 @@
                             var name = "";
                             try {
                                 currentScene = eval(scriptCode);
-                                processCurrentScene(test, referenceImage, done, compareFunction);
+                                stopSceneProcessing = processCurrentScene(test, referenceImage, done, compareFunction);
                             }
                             catch (e) {
                                 console.error(e);
@@ -633,6 +908,7 @@
         TestUtils.setTitle(testInfo);
 
         seed = 1;
+        Math.random = seededRandom;
 
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);
