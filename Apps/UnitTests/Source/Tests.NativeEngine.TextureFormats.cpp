@@ -125,7 +125,7 @@ TEST(NativeEngineTextureFormats, D24RenderTargetUsesSupportedBackingStorage)
             if (samples == 1)
             {
                 bgfx::Attachment attachment{};
-                attachment.init(texture->Handle(), bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
+                attachment.init(texture->Handle(), bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
                 const auto frameBuffer = bgfx::createFrameBuffer(1, &attachment, false);
                 ASSERT_TRUE(bgfx::isValid(frameBuffer));
                 bgfx::destroy(frameBuffer);
