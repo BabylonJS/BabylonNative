@@ -35,6 +35,100 @@ namespace
     // bgfx Vulkan m_bindInfo is indexed by sampler stage 0..15.
     constexpr unsigned kMaxBgfxTextureStages = 16;
 
+    class VulkanInterfaceLocationTraverser final : public TIntermTraverser
+    {
+    public:
+        void Collect(TIntermediate& intermediate, TStorageQualifier storage)
+        {
+            m_storage = storage;
+            intermediate.getTreeRoot()->traverse(this);
+        }
+
+        void AssignLocations()
+        {
+            std::map<std::string, unsigned> locations;
+            std::set<unsigned> reserved;
+            for (const auto& [name, symbols] : m_symbols)
+            {
+                for (const auto* symbol : symbols)
+                {
+                    const auto& qualifier = symbol->getQualifier();
+                    if (qualifier.hasLocation())
+                    {
+                        locations[name] = qualifier.layoutLocation;
+                        const auto count = TIntermediate::computeTypeLocationSize(symbol->getType(), EShLangFragment);
+                        for (int offset = 0; offset < count; ++offset)
+                        {
+                            reserved.insert(qualifier.layoutLocation + offset);
+                        }
+                    }
+                }
+            }
+            for (const auto& [name, symbols] : m_symbols)
+            {
+                if (locations.find(name) == locations.end())
+                {
+                    const auto count = TIntermediate::computeTypeLocationSize(symbols.front()->getType(), EShLangFragment);
+                    unsigned location{};
+                    for (int offset = 0; offset < count; ++offset)
+                    {
+                        if (reserved.count(location + offset))
+                        {
+                            location += offset + 1;
+                            offset = -1;
+                        }
+                    }
+                    locations[name] = location;
+                    for (int offset = 0; offset < count; ++offset)
+                    {
+                        reserved.insert(location + offset);
+                    }
+                }
+                for (auto* symbol : symbols)
+                {
+                    symbol->getWritableType().getQualifier().layoutLocation = locations.at(name);
+                }
+            }
+        }
+
+    private:
+        void visitSymbol(TIntermSymbol* symbol) override
+        {
+            const auto& type = symbol->getType();
+            if (type.getQualifier().storage != m_storage || type.isBuiltIn())
+            {
+                return;
+            }
+            if (type.isStruct() && !type.getStruct()->empty() && type.getStruct()->front().type->isBuiltIn())
+            {
+                return;
+            }
+            m_symbols[symbol->getName().c_str()].push_back(symbol);
+        }
+
+        TStorageQualifier m_storage{};
+        std::map<std::string, std::vector<TIntermSymbol*>> m_symbols;
+    };
+
+    class VulkanBuiltInTraverser final : public TIntermTraverser
+    {
+        void visitSymbol(TIntermSymbol* symbol) override
+        {
+            auto& qualifier = symbol->getWritableType().getQualifier();
+            switch (qualifier.builtIn)
+            {
+                case EbvVertexId:
+                    qualifier.builtIn = EbvVertexIndex;
+                    break;
+                case EbvInstanceId:
+                    qualifier.builtIn = EbvInstanceIndex;
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
     void CollectStageUniforms(
         glslang::TIntermediate* intermediate,
         std::vector<TIntermSymbol*>& textures,
@@ -276,6 +370,20 @@ namespace Babylon::Plugins
         {
             throw std::runtime_error{program.getInfoLog()};
         }
+
+        // The GLSLANG_WEB build omits mapIO. Match stage interfaces by name and
+        // reserve explicit locations before allocating implicit ones.
+        VulkanInterfaceLocationTraverser varyings;
+        varyings.Collect(*program.getIntermediate(EShLangVertex), EvqVaryingOut);
+        varyings.Collect(*program.getIntermediate(EShLangFragment), EvqVaryingIn);
+        varyings.AssignLocations();
+        VulkanInterfaceLocationTraverser outputs;
+        outputs.Collect(*program.getIntermediate(EShLangFragment), EvqVaryingOut);
+        outputs.AssignLocations();
+
+        // Parse Babylon's ordinary GLSL, but emit Vulkan's index built-ins.
+        VulkanBuiltInTraverser builtIns;
+        program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&builtIns);
 
         ShaderCompilerTraversers::IdGenerator ids{};
         // Flip 2D texture sample coordinates (replaces the former ProcessSamplerFlip texture() macro).
