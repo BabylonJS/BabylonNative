@@ -37,9 +37,19 @@ function makeScene(engine) {
 }
 
 function createRunner(options = {}) {
-    const state = { scenes: [], callbacks: [], timers: [], errors: [], logs: [], exits: [], reads: [], readbacks: [], captures: [] };
+    const state = { scenes: [], callbacks: [], timers: new Map(), errors: [], logs: [], exits: [], reads: [], readbacks: [], captures: [] };
+    let nextTimerId = 0;
+    let now = 0;
     let math;
     const definitions = options.tests || [{ title: "test", renderCount: options.renderCount || 1 }];
+    function createScene(engine) {
+        const scene = options.createScene
+            ? options.createScene(engine, state.scenes.length, math)
+            : makeScene(engine);
+        state.scenes.push(scene);
+        engine.scenes.push(scene);
+        return scene;
+    }
     class Engine {
         constructor() {
             this.scenes = [];
@@ -66,7 +76,12 @@ function createRunner(options = {}) {
             log: (...args) => state.logs.push(args.join(" ")),
             error: (...args) => state.errors.push(args.map(String).join(" ")),
         },
-        setTimeout: callback => state.timers.push(callback),
+        setTimeout(callback, delay = 0) {
+            const id = ++nextTimerId;
+            state.timers.set(id, { callback, due: now + delay });
+            return id;
+        },
+        clearTimeout: id => state.timers.delete(id),
         _native: { Canvas: { loadTTFAsync: () => ({ then: callback => callback() }) } },
         TestUtils: {
             setTitle() {},
@@ -89,16 +104,18 @@ function createRunner(options = {}) {
         },
         BABYLON: {
             NativeEngine: Engine,
-            Tools: { LoadFile: (url, onload) => onload(new ArrayBuffer(4)) },
+            Tools: {
+                LoadFile(url, onload) {
+                    onload(url.startsWith("https://snippet.babylonjs.com/")
+                        ? JSON.stringify({ jsonPayload: JSON.stringify({ code: options.playgroundCode }) })
+                        : new ArrayBuffer(4));
+                },
+            },
+            Scene: function (engine) { return createScene(engine); },
             SceneLoader: {
                 OnPluginActivatedObservable: { clear() {} },
                 Load(root, filename, engine, onload) {
-                    const scene = options.createScene
-                        ? options.createScene(engine, state.scenes.length, math)
-                        : makeScene(engine);
-                    state.scenes.push(scene);
-                    engine.scenes.push(scene);
-                    onload(scene);
+                    onload(createScene(engine));
                 },
             },
         },
@@ -110,7 +127,7 @@ function createRunner(options = {}) {
                 this.responseText = JSON.stringify({
                     root: "",
                     tests: definitions.map(value => ({
-                        sceneFolder: "synthetic/", sceneFilename: "scene.babylon",
+                        ...(value.playgroundId ? {} : { sceneFolder: "synthetic/", sceneFilename: "scene.babylon" }),
                         referenceImage: "reference.png", ...value,
                     })),
                 });
@@ -129,9 +146,19 @@ function createRunner(options = {}) {
             }
         },
         flushTimers() {
-            while (state.timers.length) {
-                state.timers.shift()();
+            while (true) {
+                const next = [...state.timers].filter(([, timer]) => timer.due <= now)
+                    .sort((left, right) => left[1].due - right[1].due)[0];
+                if (!next) {
+                    return;
+                }
+                state.timers.delete(next[0]);
+                next[1].callback();
             }
+        },
+        advanceTimers(milliseconds) {
+            now += milliseconds;
+            this.flushTimers();
         },
     };
 }
@@ -148,6 +175,38 @@ test("already-ready scenes keep their exact render count", () => {
     assert.deepEqual(runner.reads, [3]);
     assert.deepEqual(runner.exits, [0]);
 });
+
+for (const deferred of [false, true]) {
+    test(`playground scene promises cancel their timeout (deferred=${deferred})`, async () => {
+        const runner = createRunner({
+            tests: [{ title: "promised scene", playgroundId: "#TEST#0", renderCount: 2 }],
+            playgroundCode: `function createScene(engine) {
+                const scene = new BABYLON.Scene(engine);
+                return ${deferred ? "new Promise(resolve => setTimeout(() => resolve(scene), 50))" : "Promise.resolve(scene)"};
+            }`,
+        });
+        runner.flushTimers();
+        if (deferred) {
+            runner.advanceTimers(49);
+            await new Promise(resolve => setImmediate(resolve));
+            assert.equal(runner.callbacks.length, 0);
+            runner.advanceTimers(1);
+        }
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(runner.errors, []);
+        assert.equal(runner.callbacks.length, 1);
+        assert.equal(runner.timers.size, 0);
+        runner.tick();
+        runner.tick();
+        runner.flushTimers();
+        assert.deepEqual(runner.reads, [2]);
+        assert.deepEqual(runner.exits, [0]);
+        runner.advanceTimers(10 * 60 * 1000);
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(runner.errors, []);
+        assert.deepEqual(runner.exits, [0]);
+    });
+}
 
 test("GUI images, dirty defines, and pending effects do not consume rendered frames", () => {
     let guiReady = false;
