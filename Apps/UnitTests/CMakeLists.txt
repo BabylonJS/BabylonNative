@@ -46,6 +46,7 @@ set(SOURCES
     "Source/Tests.NativeEngine.DepthTextures.cpp"
     "Source/Tests.NativeEngine.Teardown.cpp"
     "Source/Tests.NativeEngine.TextureFormats.cpp"
+    "Source/Tests.NativeOptimizations.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
@@ -124,6 +125,11 @@ endif()
 if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT)
     target_link_libraries(UnitTests PRIVATE NativeMeshopt)
     target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_MESHOPT)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
+    target_link_libraries(UnitTests PRIVATE NativeOptimizations)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_OPTIMIZATIONS)
 endif()
 
 if(GRAPHICS_API STREQUAL "D3D12")
