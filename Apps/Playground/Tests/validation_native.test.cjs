@@ -20,6 +20,7 @@ function makeScene(engine) {
         render() { ++this.rendered; ++engine.rendered; },
         dispose() {
             ++this.disposed;
+            this.isDisposed = true;
             engine.scenes = engine.scenes.filter(value => value !== this);
         },
         onReadyTimeoutObservable: {
@@ -37,7 +38,7 @@ function makeScene(engine) {
 }
 
 function createRunner(options = {}) {
-    const state = { scenes: [], callbacks: [], timers: new Map(), errors: [], logs: [], exits: [], reads: [], readbacks: [], captures: [] };
+    const state = { scenes: [], callbacks: [], timers: new Map(), errors: [], logs: [], exits: [], reads: [], readbacks: [], captures: [], sceneLoads: [] };
     let nextTimerId = 0;
     let now = 0;
     let math;
@@ -67,6 +68,19 @@ function createRunner(options = {}) {
             this._virtualScenes = [];
             this.currentRenderPassId = 91;
             this.rendered = 0;
+            this.effectObservers = new Set();
+            this.onEffectErrorObservable = {
+                add: callback => { this.effectObservers.add(callback); return callback; },
+                remove: callback => this.effectObservers.delete(callback),
+            };
+        }
+        emitEffectError({ terminal = true, ready = false, disposed = false } = {}) {
+            for (const callback of [...this.effectObservers]) {
+                callback({
+                    effect: { allFallbacksProcessed: () => terminal, isReady: () => ready, isDisposed: disposed },
+                    errors: "test shader compilation error",
+                });
+            }
         }
         getCaps() { return {}; }
         runRenderLoop(callback) { this.loop = callback; state.callbacks.push(callback); }
@@ -117,7 +131,11 @@ function createRunner(options = {}) {
             NativeEngine: Engine,
             UtilityLayerRenderer,
             Tools: {
-                LoadFile(url, onload) {
+                LoadFile(url, onload, progress, database, binary, onerror) {
+                    if (options.snippetLoadError && url.startsWith("https://snippet.babylonjs.com/")) {
+                        onerror({ status: 404, statusText: "Not Found" });
+                        return;
+                    }
                     onload(url.startsWith("https://snippet.babylonjs.com/")
                         ? JSON.stringify({ jsonPayload: JSON.stringify({ code: options.playgroundCode }) })
                         : new ArrayBuffer(4));
@@ -127,7 +145,11 @@ function createRunner(options = {}) {
             SceneLoader: {
                 OnPluginActivatedObservable: { clear() {} },
                 Load(root, filename, engine, onload) {
-                    onload(createScene(engine));
+                    if (options.deferSceneLoad) {
+                        state.sceneLoads.push(() => onload(createScene(engine)));
+                    } else {
+                        onload(createScene(engine));
+                    }
                 },
             },
         },
@@ -186,6 +208,152 @@ test("already-ready scenes keep their exact render count", () => {
     assert.equal(runner.scenes[0].renderId, 0);
     assert.deepEqual(runner.reads, [3]);
     assert.deepEqual(runner.exits, [0]);
+});
+
+for (const synchronous of [false, true]) {
+    test(`terminal shader errors reject pending creation and cancel its timer (synchronous=${synchronous})`, async () => {
+        const runner = createRunner({
+            tests: [{ title: "failed shader", playgroundId: "#TEST#0" }],
+            playgroundCode: `function createScene(engine) {
+                new BABYLON.Scene(engine);
+                ${synchronous ? "engine.emitEffectError();" : ""}
+                return new Promise(() => {});
+            }`,
+        });
+        runner.flushTimers();
+        if (!synchronous) {
+            runner.engine.emitEffectError();
+            assert.equal(runner.scenes[0].disposed, 0, "must not dispose inside the compiler notification");
+            runner.flushTimers();
+        }
+        await new Promise(setImmediate);
+        runner.flushTimers();
+        assert.deepEqual(runner.exits, [-1]);
+        assert.equal(runner.scenes[0].disposed, 1);
+        assert.equal(runner.engine.effectObservers.size, 0);
+        assert.equal(runner.timers.size, 0);
+        assert.ok(runner.errors.some(value => value.includes("test shader compilation error")));
+        assert.deepEqual(runner.reads, []);
+    });
+}
+
+test("shader fallbacks, retained ready pipelines, and disposed effects do not fail validation", () => {
+    const runner = createRunner();
+    runner.engine.emitEffectError({ terminal: false });
+    runner.engine.emitEffectError({ ready: true });
+    runner.engine.emitEffectError({ disposed: true });
+    runner.flushTimers();
+    assert.deepEqual(runner.errors, []);
+    assert.deepEqual(runner.exits, []);
+    runner.tick();
+    runner.flushTimers();
+    assert.deepEqual(runner.exits, [0]);
+    assert.equal(runner.engine.effectObservers.size, 0);
+    assert.equal(runner.timers.size, 0);
+});
+
+for (const phase of ["initial readiness", "convergence", "screenshot"]) {
+    test(`shader failures cancel ${phase} callbacks and continue exactly once`, () => {
+        const runner = createRunner({
+            tests: [{ title: "failed shader" }, { title: "next scene" }],
+            deferReadback: true,
+            createScene(engine, index) {
+                const scene = makeScene(engine);
+                if (index === 0) {
+                    scene.deferReady = phase === "initial readiness";
+                    scene.ready = phase !== "convergence";
+                }
+                return scene;
+            },
+        });
+        const scene = runner.scenes[0];
+        const renderCallback = runner.engine.loop;
+        runner.tick();
+        runner.engine.emitEffectError();
+        runner.engine.emitEffectError();
+        assert.equal(scene.disposed, 0);
+        runner.flushTimers();
+        assert.equal(scene.disposed, 1);
+        assert.equal(runner.scenes.length, 2);
+        const logs = runner.logs.slice();
+        const errors = runner.errors.slice();
+        scene.readyCallback();
+        scene.readyTimeout();
+        if (renderCallback) {
+            renderCallback();
+        }
+        if (phase === "screenshot") {
+            runner.readbacks[0](new Uint8Array([255, 0, 0, 255]));
+        }
+        assert.deepEqual(runner.logs, logs);
+        assert.deepEqual(runner.errors, errors);
+        runner.tick();
+        runner.readbacks[runner.readbacks.length - 1](new Uint8Array([0, 0, 0, 255]));
+        runner.flushTimers();
+        assert.deepEqual(runner.exits, [-1]);
+        assert.ok(runner.logs.some(line => /ran=2 passed=1 failed=1/.test(line)));
+        assert.equal(runner.engine.effectObservers.size, 0);
+        assert.equal(runner.timers.size, 0);
+    });
+}
+
+test("a shader failure cannot become a pass when a screenshot completes before the deferred failure", () => {
+    const runner = createRunner({ deferReadback: true });
+    runner.tick();
+    runner.engine.emitEffectError();
+    runner.readbacks[0](new Uint8Array([0, 0, 0, 255]));
+    runner.flushTimers();
+    assert.deepEqual(runner.exits, [-1]);
+    assert.equal(runner.engine.effectObservers.size, 0);
+    assert.equal(runner.timers.size, 0);
+});
+
+test("a scene promise resolving after shader failure cannot replace the next scene", async () => {
+    const runner = createRunner({
+        tests: [{ title: "failed shader", playgroundId: "#TEST#0" }, { title: "next scene" }],
+        playgroundCode: `function createScene(engine) {
+            return new Promise(resolve => { engine.resolveLateScene = resolve; });
+        }`,
+    });
+    runner.flushTimers();
+    runner.engine.emitEffectError();
+    runner.flushTimers();
+    await new Promise(setImmediate);
+    runner.flushTimers();
+    const lateScene = makeScene(runner.engine);
+    runner.engine.resolveLateScene(lateScene);
+    await new Promise(setImmediate);
+    assert.equal(lateScene.disposed, 1);
+    runner.tick();
+    runner.flushTimers();
+    assert.equal(runner.scenes[0].rendered, 1);
+    assert.ok(runner.logs.some(line => /ran=2 passed=1 failed=1/.test(line)));
+    assert.deepEqual(runner.exits, [-1]);
+    assert.equal(runner.timers.size, 0);
+});
+
+test("failed snippet loading removes its effect observer", () => {
+    const runner = createRunner({
+        tests: [{ title: "missing snippet", playgroundId: "#TEST#0" }],
+        snippetLoadError: true,
+    });
+    runner.flushTimers();
+    runner.engine.emitEffectError();
+    assert.equal(runner.engine.effectObservers.size, 0);
+    assert.equal(runner.errors.length, 1);
+    assert.deepEqual(runner.exits, [-1]);
+});
+
+test("a scene-file load delivered after shader failure is disposed without rendering", () => {
+    const runner = createRunner({ deferSceneLoad: true });
+    runner.engine.emitEffectError();
+    runner.flushTimers();
+    runner.sceneLoads[0]();
+    assert.equal(runner.scenes[0].disposed, 1);
+    assert.equal(runner.scenes[0].rendered, 0);
+    assert.deepEqual(runner.exits, [-1]);
+    assert.equal(runner.engine.effectObservers.size, 0);
+    assert.equal(runner.timers.size, 0);
 });
 
 for (const deferred of [false, true]) {
