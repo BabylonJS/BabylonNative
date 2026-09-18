@@ -291,7 +291,13 @@ namespace
     void sortSplats(const Napi::CallbackInfo& info)
     {
         const auto modelView{ info[0].As<Napi::Object>() };
-        const auto m{ modelView.Get("_m").As<Napi::Object>() };
+        const auto matrixStorage{ modelView.Get("_m") };
+        if (!matrixStorage.IsArray() &&
+            !(matrixStorage.IsTypedArray() && matrixStorage.As<Napi::TypedArray>().TypedArrayType() == napi_float32_array))
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m to be a Float32Array or Array.");
+        }
+        const auto m{ matrixStorage.As<Napi::Object>() };
 
         auto positions{ info[1].As<Napi::Float32Array>() };
 
