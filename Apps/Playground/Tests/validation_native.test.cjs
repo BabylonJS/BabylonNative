@@ -255,21 +255,29 @@ test("scene readiness is rechecked after executeWhenReady", () => {
     assert.deepEqual(runner.exits, [0]);
 });
 
-for (const cameraPass of [7, null]) {
-    test(`material inspection selects and restores the render pass (camera=${cameraPass})`, () => {
+for (const { name, hasCamera = true, cameraPass, expectedPass } of [
+    { name: "active camera", cameraPass: 7, expectedPass: 7 },
+    { name: "main render pass", cameraPass: 0, expectedPass: 0 },
+    { name: "no active camera", hasCamera: false, expectedPass: 91 },
+    { name: "undefined camera pass", cameraPass: undefined, expectedPass: 91 },
+    { name: "null camera pass", cameraPass: null, expectedPass: 91 },
+]) {
+    test(`material inspection selects and restores the render pass (${name})`, () => {
         const inspected = [];
         const runner = createRunner({
             createScene(engine) {
                 const scene = makeScene(engine);
-                if (cameraPass === null) {
+                if (!hasCamera) {
                     scene.activeCamera = null;
+                } else {
+                    scene.activeCamera.renderPassId = cameraPass;
                 }
                 scene.meshes.push({
                     isEnabled: () => true,
                     subMeshes: [{
                         get materialDefines() {
                             inspected.push(engine.currentRenderPassId);
-                            return { isDirty: engine.currentRenderPassId !== (cameraPass || 91) };
+                            return { isDirty: engine.currentRenderPassId !== expectedPass };
                         },
                     }],
                 });
@@ -278,7 +286,7 @@ for (const cameraPass of [7, null]) {
         });
         runner.tick();
         runner.flushTimers();
-        assert.deepEqual(inspected, [cameraPass || 91]);
+        assert.deepEqual(inspected, [expectedPass]);
         assert.equal(runner.engine.currentRenderPassId, 91);
         assert.deepEqual(runner.exits, [0]);
     });
@@ -416,6 +424,35 @@ test("only associated utility scenes participate in convergence", () => {
     guiReady = true;
     runner.tick();
     runner.flushTimers();
+    assert.deepEqual(runner.exits, [0]);
+});
+
+test("utility scenes attached during convergence participate in later ticks", () => {
+    let mainReady = false;
+    let utilityReady = false;
+    let utility;
+    const runner = createRunner({
+        createScene(engine) {
+            const scene = makeScene(engine);
+            scene.textures.push({ guiIsReady: () => mainReady });
+            return scene;
+        },
+    });
+    const main = runner.scenes[0];
+    runner.tick();
+    utility = makeScene(runner.engine);
+    utility.activeCamera = main.activeCamera;
+    utility.textures.push({ guiIsReady: () => utilityReady });
+    runner.engine._virtualScenes.push(utility);
+    mainReady = true;
+    runner.tick();
+    assert.equal(main.rendered, 0);
+    assert.equal(main.renderId, 2);
+    assert.equal(utility.renderId, 1);
+    utilityReady = true;
+    runner.tick();
+    runner.flushTimers();
+    assert.deepEqual(runner.reads, [1]);
     assert.deepEqual(runner.exits, [0]);
 });
 

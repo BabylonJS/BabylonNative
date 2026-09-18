@@ -330,7 +330,10 @@
 
             // Hot-swapping materials may report ready while their replacement effect is
             // still compiling. Inspect the camera's draw wrappers, not an unused pass.
-            engine.currentRenderPassId = scene.activeCamera ? scene.activeCamera.renderPassId : previousRenderPassId;
+            const cameraRenderPassId = scene.activeCamera && scene.activeCamera.renderPassId;
+            engine.currentRenderPassId = cameraRenderPassId === null || cameraRenderPassId === undefined
+                ? previousRenderPassId
+                : cameraRenderPassId;
             for (let i = 0; i < scene.meshes.length; i++) {
                 const mesh = scene.meshes[i];
                 if (!mesh.isEnabled() || !mesh.subMeshes || mesh.subMeshes.length === 0) {
@@ -412,6 +415,8 @@
                     if (stopped) {
                         return;
                     }
+                    // Recompute because utility layers can be attached or disposed while
+                    // convergence is pending, updating the engine's virtual-scene list.
                     const convergenceScenes = getConvergenceScenes(currentScene);
                     if (!convergenceScenes.every(isSceneConverged)) {
                         if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
