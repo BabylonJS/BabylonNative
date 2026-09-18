@@ -4,6 +4,7 @@ import { Buffer } from "buffer";
 import {
   RequestFile,
   NativeEngine,
+  DynamicTexture,
   MeshBuilder,
   DefaultRenderingPipeline,
   RefractionPostProcess,
@@ -34,6 +35,7 @@ declare const hostPlatform: string;
 declare const hasGpuRendering: boolean;
 declare const hasNativeImageLoading: boolean;
 declare const setExitCode: (code: number) => void;
+declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
 
 registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
@@ -197,6 +199,209 @@ describe("Canvas2D", function () {
       pixels[offset + 3],
     ];
   }
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "intersects nested clips and restores parent clips on the GPU",
+    async function () {
+      this.timeout(10000);
+      for (const translated of [false, true]) {
+        const engine = new NativeEngine();
+        const scene = new Scene(engine);
+        try {
+          const texture = new DynamicTexture("nested clips", 64, scene, false);
+          const ctx = texture.getContext();
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(8, 0, 24, 64);
+          ctx.clip();
+
+          ctx.save();
+          if (translated) {
+            ctx.translate(16, 0);
+          }
+          ctx.beginPath();
+          ctx.rect(0, 0, 64, 64);
+          ctx.clip();
+          ctx.fillStyle = "red";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.restore();
+
+          ctx.fillStyle = "#00ff00";
+          ctx.fillRect(24, 0, 16, 64);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(40, 0, 16, 64);
+          ctx.clip();
+          ctx.fillStyle = "magenta";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.restore();
+          ctx.restore();
+
+          ctx.fillStyle = "blue";
+          ctx.fillRect(40, 0, 8, 64);
+          texture.update(false);
+          const pixels = await texture.readPixels();
+          if (!(pixels instanceof Uint8Array)) {
+            throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+          }
+          const pixel = (x: number) =>
+            Array.from(
+              pixels.subarray(
+                (32 * 64 + x) * 4,
+                (32 * 64 + x + 1) * 4
+              )
+            );
+          expect(pixel(4), "outside parent").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+          expect(pixel(12), "translated child boundary").to.deep.equal(
+            translated ? [255, 255, 255, 255] : [255, 0, 0, 255]
+          );
+          expect(pixel(20), "inside intersection").to.deep.equal([
+            255, 0, 0, 255
+          ]);
+          expect(pixel(28), "restored parent").to.deep.equal([
+            0, 255, 0, 255
+          ]);
+          expect(pixel(36), "outside restored parent").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+          expect(pixel(44), "restored unclipped state").to.deep.equal([
+            0, 0, 255, 255
+          ]);
+          expect(pixel(52), "disjoint clip").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+          expect(pixel(60), "outside every fill").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+        } finally {
+          scene.dispose();
+          engine.dispose();
+        }
+      }
+    }
+  );
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "normalizes negative rectangle dimensions before intersecting GPU clips",
+    async function () {
+      this.timeout(10000);
+      const engine = new NativeEngine();
+      const scene = new Scene(engine);
+      try {
+        const texture = new DynamicTexture("signed clips", 64, scene, false);
+        const ctx = texture.getContext();
+        for (const rotated of [false, true]) {
+          let expected: Uint8Array | undefined;
+          for (const flips of [
+            [false, false], [true, false], [false, true], [true, true]
+          ]) {
+            const flipX = flips[0];
+            const flipY = flips[1];
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(18, 12, 36, 44);
+            ctx.clip();
+            ctx.save();
+            if (rotated) {
+              ctx.translate(32, 32);
+              ctx.rotate(0.3);
+              ctx.translate(-32, -32);
+            }
+            ctx.beginPath();
+            ctx.rect(
+              flipX ? 40 : 16, flipY ? 40 : 20,
+              flipX ? -24 : 24, flipY ? -20 : 20
+            );
+            ctx.clip();
+            ctx.fillStyle = "blue";
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.restore();
+            ctx.restore();
+            texture.update(false);
+
+            const pixels = await texture.readPixels();
+            if (!(pixels instanceof Uint8Array)) {
+              throw new Error("Expected RGBA8 GPU readback for signed clips");
+            }
+            const description =
+              `rotated=${rotated}, flipX=${flipX}, flipY=${flipY}`;
+            expect(pixelAt(pixels, 64, 28, 30), `inside clip, ${description}`)
+              .to.deep.equal([0, 0, 255, 255]);
+            expect(pixelAt(pixels, 64, 0, 0), "outside parent clip")
+              .to.deep.equal([255, 255, 255, 255]);
+            if (expected) {
+              let changed = 0;
+              for (let index = 0; index < pixels.length; ++index) {
+                if (pixels[index] !== expected[index]) {
+                  ++changed;
+                }
+              }
+              expect(changed, `signed clip equivalence, ${description}`)
+                .to.equal(0);
+            } else {
+              expected = pixels.slice();
+            }
+          }
+        }
+      } finally {
+        scene.dispose();
+        engine.dispose();
+      }
+    }
+  );
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "clears only the clipped GPU region and ignores globalAlpha and filters",
+    async function () {
+      this.timeout(10000);
+      const engine = new NativeEngine();
+      const scene = new Scene(engine);
+      try {
+        const texture = new DynamicTexture("clipped clear", 64, scene, false);
+        const ctx = texture.getContext();
+        ctx.fillStyle = "red";
+        ctx.fillRect(0, 0, 64, 64);
+        texture.update(false);
+
+        ctx.filter = "blur(2px)";
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(8, 0, 24, 64);
+        ctx.clip();
+        ctx.globalAlpha = 0.25;
+        ctx.clearRect(0, 0, 64, 64);
+        ctx.restore();
+        texture.update(false);
+        const pixels = await texture.readPixels();
+        if (!(pixels instanceof Uint8Array)) {
+          throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+        }
+        const pixel = (x: number) =>
+          Array.from(
+            pixels.subarray((32 * 64 + x) * 4, (32 * 64 + x + 1) * 4)
+          );
+        expect(pixel(36), "preserved near clip").to.deep.equal([
+          255, 0, 0, 255
+        ]);
+        expect(pixel(16), "fully cleared inside clip").to.deep.equal([
+          0, 0, 0, 0
+        ]);
+        expect(pixel(44), "preserved after clip").to.deep.equal([
+          255, 0, 0, 255
+        ]);
+      } finally {
+        scene.dispose();
+        engine.dispose();
+      }
+    }
+  );
 
   it("round-trips a string fillStyle and strokeStyle", function () {
     const ctx = createContext();

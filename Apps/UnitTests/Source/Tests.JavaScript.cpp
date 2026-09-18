@@ -84,6 +84,11 @@ TEST(JavaScript, All)
 #else
         env.Global().Set("hasGpuRendering", true);
 #endif
+#if defined(SKIP_RENDER_TESTS) || defined(SKIP_EXTERNAL_TEXTURE_TESTS)
+        env.Global().Set("skipCanvasGpuTests", true);
+#else
+        env.Global().Set("skipCanvasGpuTests", false);
+#endif
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
