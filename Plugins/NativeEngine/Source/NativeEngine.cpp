@@ -1639,13 +1639,16 @@ namespace Babylon
     void NativeEngine::InitializeTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        const auto widthValue = info[1].As<Napi::Number>();
+        const auto heightValue = info[2].As<Napi::Number>();
+        const uint16_t width = static_cast<uint16_t>(widthValue.Uint32Value());
+        const uint16_t height = static_cast<uint16_t>(heightValue.Uint32Value());
         const bool hasMips = info[3].As<Napi::Boolean>();
         const bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
         const bool renderTarget = info[5].As<Napi::Boolean>();
         const bool srgb = info[6].As<Napi::Boolean>();
         const uint32_t samples = info[7].IsUndefined() ? 1 : info[7].As<Napi::Number>().Uint32Value();
+        const bool isCube = !info[8].IsUndefined() && info[8].As<Napi::Boolean>();
 
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
@@ -1657,7 +1660,18 @@ namespace Babylon
             flags |= BGFX_TEXTURE_SRGB;
         }
 
-        texture->Create2D(width, height, hasMips, 1, format, flags);
+        if (isCube)
+        {
+            if (widthValue.DoubleValue() != heightValue.DoubleValue())
+            {
+                throw Napi::RangeError::New(info.Env(), "Cube texture width and height must be equal");
+            }
+            texture->CreateCube(width, hasMips, 1, format, flags);
+        }
+        else
+        {
+            texture->Create2D(width, height, hasMips, 1, format, flags);
+        }
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
@@ -2465,6 +2479,14 @@ namespace Babylon
         const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
         const bool generateDepth = info[4].As<Napi::Boolean>();
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
+        const double layer = info[6].IsUndefined() ? 0 : info[6].As<Napi::Number>().DoubleValue();
+        const bool isCube = texture != nullptr && texture->IsCube();
+        if (!std::isfinite(layer) || layer != std::floor(layer) || layer < 0 || layer > (isCube ? 5 : 0))
+        {
+            throw Napi::RangeError::New(info.Env(), isCube
+                ? "Cube frame buffer face must be an integer between 0 and 5"
+                : "Non-cube frame buffer layer must be 0");
+        }
 
         // A single render target is just the zero-or-one color attachment case of the shared implementation.
         const bool requestDepthStencilTexture = texture != nullptr && !texture->IsValid();
@@ -2476,7 +2498,7 @@ namespace Babylon
         const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr && !requestDepthStencilTexture ? 1u : 0u};
 
         return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples,
-            requestDepthStencilTexture ? texture : nullptr);
+            static_cast<uint16_t>(layer), requestDepthStencilTexture ? texture : nullptr);
     }
 
     Napi::Value NativeEngine::CreateMultiFrameBuffer(const Napi::CallbackInfo& info)
@@ -2504,7 +2526,7 @@ namespace Babylon
         return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples);
     }
 
-    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, Graphics::Texture* depthStencilTexture)
+    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer, Graphics::Texture* depthStencilTexture)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
         const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
@@ -2526,7 +2548,7 @@ namespace Babylon
             // bgfx validation now asserts when trying to use BGFX_ATTACHMENT_AUTO_GEN_MIPS with a texture that doesn't have the BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN flag,
             // but before it would just ignore the flag and not generate mips without any warning. This prevents validation assert, but rendering might be broken if autogen
             // mips were expected. Basically this change preserves previous behavior.
-            attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, 0, 1, 0
+            attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, layer, 1, 0
                 , 0 != (caps->formats[texture->Format()] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) ? BGFX_ATTACHMENT_AUTO_GEN_MIPS : BGFX_ATTACHMENT_NONE
                 );
         }
