@@ -39,6 +39,7 @@ namespace Babylon::Polyfills::Internal
         void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);
         void HandleLoadImageError(const Napi::Error& error);
         bool SetBuffer(gsl::span<const std::byte> buffer);
+        void ReleaseImage();
         void Dispose();
 
         uint32_t m_width{1};

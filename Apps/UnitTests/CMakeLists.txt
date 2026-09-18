@@ -20,6 +20,7 @@ set(TEST_ASSETS
     "JavaScript/dist/tests.shaderCompilation.comprehensiveGLSL.js")
 
 set(PACKAGED_TEST_ASSETS
+    "Assets/image-reload.png"
     "Assets/droidsans.ttf"
     "Assets/droidsans.LICENSE.txt")
 
