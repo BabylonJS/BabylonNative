@@ -717,14 +717,11 @@ namespace Babylon::Plugins
                 texture.NumLayers(),
                 texture.Format(),
                 texture.Flags(),
-                reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
+                reinterpret_cast<uintptr_t>(m_impl->textureRGBA),
+                std::shared_ptr<void>{(__bridge_retained void*)m_impl->textureRGBA, [](void* resource) { CFRelease(resource); }});
             m_impl->bgfxTexture = &texture;
             m_impl->bgfxTextureHandle = texture.Handle();
             m_impl->refreshBgfxTexture = false;
-
-            // Keep only the native resource alive until bgfx processes the import.
-            arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), arcana::cancellation::none(),
-                [textureRGBA = m_impl->textureRGBA] { (void)textureRGBA; });
         }
 
         // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
@@ -838,10 +835,10 @@ namespace Babylon::Plugins
             // to a deadlock where Babylon is waiting for the frame to finish render on the main thread and AVCaptureSession::stopRunning is waiting
             // for the main thread to free up while blocking the current frame from rendering.
             //
-            // Capturing textureRGBA, textureDelegate, and textureCache maintains the imported texture's
-            // lifetime until after the render pass. Otherwise bgfx could access a released Metal texture.
+            // Keep capture resources alive until the session stops. Imported output textures
+            // are retained separately by their Graphics::Texture wrappers.
             arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), arcana::cancellation::none(),
-                [avCaptureSession = m_impl->avCaptureSession, textureRGBA = m_impl->textureRGBA, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
+                [avCaptureSession = m_impl->avCaptureSession, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
             {
                 [avCaptureSession stopRunning];
 

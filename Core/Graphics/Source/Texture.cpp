@@ -2,6 +2,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <cassert>
 #include <cstring>
+#include <utility>
 
 namespace
 {
@@ -36,6 +37,15 @@ namespace Babylon::Graphics
             m_handle = BGFX_INVALID_HANDLE;
             m_ownsHandle = false;
         }
+
+        if (m_nativeTextureOwner)
+        {
+            // Cross a full render boundary, even when Dispose is called from AfterRender.
+            // Only the native owner is deferred; the Texture wrapper is never accessed.
+            arcana::make_task(m_deviceContext.BeforeRenderScheduler(), arcana::cancellation::none(), [] {})
+                .then(m_deviceContext.AfterRenderScheduler(), arcana::cancellation::none(),
+                    [owner = std::move(m_nativeTextureOwner)] { (void)owner; });
+        }
     }
 
     bool Texture::IsValid() const
@@ -65,7 +75,7 @@ namespace Babylon::Graphics
         m_flags = flags;
     }
 
-    void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle)
+    void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle, std::shared_ptr<void> nativeTextureOwner)
     {
         Dispose();
 
@@ -82,6 +92,7 @@ namespace Babylon::Graphics
         }
 
         m_ownsHandle = true;
+        m_nativeTextureOwner = std::move(nativeTextureOwner);
         SetMetadata(width, height, 0, hasMips, false, false, numLayers, format, flags);
     }
 
