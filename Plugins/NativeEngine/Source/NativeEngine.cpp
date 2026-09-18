@@ -2299,11 +2299,11 @@ namespace Babylon
         const Napi::Env env{info.Env()};
 
         Graphics::Texture* texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
-        uint8_t mipLevel{static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value())};
-        const uint16_t x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
-        const uint16_t y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
-        const uint16_t width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
-        const uint16_t height{static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value())};
+        const double requestedMipLevel{info[1].As<Napi::Number>().DoubleValue()};
+        const double requestedX{info[2].As<Napi::Number>().DoubleValue()};
+        const double requestedY{info[3].As<Napi::Number>().DoubleValue()};
+        const double requestedWidth{info[4].As<Napi::Number>().DoubleValue()};
+        const double requestedHeight{info[5].As<Napi::Number>().DoubleValue()};
         auto buffer{info[6].As<Napi::ArrayBuffer>()};
         uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
         uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
@@ -2313,6 +2313,27 @@ namespace Babylon
         const uint16_t srcZ{isCubeFace ? static_cast<uint16_t>(faceIndex) : static_cast<uint16_t>(0)};
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
+
+        // Validate JS numbers before any integer conversion can wrap or truncate them.
+        const auto isUnsignedInteger = [](double value, double maximum) {
+            return value >= 0 && value <= maximum && std::floor(value) == value;
+        };
+        if (!isUnsignedInteger(requestedMipLevel, UINT8_MAX))
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
+            return deferred.Promise();
+        }
+        if (!isUnsignedInteger(requestedX, UINT16_MAX) || !isUnsignedInteger(requestedY, UINT16_MAX) ||
+            !isUnsignedInteger(requestedWidth, UINT16_MAX) || !isUnsignedInteger(requestedHeight, UINT16_MAX))
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture rectangle is out of range for this mip level.").Value());
+            return deferred.Promise();
+        }
+        uint8_t mipLevel{static_cast<uint8_t>(requestedMipLevel)};
+        const uint16_t x{static_cast<uint16_t>(requestedX)};
+        const uint16_t y{static_cast<uint16_t>(requestedY)};
+        const uint16_t width{static_cast<uint16_t>(requestedWidth)};
+        const uint16_t height{static_cast<uint16_t>(requestedHeight)};
 
         // Calculate source texture storage size.
         const auto sourceTextureFormat{texture->Format()};
