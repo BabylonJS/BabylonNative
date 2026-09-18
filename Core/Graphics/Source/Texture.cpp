@@ -83,10 +83,12 @@ namespace Babylon::Graphics
         const auto createFlags = nativeTextureHandle == 0 ? flags | BGFX_TEXTURE_BLIT_DST : flags;
 
         const bool renderTarget = (flags & BGFX_TEXTURE_RT_MASK) != 0;
-        const bool msaaSample = (flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 &&
-            (flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
-        // D3D11 forbids initial data for multisampled storage; it must be initialized by a framebuffer clear.
-        const auto* mem = nativeTextureHandle == 0 && renderTarget && !msaaSample ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
+        const auto rtMsaa = flags & BGFX_TEXTURE_RT_MSAA_MASK;
+        const bool sampledMsaa = (flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 &&
+            rtMsaa != BGFX_TEXTURE_NONE && rtMsaa != BGFX_TEXTURE_RT;
+        // Sampled MSAA storage cannot receive initial data; initialize it with a framebuffer clear.
+        // Ordinary MSAA targets still have single-sample resolve storage to initialize.
+        const auto* mem = nativeTextureHandle == 0 && renderTarget && !sampledMsaa ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
 
         m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, createFlags, mem, nativeTextureHandle);
         if (!bgfx::isValid(m_handle))
