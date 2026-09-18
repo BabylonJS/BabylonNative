@@ -44,7 +44,7 @@ registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
 describe("Native texture readback", function () {
   this.timeout(10000);
 
-  (hasGpuRendering ? it : it.skip)("returns bottom-origin RGBA8 crops and preserves destination offsets", async function () {
+  (hasGpuRendering && hasNativeImageLoading ? it : it.skip)("returns bottom-origin RGBA8 crops and preserves destination offsets", async function () {
     const engine = new NativeEngine();
     const scene = new Scene(engine);
     try {
@@ -127,6 +127,25 @@ describe("Native texture readback", function () {
           throw new Error("Expected out-of-range mip readback to reject");
         }
         expect(error.message).to.contain("rectangle is out of range");
+      }
+      for (const invalid of [65536, 65537, 256, 2 ** 32, 2 ** 32 + 1, -1, 0.5, NaN, Infinity]) {
+        for (const component of [1, 2, 3, 4, 0]) {
+          const request = [0, 0, 0, 1, 1];
+          request[component] = invalid;
+          const [mip, x, y, width, height] = request;
+          const destination = new Uint8Array(4).fill(91);
+          let error: unknown;
+          try {
+            await engine._readTexturePixels(internalTexture, width, height, -1, mip, destination, true, false, x, y);
+          } catch (caught) {
+            error = caught;
+          }
+          if (!(error instanceof Error)) {
+            throw new Error(`Expected invalid readback component ${component}=${invalid} to reject`);
+          }
+          expect(error.message).to.contain(component === 0 ? "mip level is out of range" : "rectangle is out of range");
+          expect(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);
+        }
       }
     } finally {
       scene.dispose();
