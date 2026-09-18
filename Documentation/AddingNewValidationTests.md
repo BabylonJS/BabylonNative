@@ -50,6 +50,14 @@ next scene.
 Each test restores both the seeded `Math.random` function and its seed, so a snippet
 that replaces `Math.random` cannot change the sequence used by the next test.
 
+Terminal notifications from the engine's `onEffectErrorObservable` fail the active
+test without waiting for readiness or scene-creation timeouts. Errors with remaining
+fallbacks, a retained ready pipeline, or a disposed effect do not fail the test.
+Cleanup runs outside the compiler notification callback and cancels pending readiness,
+screenshot, and creation-timeout work. A late-loaded scene cannot replace the next test.
+This uses published engine APIs; failures that do not emit an effect-error notification
+still depend on the normal timeouts or a separate engine fix.
+
 The host-independent runner regressions execute the complete script with simulated
 host services. Run them from the repository root with
 `node --test Apps/Playground/Tests/validation_native.test.cjs`; CI runs them separately
