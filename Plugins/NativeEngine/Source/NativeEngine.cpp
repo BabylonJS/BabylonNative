@@ -26,9 +26,9 @@
 #include <stb/stb_image_resize2.h>
 #include <bx/math.h>
 #include <bx/error.h>
-#include <algorithm>
 #endif
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <limits>
@@ -92,15 +92,12 @@ namespace Babylon
         {
             const size_t rowPitch{image.size() / height};
 
-            std::vector<uint8_t> buffer(rowPitch);
             for (size_t row = 0; row < height / 2; row++)
             {
                 uint8_t* frontPtr{image.data() + (row * rowPitch)};
                 uint8_t* backPtr{image.data() + ((height - row - 1) * rowPitch)};
 
-                std::memcpy(buffer.data(), frontPtr, rowPitch);
-                std::memcpy(frontPtr, backPtr, rowPitch);
-                std::memcpy(backPtr, buffer.data(), rowPitch);
+                std::swap_ranges(frontPtr, frontPtr + rowPitch, backPtr);
             }
         }
 
@@ -2346,13 +2343,13 @@ namespace Babylon
         };
         if (!isUnsignedInteger(requestedMipLevel, UINT8_MAX))
         {
-            deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
+            deferred.Reject(Napi::Error::New(env, "readTexture mip level must be a finite integer between 0 and 255.").Value());
             return deferred.Promise();
         }
         if (!isUnsignedInteger(requestedX, UINT16_MAX) || !isUnsignedInteger(requestedY, UINT16_MAX) ||
             !isUnsignedInteger(requestedWidth, UINT16_MAX) || !isUnsignedInteger(requestedHeight, UINT16_MAX))
         {
-            deferred.Reject(Napi::Error::New(env, "readTexture rectangle is out of range for this mip level.").Value());
+            deferred.Reject(Napi::Error::New(env, "readTexture x, y, width, and height must be finite integers between 0 and 65535.").Value());
             return deferred.Promise();
         }
         uint8_t mipLevel{static_cast<uint8_t>(requestedMipLevel)};
