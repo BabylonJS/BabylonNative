@@ -28536,8 +28536,10 @@ mocha__WEBPACK_IMPORTED_MODULE_3__.reporter("spec");
 
 describe("Native texture readback", function () {
   this.timeout(10000);
+  // Native LoadRawTexture is also disabled when native image loading is off.
+  var itWithRawTexture = hasGpuRendering && hasNativeImageLoading ? it : it.skip;
 
-  (hasGpuRendering && hasNativeImageLoading ? it : it.skip)("returns bottom-origin RGBA8 crops and preserves destination offsets", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee() {var engine, scene, _i, _arr, invertY, width, height, data, y, x, texture, _i2, _arr2, _arr2$_i, _x, _y, readWidth, readHeight, storage, destination, result, row, sourceY, column, offset;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+  itWithRawTexture("returns bottom-origin RGBA8 crops and preserves destination offsets", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee() {var engine, scene, _i, _arr, invertY, width, height, data, y, x, texture, _i2, _arr2, _arr2$_i, _x, _y, readWidth, readHeight, storage, destination, result, row, sourceY, column, offset;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
           engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.NativeEngine();
           scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context.prev = 1;_i = 0, _arr =
 
@@ -28582,9 +28584,45 @@ describe("Native texture readback", function () {
 
   );
 
-  (hasGpuRendering && hasNativeImageLoading ? it : it.skip)("uses mip extents for cropped readback", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee2() {var engine, scene, data, y, x, texture, _i3, _arr3, _arr3$_i, _y2, green, result, internalTexture, _i4, _arr4, _arr4$_i, _x2, _y3, width, height, error, _i5, _arr5, invalid, _i6, _arr6, component, request, mip, _x3, _y4, _width, _height, destination, _error, maximum, _t, _t2;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
+  itWithRawTexture("returns wide odd-height readbacks without changing the middle row", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee2() {var engine, scene, width, height, rowPitch, data, y, x, _i3, _arr3, invertY, texture, result, row, sourceY;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
           engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.NativeEngine();
           scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context2.prev = 1;
+
+          width = 2049;
+          height = 3;
+          rowPitch = width * 4;
+          data = new Uint8Array(rowPitch * height);
+          for (y = 0; y < height; ++y) {
+            for (x = 0; x < width; ++x) {
+              data.set([x % 251, y * 70, Math.floor(x / 256) * 23, 255], y * rowPitch + x * 4);
+            }
+          }_i3 = 0, _arr3 =
+          [false, true];case 2:if (!(_i3 < _arr3.length)) {_context2.next = 8;break;}invertY = _arr3[_i3];
+          texture = _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.RawTexture.CreateRGBATexture(data, width, height, scene, false, invertY);_context2.prev = 3;_context2.next = 4;return (
+
+            texture.readPixels());case 4:result = _context2.sent;if (
+          result instanceof Uint8Array) {_context2.next = 5;break;}throw (
+            new Error("Expected RGBA8 wide readback"));case 5:
+
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(result.length).to.equal(data.length);
+          for (row = 0; row < height; ++row) {
+            sourceY = invertY ? height - 1 - row : row;
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(Array.from(result.subarray(row * rowPitch, (row + 1) * rowPitch))).
+            to.deep.equal(Array.from(data.subarray(sourceY * rowPitch, (sourceY + 1) * rowPitch)));
+          }case 6:_context2.prev = 6;
+
+          texture.dispose();return _context2.finish(6);case 7:_i3++;_context2.next = 2;break;case 8:_context2.prev = 8;
+
+
+
+          scene.dispose();
+          engine.dispose();return _context2.finish(8);case 9:case "end":return _context2.stop();}}, _callee2, null, [[1,, 8, 9], [3,, 6, 7]]);}))
+
+  );
+
+  itWithRawTexture("uses mip extents for cropped readback", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee3() {var engine, scene, data, y, x, texture, _i4, _arr4, _arr4$_i, _y2, green, result, internalTexture, _i5, _arr5, _arr5$_i, _x2, _y3, width, height, error, _i6, _arr6, invalid, _i7, _arr7, component, request, mip, _x3, _y4, _width, _height, destination, _error, maximum, parameter, _t, _t2;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context3) {while (1) switch (_context3.prev = _context3.next) {case 0:
+          engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.NativeEngine();
+          scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context3.prev = 1;
 
           data = new Uint8Array(4 * 8 * 4);
           for (y = 0; y < 8; ++y) {
@@ -28592,10 +28630,10 @@ describe("Native texture readback", function () {
               data.set([x < 2 ? 255 : 0, y < 4 ? 255 : 0, 0, 255], (y * 4 + x) * 4);
             }
           }
-          texture = _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.RawTexture.CreateRGBATexture(data, 4, 8, scene, true, false);_i3 = 0, _arr3 =
-          [[0, 255], [3, 0]];case 2:if (!(_i3 < _arr3.length)) {_context2.next = 6;break;}_arr3$_i = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_arr3[_i3], 2), _y2 = _arr3$_i[0], green = _arr3$_i[1];_context2.next = 3;return (
-            texture.readPixels(0, 1, null, true, false, 1, _y2, 1, 1));case 3:result = _context2.sent;if (
-          result instanceof Uint8Array) {_context2.next = 4;break;}throw (
+          texture = _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.RawTexture.CreateRGBATexture(data, 4, 8, scene, true, false);_i4 = 0, _arr4 =
+          [[0, 255], [3, 0]];case 2:if (!(_i4 < _arr4.length)) {_context3.next = 6;break;}_arr4$_i = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_arr4[_i4], 2), _y2 = _arr4$_i[0], green = _arr4$_i[1];_context3.next = 3;return (
+            texture.readPixels(0, 1, null, true, false, 1, _y2, 1, 1));case 3:result = _context3.sent;if (
+          result instanceof Uint8Array) {_context3.next = 4;break;}throw (
             new Error("Expected RGBA8 mip readback"));case 4:
 
           (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(result.length).to.equal(4);
@@ -28603,53 +28641,52 @@ describe("Native texture readback", function () {
           // Mip generation can round a solid 255 channel down by one.
           (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(result[1]).to.be.closeTo(green, 1);
           (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(result[2]).to.equal(0);
-          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(result[3]).to.equal(255);case 5:_i3++;_context2.next = 2;break;case 6:
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(result[3]).to.equal(255);case 5:_i4++;_context3.next = 2;break;case 6:
 
           internalTexture = texture.getInternalTexture();if (
-          internalTexture) {_context2.next = 7;break;}throw (
-            new Error("Expected an initialized raw texture"));case 7:_i4 = 0, _arr4 =
+          internalTexture) {_context3.next = 7;break;}throw (
+            new Error("Expected an initialized raw texture"));case 7:_i5 = 0, _arr5 =
 
-          [[2, 0, 1, 1], [0, 4, 1, 1], [0, 3, 1, 2], [0, 0, 0, 1]];case 8:if (!(_i4 < _arr4.length)) {_context2.next = 15;break;}_arr4$_i = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_arr4[_i4], 4), _x2 = _arr4$_i[0], _y3 = _arr4$_i[1], width = _arr4$_i[2], height = _arr4$_i[3];
-          error = void 0;_context2.prev = 9;_context2.next = 10;return (
+          [[2, 0, 1, 1], [0, 4, 1, 1], [0, 3, 1, 2], [0, 0, 0, 1]];case 8:if (!(_i5 < _arr5.length)) {_context3.next = 15;break;}_arr5$_i = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_arr5[_i5], 4), _x2 = _arr5$_i[0], _y3 = _arr5$_i[1], width = _arr5$_i[2], height = _arr5$_i[3];
+          error = void 0;_context3.prev = 9;_context3.next = 10;return (
 
-            engine._readTexturePixels(internalTexture, width, height, -1, 1, null, true, false, _x2, _y3));case 10:_context2.next = 12;break;case 11:_context2.prev = 11;_t = _context2["catch"](9);
+            engine._readTexturePixels(internalTexture, width, height, -1, 1, null, true, false, _x2, _y3));case 10:_context3.next = 12;break;case 11:_context3.prev = 11;_t = _context3["catch"](9);
 
           error = _t;case 12:if (
 
-          error instanceof Error) {_context2.next = 13;break;}throw (
+          error instanceof Error) {_context3.next = 13;break;}throw (
             new Error("Expected out-of-range mip readback to reject"));case 13:
 
-          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(error.message).to.contain("rectangle is out of range");case 14:_i4++;_context2.next = 8;break;case 15:_i5 = 0, _arr5 =
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(error.message).to.contain("rectangle is out of range");case 14:_i5++;_context3.next = 8;break;case 15:_i6 = 0, _arr6 =
 
-          [65536, 65537, 256, Math.pow(2, 32), Math.pow(2, 32) + 1, -1, 0.5, NaN, Infinity];case 16:if (!(_i5 < _arr5.length)) {_context2.next = 25;break;}invalid = _arr5[_i5];_i6 = 0, _arr6 =
-          [1, 2, 3, 4, 0];case 17:if (!(_i6 < _arr6.length)) {_context2.next = 24;break;}component = _arr6[_i6];
+          [65536, 65537, 256, Math.pow(2, 32), Math.pow(2, 32) + 1, -1, 0.5, NaN, Infinity];case 16:if (!(_i6 < _arr6.length)) {_context3.next = 25;break;}invalid = _arr6[_i6];_i7 = 0, _arr7 =
+          [1, 2, 3, 4, 0];case 17:if (!(_i7 < _arr7.length)) {_context3.next = 24;break;}component = _arr7[_i7];
           request = [0, 0, 0, 1, 1];
           request[component] = invalid;
           mip = request[0], _x3 = request[1], _y4 = request[2], _width = request[3], _height = request[4];
           destination = new Uint8Array(4).fill(91);
-          _error = void 0;_context2.prev = 18;_context2.next = 19;return (
+          _error = void 0;_context3.prev = 18;_context3.next = 19;return (
 
-            engine._readTexturePixels(internalTexture, _width, _height, -1, mip, destination, true, false, _x3, _y4));case 19:_context2.next = 21;break;case 20:_context2.prev = 20;_t2 = _context2["catch"](18);
+            engine._readTexturePixels(internalTexture, _width, _height, -1, mip, destination, true, false, _x3, _y4));case 19:_context3.next = 21;break;case 20:_context3.prev = 20;_t2 = _context3["catch"](18);
 
           _error = _t2;case 21:if (
 
-          _error instanceof Error) {_context2.next = 22;break;}throw (
+          _error instanceof Error) {_context3.next = 22;break;}throw (
             new Error("Expected invalid readback component ".concat(component, "=").concat(invalid, " to reject")));case 22:
 
           maximum = component === 0 ? 255 : 65535;
           if (!Number.isInteger(invalid) || invalid < 0 || invalid > maximum) {
-            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_error.message).to.equal(component === 0 ?
-            "readTexture mip level must be a finite integer between 0 and 255." :
-            "readTexture x, y, width, and height must be finite integers between 0 and 65535.");
+            parameter = ["mip level", "x", "y", "width", "height"][component];
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_error.message).to.equal("readTexture ".concat(parameter, " must be a finite integer between 0 and ").concat(maximum, "."));
           } else {
             (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_error.message).to.contain("rectangle is out of range");
           }
-          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);case 23:_i6++;_context2.next = 17;break;case 24:_i5++;_context2.next = 16;break;case 25:_context2.prev = 25;
+          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);case 23:_i7++;_context3.next = 17;break;case 24:_i6++;_context3.next = 16;break;case 25:_context3.prev = 25;
 
 
 
           scene.dispose();
-          engine.dispose();return _context2.finish(25);case 26:case "end":return _context2.stop();}}, _callee2, null, [[1,, 25, 26], [9, 11], [18, 20]]);}))
+          engine.dispose();return _context3.finish(25);case 26:case "end":return _context3.stop();}}, _callee3, null, [[1,, 25, 26], [9, 11], [18, 20]]);}))
 
   );
 });
@@ -28816,11 +28853,11 @@ describe("Canvas2D", function () {
 
   (skipCanvasGpuTests ? it.skip : it)(
     "intersects nested clips and restores parent clips on the GPU", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(
-      function _callee3() {var _loop, _i7, _arr7;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context4) {while (1) switch (_context4.prev = _context4.next) {case 0:
-              this.timeout(10000);_loop = /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _loop() {var translated, engine, scene, texture, ctx, pixels, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context3) {while (1) switch (_context3.prev = _context3.next) {case 0:
-                      translated = _arr7[_i7];
+      function _callee4() {var _loop, _i8, _arr8;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context5) {while (1) switch (_context5.prev = _context5.next) {case 0:
+              this.timeout(10000);_loop = /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _loop() {var translated, engine, scene, texture, ctx, pixels, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context4) {while (1) switch (_context4.prev = _context4.next) {case 0:
+                      translated = _arr8[_i8];
                       engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.NativeEngine();
-                      scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context3.prev = 1;
+                      scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context4.prev = 1;
 
                       texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.DynamicTexture("nested clips", 64, scene, false);
                       ctx = texture.getContext();
@@ -28855,9 +28892,9 @@ describe("Canvas2D", function () {
 
                       ctx.fillStyle = "blue";
                       ctx.fillRect(40, 0, 8, 64);
-                      texture.update(false);_context3.next = 2;return (
-                        texture.readPixels());case 2:pixels = _context3.sent;if (
-                      pixels instanceof Uint8Array) {_context3.next = 3;break;}throw (
+                      texture.update(false);_context4.next = 2;return (
+                        texture.readPixels());case 2:pixels = _context4.sent;if (
+                      pixels instanceof Uint8Array) {_context4.next = 3;break;}throw (
                         new Error("Expected RGBA8 GPU readback for the canvas texture"));case 3:
 
                       pixel = function pixel(x) {return (
@@ -28890,10 +28927,10 @@ describe("Canvas2D", function () {
                       );
                       (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pixel(60), "outside every fill").to.deep.equal([
                       255, 255, 255, 255]
-                      );case 4:_context3.prev = 4;
+                      );case 4:_context4.prev = 4;
 
                       scene.dispose();
-                      engine.dispose();return _context3.finish(4);case 5:case "end":return _context3.stop();}}, _loop, null, [[1,, 4, 5]]);});_i7 = 0, _arr7 = [false, true];case 1:if (!(_i7 < _arr7.length)) {_context4.next = 3;break;}return _context4.delegateYield(_loop(), "t0", 2);case 2:_i7++;_context4.next = 1;break;case 3:case "end":return _context4.stop();}}, _callee3, this);}))
+                      engine.dispose();return _context4.finish(4);case 5:case "end":return _context4.stop();}}, _loop, null, [[1,, 4, 5]]);});_i8 = 0, _arr8 = [false, true];case 1:if (!(_i8 < _arr8.length)) {_context5.next = 3;break;}return _context5.delegateYield(_loop(), "t0", 2);case 2:_i8++;_context5.next = 1;break;case 3:case "end":return _context5.stop();}}, _callee4, this);}))
 
 
 
@@ -28901,17 +28938,17 @@ describe("Canvas2D", function () {
 
   (skipCanvasGpuTests ? it.skip : it)(
     "normalizes negative rectangle dimensions before intersecting GPU clips", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(
-      function _callee4() {var engine, scene, texture, ctx, _i8, _arr8, rotated, expected, _i9, _arr9, flips, flipX, flipY, _pixels, description, changed, index;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context5) {while (1) switch (_context5.prev = _context5.next) {case 0:
+      function _callee5() {var engine, scene, texture, ctx, _i9, _arr9, rotated, expected, _i0, _arr0, flips, flipX, flipY, _pixels, description, changed, index;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context6) {while (1) switch (_context6.prev = _context6.next) {case 0:
               this.timeout(10000);
               engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.NativeEngine();
-              scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context5.prev = 1;
+              scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context6.prev = 1;
 
               texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.DynamicTexture("signed clips", 64, scene, false);
-              ctx = texture.getContext();_i8 = 0, _arr8 =
-              [false, true];case 2:if (!(_i8 < _arr8.length)) {_context5.next = 8;break;}rotated = _arr8[_i8];
-              expected = void 0;_i9 = 0, _arr9 =
+              ctx = texture.getContext();_i9 = 0, _arr9 =
+              [false, true];case 2:if (!(_i9 < _arr9.length)) {_context6.next = 8;break;}rotated = _arr9[_i9];
+              expected = void 0;_i0 = 0, _arr0 =
               [
-              [false, false], [true, false], [false, true], [true, true]];case 3:if (!(_i9 < _arr9.length)) {_context5.next = 7;break;}flips = _arr9[_i9];
+              [false, false], [true, false], [false, true], [true, true]];case 3:if (!(_i0 < _arr0.length)) {_context6.next = 7;break;}flips = _arr0[_i0];
 
               flipX = flips[0];
               flipY = flips[1];
@@ -28937,10 +28974,10 @@ describe("Canvas2D", function () {
               ctx.fillRect(0, 0, 64, 64);
               ctx.restore();
               ctx.restore();
-              texture.update(false);_context5.next = 4;return (
+              texture.update(false);_context6.next = 4;return (
 
-                texture.readPixels());case 4:_pixels = _context5.sent;if (
-              _pixels instanceof Uint8Array) {_context5.next = 5;break;}throw (
+                texture.readPixels());case 4:_pixels = _context6.sent;if (
+              _pixels instanceof Uint8Array) {_context6.next = 5;break;}throw (
                 new Error("Expected RGBA8 GPU readback for signed clips"));case 5:
 
               description = "rotated=".concat(
@@ -28960,22 +28997,22 @@ describe("Canvas2D", function () {
                 to.equal(0);
               } else {
                 expected = _pixels.slice();
-              }case 6:_i9++;_context5.next = 3;break;case 7:_i8++;_context5.next = 2;break;case 8:_context5.prev = 8;
+              }case 6:_i0++;_context6.next = 3;break;case 7:_i9++;_context6.next = 2;break;case 8:_context6.prev = 8;
 
 
 
               scene.dispose();
-              engine.dispose();return _context5.finish(8);case 9:case "end":return _context5.stop();}}, _callee4, this, [[1,, 8, 9]]);}))
+              engine.dispose();return _context6.finish(8);case 9:case "end":return _context6.stop();}}, _callee5, this, [[1,, 8, 9]]);}))
 
 
   );
 
   (skipCanvasGpuTests ? it.skip : it)(
     "clears only the clipped GPU region and ignores globalAlpha and filters", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(
-      function _callee5() {var engine, scene, texture, ctx, _pixels2, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context6) {while (1) switch (_context6.prev = _context6.next) {case 0:
+      function _callee6() {var engine, scene, texture, ctx, _pixels2, pixel;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context7) {while (1) switch (_context7.prev = _context7.next) {case 0:
               this.timeout(10000);
               engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.NativeEngine();
-              scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context6.prev = 1;
+              scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context7.prev = 1;
 
               texture = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.DynamicTexture("clipped clear", 64, scene, false);
               ctx = texture.getContext();
@@ -28992,9 +29029,9 @@ describe("Canvas2D", function () {
               ctx.globalAlpha = 0.25;
               ctx.clearRect(0, 0, 64, 64);
               ctx.restore();
-              texture.update(false);_context6.next = 2;return (
-                texture.readPixels());case 2:_pixels2 = _context6.sent;if (
-              _pixels2 instanceof Uint8Array) {_context6.next = 3;break;}throw (
+              texture.update(false);_context7.next = 2;return (
+                texture.readPixels());case 2:_pixels2 = _context7.sent;if (
+              _pixels2 instanceof Uint8Array) {_context7.next = 3;break;}throw (
                 new Error("Expected RGBA8 GPU readback for the canvas texture"));case 3:
 
               pixel = function pixel(x) {return (
@@ -29009,10 +29046,10 @@ describe("Canvas2D", function () {
               );
               (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pixel(44), "preserved after clip").to.deep.equal([
               255, 0, 0, 255]
-              );case 4:_context6.prev = 4;
+              );case 4:_context7.prev = 4;
 
               scene.dispose();
-              engine.dispose();return _context6.finish(4);case 5:case "end":return _context6.stop();}}, _callee5, this, [[1,, 4, 5]]);}))
+              engine.dispose();return _context7.finish(4);case 5:case "end":return _context7.stop();}}, _callee6, this, [[1,, 4, 5]]);}))
 
 
   );
@@ -30134,9 +30171,9 @@ describe("PostProcesses", function () {
 describe("NativeEncoding", function () {
   this.timeout(0);function
 
-  expectValidPNG(_x4) {return _expectValidPNG.apply(this, arguments);}function _expectValidPNG() {_expectValidPNG = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee8(blob) {var arrayBuffer, pngSignature;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context9) {while (1) switch (_context9.prev = _context9.next) {case 0:
-            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(blob).to.be.instanceOf(Blob);_context9.next = 1;return (
-              blob.arrayBuffer());case 1:arrayBuffer = _context9.sent;
+  expectValidPNG(_x4) {return _expectValidPNG.apply(this, arguments);}function _expectValidPNG() {_expectValidPNG = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee9(blob) {var arrayBuffer, pngSignature;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context0) {while (1) switch (_context0.prev = _context0.next) {case 0:
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(blob).to.be.instanceOf(Blob);_context0.next = 1;return (
+              blob.arrayBuffer());case 1:arrayBuffer = _context0.sent;
             (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(arrayBuffer.byteLength).to.be.greaterThan(0);
 
             pngSignature = new Uint8Array(arrayBuffer.slice(0, 4));
@@ -30144,23 +30181,23 @@ describe("NativeEncoding", function () {
             (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pngSignature[1]).to.equal(80); // 'P'
             (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pngSignature[2]).to.equal(78); // 'N'
             (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(pngSignature[3]).to.equal(71); // 'G'
-          case 2:case "end":return _context9.stop();}}, _callee8);}));return _expectValidPNG.apply(this, arguments);}
+          case 2:case "end":return _context0.stop();}}, _callee9);}));return _expectValidPNG.apply(this, arguments);}
 
-  it("should encode a PNG", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee6() {var pixelData, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context7) {while (1) switch (_context7.prev = _context7.next) {case 0:
-          pixelData = new Uint8Array(4).fill(255);_context7.next = 1;return (
-            _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false));case 1:result = _context7.sent;_context7.next = 2;return (
-            expectValidPNG(result));case 2:case "end":return _context7.stop();}}, _callee6);}))
+  it("should encode a PNG", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee7() {var pixelData, result;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context8) {while (1) switch (_context8.prev = _context8.next) {case 0:
+          pixelData = new Uint8Array(4).fill(255);_context8.next = 1;return (
+            _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false));case 1:result = _context8.sent;_context8.next = 2;return (
+            expectValidPNG(result));case 2:case "end":return _context8.stop();}}, _callee7);}))
   );
 
-  it("should handle multiple concurrent encoding tasks", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee7() {var pixelDatas, i, results;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context8) {while (1) switch (_context8.prev = _context8.next) {case 0:
+  it("should handle multiple concurrent encoding tasks", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee8() {var pixelDatas, i, results;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context9) {while (1) switch (_context9.prev = _context9.next) {case 0:
           pixelDatas = [];
           for (i = 0; i < 10; i++) {
             pixelDatas.push(new Uint8Array(4).fill(255));
-          }_context8.next = 1;return (
+          }_context9.next = 1;return (
             Promise.all(pixelDatas.map(function (pixelData) {return (
                 _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false));}
-            )));case 1:results = _context8.sent;_context8.next = 2;return (
-            Promise.all(results.map(function (b) {return expectValidPNG(b);})));case 2:case "end":return _context8.stop();}}, _callee7);}))
+            )));case 1:results = _context9.sent;_context9.next = 2;return (
+            Promise.all(results.map(function (b) {return expectValidPNG(b);})));case 2:case "end":return _context9.stop();}}, _callee8);}))
   );
 });
 

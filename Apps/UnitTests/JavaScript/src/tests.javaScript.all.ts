@@ -43,8 +43,10 @@ registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
 
 describe("Native texture readback", function () {
   this.timeout(10000);
+  // Native LoadRawTexture is also disabled when native image loading is off.
+  const itWithRawTexture = hasGpuRendering && hasNativeImageLoading ? it : it.skip;
 
-  (hasGpuRendering && hasNativeImageLoading ? it : it.skip)("returns bottom-origin RGBA8 crops and preserves destination offsets", async function () {
+  itWithRawTexture("returns bottom-origin RGBA8 crops and preserves destination offsets", async function () {
     const engine = new NativeEngine();
     const scene = new Scene(engine);
     try {
@@ -89,7 +91,43 @@ describe("Native texture readback", function () {
     }
   });
 
-  (hasGpuRendering && hasNativeImageLoading ? it : it.skip)("uses mip extents for cropped readback", async function () {
+  itWithRawTexture("returns wide odd-height readbacks without changing the middle row", async function () {
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const width = 2049;
+      const height = 3;
+      const rowPitch = width * 4;
+      const data = new Uint8Array(rowPitch * height);
+      for (let y = 0; y < height; ++y) {
+        for (let x = 0; x < width; ++x) {
+          data.set([x % 251, y * 70, Math.floor(x / 256) * 23, 255], y * rowPitch + x * 4);
+        }
+      }
+      for (const invertY of [false, true]) {
+        const texture = RawTexture.CreateRGBATexture(data, width, height, scene, false, invertY);
+        try {
+          const result = await texture.readPixels();
+          if (!(result instanceof Uint8Array)) {
+            throw new Error("Expected RGBA8 wide readback");
+          }
+          expect(result.length).to.equal(data.length);
+          for (let row = 0; row < height; ++row) {
+            const sourceY = invertY ? height - 1 - row : row;
+            expect(Array.from(result.subarray(row * rowPitch, (row + 1) * rowPitch)))
+              .to.deep.equal(Array.from(data.subarray(sourceY * rowPitch, (sourceY + 1) * rowPitch)));
+          }
+        } finally {
+          texture.dispose();
+        }
+      }
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  itWithRawTexture("uses mip extents for cropped readback", async function () {
     const engine = new NativeEngine();
     const scene = new Scene(engine);
     try {
@@ -145,9 +183,8 @@ describe("Native texture readback", function () {
           }
           const maximum = component === 0 ? 255 : 65535;
           if (!Number.isInteger(invalid) || invalid < 0 || invalid > maximum) {
-            expect(error.message).to.equal(component === 0
-              ? "readTexture mip level must be a finite integer between 0 and 255."
-              : "readTexture x, y, width, and height must be finite integers between 0 and 65535.");
+            const parameter = ["mip level", "x", "y", "width", "height"][component];
+            expect(error.message).to.equal(`readTexture ${parameter} must be a finite integer between 0 and ${maximum}.`);
           } else {
             expect(error.message).to.contain("rectangle is out of range");
           }
