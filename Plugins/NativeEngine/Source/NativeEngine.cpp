@@ -26,14 +26,15 @@
 #include <stb/stb_image_resize2.h>
 #include <bx/math.h>
 #include <bx/error.h>
-#include <algorithm>
 #endif
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <limits>
 #include <optional>
 #include <array>
+#include <utility>
 
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
 #include <atomic>
@@ -92,7 +93,9 @@ namespace Babylon
         {
             const size_t rowPitch{image.size() / height};
 
-            std::vector<uint8_t> buffer(rowPitch);
+            // Reuse whole-row scratch storage without sharing it across concurrent readbacks.
+            thread_local std::vector<uint8_t> buffer;
+            buffer.resize(rowPitch);
             for (size_t row = 0; row < height / 2; row++)
             {
                 uint8_t* frontPtr{image.data() + (row * rowPitch)};
@@ -2299,11 +2302,11 @@ namespace Babylon
         const Napi::Env env{info.Env()};
 
         Graphics::Texture* texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
-        uint8_t mipLevel{static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value())};
-        const uint16_t x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
-        const uint16_t y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
-        const uint16_t width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
-        const uint16_t height{static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value())};
+        const double requestedMipLevel{info[1].As<Napi::Number>().DoubleValue()};
+        const double requestedX{info[2].As<Napi::Number>().DoubleValue()};
+        const double requestedY{info[3].As<Napi::Number>().DoubleValue()};
+        const double requestedWidth{info[4].As<Napi::Number>().DoubleValue()};
+        const double requestedHeight{info[5].As<Napi::Number>().DoubleValue()};
         auto buffer{info[6].As<Napi::ArrayBuffer>()};
         uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
         uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
@@ -2313,6 +2316,31 @@ namespace Babylon
         const uint16_t srcZ{isCubeFace ? static_cast<uint16_t>(faceIndex) : static_cast<uint16_t>(0)};
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
+
+        // Validate JS numbers before any integer conversion can wrap or truncate them.
+        const auto isUnsignedInteger = [](double value, double maximum) {
+            return value >= 0 && value <= maximum && std::floor(value) == value;
+        };
+        if (!isUnsignedInteger(requestedMipLevel, UINT8_MAX))
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture mip level must be a finite integer between 0 and 255.").Value());
+            return deferred.Promise();
+        }
+        const std::pair<const char*, double> rectangleParameters[]{
+            {"x", requestedX}, {"y", requestedY}, {"width", requestedWidth}, {"height", requestedHeight}};
+        for (const auto& [name, value] : rectangleParameters)
+        {
+            if (!isUnsignedInteger(value, UINT16_MAX))
+            {
+                deferred.Reject(Napi::Error::New(env, std::string{"readTexture "} + name + " must be a finite integer between 0 and 65535.").Value());
+                return deferred.Promise();
+            }
+        }
+        uint8_t mipLevel{static_cast<uint8_t>(requestedMipLevel)};
+        const uint16_t x{static_cast<uint16_t>(requestedX)};
+        const uint16_t y{static_cast<uint16_t>(requestedY)};
+        const uint16_t width{static_cast<uint16_t>(requestedWidth)};
+        const uint16_t height{static_cast<uint16_t>(requestedHeight)};
 
         // Calculate source texture storage size.
         const auto sourceTextureFormat{texture->Format()};
@@ -2350,6 +2378,12 @@ namespace Babylon
         {
             deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
         }
+        else if (width == 0 || height == 0 ||
+            static_cast<uint32_t>(x) + width > std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel) ||
+            static_cast<uint32_t>(y) + height > std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel))
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture rectangle is out of range for this mip level.").Value());
+        }
         else if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture face/layer index is out of range for this texture.").Value());
@@ -2382,6 +2416,8 @@ namespace Babylon
             // shifts are well defined here; they floor at 1 to match how bgfx sizes the tail of the chain.
             const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel)};
             const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
+            // WebGL readPixels coordinates start at the bottom, unlike D3D/Metal/Vulkan blit coordinates.
+            const uint16_t blitY{bgfx::getCaps()->originBottomLeft ? y : static_cast<uint16_t>(mipHeight - y - height)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
             // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
@@ -2395,7 +2431,7 @@ namespace Babylon
                 bgfx::TextureRegion dstRegion{};
                 dstRegion.init(blitTextureHandle, /*x*/ 0, /*y*/ 0, width, height);
                 bgfx::TextureRegion srcRegion{};
-                srcRegion.init(sourceTextureHandle, x, y, width, height);
+                srcRegion.init(sourceTextureHandle, x, blitY, width, height);
                 srcRegion.mip = mipLevel;
                 srcRegion.z = srcZ;
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
@@ -2425,7 +2461,8 @@ namespace Babylon
 #endif
                     }
                     assert(textureBuffer.size() == targetTextureInfo.storageSize);
-                    if (bgfx::getCaps()->originBottomLeft)
+                    // Return bottom-up rows, matching WebGL readPixels on every backend.
+                    if (!bgfx::getCaps()->originBottomLeft)
                     {
                         FlipImage(textureBuffer, targetTextureInfo.height);
                     }
