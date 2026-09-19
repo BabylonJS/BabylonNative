@@ -28582,7 +28582,7 @@ describe("Native texture readback", function () {
 
   );
 
-  (hasGpuRendering && hasNativeImageLoading ? it : it.skip)("uses mip extents for cropped readback", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee2() {var engine, scene, data, y, x, texture, _i3, _arr3, _arr3$_i, _y2, green, result, internalTexture, _i4, _arr4, _arr4$_i, _x2, _y3, width, height, error, _i5, _arr5, invalid, _i6, _arr6, component, request, mip, _x3, _y4, _width, _height, destination, _error, _t, _t2;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
+  (hasGpuRendering && hasNativeImageLoading ? it : it.skip)("uses mip extents for cropped readback", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().mark(function _callee2() {var engine, scene, data, y, x, texture, _i3, _arr3, _arr3$_i, _y2, green, result, internalTexture, _i4, _arr4, _arr4$_i, _x2, _y3, width, height, error, _i5, _arr5, invalid, _i6, _arr6, component, request, mip, _x3, _y4, _width, _height, destination, _error, maximum, _t, _t2;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_2___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
           engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.NativeEngine();
           scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_6__.Scene(engine);_context2.prev = 1;
 
@@ -28636,7 +28636,14 @@ describe("Native texture readback", function () {
           _error instanceof Error) {_context2.next = 22;break;}throw (
             new Error("Expected invalid readback component ".concat(component, "=").concat(invalid, " to reject")));case 22:
 
-          (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_error.message).to.contain(component === 0 ? "mip level is out of range" : "rectangle is out of range");
+          maximum = component === 0 ? 255 : 65535;
+          if (!Number.isInteger(invalid) || invalid < 0 || invalid > maximum) {
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_error.message).to.equal(component === 0 ?
+            "readTexture mip level must be a finite integer between 0 and 255." :
+            "readTexture x, y, width, and height must be finite integers between 0 and 65535.");
+          } else {
+            (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(_error.message).to.contain("rectangle is out of range");
+          }
           (0,chai__WEBPACK_IMPORTED_MODULE_4__.expect)(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);case 23:_i6++;_context2.next = 17;break;case 24:_i5++;_context2.next = 16;break;case 25:_context2.prev = 25;
 
 

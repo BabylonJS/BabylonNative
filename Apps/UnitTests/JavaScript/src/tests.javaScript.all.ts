@@ -143,7 +143,14 @@ describe("Native texture readback", function () {
           if (!(error instanceof Error)) {
             throw new Error(`Expected invalid readback component ${component}=${invalid} to reject`);
           }
-          expect(error.message).to.contain(component === 0 ? "mip level is out of range" : "rectangle is out of range");
+          const maximum = component === 0 ? 255 : 65535;
+          if (!Number.isInteger(invalid) || invalid < 0 || invalid > maximum) {
+            expect(error.message).to.equal(component === 0
+              ? "readTexture mip level must be a finite integer between 0 and 255."
+              : "readTexture x, y, width, and height must be finite integers between 0 and 65535.");
+          } else {
+            expect(error.message).to.contain("rectangle is out of range");
+          }
           expect(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);
         }
       }
