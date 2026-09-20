@@ -25,6 +25,7 @@
 #include "NativeXrImpl.h"
 #include "XRSession.h"
 #include "XRFrame.h"
+#include "ImageTracking.h"
 
 namespace Babylon
 {
@@ -254,26 +255,8 @@ namespace Babylon
                 // Create the tracked image buffer.
                 for (uint32_t idx = 0; idx < napiTrackedImages.Length(); idx++)
                 {
-                    // Pull out native values from the JS object.
                     const auto napiImageRequest{ napiTrackedImages.Get(idx).As<Napi::Object>() };
-                    const auto napiImage{ napiImageRequest.Get("image").As<Napi::Object>() };
-                    const auto napiBuffer{ napiImage.Get("data").As<Napi::Uint8Array>() };
-                    const uint32_t bufferSize{ (uint32_t)napiBuffer.ByteLength() };
-                    const uint32_t imageHeight{ napiImage.Get("height").ToNumber().Uint32Value() };
-                    const uint32_t imageWidth{ napiImage.Get("width").ToNumber().Uint32Value() };
-                    const uint32_t imageDepth{ napiImage.Get("depth").ToNumber().Uint32Value() };
-                    const uint32_t stride{ bufferSize / imageHeight };
-                    const float estimatedWidth{ napiImageRequest.Get("widthInMeters").ToNumber().FloatValue() };
-
-                    // Construct the image tracking request object.
-                    session.m_imageTrackingRequests[idx] =
-                    {
-                        napiBuffer.Data(),
-                        imageWidth,
-                        imageHeight,
-                        imageDepth,
-                        stride,
-                        estimatedWidth };
+                    session.m_imageTrackingRequests[idx] = CreateImageTrackingRequest(napiImageRequest);
                 }
             }
 
@@ -543,7 +526,11 @@ namespace Babylon
         {
             Napi::Function callback{ info[0].As<Napi::Function>() };
 
-            m_xr->ScheduleFrame([this, callbackPtr{ std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback)) }](const std::shared_ptr<const xr::System::Session::Frame>& frame) {
+            m_xr->ScheduleFrame([
+                this,
+                callbackPtr{ std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback)) },
+                sessionPtr{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(info.This().As<Napi::Object>())) }](const std::shared_ptr<const xr::System::Session::Frame>& frame) {
+                (void)sessionPtr;
                 ProcessEyeInputSource(*frame.get(), Env());
                 ProcessControllerInputSources(*frame.get(), Env());
 
@@ -674,7 +661,8 @@ namespace Babylon
         {
             auto deferred{ Napi::Promise::Deferred::New(info.Env()) };
             m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
-                [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
+                [this, deferred, sessionPtr{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(info.This().As<Napi::Object>())) }](const arcana::expected<void, std::exception_ptr>& result) {
+                    (void)sessionPtr;
                     if (result.has_error())
                     {
                         deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
