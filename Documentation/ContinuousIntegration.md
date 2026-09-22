@@ -57,6 +57,11 @@ These features are multiplatform and the code can be found here : `Apps\Validati
 
 ## The test script
 
+The native runner reuses its engine between scenes. Cleanup restores forward depth
+(`useReverseDepthBuffer = false`), stencil, and scissor state before the next scene.
+Run the cleanup regression without a native build:
+`node --test Apps/Playground/Tests/validation_cleanup.test.cjs`.
+
 It loads the json using XMLHttpRequest, then for each entry in the json, loads the Playground, runs it, make a capture.
 The most important part is the image comparison. It works the same way as babylonjs validation test.
 The function `compare` is responsible for comparing each pixel. Every pixel for a same coordinate that is too much different between reference and rendering are counted.
@@ -140,4 +145,3 @@ Then, for the intended plaform, download the .zip:
 Finaly, open the zip file. It will contain all rendered images for the build. If the build fails at build time, no artifact will be produced. If the image comparison fails, an artifact containing the image difference will be published.
 
 ![BuildPage](Images/CI_ArtifactImage.jpg)
-
