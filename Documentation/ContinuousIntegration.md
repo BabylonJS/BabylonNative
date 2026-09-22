@@ -58,7 +58,7 @@ These features are multiplatform and the code can be found here : `Apps\Validati
 ## The test script
 
 The native runner reuses its engine between scenes. Cleanup restores forward depth
-(`useReverseDepthBuffer = false`), stencil, and scissor state before the next scene.
+(`engine.useReverseDepthBuffer = false`), stencil, and scissor state before the next scene.
 Run the cleanup regression without a native build:
 `node --test Apps/Playground/Tests/validation_cleanup.test.cjs`.
 

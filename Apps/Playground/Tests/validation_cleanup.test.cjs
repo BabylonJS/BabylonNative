@@ -7,7 +7,8 @@ const { runInNewContext } = require("node:vm");
 const source = readFileSync(join(__dirname, "..", "Scripts", "validation_native.js"), "utf8");
 
 function extractFunctionDeclaration(name) {
-    const match = new RegExp(`\\bfunction\\s+${name}\\s*\\(`).exec(source);
+    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = new RegExp(`\\bfunction\\s+${escapedName}\\s*\\(`).exec(source);
     assert.ok(match, `Could not find function ${name}`);
     const bodyStart = source.indexOf("{", match.index + match[0].length);
     assert.ok(bodyStart >= 0, `Could not find body for function ${name}`);
@@ -84,9 +85,9 @@ test("restores forward depth between scenes on the reused engine", () => {
         console,
         BABYLON: { SceneLoader: { OnPluginActivatedObservable: { clear() {} } } },
     };
-    runInNewContext(extractFunctionDeclaration("cleanupAfterTest"), context);
-    context.cleanupAfterTest();
-    context.cleanupAfterTest();
+    const cleanupAfterTest = runInNewContext(`(${extractFunctionDeclaration("cleanupAfterTest")})`, context);
+    cleanupAfterTest();
+    cleanupAfterTest();
     assert.equal(disposed, 1);
     assert.equal(released, 1);
     assert.equal(context.currentScene, null);
