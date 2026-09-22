@@ -5,6 +5,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <future>
 #include <vector>
 
@@ -174,7 +175,12 @@ TEST_F(NativeEngineVertexArray, LayoutExhaustionIsReportedAndCanRecover)
     {
         bgfx::VertexLayout layout;
         layout.begin().add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true);
-        layout.m_stride = static_cast<uint16_t>(4 + index * 4);
+        for (uint32_t padding = index * 4; padding > 0;)
+        {
+            const auto skip = static_cast<uint8_t>(std::min(padding, uint32_t{255}));
+            layout.skip(skip);
+            padding -= skip;
+        }
         layout.end();
         const auto handle = bgfx::createVertexLayout(layout);
         if (!bgfx::isValid(handle))
