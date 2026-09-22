@@ -45,6 +45,7 @@ set(SOURCES
     "Source/Tests.NativeEngine.ImageFormats.cpp"
     "Source/Tests.NativeEngine.DepthTextures.cpp"
     "Source/Tests.NativeEngine.Teardown.cpp"
+    "Source/Tests.NativeEngine.TextureFormats.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
