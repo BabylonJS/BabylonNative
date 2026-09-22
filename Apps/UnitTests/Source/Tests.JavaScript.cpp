@@ -39,6 +39,56 @@ namespace
     }
 }
 
+#ifdef HAS_NATIVE_MESHOPT
+TEST(NativeMeshopt, LegacyEntryPointMatchesGroupedDecoder)
+{
+    std::promise<void> done;
+    auto completion = done.get_future();
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&done](Napi::Env env) {
+        try
+        {
+            Babylon::Plugins::NativeMeshopt::Initialize(env);
+            Napi::Eval(env, R"(
+                (function () {
+                    function bytes(hex) {
+                        return new Uint8Array(hex.match(/../g).map(function (byte) { return parseInt(byte, 16); }));
+                    }
+                    var encoded = bytes(
+                        "a00000013ff000007fffa0606001380000007e0000013ff0000020ff9070480130800000800000013ff0000080ff" +
+                        "a0606001320000007e012aa000000000000000000000000000000000000000000000000000000000800000000000beadde");
+                    var expected = bytes(
+                        "00000000000000800000000000beadde0000c03f000010c00000403f01beadde00004040000090c00000c03f02beadde" +
+                        "000090400000d8c00000104003beadde0000c040000010c10000404004beadde0000f040000034c10000704005beadde");
+                    if (typeof _native.decodeMeshopt !== "function") {
+                        throw new Error("Missing Babylon.js meshopt compatibility entry point");
+                    }
+                    [_native.decodeMeshopt, _native.MeshoptCodec.Decode].forEach(function (decode) {
+                        var result = decode(encoded, 6, 16, "ATTRIBUTES");
+                        if (!(result instanceof Uint8Array) || result.length !== expected.length ||
+                            result.some(function (value, index) { return value !== expected[index]; })) {
+                            throw new Error("Meshopt reference stream did not decode byte for byte");
+                        }
+                        var rejected = false;
+                        try { decode(encoded, 6, 16, "NOT_A_MODE"); } catch (error) { rejected = true; }
+                        if (!rejected) {
+                            throw new Error("Meshopt accepted an invalid mode");
+                        }
+                    });
+                })();
+            )", "meshopt-compatibility.js");
+            done.set_value();
+        }
+        catch (...)
+        {
+            done.set_exception(std::current_exception());
+        }
+    });
+    ASSERT_EQ(completion.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    EXPECT_NO_THROW(completion.get());
+}
+#endif
+
 TEST(JavaScript, All)
 {
     // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
