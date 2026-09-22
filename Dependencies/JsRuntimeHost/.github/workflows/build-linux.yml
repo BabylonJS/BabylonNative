@@ -28,9 +28,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      CC: ${{ inputs.cc }}
-      CXX: ${{ inputs.cxx }}
     steps:
       - uses: actions/checkout@v5
 
