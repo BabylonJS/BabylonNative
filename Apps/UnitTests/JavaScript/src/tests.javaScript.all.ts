@@ -35,6 +35,7 @@ declare const hostPlatform: string;
 declare const hasGpuRendering: boolean;
 declare const hasNativeImageLoading: boolean;
 declare const setExitCode: (code: number) => void;
+declare const setImageReloadTestResponse: (bytes: Uint8Array) => void;
 declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
 
@@ -1961,6 +1962,87 @@ function hexToBytes(hex: string): Uint8Array {
 
   it("rejects a non-typed-array source", function () {
     expect(() => _native.MeshoptCodec.Decode(null, COUNT, STRIDE, "ATTRIBUTES")).to.throw();
+  });
+});
+
+describe("Canvas image reloads", function () {
+  this.timeout(5000);
+  const test = hasNativeImageLoading ? it : it.skip;
+  const url = "app:///Assets/image-reload.png";
+  const dataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAABCAAAAAA+i0toAAAADElEQVR42mNgqP8PAAIBAX+LG2RhAAAAAElFTkSuQmCC";
+
+  for (const sources of [[url, url], [url, dataUrl], [dataUrl, url], [dataUrl, dataUrl]]) {
+    test(`loads the same image again (${sources.map(source => source === url ? "URL" : "data").join(" to ")})`, async function () {
+      const image = new _native.Image();
+      for (const source of sources) {
+        await new Promise<void>((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = source;
+        });
+        expect(image.width).to.equal(source === url ? 2 : 3);
+        expect(image.naturalWidth).to.equal(image.width);
+        expect(image.height).to.equal(1);
+        expect(image.naturalHeight).to.equal(1);
+      }
+    });
+  }
+
+  test("reflects the assigned src immediately", async function () {
+    const image = new _native.Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = dataUrl;
+      expect(image.src).to.equal(dataUrl);
+    });
+    expect(image.src).to.equal(dataUrl);
+  });
+
+  for (const fromUrl of [true, false]) {
+    test(`only delivers the latest assignment after a pending ${fromUrl ? "URL" : "data"} load`, async function () {
+      setImageReloadTestResponse(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=", "base64"));
+      const image = new _native.Image();
+      const barrier = new _native.Image();
+      const loaded: number[] = [];
+      const errors: unknown[] = [];
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => { loaded.push(image.width); };
+        image.onerror = (error: unknown) => { errors.push(error); reject(error); };
+        barrier.onload = resolve;
+        barrier.onerror = reject;
+        // The in-memory URL resolver queues completion synchronously. The final data load
+        // is a runtime-queue barrier after both candidate callbacks, not a timing estimate.
+        image.src = fromUrl ? "image-reload-test:///image.png" : dataUrl;
+        image.src = dataUrl;
+        barrier.src = dataUrl;
+      });
+      expect(image.src).to.equal(dataUrl);
+      expect(loaded).to.deep.equal([3]);
+      expect(errors).to.deep.equal([]);
+      expect(image.width).to.equal(3);
+      expect(barrier.width).to.equal(3);
+    });
+  }
+
+  test("reports load errors and can recover with data and URL loads", async function () {
+    const image = new _native.Image();
+    let errorCount = 0;
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => reject(new Error("A missing file unexpectedly loaded"));
+      image.onerror = () => { ++errorCount; resolve(); };
+      image.src = "app:///Assets/nonexistent-image-reload.png";
+    });
+    expect(errorCount).to.equal(1);
+    for (const source of [dataUrl, url]) {
+      await new Promise<void>((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = source;
+      });
+      expect(image.src).to.equal(source);
+      expect(image.width).to.equal(source === url ? 2 : 3);
+    }
   });
 });
 

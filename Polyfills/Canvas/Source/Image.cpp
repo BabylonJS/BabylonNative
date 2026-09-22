@@ -57,6 +57,12 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvasImage::Dispose()
     {
+        ReleaseImage();
+        m_cancellationSource->cancel();
+    }
+
+    void NativeCanvasImage::ReleaseImage()
+    {
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         if (m_imageContainer)
         {
@@ -64,7 +70,6 @@ namespace Babylon::Polyfills::Internal
             m_imageContainer = nullptr;
         }
 #endif
-        m_cancellationSource->cancel();
     }
 
     Napi::Value NativeCanvasImage::GetWidth(const Napi::CallbackInfo&)
@@ -106,6 +111,7 @@ namespace Babylon::Polyfills::Internal
     bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
     {
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        ReleaseImage();
         auto& allocator = Graphics::DeviceContext::GetDefaultAllocator();
         m_imageContainer = bimg::imageParse(&allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
         if (m_imageContainer != nullptr)
@@ -146,13 +152,22 @@ namespace Babylon::Polyfills::Internal
         return;
 #else
         auto text{value.As<Napi::String>().Utf8Value()};
+        m_src = text;
+        m_cancellationSource->cancel();
+        m_cancellationSource = std::make_shared<arcana::cancellation_source>();
 
         // try with base64
         static const std::string base64{"base64,"};
         const auto pos = text.find(base64);
         if (pos != std::string::npos)
         {
-            arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, text{std::move(text)}, pos]() {
+            // SetSrc, disposal, decoding and event delivery share the JS runtime thread;
+            // cancellation cannot interleave with this synchronous decode.
+            arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, text{std::move(text)}, pos]() {
+                if (cancellationSource->cancelled())
+                {
+                    return;
+                }
                 std::vector<uint8_t> base64Buffer;
                 bn::decode_b64(text.begin() + pos + base64.length(), text.end(), std::back_inserter(base64Buffer));
                 gsl::span<const std::byte> buffer = {reinterpret_cast<std::byte*>(base64Buffer.data()), base64Buffer.size()};
@@ -169,14 +184,16 @@ namespace Babylon::Polyfills::Internal
         UrlLib::UrlRequest request{};
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
-        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, request{std::move(request)}, text](arcana::expected<void, std::exception_ptr> result) {
+        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
+            if (cancellationSource->cancelled())
+            {
+                return;
+            }
             if (result.has_error())
             {
                 HandleLoadImageError(Napi::Error::New(env, result.error()));
                 return;
             }
-
-            Dispose();
 
             auto buffer{request.ResponseBuffer()};
             if (buffer.data() == nullptr || buffer.size_bytes() == 0)
