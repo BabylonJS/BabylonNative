@@ -18,6 +18,7 @@
 #include <Babylon/ScriptLoader.h>
 
 #include <cstdlib>
+#include <memory>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -42,10 +43,10 @@ namespace
 #ifdef HAS_NATIVE_MESHOPT
 TEST(NativeMeshopt, LegacyEntryPointMatchesGroupedDecoder)
 {
-    std::promise<void> done;
-    auto completion = done.get_future();
+    auto done = std::make_shared<std::promise<void>>();
+    auto completion = done->get_future();
     Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&done](Napi::Env env) {
+    runtime.Dispatch([done](Napi::Env env) {
         try
         {
             Babylon::Plugins::NativeMeshopt::Initialize(env);
@@ -77,15 +78,19 @@ TEST(NativeMeshopt, LegacyEntryPointMatchesGroupedDecoder)
                     });
                 })();
             )", "meshopt-compatibility.js");
-            done.set_value();
+            done->set_value();
         }
         catch (...)
         {
-            done.set_exception(std::current_exception());
+            done->set_exception(std::current_exception());
         }
     });
-    ASSERT_EQ(completion.wait_for(std::chrono::seconds{30}), std::future_status::ready);
-    EXPECT_NO_THROW(completion.get());
+    const auto status = completion.wait_for(std::chrono::seconds{30});
+    EXPECT_EQ(status, std::future_status::ready);
+    if (status == std::future_status::ready)
+    {
+        EXPECT_NO_THROW(completion.get());
+    }
 }
 #endif
 
