@@ -9,14 +9,15 @@ The plugin is **off by default**. Enable it with `-D BABYLON_NATIVE_PLUGIN_NATIV
 ## Limitations
 
 - **Decode only.** Encoding is an authoring-time concern that Babylon Native does not exercise.
-- **No consumer yet.** Nothing in the pinned `babylonjs` package calls `_native.MeshoptCodec`. The grouping and the entry-point names have therefore not faced a real consumer and may still move.
+- **Compatibility entry point.** Babylon.js probes `_native.decodeMeshopt`; this free-function entry point uses the same decoder as `_native.MeshoptCodec.Decode`. The grouped API remains available.
 
 ## Design
 
-The API is exposed as a single `MeshoptCodec` object on the `_native` global, for the same reasons as `DracoCodec`. Publishing the version matters more here: meshoptimizer stores its codec version in the first header byte, and a decoder **rejects** streams newer than it understands — returning an error rather than degraded output. Exposing the version lets the JavaScript side fall back before it tries.
+The API is exposed as a `MeshoptCodec` object on the `_native` global and a compatible `decodeMeshopt` free function. Publishing the version matters more here: meshoptimizer stores its codec version in the first header byte, and a decoder **rejects** streams newer than it understands — returning an error rather than degraded output. Exposing the version lets the JavaScript side fall back before it tries.
 
 ```typescript
 interface INative {
+  decodeMeshopt: INative["MeshoptCodec"]["Decode"];
   MeshoptCodec: {
     Decode: (
       source: ArrayBufferView,
