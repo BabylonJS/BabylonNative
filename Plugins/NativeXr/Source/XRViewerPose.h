@@ -77,7 +77,8 @@ namespace Babylon
             for (uint32_t idx = 0; idx < static_cast<uint32_t>(frame.Views.size()); ++idx)
             {
                 const auto& view = frame.Views[idx];
-                m_views[idx]->Update(idx, view.ProjectionMatrix, view.Space, view.IsFirstPersonObserver);
+                m_views[idx]->Update(info, idx, view.ProjectionMatrix, view.Space, view.IsFirstPersonObserver,
+                    view.CameraTexturePointer, view.CameraTextureSize.Width, view.CameraTextureSize.Height);
             }
 
             // Check the frame to see if it has valid tracking, if it does not then the position should
