@@ -93,9 +93,8 @@ namespace Babylon
         {
             const size_t rowPitch{image.size() / height};
 
-            // Reuse whole-row scratch storage without sharing it across concurrent readbacks.
-            thread_local std::vector<uint8_t> buffer;
-            buffer.resize(rowPitch);
+            // Allocate one scratch row per flip without retaining peak readback size.
+            std::vector<uint8_t> buffer(rowPitch);
             for (size_t row = 0; row < height / 2; row++)
             {
                 uint8_t* frontPtr{image.data() + (row * rowPitch)};
@@ -2400,13 +2399,17 @@ namespace Babylon
         // without mips has numMips == 1, so this also rejects mipLevel > 0 for that case.
         bgfx::TextureInfo mipChainInfo;
         bgfx::calcTextureSize(mipChainInfo, texture->Width(), texture->Height(), 1, texture->IsCube(), texture->HasMips(), 1, sourceTextureFormat);
+        // Guard the shift independently of the mip-chain check so malformed JS input cannot
+        // trigger undefined behavior while computing the extents used by validation.
+        const uint32_t mipWidth{mipLevel < 32 ? std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel) : 0};
+        const uint32_t mipHeight{mipLevel < 32 ? std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel) : 0};
         if (mipLevel >= mipChainInfo.numMips)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
         }
         else if (width == 0 || height == 0 ||
-            static_cast<uint32_t>(x) + width > std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel) ||
-            static_cast<uint32_t>(y) + height > std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel))
+            static_cast<uint32_t>(x) + width > mipWidth ||
+            static_cast<uint32_t>(y) + height > mipHeight)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture rectangle is out of range for this mip level.").Value());
         }
@@ -2438,10 +2441,6 @@ namespace Babylon
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture = std::make_shared<bool>(false);
 
-            // Extents of the requested mip. mipLevel was validated against the mip chain above, so the
-            // shifts are well defined here; they floor at 1 to match how bgfx sizes the tail of the chain.
-            const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel)};
-            const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
             // WebGL readPixels coordinates start at the bottom, unlike D3D/Metal/Vulkan blit coordinates.
             const uint16_t blitY{bgfx::getCaps()->originBottomLeft ? y : static_cast<uint16_t>(mipHeight - y - height)};
 
