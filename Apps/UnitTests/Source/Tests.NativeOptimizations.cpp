@@ -56,27 +56,30 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                             _native.sortSplats(modelView, new Float32Array(0), new Float32Array(0), rightHanded);
                         }
                     }
-                    function expectTypeError(matrix, message) {
+                    function expectMatrixError(matrix, message) {
                         let error;
                         try {
                             _native.sortSplats({ _m: matrix }, positions, new Float32Array(5), false);
                         } catch (caught) {
                             error = caught;
                         }
-                        if (!(error instanceof TypeError) || error.message !== message) {
-                            throw new Error("Invalid matrix must produce TypeError: " + message);
+                        // Node-API-JSI currently surfaces a native Napi::TypeError as a generic
+                        // JavaScript Error. The exact message distinguishes this explicit
+                        // validation from the old backend-dependent cast failure.
+                        if (!(error instanceof Error) || error.message !== message) {
+                            throw new Error("Invalid matrix must report: " + message);
                         }
                     }
                     for (const matrix of [undefined, null, {}, 42, new Uint8Array(16), new Float64Array(16)]) {
-                        expectTypeError(matrix, "sortSplats requires modelView._m to be a Float32Array or Array.");
+                        expectMatrixError(matrix, "sortSplats requires modelView._m to be a Float32Array or Array.");
                     }
                     for (const component of [2, 6, 10]) {
                         const matrix = new Array(16).fill(0);
                         delete matrix[component];
-                        expectTypeError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+                        expectMatrixError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
                         for (const value of [undefined, null, "2", false, {}]) {
                             matrix[component] = value;
-                            expectTypeError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+                            expectMatrixError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
                         }
                     }
                 })();
