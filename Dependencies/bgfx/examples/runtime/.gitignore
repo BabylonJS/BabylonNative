@@ -1,0 +1,6 @@
+*.dll
+*.dylib
+*.so
+*.pdb
+imgui*
+vk_layer_settings.txt

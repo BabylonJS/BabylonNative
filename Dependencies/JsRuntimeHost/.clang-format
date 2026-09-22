@@ -1,0 +1,36 @@
+---
+Language: Cpp
+# BasedOnStyle: LLVM
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: DontAlign
+AlignEscapedNewlines: Left
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeWhile: true
+BreakBeforeBraces: Custom
+BreakConstructorInitializers: BeforeComma
+BreakStringLiterals: false
+ColumnLimit: 0
+FixNamespaceComments: false
+IndentCaseLabels: true
+IndentWidth: 4
+KeepEmptyLinesAtTheStartOfBlocks: false
+NamespaceIndentation: All
+ReflowComments: false
+PackConstructorInitializers: Never
+PointerAlignment: Left
+SortIncludes: Never
+SortUsingDeclarations: false
+SpaceAfterTemplateKeyword: false

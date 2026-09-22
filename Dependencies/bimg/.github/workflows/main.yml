@@ -1,0 +1,205 @@
+name: CI
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  msvc:
+    strategy:
+      fail-fast: true
+      matrix:
+        include: [
+          { config: Debug,   platform: x64, bindir: 'win64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
+          { config: Release, platform: x64, bindir: 'win64_vs2022', genie-action: 'vs2022', solution-ext: 'sln' },
+        ]
+    name: msvc-${{ matrix.config }}-${{ matrix.platform }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout bx
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bx
+          path: bx
+      - name: Checkout bimg
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bimg
+          path: bimg
+      - name: Prepare
+        uses: microsoft/setup-msbuild@v2
+      - name: Build
+        shell: cmd
+        run: |
+          cd bimg
+          ..\bx\tools\bin\windows\genie.exe --with-tools --with-shared-lib ${{ matrix.genie-action }}
+          msbuild ".build/projects/${{ matrix.genie-action }}/bimg.${{ matrix.solution-ext }}" /m /v:minimal /p:Configuration=${{ matrix.config }} /p:Platform=${{ matrix.platform }}
+      - name: Check
+        shell: cmd
+        run: |
+          cd bimg
+          ".build\${{ matrix.bindir }}\bin\texturec${{ matrix.config }}.exe" --version
+  mingw:
+    strategy:
+      fail-fast: true
+      matrix:
+        include: [
+          { msystem: MINGW64, project: 'mingw-gcc',   bindir: 'win64_mingw-gcc'   },
+          { msystem: CLANG64, project: 'mingw-clang', bindir: 'win64_mingw-clang' },
+        ]
+    name: mingw-${{ matrix.msystem }}
+    runs-on: windows-2022
+    steps:
+      - name: Checkout bx
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bx
+          path: bx
+      - name: Checkout bimg
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bimg
+          path: bimg
+      - name: Prepare
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: make
+          pacboy: cc:p
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cd bimg
+          make ${{ matrix.project }}-release64 -j$(nproc) AR=ar CC=cc CXX=c++ MINGW=$MINGW_PREFIX
+      - name: Check
+        shell: cmd
+        run: |
+          cd bimg
+          ".build\${{ matrix.bindir }}\bin\texturecRelease.exe" --version
+  linux:
+    strategy:
+      fail-fast: true
+      matrix:
+        include: [
+          { compiler: gcc,   config: debug,   binsuffix: Debug,   bindir: linux64_gcc   },
+          { compiler: gcc,   config: release, binsuffix: Release, bindir: linux64_gcc   },
+          { compiler: clang, config: debug,   binsuffix: Debug,   bindir: linux64_clang },
+          { compiler: clang, config: release, binsuffix: Release, bindir: linux64_clang },
+        ]
+    name: linux-${{ matrix.compiler }}-${{ matrix.config }}64
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout bx
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bx
+          path: bx
+      - name: Checkout bimg
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bimg
+          path: bimg
+      - name: Build
+        run: |
+          sudo apt install libgl-dev
+          cd bimg
+          make -j$(nproc) linux-${{ matrix.compiler }}-${{ matrix.config }}64
+      - name: Check
+        run: |
+          cd bimg
+          ".build/${{ matrix.bindir }}/bin/texturec${{ matrix.binsuffix }}" --version
+  osx:
+    strategy:
+      fail-fast: true
+      matrix:
+        include: [
+          { runs-on: macos-14, arch: osx-arm64, bindir: osx-arm64, config: debug,   binsuffix: Debug   },
+          { runs-on: macos-14, arch: osx-arm64, bindir: osx-arm64, config: release, binsuffix: Release },
+        ]
+    name: osx-${{ matrix.arch }}-${{ matrix.config }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout bx
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bx
+          path: bx
+      - name: Checkout bimg
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bimg
+          path: bimg
+      - name: Build
+        run: |
+          cd bimg
+          make -j$(sysctl -n hw.physicalcpu) ${{ matrix.arch }}-${{ matrix.config }}
+      - name: Check
+        run: |
+          cd bimg
+          ".build/${{ matrix.bindir }}/bin/texturec${{ matrix.binsuffix }}" --version
+  android:
+    strategy:
+      fail-fast: true
+      matrix:
+        include: [
+          { project: android-arm,   bindir: android-arm   },
+          { project: android-arm64, bindir: android-arm64 },
+        ]
+    name: ${{ matrix.project }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout bx
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bx
+          path: bx
+      - name: Checkout bimg
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bimg
+          path: bimg
+      - uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+      - name: Build
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ARM: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ARM64: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          cd bimg
+          make -j$(nproc) ${{ matrix.project }}-release
+  emscripten:
+    strategy:
+      fail-fast: true
+      matrix:
+        include: [
+          { config: debug,   binsuffix: Debug   },
+          { config: release, binsuffix: Release },
+        ]
+    name: wasm-${{ matrix.config }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout bx
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bx
+          path: bx
+      - name: Checkout bimg
+        uses: actions/checkout@v6
+        with:
+          repository: bkaradzic/bimg
+          path: bimg
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 5.0.2
+      - name: Build
+        run: |
+          cd bimg
+          make -j$(nproc) wasm-${{ matrix.config }} EMSCRIPTEN=$EMSDK/upstream/emscripten
