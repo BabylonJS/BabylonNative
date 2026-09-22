@@ -101,11 +101,16 @@ namespace Babylon
             const auto layoutHandle = bgfx::createVertexLayout(layout);
             if (!bgfx::isValid(layoutHandle))
             {
-                throw std::runtime_error{"Failed to create vertex layout"};
+                throw std::runtime_error{"Failed to create vertex layout (attribute=" + std::to_string(location) +
+                    ", stride=" + std::to_string(byteStride) + ", offset=" + std::to_string(byteOffset) +
+                    "). The maxVertexLayouts limit of " + std::to_string(bgfx::getCaps()->limits.maxVertexLayouts) + " may be exhausted"};
             }
             try
             {
-                m_vertexBufferRecords.try_emplace(attrib, vertexBuffer, byteOffset / byteStride, layoutHandle);
+                if (!m_vertexBufferRecords.try_emplace(attrib, vertexBuffer, byteOffset / byteStride, layoutHandle).second)
+                {
+                    throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+                }
             }
             catch (...)
             {
