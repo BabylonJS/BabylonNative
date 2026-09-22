@@ -7,6 +7,7 @@
 #include <sstream>
 #include <assert.h>
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+#include <Babylon/Graphics/ImageFormat.h>
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #endif
@@ -105,7 +106,18 @@ namespace Babylon::Polyfills::Internal
     bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
     {
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
-        m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+        auto& allocator = Graphics::DeviceContext::GetDefaultAllocator();
+        m_imageContainer = bimg::imageParse(&allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
+        if (m_imageContainer != nullptr)
+        {
+            m_imageContainer = Graphics::NormalizePngImage(allocator, m_imageContainer);
+            if (m_imageContainer != nullptr && m_imageContainer->m_format != bimg::TextureFormat::RGBA8)
+            {
+                auto* source = m_imageContainer;
+                m_imageContainer = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *source);
+                bimg::imageFree(source);
+            }
+        }
 
         if (m_imageContainer == nullptr)
         {

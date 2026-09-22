@@ -84,7 +84,11 @@ namespace
             {
                 return arcana::make_task(m_graphicsContext.AfterRenderScheduler(), m_cancellationToken, [thisRef{shared_from_this()}] {
                     // bgfx does not allow readback of render textures, so the frame buffer render texture needs to be blitted to a texture with readback enabled.
-                    bgfx::blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), thisRef->m_blitTextureHandle, 0, 0, thisRef->m_frameBufferTextureHandle);
+                    bgfx::TextureRegion dstRegion{};
+                    dstRegion.init(thisRef->m_blitTextureHandle);
+                    bgfx::TextureRegion srcRegion{};
+                    srcRegion.init(thisRef->m_frameBufferTextureHandle);
+                    bgfx::blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
 
                     // Reading the texture is an async operation, but everything that needs to be done prior to future write operations on that texture is completed synchronously,
                     // so we kick off the read for the next frame prior to the read for the current frame completes.

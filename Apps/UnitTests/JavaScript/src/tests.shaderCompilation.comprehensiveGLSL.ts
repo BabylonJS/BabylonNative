@@ -108,6 +108,14 @@ flat out uint  vFlagsOut;
 smooth out vec4 vColor;
 centroid out vec2 vCentroidUV;
 out vec4 vSplatColor;
+// Narrow (scalar) varying array, read back with a runtime index in the fragment
+// shader. This mirrors Babylon.js cascaded shadow maps, whose per-cascade
+// "varying float vDepthMetric[N]" used to make SPIRV-Cross emit an indexable HLSL
+// input register range that fxc rejects -- and in practice hangs on -- because the
+// per-register write masks differ. The vec4 array below is the companion case that
+// was always legal, since its masks are uniform.
+out float vCascadeDepth[4];
+out vec4  vCascadePosition[4];
 
 // ── Constant declarations ───────────────────────────────────────────────
 const float EPSILON = 1e-6;
@@ -675,6 +683,12 @@ void main() {
     vCentroidUV  = uv;
     vColor       = color;
 
+    // Written through a loop so the array is not trivially scalarizable.
+    for (int c = 0; c < 4; ++c) {
+        vCascadeDepth[c]    = float(c) * 0.25 + uv.x;
+        vCascadePosition[c] = uViewProj * uModel * vec4(position + float(c), 1.0);
+    }
+
     gl_Position  = uViewProj * uModel * vec4(position, 1.0);
     gl_PointSize = 1.0;
 }
@@ -761,6 +775,9 @@ flat in uint  vFlagsOut;
 smooth in vec4 vColor;
 centroid in vec2 vCentroidUV;
 in vec4 vSplatColor;
+// See the vertex shader: scalar varying array selected by a runtime index.
+in float vCascadeDepth[4];
+in vec4  vCascadePosition[4];
 
 // ── Fragment output (MRT-capable) ───────────────────────────────────────
 layout(location = 0) out vec4 fragColor;
@@ -970,7 +987,13 @@ void main() {
     gl_FragDepth = fragDepth;
 
     // ── Output (blend in splat color contribution) ────────────────────
-    fragColor = finalColor + vSplatColor * 0.001 + fetchedComplex * 0.0001;
+    // Runtime-selected cascade, matching how Babylon.js CSM indexes vDepthMetric.
+    // The index must stay opaque to the compiler for this to exercise dynamic
+    // indexing of the flattened varying array.
+    int cascade = int(clamp(floor(fragDepth * 4.0), 0.0, 3.0));
+    float cascadeContribution = vCascadeDepth[cascade] + vCascadePosition[cascade].w;
+
+    fragColor = finalColor + vSplatColor * 0.001 + fetchedComplex * 0.0001 + cascadeContribution * 0.0001;
 }
 `;
 

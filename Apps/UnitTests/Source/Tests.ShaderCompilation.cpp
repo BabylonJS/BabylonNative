@@ -5,16 +5,42 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#ifdef HAS_SHADER_COMPILER
+#include <Babylon/Plugins/ShaderCompiler.h>
+#endif
 #include <Babylon/ScriptLoader.h>
 
 #include <chrono>
 #include <cstdlib>
 #include <future>
 #include <iostream>
+#include <string>
 
 using namespace std::chrono_literals;
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
+
+#ifdef HAS_SHADER_COMPILER
+TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    auto shader = compiler.Compile(
+        R"(
+            in vec2 position;
+            void main() { gl_Position = vec4(position, 0.0, 1.0); }
+        )",
+        R"(
+            precision highp float;
+            uniform vec4 values[2];
+            layout(location = 0) out vec4 fragColor;
+            vec4 readValue() { return values[0]; }
+            void main() { fragColor = readValue(); }
+        )");
+
+    EXPECT_FALSE(shader.VertexBytes.empty());
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+#endif
 
 TEST(ShaderCompilation, CompileComprehensiveGLSL)
 {
@@ -177,3 +203,222 @@ TEST(ShaderCompilation, ReturnedUniformIsShapeConverted)
 
     device.FinishRenderingCurrentFrame();
 }
+
+TEST(ShaderCompilation, DisjointStageSamplersCompile)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+
+    Babylon::AppRuntime::Options options{};
+    options.UnhandledExceptionHandler = [](const Napi::Error& error) {
+        std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
+        std::quick_exit(1);
+    };
+
+    Babylon::AppRuntime runtime{options};
+    runtime.Dispatch([&device](Napi::Env env) {
+        device.AddToJavaScript(env);
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+        });
+        Babylon::Polyfills::Window::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env);
+    });
+
+    Babylon::ScriptLoader loader{runtime};
+    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.Eval(R"(
+        const engine = new BABYLON.NativeEngine();
+        engine.getCaps().parallelShaderCompile = null;
+        const effect = engine.createEffect({
+            vertexSource: `
+                attribute vec2 position;
+                uniform sampler2D vsOnly;
+                void main() {
+                    gl_Position = vec4(position, 0.0, 1.0) + texture2D(vsOnly, position) * 0.0;
+                }
+            `,
+            fragmentSource: `
+                precision highp float;
+                uniform sampler2D fsOnly;
+                void main() { gl_FragColor = texture2D(fsOnly, vec2(0.5)); }
+            `
+        }, ["position"], ["vsOnly", "fsOnly"], []);
+        if (!effect.isReady()) { throw new Error("Disjoint stage sampler effect should compile"); }
+        effect.dispose();
+        engine.dispose();
+    )", "disjoint_stage_samplers_test.js");
+
+    std::promise<void> done{};
+    loader.Dispatch([&done](Napi::Env) {
+        done.set_value();
+    });
+    done.get_future().get();
+    device.FinishRenderingCurrentFrame();
+}
+
+TEST(ShaderCompilation, PartiallySharedStageSamplersCompile)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+
+    Babylon::AppRuntime::Options options{};
+    options.UnhandledExceptionHandler = [](const Napi::Error& error) {
+        std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
+        std::quick_exit(1);
+    };
+
+    Babylon::AppRuntime runtime{options};
+    runtime.Dispatch([&device](Napi::Env env) {
+        device.AddToJavaScript(env);
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+        });
+        Babylon::Polyfills::Window::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env);
+    });
+
+    Babylon::ScriptLoader loader{runtime};
+    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.Eval(R"(
+        const engine = new BABYLON.NativeEngine();
+        engine.getCaps().parallelShaderCompile = null;
+        const effect = engine.createEffect({
+            vertexSource: `
+                attribute vec2 position;
+                uniform sampler2D sharedTex;
+                uniform sampler2D vsOnly;
+                void main() {
+                    gl_Position = vec4(position, 0.0, 1.0)
+                        + texture2D(sharedTex, position) * 0.0
+                        + texture2D(vsOnly, position) * 0.0;
+                }
+            `,
+            fragmentSource: `
+                precision highp float;
+                uniform sampler2D sharedTex;
+                uniform sampler2D fsOnly;
+                void main() {
+                    gl_FragColor = texture2D(sharedTex, vec2(0.5)) + texture2D(fsOnly, vec2(0.5)) * 0.0;
+                }
+            `
+        }, ["position"], ["sharedTex", "vsOnly", "fsOnly"], []);
+        if (!effect.isReady()) { throw new Error("Partially shared stage sampler effect should compile"); }
+        effect.dispose();
+        engine.dispose();
+    )", "partially_shared_stage_samplers_test.js");
+
+    std::promise<void> done{};
+    loader.Dispatch([&done](Napi::Env) {
+        done.set_value();
+    });
+    done.get_future().get();
+    device.FinishRenderingCurrentFrame();
+}
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+namespace
+{
+    struct SamplerCompilationResult
+    {
+        bool IsReady;
+        std::string Error;
+    };
+
+    SamplerCompilationResult CompileVulkanSamplers(int samplerCount)
+    {
+        Babylon::Graphics::Device device{g_deviceConfig};
+        device.StartRenderingCurrentFrame();
+
+        Babylon::AppRuntime::Options options{};
+        options.UnhandledExceptionHandler = [](const Napi::Error& error) {
+            std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
+            std::quick_exit(1);
+        };
+
+        Babylon::AppRuntime runtime{options};
+        runtime.Dispatch([&device](Napi::Env env) {
+            device.AddToJavaScript(env);
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                std::cout << message << std::endl;
+            });
+            Babylon::Polyfills::Window::Initialize(env);
+            Babylon::Plugins::NativeEngine::Initialize(env);
+        });
+
+        std::string decls;
+        std::string sum;
+        for (int i = 0; i < samplerCount; ++i)
+        {
+            decls += "uniform sampler2D t" + std::to_string(i) + ";\n";
+            if (i > 0)
+            {
+                sum += " + ";
+            }
+            sum += "texture(t" + std::to_string(i) + ", vec2(0.5))";
+        }
+
+        // Effect keeps only the stack on JavaScriptCore. Use the synchronous
+        // program API to preserve the native compiler's error message.
+        std::string script = R"(
+            const engine = new BABYLON.NativeEngine();
+            engine.getCaps().parallelShaderCompile = null;
+            const pipeline = engine.createPipelineContext();
+            let ready = false;
+            let message = "";
+            try {
+                engine.createShaderProgram(pipeline,
+                    `#version 300 es
+                        precision highp float;
+                        in vec2 position;
+                        void main() { gl_Position = vec4(position, 0.0, 1.0); }
+                    `,
+                    `#version 300 es
+                        precision highp float;
+                        out vec4 color;
+)" + decls + R"(
+                        void main() { color = )" + sum + R"(; }
+                    `, "");
+                ready = pipeline.isReady;
+            } catch (e) {
+                message = String(e && e.message ? e.message : e);
+            }
+            engine._deletePipelineContext(pipeline);
+            pipeline.dispose();
+            engine.dispose();
+            globalThis.__samplerReady = ready;
+            globalThis.__samplerError = message;
+        )";
+
+        Babylon::ScriptLoader loader{runtime};
+        loader.LoadScript("app:///Assets/babylon.max.js");
+        loader.Eval(script, "vulkan_sampler_boundary_test.js");
+
+        std::promise<SamplerCompilationResult> done{};
+        loader.Dispatch([&done](Napi::Env env) {
+            done.set_value({
+                env.Global().Get("__samplerReady").ToBoolean().Value(),
+                env.Global().Get("__samplerError").ToString(),
+            });
+        });
+        auto result = done.get_future().get();
+        device.FinishRenderingCurrentFrame();
+        return result;
+    }
+}
+
+TEST(ShaderCompilation, VulkanAcceptsSixteenSamplers)
+{
+    const auto result = CompileVulkanSamplers(16);
+    EXPECT_TRUE(result.IsReady) << result.Error;
+    EXPECT_TRUE(result.Error.empty()) << result.Error;
+}
+
+TEST(ShaderCompilation, VulkanRejectsMoreThanSixteenSamplers)
+{
+    const auto result = CompileVulkanSamplers(17);
+    // Assert outside the script's catch path so unexpected success cannot pass.
+    EXPECT_FALSE(result.IsReady);
+    EXPECT_NE(result.Error.find("Vulkan shader uses more than 16 distinct sampler textures"), std::string::npos) << result.Error;
+}
+#endif

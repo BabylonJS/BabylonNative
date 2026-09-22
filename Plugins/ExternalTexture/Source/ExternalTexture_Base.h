@@ -61,31 +61,30 @@ namespace Babylon::Plugins
             return BGFX_TEXTURE_NONE;
         }
 
-        // Re-attaches every registered Graphics::Texture to a fresh bgfx handle backed by
+        // Recreates every registered Graphics::Texture with a fresh bgfx handle backed by
         // `ptr`. Caller must hold m_mutex (called from the locked region of Impl::Update).
         void UpdateTextures(Graphics::TextureT ptr, std::optional<uint16_t> layerIndex)
         {
-            for (auto* texture : m_textures)
+            for (auto it = m_textures.begin(); it != m_textures.end();)
             {
-                bgfx::TextureHandle handle = bgfx::createTexture2D(
+                auto* texture = *it;
+                if (!texture->IsValid())
+                {
+                    it = m_textures.erase(it);
+                    continue;
+                }
+
+                texture->Create2D(
                     Width(),
                     Height(),
                     HasMips(),
                     NumLayers(),
                     Format(),
                     Flags(),
-                    0,
-                    NativeTextureHandle(ptr)
-                );
-
-                if (!bgfx::isValid(handle))
-                {
-                    throw std::runtime_error{"Failed to create external texture"};
-                }
-
-                texture->Attach(handle, true, m_info.Width, m_info.Height, HasMips(), m_info.NumLayers, m_info.Format, m_info.Flags);
+                    NativeTextureHandle(ptr));
                 texture->ViewFirstLayer(layerIndex.value_or(0));
                 texture->ViewNumLayers(layerIndex.has_value() ? 1 : 0);
+                ++it;
             }
         }
 

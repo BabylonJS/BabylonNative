@@ -2,6 +2,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <cassert>
 #include <cstring>
+#include <utility>
 
 namespace
 {
@@ -36,6 +37,15 @@ namespace Babylon::Graphics
             m_handle = BGFX_INVALID_HANDLE;
             m_ownsHandle = false;
         }
+
+        if (m_nativeTextureOwner)
+        {
+            // Cross a full render boundary, even when Dispose is called from AfterRender.
+            // Only the native owner is deferred; the Texture wrapper is never accessed.
+            arcana::make_task(m_deviceContext.BeforeRenderScheduler(), arcana::cancellation::none(), [] {})
+                .then(m_deviceContext.AfterRenderScheduler(), arcana::cancellation::none(),
+                    [owner = std::move(m_nativeTextureOwner)] { (void)owner; });
+        }
     }
 
     bool Texture::IsValid() const
@@ -43,41 +53,47 @@ namespace Babylon::Graphics
         return bgfx::isValid(m_handle);
     }
 
-    void Texture::ResetMetadata()
+    void Texture::SetMetadata(
+        uint16_t width,
+        uint16_t height,
+        uint16_t depth,
+        bool hasMips,
+        bool isCube,
+        bool is3D,
+        uint16_t numLayers,
+        bgfx::TextureFormat::Enum format,
+        uint64_t flags)
     {
-        m_width = 0;
-        m_height = 0;
-        m_depth = 0;
-        m_hasMips = false;
-        m_isCube = false;
-        m_is3D = false;
-        m_numLayers = 0;
-        m_format = bgfx::TextureFormat::Enum::Unknown;
-        m_flags = BGFX_TEXTURE_NONE;
+        m_width = width;
+        m_height = height;
+        m_depth = depth;
+        m_hasMips = hasMips;
+        m_isCube = isCube;
+        m_is3D = is3D;
+        m_numLayers = numLayers;
+        m_format = format;
+        m_flags = flags;
     }
 
-    void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
+    void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle, std::shared_ptr<void> nativeTextureOwner)
     {
         Dispose();
-        ResetMetadata();
 
-        // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-        const auto* mem = (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
+        // Create Babylon-owned textures with BGFX_TEXTURE_BLIT_DST to match web behavior.
+        const auto createFlags = nativeTextureHandle == 0 ? flags | BGFX_TEXTURE_BLIT_DST : flags;
 
-        // Always create with BGFX_TEXTURE_BLIT_DST to match web behavior.
-        m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, flags | BGFX_TEXTURE_BLIT_DST, mem);
+        // Make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
+        const auto* mem = nativeTextureHandle == 0 && (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
+
+        m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, createFlags, mem, nativeTextureHandle);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create texture"};
         }
 
         m_ownsHandle = true;
-        m_width = width;
-        m_height = height;
-        m_hasMips = hasMips;
-        m_numLayers = numLayers;
-        m_format = format;
-        m_flags = flags;
+        m_nativeTextureOwner = std::move(nativeTextureOwner);
+        SetMetadata(width, height, 0, hasMips, false, false, numLayers, format, flags);
     }
 
     void Texture::Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -88,7 +104,6 @@ namespace Babylon::Graphics
     void Texture::Create3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMips, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
-        ResetMetadata();
 
         m_handle = bgfx::createTexture3D(width, height, depth, hasMips, format, flags);
         if (!bgfx::isValid(m_handle))
@@ -97,14 +112,7 @@ namespace Babylon::Graphics
         }
 
         m_ownsHandle = true;
-        m_width = width;
-        m_height = height;
-        m_depth = depth;
-        m_hasMips = hasMips;
-        m_numLayers = 1;
-        m_format = format;
-        m_flags = flags;
-        m_is3D = true;
+        SetMetadata(width, height, depth, hasMips, false, true, 1, format, flags);
     }
 
     void Texture::Update3D(uint8_t mip, uint16_t x, uint16_t y, uint16_t z, uint16_t width, uint16_t height, uint16_t depth, const bgfx::Memory* mem)
@@ -115,17 +123,15 @@ namespace Babylon::Graphics
     void Texture::CreateCube(uint16_t size, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
-        ResetMetadata();
 
         m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags);
+        if (!bgfx::isValid(m_handle))
+        {
+            throw std::runtime_error{"Failed to create cube texture"};
+        }
+
         m_ownsHandle = true;
-        m_width = size;
-        m_height = size;
-        m_hasMips = hasMips;
-        m_numLayers = numLayers;
-        m_format = format;
-        m_flags = flags;
-        m_isCube = true;
+        SetMetadata(size, size, 0, hasMips, true, false, numLayers, format, flags);
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -133,20 +139,15 @@ namespace Babylon::Graphics
         bgfx::updateTextureCube(m_handle, layer, side, mip, x, y, width, height, mem, pitch);
     }
 
-    void Texture::Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
+    void Texture::Attach(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
-        ResetMetadata();
 
         assert(bgfx::isValid(handle));
         m_handle = handle;
-        m_ownsHandle = ownsHandle;
-        m_width = width;
-        m_height = height;
-        m_hasMips = hasMips;
-        m_numLayers = numLayers;
-        m_format = format;
-        m_flags = flags;
+
+        m_ownsHandle = false;
+        SetMetadata(width, height, 0, hasMips, false, false, numLayers, format, flags);
     }
 
     bgfx::TextureHandle Texture::Handle() const

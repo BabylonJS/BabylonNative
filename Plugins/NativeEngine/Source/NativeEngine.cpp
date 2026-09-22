@@ -18,6 +18,7 @@
 #include <bgfx/bgfx.h>
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+#include <Babylon/Graphics/ImageFormat.h>
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -209,6 +210,12 @@ namespace Babylon
             if (image == nullptr)
             {
                 throw std::runtime_error{"Failed to parse image."};
+            }
+
+            image = Graphics::NormalizePngImage(allocator, image);
+            if (image == nullptr)
+            {
+                throw std::runtime_error{"Failed to normalize PNG image."};
             }
 
             assert(image->m_offset == 0);
@@ -1261,6 +1268,14 @@ namespace Babylon
         const uint32_t dataByteLength = info[3].As<Napi::Number>().Uint32Value();
         const uint32_t vertexByteOffset = info[4].IsUndefined() ? 0 : info[4].As<Napi::Number>().Uint32Value();
 
+        // Queued draws snapshot instance data when decoded, so drain them
+        // before updating. Keep this outside the update error handler so
+        // command errors propagate like an explicit submitCommands call.
+        if (m_commandStream)
+        {
+            SubmitCommands(info);
+        }
+
         try
         {
             vertexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), vertexByteOffset);
@@ -1627,7 +1642,14 @@ namespace Babylon
         const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         const bool hasMips = info[3].As<Napi::Boolean>();
-        const bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
+        const double formatValue = info[4].As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(formatValue) || formatValue < 0 || formatValue >= static_cast<double>(bgfx::TextureFormat::Count) ||
+            std::floor(formatValue) != formatValue)
+        {
+            throw Napi::Error::New(info.Env(), "Invalid texture format " + info[4].ToString().Utf8Value() +
+                ": expected a finite integer in [0, " + std::to_string(bgfx::TextureFormat::Count) + ")");
+        }
+        auto format = static_cast<bgfx::TextureFormat::Enum>(formatValue);
         const bool renderTarget = info[5].As<Napi::Boolean>();
         const bool srgb = info[6].As<Napi::Boolean>();
         const uint32_t samples = info[7].IsUndefined() ? 1 : info[7].As<Napi::Number>().Uint32Value();
@@ -1640,6 +1662,25 @@ namespace Babylon
         if (srgb)
         {
             flags |= BGFX_TEXTURE_SRGB;
+        }
+
+        // Texture::Create2D also adds BLIT_DST for Babylon-owned textures.
+        const auto createFlags = flags | BGFX_TEXTURE_BLIT_DST;
+        if (!bgfx::isTextureValid(0, false, 1, format, createFlags))
+        {
+            // Some backends support 24-bit depth only with packed stencil storage.
+            if (renderTarget && format == bgfx::TextureFormat::D24 &&
+                bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24S8, createFlags))
+            {
+                format = bgfx::TextureFormat::D24S8;
+            }
+            else
+            {
+                throw Napi::Error::New(info.Env(), "Unsupported texture format " + std::to_string(format) +
+                    " for requested flags (renderTarget=" + (renderTarget ? "true" : "false") +
+                    ", srgb=" + (srgb ? "true" : "false") + ", samples=" + std::to_string(samples) +
+                    ", createFlags=" + std::to_string(createFlags) + ")");
+            }
         }
 
         texture->Create2D(width, height, hasMips, 1, format, flags);
@@ -1714,7 +1755,11 @@ namespace Babylon
         {
             blitView = m_deviceContext.PeekNextViewId();
         }
-        encoder->blit(blitView, textureDestination->Handle(), 0, 0, textureSource->Handle());
+        bgfx::TextureRegion dstRegion{};
+        dstRegion.init(textureDestination->Handle());
+        bgfx::TextureRegion srcRegion{};
+        srcRegion.init(textureSource->Handle());
+        encoder->blit(blitView, dstRegion, srcRegion);
     }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
@@ -2353,7 +2398,7 @@ namespace Babylon
         {
             // Acquire a FrameCompletionScope for the duration of the read operation.
             // This ensures the encoder is available for the blit (if needed) and that
-            // bgfx::readTexture lands in the same frame as the blit.
+            // bgfx::read lands in the same frame as the blit.
             Graphics::FrameCompletionScope scope{m_deviceContext.AcquireFrameCompletionScope()};
 
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
@@ -2365,14 +2410,21 @@ namespace Babylon
             const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
-            // specific cube-map face, blit to a temp 2D texture. bgfx::readTexture cannot address an
-            // individual cube face, so a cube-face read always goes through the blit (srcZ = face index).
+            // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
+            // slice via TextureRegion::z, but a cropped sub-rect still needs the blit path. Cube-face
+            // reads use srcZ = face index on the source region of that blit.
             if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
                 bgfx::Encoder* encoder = GetEncoder();
-                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, srcZ, width, height, /*depth*/ 0);
+                bgfx::TextureRegion dstRegion{};
+                dstRegion.init(blitTextureHandle, /*x*/ 0, /*y*/ 0, width, height);
+                bgfx::TextureRegion srcRegion{};
+                srcRegion.init(sourceTextureHandle, x, y, width, height);
+                srcRegion.mip = mipLevel;
+                srcRegion.z = srcZ;
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
 
                 sourceTextureHandle = blitTextureHandle;
                 *tempTexture = true;
@@ -2441,10 +2493,16 @@ namespace Babylon
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
 
         // A single render target is just the zero-or-one color attachment case of the shared implementation.
+        const bool requestDepthStencilTexture = texture != nullptr && !texture->IsValid();
+        if (requestDepthStencilTexture && !generateDepth && !generateStencilBuffer)
+        {
+            throw Napi::Error::New(info.Env(), "An uninitialized texture requires a depth/stencil attachment");
+        }
         Graphics::Texture* const colorTextures[]{texture};
-        const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr ? 1u : 0u};
+        const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr && !requestDepthStencilTexture ? 1u : 0u};
 
-        return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples);
+        return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples,
+            requestDepthStencilTexture ? texture : nullptr);
     }
 
     Napi::Value NativeEngine::CreateMultiFrameBuffer(const Napi::CallbackInfo& info)
@@ -2472,7 +2530,7 @@ namespace Babylon
         return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples);
     }
 
-    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples)
+    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, Graphics::Texture* depthStencilTexture)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
         const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
@@ -2491,16 +2549,18 @@ namespace Babylon
 
         for (Graphics::Texture* texture : colorTextures)
         {
-            // bgfx validation now asserts when trying to use BGFX_RESOLVE_AUTO_GEN_MIPS with a texture that doesn't have the BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN flag,
+            // bgfx validation now asserts when trying to use BGFX_ATTACHMENT_AUTO_GEN_MIPS with a texture that doesn't have the BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN flag,
             // but before it would just ignore the flag and not generate mips without any warning. This prevents validation assert, but rendering might be broken if autogen
             // mips were expected. Basically this change preserves previous behavior.
             attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, 0, 1, 0
-                , 0 != (caps->formats[texture->Format()] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) ? BGFX_RESOLVE_AUTO_GEN_MIPS : BGFX_RESOLVE_NONE
+                , 0 != (caps->formats[texture->Format()] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) ? BGFX_ATTACHMENT_AUTO_GEN_MIPS : BGFX_ATTACHMENT_NONE
                 );
         }
 
         bgfx::TextureHandle depthStencilTextureHandle = BGFX_INVALID_HANDLE;
         int8_t depthStencilAttachmentIndex = -1;
+        bgfx::TextureFormat::Enum depthStencilTextureFormat = bgfx::TextureFormat::Unknown;
+        uint64_t depthStencilTextureFlags = BGFX_TEXTURE_NONE;
         if (generateStencilBuffer || generateDepth)
         {
             if (generateStencilBuffer && !generateDepth)
@@ -2508,25 +2568,48 @@ namespace Babylon
                 JsConsoleLogger::LogWarn(env, "Stencil without depth is not supported, assuming depth and stencil");
             }
 
-            auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | RenderTargetSamplesToBgfxMsaaFlag(samples);
-#ifdef ANDROID
-            // On Android with Mali GPU (Oppo Find x5 lite, Google Pixel 8, Samsung Galaxy Tab Active 3, ...)
-            // D32 depth buffer gives glitches. Everything is fine with D24S8.
-            // see https://forum.babylonjs.com/t/post-processing-graphics-glitch/49523
-            // As 24bits should be enough for 99.99% cases, defaulting to that format on Android.
-            const auto depthStencilFormat{bgfx::TextureFormat::D24S8};
-#else
-            const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
+            const auto msaaFlag = RenderTargetSamplesToBgfxMsaaFlag(samples);
+            auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | msaaFlag;
+            if (depthStencilTexture != nullptr)
+            {
+                // A standalone texture must be readable. Multisampled depth is sampled directly, not resolved.
+                flags = msaaFlag == BGFX_TEXTURE_NONE ? BGFX_TEXTURE_RT : msaaFlag | BGFX_TEXTURE_MSAA_SAMPLE;
+            }
+
+            // Pick a depth(/stencil) format the active renderer actually supports as an RT.
+            // Plain D32 is not a valid D3D11 depth RT (bgfx maps it to R24G8 with no DSV), and
+            // newer bgfx asserts in createTexture2D when isTextureValid fails. Prefer D32F for
+            // depth-only when available; otherwise fall back to D24S8. Android always uses
+            // D24S8 — D32/D32F has produced glitches on several Mali devices
+            // (https://forum.babylonjs.com/t/post-processing-graphics-glitch/49523).
+            bgfx::TextureFormat::Enum depthStencilFormat{bgfx::TextureFormat::D24S8};
+#ifndef ANDROID
+            if (!generateStencilBuffer)
+            {
+                if (bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D32F, flags))
+                {
+                    depthStencilFormat = bgfx::TextureFormat::D32F;
+                }
+                else if (bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24, flags))
+                {
+                    depthStencilFormat = bgfx::TextureFormat::D24;
+                }
+            }
 #endif
-            assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags));
+            if (!bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags))
+            {
+                throw Napi::Error::New(env, "No supported depth/stencil texture format for frame buffer");
+            }
             depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags);
+            depthStencilTextureFormat = depthStencilFormat;
+            depthStencilTextureFlags = flags;
 
             // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
             // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
             // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
             // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
             depthStencilAttachmentIndex = numAttachments;
-            attachments[numAttachments++].init(depthStencilTextureHandle, bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
+            attachments[numAttachments++].init(depthStencilTextureHandle, bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
         }
 
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
@@ -2540,7 +2623,13 @@ namespace Babylon
             throw Napi::Error::New(env, "Failed to create frame buffer");
         }
 
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer, depthStencilAttachmentIndex);
+        const bool hasDepthAttachment = generateDepth || generateStencilBuffer;
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, depthStencilAttachmentIndex);
+        if (depthStencilTexture != nullptr)
+        {
+            // The framebuffer owns its depth attachment; expose a non-owning texture for sampling.
+            depthStencilTexture->Attach(depthStencilTextureHandle, width, height, false, 1, depthStencilTextureFormat, depthStencilTextureFlags);
+        }
         return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
@@ -2936,6 +3025,14 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
+        // Flush the JavaScript staging buffer first so an empty submission can
+        // remain a no-op instead of waiting for the next frame.
+        NativeDataStream::Reader reader = m_commandStream->GetReader();
+        if (!reader.CanRead())
+        {
+            return;
+        }
+
         // Acquire a FrameCompletionScope and capture it into a Dispatch
         // lambda so the frame stays open across the rest of the current JS
         // task, not just this command-stream pass. Any continuation work in
@@ -2957,7 +3054,6 @@ namespace Babylon
 
         try
         {
-            NativeDataStream::Reader reader = m_commandStream->GetReader();
             while (reader.CanRead())
             {
                 std::invoke(reader.ReadPointer<CommandFunctionPointerT>(), this, reader);
@@ -3038,6 +3134,20 @@ namespace Babylon
         {
             const UniformValue& value = it.second;
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
+        }
+
+        // Resolves the gl_FragCoord Y flip injected by ShaderCompilerTraversers::FlipFragCoordY.
+        // Must be the framebuffer's height, not the bgfx view rect's, which
+        // SetBgfxViewPortAndScissor narrows to the viewport when one is set.
+        if (const UniformInfo* fragCoordTargetSize = m_currentProgram->FragCoordTargetSizeUniform())
+        {
+            const Graphics::FrameBuffer& frameBuffer = GetBoundFrameBuffer();
+            const float targetSize[4]{
+                static_cast<float>(frameBuffer.Width()),
+                static_cast<float>(frameBuffer.Height()),
+                0.0f,
+                0.0f};
+            encoder->setUniform(fragCoordTargetSize->Handle, targetSize, 1);
         }
 
         // Generic divisor-driven attributes are per-vertex inputs in the base shader. Recompile a

@@ -113,6 +113,7 @@ namespace Babylon::Graphics
 
         //Note: This is an index that changes when bgfx gets reset. It should be used to validate that resource handles created using bgfx remain valid on destruction.
         uintptr_t GetDeviceId() const;
+        bgfx::FrameBufferHandle GetBackBufferHandle() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
@@ -128,6 +129,11 @@ namespace Babylon::Graphics
         // views (cross-thread bgfx::frame + view-counter reset) so rendering can
         // continue within the same logical frame. Call at draw/clear op boundaries.
         void FlushViewsIfNeeded();
+
+        // Force a mid-frame flush when a FrameCompletionScope is held so pending
+        // bgfx::readTexture requests can complete (Canvas toDataURL / drawImage).
+        // Returns false when the render thread cannot service the request.
+        bool ForceMidFrameFlush();
 
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);

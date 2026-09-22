@@ -29,7 +29,7 @@ namespace Babylon::Plugins
         throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 
-    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/)
+    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(Graphics::Texture& /*texture*/)
     {
         throw std::runtime_error{"HW Camera not implemented for this platform."};
     }

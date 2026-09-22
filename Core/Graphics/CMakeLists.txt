@@ -7,6 +7,7 @@ set(SOURCES
     "InternalInclude/Babylon/Graphics/DeviceContext.h"
     "InternalInclude/Babylon/Graphics/DeviceQueries.h"
     "InternalInclude/Babylon/Graphics/FrameBuffer.h"
+    "InternalInclude/Babylon/Graphics/ImageFormat.h"
     "InternalInclude/Babylon/Graphics/Texture.h"
     "Source/BgfxCallback.cpp"
     "Source/FrameBuffer.cpp"
@@ -43,7 +44,6 @@ target_compile_definitions(Graphics
 target_link_libraries(Graphics
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
-    PRIVATE minz
     PRIVATE bx)
 
 if(WINDOWS_STORE)

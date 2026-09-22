@@ -20,6 +20,7 @@ endfunction()
 function(install_bin)
     foreach(target IN LISTS ARGN)
         install(PROGRAMS "$<TARGET_FILE:${target}>" DESTINATION bin)
+        install(PROGRAMS $<TARGET_RUNTIME_DLLS:${target}> DESTINATION bin)
         install(FILES "$<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_PREFIX:${target}>$<TARGET_FILE_BASE_NAME:${target}>.pdb" DESTINATION bin OPTIONAL)
     endforeach()
 endfunction()
@@ -43,7 +44,7 @@ endfunction()
 install_lib(arcana)
 
 ## bgfx
-install_lib(bimg_encode bimg_decode bgfx bimg bx minz)
+install_lib(bimg_encode bimg_decode bgfx bimg bx)
 
 ## glslang
 install_lib(GenericCodeGen glslang glslang-default-resource-limits MachineIndependent OGLCompiler OSDependent SPIRV)

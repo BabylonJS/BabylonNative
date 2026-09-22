@@ -74,6 +74,21 @@ TEST(JavaScript, All)
 
     runtime.Dispatch([&exitCodePromise, &device, &nativeCanvas](Napi::Env env) {
         device.AddToJavaScript(env);
+#ifdef HAS_NATIVE_IMAGE_LOADING
+        env.Global().Set("hasNativeImageLoading", true);
+#else
+        env.Global().Set("hasNativeImageLoading", false);
+#endif
+#ifdef USE_NOOP_METAL_DEVICE
+        env.Global().Set("hasGpuRendering", false);
+#else
+        env.Global().Set("hasGpuRendering", true);
+#endif
+#if defined(SKIP_RENDER_TESTS) || defined(SKIP_EXTERNAL_TEXTURE_TESTS)
+        env.Global().Set("skipCanvasGpuTests", true);
+#else
+        env.Global().Set("skipCanvasGpuTests", false);
+#endif
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {

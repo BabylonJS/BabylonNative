@@ -103,6 +103,9 @@ namespace Babylon
                 throw std::runtime_error{"Multiple built-in instance attributes use the same shader location."};
             }
         }
+
+        // Cached because DrawInternal consults it on every draw.
+        m_fragCoordTargetSizeUniform = GetUniformInfo(Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME);
     }
 
     void Program::SetSources(std::string vertexSource, std::string fragmentSource)

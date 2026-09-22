@@ -86,6 +86,16 @@ namespace Babylon::ShaderCompilerTraversers
                         branch->setFalseBlock(replacement);
                     }
                 }
+                else if (auto* flow = parent->getAsBranchNode())
+                {
+                    // `return gl_FragCoord;` (and similar) parents the symbol on TIntermBranch.
+                    if (flow->getExpression() != symbol)
+                    {
+                        throw std::runtime_error{"Cannot replace symbol: unexpected branch expression"};
+                    }
+                    RemoveAllTreeNodes(flow->getExpression());
+                    flow->setExpression(replacement);
+                }
                 else
                 {
                     throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};
@@ -1422,6 +1432,15 @@ namespace Babylon::ShaderCompilerTraversers
                             selection->setFalseBlock(replacement);
                         }
                     }
+                    else if (auto* flow = parent->getAsBranchNode())
+                    {
+                        if (flow->getExpression() != oldSymbol)
+                        {
+                            throw std::runtime_error{
+                                "SamplerFunctionParameterSplitter: unexpected branch expression when rewriting body sampler reference"};
+                        }
+                        flow->setExpression(replacement);
+                    }
                     else
                     {
                         throw std::runtime_error{
@@ -1758,6 +1777,333 @@ namespace Babylon::ShaderCompilerTraversers
             };
         };
 
+        /// Flattens narrow inter-stage varying arrays into one varying per array element.
+        ///
+        /// SPIRV-Cross emits an array-typed member in the HLSL interface struct for an
+        /// array-typed varying, e.g. `float vDepthMetric0[4] : TEXCOORD5;`. fxc turns that
+        /// into an indexable input register range and requires every register in the range
+        /// to use the same component mask (not necessarily all four slots -- matching `.x`
+        /// or matching `.xyz` is fine). Observed hang/reject shapes are float and vec2
+        /// arrays; `flat int[4]` and `vec3[4]` compile without this pass. Treating element
+        /// width `< 4` as flattenable is a conservative workaround covering the known bad
+        /// cases:
+        ///
+        ///     error X8000: masks on all input registers in an index range must be identical
+        ///
+        /// In practice fxc does not merely fail on the bad shapes, it hangs, which is how
+        /// this surfaced: D3D11 shader compilation for Babylon.js cascaded shadow maps never
+        /// returns. `varying float vDepthMetric{X}[SHADOWCSMNUM_CASCADES{X}]` in
+        /// lightFragmentDeclaration.fx is the trigger. Its companion
+        /// `varying vec4 vPositionFromLight{X}[...]` is fine.
+        ///
+        /// Each such array is replaced by:
+        ///   - one scalar/narrow varying per element (`v_0`, `v_1`, ...), so the interface
+        ///     contains no array and fxc emits no indexable range, and
+        ///   - a plain global array that keeps the original array type, which every existing
+        ///     reference is repointed at.
+        ///
+        /// The global is what preserves dynamic indexing. The cascade index in
+        /// `vDepthMetric{X}[index{X}]` is computed at runtime (lightFragment.fx picks the
+        /// cascade per fragment), so the accesses cannot simply be rewritten to the per-element
+        /// varyings. Copies between the two forms are inserted in `main`: element-wise reads at
+        /// the top of the fragment entry point, element-wise writes immediately before a trailing
+        /// top-level `return` (or at the end) of the vertex one. Routing through a global also
+        /// keeps writes performed by non-inlined helper functions working, since they observe
+        /// the global rather than a local copy.
+        ///
+        /// Only literally-sized, single-dimension, non-struct, non-matrix arrays with fewer than
+        /// four components per element are flattened. Everything else keeps its existing form.
+        /// Explicit `layout(location=N)` on the array is cleared on generated elements so they
+        /// do not all pin the same TEXCOORD.
+        class NarrowVaryingArrayFlattenerTraverser final : private TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids)
+            {
+                // Inter-stage varyings only: vertex outputs and fragment inputs. Vertex inputs
+                // are handled by AssignLocationsAndNamesToVertexVaryings*, and fragment outputs
+                // are render targets; neither may be touched here.
+                FlattenStage(program.getIntermediate(EShLangVertex), ids, EvqVaryingOut);
+                FlattenStage(program.getIntermediate(EShLangFragment), ids, EvqVaryingIn);
+            }
+
+        private:
+            explicit NarrowVaryingArrayFlattenerTraverser(TStorageQualifier storage)
+                : m_storage{storage}
+            {
+            }
+
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                if (!IsFlattenable(symbol, m_storage))
+                {
+                    return;
+                }
+
+                if (IsLinkerObject(this->path))
+                {
+                    m_varyingNameToSymbol[symbol->getName().c_str()] = symbol;
+                }
+
+                m_symbolsToParents.emplace_back(symbol, this->getParentNode());
+            }
+
+            static bool IsFlattenable(const TIntermSymbol* symbol, TStorageQualifier storage)
+            {
+                const TType& type = symbol->getType();
+                const TQualifier& qualifier = type.getQualifier();
+
+                if (qualifier.storage != storage || qualifier.builtIn != EbvNone)
+                {
+                    return false;
+                }
+
+                // A struct or matrix element has no single write mask to reason about, and
+                // glslang would need a different construction path for each; neither appears
+                // as an array-typed varying in Babylon.js shaders.
+                if (type.isStruct() || type.isMatrix())
+                {
+                    return false;
+                }
+
+                // Observed fxc hang/reject shapes are float and vec2 arrays (e.g. CSM
+                // vDepthMetric). flat int[4] and vec3[4] compile without this pass: the
+                // indexable-range rule requires matching component masks across registers,
+                // not a full .xyzw mask. Treating anything narrower than vec4 as flattenable
+                // is therefore a conservative workaround that covers the known bad cases
+                // without chasing every fxc edge case.
+                if (type.getVectorSize() >= 4)
+                {
+                    return false;
+                }
+
+                // An unsized or specialization-constant-sized array has no element count to
+                // expand at this point, and multi-dimensional arrays are not emitted by
+                // Babylon.js, so both keep their existing form.
+                return type.isSizedArray() && type.getArraySizes()->getNumDims() == 1 && type.getOuterArraySize() > 0;
+            }
+
+            static void FlattenStage(TIntermediate* intermediate, IdGenerator& ids, TStorageQualifier storage)
+            {
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                auto* root = intermediate->getTreeRoot() != nullptr ? intermediate->getTreeRoot()->getAsAggregate() : nullptr;
+                if (root == nullptr)
+                {
+                    return;
+                }
+
+                NarrowVaryingArrayFlattenerTraverser traverser{storage};
+                root->traverse(&traverser);
+
+                if (traverser.m_varyingNameToSymbol.empty())
+                {
+                    return;
+                }
+
+                auto* linkerObjects = FindLinkerObjects(root);
+                auto* mainBody = FindMainBody(root);
+                if (linkerObjects == nullptr || mainBody == nullptr)
+                {
+                    throw std::runtime_error{"Cannot flatten varying arrays: shader has no linker objects or no main()"};
+                }
+
+                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
+                std::vector<TIntermNode*> copyStatements{};
+
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                {
+                    FlattenVarying(intermediate, ids, storage, name, symbol, linkerObjects->getSequence(), originalNameToReplacement, copyStatements);
+                }
+
+                // Every reference to the varying -- including the linker object entry, which is
+                // how the global gets declared -- now points at the global array.
+                MakeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
+
+                auto& bodySequence = mainBody->getSequence();
+                if (storage == EvqVaryingIn)
+                {
+                    // Fragment: fill the global from the incoming per-element varyings before
+                    // any shader code can read it.
+                    bodySequence.insert(bodySequence.begin(), copyStatements.begin(), copyStatements.end());
+                }
+                else
+                {
+                    // Vertex: publish the global to the outgoing per-element varyings once the
+                    // shader body has finished writing it. Nested or mid-body returns would
+                    // jump over those copies and silently emit stale varyings, so refuse to
+                    // transform rather than mis-render. Babylon.js vertex shaders do not return
+                    // early today; this is here so that if one ever does, it surfaces as a
+                    // build failure.
+                    if (HasEarlyReturn(mainBody))
+                    {
+                        throw std::runtime_error{"Cannot flatten varying arrays: vertex main() returns early"};
+                    }
+
+                    // A trailing top-level `return;` is not "early", but copies appended after
+                    // it never run. Insert immediately before that return when present.
+                    auto insertAt = bodySequence.end();
+                    if (!bodySequence.empty())
+                    {
+                        auto* trailing = bodySequence.back() != nullptr ? bodySequence.back()->getAsBranchNode() : nullptr;
+                        if (trailing != nullptr && trailing->getFlowOp() == EOpReturn)
+                        {
+                            --insertAt;
+                        }
+                    }
+                    bodySequence.insert(insertAt, copyStatements.begin(), copyStatements.end());
+                }
+            }
+
+            /// True when main() can return before the statements this pass inserts. A trailing
+            /// top-level return is handled by inserting copies immediately before it, so it is
+            /// not treated as early; nested or earlier returns still are.
+            static bool HasEarlyReturn(TIntermAggregate* mainBody)
+            {
+                class ReturnFinder final : public TIntermTraverser
+                {
+                public:
+                    bool Found{false};
+
+                    bool visitBranch(TVisit, TIntermBranch* branch) override
+                    {
+                        if (branch->getFlowOp() == EOpReturn)
+                        {
+                            Found = true;
+                        }
+                        return true;
+                    }
+                };
+
+                auto& sequence = mainBody->getSequence();
+                for (size_t i = 0; i < sequence.size(); ++i)
+                {
+                    if (sequence[i] == nullptr)
+                    {
+                        continue;
+                    }
+
+                    auto* branch = sequence[i]->getAsBranchNode();
+                    const bool isTrailingReturn = branch != nullptr && branch->getFlowOp() == EOpReturn && i + 1 == sequence.size();
+                    if (isTrailingReturn)
+                    {
+                        continue;
+                    }
+
+                    ReturnFinder finder{};
+                    sequence[i]->traverse(&finder);
+                    if (finder.Found)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            static void FlattenVarying(
+                TIntermediate* intermediate,
+                IdGenerator& ids,
+                TStorageQualifier storage,
+                const std::string& name,
+                TIntermSymbol* symbol,
+                TIntermSequence& linkerObjects,
+                std::map<std::string, TIntermTyped*>& originalNameToReplacement,
+                std::vector<TIntermNode*>& copyStatements)
+            {
+                const TType& varyingType = symbol->getType();
+                const TSourceLoc& loc = symbol->getLoc();
+                const int arraySize = varyingType.getOuterArraySize();
+
+                // The global keeps the original array type so dynamic indexing is unaffected.
+                TType globalType{};
+                globalType.shallowCopy(varyingType);
+                globalType.getQualifier().clearLayout();
+                globalType.getQualifier().clearInterpolation();
+                globalType.getQualifier().storage = EvqGlobal;
+
+                TIntermSymbol globalPrototype{ids.Next(), symbol->getName(), globalType};
+                originalNameToReplacement[name] = intermediate->addSymbol(globalPrototype);
+
+                // Element type for the flattened varyings. The dereference constructor keeps the
+                // original storage and interpolation qualifiers, which is what these need.
+                // It also copies layout(location=N) onto every element; pinned SPIRV-Cross
+                // then maps each to the same TEXCOORDN and D3DCompile rejects the duplicates.
+                // Clear the location so SPIRV-Cross assigns vacant TEXCOORDs the same way it
+                // does for undecorated inter-stage varyings (BN never mapIO's them).
+                TType elementType{varyingType, 0};
+                elementType.getQualifier().layoutLocation = TQualifier::layoutLocationEnd;
+
+                for (int i = 0; i < arraySize; ++i)
+                {
+                    TIntermSymbol elementPrototype{ids.Next(), TString{(name + "_" + std::to_string(i)).c_str()}, elementType};
+                    auto* elementDeclaration = intermediate->addSymbol(elementPrototype);
+                    linkerObjects.push_back(elementDeclaration);
+
+                    auto* indexedGlobal = intermediate->addIndex(EOpIndexDirect,
+                        intermediate->addSymbol(globalPrototype),
+                        intermediate->addConstantUnion(i, loc, true),
+                        loc);
+                    if (indexedGlobal == nullptr)
+                    {
+                        throw std::runtime_error{"Cannot flatten varying array '" + name + "': failed to build element access"};
+                    }
+                    // addIndex leaves the result type to the caller.
+                    indexedGlobal->setType(TType{globalType, 0});
+
+                    auto* elementReference = intermediate->addSymbol(elementPrototype);
+                    auto* copy = storage == EvqVaryingIn
+                        ? intermediate->addAssign(EOpAssign, indexedGlobal, elementReference, loc)
+                        : intermediate->addAssign(EOpAssign, elementReference, indexedGlobal, loc);
+                    if (copy == nullptr)
+                    {
+                        throw std::runtime_error{"Cannot flatten varying array '" + name + "': failed to build element copy"};
+                    }
+                    copyStatements.push_back(copy);
+                }
+            }
+
+            static TIntermAggregate* FindLinkerObjects(TIntermAggregate* root)
+            {
+                for (auto* node : root->getSequence())
+                {
+                    auto* aggregate = node != nullptr ? node->getAsAggregate() : nullptr;
+                    if (aggregate != nullptr && aggregate->getOp() == EOpLinkerObjects)
+                    {
+                        return aggregate;
+                    }
+                }
+                return nullptr;
+            }
+
+            static TIntermAggregate* FindMainBody(TIntermAggregate* root)
+            {
+                for (auto* node : root->getSequence())
+                {
+                    auto* function = node != nullptr ? node->getAsAggregate() : nullptr;
+                    if (function == nullptr || function->getOp() != EOpFunction)
+                    {
+                        continue;
+                    }
+                    // glslang mangles function names as "name(argtypes"; main takes no arguments.
+                    if (function->getName().compare(0, 5, "main(") != 0)
+                    {
+                        continue;
+                    }
+                    auto& sequence = function->getSequence();
+                    // [0] is the parameter list, [1] is the body.
+                    return sequence.size() >= 2 && sequence[1] != nullptr ? sequence[1]->getAsAggregate() : nullptr;
+                }
+                return nullptr;
+            }
+
+            const TStorageQualifier m_storage;
+            std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+        };
+
         class InvertYDerivativeOperandsTraverser : public TIntermTraverser
         {
         public:
@@ -2027,6 +2373,133 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
         };
+
+        /// Presents gl_FragCoord in OpenGL's coordinate space on the top-left-origin backends
+        /// (D3D, Metal, Vulkan). FlipSamplerCoordinates already flips every sample coordinate, so
+        /// gl_FragCoord was the one input left in physical space -- making
+        /// `texelFetch(tex, ivec2(gl_FragCoord.xy), 0)` read the mirrored row.
+        ///
+        /// The flip is `targetHeight - gl_FragCoord.y`, with no -1 term: the hardware yields
+        /// p + 0.5 for physical row p, and p == height - 1 - y, so the GL value y + 0.5 is exactly
+        /// height minus the incoming value.
+        ///
+        /// The height cannot come from bgfx's u_viewRect, which SetBgfxViewPortAndScissor narrows
+        /// to the viewport, while gl_FragCoord is relative to the whole render target.
+        class FragCoordYFlipTraverser final : private TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids)
+            {
+                auto* intermediate{program.getIntermediate(EShLangFragment)};
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                FragCoordYFlipTraverser traverser{intermediate};
+                intermediate->getTreeRoot()->traverse(&traverser);
+
+                if (traverser.m_symbolsToParents.empty())
+                {
+                    return;
+                }
+
+                // Declared as a linker object so MoveNonSamplerUniformsIntoStruct sweeps it into
+                // the "Frame" struct with every other non-sampler uniform.
+                TType targetSizeType{EbtFloat, EvqUniform, 4};
+                TIntermSymbol* targetSize{intermediate->addSymbol(TIntermSymbol{ids.Next(), Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME, targetSizeType})};
+
+                auto* linkerObjects = FindLinkerObjects(intermediate->getTreeRoot()->getAsAggregate());
+                if (linkerObjects == nullptr)
+                {
+                    throw std::runtime_error{"FragCoordYFlip: fragment stage has no linker objects sequence."};
+                }
+                linkerObjects->getSequence().push_back(targetSize);
+
+                traverser.ApplyReplacements(targetSize);
+            }
+
+        protected:
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                // Linker object references declare gl_FragCoord rather than read it.
+                if (symbol->getName() != "gl_FragCoord" || IsLinkerObject(path))
+                {
+                    return;
+                }
+
+                m_symbolsToParents.emplace_back(symbol, getParentNode());
+            }
+
+        private:
+            FragCoordYFlipTraverser(TIntermediate* intermediate)
+                : TIntermTraverser{true, false, false}
+                , m_intermediate{intermediate}
+            {
+            }
+
+            static TIntermAggregate* FindLinkerObjects(TIntermAggregate* root)
+            {
+                if (root == nullptr)
+                {
+                    return nullptr;
+                }
+
+                for (auto* node : root->getSequence())
+                {
+                    auto* aggregate = node != nullptr ? node->getAsAggregate() : nullptr;
+                    if (aggregate != nullptr && aggregate->getOp() == EOpLinkerObjects)
+                    {
+                        return aggregate;
+                    }
+                }
+
+                return nullptr;
+            }
+
+            void ApplyReplacements(TIntermSymbol* targetSize)
+            {
+                for (const auto& [symbol, parent] : m_symbolsToParents)
+                {
+                    // Not batched into one MakeReplacements call: that maps one replacement per
+                    // symbol *name*, so every gl_FragCoord reference would share one subtree and
+                    // that node would end up with multiple parents.
+                    MakeReplacements({{"gl_FragCoord", BuildFlippedFragCoord(symbol, targetSize)}}, {{symbol, parent}});
+                }
+            }
+
+            /// Builds `vec4(gl_FragCoord.x, targetSize.y - gl_FragCoord.y, .z, .w)`. The whole
+            /// vector is rebuilt rather than patching .y because a reference may be swizzled,
+            /// indexed, or passed along whole, and the parent node is not inspected here.
+            TIntermTyped* BuildFlippedFragCoord(TIntermSymbol* fragCoord, TIntermSymbol* targetSize)
+            {
+                const TSourceLoc& loc{fragCoord->getLoc()};
+                TType floatType{EbtFloat, EvqTemporary, 1};
+                TType vec4Type{EbtFloat, EvqTemporary, 4};
+
+                // Each component gets its own symbol copy so no node ends up with two parents.
+                auto component = [&](int index) {
+                    TIntermTyped* copy{m_intermediate->addSymbol(*fragCoord)};
+                    TIntermTyped* element{m_intermediate->addIndex(EOpIndexDirect, copy, m_intermediate->addConstantUnion(index, loc), loc)};
+                    element->setType(floatType);
+                    return element;
+                };
+
+                TIntermTyped* height{m_intermediate->addIndex(EOpIndexDirect, m_intermediate->addSymbol(*targetSize), m_intermediate->addConstantUnion(1, loc), loc)};
+                height->setType(floatType);
+
+                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, height, component(1), loc)};
+
+                TIntermAggregate* constructed{m_intermediate->makeAggregate(component(0), loc)};
+                constructed = m_intermediate->growAggregate(constructed, flippedY, loc);
+                constructed = m_intermediate->growAggregate(constructed, component(2), loc);
+                constructed = m_intermediate->growAggregate(constructed, component(3), loc);
+                return m_intermediate->setAggregateOperator(constructed, EOpConstructVec4, vec4Type, loc);
+            }
+
+            TIntermediate* m_intermediate{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -2069,6 +2542,11 @@ namespace Babylon::ShaderCompilerTraversers
         StructLocalZeroInitializerTraverser::Traverse(program);
     }
 
+    void FlattenNarrowVaryingArrays(TProgram& program, IdGenerator& ids)
+    {
+        NarrowVaryingArrayFlattenerTraverser::Traverse(program, ids);
+    }
+
     void InvertYDerivativeOperands(TProgram& program)
     {
         InvertYDerivativeOperandsTraverser::Traverse(program);
@@ -2077,5 +2555,10 @@ namespace Babylon::ShaderCompilerTraversers
     void FlipSamplerCoordinates(TProgram& program)
     {
         FlipSamplerCoordinatesTraverser::Traverse(program);
+    }
+
+    void FlipFragCoordY(TProgram& program, IdGenerator& ids)
+    {
+        FragCoordYFlipTraverser::Traverse(program, ids);
     }
 }

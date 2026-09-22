@@ -37,6 +37,12 @@ set(BGFX_CUSTOM_TARGETS OFF)
 set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
+set(BGFX_CONFIG_VIDEO OFF)
+
+# Keep AVIF opt-in, including caches with bgfx.cmake's empty (inherit) default.
+if(NOT DEFINED BIMG_CONFIG_PARSE_AVIF OR "${BIMG_CONFIG_PARSE_AVIF}" STREQUAL "")
+    set(BIMG_CONFIG_PARSE_AVIF OFF)
+endif()
 
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
@@ -67,9 +73,6 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CON
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
 
-# Disable video decoding support (not used by Babylon Native).
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_VIDEO=0)
-
 # Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_C99_API=0)
 
@@ -89,7 +92,6 @@ endif()
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 set_property(TARGET bimg_encode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 set_property(TARGET bimg_decode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET minz PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 if(TARGET tinyexr)
     set_property(TARGET tinyexr PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 endif()
@@ -177,7 +179,7 @@ function(group_directory_targets DIR FOLDER_NAME)
 endfunction()
 
 # --------------------------------------------------
-# draco (mesh decompression, native replacement for the WASM decoder)
+# draco (mesh compression/decompression, native replacement for the WASM modules)
 # --------------------------------------------------
 if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_static)
     set(DRACO_TESTS OFF CACHE BOOL "" FORCE)
@@ -185,11 +187,13 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_s
     set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
     set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
 
-    # Build only the features in the Draco glTF bitstream spec: mesh compression, normal
-    # encoding and the standard edgebreaker. This is the same subset Babylon.js decodes
-    # with, since its default configuration loads draco_decoder_gltf.wasm rather than the
-    # full decoder, so it costs no capability the JavaScript path has. It drops point cloud
-    # compression, the predictive edgebreaker and pre-glTF backwards compatibility.
+    # Keep the glTF bitstream subset. NativeDraco is intended to produce and consume
+    # glTF-compatible Draco data (Babylon.js defaults to the glTF-only decoder). The
+    # subset still supports mesh encoding, normals, and standard Edgebreaker; it
+    # constrains the output rather than disabling encoding, and avoids emitting
+    # features outside the glTF profile (e.g. predictive valence at slower speeds)
+    # that the default decoder may reject. Attribute deduplication may be compiled
+    # out; Encode guards those passes on the feature macros Draco publishes.
     set(DRACO_GLTF_BITSTREAM ON CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable_With_Message(draco)
@@ -336,7 +340,9 @@ if(BABYLON_NATIVE_DISABLE_WEBMIN)
 else()
     set(SPIRV_CROSS_ENABLE_WEBMIN ON)
 endif()
-if(NOT GRAPHICS_API STREQUAL "OpenGL")
+# Vulkan's ShaderCompiler still uses spirv-cross (GLSL backend) for reflection /
+# binding rewrites even though the emitted binary is SPIR-V.
+if(NOT GRAPHICS_API STREQUAL "OpenGL" AND NOT GRAPHICS_API STREQUAL "Vulkan")
     set(SPIRV_CROSS_ENABLE_GLSL OFF)
 endif()
 if(NOT GRAPHICS_API STREQUAL "Metal")

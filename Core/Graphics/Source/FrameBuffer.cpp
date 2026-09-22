@@ -12,6 +12,8 @@ namespace Babylon::Graphics
         , m_width{width}
         , m_height{height}
         , m_defaultBackBuffer{defaultBackBuffer}
+        // XR uses default framebuffer semantics but supplies an explicit render target.
+        , m_useDeviceBackBuffer{defaultBackBuffer && !bgfx::isValid(handle)}
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
         , m_disposed{false}
@@ -51,7 +53,7 @@ namespace Babylon::Graphics
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
     {
-        return m_handle;
+        return m_useDeviceBackBuffer ? m_deviceContext.GetBackBufferHandle() : m_handle;
     }
 
     uint16_t FrameBuffer::Width() const
@@ -86,7 +88,7 @@ namespace Babylon::Graphics
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
-        bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         // If a scissor is not set, WebGL clears the entire screen, so set the view rect to cover the entire screen
         // before clearing to match WebGL's behavior; otherwise BGFX will only clear the view rect.
@@ -122,7 +124,10 @@ namespace Babylon::Graphics
         bgfx::setViewScissor(m_viewId.value());
         m_bgfxScissor = {};
 
-        encoder.touch(m_viewId.value());
+        // Keep texture bindings and uniform writes (including OpenGL sampler indices) across the empty draw.
+        constexpr uint8_t discardFlags{BGFX_DISCARD_ALL & ~(BGFX_DISCARD_BINDINGS | BGFX_DISCARD_STATE)};
+        encoder.discard(discardFlags);
+        encoder.submit(m_viewId.value(), BGFX_INVALID_HANDLE, 0, discardFlags);
     }
 
     void FrameBuffer::SetViewPort(float x, float y, float width, float height)
@@ -147,7 +152,17 @@ namespace Babylon::Graphics
     {
         // In order for Blit to work properly we need to force the creation of a new ViewID.
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
-        encoder.blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
+
+        // bgfx blit now takes TextureRegion pairs. UINT16_MAX was the old "whole texture"
+        // sentinel; zero width/height now means "rest of mip from x/y".
+        const uint16_t regionWidth{width == UINT16_MAX ? static_cast<uint16_t>(0) : width};
+        const uint16_t regionHeight{height == UINT16_MAX ? static_cast<uint16_t>(0) : height};
+
+        bgfx::TextureRegion dstRegion{};
+        dstRegion.init(dst, dstX, dstY, regionWidth, regionHeight);
+        bgfx::TextureRegion srcRegion{};
+        srcRegion.init(src, srcX, srcY, regionWidth, regionHeight);
+        encoder.blit(m_viewId.value(), dstRegion, srcRegion);
     }
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
@@ -209,7 +224,7 @@ namespace Babylon::Graphics
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
-        bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         m_bgfxViewPort = viewPort;
         bgfx::setViewRect(m_viewId.value(),

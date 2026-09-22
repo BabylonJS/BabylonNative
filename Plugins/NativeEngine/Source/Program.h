@@ -69,6 +69,8 @@ namespace Babylon
         bgfx::ProgramHandle Handle() const { return m_handle; }
         const std::map<uint16_t, UniformValue>& Uniforms() const { return m_uniforms; }
         const std::map<std::string, uint32_t>& VertexAttributeLocations() const { return m_vertexAttributeLocations; }
+        // Null for shaders that never read gl_FragCoord; the compiler omits the uniform there.
+        const UniformInfo* FragCoordTargetSizeUniform() const { return m_fragCoordTargetSizeUniform; }
 
         // Compiler-assigned i_data slot for each built-in attribute location.
         const std::map<uint32_t, uint32_t>& BuiltInInstanceDataSlots() const { return m_builtInInstanceDataSlots; }
@@ -82,6 +84,7 @@ namespace Babylon
         std::map<uint16_t, UniformInfo> m_uniformInfos;
         std::map<std::string, uint32_t> m_vertexAttributeLocations;
         std::map<uint32_t, uint32_t> m_builtInInstanceDataSlots;
+        const UniformInfo* m_fragCoordTargetSizeUniform{nullptr};
         std::string m_vertexSource;
         std::string m_fragmentSource;
         std::map<std::map<std::string, uint32_t>, bgfx::ProgramHandle> m_instancedVariants;

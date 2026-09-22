@@ -8,20 +8,21 @@
 
 namespace Babylon::Graphics
 {
-    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
+    void DeviceImpl::ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window)
     {
+        swapChain.ndt = nullptr;
         // Assume window is a xaml swap chain panel if not a core window.
         if (!window.try_as<ABI::Windows::UI::Core::ICoreWindow>())
         {
             // Set ndt greater than 1 for xaml swap chain panels.
             // See https://github.com/bkaradzic/bgfx/blob/23edb9c4d90744bf90a89ff9e7308b8ff6517fee/src/dxgi.cpp#L531-L552
-            pd.ndt = reinterpret_cast<void*>(2);
+            swapChain.ndt = reinterpret_cast<void*>(2);
         }
 
-        pd.nwh = winrt::get_abi(window);
+        swapChain.nwh = winrt::get_abi(window);
     }
 
-    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::Init& /*init*/)
     {
     }
 

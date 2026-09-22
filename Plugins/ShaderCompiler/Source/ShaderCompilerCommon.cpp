@@ -49,6 +49,41 @@ namespace Babylon::ShaderCompilerCommon
         return std::string{source};
     }
 
+    // bgfx shader binary v8+ stores texComponent/texDimension after each uniform; v10+ also
+    // stores texFormat. IDs match bgfx src/shader.cpp (0 = unknown / TextureDimension::Count).
+    void AppendUniformTextureMeta(std::vector<uint8_t>& bytes, uint8_t texComponent, uint8_t texDimension, uint16_t texFormat)
+    {
+        AppendBytes(bytes, texComponent);
+        AppendBytes(bytes, texDimension);
+        AppendBytes(bytes, texFormat);
+    }
+
+    // Map SPIR-V image dim to bgfx TextureDimension id. Pure Sampler types have no dim and
+    // return 0 so the backend falls back to the bound texture's actual dimension.
+    uint8_t TextureDimensionIdFromResource(const spirv_cross::Compiler& compiler, const spirv_cross::Resource& resource)
+    {
+        const auto& type = compiler.get_type(resource.type_id);
+        if (type.basetype != spirv_cross::SPIRType::SampledImage && type.basetype != spirv_cross::SPIRType::Image)
+        {
+            return 0;
+        }
+
+        const bool arrayed{type.image.arrayed};
+        switch (type.image.dim)
+        {
+            case spv::Dim1D:
+                return 0x01;
+            case spv::Dim2D:
+                return arrayed ? static_cast<uint8_t>(0x03) : static_cast<uint8_t>(0x02);
+            case spv::Dim3D:
+                return 0x06;
+            case spv::DimCube:
+                return arrayed ? static_cast<uint8_t>(0x05) : static_cast<uint8_t>(0x04);
+            default:
+                return 0;
+        }
+    }
+
     void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
     {
         const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
@@ -78,6 +113,7 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(bytes, static_cast<uint8_t>(uniform.ElementLength));
             AppendBytes(bytes, static_cast<uint16_t>(uniform.Offset));
             AppendBytes(bytes, static_cast<uint16_t>(uniform.RegisterSize));
+            AppendUniformTextureMeta(bytes);
         }
     }
 
@@ -92,19 +128,23 @@ namespace Babylon::ShaderCompilerCommon
             // never bind (the sampler silently samples nothing). Recover the pre-transpile name from the
             // parser's ParsedIR (the Compiler transpiles a private copy, leaving the parser's names intact).
             const std::string& originalName = originalIr.get_name(sampler.id);
-            const std::string& name = originalName.empty() ? sampler.name : originalName;
+            std::string name = originalName.empty() ? sampler.name : originalName;
 
             AppendBytes(bytes, static_cast<uint8_t>(name.size()));
             AppendBytes(bytes, name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
 
-            // TODO : These values (num, regIndex, regCount) are only used by Vulkan and should be set for that API
-            AppendBytes(bytes, static_cast<uint8_t>(0));
-            AppendBytes(bytes, static_cast<uint16_t>(0));
-            AppendBytes(bytes, static_cast<uint16_t>(0));
+            // num / regIndex / regCount: only Vulkan (and WebGPU) consume these; default packaging
+            // leaves them zero. Vulkan's appender (ShaderCompilerVulkan) fills regIndex.
+            uint8_t num{0};
+            uint16_t regIndex{0};
+            uint16_t regCount{0};
+            AppendBytes(bytes, num);
+            AppendBytes(bytes, regIndex);
+            AppendBytes(bytes, regCount);
+            AppendUniformTextureMeta(bytes, /*texComponent*/ 0, TextureDimensionIdFromResource(compiler, sampler));
 
 #if OPENGL
-            BX_UNUSED(compiler);
             // A program's vertex and fragment shaders share this stages map, and Babylon's
             // generated GLSL frequently declares the same sampler in both stages. Assign a stage
             // (texture unit) the first time a sampler name is seen and reuse it thereafter; without
@@ -264,115 +304,155 @@ namespace Babylon::ShaderCompilerCommon
         return info;
     }
 
-    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo, std::map<std::string, uint32_t> builtInInstanceDataSlots)
+    namespace
+{
+    const spirv_cross::SmallVector<spirv_cross::Resource>& SelectSamplers(const spirv_cross::ShaderResources& resources, SamplerResourceSet samplerResources)
     {
-        Graphics::BgfxShaderInfo bgfxShaderInfo{};
-        bgfxShaderInfo.BuiltInInstanceDataSlots = std::move(builtInInstanceDataSlots);
-
-        constexpr uint8_t BGFX_SHADER_BIN_VERSION{6};
-
-        // These hashes are generated internally by BGFX's custom shader compilation pipeline,
-        // which we don't have access to.  Fortunately, however, they aren't used for anything
-        // crucial; they just have to match.
-        constexpr uint32_t vertexOutputsHash{0xBAD1DEA};
-        constexpr uint32_t fragmentInputsHash{vertexOutputsHash};
-
-        // Vertex Shader
+        switch (samplerResources)
         {
-            std::vector<uint8_t>& vertexBytes{bgfxShaderInfo.VertexBytes};
-
-            const auto& compiler{*vertexShaderInfo.Compiler};
-            const spirv_cross::ShaderResources resources{compiler.get_shader_resources()};
-            auto uniformsInfo{CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler)};
-#if __APPLE__
-            // with metal, we bind images and not samplers
-            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers{resources.separate_images};
-#elif OPENGL
-            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
-#else
-            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
-#endif
-            size_t numUniforms{uniformsInfo.Uniforms.size() + samplers.size()};
-
-            AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
-            AppendBytes(vertexBytes, vertexOutputsHash);
-            AppendBytes(vertexBytes, fragmentInputsHash);
-
-            AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
-            AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-            AppendSamplers(vertexBytes, compiler, vertexShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
-
-            AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
-            AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
-            AppendBytes(vertexBytes, static_cast<uint8_t>(0));
-
-            // Per-instance vertex attributes are encoded with synthetic locations at/above
-            // bgfx::Attrib::Count (they occupy the top TEXCOORD semantics that bgfx binds by
-            // semantic rather than via bgfx::Attrib). They must be excluded from the shader's
-            // attribute table: bgfx::attribToId only covers real bgfx::Attrib values, and the
-            // backends resolve instance data from the instance-data buffer independently. This
-            // mirrors bgfx's own reflection, which skips semantics without a bgfx::Attrib mapping.
-            uint8_t numVertexAttributes{0};
-            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
-            {
-                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-                if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
-                {
-                    ++numVertexAttributes;
-                }
-            }
-
-            AppendBytes(vertexBytes, numVertexAttributes);
-
-            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
-            {
-                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-                if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
-                {
-                    AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
-                }
-
-                // Map from symbolName -> originalName to associate babylon.js shader attribute -> Babylon Native attribute location.
-                // Instance-data inputs are still exposed here so the consumer can bind their vertex buffers.
-                bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
-            }
-            AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
+            case SamplerResourceSet::SeparateImages:
+                return resources.separate_images;
+            case SamplerResourceSet::SampledImages:
+                return resources.sampled_images;
+            case SamplerResourceSet::SeparateSamplers:
+            default:
+                return resources.separate_samplers;
         }
-
-        // Fragment Shader
-        {
-            std::vector<uint8_t>& fragmentBytes{bgfxShaderInfo.FragmentBytes};
-
-            const spirv_cross::Compiler& compiler = *fragmentShaderInfo.Compiler;
-            const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
-            const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
-#if __APPLE__
-            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
-#elif OPENGL
-            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
-#else
-            const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
-#endif
-            size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
-
-            AppendBytes(fragmentBytes, BX_MAKEFOURCC('F', 'S', 'H', BGFX_SHADER_BIN_VERSION));
-            AppendBytes(fragmentBytes, vertexOutputsHash);
-            AppendBytes(fragmentBytes, fragmentInputsHash);
-
-            AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
-            AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-            AppendSamplers(fragmentBytes, compiler, fragmentShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
-
-            AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
-            AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
-            AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
-
-            // Fragment shaders don't have attributes.
-            AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
-
-            AppendBytes(fragmentBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
-        }
-
-        return bgfxShaderInfo;
     }
+
+    SamplerResourceSet DefaultSamplerResourceSet()
+    {
+#if __APPLE__
+        // Metal binds images, not samplers.
+        return SamplerResourceSet::SeparateImages;
+#elif OPENGL
+        return SamplerResourceSet::SampledImages;
+#else
+        return SamplerResourceSet::SeparateSamplers;
+#endif
+    }
+}
+
+Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo, std::map<std::string, uint32_t> builtInInstanceDataSlots)
+{
+    return CreateBgfxShader(
+        std::move(vertexShaderInfo),
+        std::move(fragmentShaderInfo),
+        std::move(builtInInstanceDataSlots),
+        DefaultSamplerResourceSet(),
+        AppendSamplers);
+}
+
+Graphics::BgfxShaderInfo CreateBgfxShader(
+    ShaderInfo vertexShaderInfo,
+    ShaderInfo fragmentShaderInfo,
+    std::map<std::string, uint32_t> builtInInstanceDataSlots,
+    SamplerResourceSet samplerResources,
+    AppendSamplersFn appendSamplers)
+{
+    Graphics::BgfxShaderInfo bgfxShaderInfo{};
+    bgfxShaderInfo.BuiltInInstanceDataSlots = std::move(builtInInstanceDataSlots);
+
+    // Must match BGFX_SHADER_BIN_VERSION in bgfx tools/shaderc/shaderc.cpp.
+    // v12 requires raw SRV/UAV binding masks after the in/out hashes, and
+    // uniform entries always carry texComponent/texDimension/texFormat (v8/v10).
+    constexpr uint8_t BGFX_SHADER_BIN_VERSION{12};
+
+    // These hashes are generated internally by BGFX's custom shader compilation pipeline,
+    // which we don't have access to.  Fortunately, however, they aren't used for anything
+    // crucial; they just have to match.
+    constexpr uint32_t vertexOutputsHash{0xBAD1DEA};
+    constexpr uint32_t fragmentInputsHash{vertexOutputsHash};
+
+    // Vertex Shader
+    {
+        std::vector<uint8_t>& vertexBytes{bgfxShaderInfo.VertexBytes};
+
+        const auto& compiler{*vertexShaderInfo.Compiler};
+        const spirv_cross::ShaderResources resources{compiler.get_shader_resources()};
+        auto uniformsInfo{CollectNonSamplerUniforms(*vertexShaderInfo.Parser, compiler)};
+        const spirv_cross::SmallVector<spirv_cross::Resource>& samplers{SelectSamplers(resources, samplerResources)};
+        size_t numUniforms{uniformsInfo.Uniforms.size() + samplers.size()};
+
+        AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
+        AppendBytes(vertexBytes, vertexOutputsHash);
+        AppendBytes(vertexBytes, fragmentInputsHash);
+        // Raw SRV/UAV masks (bgfx v12). BN runtime shaders don't expose raw buffers here.
+        AppendBytes(vertexBytes, static_cast<uint32_t>(0));
+        AppendBytes(vertexBytes, static_cast<uint32_t>(0));
+
+        AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
+        AppendUniformBuffer(vertexBytes, uniformsInfo, false);
+        appendSamplers(vertexBytes, compiler, vertexShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
+
+        AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
+        AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
+        AppendBytes(vertexBytes, static_cast<uint8_t>(0));
+
+        // Per-instance vertex attributes are encoded with synthetic locations at/above
+        // bgfx::Attrib::Count (they occupy the top TEXCOORD semantics that bgfx binds by
+        // semantic rather than via bgfx::Attrib). They must be excluded from the shader's
+        // attribute table: bgfx::attribToId only covers real bgfx::Attrib values, and the
+        // backends resolve instance data from the instance-data buffer independently. This
+        // mirrors bgfx's own reflection, which skips semantics without a bgfx::Attrib mapping.
+        uint8_t numVertexAttributes{0};
+        for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+        {
+            const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+            if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+            {
+                ++numVertexAttributes;
+            }
+        }
+
+        AppendBytes(vertexBytes, numVertexAttributes);
+
+        for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+        {
+            const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+            if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+            {
+                AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
+            }
+
+            // Map from symbolName -> originalName to associate babylon.js shader attribute -> Babylon Native attribute location.
+            // Instance-data inputs are still exposed here so the consumer can bind their vertex buffers.
+            bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
+        }
+        AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
+    }
+
+    // Fragment Shader
+    {
+        std::vector<uint8_t>& fragmentBytes{bgfxShaderInfo.FragmentBytes};
+
+        const spirv_cross::Compiler& compiler = *fragmentShaderInfo.Compiler;
+        const spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+        const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
+        const spirv_cross::SmallVector<spirv_cross::Resource>& samplers{SelectSamplers(resources, samplerResources)};
+        size_t numUniforms = uniformsInfo.Uniforms.size() + samplers.size();
+
+        AppendBytes(fragmentBytes, BX_MAKEFOURCC('F', 'S', 'H', BGFX_SHADER_BIN_VERSION));
+        AppendBytes(fragmentBytes, vertexOutputsHash);
+        AppendBytes(fragmentBytes, fragmentInputsHash);
+        // Raw SRV/UAV masks (bgfx v12). BN runtime shaders don't expose raw buffers here.
+        AppendBytes(fragmentBytes, static_cast<uint32_t>(0));
+        AppendBytes(fragmentBytes, static_cast<uint32_t>(0));
+
+        AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
+        AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
+        appendSamplers(fragmentBytes, compiler, fragmentShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
+
+        AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
+        AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
+        AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
+
+        // Fragment shaders don't have attributes.
+        AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
+
+        AppendBytes(fragmentBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
+    }
+
+    return bgfxShaderInfo;
+}
 }
