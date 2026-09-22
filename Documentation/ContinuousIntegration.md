@@ -142,6 +142,6 @@ Then, for the intended plaform, download the .zip:
 
 ![BuildPage](Images/CI_DownloadZip.jpg)
 
-Finaly, open the zip file. It will contain all rendered images for the build. If the build fails at build time, no artifact will be produced. If the image comparison fails, an artifact containing the image difference will be published.
+Finally, open the zip file. It will contain all rendered images for the build. If the build fails at build time, no artifact will be produced. If the image comparison fails, an artifact containing the image difference will be published.
 
 ![BuildPage](Images/CI_ArtifactImage.jpg)
