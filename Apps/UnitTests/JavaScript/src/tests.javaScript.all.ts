@@ -23,6 +23,7 @@ import {
 } from "@babylonjs/core";
 import { GradientMaterial } from "@babylonjs/materials";
 import { registerPngTests } from "./tests.nativeEngine.png";
+import { registerAttributeLessInstancingTests } from "./tests.nativeEngine.attributeLessInstancing";
 
 declare var describe: typeof Mocha.describe;
 declare var it: typeof Mocha.it;
@@ -34,11 +35,13 @@ Mocha.reporter("spec");
 declare const hostPlatform: string;
 declare const hasGpuRendering: boolean;
 declare const hasNativeImageLoading: boolean;
+declare const hasAttributeLessInstancing: boolean;
 declare const setExitCode: (code: number) => void;
 declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
 
 registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
+registerAttributeLessInstancingTests(describe, it, hasAttributeLessInstancing);
 
 describe("RequestFile", function () {
   this.timeout(0);
