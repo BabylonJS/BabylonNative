@@ -16,16 +16,18 @@ The plugin is **off by default**. Enable it with `-D BABYLON_NATIVE_PLUGIN_NATIV
 The API is exposed as a `MeshoptCodec` object on the `_native` global and a compatible `decodeMeshopt` free function. Publishing the version matters more here: meshoptimizer stores its codec version in the first header byte, and a decoder **rejects** streams newer than it understands — returning an error rather than degraded output. Exposing the version lets the JavaScript side fall back before it tries.
 
 ```typescript
+type MeshoptDecode = (
+  source: ArrayBufferView,
+  count: number,
+  stride: number,
+  mode: "ATTRIBUTES" | "TRIANGLES" | "INDICES",
+  filter?: "NONE" | "OCTAHEDRAL" | "QUATERNION" | "EXPONENTIAL"
+) => Uint8Array;
+
 interface INative {
-  decodeMeshopt: INative["MeshoptCodec"]["Decode"];
+  decodeMeshopt: MeshoptDecode;
   MeshoptCodec: {
-    Decode: (
-      source: ArrayBufferView,
-      count: number,
-      stride: number,
-      mode: "ATTRIBUTES" | "TRIANGLES" | "INDICES",
-      filter?: "NONE" | "OCTAHEDRAL" | "QUATERNION" | "EXPONENTIAL"
-    ) => Uint8Array;
+    Decode: MeshoptDecode;
     Version: string;
   };
 }

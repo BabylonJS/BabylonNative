@@ -61,19 +61,27 @@ TEST(NativeMeshopt, LegacyEntryPointMatchesGroupedDecoder)
                     var expected = bytes(
                         "00000000000000800000000000beadde0000c03f000010c00000403f01beadde00004040000090c00000c03f02beadde" +
                         "000090400000d8c00000104003beadde0000c040000010c10000404004beadde0000f040000034c10000704005beadde");
-                    if (typeof _native.decodeMeshopt !== "function") {
-                        throw new Error("Missing Babylon.js meshopt compatibility entry point");
-                    }
-                    [_native.decodeMeshopt, _native.MeshoptCodec.Decode].forEach(function (decode) {
-                        var result = decode(encoded, 6, 16, "ATTRIBUTES");
+                    [
+                        { name: "_native.decodeMeshopt", decode: _native.decodeMeshopt },
+                        { name: "_native.MeshoptCodec.Decode", decode: _native.MeshoptCodec.Decode }
+                    ].forEach(function (entry) {
+                        if (typeof entry.decode !== "function") {
+                            throw new Error(entry.name + ": missing Meshopt entry point");
+                        }
+                        var result;
+                        try {
+                            result = entry.decode(encoded, 6, 16, "ATTRIBUTES");
+                        } catch (error) {
+                            throw new Error(entry.name + ": " + error.message);
+                        }
                         if (!(result instanceof Uint8Array) || result.length !== expected.length ||
                             result.some(function (value, index) { return value !== expected[index]; })) {
-                            throw new Error("Meshopt reference stream did not decode byte for byte");
+                            throw new Error(entry.name + ": expected Uint8Array containing the byte-exact reference output");
                         }
                         var rejected = false;
-                        try { decode(encoded, 6, 16, "NOT_A_MODE"); } catch (error) { rejected = true; }
+                        try { entry.decode(encoded, 6, 16, "NOT_A_MODE"); } catch (error) { rejected = true; }
                         if (!rejected) {
-                            throw new Error("Meshopt accepted an invalid mode");
+                            throw new Error(entry.name + ": accepted an invalid mode");
                         }
                     });
                 })();
