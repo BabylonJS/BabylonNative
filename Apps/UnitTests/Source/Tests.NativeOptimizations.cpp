@@ -63,11 +63,10 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                         } catch (caught) {
                             error = caught;
                         }
-                        // Node-API-JSI currently surfaces a native Napi::TypeError as a generic
-                        // JavaScript Error. The exact message distinguishes this explicit
-                        // validation from the old backend-dependent cast failure.
-                        if (!(error instanceof Error) || error.message !== message) {
-                            throw new Error("Invalid matrix must report: " + message);
+                        // JSI may wrap native errors without preserving the Error prototype.
+                        if (!error || error.message !== message) {
+                            throw new Error("Invalid matrix must report: " + message +
+                                "; received: " + String(error));
                         }
                     }
                     for (const matrix of [undefined, null, {}, 42, new Uint8Array(16), new Float64Array(16)]) {
