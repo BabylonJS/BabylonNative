@@ -63,8 +63,9 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                         } catch (caught) {
                             error = caught;
                         }
-                        // JSI may wrap native errors without preserving the Error prototype.
-                        if (!error || error.message !== message) {
+                        // JSI wraps exceptions thrown from host functions with this prefix.
+                        if (!(error instanceof Error) ||
+                            (error.message !== message && error.message !== "Exception in HostFunction: " + message)) {
                             throw new Error("Invalid matrix must report: " + message +
                                 "; received: " + String(error));
                         }
