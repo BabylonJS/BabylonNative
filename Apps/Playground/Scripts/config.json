@@ -4067,20 +4067,17 @@
         },
         {
             "title": "Particles - Emitters - Box",
-            "playgroundId": "#WLX2I2#8",
-            "renderCount": 120,
+            "playgroundId": "#ZVMMSX#0",
             "referenceImage": "particles-emitters-box.png"
         },
         {
             "title": "Particles - Emitters - Sphere",
-            "playgroundId": "#WLX2I2#9",
-            "renderCount": 120,
+            "playgroundId": "#O9966G#0",
             "referenceImage": "particles-emitters-sphere.png"
         },
         {
             "title": "Particles - Emitters - Directed Sphere",
-            "playgroundId": "#WLX2I2#10",
-            "renderCount": 120,
+            "playgroundId": "#0OQGK1#0",
             "referenceImage": "particles-emitters-directed-sphere.png"
         },
         {
@@ -4091,8 +4088,7 @@
         },
         {
             "title": "Particles - Emitters - Cylinder",
-            "playgroundId": "#WLX2I2#12",
-            "renderCount": 120,
+            "playgroundId": "#96154U#0",
             "errorRatio": 4,
             "referenceImage": "particles-emitters-cylinder.png"
         },
@@ -4214,8 +4210,7 @@
         },
         {
             "title": "Particles - Attractors",
-            "playgroundId": "#DEZ79M#73",
-            "renderCount": 240,
+            "playgroundId": "#PUWWM3#0",
             "referenceImage": "particles-attractors.png"
         },
         {
