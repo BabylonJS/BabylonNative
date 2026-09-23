@@ -1,9 +1,9 @@
-#include "VertexArray.h"
+#include <gtest/gtest.h>
 
+#include "VertexArray.h"
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include <gtest/gtest.h>
 
 #include <algorithm>
 #include <future>
@@ -162,6 +162,31 @@ TEST_F(NativeEngineVertexArray, OldDeviceLayoutsDoNotReleaseNewDeviceHandles)
     newBuffer.Dispose();
     FlushFrames();
     EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
+}
+
+TEST_F(NativeEngineVertexArray, OldDeviceArrayRejectsNewRecords)
+{
+    Babylon::VertexArray array{*m_context};
+    const auto deviceId = m_context->GetDeviceId();
+    m_device.DisableRendering();
+    FlushFrames();
+    ASSERT_NE(m_context->GetDeviceId(), deviceId);
+    const auto baseline = bgfx::getStats()->numVertexLayouts;
+    const auto bufferBaseline = bgfx::getStats()->numVertexBuffers;
+
+    const std::vector<uint8_t> bytes(36);
+    Babylon::VertexBuffer buffer{*m_context, gsl::make_span(bytes), false};
+    for (uint32_t divisor : {0u, 1u})
+    {
+        SCOPED_TRACE(divisor);
+        EXPECT_THROW(array.RecordVertexBuffer(&buffer, bgfx::Attrib::Position, 0, 12, 3, bgfx::AttribType::Float, false, divisor), std::runtime_error);
+    }
+    EXPECT_TRUE(array.GetInstances().empty());
+    array.Dispose();
+    buffer.Dispose();
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
+    EXPECT_EQ(bgfx::getStats()->numVertexBuffers, bufferBaseline);
 }
 
 TEST_F(NativeEngineVertexArray, LayoutExhaustionIsReportedAndCanRecover)
