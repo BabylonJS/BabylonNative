@@ -26,6 +26,7 @@ namespace Babylon::Polyfills::Internal
 
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
+        const uint8_t* GetPixels() const;
 
     private:
         Napi::Value GetWidth(const Napi::CallbackInfo&);
