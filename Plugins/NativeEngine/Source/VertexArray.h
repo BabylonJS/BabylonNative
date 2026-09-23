@@ -10,7 +10,7 @@ namespace Babylon
     class VertexArray final
     {
     public:
-        VertexArray() = default;
+        explicit VertexArray(Graphics::DeviceContext& deviceContext);
         ~VertexArray();
 
         VertexArray(const VertexArray&) = delete;
@@ -27,6 +27,8 @@ namespace Babylon
         const std::map<uint32_t, VertexBuffer::InstanceInfo>& GetInstances() const { return m_vertexBufferInstances; }
 
     private:
+        Graphics::DeviceContext& m_deviceContext;
+        const uintptr_t m_deviceId{};
         IndexBuffer* m_indexBuffer{};
 
         struct VertexBufferRecord

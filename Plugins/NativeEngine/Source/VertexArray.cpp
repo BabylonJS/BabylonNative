@@ -6,6 +6,12 @@
 
 namespace Babylon
 {
+    VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
+        : m_deviceContext{deviceContext}
+        , m_deviceId{m_deviceContext.GetDeviceId()}
+    {
+    }
+
     VertexArray::~VertexArray()
     {
         Dispose();
@@ -19,6 +25,17 @@ namespace Babylon
         }
 
         m_indexBuffer = nullptr;
+        if (m_deviceId == m_deviceContext.GetDeviceId())
+        {
+            for (const auto& pair : m_vertexBufferRecords)
+            {
+                const auto& record{pair.second};
+                if (bgfx::isValid(record.LayoutHandle))
+                {
+                    bgfx::destroy(record.LayoutHandle);
+                }
+            }
+        }
         m_vertexBufferRecords.clear();
         m_vertexBufferInstances.clear();
 
@@ -33,6 +50,15 @@ namespace Babylon
 
     void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized, uint32_t divisor)
     {
+        if (m_disposed)
+        {
+            throw std::runtime_error{"Cannot record a vertex buffer in a disposed vertex array"};
+        }
+        if (m_deviceId != m_deviceContext.GetDeviceId())
+        {
+            throw std::runtime_error{"Cannot record a vertex buffer in a stale vertex array after device loss"};
+        }
+
         auto attribType = static_cast<bgfx::AttribType::Enum>(type);
 
         if (divisor == 1)
@@ -63,6 +89,10 @@ namespace Babylon
         else
         {
             auto attrib = static_cast<bgfx::Attrib::Enum>(location);
+            if (m_vertexBufferRecords.find(attrib) != m_vertexBufferRecords.end())
+            {
+                throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+            }
             vertexBuffer->Build(byteStride);
 
             bgfx::VertexLayout layout{};
@@ -72,9 +102,24 @@ namespace Babylon
             layout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
             layout.end();
 
-            if (!m_vertexBufferRecords.try_emplace(attrib, vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)).second)
+            const auto layoutHandle = bgfx::createVertexLayout(layout);
+            if (!bgfx::isValid(layoutHandle))
             {
-                throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+                throw std::runtime_error{"Failed to create vertex layout (attribute=" + std::to_string(location) +
+                    ", stride=" + std::to_string(byteStride) + ", offset=" + std::to_string(byteOffset) +
+                    "). The maxVertexLayouts limit of " + std::to_string(bgfx::getCaps()->limits.maxVertexLayouts) + " may be exhausted"};
+            }
+            try
+            {
+                if (!m_vertexBufferRecords.try_emplace(attrib, vertexBuffer, byteOffset / byteStride, layoutHandle).second)
+                {
+                    throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+                }
+            }
+            catch (...)
+            {
+                bgfx::destroy(layoutHandle);
+                throw;
             }
         }
     }
