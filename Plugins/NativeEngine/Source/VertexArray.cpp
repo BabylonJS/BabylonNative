@@ -27,9 +27,9 @@ namespace Babylon
         m_indexBuffer = nullptr;
         if (m_deviceId == m_deviceContext.GetDeviceId())
         {
-            for (const auto& [attrib, record] : m_vertexBufferRecords)
+            for (const auto& pair : m_vertexBufferRecords)
             {
-                static_cast<void>(attrib);
+                const auto& record{pair.second};
                 if (bgfx::isValid(record.LayoutHandle))
                 {
                     bgfx::destroy(record.LayoutHandle);
@@ -53,6 +53,10 @@ namespace Babylon
         if (m_disposed)
         {
             throw std::runtime_error{"Cannot record a vertex buffer in a disposed vertex array"};
+        }
+        if (m_deviceId != m_deviceContext.GetDeviceId())
+        {
+            throw std::runtime_error{"Cannot record a vertex buffer in a stale vertex array after device loss"};
         }
 
         auto attribType = static_cast<bgfx::AttribType::Enum>(type);
