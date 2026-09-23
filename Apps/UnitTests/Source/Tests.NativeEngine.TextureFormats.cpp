@@ -143,7 +143,7 @@ TEST(NativeEngineTextureFormats, DoesNotSubstituteNonRenderTargetD24)
         {
             ExpectInitializationError(engine, value, bgfx::TextureFormat::D24, false, false,
                 "Unsupported texture format " + std::to_string(bgfx::TextureFormat::D24) +
-                " for requested flags (renderTarget=false, srgb=false, samples=1, createFlags=" +
+                " for requested flags (renderTarget=false, cube=false, srgb=false, samples=1, createFlags=" +
                 std::to_string(BGFX_TEXTURE_BLIT_DST) + ")");
             EXPECT_FALSE(texture->IsValid());
             return;
@@ -194,7 +194,7 @@ TEST(NativeEngineTextureFormats, RejectedInitializationPreservesExistingTexture)
         {
             ExpectInitializationError(engine, value, bgfx::TextureFormat::D24, true, true,
                 "Unsupported texture format " + std::to_string(bgfx::TextureFormat::D24) +
-                " for requested flags (renderTarget=true, srgb=true, samples=1, createFlags=" +
+                " for requested flags (renderTarget=true, cube=false, srgb=true, samples=1, createFlags=" +
                 std::to_string(flags | BGFX_TEXTURE_BLIT_DST) + ")");
             EXPECT_EQ(texture->Handle().idx, originalHandle.idx);
             EXPECT_EQ(texture->Format(), bgfx::TextureFormat::RGBA8);
