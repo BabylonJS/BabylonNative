@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "build": "webpack",
-    "watch": "webpack --watch",
-    "postinstall": "npm run build"
+    "watch": "webpack --watch"
   },
   "dependencies": {
     "chai": "5.2.0",

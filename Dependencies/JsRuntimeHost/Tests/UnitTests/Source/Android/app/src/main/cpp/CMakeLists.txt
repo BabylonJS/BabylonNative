@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(UnitTestsJNI)
 
-get_filename_component(UNIT_TESTS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
+get_filename_component(UNIT_TESTS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../../.." ABSOLUTE)
 get_filename_component(TESTS_DIR "${UNIT_TESTS_DIR}/.." ABSOLUTE)
 get_filename_component(REPO_ROOT_DIR "${TESTS_DIR}/.." ABSOLUTE)
 
@@ -18,20 +18,28 @@ npm(install --silent WORKING_DIRECTORY ${TESTS_DIR})
 
 add_library(UnitTestsJNI SHARED
     JNI.cpp
-    ${UNIT_TESTS_DIR}/Shared/DelayedTaskScheduler.cpp
-    ${UNIT_TESTS_DIR}/Shared/StandardStreamLogger.cpp
-    ${UNIT_TESTS_DIR}/Shared/TimeoutDispatcher.cpp
-    ${UNIT_TESTS_DIR}/Shared/Shared.h
-    ${UNIT_TESTS_DIR}/Shared/Shared.cpp)
+    ${UNIT_TESTS_DIR}/Source/App.cpp
+    ${UNIT_TESTS_DIR}/Source/App.h
+    ${UNIT_TESTS_DIR}/Source/Tests.AppRuntime.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Console.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.DelayedTaskScheduler.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.JavaScript.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Scheduling.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.StandardStreamLogger.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.TimeoutDispatcher.cpp)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Shared/V8ForegroundTaskRunner.cpp)
+    target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.V8ForegroundTaskRunner.cpp)
     target_link_libraries(UnitTestsJNI PRIVATE AppRuntimeInternal)
 endif()
 
 target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
 target_compile_definitions(UnitTestsJNI PRIVATE NAPI_JAVASCRIPT_ENGINE="${NAPI_JAVASCRIPT_ENGINE}")
 target_compile_definitions(UnitTestsJNI PRIVATE ARCANA_TEST_HOOKS)
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
+    target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+endif()
 
 target_include_directories(UnitTestsJNI
     PRIVATE ${UNIT_TESTS_DIR})
