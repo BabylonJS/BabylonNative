@@ -1,4 +1,4 @@
-#include "../Shared/Shared.h"
+#include "../App.h"
 #include <Windows.h>
 #include "Babylon/DebugTrace.h"
 #include <gtest/gtest.h>

@@ -25,7 +25,7 @@ Use a git-enabled terminal to run the following command.
 git clone https://github.com/BabylonJS/JsRuntimeHost.git
 ```
 
-The unit tests require some NPM packages. From the root of the repository on the command line, run the following commands:
+The unit tests require some NPM packages. From the root of the repository on the command line, run the following commands. The CMake or Android Gradle build generates `tests.js` in its build directory and packages it as `Assets/tests.js`; installing packages alone does not build the bundle.
 
 ```
 cd Tests
@@ -50,7 +50,7 @@ First, download the latest release of Ninja, extract the binary, and add it to y
 Once you have Android Studio downloaded, you need to set up an Android emulator if you do not have a physical Android device. You can do this by selecting `Tools` -> `Device Manager` and then selecting a device. (We are using Pixel 2 API 27). 
 
 Open the project located at
-`JsRuntimeHost\Tests\UnitTests\Android` with Android Studio. Note that this can take a while to load. (The bottom right corner of the Android Studio window shows you what is currently being loaded.) 
+`JsRuntimeHost\Tests\UnitTests\Source\Android` with Android Studio. Note that this can take a while to load. (The bottom right corner of the Android Studio window shows you what is currently being loaded.)
 
 Then in the LEFT PANE, right click on `app`, and select `Run 'All Tests'`, as displayed in the image below.
 

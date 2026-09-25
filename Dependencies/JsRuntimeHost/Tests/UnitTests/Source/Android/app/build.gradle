@@ -72,7 +72,7 @@ android {
     externalNativeBuild {
         cmake {
             path file('src/main/cpp/CMakeLists.txt')
-            buildStagingDirectory '../../../../Build/Android'
+            buildStagingDirectory '../../../../../Build/Android'
             version '3.22.1+'
         }
     }
@@ -89,7 +89,9 @@ android {
 
     sourceSets {
         main {
-            assets.srcDirs += [nodeApiAssetsDir]
+            // The generated test bundle is wired per variant below; the Node-API conformance
+            // scripts (copyNodeApiTests) are the only assets sourced from the main set.
+            assets.srcDirs = [nodeApiAssetsDir]
             if (enableAsan) {
                 jniLibs.srcDir "${buildDir}/generated/asanRuntime/jniLibs"
             }
@@ -107,38 +109,48 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
 
-task copyScripts {
-    doLast {
-        // run copy at execution phase because npm command is not done at configuration phase
-        copy
-        {
-            from '../../dist'
-            include "*.js"
-            into 'src/main/assets/Scripts'
+['Debug', 'Release'].each { variant ->
+    def variantName = variant.toLowerCase()
+    def bundleDir = file("$buildDir/generated/test-bundle/$variantName")
+    def assetsDir = file("$buildDir/generated/test-assets/$variantName")
+    def buildBundle = tasks.register("build${variant}TestBundle", Exec) {
+        dependsOn "merge${variant}NativeLibs"
+        workingDir file('../../../..')
+        commandLine System.getProperty('os.name').toLowerCase().contains('windows') ? 'npm.cmd' : 'npm',
+            'run', 'build', '--', '--output-path', bundleDir.absolutePath
+        inputs.files(fileTree('../../../Source/Scripts') { include '**/*.ts' })
+        inputs.files files('../../../../webpack.config.js', '../../../../babel-plugin-replace-bigint.js',
+            '../../../../package.json', '../../../../package-lock.json')
+        outputs.file file("$bundleDir/tests.js")
+    }
+    def copyAssets = tasks.register(variant == 'Debug' ? 'copyAssets' : "copy${variant}Assets", Sync) {
+        dependsOn buildBundle
+        from(bundleDir) { into 'Assets' }
+        from('../../../Assets') { into 'Assets' }
+        into assetsDir
+        doFirst {
+            delete 'src/main/assets/Scripts', 'src/main/assets/Assets/tests.js'
         }
-        copy
-        {
-            from '../../Scripts'
-            include "*.js"
-            into 'src/main/assets/Scripts'
-        }
-        copy
-        {
-            from '../../Assets'
-            include "*.*"
-            into 'src/main/assets/Assets'
+    }
+    android.sourceSets.getByName(variantName).assets.srcDir(copyAssets)
+    // Lint reads the asset source directory independently of mergeAssets.
+    tasks.configureEach { task ->
+        if (task.name == "merge${variant}Assets" ||
+            task.name == "lintVitalAnalyze${variant}" ||
+            task.name == "generate${variant}LintVitalReportModel") {
+            task.dependsOn(copyAssets)
         }
     }
 }
 
 task copyNodeApiTests(type: Copy) {
-    from '../../../NodeApi/test'
+    from '../../../../NodeApi/test'
     into "${nodeApiAssetsDir}/NodeApi/test"
     // Always re-run so the manifest is regenerated even when the copied sources are unchanged.
     outputs.upToDateWhen { false }
     doLast {
         // AAssetManager cannot enumerate subdirectories at runtime, so emit a manifest listing
-        // every copied file (one path relative to NodeApi/test per line). Consumed by Shared.cpp.
+        // every copied file (one path relative to NodeApi/test per line). Consumed by App.cpp.
         // Must NOT start with a dot -- aapt ignores dotfiles when packaging assets.
         def testRoot = file("${nodeApiAssetsDir}/NodeApi/test")
         def manifestFile = new File(testRoot, 'manifest.txt')
@@ -152,18 +164,12 @@ task copyNodeApiTests(type: Copy) {
     }
 }
 
-// Run copyScripts task after CMake external build
-// And make sure merging assets into output is performed after the scripts copy
+// The manifest must exist before assets are merged. Lint reads the asset source directory
+// independently of mergeAssets, so it needs the same dependency (see the bundle wiring above).
 tasks.configureEach { task ->
-    if (task.name == 'mergeDebugNativeLibs') {
-        task.finalizedBy(copyScripts)
-    }
-    if (task.name == 'mergeDebugAssets') {
-        task.dependsOn(copyScripts)
-        task.dependsOn(copyNodeApiTests)
-    }
-    if (task.name == 'mergeReleaseAssets') {
-        task.dependsOn(copyScripts)
+    if (task.name in ['mergeDebugAssets', 'mergeReleaseAssets',
+                      'lintVitalAnalyzeDebug', 'lintVitalAnalyzeRelease',
+                      'generateDebugLintVitalReportModel', 'generateReleaseLintVitalReportModel']) {
         task.dependsOn(copyNodeApiTests)
     }
 }
