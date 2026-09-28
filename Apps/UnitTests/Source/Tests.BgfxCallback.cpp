@@ -6,6 +6,32 @@
 
 using Babylon::Graphics::BgfxCallback;
 
+namespace
+{
+    class TestBgfxCallback : public BgfxCallback
+    {
+    public:
+        using BgfxCallback::BgfxCallback;
+        using BgfxCallback::fatal;
+    };
+}
+
+TEST(BgfxCallback, DeviceLossIsLatchedUntilCleared)
+{
+    TestBgfxCallback callback{[](const auto&) {}};
+    EXPECT_FALSE(callback.IsDeviceLost());
+    callback.fatal(__FILE__, __LINE__, bgfx::Fatal::DeviceLost, "simulated device loss");
+    EXPECT_TRUE(callback.IsDeviceLost());
+    callback.ClearDeviceLost();
+    EXPECT_FALSE(callback.IsDeviceLost());
+}
+
+TEST(BgfxCallback, OtherFatalErrorsStillAbort)
+{
+    TestBgfxCallback callback{[](const auto&) {}};
+    EXPECT_DEATH(callback.fatal(__FILE__, __LINE__, bgfx::Fatal::UnableToInitialize, "simulated init failure"), "FATAL");
+}
+
 TEST(BgfxCallback, CoalescesScreenshotsAndCapture)
 {
     const std::array<uint8_t, 12> pixels{3, 2, 1, 255, 6, 5, 4, 255, 0, 0, 0, 0};

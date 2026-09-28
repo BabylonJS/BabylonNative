@@ -61,6 +61,7 @@ namespace Babylon::Graphics
 
         void EnableRendering();
         void DisableRendering();
+        bool IsDeviceLost() const;
 
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
@@ -150,6 +151,7 @@ namespace Babylon::Graphics
         void DestroyBackBuffer();
         bool RequestScreenShots();
         void Frame();
+        void CompleteReadTextureRequests(uint32_t frameNumber);
         void PerformMidFrameViewFlush();
         void CaptureCallback(const BgfxCallback::CaptureData&);
 

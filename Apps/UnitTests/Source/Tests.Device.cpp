@@ -6,6 +6,15 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
+TEST(Device, HeadlessNoopDoesNotReportDeviceLoss)
+{
+    Babylon::Graphics::Configuration config{};
+    Babylon::Graphics::Device device{config};
+    device.StartRenderingCurrentFrame();
+    device.FinishRenderingCurrentFrame();
+    EXPECT_FALSE(device.IsDeviceLost());
+}
+
 // Verifies UpdateDevice replaces the active graphics device after a DisableRendering / EnableRendering cycle.
 TEST(Device, UpdateDevice)
 {
@@ -28,6 +37,7 @@ TEST(Device, UpdateDevice)
         device.FinishRenderingCurrentFrame();
 
         EXPECT_EQ(device.GetPlatformInfo().Device, deviceA);
+        EXPECT_FALSE(device.IsDeviceLost());
 
         deviceB = Helpers::CreateDevice();
         ASSERT_NE(deviceB, nullptr);
@@ -42,6 +52,7 @@ TEST(Device, UpdateDevice)
         device.FinishRenderingCurrentFrame();
 
         EXPECT_EQ(device.GetPlatformInfo().Device, deviceB);
+        EXPECT_FALSE(device.IsDeviceLost());
         // Note: no EXPECT_NE(deviceB, deviceA). On D3D12 with WARP, D3D12CreateDevice returns the
         // same singleton pointer on successive calls so distinctness is not assertable. On D3D11
         // distinctness holds but exercising it does not add value over the EXPECT_EQ above.
