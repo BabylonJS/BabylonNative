@@ -38,6 +38,11 @@ namespace Babylon::Graphics
         m_screenShotCallbacks.emplace(std::move(callback));
     }
 
+    bool BgfxCallback::HasPendingScreenShotCallbacks() const
+    {
+        return !m_screenShotCallbacks.empty();
+    }
+
     void BgfxCallback::CaptureNextScreenShot()
     {
         m_captureScreenShot = true;

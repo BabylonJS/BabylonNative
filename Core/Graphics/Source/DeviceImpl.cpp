@@ -318,6 +318,7 @@ namespace Babylon::Graphics
             ready = true;
             if (!deviceStillLost)
             {
+                m_retryScreenShotAfterReset = m_bgfxCallback.HasPendingScreenShotCallbacks();
                 m_bgfxCallback.ClearDeviceLost();
             }
         }
@@ -811,7 +812,8 @@ namespace Babylon::Graphics
 
     bool DeviceImpl::RequestScreenShots()
     {
-        bool requested = false;
+        // A screenshot requested on the lost device may never have reached the callback.
+        bool requested = m_retryScreenShotAfterReset;
         std::function<void(std::vector<uint8_t>)> callback;
         while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
         {
@@ -834,6 +836,7 @@ namespace Babylon::Graphics
         {
             throw std::runtime_error{"Cannot capture without a window or an external back buffer."};
         }
+        m_retryScreenShotAfterReset = false;
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
         if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
         {

@@ -29,6 +29,7 @@ namespace Babylon::Graphics
         void ClearDeviceLost();
 
         void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
+        bool HasPendingScreenShotCallbacks() const;
         void CaptureNextScreenShot();
         void CompleteScreenShot(const CaptureData& data);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
