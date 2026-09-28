@@ -23,9 +23,24 @@ namespace Babylon::Graphics
     {
     }
 
+    bool BgfxCallback::IsDeviceLost() const
+    {
+        return m_deviceLost.load();
+    }
+
+    void BgfxCallback::ClearDeviceLost()
+    {
+        m_deviceLost.store(false);
+    }
+
     void BgfxCallback::AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback)
     {
         m_screenShotCallbacks.emplace(std::move(callback));
+    }
+
+    bool BgfxCallback::HasPendingScreenShotCallbacks() const
+    {
+        return !m_screenShotCallbacks.empty();
     }
 
     void BgfxCallback::CaptureNextScreenShot()
@@ -55,6 +70,12 @@ namespace Babylon::Graphics
                      str != nullptr ? str : "(null)");
         std::fflush(stderr);
 
+        if (code == bgfx::Fatal::DeviceLost)
+        {
+            m_deviceLost.store(true);
+            return;
+        }
+
         if (bgfx::Fatal::DebugCheck == code)
         {
 #if BX_PLATFORM_WINDOWS
@@ -70,9 +91,8 @@ namespace Babylon::Graphics
 #endif
         }
 
-        // Falls through (DebugCheck on no-debugger Windows, or any other
-        // Fatal code) to abort() so the SIGABRT handler in Diagnostics.cpp
-        // produces a callstack and exit code 3.
+        // All fatal errors other than device loss still abort so the
+        // SIGABRT handler in Diagnostics.cpp produces a callstack and exit code 3.
         BX_UNUSED(code, str);
         std::abort();
     }

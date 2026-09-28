@@ -303,7 +303,11 @@ namespace Babylon::Graphics
 
             m_cancellationSource.emplace();
 
-            if (m_bgfxId != 0)
+            const bool deviceStillLost =
+                m_bgfxCallback.IsDeviceLost() &&
+                init.type != bgfx::RendererType::Noop &&
+                bgfx::getRendererType() == bgfx::RendererType::Noop;
+            if (m_bgfxId != 0 && !deviceStillLost)
             {
                 if (m_renderResetCallback)
                 {
@@ -312,7 +316,17 @@ namespace Babylon::Graphics
             }
             m_state.Bgfx.Dirty = false;
             ready = true;
+            if (!deviceStillLost)
+            {
+                m_retryScreenShotAfterReset = m_bgfxCallback.HasPendingScreenShotCallbacks();
+                m_bgfxCallback.ClearDeviceLost();
+            }
         }
+    }
+
+    bool DeviceImpl::IsDeviceLost() const
+    {
+        return m_bgfxCallback.IsDeviceLost();
     }
 
     void DeviceImpl::DisableRendering()
@@ -679,27 +693,22 @@ namespace Babylon::Graphics
         // bgfx::frame() would flip a half-drawn backbuffer to the screen partway through the
         // logical frame; bgfx remembers the flush in m_flushPrevFrame so the next real frame
         // still flips exactly once.
-        // Same completion path as Frame(): readTexture requests become ready once the
-                // returned frame number catches the request. Without this, a mid-frame flush
-                // could never unblock a JS-thread ReadTexture wait that forced the flush.
-                const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
-                while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)
-                {
-                    m_readTextureRequests.front().second.complete();
-                    m_readTextureRequests.pop();
-                }
+        // Same completion path as Frame(): a mid-frame flush must unblock
+        // readTexture requests on the waiting JS thread.
+        const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
+        CompleteReadTextureRequests(frameNumber);
 
-                m_nextViewId.store(0);
-                m_midFrameFlushCount.fetch_add(1);
+        m_nextViewId.store(0);
+        m_midFrameFlushCount.fetch_add(1);
 
-                // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
-                // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
-                // Without this a cached high id would sort *after* every id handed out from the reset
-                // counter, inverting submission order relative to the JS-side draw order.
-                m_viewIdGeneration.fetch_add(1);
+        // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
+        // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
+        // Without this a cached high id would sort *after* every id handed out from the reset
+        // counter, inverting submission order relative to the JS-side draw order.
+        m_viewIdGeneration.fetch_add(1);
 
-                m_frameEncoder = bgfx::begin(true);
-            }
+        m_frameEncoder = bgfx::begin(true);
+    }
 
     void DeviceImpl::UpdateBgfxState()
     {
@@ -708,6 +717,10 @@ namespace Babylon::Graphics
         {
             // Discard the whole frame.
             bgfx::frame(BGFX_FRAME_DISCARD);
+            if (m_bgfxCallback.IsDeviceLost())
+            {
+                return;
+            }
 
             bgfx::reset(m_state.Bgfx.InitState.reset);
             UpdateBackBufferState();
@@ -799,7 +812,8 @@ namespace Babylon::Graphics
 
     bool DeviceImpl::RequestScreenShots()
     {
-        bool requested = false;
+        // A screenshot requested on the lost device may never have reached the callback.
+        bool requested = m_retryScreenShotAfterReset;
         std::function<void(std::vector<uint8_t>)> callback;
         while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
         {
@@ -822,6 +836,7 @@ namespace Babylon::Graphics
         {
             throw std::runtime_error{"Cannot capture without a window or an external back buffer."};
         }
+        m_retryScreenShotAfterReset = false;
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
         if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
         {
@@ -841,28 +856,44 @@ namespace Babylon::Graphics
         UpdateBgfxState();
 
         // Request screen shots before bgfx::frame.
-        [[maybe_unused]] const bool externalScreenShot = RequestScreenShots();
+        [[maybe_unused]] const bool externalScreenShot = !m_bgfxCallback.IsDeviceLost() && RequestScreenShots();
 
         // Advance frame and render!
         const uint8_t frameFlags = m_captureNextFrame.exchange(false) ? BGFX_FRAME_DEBUG_CAPTURE : 0;
         uint32_t frameNumber{bgfx::frame(frameFlags)};
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        if (externalScreenShot)
+        if (externalScreenShot && !m_bgfxCallback.IsDeviceLost())
         {
             ReadExternalBackBuffer();
         }
 #endif
 
-        // Process read texture requests.
+        CompleteReadTextureRequests(frameNumber);
+
+        m_nextViewId.store(0);
+        m_midFrameFlushCount.store(0);
+    }
+
+    void DeviceImpl::CompleteReadTextureRequests(uint32_t frameNumber)
+    {
+        if (m_bgfxCallback.IsDeviceLost())
+        {
+            while (!m_readTextureRequests.empty())
+            {
+                auto error = arcana::make_unexpected(std::make_exception_ptr(
+                    std::system_error(std::make_error_code(std::errc::operation_canceled))));
+                m_readTextureRequests.front().second.complete(error);
+                m_readTextureRequests.pop();
+            }
+            return;
+        }
+
         while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)
         {
             m_readTextureRequests.front().second.complete();
             m_readTextureRequests.pop();
         }
-
-        m_nextViewId.store(0);
-        m_midFrameFlushCount.store(0);
     }
 
     void DeviceImpl::CaptureCallback(const BgfxCallback::CaptureData& data)

@@ -61,6 +61,7 @@ namespace Babylon::Graphics
 
         void EnableRendering();
         void DisableRendering();
+        bool IsDeviceLost() const;
 
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
@@ -150,6 +151,7 @@ namespace Babylon::Graphics
         void DestroyBackBuffer();
         bool RequestScreenShots();
         void Frame();
+        void CompleteReadTextureRequests(uint32_t frameNumber);
         void PerformMidFrameViewFlush();
         void CaptureCallback(const BgfxCallback::CaptureData&);
 
@@ -293,6 +295,7 @@ namespace Babylon::Graphics
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
 
         arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
+        bool m_retryScreenShotAfterReset{};
 
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
 

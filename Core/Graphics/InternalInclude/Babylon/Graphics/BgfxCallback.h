@@ -1,7 +1,8 @@
 #pragma once
 
-#include <queue>
+#include <atomic>
 #include <functional>
+#include <queue>
 
 #include <bgfx/bgfx.h>
 
@@ -24,7 +25,11 @@ namespace Babylon::Graphics
         BgfxCallback(std::function<void(const CaptureData&)>);
         virtual ~BgfxCallback() = default;
 
+        bool IsDeviceLost() const;
+        void ClearDeviceLost();
+
         void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
+        bool HasPendingScreenShotCallbacks() const;
         void CaptureNextScreenShot();
         void CompleteScreenShot(const CaptureData& data);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
@@ -45,6 +50,7 @@ namespace Babylon::Graphics
         void captureFrame(const void* _data, uint32_t _size) override;
 
     private:
+        std::atomic<bool> m_deviceLost{false};
         std::function<void(const char* output)> m_outputFunction;
 
         std::queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;

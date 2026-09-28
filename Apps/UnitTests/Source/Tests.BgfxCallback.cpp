@@ -3,8 +3,53 @@
 #include <Babylon/Graphics/BgfxCallback.h>
 
 #include <array>
+#include <optional>
 
 using Babylon::Graphics::BgfxCallback;
+
+namespace
+{
+    class TestBgfxCallback : public BgfxCallback
+    {
+    public:
+        using BgfxCallback::BgfxCallback;
+        using BgfxCallback::fatal;
+    };
+}
+
+TEST(BgfxCallback, DeviceLossIsLatchedUntilCleared)
+{
+    TestBgfxCallback callback{[](const auto&) {}};
+    EXPECT_FALSE(callback.IsDeviceLost());
+    callback.fatal(__FILE__, __LINE__, bgfx::Fatal::DeviceLost, "simulated device loss");
+    EXPECT_TRUE(callback.IsDeviceLost());
+    callback.ClearDeviceLost();
+    EXPECT_FALSE(callback.IsDeviceLost());
+}
+
+TEST(BgfxCallback, ScreenshotCallbacksRemainPendingAcrossDeviceLoss)
+{
+    const std::array<uint8_t, 4> pixels{1, 2, 3, 4};
+    const BgfxCallback::CaptureData data{1, 1, 4, bgfx::TextureFormat::RGBA8, false, pixels.data(), 4};
+    TestBgfxCallback callback{[](const auto&) {}};
+    std::optional<std::vector<uint8_t>> result;
+    callback.AddScreenShotCallback([&](auto captured) { result = std::move(captured); });
+
+    EXPECT_TRUE(callback.HasPendingScreenShotCallbacks());
+    callback.fatal(__FILE__, __LINE__, bgfx::Fatal::DeviceLost, "simulated device loss");
+    EXPECT_TRUE(callback.HasPendingScreenShotCallbacks());
+    callback.ClearDeviceLost();
+    callback.CompleteScreenShot(data);
+
+    EXPECT_EQ(result, (std::vector<uint8_t>{1, 2, 3, 4}));
+    EXPECT_FALSE(callback.HasPendingScreenShotCallbacks());
+}
+
+TEST(BgfxCallback, OtherFatalErrorsStillAbort)
+{
+    TestBgfxCallback callback{[](const auto&) {}};
+    EXPECT_DEATH(callback.fatal(__FILE__, __LINE__, bgfx::Fatal::UnableToInitialize, "simulated init failure"), "FATAL");
+}
 
 TEST(BgfxCallback, CoalescesScreenshotsAndCapture)
 {

@@ -125,6 +125,12 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
+        // Thread-safe. Remains true after loss until rendering is successfully reinitialized.
+        // When false, the initial headless Noop renderer is not considered a lost device.
+        // After loss, the host must stop rendering, disable rendering, replace the device,
+        // and re-enable rendering. Without replacement, bgfx renders through Noop.
+        bool IsDeviceLost() const;
+
         [[deprecated("DeviceUpdate is a no-op; remove GetUpdate/Start/Finish calls.")]]
         DeviceUpdate GetUpdate(const char* /*updateName*/) { return {}; }
 
