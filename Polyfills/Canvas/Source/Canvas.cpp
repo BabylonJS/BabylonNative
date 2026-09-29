@@ -11,6 +11,7 @@
 #include "Colors.h"
 #include "Gradient.h"
 #include "Font.h"
+#include "NativeInstanceRegistry.h"
 #include <basen.hpp>
 #include <bimg/encode.h>
 #include <bx/allocator.h>
@@ -47,15 +48,23 @@ namespace Babylon::Polyfills::Internal
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
 
+    NativeCanvas* NativeCanvas::TryUnwrap(Napi::Env env, const Napi::Value& value)
+    {
+        return NativeInstanceRegistry<NativeCanvas>::TryUnwrap(env, value);
+    }
+
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
         , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
+        NativeInstanceRegistry<NativeCanvas>::Add(info, this);
     }
 
     NativeCanvas::~NativeCanvas()
     {
+        NativeInstanceRegistry<NativeCanvas>::Remove(this);
+
         // Canvas and Context form a JS cycle; finalizer order is not guaranteed.
         // Clear the reverse pointer first so Context::~Context cannot touch us.
         if (m_context != nullptr)
@@ -307,24 +316,56 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills
 {
+    struct Canvas::Impl::JavaScriptData
+    {
+        Canvas::Impl& Owner;
+        Napi::FunctionReference WeakSetConstructor;
+        Napi::FunctionReference WeakSetAdd;
+        Napi::FunctionReference WeakSetHas;
+    };
+
     Canvas::Impl::Impl(Napi::Env env)
         : m_env{env}
     {
         AddToJavaScript(env);
     }
 
+    Canvas::Impl::WeakIdentity Canvas::Impl::CreateWeakIdentity(const Napi::Object& value)
+    {
+        const auto& data = GetJavaScriptData(m_env);
+        const auto receivers = data.WeakSetConstructor.New({});
+        data.WeakSetAdd.Call(receivers, {value});
+        return {Napi::Persistent(receivers), Napi::Persistent(data.WeakSetHas.Value())};
+    }
+
     void Canvas::Impl::AddToJavaScript(Napi::Env env)
     {
-        JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Set(JS_CANVAS_NAME, Napi::External<Canvas::Impl>::New(env, this));
+        const auto constructor = env.Global().Get("WeakSet").As<Napi::Function>();
+        const auto prototype = constructor.Get("prototype").As<Napi::Object>();
+        // The host Canvas may outlive its environment; finalize N-API references with JavaScript.
+        auto data = std::make_unique<JavaScriptData>(JavaScriptData{
+            *this,
+            Napi::Persistent(constructor),
+            Napi::Persistent(prototype.Get("add").As<Napi::Function>()),
+            Napi::Persistent(prototype.Get("has").As<Napi::Function>())});
+        const auto external = Napi::External<JavaScriptData>::New(env, data.get(), [](Napi::Env, JavaScriptData* data) {
+            delete data;
+        });
+        data.release();
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CANVAS_NAME, external);
+    }
+
+    Canvas::Impl::JavaScriptData& Canvas::Impl::GetJavaScriptData(Napi::Env env)
+    {
+        return *JsRuntime::NativeObject::GetFromJavaScript(env)
+                    .Get(JS_CANVAS_NAME)
+                    .As<Napi::External<JavaScriptData>>()
+                    .Data();
     }
 
     Canvas::Impl& Canvas::Impl::GetFromJavaScript(Napi::Env env)
     {
-        return *JsRuntime::NativeObject::GetFromJavaScript(env)
-                    .Get(JS_CANVAS_NAME)
-                    .As<Napi::External<Canvas::Impl>>()
-                    .Data();
+        return GetJavaScriptData(env).Owner;
     }
 
     void Canvas::Impl::AddMonitoredResource(MonitoredResource* monitoredResource)

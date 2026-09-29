@@ -605,6 +605,113 @@ describe("Canvas2D", function () {
     expect(ctx.strokeStyle).to.equal("#00ff00");
   });
 
+  it("rejects a prototype-spoofed object in place of a Path2D", function () {
+    // Prototype spoofing must not let fill() unwrap a foreign or nonexistent native object.
+    const ctx = createContext();
+    const spoofedGradient: any = ctx.createLinearGradient(0, 0, 10, 10);
+    Object.setPrototypeOf(spoofedGradient, Path2D.prototype);
+    expect(spoofedGradient instanceof Path2D).to.equal(true);
+
+    const bare: any = Object.create(Path2D.prototype);
+    expect(bare instanceof Path2D).to.equal(true);
+
+    const realPath = new Path2D();
+    for (const impostor of [spoofedGradient, bare]) {
+      expect(function () { ctx.fill(impostor); }).to.throw();
+      expect(function () { ctx.stroke(impostor); }).to.throw();
+      expect(function () { realPath.addPath(impostor); }).to.throw();
+      // Non-Path2D arguments use the DOMString overload.
+      expect(function () { new Path2D(impostor); }).to.not.throw();
+    }
+  });
+
+  it("ignores a prototype-spoofed object assigned to fillStyle or strokeStyle", function () {
+    // A forged gradient prototype must not authorize native unwrapping.
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 10, 10);
+    const spoofedPath: any = new Path2D();
+    Object.setPrototypeOf(spoofedPath, Object.getPrototypeOf(gradient));
+
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    ctx.fillStyle = spoofedPath;
+    ctx.strokeStyle = spoofedPath;
+
+    // Per spec an unusable assignment leaves the previous value in place.
+    expect(ctx.fillStyle).to.equal("#ff0000");
+    expect(ctx.strokeStyle).to.equal("#00ff00");
+
+    // The drawing path must stay usable rather than unwrapping the impostor.
+    expect(function () { ctx.fillRect(0, 0, 10, 10); }).to.not.throw();
+    expect(function () { ctx.strokeRect(0, 0, 10, 10); }).to.not.throw();
+  });
+
+  it("rejects a non-Path2D argument to fill and stroke", function () {
+    // Assert rejection, not the exception class: QuickJS reports native TypeErrors as InternalErrors.
+    const ctx = createContext();
+    expect(function () { ctx.stroke("x"); }).to.throw();
+    expect(function () { ctx.stroke({}); }).to.throw();
+    expect(function () { ctx.stroke(5); }).to.throw();
+    expect(function () { ctx.fill({}); }).to.throw();
+    expect(function () { ctx.fill(5); }).to.throw();
+  });
+
+  it("still accepts the valid fill and stroke argument forms", function () {
+    const ctx = createContext();
+    const path = new Path2D("M0 0 L10 10");
+    expect(function () { ctx.fill(); }).to.not.throw();
+    expect(function () { ctx.stroke(); }).to.not.throw();
+    // undefined selects the no-argument overload rather than being a bad Path2D.
+    expect(function () { ctx.fill(undefined); }).to.not.throw();
+    expect(function () { ctx.stroke(undefined); }).to.not.throw();
+    // fill() also takes a fill rule string.
+    expect(function () { ctx.fill("evenodd"); }).to.not.throw();
+    expect(function () { ctx.fill(new String("evenodd") as any); }).to.not.throw();
+    expect(function () {
+      ctx.fill({ toString: function () { return "nonzero"; } } as any);
+    }).to.not.throw();
+    expect(function () { ctx.fill(path); }).to.not.throw();
+    expect(function () { ctx.fill(path, "nonzero"); }).to.not.throw();
+    expect(function () { ctx.fill(path, new String("evenodd") as any); }).to.not.throw();
+    expect(function () { ctx.stroke(path); }).to.not.throw();
+    expect(function () { ctx.fill("invalid"); }).to.throw();
+    expect(function () { ctx.fill(path, "invalid"); }).to.throw();
+  });
+
+  it("rejects a non-Path2D argument to Path2D.addPath", function () {
+    // Missing and unrelated arguments must not reach native unwrapping.
+    const path = new Path2D();
+    expect(function () { path.addPath(); }).to.throw();
+    expect(function () { path.addPath("x"); }).to.throw();
+    expect(function () { path.addPath({}); }).to.throw();
+    expect(function () { path.addPath(new Path2D("M0 0 L5 5")); }).to.not.throw();
+  });
+
+  it("rejects an invalid native source argument to drawImage", function () {
+    // Native-looking impostors must throw, not AV via an unchecked Unwrap.
+    const ctx = createContext();
+    const realCanvas = new _native.Canvas();
+    const spoofedCanvas = Object.create(Object.getPrototypeOf(realCanvas));
+    expect(spoofedCanvas instanceof _native.Canvas).to.equal(true);
+    expect(function () { ctx.drawImage({}, 0, 0); }).to.throw();
+    expect(function () { ctx.drawImage(new Path2D(), 0, 0); }).to.throw();
+    expect(function () { ctx.drawImage(spoofedCanvas, 0, 0); }).to.throw();
+    realCanvas.dispose();
+  });
+
+  it("treats a non-Path2D Path2D() argument as path data", function () {
+    // Non-Path2D objects use the DOMString constructor overload.
+    expect(function () { new Path2D({}); }).to.not.throw();
+    expect(function () { new Path2D(5); }).to.not.throw();
+    expect(function () { new Path2D(); }).to.not.throw();
+    const source = new Path2D("M0 0 L10 10");
+    const ctx = createContext();
+    expect(function () { ctx.fill(new Path2D(source)); }).to.not.throw();
+    expect(function () {
+      ctx.fill(new Path2D({ toString: function () { return "M0 0 L10 10"; } }));
+    }).to.not.throw();
+  });
+
   it("accepts a CanvasGradient as fillStyle", function () {
     const ctx = createContext();
     const gradient = ctx.createLinearGradient(0, 0, 64, 64);

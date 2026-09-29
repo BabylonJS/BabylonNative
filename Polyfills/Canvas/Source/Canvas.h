@@ -17,6 +17,14 @@ namespace Babylon::Polyfills
 
         void FlushGraphicResources();
 
+        struct WeakIdentity
+        {
+            Napi::ObjectReference Receivers;
+            Napi::FunctionReference Has;
+        };
+
+        WeakIdentity CreateWeakIdentity(const Napi::Object& value);
+
         static Canvas::Impl& GetFromJavaScript(Napi::Env env);
 
         struct MonitoredResource
@@ -39,6 +47,9 @@ namespace Babylon::Polyfills
         };
 
     private:
+        struct JavaScriptData;
+        static JavaScriptData& GetJavaScriptData(Napi::Env env);
+
         Napi::Env m_env;
 
         void AddToJavaScript(Napi::Env env);
@@ -60,6 +71,8 @@ namespace Babylon::Polyfills::Internal
     {
     public:
         static void Initialize(Napi::Env env);
+
+        static NativeCanvas* TryUnwrap(Napi::Env env, const Napi::Value& value);
 
         explicit NativeCanvas(const Napi::CallbackInfo& info);
         virtual ~NativeCanvas();

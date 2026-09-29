@@ -1,10 +1,15 @@
 #include <gtest/gtest.h>
+#include <gsl/util>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include "../../../Polyfills/Canvas/Source/Canvas.h"
 #include "../../../Polyfills/Canvas/Source/Context.h"
+#include "../../../Polyfills/Canvas/Source/Gradient.h"
+#include "../../../Polyfills/Canvas/Source/Image.h"
+#include "../../../Polyfills/Canvas/Source/NativeInstanceRegistry.h"
+#include "../../../Polyfills/Canvas/Source/Path2D.h"
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg.h"
 
 #include <array>
@@ -53,6 +58,69 @@ namespace
         canvas.reset();
         device.FinishRenderingCurrentFrame();
     }
+}
+
+TEST(CanvasReadback, HostOwnerMayOutliveRuntime)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    std::optional<Babylon::Polyfills::Canvas> canvas;
+    {
+        Babylon::AppRuntime runtime{};
+        std::promise<void> initialized;
+        runtime.Dispatch([&](Napi::Env env) {
+            device.AddToJavaScript(env);
+            canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+            initialized.set_value();
+        });
+        initialized.get_future().get();
+    }
+    canvas.reset();
+}
+
+TEST(CanvasReadback, NativeBrandsRequireTheOriginalReceiver)
+{
+    RunCanvasTest([](Napi::Env env) {
+        using namespace Babylon::Polyfills::Internal;
+        const auto native = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env);
+        const auto canvas = native.Get("Canvas").As<Napi::Function>().New({});
+        const auto image = native.Get("Image").As<Napi::Function>().New({});
+        const auto path = native.Get("Path2D").As<Napi::Function>().New({});
+        const auto context = canvas.Get("getContext").As<Napi::Function>()
+                                 .Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+        const auto gradient = context.Get("createLinearGradient").As<Napi::Function>()
+                                  .Call(context, {Napi::Number::New(env, 0), Napi::Number::New(env, 0),
+                                                     Napi::Number::New(env, 8), Napi::Number::New(env, 8)}).As<Napi::Object>();
+        const auto check = [&](const Napi::Object& object, auto unwrap) {
+            ASSERT_NE(unwrap(env, object), nullptr);
+            auto copied = Napi::Object::New(env);
+            copied.Set("__nativeInstance", object.Get("__nativeInstance"));
+            EXPECT_EQ(unwrap(env, copied), nullptr);
+            const auto objectConstructor = env.Global().Get("Object").As<Napi::Object>();
+            const auto inherited = objectConstructor.Get("create").As<Napi::Function>().Call(objectConstructor, {object});
+            EXPECT_EQ(unwrap(env, inherited), nullptr);
+            EXPECT_NE(unwrap(env, object), nullptr);
+        };
+        check(canvas, NativeCanvas::TryUnwrap);
+        check(image, NativeCanvasImage::TryUnwrap);
+        check(path, NativeCanvasPath2D::TryUnwrap);
+        check(gradient, CanvasGradient::TryUnwrap);
+        EXPECT_EQ(NativeCanvas::TryUnwrap(env, image), nullptr);
+        EXPECT_EQ(NativeCanvasImage::TryUnwrap(env, canvas), nullptr);
+
+        // Re-register one native address with a different wrapper, simulating address reuse.
+        int token{};
+        using Registry = NativeInstanceRegistry<int>;
+        const auto remove = gsl::finally([&] { Registry::Remove(&token); });
+        const auto registerToken = Napi::Function::New(env, [&](const Napi::CallbackInfo& info) { Registry::Add(info, &token); });
+        const auto oldWrapper = Napi::Object::New(env);
+        const auto newWrapper = Napi::Object::New(env);
+        registerToken.Call(oldWrapper, {});
+        EXPECT_EQ(Registry::TryUnwrap(env, oldWrapper), &token);
+        Registry::Remove(&token);
+        registerToken.Call(newWrapper, {});
+        EXPECT_EQ(Registry::TryUnwrap(env, oldWrapper), nullptr);
+        EXPECT_EQ(Registry::TryUnwrap(env, newWrapper), &token);
+    });
 }
 
 TEST(CanvasReadback, DrawImageRejectsArityAndNoOpGeometryBeforeReadbackOrUpload)
