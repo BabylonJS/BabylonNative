@@ -19,6 +19,8 @@
 #ifndef NANOVG_H
 #define NANOVG_H
 
+#include <vector>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -437,6 +439,13 @@ void nvgIntersectScissor(NVGcontext* ctx, float x, float y, float w, float h);
 
 // Reset and disables scissoring.
 void nvgResetScissor(NVGcontext* ctx);
+
+struct NVGsavedPath {
+	std::vector<float> commands;
+	float x, y;
+};
+void nvgSavePath(NVGcontext* ctx, NVGsavedPath& path);
+void nvgRestorePath(NVGcontext* ctx, const NVGsavedPath& path);
 
 //
 // Paths

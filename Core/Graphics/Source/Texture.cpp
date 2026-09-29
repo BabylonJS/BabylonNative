@@ -215,6 +215,13 @@ namespace Babylon::Graphics
     {
         Dispose();
 
+        // bgfx creates depth-1 volumes as Texture2D, which cannot bind to sampler3D.
+        // Pad to two slices to obtain a 3D view, including for placeholder volumes.
+        if (depth < 2)
+        {
+            depth = 2;
+        }
+
         m_handle = bgfx::createTexture3D(width, height, depth, hasMips, format, flags);
         if (!bgfx::isValid(m_handle))
         {

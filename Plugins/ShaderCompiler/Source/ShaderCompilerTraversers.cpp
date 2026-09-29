@@ -2144,7 +2144,7 @@ namespace Babylon::ShaderCompilerTraversers
         public:
             static void Traverse(TProgram& program)
             {
-                for (auto stage : {EShLangVertex, EShLangFragment})
+                for (auto stage : {EShLangVertex, EShLangFragment, EShLangCompute})
                 {
                     auto* intermediate{program.getIntermediate(stage)};
                     if (intermediate != nullptr)
@@ -2163,27 +2163,29 @@ namespace Babylon::ShaderCompilerTraversers
                     auto& sequence = node->getSequence();
                     if (sequence.size() >= 2)
                     {
-                        // The coordinate is the operand right after the sampler. Only 2-component
-                        // float coordinates (sampler2D-style) are flipped; cube/array/3D coordinates
-                        // (vec3+) are left untouched, matching the original flip(vec2)/flip(vec3).
+                        // Flip only V; preserve shadow depth, array layer, and volume depth. Leave cube directions unchanged.
+                        auto* sampler = sequence[0]->getAsTyped();
                         auto* coordinate = sequence[1]->getAsTyped();
-                        if (coordinate != nullptr &&
+                        if (sampler != nullptr && coordinate != nullptr &&
+                            sampler->getType().getBasicType() == EbtSampler &&
                             coordinate->getType().getBasicType() == EbtFloat &&
-                            !coordinate->getType().isArray() &&
-                            coordinate->getType().getVectorSize() == 2)
+                            !coordinate->getType().isArray())
                         {
-                            sequence[1] = FlipVerticalCoordinate(coordinate);
+                            const TSampler& samp = sampler->getType().getSampler();
+                            const int vecSize = coordinate->getType().getVectorSize();
+                            // Esd2D covers both sampler2D and sampler2DArray (arrayed flag separate).
+                            if ((samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
+                            {
+                                sequence[1] = (vecSize == 2)
+                                    ? FlipVerticalCoordinate(coordinate)
+                                    : FlipVerticalCoordinateKeepTail(coordinate);
+                            }
                         }
                     }
                 }
                 else if (visit == EvPostVisit && node->getOp() == EOpTextureFetch)
                 {
-                    // texelFetch(sampler, ivec coord, lod). The vertical flip that used to be applied
-                    // by a preprocessor macro in ProcessSamplerFlip is done here instead so that the
-                    // sampler dimensionality is known: only 2-component integer coordinates
-                    // (sampler2D-style) are flipped. sampler3D / sampler2DArray coordinates (ivec3)
-                    // are left untouched — the old macro forced every coordinate through ivec2(...),
-                    // which failed to compile against sampler3D ('no matching overloaded function').
+                    // Flip integer Y using the selected mip height, preserving volume depth.
                     auto& sequence = node->getSequence();
                     if (sequence.size() >= 3)
                     {
@@ -2191,11 +2193,15 @@ namespace Babylon::ShaderCompilerTraversers
                         auto* coordinate = sequence[1]->getAsTyped();
                         auto* lod = sequence[2]->getAsTyped();
                         if (sampler != nullptr && coordinate != nullptr && lod != nullptr &&
+                            sampler->getType().getBasicType() == EbtSampler &&
                             coordinate->getType().getBasicType() == EbtInt &&
-                            !coordinate->getType().isArray() &&
-                            coordinate->getType().getVectorSize() == 2)
+                            !coordinate->getType().isArray())
                         {
-                            sequence[1] = FlipVerticalTexelCoordinate(coordinate, sampler, lod);
+                            const int vecSize = coordinate->getType().getVectorSize();
+                            if (vecSize == 2 || (vecSize == 3 && sampler->getType().getSampler().dim == Esd3D))
+                            {
+                                sequence[1] = FlipVerticalTexelCoordinate(coordinate, sampler, lod);
+                            }
                         }
                     }
                 }
@@ -2235,39 +2241,69 @@ namespace Babylon::ShaderCompilerTraversers
                 return m_intermediate->addBinaryMath(EOpAdd, scaled, offset, loc);
             }
 
-            // Builds `ivec2(coordinate.x, textureSize(sampler, lod).y - 1 - coordinate.y)`, the
-            // integer-texel-coordinate equivalent of FlipVerticalCoordinate. This is exactly the
-            // expression the former ProcessSamplerFlip texelFetch macro expanded to, including its
-            // double evaluation of the coordinate operand.
-            //
-            // The obvious vector form `coordinate * ivec2(1, -1) + ivec2(0, size.y - 1)` must NOT
-            // be used: it emits SPIR-V OpIMul, which SPIRV-Cross omits entirely when built with
-            // SPIRV_CROSS_WEBMIN (the configuration Babylon Native ships). The multiply then
-            // silently produces no HLSL/MSL expression and the whole shader fails to cross-compile
-            // with "Cannot resolve expression type". Integer subtract and vector construction are
-            // both retained by that build, so express the flip with those only.
+            // Preserve trailing components. Scalar extracts avoid OpVectorTimesScalar in SPIRV_CROSS_WEBMIN.
+            TIntermTyped* FlipVerticalCoordinateKeepTail(TIntermTyped* coordinate)
+            {
+                const TSourceLoc& loc{coordinate->getLoc()};
+                const int vecSize = static_cast<int>(coordinate->getType().getVectorSize());
+                TType floatType{EbtFloat, EvqTemporary, 1};
+                TType resultType{EbtFloat, EvqTemporary, vecSize};
+
+                // coordinate is read once per component; clone so no node ends up with two parents.
+                TIntermTyped* coordXSrc = coordinate;
+                TIntermTyped* coordYSrc = CloneExpression(coordinate);
+                TIntermTyped* coordZSrc = (vecSize >= 3) ? CloneExpression(coordinate) : nullptr;
+                TIntermTyped* coordWSrc = (vecSize >= 4) ? CloneExpression(coordinate) : nullptr;
+
+                TIntermTyped* x{m_intermediate->addIndex(EOpIndexDirect, coordXSrc, m_intermediate->addConstantUnion(0, loc), loc)};
+                x->setType(floatType);
+                TIntermTyped* y{m_intermediate->addIndex(EOpIndexDirect, coordYSrc, m_intermediate->addConstantUnion(1, loc), loc)};
+                y->setType(floatType);
+
+                TConstUnionArray oneValues{1};
+                oneValues[0].setDConst(1.0);
+                TIntermTyped* one{m_intermediate->addConstantUnion(oneValues, TType{EbtFloat, EvqConst, 1}, loc)};
+                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, one, y, loc)};
+
+                TIntermAggregate* ctor{m_intermediate->makeAggregate(x, loc)};
+                ctor = m_intermediate->growAggregate(ctor, flippedY, loc);
+                if (vecSize >= 3)
+                {
+                    TIntermTyped* z{m_intermediate->addIndex(EOpIndexDirect, coordZSrc, m_intermediate->addConstantUnion(2, loc), loc)};
+                    z->setType(floatType);
+                    ctor = m_intermediate->growAggregate(ctor, z, loc);
+                }
+                if (vecSize >= 4)
+                {
+                    TIntermTyped* w{m_intermediate->addIndex(EOpIndexDirect, coordWSrc, m_intermediate->addConstantUnion(3, loc), loc)};
+                    w->setType(floatType);
+                    ctor = m_intermediate->growAggregate(ctor, w, loc);
+                }
+
+                const TOperator op = (vecSize == 3) ? EOpConstructVec3 : EOpConstructVec4;
+                return m_intermediate->setAggregateOperator(ctor, op, resultType, loc);
+            }
+
+            // Build (x, textureSize(sampler, lod).y - 1 - y[, z]).
+            // Use subtraction and construction: SPIRV_CROSS_WEBMIN omits integer vector multiplication.
             TIntermTyped* FlipVerticalTexelCoordinate(TIntermTyped* coordinate, TIntermTyped* sampler, TIntermTyped* lod)
             {
                 const TSourceLoc& loc{coordinate->getLoc()};
 
-                // Every operand referenced more than once below has to be an independent subtree.
-                // Reusing a node pointer would give it two parents in the AST, which later traversers
-                // (sampler splitting, SPIR-V generation) do not expect. The sampler and lod are each
-                // referenced twice because textureSize repeats them, and the coordinate is referenced
-                // twice because the flip reads both .x and .y, so all three need a copy. The original
-                // node is kept for one reference and the clone used for the other, leaving every node
-                // with exactly one parent.
+                // Clone repeated operands so each AST node retains one parent.
                 TIntermTyped* samplerClone{CloneExpression(sampler)};
                 TIntermTyped* lodClone{CloneExpression(lod)};
                 TIntermTyped* coordinateClone{CloneExpression(coordinate)};
+                const int vecSize = coordinate->getType().getVectorSize();
+                TIntermTyped* coordinateZClone = vecSize == 3 ? CloneExpression(coordinate) : nullptr;
 
-                TType ivec2Type{EbtInt, EvqTemporary, 2};
+                TType vectorType{EbtInt, EvqTemporary, vecSize};
                 TType intType{EbtInt, EvqTemporary, 1};
 
-                // textureSize(sampler, lod) -> ivec2
+                // textureSize(sampler, lod) has the same dimensions as the coordinate.
                 TIntermAggregate* sizeArgs{m_intermediate->makeAggregate(samplerClone, loc)};
                 sizeArgs = m_intermediate->growAggregate(sizeArgs, lodClone, loc);
-                TIntermTyped* size{m_intermediate->addBuiltInFunctionCall(loc, EOpTextureQuerySize, false, sizeArgs, ivec2Type)};
+                TIntermTyped* size{m_intermediate->addBuiltInFunctionCall(loc, EOpTextureQuerySize, false, sizeArgs, vectorType)};
 
                 // textureSize(sampler, lod).y - 1
                 TIntermTyped* sizeY{m_intermediate->addIndex(EOpIndexDirect, size, m_intermediate->addConstantUnion(1, loc), loc)};
@@ -2281,11 +2317,17 @@ namespace Babylon::ShaderCompilerTraversers
                 TIntermTyped* coordinateY{m_intermediate->addIndex(EOpIndexDirect, coordinateClone, m_intermediate->addConstantUnion(1, loc), loc)};
                 coordinateY->setType(intType);
 
-                // ivec2(coordinate.x, (textureSize(sampler, lod).y - 1) - coordinate.y)
+                // Construct (x, flipped Y), preserving Z for a volume fetch.
                 TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, maxY, coordinateY, loc)};
                 TIntermAggregate* flipped{m_intermediate->makeAggregate(coordinateX, loc)};
                 flipped = m_intermediate->growAggregate(flipped, flippedY, loc);
-                return m_intermediate->setAggregateOperator(flipped, EOpConstructIVec2, ivec2Type, loc);
+                if (coordinateZClone != nullptr)
+                {
+                    TIntermTyped* coordinateZ{m_intermediate->addIndex(EOpIndexDirect, coordinateZClone, m_intermediate->addConstantUnion(2, loc), loc)};
+                    coordinateZ->setType(intType);
+                    flipped = m_intermediate->growAggregate(flipped, coordinateZ, loc);
+                }
+                return m_intermediate->setAggregateOperator(flipped, vecSize == 3 ? EOpConstructIVec3 : EOpConstructIVec2, vectorType, loc);
             }
 
             // Produces an independent copy of an expression subtree so it can be referenced from a
@@ -2374,17 +2416,9 @@ namespace Babylon::ShaderCompilerTraversers
             TIntermediate* m_intermediate{};
         };
 
-        /// Presents gl_FragCoord in OpenGL's coordinate space on the top-left-origin backends
-        /// (D3D, Metal, Vulkan). FlipSamplerCoordinates already flips every sample coordinate, so
-        /// gl_FragCoord was the one input left in physical space -- making
-        /// `texelFetch(tex, ivec2(gl_FragCoord.xy), 0)` read the mirrored row.
-        ///
-        /// The flip is `targetHeight - gl_FragCoord.y`, with no -1 term: the hardware yields
-        /// p + 0.5 for physical row p, and p == height - 1 - y, so the GL value y + 0.5 is exactly
-        /// height minus the incoming value.
-        ///
-        /// The height cannot come from bgfx's u_viewRect, which SetBgfxViewPortAndScissor narrows
-        /// to the viewport, while gl_FragCoord is relative to the whole render target.
+        /// Convert gl_FragCoord to GL coordinates on top-left-origin backends.
+        /// Pixel centers require targetHeight - y, without a -1 term.
+        /// Use the full target height, not u_viewRect, which may describe a smaller viewport.
         class FragCoordYFlipTraverser final : private TIntermTraverser
         {
         public:
@@ -2404,8 +2438,7 @@ namespace Babylon::ShaderCompilerTraversers
                     return;
                 }
 
-                // Declared as a linker object so MoveNonSamplerUniformsIntoStruct sweeps it into
-                // the "Frame" struct with every other non-sampler uniform.
+                // Declare before uniform collection so target size joins the Frame struct and uniform table.
                 TType targetSizeType{EbtFloat, EvqUniform, 4};
                 TIntermSymbol* targetSize{intermediate->addSymbol(TIntermSymbol{ids.Next(), Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME, targetSizeType})};
 
@@ -2422,7 +2455,7 @@ namespace Babylon::ShaderCompilerTraversers
         protected:
             void visitSymbol(TIntermSymbol* symbol) override
             {
-                // Linker object references declare gl_FragCoord rather than read it.
+                // Linker references are declarations, not reads.
                 if (symbol->getName() != "gl_FragCoord" || IsLinkerObject(path))
                 {
                     return;
@@ -2461,23 +2494,19 @@ namespace Babylon::ShaderCompilerTraversers
             {
                 for (const auto& [symbol, parent] : m_symbolsToParents)
                 {
-                    // Not batched into one MakeReplacements call: that maps one replacement per
-                    // symbol *name*, so every gl_FragCoord reference would share one subtree and
-                    // that node would end up with multiple parents.
+                    // Build a fresh replacement per occurrence to avoid sharing AST parents.
                     MakeReplacements({{"gl_FragCoord", BuildFlippedFragCoord(symbol, targetSize)}}, {{symbol, parent}});
                 }
             }
 
-            /// Builds `vec4(gl_FragCoord.x, targetSize.y - gl_FragCoord.y, .z, .w)`. The whole
-            /// vector is rebuilt rather than patching .y because a reference may be swizzled,
-            /// indexed, or passed along whole, and the parent node is not inspected here.
+            /// Reconstruct the vec4 to support whole-vector, swizzled, and indexed reads.
             TIntermTyped* BuildFlippedFragCoord(TIntermSymbol* fragCoord, TIntermSymbol* targetSize)
             {
                 const TSourceLoc& loc{fragCoord->getLoc()};
                 TType floatType{EbtFloat, EvqTemporary, 1};
                 TType vec4Type{EbtFloat, EvqTemporary, 4};
 
-                // Each component gets its own symbol copy so no node ends up with two parents.
+                // Each component needs its own symbol node.
                 auto component = [&](int index) {
                     TIntermTyped* copy{m_intermediate->addSymbol(*fragCoord)};
                     TIntermTyped* element{m_intermediate->addIndex(EOpIndexDirect, copy, m_intermediate->addConstantUnion(index, loc), loc)};

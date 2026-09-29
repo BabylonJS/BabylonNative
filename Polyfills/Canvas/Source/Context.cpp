@@ -52,6 +52,26 @@ namespace Babylon::Polyfills::Internal
 
     namespace
     {
+        class ScopedPath
+        {
+        public:
+            explicit ScopedPath(NVGcontext* context) : m_context{context}
+            {
+                nvgSavePath(m_context, m_path);
+                nvgBeginPath(m_context);
+            }
+            ~ScopedPath()
+            {
+                nvgRestorePath(m_context, m_path);
+            }
+            ScopedPath(const ScopedPath&) = delete;
+            ScopedPath& operator=(const ScopedPath&) = delete;
+
+        private:
+            NVGcontext* m_context;
+            NVGsavedPath m_path;
+        };
+
         // True only for a finite, non-negative integer that fits in a uint32_t. Used where a
         // dimension arrives from a duck-typed object and so has not been through WebIDL's
         // unsigned long conversion; Uint32Value() would silently wrap -1 into 4294967295.
@@ -1239,11 +1259,10 @@ namespace Babylon::Polyfills::Internal
         nvgGlobalCompositeOperation(*m_nvg, NVG_COPY);
 
         NVGpaint imagePaint = nvgImagePattern(*m_nvg, destX, destY, destWidth, destHeight, 0.f, imageIndex, 1.f);
-        ResetPathState();
+        ScopedPath temporaryPath{*m_nvg};
         nvgRect(*m_nvg, destX, destY, destWidth, destHeight);
         nvgFillPaint(*m_nvg, imagePaint);
         nvgFill(*m_nvg);
-
         nvgRestore(*m_nvg);
     }
 
@@ -1600,28 +1619,11 @@ namespace Babylon::Polyfills::Internal
             imageIndex,
             1.f);
 
-        if (m_isClipped)
-        {
-            // The current path is the emulated non-rectangular clip. Restrict it to
-            // the destination rectangle with a temporary scissor instead of appending
-            // the rectangle to the path, which would fill and retain their union.
-            nvgSave(*m_nvg);
-            nvgIntersectScissor(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-            nvgRestore(*m_nvg);
-        }
-        else
-        {
-            // Rectangular clips live in NanoVG's scissor state and survive resetting
-            // the temporary draw path. Keep the wrapper's path flags in sync as well.
-            ResetPathState();
-            nvgRect(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-        }
+        ScopedPath temporaryPath{*m_nvg};
+        nvgRect(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
+        nvgFillPaint(*m_nvg, imagePaint);
+        SetFilterStack();
+        nvgFill(*m_nvg);
     }
 
     void Context::RetainImageUntilFlush(int imageIndex)

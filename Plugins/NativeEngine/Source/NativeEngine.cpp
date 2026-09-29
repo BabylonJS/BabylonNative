@@ -741,6 +741,7 @@ namespace Babylon
 
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, limits.maxTextureSize)),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
+                StaticValue("CAPS_ORIGIN_BOTTOM_LEFT", Napi::Boolean::From(env, bgfx::getCaps()->originBottomLeft)),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -1893,10 +1894,10 @@ namespace Babylon
 
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
 
-        // Match the vertical orientation the base upload applies (PrepareImage flips the whole image when
-        // originBottomLeft ? invertY : !invertY). To land a sub-rectangle at the same place, flip it to the
-        // mirrored Y origin and reverse its rows so row 0 of the source lines up with the flipped base data.
-        const bool flip{bgfx::getCaps()->originBottomLeft ? invertY : !invertY};
+        // Cube uploads honor invertY directly; only 2D uploads compensate for the backend origin.
+        const bool flip{texture->IsCube()
+                ? invertY
+                : (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)};
         const uint16_t targetY{flip ? static_cast<uint16_t>(mipHeight - y - height) : y};
         const bgfx::Memory* mem{bgfx::alloc(requiredSize)};
         if (flip)
@@ -2084,6 +2085,16 @@ namespace Babylon
 
             // This is required since BGFX must manage the memory backing the update.
             const bgfx::Memory* dataCopy = bgfx::copy(dataPtr, static_cast<uint32_t>(dataSize));
+            if (!bgfx::getCaps()->originBottomLeft)
+            {
+                // Match render-to-volume storage and the shader compiler's 3D sampler Y flip.
+                // Flip each XY slice independently without modifying the caller's typed array.
+                const size_t sliceSize = dataSize / depth;
+                for (uint16_t slice = 0; slice < depth; ++slice)
+                {
+                    FlipImage({dataCopy->data + sliceSize * slice, sliceSize}, height);
+                }
+            }
             texture->Update3D(0, 0, 0, 0, width, height, depth, dataCopy);
         }
 #endif
@@ -3096,7 +3107,8 @@ namespace Babylon
         const float y{data.ReadFloat32()};
         const float width{data.ReadFloat32()};
         const float height{data.ReadFloat32()};
-        const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
+        // bgfx view rectangles use a top-left origin on every renderer.
+        const float yOrigin = 1.f - y - height;
 
         GetBoundFrameBuffer().SetViewPort(x, yOrigin, width, height);
     }

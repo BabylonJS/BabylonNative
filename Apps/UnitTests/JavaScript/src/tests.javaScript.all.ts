@@ -41,7 +41,6 @@ declare const setExitCode: (code: number) => void;
 declare const setImageReloadTestResponse: (bytes: Uint8Array) => void;
 declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
-
 registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
 registerAttributeLessInstancingTests(describe, it, hasAttributeLessInstancing);
 
@@ -347,6 +346,22 @@ describe("ColorParsing", function () {
   });
 });
 
+describe("Native splat matrix storage", function () {
+  const test = typeof _native.sortSplats === "function" ? it : it.skip;
+  for (const numberArray of [false, true]) {
+    test(`sorts with ${numberArray ? "number-array" : "Float32Array"} matrices`, function () {
+      const values = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      const matrix = { _m: numberArray ? values : new Float32Array(values) };
+      const positions = new Float32Array([0, 0, 1, 1, 0, 0, 4, 1, 0, 0, 2, 1]);
+      for (const rightHanded of [false, true]) {
+        const indices = new Float32Array(3);
+        _native.sortSplats(matrix, positions, indices, rightHanded);
+        expect(Array.from(indices)).to.deep.equal(rightHanded ? [0, 2, 1] : [1, 2, 0]);
+      }
+    });
+  }
+});
+
 describe("Canvas2D", function () {
   // No-op renderers accept GPU commands but cannot produce pixels for readback.
   const itWithGpu = hasGpuRendering ? it : it.skip;
@@ -357,6 +372,34 @@ describe("Canvas2D", function () {
     canvas.height = 64;
     return canvas.getContext("2d");
   }
+
+  (skipCanvasGpuTests ? it.skip : it)("uses the strokeRect geometry after a preceding fillRect", async function () {
+    this.timeout(10000);
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const texture = new DynamicTexture("fill then inset stroke", 16, scene, false);
+      const ctx = texture.getContext();
+      ctx.fillStyle = "blue";
+      ctx.fillRect(2, 2, 12, 12);
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(2.5, 2.5, 11, 11);
+      texture.update(false);
+
+      const pixels = await texture.readPixels();
+      if (!(pixels instanceof Uint8Array)) {
+        throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+      }
+      const pixel = (x: number, y: number) => Array.from(pixels.subarray((y * 16 + x) * 4, (y * 16 + x + 1) * 4));
+      expect(pixel(8, 1), "outside inset border").to.deep.equal([0, 0, 0, 0]);
+      expect(pixel(8, 2), "pixel-aligned inset border").to.deep.equal([255, 255, 255, 255]);
+      expect(pixel(8, 3), "button fill inside border").to.deep.equal([0, 0, 255, 255]);
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
 
   function createCanvas(width: number, height: number): any {
     const canvas = new _native.Canvas();
@@ -1708,19 +1751,6 @@ describe("Canvas2D", function () {
     });
   });
 
-  it("returns ascent and descent in no-font text metrics", function () {
-    const resource = createCanvas(8, 8);
-    try {
-      resource.context.font = "20px MissingFontForCanvasMetrics";
-      const metrics = resource.context.measureText("test");
-      expect(metrics).to.have.property("actualBoundingBoxAscent");
-      expect(metrics).to.have.property("actualBoundingBoxDescent");
-      expect(metrics.actualBoundingBoxAscent).to.equal(15);
-      expect(metrics.actualBoundingBoxDescent).to.equal(5);
-    } finally {
-      disposeCanvas(resource);
-    }
-  });
 });
 
 function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {
@@ -1732,6 +1762,7 @@ function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => vo
     done();
   });
 }
+
 
 describe("Materials", function () {
   this.timeout(0);

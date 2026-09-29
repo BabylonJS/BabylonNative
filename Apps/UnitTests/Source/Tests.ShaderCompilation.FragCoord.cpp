@@ -24,11 +24,7 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-// These tests pin down the orientation of gl_FragCoord.y.
-//
-// D3D, Metal and Vulkan rasterize with a top-left origin while GL uses bottom-left,
-// and Babylon Native does not flip geometry, so gl_FragCoord.y arrives mirrored and
-// is corrected by the shader compiler (FragCoordYFlipTraverser).
+// Shader-visible coordinates use GL's bottom-left origin on every backend.
 namespace
 {
     class TestCompletion
@@ -105,6 +101,7 @@ namespace
         const std::string& setupScript = {},
         std::chrono::milliseconds renderTimeout = std::chrono::seconds{30})
     {
+        // Use clip-space geometry and bottom-left-origin UVs.
         Babylon::Graphics::Device device{g_deviceConfig};
         Babylon::Graphics::TextureT outputTexture{};
         const auto releaseOutput = gsl::finally([&outputTexture] {
@@ -195,8 +192,7 @@ namespace
                     camera.orthoRight = 1;
                     camera.outputRenderTarget = outputTexture;
 
-                    // Clip-space quad passed straight through the vertex shader, so no
-                    // projection matrix is involved and it lines up with the target exactly.
+                    // Cover the target without a projection matrix.
                     var quad = new BABYLON.Mesh("quad", scene);
                     var vertexData = new BABYLON.VertexData();
                     vertexData.positions = [
@@ -234,8 +230,7 @@ namespace
                     material.setVector2("targetSize", new BABYLON.Vector2(width, height));
 
                     if (WITH_INPUT_TEXTURE) {
-                        // Decreasing red ramp makes a vertical mirror unambiguous; blue
-                        // encodes the low bits of the row index to catch off-by-one errors.
+                        // A red ramp detects mirrors; row-index bits in blue detect off-by-one errors.
                         var data = new Uint8Array(width * height * 4);
                         for (var y = 0; y < height; ++y) {
                             for (var x = 0; x < width; ++x) {
@@ -426,6 +421,26 @@ TEST(ShaderCompilation, FragCoordSetupAndPreparationFailuresPropagate)
             EXPECT_NE(std::string{error.what()}.find(expectedError), std::string::npos) << error.what();
         }
     }
+#endif
+}
+
+TEST(NativeEngineViewport, MatchesClipSpaceRegion)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "void main(void) { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+    const auto expected = RenderFullScreenQuad(8, 8,
+        "attribute vec3 position;\n"
+        "void main(void) { gl_Position = vec4(position.x * 0.5, position.y * 0.5 - 0.25, 0.0, 1.0); }\n",
+        fragmentShader, false);
+    const auto actual = RenderFullScreenQuad(8, 8,
+        "attribute vec3 position;\n"
+        "void main(void) { gl_Position = vec4(position, 1.0); }\n",
+        fragmentShader, false, "camera.viewport = new BABYLON.Viewport(0.25, 0.125, 0.5, 0.5);");
+    EXPECT_EQ(actual, expected);
 #endif
 }
 
@@ -664,13 +679,7 @@ TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWa
         << "an update with no queued commands must not wait for the next frame";
 }
 
-// gl_FragCoord.y must increase towards +Y in clip space, like the interpolated vUV.y
-// the quad supplies. Without the correction the two ramps become mirror images.
-//
-// Two channels of a single render are compared rather than absolute row indices
-// because Helpers::ReadPixels returns the bottom scanline first on OpenGL and the top
-// first on D3D11; an absolute check would encode one backend's readback convention
-// instead of the shading language rule under test.
+// Compare channels to test shader coordinates independently of backend readback row order.
 TEST(ShaderCompilation, FragCoordYMatchesInterpolatedUV)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -710,13 +719,15 @@ TEST(ShaderCompilation, FragCoordYMatchesInterpolatedUV)
               << ", row " << (HEIGHT - 1) << " fragCoord=" << last.first << " uv=" << last.second
               << std::endl;
 
-    // Guard against a vacuous pass: the reference ramp must actually sweep the range.
+    // Guard against the whole comparison passing vacuously: the reference ramp
+    // has to actually sweep the range rather than sitting at a constant.
     ASSERT_GT(std::abs(first.second - last.second), 200)
         << "vUV.y reference ramp did not vary across the target";
 
-    // Both channels come from the same fragment invocation, so they must agree row by
-    // row whichever end of the image the readback starts at. The tolerance absorbs
-    // interpolation and 8-bit quantization only.
+    // Both channels are produced by the same fragment invocation, so they must
+    // agree row by row no matter which end of the image the readback starts at.
+    // The tolerance absorbs interpolation and 8-bit quantization only; a flipped
+    // gl_FragCoord.y misses by the full range of the ramp.
     for (uint32_t row = 0; row < HEIGHT; ++row)
     {
         const auto values = texel(row);
@@ -727,8 +738,7 @@ TEST(ShaderCompilation, FragCoordYMatchesInterpolatedUV)
 #endif
 }
 
-// `return gl_FragCoord;` parents the symbol on TIntermBranch, which MakeReplacements
-// must handle; without that the compiler throws "Cannot replace symbol".
+// Direct returns parent the symbol on TIntermBranch rather than an expression node.
 TEST(ShaderCompilation, FragCoordDirectReturnMatchesInterpolatedUV)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -776,11 +786,7 @@ TEST(ShaderCompilation, FragCoordDirectReturnMatchesInterpolatedUV)
 #endif
 }
 
-// Indexing a screen-sized texture with gl_FragCoord must give the same image as
-// indexing it with the interpolated UVs of a full-screen quad; this only holds if the
-// gl_FragCoord correction and FlipSamplerCoordinatesTraverser compose to a no-op.
-// The two addressing modes are compared against each other rather than against the
-// source pixels so the test does not depend on createRawTexture's memory layout.
+// Compare fragment-coordinate and UV addressing without depending on upload row order.
 TEST(ShaderCompilation, FragCoordAndUVAddressATextureIdentically)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -827,7 +833,8 @@ TEST(ShaderCompilation, FragCoordAndUVAddressATextureIdentically)
         return static_cast<int>(pixels[static_cast<size_t>(row) * WIDTH * 4]);
     };
 
-    // Guard against a vacuous pass: the source must actually vary down the image.
+    // Guard against a vacuous pass: the source must actually vary down the image,
+    // otherwise a vertical mirror would be undetectable.
     ASSERT_GT(std::abs(red(uvPixels, 0) - red(uvPixels, HEIGHT - 1)), 200)
         << "the source texture must vary from top to bottom for this test to mean anything";
 

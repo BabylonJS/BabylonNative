@@ -1961,6 +1961,23 @@ void nvgBeginPath(NVGcontext* ctx)
 	nvg__clearPathCache(ctx);
 }
 
+void nvgSavePath(NVGcontext* ctx, NVGsavedPath& path)
+{
+	path.commands.assign(ctx->commands, ctx->commands + ctx->ncommands);
+	path.x = ctx->commandx;
+	path.y = ctx->commandy;
+}
+
+void nvgRestorePath(NVGcontext* ctx, const NVGsavedPath& path)
+{
+	nvgBeginPath(ctx);
+	if (!path.commands.empty())
+		memcpy(ctx->commands, path.commands.data(), path.commands.size() * sizeof(float));
+	ctx->ncommands = int(path.commands.size());
+	ctx->commandx = path.x;
+	ctx->commandy = path.y;
+}
+
 void nvgMoveTo(NVGcontext* ctx, float x, float y)
 {
 	float vals[] = { NVG_MOVETO, x, y };
