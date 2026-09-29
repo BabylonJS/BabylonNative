@@ -209,6 +209,13 @@ namespace Babylon::Graphics
         m_state.Bgfx.Dirty = true;
     }
 
+    uint8_t DeviceImpl::GetMSAASamples() const
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        const auto level = (m_state.Bgfx.InitState.swapChain.flags & BGFX_SWAP_CHAIN_MSAA_MASK) >> BGFX_SWAP_CHAIN_MSAA_SHIFT;
+        return static_cast<uint8_t>(1u << level);
+    }
+
     void DeviceImpl::UpdateAlphaPremultiplied(bool enabled)
     {
         std::scoped_lock lock{m_state.Mutex};

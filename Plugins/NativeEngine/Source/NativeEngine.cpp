@@ -3284,13 +3284,17 @@ namespace Babylon
         }
 
         auto& boundFrameBuffer = GetBoundFrameBuffer();
+        // D3D11 also uses this flag to select its line coverage algorithm on single-sample targets.
+        const uint64_t multisampleMask = boundFrameBuffer.IsMultisampled() ? UINT64_MAX : ~BGFX_STATE_MSAA;
         if (boundFrameBuffer.HasDepth())
         {
-            encoder->setState(m_engineState | fillModeState);
+            const uint64_t drawState = (m_engineState | fillModeState);
+            encoder->setState(drawState & multisampleMask);
         }
         else
         {
-            encoder->setState((m_engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
+            const uint64_t drawState = ((m_engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
+            encoder->setState(drawState & multisampleMask);
         }
 
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);

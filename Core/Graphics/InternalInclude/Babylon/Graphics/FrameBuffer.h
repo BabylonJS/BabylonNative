@@ -20,7 +20,7 @@ namespace Babylon::Graphics
     class FrameBuffer final
     {
     public:
-        FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex = -1);
+        FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex = -1, bool isMultisampled = false);
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
@@ -32,6 +32,7 @@ namespace Babylon::Graphics
         uint16_t Width() const;
         uint16_t Height() const;
         bool DefaultBackBuffer() const;
+        bool IsMultisampled() const;
 
         void Bind();
         void Unbind();
@@ -60,6 +61,7 @@ namespace Babylon::Graphics
         const bool m_useDeviceBackBuffer{};
         const bool m_hasDepth{};
         const bool m_hasStencil{};
+        const bool m_isMultisampled{};
 
         std::optional<bgfx::ViewId> m_viewId{};
 

@@ -108,6 +108,8 @@ namespace Babylon::Graphics
 
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
+        void UpdateMSAA(uint8_t samples);
+        uint8_t GetMSAASamples() const;
 
         size_t GetWidth() const;
         size_t GetHeight() const;
@@ -133,9 +135,8 @@ namespace Babylon::Graphics
         // continue within the same logical frame. Call at draw/clear op boundaries.
         void FlushViewsIfNeeded();
 
-        // Force a mid-frame flush when a FrameCompletionScope is held so pending
-        // bgfx::readTexture requests can complete (Canvas toDataURL / drawImage).
-        // Returns false when the render thread cannot service the request.
+        // Flush pending compute writes or readbacks while a FrameCompletionScope is
+        // held. Returns false when the render thread cannot service the request.
         bool ForceMidFrameFlush();
 
         // TODO: find a different way to get the texture info for frame capture

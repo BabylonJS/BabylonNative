@@ -107,6 +107,16 @@ namespace Babylon::Graphics
         m_graphicsImpl.SetHardwareScalingLevel(level);
     }
 
+    void DeviceContext::UpdateMSAA(uint8_t samples)
+    {
+        m_graphicsImpl.UpdateMSAA(samples);
+    }
+
+    uint8_t DeviceContext::GetMSAASamples() const
+    {
+        return m_graphicsImpl.GetMSAASamples();
+    }
+
     size_t DeviceContext::GetWidth() const
     {
         return m_graphicsImpl.GetWidth();

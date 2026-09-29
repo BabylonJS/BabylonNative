@@ -224,7 +224,7 @@ namespace Babylon::Polyfills::Internal
                 }
                 throw std::runtime_error{"bgfx::createFrameBuffer returned invalid handle (framebuffer pool exhausted; raise BGFX_CONFIG_MAX_FRAME_BUFFERS or audit Canvas/Context lifetime)"};
             }
-            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
+            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false, -1, false);
             m_dirty = false;
 
             if (m_texture)

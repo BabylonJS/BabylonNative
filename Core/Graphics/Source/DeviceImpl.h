@@ -48,6 +48,7 @@ namespace Babylon::Graphics
         void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
+        uint8_t GetMSAASamples() const;
         void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT

@@ -3,6 +3,10 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/FrameBuffer.h>
+#ifdef HAS_TEST_UTILS
+#include <Babylon/Plugins/TestUtils.h>
+#endif
 
 #include <chrono>
 #include <future>
@@ -75,6 +79,65 @@ TEST(Device, ActiveEncoderIsNullOutsideFrame)
     EXPECT_EQ(encoderOutsideFrame, nullptr)
         << "GetActiveEncoder() must report null outside a frame so callers can tell that "
            "dereferencing it is unsafe";
+}
+
+TEST(Device, FrameBufferMultisamplingTracksItsOwnTarget)
+{
+    auto config = g_deviceConfig;
+    config.MSAASamples = 4;
+    Babylon::Graphics::Device device{config};
+    device.StartRenderingCurrentFrame();
+    Babylon::AppRuntime runtime{};
+    RunOnRuntimeThread(runtime, [&device](Napi::Env env) {
+        device.AddToJavaScript(env);
+        auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        Babylon::Graphics::FrameBuffer backBuffer{context, BGFX_INVALID_HANDLE, 0, 0, true, true, true};
+        Babylon::Graphics::FrameBuffer singleSample{context, BGFX_INVALID_HANDLE, 64, 64, false, true, true};
+        Babylon::Graphics::FrameBuffer multisample{context, BGFX_INVALID_HANDLE, 64, 64, false, true, true, -1, true};
+        const auto xrHandle = bgfx::createFrameBuffer(64, 64, bgfx::TextureFormat::RGBA8);
+        ASSERT_TRUE(bgfx::isValid(xrHandle));
+        Babylon::Graphics::FrameBuffer xrBackBuffer{context, xrHandle, 64, 64, true, false, false};
+        EXPECT_EQ(context.GetMSAASamples(), 4);
+        EXPECT_TRUE(backBuffer.IsMultisampled());
+#ifdef HAS_TEST_UTILS
+        Babylon::Plugins::TestUtils::Initialize(env, g_deviceConfig.Window);
+        const auto testUtils = env.Global().Get("TestUtils").As<Napi::Object>();
+        const auto setSamples = testUtils.Get("setMSAASamples").As<Napi::Function>();
+#endif
+        for (const uint8_t samples : {0, 1, 2, 4, 8, 16})
+        {
+#ifdef HAS_TEST_UTILS
+            setSamples.Call(testUtils, {Napi::Number::New(env, samples)});
+#else
+            context.UpdateMSAA(samples);
+#endif
+            EXPECT_EQ(context.GetMSAASamples(), samples == 0 ? 1 : samples);
+            EXPECT_EQ(backBuffer.IsMultisampled(), samples > 1);
+            EXPECT_FALSE(singleSample.IsMultisampled());
+            EXPECT_TRUE(multisample.IsMultisampled());
+            EXPECT_FALSE(xrBackBuffer.IsMultisampled());
+        }
+#ifdef HAS_TEST_UTILS
+        const auto rejectsInvalid = Napi::Eval(env, R"(
+            (function() {
+                const invalid = [-1, 3, 4.5, 256, NaN, Infinity, undefined, null, "4",
+                    true, false, {}, [], new Number(4)];
+                return invalid.every(function(value) {
+                    try {
+                        TestUtils.setMSAASamples(value);
+                        return false;
+                    } catch (error) {
+                        return error instanceof Error;
+                    }
+                });
+            })()
+        )", "validation-msaa-options.js");
+        EXPECT_TRUE(rejectsInvalid.As<Napi::Boolean>().Value());
+        EXPECT_THROW(setSamples.Call(testUtils, {}), Napi::Error);
+        EXPECT_EQ(context.GetMSAASamples(), 16);
+#endif
+    });
+    device.FinishRenderingCurrentFrame();
 }
 
 // The guarantee the fix relies on: acquiring a FrameCompletionScope blocks until a frame is live,

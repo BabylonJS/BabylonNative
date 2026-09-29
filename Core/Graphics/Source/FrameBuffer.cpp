@@ -5,7 +5,7 @@
 
 namespace Babylon::Graphics
 {
-    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex)
+    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex, bool isMultisampled)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
         , m_handle{handle}
@@ -16,6 +16,7 @@ namespace Babylon::Graphics
         , m_useDeviceBackBuffer{defaultBackBuffer && !bgfx::isValid(handle)}
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
+        , m_isMultisampled{isMultisampled}
         , m_disposed{false}
         , m_depthStencilAttachmentIndex{depthStencilAttachmentIndex}
     {
@@ -69,6 +70,12 @@ namespace Babylon::Graphics
     bool FrameBuffer::DefaultBackBuffer() const
     {
         return m_defaultBackBuffer;
+    }
+
+    bool FrameBuffer::IsMultisampled() const
+    {
+        // The window's sample count can change without recreating its wrapper.
+        return m_defaultBackBuffer && !bgfx::isValid(m_handle) ? m_deviceContext.GetMSAASamples() > 1 : m_isMultisampled;
     }
 
     void FrameBuffer::Bind()
