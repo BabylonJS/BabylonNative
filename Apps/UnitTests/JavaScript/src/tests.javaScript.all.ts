@@ -373,6 +373,21 @@ describe("Canvas2D", function () {
     return canvas.getContext("2d");
   }
 
+  // Font registrations are global; exercise the fallback before loading a face.
+  it("returns ascent and descent in no-font text metrics", function () {
+    const resource = createCanvas(8, 8);
+    try {
+      resource.context.font = "20px MissingFontForCanvasMetrics";
+      const metrics = resource.context.measureText("test");
+      expect(metrics).to.have.property("actualBoundingBoxAscent");
+      expect(metrics).to.have.property("actualBoundingBoxDescent");
+      expect(metrics.actualBoundingBoxAscent).to.equal(15);
+      expect(metrics.actualBoundingBoxDescent).to.equal(5);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
   (skipCanvasGpuTests ? it.skip : it)("uses the strokeRect geometry after a preceding fillRect", async function () {
     this.timeout(10000);
     const engine = new NativeEngine();
@@ -401,6 +416,36 @@ describe("Canvas2D", function () {
     }
   });
 
+  it("matches browser text layout metrics", async function () {
+    this.timeout(10000);
+    const fontData = await new Promise<ArrayBuffer>((resolve, reject) => {
+      RequestFile(
+        "app:///Assets/Arimo-Regular.ttf",
+        (data) => {
+          if (typeof data === "string") {
+            reject(new Error("Expected binary font data"));
+          } else {
+            resolve(data);
+          }
+        },
+        undefined,
+        undefined,
+        true,
+        (error) => reject(error)
+      );
+    });
+    _native.Canvas.loadTTF("arimo-regular", fontData);
+
+    const ctx = createContext();
+    ctx.font = "18px arimo-regular";
+    expect(ctx.measureText("Home Impulse").width).to.be.closeTo(116.0419921875, 0.0001);
+    expect(ctx.measureText("Far Away Impulse").width).to.be.closeTo(143.71875, 0.0001);
+    expect(ctx.measureText("Move far away").width).to.be.closeTo(117.0439453125, 0.0001);
+    expect(ctx.measureText("Hg").fontBoundingBoxAscent).to.equal(16);
+    expect(ctx.measureText("Hg").fontBoundingBoxDescent).to.equal(5);
+    ctx.letterSpacing = "0.25px";
+    expect(ctx.measureText("Home Impulse").width).to.be.closeTo(118.7919921875, 0.0001);
+  });
   function createCanvas(width: number, height: number): any {
     const canvas = new _native.Canvas();
     canvas.width = width;

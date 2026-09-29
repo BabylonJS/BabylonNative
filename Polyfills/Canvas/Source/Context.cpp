@@ -758,8 +758,9 @@ namespace Babylon::Polyfills::Internal
     {
         std::string text{info[0].As<Napi::String>()};
 
-        // Measure against the same face FillText will bind.
+        // SetFont records the face but does not bind it; measure with the same face as FillText.
         const bool fontBound = SetFontFaceId();
+
         // No face available: synthesize Arial-ish metrics so callers still get a finite width.
         if (!fontBound && m_state.font.Size() > 0.f)
         {
