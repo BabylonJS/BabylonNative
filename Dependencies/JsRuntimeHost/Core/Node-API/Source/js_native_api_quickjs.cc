@@ -1,4 +1,5 @@
 #include "js_native_api_quickjs.h"
+#include "js_native_api_shared.h"
 #include <napi/js_native_api.h>
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -1394,27 +1395,19 @@ napi_status napi_get_property_names(napi_env env, napi_value object, napi_value*
   CHECK_ENV(env);
   CHECK_ARG(env, object);
   CHECK_ARG(env, result);
-  
-  JSValue jsObject = ToJSValue(object);
-  
-  JSPropertyEnum* ptab;
-  uint32_t plen;
-  
-  if (JS_GetOwnPropertyNames(env->context, &ptab, &plen, jsObject, 
-      JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0) {
-    return napi_set_last_error(env, napi_generic_failure);
+
+  // `JS_GetOwnPropertyNames` is own-only, so use the shared prototype-chain
+  // walk instead. It is written against the public `napi_*` surface and so
+  // cannot reach `napi_set_last_error`; do it here, since `CHECK_NAPI` only
+  // propagates the status and the preceding call inside the walk will have
+  // cleared the last error. The success path likewise has to clear it, so that
+  // a rejection recorded by an earlier call does not survive as the last error
+  // of a call that succeeded.
+  const napi_status status{napi_shared::GetEnumerablePropertyNames(env, object, result, env->property_name_intrinsics)};
+  if (status != napi_ok) {
+    return napi_set_last_error(env, status);
   }
-  
-  JSValue arr = JS_NewArray(env->context);
-  
-  for (uint32_t i = 0; i < plen; i++) {
-    JSValue name = JS_AtomToString(env->context, ptab[i].atom);
-    JS_SetPropertyUint32(env->context, arr, i, name);
-  }
-  
-  JS_FreePropertyEnum(env->context, ptab, plen);
-  
-  *result = FromJSValue(env, arr);
+
   napi_clear_last_error(env);
   return napi_ok;
 }

@@ -97,6 +97,40 @@ TEST(JavaScript, All)
 
         env.Global().Set("hostPlatform", Napi::Value::From(env, JSRUNTIMEHOST_PLATFORM));
         env.Global().Set("hostEngine", Napi::Value::From(env, NAPI_JAVASCRIPT_ENGINE));
+
+        auto getPropertyNamesCallback = Napi::Function::New(
+            env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return info[0].As<Napi::Object>().GetPropertyNames();
+            },
+            "napiGetPropertyNames");
+        env.Global().Set("napiGetPropertyNames", getPropertyNamesCallback);
+
+#ifndef JSRUNTIMEHOST_NAPI_ENGINE_JSI
+        auto getPropertyNamesRawCallback = Napi::Function::New(
+            env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                napi_env rawEnv{info.Env()};
+                napi_value result{};
+                const napi_status status{napi_get_property_names(rawEnv, info[0], &result)};
+                if (status != napi_ok)
+                {
+                    bool isExceptionPending{};
+                    if (napi_is_exception_pending(rawEnv, &isExceptionPending) == napi_ok && isExceptionPending)
+                    {
+                        napi_value error{};
+                        if (napi_get_and_clear_last_exception(rawEnv, &error) == napi_ok)
+                        {
+                            throw Napi::Error{info.Env(), error};
+                        }
+                    }
+
+                    throw Napi::Error::New(info.Env(), "napi_get_property_names failed with status " + std::to_string(status));
+                }
+
+                return Napi::Value{rawEnv, result};
+            },
+            "napiGetPropertyNamesRaw");
+        env.Global().Set("napiGetPropertyNamesRaw", getPropertyNamesRawCallback);
+#endif
     });
 
     Babylon::ScriptLoader loader{runtime};

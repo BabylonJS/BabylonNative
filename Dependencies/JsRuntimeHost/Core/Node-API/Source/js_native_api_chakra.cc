@@ -1,8 +1,12 @@
 #include "js_native_api_chakra.h"
+#include "js_native_api_shared.h"
 #include <napi/js_native_api.h>
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstring>
+#include <memory>
 #include <optional>
 #include <vector>
 #include <string>
@@ -48,13 +52,14 @@ JsErrorCode JsCopyStringUtf16(_In_ JsValueRef value, _Out_opt_ char16_t* buffer,
   size_t stringLength;
   CHECK_JSRT_ERROR_CODE(JsStringToPointer(value, &stringValue, &stringLength));
 
+  const size_t copied = buffer == nullptr ? stringLength : std::min(bufferSize, stringLength);
   if (length != nullptr) {
-    *length = stringLength;
+    *length = copied;
   }
 
-  if (buffer != nullptr) {
+  if (buffer != nullptr && copied != 0) {
     static_assert(sizeof(char16_t) == sizeof(wchar_t));
-    memcpy_s(buffer, bufferSize, stringValue, stringLength * sizeof(wchar_t));
+    std::memcpy(buffer, stringValue, copied * sizeof(char16_t));
   }
 
   return JsErrorCode::JsNoError;
@@ -509,6 +514,12 @@ napi_status DefineProperty(napi_env env,
 
 } // end anonymous namespace
 
+void napi_chakra_internal::DiscardReferenceAfterRuntimeDisposal(napi_ref ref)
+{
+  // The runtime has freed its JS values; JsRelease would access invalid handles.
+  delete reinterpret_cast<RefInfo*>(ref);
+}
+
 // Warning: Keep in-sync with napi_status enum
 static const char* error_messages[] = {
   nullptr,
@@ -678,11 +689,22 @@ napi_status napi_get_property_names(napi_env env,
                                     napi_value object,
                                     napi_value* result) {
   CHECK_ENV(env);
+  CHECK_ARG(env, object);
   CHECK_ARG(env, result);
-  JsValueRef obj = reinterpret_cast<JsValueRef>(object);
-  JsValueRef propertyNames;
-  CHECK_JSRT(env, JsGetOwnPropertyNames(obj, &propertyNames));
-  *result = reinterpret_cast<napi_value>(propertyNames);
+
+  // `JsGetOwnPropertyNames` is own-only and includes non-enumerable properties,
+  // so use the shared prototype-chain walk instead. It is written against the
+  // public `napi_*` surface and so cannot reach `napi_set_last_error`; do it
+  // here, since `CHECK_NAPI` only propagates the status and the preceding call
+  // inside the walk will have cleared the last error. The success path likewise
+  // has to clear it, so that a rejection recorded by an earlier call does not
+  // survive as the last error of a call that succeeded.
+  const napi_status status{napi_shared::GetEnumerablePropertyNames(env, object, result, env->property_name_intrinsics)};
+  if (status != napi_ok) {
+    return napi_set_last_error(env, status);
+  }
+
+  napi_clear_last_error(env);
   return napi_ok;
 }
 
@@ -1825,17 +1847,13 @@ napi_status napi_create_reference(napi_env env,
   CHECK_ARG(env, result);
 
   auto jsValue = reinterpret_cast<JsValueRef>(value);
-  auto info = new RefInfo{ reinterpret_cast<JsValueRef>(value), initial_refcount };
-  if (info == nullptr) {
-    return napi_set_last_error(env, napi_generic_failure);
-  }
-
+  std::unique_ptr<RefInfo> info{new RefInfo{jsValue, initial_refcount}};
   if (info->count != 0)
   {
     CHECK_JSRT(env, JsAddRef(jsValue, nullptr));
   }
 
-  *result = reinterpret_cast<napi_ref>(info);
+  *result = reinterpret_cast<napi_ref>(info.release());
   return napi_ok;
 }
 

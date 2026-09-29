@@ -5,16 +5,24 @@
 
 #include <jsrt.h>
 #include <napi/js_native_api_types.h>
+#include "js_native_api_shared.h"
 #include <thread>
 #include <cassert>
 #include <map>
+
+namespace napi_chakra_internal {
+  void DiscardReferenceAfterRuntimeDisposal(napi_ref ref);
+}
 
 struct napi_env__ {
   JsSourceContext source_context = JS_SOURCE_CONTEXT_NONE;
   napi_extended_error_info last_error{ nullptr, nullptr, 0, napi_ok };
   JsValueRef has_own_property_function = JS_INVALID_REFERENCE;
+  napi_ref has_own_property_reference{};
+  napi_shared::PropertyNameIntrinsics property_name_intrinsics{};
 
   JsPropertyIdRef wrap_property_id = JS_INVALID_REFERENCE;
+  napi_ref wrap_symbol_reference{};
 
   // Escapable scope bookkeeping: token -> whether that scope has escaped. Values
   // are rooted by the engine rather than by a scope here, so this exists only to

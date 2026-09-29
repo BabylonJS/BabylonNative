@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <future>
 #include <string>
+#include <string_view>
 
 // The V8JSI Node-API shim does not implement napi_create_dataview /
 // napi_get_dataview_info (its DataView::New throws "TODO"), so this native test
@@ -125,6 +126,39 @@ TEST(NodeApi, GetValueStringUtf16HandlesZeroBufsize)
 
     EXPECT_TRUE(zeroSafe.get_future().get());
     EXPECT_TRUE(normalWorks.get_future().get());
+}
+
+TEST(NodeApi, GetValueStringUtf16CopiesAndTruncates)
+{
+    Babylon::AppRuntime runtime{};
+    std::promise<bool> copiedCorrectly;
+
+    runtime.Dispatch([&copiedCorrectly](Napi::Env env) {
+        napi_env nenv{env};
+        const char16_t input[]{u'a', static_cast<char16_t>(0xD800), u'b'};
+        napi_value value{};
+        if (napi_create_string_utf16(nenv, input, 3, &value) != napi_ok)
+        {
+            copiedCorrectly.set_value(false);
+            return;
+        }
+
+        size_t length{};
+        char16_t truncated[2]{u'?', u'?'};
+        size_t truncatedLength{};
+        char16_t complete[4]{};
+        size_t completeLength{};
+        const bool correct =
+            napi_get_value_string_utf16(nenv, value, nullptr, 0, &length) == napi_ok && length == 3 &&
+            napi_get_value_string_utf16(nenv, value, truncated, 2, &truncatedLength) == napi_ok &&
+            truncatedLength == 1 && truncated[0] == u'a' && truncated[1] == u'\0' &&
+            napi_get_value_string_utf16(nenv, value, complete, 4, &completeLength) == napi_ok &&
+            completeLength == 3 && complete[0] == u'a' && complete[1] == input[1] &&
+            complete[2] == u'b' && complete[3] == u'\0';
+        copiedCorrectly.set_value(correct);
+    });
+
+    EXPECT_TRUE(copiedCorrectly.get_future().get());
 }
 
 // Closes an escapable handle scope however the test leaves it. Without this, a
@@ -497,4 +531,44 @@ TEST(NodeApi, AdjacentEscapableScopesEscapeIndependently)
     EXPECT_TRUE(bothEscapesAccepted.get_future().get());
 }
 
+#endif
+
+#if !defined(JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+TEST(NodeApi, GetPropertyNamesReportsLastErrorConsistently)
+{
+    const std::string_view engine{NAPI_JAVASCRIPT_ENGINE};
+    if (engine != "Chakra" && engine != "QuickJS" && engine != "JavaScriptCore")
+    {
+        GTEST_SKIP() << engine << " supplies its own napi_get_property_names.";
+    }
+
+    Babylon::AppRuntime runtime{};
+    std::promise<bool> nullConsistent;
+    std::promise<bool> undefinedConsistent;
+    std::promise<bool> successClears;
+
+    runtime.Dispatch([&nullConsistent, &undefinedConsistent, &successClears](Napi::Env env) {
+        napi_env nenv{env};
+        const auto check = [nenv](napi_value value) {
+            napi_value names{nullptr};
+            const napi_status status{napi_get_property_names(nenv, value, &names)};
+            const napi_extended_error_info* info{nullptr};
+            napi_get_last_error_info(nenv, &info);
+            return status == napi_object_expected && info != nullptr && info->error_code == status;
+        };
+
+        nullConsistent.set_value(check(napi_value{env.Null()}));
+        undefinedConsistent.set_value(check(napi_value{env.Undefined()}));
+
+        napi_value names{nullptr};
+        const napi_status status{napi_get_property_names(nenv, napi_value{Napi::Object::New(env)}, &names)};
+        const napi_extended_error_info* info{nullptr};
+        napi_get_last_error_info(nenv, &info);
+        successClears.set_value(status == napi_ok && info != nullptr && info->error_code == napi_ok);
+    });
+
+    EXPECT_TRUE(nullConsistent.get_future().get());
+    EXPECT_TRUE(undefinedConsistent.get_future().get());
+    EXPECT_TRUE(successClears.get_future().get());
+}
 #endif
