@@ -60,7 +60,7 @@ if(BABYLON_NATIVE_POLYFILL_CANVAS)
 endif()
 
 if(TARGET AbortController)
-    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER=1)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_ABORTCONTROLLER=1)
     target_link_libraries(Embedding PRIVATE AbortController)
 endif()
 

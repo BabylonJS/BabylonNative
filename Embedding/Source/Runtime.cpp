@@ -42,7 +42,7 @@
 #include <Babylon/Polyfills/TextEncoder.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
-#if JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER
+#if JSRUNTIMEHOST_POLYFILL_ABORTCONTROLLER
 #include <Babylon/Polyfills/AbortController.h>
 #endif
 
@@ -249,7 +249,7 @@ namespace Babylon::Embedding
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
             Babylon::Polyfills::Fetch::Initialize(env);
 
-#if JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER
+#if JSRUNTIMEHOST_POLYFILL_ABORTCONTROLLER
             Babylon::Polyfills::AbortController::Initialize(env);
 #endif
 #if JSRUNTIMEHOST_POLYFILL_SCHEDULING
