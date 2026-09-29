@@ -64,12 +64,16 @@ namespace
 
             ~OffScreenBufferFrameProvider()
             {
-                bgfx::destroy(m_blitTextureHandle);
+                if (m_deviceId == m_graphicsContext.GetDeviceId())
+                {
+                    bgfx::destroy(m_blitTextureHandle);
+                }
             }
 
         private:
             OffScreenBufferFrameProvider(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
                 : m_graphicsContext{graphicsContext}
+                , m_deviceId{graphicsContext.GetDeviceId()}
                 , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
                 , m_frameCallback{std::move(callback)}
                 , m_textureInfo{m_graphicsContext.GetTextureInfo(m_frameBufferTextureHandle)}
@@ -98,6 +102,13 @@ namespace
                         thisRef->m_graphicsContext.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer)
                             .then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef] {
                                 thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
+                            })
+                            .then(arcana::inline_scheduler, arcana::cancellation::none(), [thisRef](const arcana::expected<void, std::exception_ptr>& result) {
+                                if (result.has_error())
+                                {
+                                    thisRef->m_cancellationToken.cancel();
+                                    std::rethrow_exception(result.error());
+                                }
                             })};
 
                     arcana::task<void, std::exception_ptr> readNextFrameTask{thisRef->ReadTextureAsync()};
@@ -111,6 +122,7 @@ namespace
 
         private:
             Babylon::Graphics::DeviceContext& m_graphicsContext;
+            const uintptr_t m_deviceId;
             bgfx::TextureHandle m_frameBufferTextureHandle{bgfx::kInvalidHandle};
             FrameCallback m_frameCallback{};
             Babylon::Graphics::TextureInfo m_textureInfo{};

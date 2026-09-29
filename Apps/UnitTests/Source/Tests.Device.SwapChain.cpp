@@ -42,7 +42,10 @@ namespace
         const std::function<void(bgfx::Encoder&)>& render = {})
     {
         auto captured = std::make_shared<std::optional<std::vector<uint8_t>>>();
-        context.RequestScreenShot([captured](auto pixels) { captured->emplace(std::move(pixels)); });
+        context.RequestScreenShot([captured](auto result) {
+            ASSERT_FALSE(result.has_error());
+            captured->emplace(std::move(result.value()));
+        });
         for (size_t frame = 0; frame < 3 && !captured->has_value(); ++frame)
         {
             device.StartRenderingCurrentFrame();

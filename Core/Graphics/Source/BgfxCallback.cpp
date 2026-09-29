@@ -33,7 +33,7 @@ namespace Babylon::Graphics
         m_deviceLost.store(false);
     }
 
-    void BgfxCallback::AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback)
+    void BgfxCallback::AddScreenShotCallback(ScreenShotCallback callback)
     {
         m_screenShotCallbacks.emplace(std::move(callback));
     }
@@ -41,6 +41,19 @@ namespace Babylon::Graphics
     bool BgfxCallback::HasPendingScreenShotCallbacks() const
     {
         return !m_screenShotCallbacks.empty();
+    }
+
+    void BgfxCallback::CancelScreenShots(std::exception_ptr error)
+    {
+        m_captureScreenShot = false;
+        std::queue<ScreenShotCallback> callbacks;
+        callbacks.swap(m_screenShotCallbacks);
+        while (!callbacks.empty())
+        {
+            auto callback = std::move(callbacks.front());
+            callbacks.pop();
+            callback(arcana::make_unexpected(error));
+        }
     }
 
     void BgfxCallback::CaptureNextScreenShot()
@@ -148,6 +161,11 @@ namespace Babylon::Graphics
 
     void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, const void* data, uint32_t size, bool yflip)
     {
+        // DeviceImpl retires failed requests after bgfx::frame has finished using their buffers.
+        if (IsDeviceLost())
+        {
+            return;
+        }
         assert(m_captureScreenShot || !m_screenShotCallbacks.empty());
         if (m_captureScreenShot)
         {
@@ -221,6 +239,10 @@ namespace Babylon::Graphics
 
     void BgfxCallback::captureFrame(const void* data, uint32_t size)
     {
+        if (IsDeviceLost())
+        {
+            return;
+        }
         m_captureData.Data = data;
         m_captureData.DataSize = size;
 

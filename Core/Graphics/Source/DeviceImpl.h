@@ -5,7 +5,6 @@
 #include <Babylon/Graphics/DeviceContext.h>
 
 #include <arcana/containers/ticketed_collection.h>
-#include <arcana/threading/blocking_concurrent_queue.h>
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
@@ -89,7 +88,7 @@ namespace Babylon::Graphics
         continuation_scheduler<>& AfterRenderScheduler();
         continuation_scheduler<>& FrameStartScheduler();
 
-        void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        void RequestScreenShot(BgfxCallback::ScreenShotCallback callback);
 
         void RequestCaptureNextFrame();
 
@@ -134,6 +133,7 @@ namespace Babylon::Graphics
 
     private:
         friend class FrameCompletionScope;
+        friend struct DeviceImplTestAccess;
 
         static const bgfx::RendererType::Enum s_bgfxRenderType;
         void ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window);
@@ -294,8 +294,8 @@ namespace Babylon::Graphics
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
 
-        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
-        bool m_retryScreenShotAfterReset{};
+        std::mutex m_screenShotCallbacksMutex{};
+        std::queue<BgfxCallback::ScreenShotCallback> m_screenShotCallbacks{};
 
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
 

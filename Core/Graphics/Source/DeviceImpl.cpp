@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <system_error>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -24,6 +25,11 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
+
+    std::exception_ptr ReadbackCanceled()
+    {
+        return std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled)));
+    }
 
     bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
     {
@@ -318,7 +324,6 @@ namespace Babylon::Graphics
             ready = true;
             if (!deviceStillLost)
             {
-                m_retryScreenShotAfterReset = m_bgfxCallback.HasPendingScreenShotCallbacks();
                 m_bgfxCallback.ClearDeviceLost();
             }
         }
@@ -340,9 +345,9 @@ namespace Babylon::Graphics
             // Drain readTextures queue, completing them in an error state.
             while (!m_readTextureRequests.empty())
             {
-                auto error = arcana::make_unexpected(std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled))));
-                m_readTextureRequests.front().second.complete(error);
+                auto completionSource = std::move(m_readTextureRequests.front().second);
                 m_readTextureRequests.pop();
+                completionSource.complete(arcana::make_unexpected(ReadbackCanceled()));
             }
 
             // HACK: Render one more frame to drain the before/after render work queues.
@@ -538,9 +543,17 @@ namespace Babylon::Graphics
         return m_frameEncoder;
     }
 
-    void DeviceImpl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    void DeviceImpl::RequestScreenShot(BgfxCallback::ScreenShotCallback callback)
     {
-        m_screenShotCallbacks.push(std::move(callback));
+        {
+            std::scoped_lock lock{m_screenShotCallbacksMutex};
+            if (!IsDeviceLost())
+            {
+                m_screenShotCallbacks.push(std::move(callback));
+                return;
+            }
+        }
+        callback(arcana::make_unexpected(ReadbackCanceled()));
     }
 
     void DeviceImpl::RequestCaptureNextFrame()
@@ -551,6 +564,11 @@ namespace Babylon::Graphics
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
         arcana::task_completion_source<void, std::exception_ptr> completionSource{};
+        if (IsDeviceLost())
+        {
+            completionSource.complete(arcana::make_unexpected(ReadbackCanceled()));
+            return completionSource.as_task();
+        }
         bgfx::TextureRegion region{};
         region.init(handle);
         region.mip = mipLevel;
@@ -812,12 +830,16 @@ namespace Babylon::Graphics
 
     bool DeviceImpl::RequestScreenShots()
     {
-        // A screenshot requested on the lost device may never have reached the callback.
-        bool requested = m_retryScreenShotAfterReset;
-        std::function<void(std::vector<uint8_t>)> callback;
-        while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
+        bool requested = false;
+        std::queue<BgfxCallback::ScreenShotCallback> callbacks;
         {
-            m_bgfxCallback.AddScreenShotCallback(std::move(callback));
+            std::scoped_lock lock{m_screenShotCallbacksMutex};
+            callbacks.swap(m_screenShotCallbacks);
+        }
+        while (!callbacks.empty())
+        {
+            m_bgfxCallback.AddScreenShotCallback(std::move(callbacks.front()));
+            callbacks.pop();
             requested = true;
         }
         {
@@ -836,7 +858,6 @@ namespace Babylon::Graphics
         {
             throw std::runtime_error{"Cannot capture without a window or an external back buffer."};
         }
-        m_retryScreenShotAfterReset = false;
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
         if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
         {
@@ -879,20 +900,33 @@ namespace Babylon::Graphics
     {
         if (m_bgfxCallback.IsDeviceLost())
         {
+            std::queue<BgfxCallback::ScreenShotCallback> callbacks;
+            {
+                std::scoped_lock lock{m_screenShotCallbacksMutex};
+                callbacks.swap(m_screenShotCallbacks);
+            }
+            const auto error = ReadbackCanceled();
+            m_bgfxCallback.CancelScreenShots(error);
+            while (!callbacks.empty())
+            {
+                auto callback = std::move(callbacks.front());
+                callbacks.pop();
+                callback(arcana::make_unexpected(error));
+            }
             while (!m_readTextureRequests.empty())
             {
-                auto error = arcana::make_unexpected(std::make_exception_ptr(
-                    std::system_error(std::make_error_code(std::errc::operation_canceled))));
-                m_readTextureRequests.front().second.complete(error);
+                auto completionSource = std::move(m_readTextureRequests.front().second);
                 m_readTextureRequests.pop();
+                completionSource.complete(arcana::make_unexpected(error));
             }
             return;
         }
 
         while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)
         {
-            m_readTextureRequests.front().second.complete();
+            auto completionSource = std::move(m_readTextureRequests.front().second);
             m_readTextureRequests.pop();
+            completionSource.complete();
         }
     }
 
