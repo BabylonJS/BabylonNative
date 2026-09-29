@@ -16,10 +16,10 @@
 #include <napi/pointer.h>
 
 #include <bgfx/bgfx.h>
+#include <bimg/bimg.h>
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <Babylon/Graphics/ImageFormat.h>
-#include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
@@ -2353,12 +2353,10 @@ namespace Babylon
         const double requestedWidth{info[4].As<Napi::Number>().DoubleValue()};
         const double requestedHeight{info[5].As<Napi::Number>().DoubleValue()};
         auto buffer{info[6].As<Napi::ArrayBuffer>()};
-        uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
-        uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
+        const double requestedBufferOffset{info[7].As<Napi::Number>().DoubleValue()};
+        const double requestedBufferLength{info[8].As<Napi::Number>().DoubleValue()};
         // Optional cube-map face index (0-5). -1 (or absent) means a plain 2D read.
-        const int32_t faceIndex{(info.Length() > 9 && info[9].IsNumber()) ? info[9].As<Napi::Number>().Int32Value() : -1};
-        const bool isCubeFace{faceIndex >= 0};
-        const uint16_t srcZ{isCubeFace ? static_cast<uint16_t>(faceIndex) : static_cast<uint16_t>(0)};
+        const double requestedFaceIndex{(info.Length() > 9 && !info[9].IsUndefined()) ? info[9].As<Napi::Number>().DoubleValue() : -1};
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
 
@@ -2381,6 +2379,26 @@ namespace Babylon
                 return deferred.Promise();
             }
         }
+        if (!isUnsignedInteger(requestedBufferOffset, UINT32_MAX) || !isUnsignedInteger(requestedBufferLength, UINT32_MAX))
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture buffer offset and length must be finite uint32 integers.").Value());
+            return deferred.Promise();
+        }
+        if (!(requestedFaceIndex >= -1 && requestedFaceIndex <= UINT16_MAX && std::floor(requestedFaceIndex) == requestedFaceIndex))
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture face/layer index must be -1 or a finite uint16 integer.").Value());
+            return deferred.Promise();
+        }
+        if (!texture->IsValid())
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture requires an initialized texture.").Value());
+            return deferred.Promise();
+        }
+        uint32_t bufferOffset{static_cast<uint32_t>(requestedBufferOffset)};
+        uint32_t bufferLength{static_cast<uint32_t>(requestedBufferLength)};
+        const int32_t faceIndex{static_cast<int32_t>(requestedFaceIndex)};
+        const bool isCubeFace{faceIndex >= 0};
+        const uint16_t srcZ{isCubeFace ? static_cast<uint16_t>(faceIndex) : static_cast<uint16_t>(0)};
         uint8_t mipLevel{static_cast<uint8_t>(requestedMipLevel)};
         const uint16_t x{static_cast<uint16_t>(requestedX)};
         const uint16_t y{static_cast<uint16_t>(requestedY)};
@@ -2388,7 +2406,6 @@ namespace Babylon
         const uint16_t height{static_cast<uint16_t>(requestedHeight)};
 
         const auto sourceTextureFormat{texture->Format()};
-
         // The face/layer index is JS-controlled and is forwarded to encoder->blit as srcZ, so validate it
         // before it can drive an out-of-bounds read inside bgfx. Babylon.js passes this argument for both
         // cube maps (face 0-5, six consecutive faces per array layer) and 2D arrays (slice index, which can
@@ -2424,12 +2441,22 @@ namespace Babylon
             return deferred.Promise();
         }
 
+        // Check the full storage size before bgfx narrows it to uint32.
+        const auto targetTextureFormat{bgfx::TextureFormat::RGBA8};
+        const auto storageSize = [&](bgfx::TextureFormat::Enum format) {
+            return bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, static_cast<bimg::TextureFormat::Enum>(format));
+        };
+        if (storageSize(sourceTextureFormat) > UINT32_MAX || storageSize(targetTextureFormat) > UINT32_MAX)
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture storage size exceeds uint32.").Value());
+            return deferred.Promise();
+        }
+
         // Calculate storage sizes only after validating the requested mip and rectangle.
         bgfx::TextureInfo sourceTextureInfo{};
         bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat);
 
-        // Always return pixel data in RGBA8 to match the web.
-        const auto targetTextureFormat{bgfx::TextureFormat::Enum::RGBA8};
+        // Always return four-channel pixel data to match the web.
         bgfx::TextureInfo targetTextureInfo{};
         bgfx::calcTextureSize(targetTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, targetTextureFormat);
 

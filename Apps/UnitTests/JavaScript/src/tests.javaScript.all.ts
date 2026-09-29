@@ -50,6 +50,35 @@ describe("Native texture readback", function () {
   // Native LoadRawTexture is also disabled when native image loading is off.
   const itWithRawTexture = hasGpuRendering && hasNativeImageLoading ? it : it.skip;
 
+  itWithRawTexture("rejects invalid native buffer and face numbers without modifying the destination", async function () {
+    const engine = new _native.Engine();
+    const texture = engine.createTexture();
+    try {
+      engine.initializeTexture(texture, 4, 4, false, _native.Engine.TEXTURE_FORMAT_RGBA8, false, false, 1);
+      for (const component of [7, 8, 9]) {
+        for (const invalid of [-2, 0.5, NaN, Infinity, 2 ** 32, 2 ** 32 + 1]) {
+          const destination = new Uint8Array(4).fill(91);
+          const request = [texture, 0, 0, 0, 1, 1, destination.buffer, 0, 4, -1];
+          request[component] = invalid;
+          let error: unknown;
+          try {
+            await engine.readTexture(...request);
+          } catch (caught) {
+            error = caught;
+          }
+          if (!(error instanceof Error)) {
+            throw new Error(`Expected native readback component ${component}=${invalid} to reject`);
+          }
+          expect(error.message).to.contain(component === 9 ? "face/layer index" : "buffer offset and length");
+          expect(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);
+        }
+      }
+    } finally {
+      engine.deleteTexture(texture);
+      engine.dispose();
+    }
+  });
+
   itWithRawTexture("returns bottom-origin RGBA8 crops and preserves destination offsets", async function () {
     const engine = new NativeEngine();
     const scene = new Scene(engine);
