@@ -154,6 +154,11 @@ TEST(JavaScript, All)
         env.Global().Set("hasNativeImageLoading", false);
 #endif
 #ifdef USE_NOOP_METAL_DEVICE
+        env.Global().Set("hasAttributeLessInstancing", false);
+#else
+        env.Global().Set("hasAttributeLessInstancing", true);
+#endif
+#ifdef USE_NOOP_METAL_DEVICE
         env.Global().Set("hasGpuRendering", false);
 #else
         env.Global().Set("hasGpuRendering", true);
