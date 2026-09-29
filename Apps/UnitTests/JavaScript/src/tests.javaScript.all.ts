@@ -1,6 +1,7 @@
 import * as Mocha from "mocha";
 import { expect } from "chai";
 import { registerPngTests } from "./tests.nativeEngine.png";
+import { registerCanvasImageTests } from "./tests.nativeEngine.canvasImage";
 import { Buffer } from "buffer";
 import {
   RequestFile,
@@ -232,6 +233,7 @@ describe("Native texture readback", function () {
     }
   });
 });
+registerCanvasImageTests(describe, it, skipCanvasGpuTests);
 
 describe("RequestFile", function () {
   this.timeout(0);

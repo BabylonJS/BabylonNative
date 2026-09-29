@@ -3,6 +3,8 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Texture.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <bimg/decode.h>
 #include <bx/allocator.h>
@@ -15,6 +17,7 @@
 #include "../../../Polyfills/Canvas/Source/Path2D.h"
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg.h"
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg_filterstack.h"
+#include <napi/pointer.h>
 
 #include <array>
 #include <chrono>
@@ -352,6 +355,112 @@ TEST(CanvasReadback, UntouchedCanvasReadbackCreatesRenderTarget)
             EXPECT_TRUE(nativeCanvas->HasFrameBuffer());
         }
     });
+}
+
+TEST(CanvasReadback, CanvasTexturePreservesLegacyPremultipliedSource)
+{
+    RunCanvasTest([](Napi::Env env) {
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+        auto canvas = constructor.New({});
+        canvas.Set("width", 4);
+        canvas.Set("height", 4);
+        auto context = canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+        auto getTexture = canvas.Get("getCanvasTexture").As<Napi::Function>();
+        EXPECT_THROW(getTexture.Call(canvas, {}), Napi::Error);
+        context.Get("flush").As<Napi::Function>().Call(context, {});
+        auto* nativeCanvas = Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas);
+        const auto source = bgfx::getTexture(nativeCanvas->GetFrameBuffer().Handle());
+        for (const std::vector<Napi::Value>& arguments : std::vector<std::vector<Napi::Value>>{
+                 {}, {env.Undefined()}, {Napi::Boolean::New(env, true)}})
+        {
+            auto* texture = getTexture.Call(canvas, arguments).As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+            EXPECT_EQ(texture->Handle().idx, source.idx);
+        }
+        auto* straight = getTexture.Call(canvas, {Napi::Boolean::New(env, false)}).As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+        EXPECT_NE(straight->Handle().idx, source.idx);
+        EXPECT_EQ(straight->Width(), 4u);
+        EXPECT_EQ(straight->Height(), 4u);
+        EXPECT_EQ(bgfx::getTexture(nativeCanvas->GetFrameBuffer().Handle()).idx, source.idx);
+    });
+}
+
+TEST(CanvasReadback, QueuedRepresentationsPreservePixelsAndMips)
+{
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    RunCanvasTest([](Napi::Env env) {
+        auto canvas = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>().New({});
+        canvas.Set("width", 4);
+        canvas.Set("height", 4);
+        auto context = canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+        context.Set("fillStyle", "rgba(200, 100, 50, 0.5)");
+        context.Get("fillRect").As<Napi::Function>().Call(context, {
+            Napi::Number::New(env, 0), Napi::Number::New(env, 0), Napi::Number::New(env, 4), Napi::Number::New(env, 4)});
+        context.Get("flush").As<Napi::Function>().Call(context, {});
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        auto pixels = std::make_shared<std::array<uint8_t, 16 * 4 * 4>>();
+        auto completed = std::make_shared<std::promise<void>>();
+        auto future = completed->get_future();
+        {
+            auto frameScope = graphics.AcquireFrameCompletionScope();
+            const auto getTexture = canvas.Get("getCanvasTexture").As<Napi::Function>();
+            std::array<Babylon::Graphics::Texture*, 3> textures{};
+            for (size_t i = 0; i < textures.size(); ++i)
+            {
+                textures[i] = getTexture.Call(canvas, {Napi::Boolean::New(env, i == 2), Napi::Boolean::New(env, i != 0)})
+                                  .As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+            }
+            auto readback = std::make_shared<Babylon::Graphics::Texture>(graphics);
+            readback->Create2D(16, 4, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+            for (uint16_t i = 0; i < 5; ++i)
+            {
+                const uint8_t mip = i < 3 ? 0 : 1;
+                const uint16_t size = 4 >> mip;
+                const uint16_t x = i < 3 ? i * 4 : 12 + (i - 3) * 2;
+                bgfx::TextureRegion source{};
+                source.init(textures[i < 3 ? i : i - 2]->Handle(), 0, 0, size, size);
+                source.mip = mip;
+                bgfx::TextureRegion destination{};
+                destination.init(readback->Handle(), x, 0, size, size);
+                graphics.GetActiveEncoder()->blit(graphics.AcquireNewViewId(), destination, source);
+            }
+            graphics.ReadTextureAsync(readback->Handle(), gsl::make_span(*pixels))
+                .then(arcana::inline_scheduler, arcana::cancellation::none(),
+                    [readback, pixels, completed](arcana::expected<void, std::exception_ptr> result) {
+                        readback->Dispose();
+                        if (result.has_error())
+                        {
+                            completed->set_exception(result.error());
+                        }
+                        else
+                        {
+                            completed->set_value();
+                        }
+                    });
+        }
+        ASSERT_EQ(future.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+        ASSERT_NO_THROW(future.get());
+        for (size_t i = 0; i < 5; ++i)
+        {
+            SCOPED_TRACE(i);
+            const size_t size = i < 3 ? 4 : 2;
+            const size_t offsetX = i < 3 ? i * 4 : 12 + (i - 3) * 2;
+            const bool premultiplied = i == 2 || i == 4;
+            for (size_t y = 0; y < size; ++y)
+            {
+                for (size_t x = 0; x < size; ++x)
+                {
+                    const size_t offset = (y * 16 + offsetX + x) * 4;
+                    EXPECT_NEAR((*pixels)[offset], premultiplied ? 100 : 200, 2);
+                    EXPECT_NEAR((*pixels)[offset + 1], premultiplied ? 50 : 100, 2);
+                    EXPECT_NEAR((*pixels)[offset + 2], premultiplied ? 25 : 50, 2);
+                    EXPECT_NEAR((*pixels)[offset + 3], 128, 1);
+                }
+            }
+        }
+    });
+#endif
 }
 
 TEST(CanvasReadback, EncodesPngWithoutInputImageLoading)

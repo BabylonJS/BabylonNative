@@ -1875,11 +1875,23 @@ namespace Babylon
         {
             blitView = m_deviceContext.PeekNextViewId();
         }
-        bgfx::TextureRegion dstRegion{};
-        dstRegion.init(textureDestination->Handle());
-        bgfx::TextureRegion srcRegion{};
-        srcRegion.init(textureSource->Handle());
-        encoder->blit(blitView, dstRegion, srcRegion);
+        bgfx::TextureInfo sourceInfo{}, destinationInfo{};
+        bgfx::calcTextureSize(sourceInfo, textureSource->Width(), textureSource->Height(),
+            std::max<uint16_t>(1, textureSource->Depth()), textureSource->IsCube(),
+            textureSource->HasMips(), textureSource->NumLayers(), textureSource->Format());
+        bgfx::calcTextureSize(destinationInfo, textureDestination->Width(), textureDestination->Height(),
+            std::max<uint16_t>(1, textureDestination->Depth()), textureDestination->IsCube(),
+            textureDestination->HasMips(), textureDestination->NumLayers(), textureDestination->Format());
+        for (uint8_t mip = 0; mip < std::min(sourceInfo.numMips, destinationInfo.numMips); ++mip)
+        {
+            bgfx::TextureRegion dstRegion{};
+            dstRegion.init(textureDestination->Handle());
+            dstRegion.mip = mip;
+            bgfx::TextureRegion srcRegion{};
+            srcRegion.init(textureSource->Handle());
+            srcRegion.mip = mip;
+            encoder->blit(blitView, dstRegion, srcRegion);
+        }
     }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
