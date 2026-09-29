@@ -40,10 +40,8 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetSrc(const Napi::CallbackInfo&);
         Napi::Value GetImageContainer(const Napi::CallbackInfo&);
         void SetSrc(const Napi::CallbackInfo&, const Napi::Value&);
-        void SetOnload(const Napi::CallbackInfo&, const Napi::Value&);
-        void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);
-        void HandleLoadImageError(const Napi::Error& error);
-        bool SetBuffer(gsl::span<const std::byte> buffer);
+        void HandleLoadImageError(const Napi::Object& self, const Napi::Error& error);
+        bool SetBuffer(const Napi::Object& self, gsl::span<const std::byte> buffer);
         void ReleaseImage();
         void Dispose();
 
@@ -54,8 +52,6 @@ namespace Babylon::Polyfills::Internal
         std::string m_src{};
 
         JsRuntimeScheduler m_runtimeScheduler;
-        Napi::FunctionReference m_onloadHandlerRef;
-        Napi::FunctionReference m_onerrorHandlerRef;
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         bimg::ImageContainer* m_imageContainer{};

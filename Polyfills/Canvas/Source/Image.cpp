@@ -7,6 +7,7 @@
 #include <functional>
 #include <sstream>
 #include <assert.h>
+#include <vector>
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <Babylon/Graphics/ImageFormat.h>
 #include <bimg/bimg.h>
@@ -35,8 +36,6 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("naturalWidth", &NativeCanvasImage::GetNaturalWidth, nullptr),
                 InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
                 InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
-                InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
-                InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
                 // TODO: This should be set directly on the JS Object rather than via an instanceAccessor see: https://github.com/BabylonJS/BabylonNative/issues/1030
                 InstanceAccessor("_imageContainer", &NativeCanvasImage::GetImageContainer, nullptr),
             });
@@ -54,6 +53,10 @@ namespace Babylon::Polyfills::Internal
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
+        // Keep callback cycles visible to the JavaScript garbage collector.
+        auto self = info.This().As<Napi::Object>();
+        self.Set("onload", info.Env().Null());
+        self.Set("onerror", info.Env().Null());
         // Register after successful construction only.
         NativeInstanceRegistry<NativeCanvasImage>::Add(info, this);
     }
@@ -117,7 +120,7 @@ namespace Babylon::Polyfills::Internal
         return Env().Null();
     }
 
-    bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
+    bool NativeCanvasImage::SetBuffer(const Napi::Object& self, gsl::span<const std::byte> buffer)
     {
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         ReleaseImage();
@@ -133,7 +136,6 @@ namespace Babylon::Polyfills::Internal
                 bimg::imageFree(source);
             }
         }
-
         if (m_imageContainer == nullptr)
         {
             return false;
@@ -144,12 +146,14 @@ namespace Babylon::Polyfills::Internal
         // Bump before onload. A draw in that callback must not reuse the previous texture.
         ++m_contentGeneration;
 
-        if (!m_onloadHandlerRef.IsEmpty())
+        const auto onload = self.Get("onload");
+        if (onload.IsFunction())
         {
-            m_onloadHandlerRef.Call({});
+            onload.As<Napi::Function>().Call(self, {});
         }
         return true;
 #else
+        (void)self;
         (void)buffer;
         return false;
 #endif
@@ -159,7 +163,7 @@ namespace Babylon::Polyfills::Internal
     {
 #ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         (void)value;
-        HandleLoadImageError(Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF)."));
+        HandleLoadImageError(info.This().As<Napi::Object>(), Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF)."));
         return;
 #else
         auto text{value.As<Napi::String>().Utf8Value()};
@@ -174,7 +178,7 @@ namespace Babylon::Polyfills::Internal
         {
             // SetSrc, disposal, decoding and event delivery share the JS runtime thread;
             // cancellation cannot interleave with this synchronous decode.
-            arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, text{std::move(text)}, pos]() {
+            arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [image{Napi::Persistent(info.This().As<Napi::Object>())}, this, cancellationSource{m_cancellationSource}, text{std::move(text)}, pos]() {
                 if (cancellationSource->cancelled())
                 {
                     return;
@@ -183,9 +187,10 @@ namespace Babylon::Polyfills::Internal
                 bn::decode_b64(text.begin() + pos + base64.length(), text.end(), std::back_inserter(base64Buffer));
                 gsl::span<const std::byte> buffer = {reinterpret_cast<std::byte*>(base64Buffer.data()), base64Buffer.size()};
 
-                if (!SetBuffer(buffer))
+                const auto self = image.Value();
+                if (!SetBuffer(self, buffer))
                 {
-                    HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided base64 source."));
+                    HandleLoadImageError(self, Napi::Error::New(image.Env(), "Unable to decode image with provided base64 source."));
                 }
             });
             return;
@@ -195,42 +200,31 @@ namespace Babylon::Polyfills::Internal
         UrlLib::UrlRequest request{};
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
-        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
+        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [image{Napi::Persistent(info.This().As<Napi::Object>())}, this, cancellationSource{m_cancellationSource}, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (cancellationSource->cancelled())
             {
                 return;
             }
+            const auto self = image.Value();
             if (result.has_error())
             {
-                HandleLoadImageError(Napi::Error::New(env, result.error()));
+                HandleLoadImageError(self, Napi::Error::New(image.Env(), result.error()));
                 return;
             }
 
             auto buffer{request.ResponseBuffer()};
             if (buffer.data() == nullptr || buffer.size_bytes() == 0)
             {
-                HandleLoadImageError(Napi::Error::New(env, "Image with provided source returned empty response or invalid base64."));
+                HandleLoadImageError(self, Napi::Error::New(image.Env(), "Image with provided source returned empty response or invalid base64."));
                 return;
             }
 
-            if (!SetBuffer(buffer))
+            if (!SetBuffer(self, buffer))
             {
-                HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided source URL."));
+                HandleLoadImageError(self, Napi::Error::New(image.Env(), "Unable to decode image with provided source URL."));
             }
         });
 #endif
-    }
-
-    void NativeCanvasImage::SetOnload(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        Napi::Function eventHandler{value.As<Napi::Function>()};
-        m_onloadHandlerRef = Napi::Persistent(eventHandler);
-    }
-
-    void NativeCanvasImage::SetOnerror(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        Napi::Function eventHandler{value.As<Napi::Function>()};
-        m_onerrorHandlerRef = Napi::Persistent(eventHandler);
     }
 
     int NativeCanvasImage::CreateNVGImageForContext(NVGcontext* nvgContext) const
@@ -243,14 +237,14 @@ namespace Babylon::Polyfills::Internal
 #endif
     }
 
-    void NativeCanvasImage::HandleLoadImageError(const Napi::Error& error)
+    void NativeCanvasImage::HandleLoadImageError(const Napi::Object& self, const Napi::Error& error)
     {
-        if (!m_onerrorHandlerRef.IsEmpty())
+        // Match HTML <img>: fire onerror when set; otherwise fail silently.
+        // Throwing here made GUI image tests flaky (async decode after/during ready).
+        const auto onerror = self.Get("onerror");
+        if (onerror.IsFunction())
         {
-            m_onerrorHandlerRef.Call({error.Value()});
-            return;
+            onerror.As<Napi::Function>().Call(self, {error.Value()});
         }
-
-        error.ThrowAsJavaScriptException();
     }
 }

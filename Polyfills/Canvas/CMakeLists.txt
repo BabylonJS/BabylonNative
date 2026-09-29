@@ -53,13 +53,11 @@ target_link_libraries(Canvas
     PRIVATE GraphicsDeviceContext
     PRIVATE UrlLib
     PRIVATE base-n
-    PRIVATE bimg_encode)
+    PRIVATE bimg)
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_compile_definitions(Canvas
         PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
-    target_link_libraries(Canvas
-        PRIVATE bimg)
 endif()
 
 if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
