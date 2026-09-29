@@ -93,7 +93,7 @@ namespace
     Babylon::Embedding::RuntimeOptions MakeRuntimeOptions()
     {
         Babylon::Embedding::RuntimeOptions runtimeOptions{};
-        runtimeOptions.enableDebugger = true;
+        runtimeOptions.enableDebugger = !options.Headless;
         runtimeOptions.enableDebugTrace = options.DebugTrace.value_or(true);
         runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
             std::string line{text};

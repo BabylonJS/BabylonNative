@@ -1101,13 +1101,15 @@ describe("Canvas2D", function () {
       expect(function () { ctx.fill(impostor); }).to.throw();
       expect(function () { ctx.stroke(impostor); }).to.throw();
       expect(function () { realPath.addPath(impostor); }).to.throw();
-      // Non-Path2D arguments use the DOMString overload.
+      // The Path2D() argument is a (Path2D or DOMString) union, so a non-Path2D is string
+      // data rather than an error. It must not be unwrapped on the way there.
       expect(function () { new Path2D(impostor); }).to.not.throw();
     }
   });
 
   it("ignores a prototype-spoofed object assigned to fillStyle or strokeStyle", function () {
-    // A forged gradient prototype must not authorize native unwrapping.
+    // Same defect on the gradient side: the assignment gate accepted anything wearing the
+    // gradient prototype and stored it, and the next fill unwrapped it as a CanvasGradient.
     const ctx = createContext();
     const gradient = ctx.createLinearGradient(0, 0, 10, 10);
     const spoofedPath: any = new Path2D();
