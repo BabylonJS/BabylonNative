@@ -1,7 +1,9 @@
 #include "Window.h"
 
 #include <Babylon/Graphics/DeviceContext.h>
+#if JSRUNTIMEHOST_POLYFILL_SCHEDULING
 #include <Babylon/Polyfills/Scheduling.h>
+#endif
 
 #include <basen.hpp>
 
@@ -31,7 +33,9 @@ namespace Babylon::Polyfills::Internal
 
         jsNative.Set(JS_WINDOW_NAME, jsWindow);
 
+#if JSRUNTIMEHOST_POLYFILL_SCHEDULING
         Scheduling::Initialize(env);
+#endif
 
         if (global.Get(JS_A_TO_B_NAME).IsUndefined())
         {

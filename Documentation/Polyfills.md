@@ -3,6 +3,16 @@ Babylon Native Polyfills add support for certain JavaScript browser APIs, such a
 
 The polyfills are still in an early stage and are subject to change.
 
+When building Embedding, JsRuntimeHost enables AbortController, Scheduling,
+URL, and WebSocket by default. Set the corresponding
+`JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER`, `JSRUNTIMEHOST_POLYFILL_SCHEDULING`,
+`JSRUNTIMEHOST_POLYFILL_URL`, or `JSRUNTIMEHOST_POLYFILL_WEBSOCKET` CMake
+option to `OFF` to omit that library and its Embedding initialization. The
+former `BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER`,
+`BABYLON_NATIVE_POLYFILL_SCHEDULING`, `BABYLON_NATIVE_POLYFILL_URL`, and
+`BABYLON_NATIVE_POLYFILL_WEBSOCKET` options no longer control these polyfills.
+Window remains available when Scheduling is disabled, without its scheduling APIs.
+
 At the moment, we are using the following polyfills:
 * [Canvas](../Polyfills/Canvas/readme.md)
 * [Console](../Polyfills/Console/readme.md)

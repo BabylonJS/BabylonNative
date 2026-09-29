@@ -46,9 +46,8 @@ target_link_libraries(Embedding
 
 # ----- Conditionally-included polyfills -----
 #
-# Each flag is exposed as a PUBLIC compile definition so the public
-# headers (Runtime.h / View.h) and the impl source files can both gate
-# on the same value via `#if BABYLON_NATIVE_*`.
+# Public compile definitions are used for options exposed by public
+# headers; JsRuntimeHost polyfills only need private definitions.
 
 if(BABYLON_NATIVE_POLYFILL_WINDOW)
     target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_POLYFILL_WINDOW=1)
@@ -60,23 +59,23 @@ if(BABYLON_NATIVE_POLYFILL_CANVAS)
     target_link_libraries(Embedding PRIVATE Canvas)
 endif()
 
-if(BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER)
-    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER=1)
+if(TARGET AbortController)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER=1)
     target_link_libraries(Embedding PRIVATE AbortController)
 endif()
 
-if(BABYLON_NATIVE_POLYFILL_SCHEDULING)
-    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_POLYFILL_SCHEDULING=1)
+if(TARGET Scheduling)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_SCHEDULING=1)
     target_link_libraries(Embedding PRIVATE Scheduling)
 endif()
 
-if(BABYLON_NATIVE_POLYFILL_URL)
-    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_POLYFILL_URL=1)
+if(TARGET URL)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_URL=1)
     target_link_libraries(Embedding PRIVATE URL)
 endif()
 
-if(BABYLON_NATIVE_POLYFILL_WEBSOCKET)
-    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_POLYFILL_WEBSOCKET=1)
+if(TARGET WebSocket)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_WEBSOCKET=1)
     target_link_libraries(Embedding PRIVATE WebSocket)
 endif()
 

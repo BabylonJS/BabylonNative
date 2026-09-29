@@ -12,9 +12,13 @@ target_include_directories(Window
 target_link_libraries(Window
     PUBLIC napi
     PRIVATE base-n
-    PRIVATE Scheduling
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext)
+
+if(TARGET Scheduling)
+    target_compile_definitions(Window PRIVATE JSRUNTIMEHOST_POLYFILL_SCHEDULING=1)
+    target_link_libraries(Window PRIVATE Scheduling)
+endif()
 
 set_property(TARGET Window PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

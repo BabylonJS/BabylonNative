@@ -42,19 +42,19 @@
 #include <Babylon/Polyfills/TextEncoder.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
-#if BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER
+#if JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER
 #include <Babylon/Polyfills/AbortController.h>
 #endif
 
-#if BABYLON_NATIVE_POLYFILL_SCHEDULING
+#if JSRUNTIMEHOST_POLYFILL_SCHEDULING
 #include <Babylon/Polyfills/Scheduling.h>
 #endif
 
-#if BABYLON_NATIVE_POLYFILL_URL
+#if JSRUNTIMEHOST_POLYFILL_URL
 #include <Babylon/Polyfills/URL.h>
 #endif
 
-#if BABYLON_NATIVE_POLYFILL_WEBSOCKET
+#if JSRUNTIMEHOST_POLYFILL_WEBSOCKET
 #include <Babylon/Polyfills/WebSocket.h>
 #endif
 
@@ -249,16 +249,16 @@ namespace Babylon::Embedding
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
             Babylon::Polyfills::Fetch::Initialize(env);
 
-#if BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER
+#if JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER
             Babylon::Polyfills::AbortController::Initialize(env);
 #endif
-#if BABYLON_NATIVE_POLYFILL_SCHEDULING
+#if JSRUNTIMEHOST_POLYFILL_SCHEDULING
             Babylon::Polyfills::Scheduling::Initialize(env);
 #endif
-#if BABYLON_NATIVE_POLYFILL_URL
+#if JSRUNTIMEHOST_POLYFILL_URL
             Babylon::Polyfills::URL::Initialize(env);
 #endif
-#if BABYLON_NATIVE_POLYFILL_WEBSOCKET
+#if JSRUNTIMEHOST_POLYFILL_WEBSOCKET
             Babylon::Polyfills::WebSocket::Initialize(env);
 #endif
 
