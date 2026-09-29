@@ -17,13 +17,6 @@ An explicit setting from a parent CMake project is also respected. Unset or empt
 values use Babylon Native's disabled default, including empty cache entries left by
 earlier configurations.
 
-NativeEngine WebP decoding is enabled by default when image loading is enabled.
-`BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP=ON` enables bimg's WebP parser even
-if a parent project disables generic bimg parsers with `BIMG_CONFIG_PARSE_ENABLE=0`.
-Setting the WebP option to `OFF` disables its parser; disabling NativeEngine
-leaves bimg's generic parser setting in control unless the WebP option is `OFF`.
-Disabling NativeEngine image loading also forces the WebP option off.
-
 ## Lateral Dependency Management
 
 Scalable dependency management can be a challenge when making heavy use of Git Submodules.
