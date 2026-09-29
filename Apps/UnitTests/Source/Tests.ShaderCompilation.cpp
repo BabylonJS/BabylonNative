@@ -139,6 +139,36 @@ TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
     EXPECT_FALSE(shader.VertexBytes.empty());
     EXPECT_FALSE(shader.FragmentBytes.empty());
 }
+
+TEST(ShaderCompilation, SamplerCoordinatesAcceptConditionalExpressions)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    auto shader = compiler.Compile(
+        R"(
+            in vec2 position;
+            void main() { gl_Position = vec4(position, 0.0, 1.0); }
+        )",
+        R"(
+            precision highp float;
+            uniform highp sampler3D volume;
+            uniform highp sampler2DShadow shadow;
+            uniform highp sampler2DArrayShadow shadowArray;
+            uniform vec4 coordinate;
+            layout(location = 0) out vec4 fragColor;
+            void main()
+            {
+                vec3 alternate = coordinate.zyx;
+                fragColor = texture(volume, coordinate.x > 0.0 ? coordinate.xyz : alternate);
+                fragColor += textureLod(volume, coordinate.x > 0.0 ? alternate : coordinate.xyz, 0.0);
+                fragColor += textureGrad(volume, coordinate.x > 0.0 ? coordinate.xyz : alternate, vec3(0.01), vec3(0.02));
+                fragColor += texelFetch(volume, coordinate.x > 0.0 ? ivec3(coordinate.xyz) : ivec3(0), coordinate.x > 0.0 ? 0 : 1);
+                fragColor += vec4(texture(shadow, coordinate.x > 0.0 ? alternate : coordinate.xyz));
+                fragColor += vec4(texture(shadowArray, coordinate.x > 0.0 ? coordinate : coordinate.wzyx));
+            }
+        )");
+    EXPECT_FALSE(shader.VertexBytes.empty());
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
 #endif
 
 TEST(ShaderCompilation, CompileComprehensiveGLSL)

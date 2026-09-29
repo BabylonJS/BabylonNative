@@ -37,15 +37,9 @@ namespace Babylon::ShaderCompilerCommon
 
     std::string ProcessSamplerFlip(std::string_view source)
     {
-        // The vertical (V) flip for both float sample coordinates (texture()/textureLod()) and
-        // integer texel coordinates (texelFetch()) is now performed by the FlipSamplerCoordinates
-        // AST traverser, not by a preprocessor macro. The macro form
-        //   #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2(...), (lod))
-        // forced every coordinate through ivec2(...), so it could not compile against sampler3D /
-        // sampler2DArray ('no matching overloaded function'). The AST traverser knows the sampler
-        // dimensionality and only flips 2-component coordinates, leaving 3D/array fetches intact.
-        // This function is retained as an identity passthrough so the backend call sites don't need
-        // to change.
+        // The AST traverser flips 2D/volume coordinates, including explicit gradients and
+        // integer fetches, while preserving raw array rows and cube directions.
+        // Retain this identity passthrough for the existing backend call sites.
         return std::string{source};
     }
 

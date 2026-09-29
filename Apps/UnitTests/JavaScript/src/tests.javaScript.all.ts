@@ -2128,6 +2128,31 @@ function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => vo
   });
 }
 
+describe("NativeTextureFormats", function () {
+  it("creates a D24 render target with compatible backing storage", function () {
+    const engine = new _native.Engine();
+    const texture = engine.createTexture();
+    try {
+      engine.initializeTexture(texture, 16, 16, false, _native.Engine.TEXTURE_FORMAT_D24, true, false, 1);
+      expect(engine.getTextureWidth(texture)).to.equal(16);
+      expect(engine.getTextureHeight(texture)).to.equal(16);
+    } finally {
+      engine.deleteTexture(texture);
+      engine.dispose();
+    }
+  });
+
+  it("rejects an invalid format without entering bgfx texture creation", function () {
+    const engine = new _native.Engine();
+    const texture = engine.createTexture();
+    try {
+      expect(() => engine.initializeTexture(texture, 16, 16, false, 0xffffffff, true, false, 1)).to.throw("Invalid texture format");
+    } finally {
+      engine.deleteTexture(texture);
+      engine.dispose();
+    }
+  });
+});
 
 describe("Materials", function () {
   this.timeout(0);

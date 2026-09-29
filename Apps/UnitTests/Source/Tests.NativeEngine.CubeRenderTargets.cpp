@@ -7,6 +7,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <napi/pointer.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <future>
@@ -15,6 +16,129 @@
 #include <stdexcept>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
+
+TEST(NativeEngineCubeRenderTargets, GeneratedImageMipsPreserveRowsAndColumns)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP() << "GPU rendering/readback is unavailable in this test configuration";
+#endif
+    // An 8x8 PNG with red increasing across X and green increasing across Y.
+    constexpr std::array<uint8_t, 86> png{
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x08, 0x06, 0x00, 0x00, 0x00, 0xc4, 0x0f, 0xbe,
+        0x8b, 0x00, 0x00, 0x00, 0x1d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x60, 0x60, 0x60, 0xf8,
+        0x8f, 0x8c, 0xff, 0xa3, 0x61, 0x06, 0x7a, 0x28, 0xf8, 0x8f, 0x0a, 0xff, 0xa3, 0x61, 0x3a, 0x28,
+        0x00, 0x00, 0x6b, 0xb0, 0x7f, 0x81, 0x52, 0xa1, 0x36, 0x78, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
+        0x4e, 0x44, 0xae, 0x42, 0x60, 0x82};
+    constexpr uint16_t readbackWidth = 6 * (8 + 4 + 2);
+    std::array<uint8_t, readbackWidth * 8 * 4> pixels{};
+    std::promise<void> completed;
+    auto future = completed.get_future();
+    device.StartRenderingCurrentFrame();
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&](Napi::Env env) {
+        try
+        {
+            device.AddToJavaScript(env);
+            Babylon::Plugins::NativeEngine::Initialize(env);
+            auto engine = env.Global().Get("_native").As<Napi::Object>().Get("Engine").As<Napi::Function>().New({});
+            auto value = engine.Get("createTexture").As<Napi::Function>().Call(engine, {});
+            env.Global().Set("_testEngine", engine);
+            env.Global().Set("_testCube", value);
+            auto bytes = Napi::Uint8Array::New(env, png.size());
+            std::copy(png.begin(), png.end(), bytes.Data());
+            auto faces = Napi::Array::New(env, 6);
+            for (uint32_t face = 0; face < 6; ++face)
+            {
+                faces.Set(face, bytes);
+            }
+            auto onLoaded = Napi::Function::New(env, [&](const Napi::CallbackInfo& info) {
+                try
+                {
+                    auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(info.Env());
+                    auto frameScope = context.AcquireFrameCompletionScope();
+                    auto* cube = info.Env().Global().Get("_testCube").As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+                    auto readback = std::make_shared<Babylon::Graphics::Texture>(context);
+                    readback->Create2D(readbackWidth, 8, false, 1, bgfx::TextureFormat::RGBA8,
+                        BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+                    uint16_t destinationX{};
+                    for (uint16_t face = 0; face < 6; ++face)
+                    {
+                        for (uint8_t mip = 0; mip < 3; ++mip)
+                        {
+                            const uint16_t size = 8 >> mip;
+                            bgfx::TextureRegion source{};
+                            source.init(cube->Handle(), 0, 0, size, size);
+                            source.z = face;
+                            source.depth = 1;
+                            source.mip = mip;
+                            bgfx::TextureRegion destination{};
+                            destination.init(readback->Handle(), destinationX, 0, size, size);
+                            context.GetActiveEncoder()->blit(context.AcquireNewViewId(), destination, source);
+                            destinationX += size;
+                        }
+                    }
+                    context.ReadTextureAsync(readback->Handle(), gsl::make_span(pixels))
+                        .then(arcana::inline_scheduler, arcana::cancellation::none(), [readback, &completed](arcana::expected<void, std::exception_ptr> result) {
+                            readback->Dispose();
+                            if (result.has_error())
+                            {
+                                completed.set_exception(result.error());
+                            }
+                            else
+                            {
+                                completed.set_value();
+                            }
+                        });
+                }
+                catch (...)
+                {
+                    completed.set_exception(std::current_exception());
+                }
+            });
+            auto onError = Napi::Function::New(env, [&](const Napi::CallbackInfo&) {
+                completed.set_exception(std::make_exception_ptr(std::runtime_error{"Cube image loading failed"}));
+            });
+            engine.Get("loadCubeTexture").As<Napi::Function>().Call(engine, {
+                value, faces, Napi::Boolean::New(env, true), Napi::Boolean::New(env, false),
+                Napi::Boolean::New(env, false), onLoaded, onError});
+        }
+        catch (...)
+        {
+            completed.set_exception(std::current_exception());
+        }
+    });
+    while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        device.StartRenderingCurrentFrame();
+    }
+    EXPECT_NO_THROW(future.get());
+    size_t sourceX{};
+    for (uint16_t face = 0; face < 6; ++face)
+    {
+        SCOPED_TRACE(face);
+        for (uint8_t mip = 0; mip < 3; ++mip)
+        {
+            SCOPED_TRACE(mip);
+            const size_t size = 8 >> mip;
+            for (size_t y = 0; y < size; ++y)
+            {
+                for (size_t x = 0; x < size; ++x)
+                {
+                    const size_t offset = (y * readbackWidth + sourceX + x) * 4;
+                    EXPECT_EQ(pixels[offset], x < size / 2 ? 0 : 255);
+                    EXPECT_EQ(pixels[offset + 1], y < size / 2 ? 255 : 0);
+                    EXPECT_EQ(pixels[offset + 2], 0);
+                    EXPECT_EQ(pixels[offset + 3], 255);
+                }
+            }
+            sourceX += size;
+        }
+    }
+    device.FinishRenderingCurrentFrame();
+}
 
 TEST(NativeEngineCubeRenderTargets, ClearsEachFaceIndependentlyAndPreserves2DDefaults)
 {

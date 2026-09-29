@@ -3,18 +3,23 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Texture.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/ExternalTexture.h>
 #include <Babylon/ScriptLoader.h>
+#include <napi/pointer.h>
 
 #include "Helpers.h"
 
 #include <atomic>
+#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <future>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -99,7 +104,8 @@ namespace
         const std::string& fragmentShader,
         bool withInputTexture,
         const std::string& setupScript = {},
-        std::chrono::milliseconds renderTimeout = std::chrono::seconds{30})
+        std::chrono::milliseconds renderTimeout = std::chrono::seconds{30},
+        const std::function<void(Napi::Env)>& nativeSetup = {})
     {
         // Use clip-space geometry and bottom-left-origin UVs.
         Babylon::Graphics::Device device{g_deviceConfig};
@@ -146,9 +152,13 @@ namespace
                 frameOpen = true;
             }
         });
-        runtime.Dispatch([&device](Napi::Env env) {
+        runtime.Dispatch([&device, &nativeSetup](Napi::Env env) {
             env.Global().Set("globalThis", env.Global());
             device.AddToJavaScript(env);
+            if (nativeSetup)
+            {
+                nativeSetup(env);
+            }
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 std::cout << message << std::endl;
@@ -373,12 +383,49 @@ namespace
             }
         });
 
-        WaitForTestCompletion(renderFuture, renderTimeout, "quad preparation/render timed out");
+        const auto deadline = std::chrono::steady_clock::now() + renderTimeout;
+        while (renderFuture.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
+        {
+            if (std::chrono::steady_clock::now() >= deadline)
+            {
+                throw std::runtime_error{"quad preparation/render timed out"};
+            }
+            device.FinishRenderingCurrentFrame();
+            frameOpen = false;
+            device.StartRenderingCurrentFrame();
+            frameOpen = true;
+        }
+        renderFuture.get();
 
         device.FinishRenderingCurrentFrame();
         frameOpen = false;
 
         return Helpers::ReadPixels(device.GetPlatformInfo(), outputTexture, width, height);
+    }
+
+    std::vector<uint8_t> RenderVolumeQuad(const std::string& fragmentShader)
+    {
+        const auto initializeVolume = [](Napi::Env env) {
+            env.Global().Set("initializeTestVolume", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+                auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(info.Env());
+                auto scope = context.AcquireFrameCompletionScope();
+                auto* texture = info[0].As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+                texture->Create3D(2, 2, 2, false, bgfx::TextureFormat::RGBA8, BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT);
+                const std::array<uint8_t, 32> pixels{
+                    64, 128, 192, 255, 64, 128, 192, 255, 64, 128, 192, 255, 64, 128, 192, 255,
+                    64, 128, 192, 255, 64, 128, 192, 255, 64, 128, 192, 255, 64, 128, 192, 255};
+                bgfx::updateTexture3D(texture->Handle(), 0, 0, 0, 0, 2, 2, 2, bgfx::copy(pixels.data(), static_cast<uint32_t>(pixels.size())));
+            }));
+        };
+        return RenderFullScreenQuad(2, 2,
+            "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+            fragmentShader, false, R"(
+                var raw = BABYLON.RawTexture.CreateRGBATexture(new Uint8Array([0, 0, 0, 255]),
+                    1, 1, scene, false, false, BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                initializeTestVolume(raw.getInternalTexture()._hardwareTexture.underlyingResource);
+                raw.getInternalTexture().is3D = true;
+                material.setTexture("volume", raw);
+            )", std::chrono::seconds{30}, initializeVolume);
     }
 }
 
@@ -421,6 +468,221 @@ TEST(ShaderCompilation, FragCoordSetupAndPreparationFailuresPropagate)
             EXPECT_NE(std::string{error.what()}.find(expectedError), std::string::npos) << error.what();
         }
     }
+#endif
+}
+
+TEST(ShaderCompilation, MultiRowMorphTextureMatchesVertexAttributes)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader = R"(
+        attribute vec3 position;
+        #include<morphTargetsVertexGlobalDeclaration>
+        #include<morphTargetsVertexDeclaration>[0..maxSimultaneousMorphTargets]
+        void main()
+        {
+            vec3 positionUpdated = position;
+            #include<morphTargetsVertexGlobal>
+            #include<morphTargetsVertex>[0..maxSimultaneousMorphTargets]
+            gl_Position = vec4(positionUpdated, 1.0);
+        }
+    )";
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+    std::vector<uint8_t> expected;
+    for (bool useTexture : {false, true})
+    {
+        const std::string setup = "var useTexture = " + std::string{useTexture ? "true" : "false"} + R"(;
+            var caps = engine.getCaps();
+            var maxTextureSize = caps.maxTextureSize;
+            caps.maxTextureSize = 2;
+            try {
+                var manager = new BABYLON.MorphTargetManager(scene);
+                manager.useTextureToStoreTargets = useTexture;
+                manager.areUpdatesFrozen = true;
+                var first = new BABYLON.MorphTarget("first", 0.25, scene);
+                first.setPositions(new Float32Array([
+                    -0.75, -0.875, 0, 0.875, -0.75, 0,
+                     0.5,   0.75, 0,  -0.5, 0.875, 0
+                ]));
+                var second = new BABYLON.MorphTarget("second", 0.5, scene);
+                second.setPositions(new Float32Array([
+                    -0.875, -0.5, 0,   0.5, -0.875, 0,
+                     0.875,  0.5, 0, -0.75,   0.75, 0
+                ]));
+                manager.addTarget(first);
+                manager.addTarget(second);
+                manager.areUpdatesFrozen = false;
+                quad.morphTargetManager = manager;
+                if (useTexture && (!manager.isUsingTextureForTargets ||
+                    manager._textureWidth !== 2 || manager._textureHeight !== 2)) {
+                    throw new Error("Expected a two-layer, multi-row morph texture");
+                }
+            } finally {
+                caps.maxTextureSize = maxTextureSize;
+            }
+        )";
+        auto pixels = RenderFullScreenQuad(32, 32, vertexShader, fragmentShader, false, setup);
+        if (useTexture)
+        {
+            EXPECT_EQ(pixels, expected);
+        }
+        else
+        {
+            expected = std::move(pixels);
+            ASSERT_EQ(expected.size(), 32u * 32u * 4u);
+            EXPECT_EQ(expected[0], 0);
+            EXPECT_EQ(expected[(16 * 32 + 16) * 4], 255);
+        }
+    }
+#endif
+}
+
+TEST(ShaderCompilation, VolumeCoordinateSideEffectsExecuteOnce)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    for (const std::string coordinate : {"nextCoordinate()", "targetSize.x > 0.0 ? nextCoordinate() : vec3(0.0)"})
+    {
+        SCOPED_TRACE(coordinate);
+        const std::string fragmentShader = R"(
+            precision highp float;
+            uniform highp sampler3D volume;
+            uniform vec2 targetSize;
+            int calls = 0;
+            vec3 nextCoordinate() { calls++; return vec3(0.25, 0.75, 0.25); }
+            void main()
+            {
+                vec4 sampled = texture(volume, )" + coordinate + R"();
+                gl_FragColor = vec4(float(calls) * 0.25, sampled.g, sampled.b, 1.0);
+            }
+        )";
+        const auto pixels = RenderVolumeQuad(fragmentShader);
+        ASSERT_EQ(pixels.size(), 16u);
+        for (size_t i = 0; i < pixels.size(); i += 4)
+        {
+            EXPECT_NEAR(pixels[i], 64, 1);
+            EXPECT_EQ(pixels[i + 1], 128);
+            EXPECT_EQ(pixels[i + 2], 192);
+            EXPECT_EQ(pixels[i + 3], 255);
+        }
+    }
+#endif
+}
+
+TEST(ShaderCompilation, IntegerVolumeCoordinatesExecuteOnce)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    for (const std::string coordinate : {"nextCoordinate()", "targetSize.x > 0.0 ? nextCoordinate() : ivec3(0)"})
+    {
+        SCOPED_TRACE(coordinate);
+        const auto pixels = RenderVolumeQuad(R"(
+            precision highp float;
+            precision highp int;
+            uniform highp sampler3D volume;
+            uniform vec2 targetSize;
+            int calls = 0;
+            int lodCalls = 0;
+            ivec3 nextCoordinate() { calls++; return ivec3(0, 1, 0); }
+            int nextLod() { lodCalls++; return 0; }
+            void main()
+            {
+                vec4 sampled = texelFetch(volume, )" + coordinate + R"(, nextLod());
+                gl_FragColor = vec4(float(calls) * 0.25, float(lodCalls) * 0.25, sampled.b, 1.0);
+            }
+        )");
+        ASSERT_EQ(pixels.size(), 16u);
+        for (size_t i = 0; i < pixels.size(); i += 4)
+        {
+            EXPECT_NEAR(pixels[i], 64, 1);
+            EXPECT_NEAR(pixels[i + 1], 64, 1);
+            EXPECT_EQ(pixels[i + 2], 192);
+            EXPECT_EQ(pixels[i + 3], 255);
+        }
+    }
+#endif
+}
+
+TEST(ShaderCompilation, RawVolumeExplicitGradientsPreserveRows)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || !defined(HAS_NATIVE_IMAGE_LOADING)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(2, 2,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        R"(
+            precision highp float;
+            uniform highp sampler3D volume;
+            void main()
+            {
+                gl_FragColor = textureGrad(volume, vec3(0.25, 0.25, 0.75),
+                    vec3(0.01, 0.03, 0.0), vec3(0.02, 0.04, 0.0));
+            }
+        )", false, R"(
+            var raw = BABYLON.RawTexture.CreateRGBATexture(new Uint8Array([0, 0, 0, 255]),
+                1, 1, scene, false, false, BABYLON.Texture.NEAREST_SAMPLINGMODE);
+            var data = new Uint8Array([
+                64, 32, 16, 255, 128, 32, 16, 255, 64, 224, 16, 255, 128, 224, 16, 255,
+                64, 32, 192, 255, 128, 32, 192, 255, 64, 224, 192, 255, 128, 224, 192, 255]);
+            engine._engine.loadRawTexture3D(raw.getInternalTexture()._hardwareTexture.underlyingResource,
+                data, 2, 2, 2, testVolumeFormat, false, false);
+            if (data[1] !== 32 || data[9] !== 224) throw new Error("Volume upload mutated source rows");
+            raw.getInternalTexture().is3D = true;
+            material.setTexture("volume", raw);
+        )", std::chrono::seconds{30}, [](Napi::Env env) {
+            env.Global().Set("testVolumeFormat", Napi::Number::New(env, bgfx::TextureFormat::RGBA8));
+        });
+    ASSERT_EQ(pixels.size(), 16u);
+    for (size_t i = 0; i < pixels.size(); i += 4)
+    {
+        EXPECT_EQ(pixels[i], 64);
+        EXPECT_EQ(pixels[i + 1], 32);
+        EXPECT_EQ(pixels[i + 2], 192);
+        EXPECT_EQ(pixels[i + 3], 255);
+    }
+#endif
+}
+
+TEST(NativeEngineReadback, FloatTexturesUsePinnedJavaScriptByteContract)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        "precision highp float; void main() { gl_FragColor = vec4(1.0); }", false, R"(
+            globalThis.__prepare = function () {
+                var texture = BABYLON.RawTexture.CreateRGBATexture(
+                    new Float32Array([0.25, 0.5, 0.75, 1.0]), 1, 1, scene, false, false,
+                    BABYLON.Texture.NEAREST_SAMPLINGMODE, BABYLON.Constants.TEXTURETYPE_FLOAT);
+                return texture.readPixels().then(function (bytes) {
+                    if (!(bytes instanceof Uint8Array) || bytes.length !== 4) {
+                        throw new Error("Default float readback must contain four RGBA8 bytes");
+                    }
+                    [64, 128, 191, 255].forEach(function (value, index) {
+                        if (Math.abs(bytes[index] - value) > 1) {
+                            throw new Error("Incorrect float-to-byte readback at channel " + index);
+                        }
+                    });
+                    var destination = new Uint8Array(12);
+                    destination.fill(91);
+                    var region = destination.subarray(4, 8);
+                    return texture.readPixels(0, 0, region).then(function (result) {
+                        if (result !== region) throw new Error("Readback replaced the supplied buffer");
+                        for (var i = 0; i < destination.length; ++i) {
+                            var expected = i >= 4 && i < 8 ? bytes[i - 4] : 91;
+                            if (destination[i] !== expected) throw new Error("Readback changed bytes outside its view");
+                        }
+                    });
+                });
+            };
+        )");
+    EXPECT_EQ(pixels, (std::vector<uint8_t>{255, 255, 255, 255}));
 #endif
 }
 

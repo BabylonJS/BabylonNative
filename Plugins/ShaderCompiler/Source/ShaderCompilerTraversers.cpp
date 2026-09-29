@@ -2142,14 +2142,14 @@ namespace Babylon::ShaderCompilerTraversers
         class FlipSamplerCoordinatesTraverser : public TIntermTraverser
         {
         public:
-            static void Traverse(TProgram& program)
+            static void Traverse(TProgram& program, IdGenerator& ids)
             {
                 for (auto stage : {EShLangVertex, EShLangFragment, EShLangCompute})
                 {
                     auto* intermediate{program.getIntermediate(stage)};
                     if (intermediate != nullptr)
                     {
-                        FlipSamplerCoordinatesTraverser traverser{intermediate};
+                        FlipSamplerCoordinatesTraverser traverser{intermediate, ids};
                         intermediate->getTreeRoot()->traverse(&traverser);
                     }
                 }
@@ -2158,12 +2158,12 @@ namespace Babylon::ShaderCompilerTraversers
         protected:
             virtual bool visitAggregate(TVisit visit, TIntermAggregate* node) override
             {
-                if (visit == EvPreVisit && (node->getOp() == EOpTexture || node->getOp() == EOpTextureLod))
+                if (visit == EvPreVisit && (node->getOp() == EOpTexture || node->getOp() == EOpTextureLod || node->getOp() == EOpTextureGrad))
                 {
                     auto& sequence = node->getSequence();
                     if (sequence.size() >= 2)
                     {
-                        // Flip only V; preserve shadow depth, array layer, and volume depth. Leave cube directions unchanged.
+                        // Raw array uploads keep their rows; leave array coordinates and cube directions unchanged.
                         auto* sampler = sequence[0]->getAsTyped();
                         auto* coordinate = sequence[1]->getAsTyped();
                         if (sampler != nullptr && coordinate != nullptr &&
@@ -2173,12 +2173,14 @@ namespace Babylon::ShaderCompilerTraversers
                         {
                             const TSampler& samp = sampler->getType().getSampler();
                             const int vecSize = coordinate->getType().getVectorSize();
-                            // Esd2D covers both sampler2D and sampler2DArray (arrayed flag separate).
-                            if ((samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
+                            if (!samp.arrayed && (samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
                             {
-                                sequence[1] = (vecSize == 2)
-                                    ? FlipVerticalCoordinate(coordinate)
-                                    : FlipVerticalCoordinateKeepTail(coordinate);
+                                sequence[1] = FlipVerticalCoordinate(coordinate);
+                                if (node->getOp() == EOpTextureGrad)
+                                {
+                                    sequence[2] = FlipVerticalCoordinate(sequence[2]->getAsTyped(), true);
+                                    sequence[3] = FlipVerticalCoordinate(sequence[3]->getAsTyped(), true);
+                                }
                             }
                         }
                     }
@@ -2200,7 +2202,15 @@ namespace Babylon::ShaderCompilerTraversers
                             const int vecSize = coordinate->getType().getVectorSize();
                             if (vecSize == 2 || (vecSize == 3 && sampler->getType().getSampler().dim == Esd3D))
                             {
-                                sequence[1] = FlipVerticalTexelCoordinate(coordinate, sampler, lod);
+                                const auto& loc = coordinate->getLoc();
+                                TIntermSymbol coordinateTemp{m_ids.Next(), "bnTexelCoordinate", TType{EbtInt, EvqTemporary, vecSize}};
+                                TIntermSymbol lodTemp{m_ids.Next(), "bnTexelLod", TType{EbtInt, EvqTemporary}};
+                                auto* captureCoordinate = m_intermediate->addAssign(EOpAssign, m_intermediate->addSymbol(coordinateTemp), coordinate, loc);
+                                auto* captureLod = m_intermediate->addAssign(EOpAssign, m_intermediate->addSymbol(lodTemp), lod, loc);
+                                auto* flipped = FlipVerticalTexelCoordinate(m_intermediate->addSymbol(coordinateTemp), sampler, m_intermediate->addSymbol(lodTemp));
+                                // Keep evaluation inside the original expression, including conditional branches.
+                                sequence[1] = m_intermediate->addComma(captureCoordinate, m_intermediate->addComma(captureLod, flipped, loc), loc);
+                                sequence[2] = m_intermediate->addSymbol(lodTemp);
                             }
                         }
                     }
@@ -2210,78 +2220,32 @@ namespace Babylon::ShaderCompilerTraversers
             }
 
         private:
-            // Post-visit is enabled so that texelFetch coordinates can be rewritten after their
-            // children have been traversed. The rewrite copies the coordinate subtree, and doing
-            // that on the way down would leave the copy unvisited while the original still got
-            // flipped, so a nested texture() call inside the coordinate would be flipped in one
-            // reference but not the other.
-            FlipSamplerCoordinatesTraverser(TIntermediate* intermediate)
+            // Rewrite texelFetch after nested samples have been visited.
+            FlipSamplerCoordinatesTraverser(TIntermediate* intermediate, IdGenerator& ids)
                 : TIntermTraverser{true, false, true}
                 , m_intermediate{intermediate}
+                , m_ids{ids}
             {
             }
 
-            // Builds `coordinate * vec2(1.0, -1.0) + vec2(0.0, 1.0)`, i.e. (u, 1.0 - v).
-            TIntermTyped* FlipVerticalCoordinate(TIntermTyped* coordinate)
+            // Component-wise math evaluates the coordinate once and preserves shadow/volume depth.
+            TIntermTyped* FlipVerticalCoordinate(TIntermTyped* coordinate, bool isGradient = false)
             {
                 const TSourceLoc& loc{coordinate->getLoc()};
-                TType vec2Type{EbtFloat, EvqConst, 2};
-
-                TConstUnionArray scaleValues{2};
-                scaleValues[0].setDConst(1.0);
-                scaleValues[1].setDConst(-1.0);
-                TIntermTyped* scale{m_intermediate->addConstantUnion(scaleValues, vec2Type, loc)};
-
-                TConstUnionArray offsetValues{2};
-                offsetValues[0].setDConst(0.0);
-                offsetValues[1].setDConst(1.0);
-                TIntermTyped* offset{m_intermediate->addConstantUnion(offsetValues, vec2Type, loc)};
+                const int vecSize = coordinate->getType().getVectorSize();
+                TType vectorType{EbtFloat, EvqConst, vecSize};
+                TConstUnionArray scaleValues{vecSize};
+                TConstUnionArray offsetValues{vecSize};
+                for (int i = 0; i < vecSize; ++i)
+                {
+                    scaleValues[i].setDConst(i == 1 ? -1.0 : 1.0);
+                    offsetValues[i].setDConst(i == 1 && !isGradient ? 1.0 : 0.0);
+                }
+                TIntermTyped* scale{m_intermediate->addConstantUnion(scaleValues, vectorType, loc)};
+                TIntermTyped* offset{m_intermediate->addConstantUnion(offsetValues, vectorType, loc)};
 
                 TIntermTyped* scaled{m_intermediate->addBinaryMath(EOpMul, coordinate, scale, loc)};
                 return m_intermediate->addBinaryMath(EOpAdd, scaled, offset, loc);
-            }
-
-            // Preserve trailing components. Scalar extracts avoid OpVectorTimesScalar in SPIRV_CROSS_WEBMIN.
-            TIntermTyped* FlipVerticalCoordinateKeepTail(TIntermTyped* coordinate)
-            {
-                const TSourceLoc& loc{coordinate->getLoc()};
-                const int vecSize = static_cast<int>(coordinate->getType().getVectorSize());
-                TType floatType{EbtFloat, EvqTemporary, 1};
-                TType resultType{EbtFloat, EvqTemporary, vecSize};
-
-                // coordinate is read once per component; clone so no node ends up with two parents.
-                TIntermTyped* coordXSrc = coordinate;
-                TIntermTyped* coordYSrc = CloneExpression(coordinate);
-                TIntermTyped* coordZSrc = (vecSize >= 3) ? CloneExpression(coordinate) : nullptr;
-                TIntermTyped* coordWSrc = (vecSize >= 4) ? CloneExpression(coordinate) : nullptr;
-
-                TIntermTyped* x{m_intermediate->addIndex(EOpIndexDirect, coordXSrc, m_intermediate->addConstantUnion(0, loc), loc)};
-                x->setType(floatType);
-                TIntermTyped* y{m_intermediate->addIndex(EOpIndexDirect, coordYSrc, m_intermediate->addConstantUnion(1, loc), loc)};
-                y->setType(floatType);
-
-                TConstUnionArray oneValues{1};
-                oneValues[0].setDConst(1.0);
-                TIntermTyped* one{m_intermediate->addConstantUnion(oneValues, TType{EbtFloat, EvqConst, 1}, loc)};
-                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, one, y, loc)};
-
-                TIntermAggregate* ctor{m_intermediate->makeAggregate(x, loc)};
-                ctor = m_intermediate->growAggregate(ctor, flippedY, loc);
-                if (vecSize >= 3)
-                {
-                    TIntermTyped* z{m_intermediate->addIndex(EOpIndexDirect, coordZSrc, m_intermediate->addConstantUnion(2, loc), loc)};
-                    z->setType(floatType);
-                    ctor = m_intermediate->growAggregate(ctor, z, loc);
-                }
-                if (vecSize >= 4)
-                {
-                    TIntermTyped* w{m_intermediate->addIndex(EOpIndexDirect, coordWSrc, m_intermediate->addConstantUnion(3, loc), loc)};
-                    w->setType(floatType);
-                    ctor = m_intermediate->growAggregate(ctor, w, loc);
-                }
-
-                const TOperator op = (vecSize == 3) ? EOpConstructVec3 : EOpConstructVec4;
-                return m_intermediate->setAggregateOperator(ctor, op, resultType, loc);
             }
 
             // Build (x, textureSize(sampler, lod).y - 1 - y[, z]).
@@ -2290,6 +2254,7 @@ namespace Babylon::ShaderCompilerTraversers
             {
                 const TSourceLoc& loc{coordinate->getLoc()};
 
+                // The coordinate and LOD are captured symbols, not the original expressions.
                 // Clone repeated operands so each AST node retains one parent.
                 TIntermTyped* samplerClone{CloneExpression(sampler)};
                 TIntermTyped* lodClone{CloneExpression(lod)};
@@ -2337,9 +2302,7 @@ namespace Babylon::ShaderCompilerTraversers
             // verbatim rather than rebuilt through TIntermediate::add*, so no constant folding,
             // type promotion or precision inference can make the copy diverge from the original.
             //
-            // Anything not reachable in a texel coordinate expression (ternaries, array methods)
-            // is reported rather than silently skipped -- returning the coordinate unflipped would
-            // sample with an un-flipped Y and produce a wrong image with no diagnostic at all.
+            // Unsupported sampler expressions are reported rather than silently left unflipped.
             TIntermTyped* CloneExpression(TIntermTyped* node)
             {
                 if (node == nullptr)
@@ -2414,6 +2377,7 @@ namespace Babylon::ShaderCompilerTraversers
             }
 
             TIntermediate* m_intermediate{};
+            IdGenerator& m_ids;
         };
 
         /// Convert gl_FragCoord to GL coordinates on top-left-origin backends.
@@ -2696,9 +2660,9 @@ namespace Babylon::ShaderCompilerTraversers
         InvertYDerivativeOperandsTraverser::Traverse(program);
     }
 
-    void FlipSamplerCoordinates(TProgram& program)
+    void FlipSamplerCoordinates(TProgram& program, IdGenerator& ids)
     {
-        FlipSamplerCoordinatesTraverser::Traverse(program);
+        FlipSamplerCoordinatesTraverser::Traverse(program, ids);
     }
 
     void FlipFragCoordY(TProgram& program, IdGenerator& ids)

@@ -43,7 +43,7 @@ namespace
 
 namespace Babylon::Graphics
 {
-    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex, bool isMultisampled)
+    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex, bool isMultisampled, uint8_t depthOneVolumeAttachmentMask)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
         , m_handle{handle}
@@ -55,6 +55,7 @@ namespace Babylon::Graphics
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
         , m_isMultisampled{isMultisampled}
+        , m_depthOneVolumeAttachmentMask{depthOneVolumeAttachmentMask}
         , m_disposed{false}
         , m_depthStencilAttachmentIndex{depthStencilAttachmentIndex}
     {
@@ -123,6 +124,24 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Unbind()
     {
+        if (m_depthOneVolumeAttachmentMask == 0 || !m_viewId.has_value())
+        {
+            return;
+        }
+        const auto view = m_deviceContext.AcquireNewViewId();
+        bgfx::resetView(view);
+        for (uint8_t attachment = 0; attachment < MaxColorAttachments; ++attachment)
+        {
+            if ((m_depthOneVolumeAttachmentMask & (1 << attachment)) != 0)
+            {
+                bgfx::TextureRegion source{};
+                source.init(bgfx::getTexture(m_handle, attachment), 0, 0, Width(), Height());
+                source.depth = 1;
+                auto destination = source;
+                destination.z = 1;
+                m_deviceContext.GetActiveEncoder()->blit(view, destination, source);
+            }
+        }
     }
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask)

@@ -38,10 +38,13 @@ namespace bgfx
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <limits>
 #include <optional>
 #include <array>
 #include <utility>
+#include <vector>
 
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
 #include <atomic>
@@ -52,6 +55,21 @@ namespace Babylon
 {
     namespace
     {
+        uint32_t ReadUnsignedInteger(const Napi::Value& value, const char* name, uint32_t maximum, uint32_t minimum = 0, bool truncate = false)
+        {
+            double number = value.As<Napi::Number>().DoubleValue();
+            if (truncate)
+            {
+                number = std::trunc(number);
+            }
+            if (!std::isfinite(number) || number < minimum || number > maximum || std::floor(number) != number)
+            {
+                throw Napi::RangeError::New(value.Env(), std::string{name} + " must be a finite integer between " +
+                    std::to_string(minimum) + " and " + std::to_string(maximum));
+            }
+            return static_cast<uint32_t>(number);
+        }
+
         namespace TextureSampling
         {
             constexpr uint32_t SAMPLER_MAG_POINT = BGFX_SAMPLER_MAG_POINT;
@@ -107,28 +125,6 @@ namespace Babylon
             constexpr uint32_t MAX = 3;
             constexpr uint32_t MIN = 4;
             constexpr uint32_t DARKEN = 5;
-        }
-
-        // Normalize floating-point readbacks to RGBA32F to preserve depth/HDR values.
-        constexpr bool IsFloatTextureFormat(bgfx::TextureFormat::Enum format)
-        {
-            switch (format)
-            {
-                case bgfx::TextureFormat::R16F:
-                case bgfx::TextureFormat::RG16F:
-                case bgfx::TextureFormat::RGBA16F:
-                case bgfx::TextureFormat::R32F:
-                case bgfx::TextureFormat::RG32F:
-                case bgfx::TextureFormat::RGBA32F:
-                case bgfx::TextureFormat::RGB9E5F:
-                case bgfx::TextureFormat::RG11B10F:
-                case bgfx::TextureFormat::D16F:
-                case bgfx::TextureFormat::D24F:
-                case bgfx::TextureFormat::D32F:
-                    return true;
-                default:
-                    return false;
-            }
         }
 
         void FlipImage(gsl::span<uint8_t> image, uint32_t height)
@@ -492,7 +488,7 @@ namespace Babylon
                         {
                             if (bgfx::getCaps()->originBottomLeft)
                             {
-                                FlipImage({const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size}, image->m_height);
+                                FlipImage({const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size}, imageMip.m_height);
                             }
 
                             bgfx::ReleaseFn releaseFn{};
@@ -1061,6 +1057,7 @@ namespace Babylon
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
+                InstanceMethod("setTextureComparisonFunction", &NativeEngine::SetTextureComparisonFunction),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
 
@@ -1726,8 +1723,10 @@ namespace Babylon
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto widthValue = info[1].As<Napi::Number>();
         const auto heightValue = info[2].As<Napi::Number>();
-        const uint16_t width = static_cast<uint16_t>(widthValue.Uint32Value());
-        const uint16_t height = static_cast<uint16_t>(heightValue.Uint32Value());
+        const uint32_t maxDimension = std::min<uint32_t>(UINT16_MAX, bgfx::getCaps()->limits.maxTextureSize);
+        // Render-target ratios can be fractional; preserve WebGL's integer-size conversion.
+        const uint16_t width = static_cast<uint16_t>(ReadUnsignedInteger(widthValue, "Texture width", maxDimension, 1, /*truncate*/ true));
+        const uint16_t height = static_cast<uint16_t>(ReadUnsignedInteger(heightValue, "Texture height", maxDimension, 1, /*truncate*/ true));
         const bool hasMips = info[3].As<Napi::Boolean>();
         const double formatValue = info[4].As<Napi::Number>().DoubleValue();
         if (!std::isfinite(formatValue) || formatValue < 0 || formatValue >= static_cast<double>(bgfx::TextureFormat::Count) ||
@@ -1740,7 +1739,10 @@ namespace Babylon
         const bool renderTarget = info[5].As<Napi::Boolean>();
         const bool srgb = info[6].As<Napi::Boolean>();
         const uint32_t samples = info[7].IsUndefined() ? 1 : info[7].As<Napi::Number>().Uint32Value();
-        const bool isCube = !info[8].IsUndefined() && info[8].As<Napi::Boolean>();
+        const bool isCube = info.Length() > 8 && !info[8].IsUndefined() && info[8].As<Napi::Boolean>();
+        // Optional array-layer count; also carries volume depth when is3D is set.
+        const uint16_t numLayers = (info.Length() > 9 && !info[9].IsUndefined()) ? static_cast<uint16_t>(ReadUnsignedInteger(info[9], "Texture layer/depth count", UINT16_MAX)) : 1;
+        const bool is3D = info.Length() > 10 && !info[10].IsUndefined() && info[10].As<Napi::Boolean>();
 
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
@@ -1758,13 +1760,17 @@ namespace Babylon
             flags |= BGFX_TEXTURE_SRGB;
         }
 
-        // Texture::Create2D also adds BLIT_DST for Babylon-owned textures.
-        const auto createFlags = isCube ? flags : flags | BGFX_TEXTURE_BLIT_DST;
-        if (!bgfx::isTextureValid(0, isCube, 1, format, createFlags))
+        // Match Create3D's depth padding and Create2D's additional allocation flag.
+        const uint16_t textureDepth = is3D ? (numLayers > 0 ? numLayers : 1) : 0;
+        const uint16_t textureLayers = (isCube || is3D) ? 1 : (numLayers > 0 ? numLayers : 1);
+        const auto createFlags = (!isCube && !is3D) || (is3D && textureDepth == 1 && renderTarget)
+            ? flags | BGFX_TEXTURE_BLIT_DST : flags;
+        const uint16_t physicalDepth = is3D ? std::max<uint16_t>(2, textureDepth) : 0;
+        if (!bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags))
         {
             // Some backends support 24-bit depth only with packed stencil storage.
             if (renderTarget && format == bgfx::TextureFormat::D24 &&
-                bgfx::isTextureValid(0, isCube, 1, bgfx::TextureFormat::D24S8, createFlags))
+                bgfx::isTextureValid(physicalDepth, isCube, textureLayers, bgfx::TextureFormat::D24S8, createFlags))
             {
                 format = bgfx::TextureFormat::D24S8;
             }
@@ -1783,11 +1789,16 @@ namespace Babylon
             {
                 throw Napi::RangeError::New(info.Env(), "Cube texture width and height must be equal");
             }
+            // Cube render target: width is the per-face size.
             texture->CreateCube(width, hasMips, 1, format, flags);
+        }
+        else if (is3D)
+        {
+            texture->Create3D(width, height, textureDepth, hasMips, format, flags);
         }
         else
         {
-            texture->Create2D(width, height, hasMips, 1, format, flags);
+            texture->Create2D(width, height, hasMips, textureLayers, format, flags);
         }
     }
 
@@ -2400,6 +2411,51 @@ namespace Babylon
         texture.SamplerFlags(flags);
     }
 
+    // A zero comparison function disables depth comparison.
+    void NativeEngine::SetTextureComparisonFunction(const Napi::CallbackInfo& info)
+    {
+        auto& texture = *info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        const uint32_t comparisonFunction = ReadUnsignedInteger(info[1], "Texture comparison function", UINT32_MAX);
+
+        uint32_t flags = texture.SamplerFlags();
+        flags &= ~BGFX_SAMPLER_COMPARE_MASK;
+
+        // GL enum values used by Babylon.Constants (NEVER=0x0200 .. ALWAYS=0x0207).
+        switch (comparisonFunction)
+        {
+            case 0:
+                break;
+            case 0x0200: // NEVER
+                flags |= BGFX_SAMPLER_COMPARE_NEVER;
+                break;
+            case 0x0201: // LESS
+                flags |= BGFX_SAMPLER_COMPARE_LESS;
+                break;
+            case 0x0202: // EQUAL
+                flags |= BGFX_SAMPLER_COMPARE_EQUAL;
+                break;
+            case 0x0203: // LEQUAL
+                flags |= BGFX_SAMPLER_COMPARE_LEQUAL;
+                break;
+            case 0x0204: // GREATER
+                flags |= BGFX_SAMPLER_COMPARE_GREATER;
+                break;
+            case 0x0205: // NOTEQUAL
+                flags |= BGFX_SAMPLER_COMPARE_NOTEQUAL;
+                break;
+            case 0x0206: // GEQUAL
+                flags |= BGFX_SAMPLER_COMPARE_GEQUAL;
+                break;
+            case 0x0207: // ALWAYS
+                flags |= BGFX_SAMPLER_COMPARE_ALWAYS;
+                break;
+            default:
+                throw Napi::RangeError::New(info.Env(), "Texture comparison function must be 0 or a GL comparison enum between 0x0200 and 0x0207");
+        }
+
+        texture.SamplerFlags(flags);
+    }
+
     void NativeEngine::SetTexture(NativeDataStream::Reader& data)
     {
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
@@ -2590,7 +2646,7 @@ namespace Babylon
             // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
             // slice via TextureRegion::z, but a cropped sub-rect still needs the blit path. Cube-face
             // reads use srcZ = face index on the source region of that blit.
-            if (isCubeFace || x != 0 || y != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
+            if (isCubeFace || x != 0 || blitY != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
@@ -2622,7 +2678,7 @@ namespace Babylon
                         std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
                         if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
                         {
-                            throw std::runtime_error{"Texture conversion to RGBA8 failed."};
+                            throw std::runtime_error{"Texture conversion for readback failed."};
                         }
                         textureBuffer = convertedTextureBuffer;
 #endif
@@ -2759,6 +2815,7 @@ namespace Babylon
         // BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS is 8, so 8 color + 1 depth fits in a fixed array.
         std::array<bgfx::Attachment, 9> attachments{};
         uint8_t numAttachments = 0;
+        uint8_t depthOneVolumeAttachmentMask{};
 
         // An uninitialized texture requests sampleable depth; alias the attachment back into it.
         Graphics::Texture* depthStencilTextureRequest = depthStencilTexture;
@@ -2779,6 +2836,17 @@ namespace Babylon
                 // Do not attach an uninitialized depth request as color.
                 depthStencilTextureRequest = texture;
                 continue;
+            }
+
+            const auto layers = texture->IsCube() ? 6 : texture->Is3D()
+                ? std::max(1, texture->Depth() >> mip) : texture->NumLayers();
+            if (attachmentLayer >= layers)
+            {
+                throw Napi::RangeError::New(env, "Frame buffer layer must be an integer within the texture");
+            }
+            if (texture->Is3D() && texture->Depth() == 1 && mip == 0)
+            {
+                depthOneVolumeAttachmentMask |= static_cast<uint8_t>(1 << numAttachments);
             }
 
             // Auto-generation requires format support and a base-mip attachment.
@@ -2914,7 +2982,7 @@ namespace Babylon
         }
 
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, frameBufferDepthOwnerIndex, isMultisampled);
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, frameBufferDepthOwnerIndex, isMultisampled, depthOneVolumeAttachmentMask);
 
         return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
@@ -2928,7 +2996,10 @@ namespace Babylon
     void NativeEngine::BindFrameBuffer(NativeDataStream::Reader& data)
     {
         Graphics::FrameBuffer* frameBuffer = data.ReadPointer<Graphics::FrameBuffer>();
-        m_boundFrameBuffer->Unbind();
+        if (m_boundFrameBuffer != nullptr)
+        {
+            m_boundFrameBuffer->Unbind();
+        }
         m_boundFrameBuffer = frameBuffer;
         m_boundFrameBuffer->Bind();
         m_boundFrameBufferNeedsRebinding.Set(false);

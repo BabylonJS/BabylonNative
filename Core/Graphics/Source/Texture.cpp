@@ -3,6 +3,7 @@
 #include <Babylon/Graphics/FrameBuffer.h>
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <utility>
 
 namespace
@@ -215,14 +216,15 @@ namespace Babylon::Graphics
     {
         Dispose();
 
-        // bgfx creates depth-1 volumes as Texture2D, which cannot bind to sampler3D.
-        // Pad to two slices to obtain a 3D view, including for placeholder volumes.
-        if (depth < 2)
+        // bgfx needs two physical slices for a 3D view; retain the logical depth.
+        const uint16_t physicalDepth = std::max<uint16_t>(2, depth);
+        auto createFlags = flags;
+        if (depth == 1 && (flags & BGFX_TEXTURE_RT_MASK) != 0)
         {
-            depth = 2;
+            createFlags |= BGFX_TEXTURE_BLIT_DST;
         }
 
-        m_handle = bgfx::createTexture3D(width, height, depth, hasMips, format, flags);
+        m_handle = bgfx::createTexture3D(width, height, physicalDepth, hasMips, format, createFlags);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create 3D texture"};
@@ -230,11 +232,34 @@ namespace Babylon::Graphics
 
         m_ownsHandle = true;
         SetMetadata(width, height, depth, hasMips, false, true, 1, format, flags);
+        if (depth == 1)
+        {
+            bgfx::TextureInfo info{};
+            bgfx::calcTextureSize(info, width, height, physicalDepth, false, hasMips, 1, format);
+            for (uint8_t mip = 0; mip < info.numMips; ++mip)
+            {
+                const auto mipWidth = static_cast<uint16_t>(std::max(1, width >> mip));
+                const auto mipHeight = static_cast<uint16_t>(std::max(1, height >> mip));
+                const auto mipDepth = static_cast<uint16_t>(std::max(1, physicalDepth >> mip));
+                bgfx::TextureInfo mipInfo{};
+                bgfx::calcTextureSize(mipInfo, mipWidth, mipHeight, mipDepth, false, false, 1, format);
+                const auto memory = bgfx::alloc(mipInfo.storageSize);
+                std::memset(memory->data, 0, memory->size);
+                bgfx::updateTexture3D(m_handle, mip, 0, 0, 0, mipWidth, mipHeight, mipDepth, memory);
+            }
+        }
     }
 
     void Texture::Update3D(uint8_t mip, uint16_t x, uint16_t y, uint16_t z, uint16_t width, uint16_t height, uint16_t depth, const bgfx::Memory* mem)
     {
+        // Keep the padding identical, including partial updates, for normalized filtering.
+        const auto padding = m_depth == 1 && mip == 0 && z == 0 && depth == 1
+            ? bgfx::copy(mem->data, mem->size) : nullptr;
         bgfx::updateTexture3D(m_handle, mip, x, y, z, width, height, depth, mem);
+        if (padding)
+        {
+            bgfx::updateTexture3D(m_handle, mip, x, y, 1, width, height, 1, padding);
+        }
     }
 
     void Texture::CreateCube(uint16_t size, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
