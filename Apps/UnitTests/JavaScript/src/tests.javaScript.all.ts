@@ -394,6 +394,77 @@ describe("Canvas2D", function () {
     ];
   }
 
+  itWithGpu("uses strokeRect geometry after a preceding fillRect", function () {
+    const resource = createCanvas(16, 16);
+    try {
+      const ctx = resource.context;
+      ctx.fillStyle = "blue";
+      ctx.fillRect(2, 2, 12, 12);
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(2.5, 2.5, 11, 11);
+
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 16, 8, 1), "outside inset border")
+        .to.deep.equal([0, 0, 0, 0]);
+      expect(pixelAt(pixels, 16, 8, 2), "pixel-aligned inset border")
+        .to.deep.equal([255, 255, 255, 255]);
+      expect(pixelAt(pixels, 16, 8, 3), "fill inside border")
+        .to.deep.equal([0, 0, 255, 255]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("does not restroke earlier rectangles with a later strokeRect", function () {
+    const resource = createCanvas(32, 16);
+    try {
+      const ctx = resource.context;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "red";
+      ctx.strokeRect(2.5, 2.5, 9, 11);
+      ctx.strokeStyle = "blue";
+      ctx.strokeRect(20.5, 2.5, 9, 11);
+
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 32, 2, 8), "first rectangle retains its stroke")
+        .to.deep.equal([255, 0, 0, 255]);
+      expect(pixelAt(pixels, 32, 20, 8), "second rectangle is drawn")
+        .to.deep.equal([0, 0, 255, 255]);
+      expect(pixelAt(pixels, 32, 16, 8), "gap remains untouched")
+        .to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("preserves a rectangular clip while resetting strokeRect geometry", function () {
+    const resource = createCanvas(32, 16);
+    try {
+      const ctx = resource.context;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, 16, 16);
+      ctx.clip();
+      ctx.fillStyle = "blue";
+      ctx.fillRect(0, 0, 32, 16);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "white";
+      ctx.strokeRect(2.5, 2.5, 27, 11);
+      ctx.restore();
+
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 32, 2, 8), "stroke inside clip")
+        .to.deep.equal([255, 255, 255, 255]);
+      expect(pixelAt(pixels, 32, 8, 8), "fill inside clip")
+        .to.deep.equal([0, 0, 255, 255]);
+      expect(pixelAt(pixels, 32, 29, 8), "stroke outside clip")
+        .to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
   (skipCanvasGpuTests ? it.skip : it)(
     "intersects nested clips and restores parent clips on the GPU",
     async function () {

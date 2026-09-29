@@ -597,6 +597,7 @@ namespace Babylon::Polyfills::Internal
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
+        ResetPathState();
         nvgRect(*m_nvg, left, top, width, height);
         BindStrokeStyle(info);
         SetFilterStack();
