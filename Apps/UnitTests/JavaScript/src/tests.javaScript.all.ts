@@ -1,5 +1,6 @@
 import * as Mocha from "mocha";
 import { expect } from "chai";
+import { registerPngTests } from "./tests.nativeEngine.png";
 import { Buffer } from "buffer";
 import {
   RequestFile,
@@ -23,7 +24,6 @@ import {
   BlurPostProcess
 } from "@babylonjs/core";
 import { GradientMaterial } from "@babylonjs/materials";
-import { registerPngTests } from "./tests.nativeEngine.png";
 import { registerAttributeLessInstancingTests } from "./tests.nativeEngine.attributeLessInstancing";
 
 declare var describe: typeof Mocha.describe;

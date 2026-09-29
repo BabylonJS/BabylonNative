@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <gsl/span>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -11,21 +12,112 @@
 #include <Babylon/ScriptLoader.h>
 
 #include <chrono>
+#include <cstring>
 #include <cstdlib>
 #include <future>
 #include <iostream>
+#include <map>
+#include <stdexcept>
 #include <string>
+#include <vector>
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
+#include <d3d11shader.h>
+#include <d3dcompiler.h>
+#include <wrl/client.h>
+#endif
 
 #if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
 #include <Babylon/Plugins/ShaderCompiler.h>
 #include <spirv_cross.hpp>
-#include <cstring>
-#include <stdexcept>
 #endif
 
 using namespace std::chrono_literals;
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11) || defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+namespace
+{
+    gsl::span<const uint8_t> ReadUniformFreeShader(const std::vector<uint8_t>& bytes)
+    {
+        // These fixtures have no uniforms: bgfx v12's code length starts at byte 22.
+        constexpr size_t codeOffset = 26;
+        if (bytes.size() < codeOffset || bytes[3] != 12 || bytes[20] != 0 || bytes[21] != 0)
+        {
+            throw std::runtime_error{"Expected a uniform-free bgfx v12 shader"};
+        }
+        uint32_t codeSize{};
+        std::memcpy(&codeSize, bytes.data() + codeOffset - sizeof(codeSize), sizeof(codeSize));
+        if (codeSize > bytes.size() - codeOffset)
+        {
+            throw std::runtime_error{"Invalid shader byte length"};
+        }
+        return {bytes.data() + codeOffset, codeSize};
+    }
+}
+#endif
+
+#if defined(HAS_SHADER_COMPILER) && defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
+TEST(ShaderCompilation, InterfaceBlocksHaveMatchingD3D11Semantics)
+{
+#if !defined(HAS_SHADER_INTERFACE_BLOCKS)
+    GTEST_SKIP() << "Interface blocks require BABYLON_NATIVE_DISABLE_WEBMIN";
+#else
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto shader = compiler.Compile(R"(
+        #extension GL_EXT_shader_io_blocks : require
+        precision highp float;
+        in vec3 position;
+        out Payload { vec3 tint; } vertexData;
+        void main() {
+            gl_Position = vec4(position, 1.0);
+            vertexData.tint = position;
+        }
+    )", R"(
+        #extension GL_EXT_shader_io_blocks : require
+        precision highp float;
+        in Payload { vec3 tint; } fragmentData;
+        out vec4 color;
+        void main() { color = vec4(fragmentData.tint, 1.0); }
+    )");
+    const auto readSignature = [](const std::vector<uint8_t>& bytes, bool vertex) {
+        const auto code = ReadUniformFreeShader(bytes);
+        Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
+        if (FAILED(D3DReflect(code.data(), code.size(), IID_PPV_ARGS(&reflection))))
+        {
+            throw std::runtime_error{"Could not reflect DXBC shader"};
+        }
+        D3D11_SHADER_DESC description{};
+        if (FAILED(reflection->GetDesc(&description)))
+        {
+            throw std::runtime_error{"Could not read DXBC shader description"};
+        }
+        std::map<unsigned, unsigned> signature;
+        const auto count = vertex ? description.OutputParameters : description.InputParameters;
+        for (UINT i = 0; i < count; ++i)
+        {
+            D3D11_SIGNATURE_PARAMETER_DESC parameter{};
+            const auto result = vertex ? reflection->GetOutputParameterDesc(i, &parameter) : reflection->GetInputParameterDesc(i, &parameter);
+            if (FAILED(result))
+            {
+                throw std::runtime_error{"Could not read DXBC signature parameter"};
+            }
+            if (std::strcmp(parameter.SemanticName, "TEXCOORD") == 0)
+            {
+                EXPECT_TRUE(signature.emplace(parameter.SemanticIndex, parameter.Mask).second);
+            }
+        }
+        return signature;
+    };
+    const auto outputs = readSignature(shader.VertexBytes, true);
+    const auto inputs = readSignature(shader.FragmentBytes, false);
+    ASSERT_EQ(outputs.size(), 1u);
+    ASSERT_EQ(inputs.size(), 1u);
+    EXPECT_EQ(outputs, inputs);
+#endif
+}
+#endif
 
 #ifdef HAS_SHADER_COMPILER
 TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
@@ -328,20 +420,13 @@ namespace
 {
     spirv_cross::Compiler ReadVulkanShader(const std::vector<uint8_t>& bytes)
     {
-        // These fixtures have no uniforms: bgfx v12's code length starts at byte 22.
-        constexpr size_t codeOffset = 26;
-        if (bytes.size() < codeOffset || bytes[3] != 12 || bytes[20] != 0 || bytes[21] != 0)
-        {
-            throw std::runtime_error{"Expected a uniform-free bgfx v12 shader"};
-        }
-        uint32_t codeSize{};
-        std::memcpy(&codeSize, bytes.data() + codeOffset - sizeof(codeSize), sizeof(codeSize));
-        if (codeSize % sizeof(uint32_t) != 0 || codeSize > bytes.size() - codeOffset)
+        const auto code = ReadUniformFreeShader(bytes);
+        if (code.size() % sizeof(uint32_t) != 0)
         {
             throw std::runtime_error{"Invalid SPIR-V byte length"};
         }
-        std::vector<uint32_t> words(codeSize / sizeof(uint32_t));
-        std::memcpy(words.data(), bytes.data() + codeOffset, codeSize);
+        std::vector<uint32_t> words(code.size() / sizeof(uint32_t));
+        std::memcpy(words.data(), code.data(), code.size());
         return spirv_cross::Compiler{std::move(words)};
     }
 

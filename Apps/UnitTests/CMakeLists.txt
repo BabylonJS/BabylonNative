@@ -48,6 +48,7 @@ set(SOURCES
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
     "Source/Tests.NativeEngine.ImageFormats.cpp"
+    "Source/Tests.NativeEngine.Mipmaps.cpp"
     "Source/Tests.NativeEngine.DepthTextures.cpp"
     "Source/Tests.NativeEngine.CubeRenderTargets.cpp"
     "Source/Tests.NativeEngine.Msaa.cpp"
@@ -124,6 +125,9 @@ target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
     target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal)
     target_compile_definitions(UnitTests PRIVATE HAS_SHADER_COMPILER)
+    if(BABYLON_NATIVE_DISABLE_WEBMIN)
+        target_compile_definitions(UnitTests PRIVATE HAS_SHADER_INTERFACE_BLOCKS)
+    endif()
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
@@ -155,6 +159,10 @@ endif()
 
 if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS BABYLON_NATIVE_GRAPHICS_API_D3D12)
+endif()
+
+if(GRAPHICS_API STREQUAL "D3D11")
+    target_compile_definitions(UnitTests PRIVATE BABYLON_NATIVE_GRAPHICS_API_D3D11)
 endif()
 
 if(GRAPHICS_API STREQUAL "Vulkan")

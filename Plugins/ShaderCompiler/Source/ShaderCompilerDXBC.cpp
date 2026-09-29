@@ -111,6 +111,7 @@ namespace Babylon::Plugins
         std::map<std::string, std::string> vertexAttributeRenaming = {};
         auto builtInInstanceDataSlots = ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming, instancedAttributes);
         ShaderCompilerTraversers::FlattenNarrowVaryingArrays(program, ids);
+        ShaderCompilerTraversers::AssignInterStageVaryingLocations(program, ids);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);

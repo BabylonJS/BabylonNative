@@ -53,7 +53,9 @@ namespace Babylon
             constexpr uint32_t SAMPLER_MIN_LINEAR = 0;
             constexpr uint32_t SAMPLER_MIP_POINT = BGFX_SAMPLER_MIP_POINT;
             constexpr uint32_t SAMPLER_MIP_LINEAR = 0;
-            constexpr uint32_t SAMPLER_MIP_IGNORE = BGFX_SAMPLER_MIP_POINT; // HACK: bgfx has no support for ignoring mips
+            // Native command-stream marker, stripped before passing sampler flags to bgfx.
+            constexpr uint32_t SAMPLER_MIP_IGNORE = 0x00000800;
+            static_assert((SAMPLER_MIP_IGNORE & BGFX_SAMPLER_BITS_MASK) == 0);
 
             // clang-format off
             // Names, as in constants.ts are MAG_MIN(_MIP?)     MAG                     MIN                         MIP
@@ -347,7 +349,7 @@ namespace Babylon
                 }
 
                 bimg::ImageContainer* oldImage{image};
-                image = bimg::imageGenerateMips(&allocator, *image);
+                image = bimg::imageGenerateMips(&allocator, *image, srgb);
                 bimg::imageFree(oldImage);
 
                 if (image == nullptr)
@@ -1734,6 +1736,10 @@ namespace Babylon
                 arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
+                if (image == nullptr)
+                {
+                    throw std::runtime_error{"Failed to prepare image for texture (unsupported format or image conversion failure)."};
+                }
                 LoadTextureFromImage(texture, image, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
@@ -1797,6 +1803,7 @@ namespace Babylon
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value())};
         const auto generateMips{info[5].As<Napi::Boolean>().Value()};
         const auto invertY{info[6].As<Napi::Boolean>().Value()};
+        const auto srgb{info.Length() > 7 && !info[7].IsUndefined() ? info[7].As<Napi::Boolean>().Value() : false};
 
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
@@ -1810,14 +1817,14 @@ namespace Babylon
         // escaping here would not be routed to an onError callback. Surface it as a JS error.
         try
         {
-            image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
+            image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
         }
         catch (const std::exception& exception)
         {
             throw Napi::Error::New(Env(), exception.what());
         }
 
-        LoadTextureFromImage(texture, image, false);
+        LoadTextureFromImage(texture, image, srgb);
 #endif
     }
 
@@ -2265,7 +2272,8 @@ namespace Babylon
         uint32_t flags = texture.SamplerFlags();
 
         flags &= ~(BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
-        flags |= value;
+        flags |= value & ~TextureSampling::SAMPLER_MIP_IGNORE;
+        texture.SamplerMaxLod((value & TextureSampling::SAMPLER_MIP_IGNORE) != 0 ? 0 : UINT8_MAX);
 
         // Disable anisotropy if either min/mag are point.
         if ((flags & BGFX_SAMPLER_MIN_POINT) != 0 || (flags & BGFX_SAMPLER_MAG_POINT) != 0)
@@ -2318,18 +2326,10 @@ namespace Babylon
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
         bgfx::Encoder* encoder = GetEncoder();
-
-        const uint16_t numLayers = texture->ViewNumLayers();
-        if (numLayers != 0)
-        {
-            // Select a single array slice of a multi-layer texture at bind time (e.g. NV12 decoder
-            // frame-pool slice). The texture itself stays a full TEXTURE2DARRAY.
-            encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->ViewFirstLayer(), numLayers, 0, UINT8_MAX, texture->SamplerFlags());
-        }
-        else
-        {
-            encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->SamplerFlags());
-        }
+        const uint16_t firstLayer = texture->ViewNumLayers() != 0 ? texture->ViewFirstLayer() : 0;
+        const uint16_t numLayers = texture->ViewNumLayers() != 0 ? texture->ViewNumLayers() : UINT16_MAX;
+        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(),
+            firstLayer, numLayers, 0, UINT8_MAX, texture->SamplerFlags(), 0, texture->SamplerMaxLod());
     }
 
     void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)

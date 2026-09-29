@@ -528,6 +528,8 @@ TEST(NativeEngineClear, ProceduralTextureRetainsBothInputs)
 #endif
 }
 
+
+
 TEST(NativeEngineInstanceData, QueuedDrawRetainsDataBeforeUpdate)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -719,15 +721,11 @@ TEST(ShaderCompilation, FragCoordYMatchesInterpolatedUV)
               << ", row " << (HEIGHT - 1) << " fragCoord=" << last.first << " uv=" << last.second
               << std::endl;
 
-    // Guard against the whole comparison passing vacuously: the reference ramp
-    // has to actually sweep the range rather than sitting at a constant.
+    // Reject a constant ramp that would pass the comparison vacuously.
     ASSERT_GT(std::abs(first.second - last.second), 200)
         << "vUV.y reference ramp did not vary across the target";
 
-    // Both channels are produced by the same fragment invocation, so they must
-    // agree row by row no matter which end of the image the readback starts at.
-    // The tolerance absorbs interpolation and 8-bit quantization only; a flipped
-    // gl_FragCoord.y misses by the full range of the ramp.
+    // Allow interpolation/8-bit quantization, but not a vertical flip.
     for (uint32_t row = 0; row < HEIGHT; ++row)
     {
         const auto values = texel(row);
@@ -833,8 +831,7 @@ TEST(ShaderCompilation, FragCoordAndUVAddressATextureIdentically)
         return static_cast<int>(pixels[static_cast<size_t>(row) * WIDTH * 4]);
     };
 
-    // Guard against a vacuous pass: the source must actually vary down the image,
-    // otherwise a vertical mirror would be undetectable.
+    // A constant source cannot detect a vertical mirror.
     ASSERT_GT(std::abs(red(uvPixels, 0) - red(uvPixels, HEIGHT - 1)), 200)
         << "the source texture must vary from top to bottom for this test to mean anything";
 
@@ -846,5 +843,63 @@ TEST(ShaderCompilation, FragCoordAndUVAddressATextureIdentically)
         ASSERT_EQ(red(fragCoordPixels, row), red(uvPixels, row))
             << "row " << row << " differs between gl_FragCoord and uv addressing";
     }
+#endif
+}
+
+TEST(ShaderCompilation, InterfaceBlocksLinkDifferentInstanceNames)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || !defined(HAS_SHADER_INTERFACE_BLOCKS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1, R"(
+        #extension GL_EXT_shader_io_blocks : require
+        attribute vec3 position;
+        out Payload { vec3 tint; } vertexData;
+        void main() {
+            gl_Position = vec4(position, 1.0);
+            vertexData.tint = vec3(0.25, 0.5, 0.75);
+        }
+    )", R"(
+        #extension GL_EXT_shader_io_blocks : require
+        precision highp float;
+        in Payload { vec3 tint; } fragmentData;
+        void main() { gl_FragColor = vec4(fragmentData.tint, 1.0); }
+    )", false);
+    ASSERT_EQ(pixels.size(), 4u);
+    EXPECT_NEAR(pixels[0], 64, 1);
+    EXPECT_NEAR(pixels[1], 128, 1);
+    EXPECT_NEAR(pixels[2], 191, 1);
+    EXPECT_EQ(pixels[3], 255);
+#endif
+}
+
+TEST(ShaderCompilation, InterfaceBlocksReserveAllMemberLocations)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || !defined(HAS_SHADER_INTERFACE_BLOCKS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1, R"(
+        #extension GL_EXT_shader_io_blocks : require
+        attribute vec3 position;
+        out Payload { mat2 transform; vec3 tint; } aData;
+        varying vec3 zExtra;
+        void main() {
+            gl_Position = vec4(position, 1.0);
+            aData.transform = mat2(0.5);
+            aData.tint = vec3(0.0, 0.0, 0.75);
+            zExtra = vec3(0.5, 1.0, 0.0);
+        }
+    )", R"(
+        #extension GL_EXT_shader_io_blocks : require
+        precision highp float;
+        in Payload { mat2 transform; vec3 tint; } aData;
+        varying vec3 zExtra;
+        void main() { gl_FragColor = vec4(aData.transform * zExtra.xy, aData.tint.z + zExtra.z, 1.0); }
+    )", false);
+    ASSERT_EQ(pixels.size(), 4u);
+    EXPECT_NEAR(pixels[0], 64, 1);
+    EXPECT_NEAR(pixels[1], 128, 1);
+    EXPECT_NEAR(pixels[2], 191, 1);
+    EXPECT_EQ(pixels[3], 255);
 #endif
 }

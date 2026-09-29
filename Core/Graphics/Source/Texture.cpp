@@ -327,6 +327,16 @@ namespace Babylon::Graphics
         m_samplerFlags = value;
     }
 
+    uint8_t Texture::SamplerMaxLod() const
+    {
+        return m_samplerMaxLod;
+    }
+
+    void Texture::SamplerMaxLod(uint8_t value)
+    {
+        m_samplerMaxLod = value;
+    }
+
     uint16_t Texture::ViewFirstLayer() const
     {
         return m_viewFirstLayer;

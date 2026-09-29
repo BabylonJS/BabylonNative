@@ -2529,6 +2529,116 @@ namespace Babylon::ShaderCompilerTraversers
             TIntermediate* m_intermediate{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
+
+        /// Assign matching locations across stages; mutate symbols in place to retain single-parent ASTs.
+        class InterStageVaryingLocationTraverser : private TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& /*ids*/)
+            {
+                auto* vs = program.getIntermediate(EShLangVertex);
+                auto* fs = program.getIntermediate(EShLangFragment);
+                if (vs == nullptr || fs == nullptr)
+                {
+                    return;
+                }
+
+                InterStageVaryingLocationTraverser vsCollector{EvqVaryingOut};
+                vs->getTreeRoot()->traverse(&vsCollector);
+                InterStageVaryingLocationTraverser fsCollector{EvqVaryingIn};
+                fs->getTreeRoot()->traverse(&fsCollector);
+
+                // Pack fragment-read varyings first in both stages. Leading vertex-only slots can break D3D linkage.
+                std::map<std::string, const TType*> sharedNameToType{};
+                std::map<std::string, const TType*> vsOnlyNameToType{};
+                for (const auto& [name, symbol] : fsCollector.m_linkerSymbols)
+                {
+                    sharedNameToType[name] = &symbol->getType();
+                }
+                for (const auto& [name, symbol] : vsCollector.m_linkerSymbols)
+                {
+                    if (sharedNameToType.find(name) == sharedNameToType.end())
+                    {
+                        vsOnlyNameToType[name] = &symbol->getType();
+                    }
+                }
+
+                if (sharedNameToType.empty() && vsOnlyNameToType.empty())
+                {
+                    return;
+                }
+
+                std::map<std::string, unsigned int> nameToLocation{};
+                unsigned int nextLocation = 0;
+                for (const auto& [name, type] : sharedNameToType)
+                {
+                    nameToLocation[name] = nextLocation;
+                    nextLocation += TIntermediate::computeTypeLocationSize(*type, EShLangFragment);
+                }
+                for (const auto& [name, type] : vsOnlyNameToType)
+                {
+                    nameToLocation[name] = nextLocation;
+                    nextLocation += TIntermediate::computeTypeLocationSize(*type, EShLangFragment);
+                }
+
+                ApplyLocations(nameToLocation, vsCollector.m_symbols);
+                ApplyLocations(nameToLocation, fsCollector.m_symbols);
+            }
+
+        private:
+            explicit InterStageVaryingLocationTraverser(TStorageQualifier storage)
+                : TIntermTraverser{}
+                , m_storage{storage}
+            {
+            }
+
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                if (symbol->getType().getQualifier().storage != m_storage)
+                {
+                    return;
+                }
+
+                // Skip built-ins (gl_Position, gl_PointSize, etc.) — they use dedicated semantics.
+                if (symbol->getType().getQualifier().builtIn != EbvNone)
+                {
+                    return;
+                }
+
+                m_symbols.push_back(symbol);
+                if (IsLinkerObject(this->path))
+                {
+                    m_linkerSymbols[InterfaceName(*symbol).c_str()] = symbol;
+                }
+            }
+
+            static const TString& InterfaceName(const TIntermSymbol& symbol)
+            {
+                // Block instance names are stage-local; the type identifies the shared interface.
+                const auto& type = symbol.getType();
+                return type.getBasicType() == EbtBlock ? type.getTypeName() : symbol.getName();
+            }
+
+            static void ApplyLocations(
+                const std::map<std::string, unsigned int>& nameToLocation,
+                const std::vector<TIntermSymbol*>& symbols)
+            {
+                for (TIntermSymbol* symbol : symbols)
+                {
+                    const std::string name = InterfaceName(*symbol).c_str();
+                    const auto it = nameToLocation.find(name);
+                    if (it == nameToLocation.end())
+                    {
+                        continue;
+                    }
+                    symbol->getWritableType().getQualifier().layoutLocation = it->second;
+                }
+            }
+
+            TStorageQualifier m_storage{};
+            std::map<std::string, TIntermSymbol*> m_linkerSymbols{};
+            std::vector<TIntermSymbol*> m_symbols{};
+        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -2574,6 +2684,11 @@ namespace Babylon::ShaderCompilerTraversers
     void FlattenNarrowVaryingArrays(TProgram& program, IdGenerator& ids)
     {
         NarrowVaryingArrayFlattenerTraverser::Traverse(program, ids);
+    }
+
+    void AssignInterStageVaryingLocations(TProgram& program, IdGenerator& ids)
+    {
+        InterStageVaryingLocationTraverser::Traverse(program, ids);
     }
 
     void InvertYDerivativeOperands(TProgram& program)
