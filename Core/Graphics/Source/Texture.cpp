@@ -111,8 +111,8 @@ namespace
                 {
                     throw std::runtime_error{"Failed to create render-target initialization framebuffer"};
                 }
-                Babylon::Graphics::FrameBuffer frameBuffer{context, frameBufferHandle, mipWidth, mipHeight, false, depth, stencil};
-                frameBuffer.Clear(*context.GetActiveEncoder(), clearFlags, 0, 0.0f, 0);
+                Babylon::Graphics::FrameBuffer frameBuffer{context, frameBufferHandle, mipWidth, mipHeight, false, depth, stencil, -1, multisampled};
+                frameBuffer.Clear(*context.GetActiveEncoder(), clearFlags, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0);
             }
         }
 
@@ -256,14 +256,13 @@ namespace Babylon::Graphics
         bgfx::updateTextureCube(m_handle, layer, side, mip, x, y, width, height, mem, pitch);
     }
 
-    void Texture::Attach(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
+    void Texture::Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
 
         assert(bgfx::isValid(handle));
         m_handle = handle;
-
-        m_ownsHandle = false;
+        m_ownsHandle = ownsHandle;
         SetMetadata(width, height, 0, hasMips, false, false, numLayers, format, flags);
     }
 

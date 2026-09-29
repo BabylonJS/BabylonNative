@@ -4,12 +4,15 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/FrameBuffer.h>
+#include <Babylon/Graphics/Texture.h>
 #ifdef HAS_TEST_UTILS
 #include <Babylon/Plugins/TestUtils.h>
 #endif
 
 #include <chrono>
+#include <array>
 #include <future>
+#include <memory>
 #include <optional>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -138,6 +141,97 @@ TEST(Device, FrameBufferMultisamplingTracksItsOwnTarget)
 #endif
     });
     device.FinishRenderingCurrentFrame();
+}
+
+TEST(Device, ClearPalettePreservesPendingColorsAndResetsAfterSubmission)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP() << "GPU rendering/readback is unavailable in this test configuration";
+#endif
+    device.StartRenderingCurrentFrame();
+    if (!bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::RGBA32F, BGFX_TEXTURE_RT))
+    {
+        GTEST_SKIP() << "RGBA32F render targets are unavailable";
+    }
+    constexpr uint16_t width = 40;
+    std::array<std::array<float, 4>, width> colors{};
+    for (uint16_t x = 0; x < width; ++x)
+    {
+        colors[x] = x < 24 ? std::array<float, 4>{float(x) / 255.f, float(x * 3) / 255.f, 0.f, 1.f}
+                          : std::array<float, 4>{float(x), -0.5f, 0.125f, 1.f};
+    }
+    std::array<float, width * 4> pixels{};
+    std::promise<void> completed;
+    auto future = completed.get_future();
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&](Napi::Env env) {
+        try
+        {
+            device.AddToJavaScript(env);
+            auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+            auto scope = context.AcquireFrameCompletionScope();
+            Babylon::Graphics::Texture target{context};
+            target.Create2D(width, 1, false, 1, bgfx::TextureFormat::RGBA32F, BGFX_TEXTURE_RT);
+            const auto handle = target.Handle();
+            Babylon::Graphics::FrameBuffer frameBuffer{context, bgfx::createFrameBuffer(1, &handle), width, 1, false, false, false};
+            for (uint16_t x = 0; x < width; ++x)
+            {
+                frameBuffer.SetScissor(float(x), 0, 1, 1);
+                const auto& color = colors[x];
+                frameBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, color[0], color[1], color[2], color[3], 1.f, 0);
+            }
+            const auto& last = colors.back();
+            EXPECT_NO_THROW(frameBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, last[0], last[1], last[2], last[3], 1.f, 0));
+            EXPECT_THROW(frameBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, 100.f, 0.f, 0.f, 1.f, 1.f, 0), std::runtime_error);
+            auto readback = std::make_shared<Babylon::Graphics::Texture>(context);
+            readback->Create2D(width, 1, false, 1, bgfx::TextureFormat::RGBA32F, BGFX_TEXTURE_READ_BACK);
+            bgfx::TextureRegion source{};
+            source.init(handle, 0, 0, width, 1);
+            auto destination = source;
+            destination.handle = readback->Handle();
+            context.GetActiveEncoder()->blit(context.AcquireNewViewId(), destination, source);
+            context.ReadTextureAsync(readback->Handle(), gsl::make_span(reinterpret_cast<uint8_t*>(pixels.data()), sizeof(pixels)))
+                .then(arcana::inline_scheduler, arcana::cancellation::none(), [readback, &completed](arcana::expected<void, std::exception_ptr> result) {
+                    if (result.has_error())
+                    {
+                        completed.set_exception(result.error());
+                    }
+                    else
+                    {
+                        completed.set_value();
+                    }
+                });
+        }
+        catch (...)
+        {
+            completed.set_exception(std::current_exception());
+        }
+    });
+    while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        device.StartRenderingCurrentFrame();
+    }
+    EXPECT_NO_THROW(future.get());
+    for (size_t x = 0; x < width; ++x)
+    {
+        for (size_t channel = 0; channel < 4; ++channel)
+        {
+            EXPECT_NEAR(pixels[x * 4 + channel], colors[x][channel], 0.000001f) << x << ", " << channel;
+        }
+    }
+    device.FinishRenderingCurrentFrame();
+    RunOnRuntimeThread(runtime, [](Napi::Env env) {
+        auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        EXPECT_EQ(context.AcquireClearPaletteIndex({100.f, 0.f, 0.f, 1.f}), 0);
+    });
+    device.DisableRendering();
+    device.EnableRendering();
+    RunOnRuntimeThread(runtime, [](Napi::Env env) {
+        auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        EXPECT_EQ(context.AcquireClearPaletteIndex({200.f, 0.f, 0.f, 1.f}), 0);
+    });
 }
 
 // The guarantee the fix relies on: acquiring a FrameCompletionScope blocks until a frame is live,

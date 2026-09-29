@@ -88,7 +88,12 @@ TEST(NativeEngineCubeRenderTargets, ClearsEachFaceIndependentlyAndPreserves2DDef
                     Napi::Number::New(env, 1), Napi::Number::New(env, face)});
                 frameBuffers.Set(face, frameBufferValue);
                 auto* frameBuffer = frameBufferValue.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();
-                frameBuffer->Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, colors[face], 1.0f, 0);
+                const auto color = colors[face];
+                frameBuffer->Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR,
+                    static_cast<float>((color >> 24) & 0xff) / 255.0f,
+                    static_cast<float>((color >> 16) & 0xff) / 255.0f,
+                    static_cast<float>((color >> 8) & 0xff) / 255.0f,
+                    static_cast<float>(color & 0xff) / 255.0f, 1.0f, 0);
             }
             const auto expectInvalidLayer = [&](Napi::Value texture, double layer) {
                 SCOPED_TRACE(layer);

@@ -942,7 +942,7 @@ namespace Babylon::Polyfills::Internal
         frameBuffer.Bind();
         if (needClear)
         {
-            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.f, 0);
         }
         frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
         const auto width = m_canvas->GetWidth();
@@ -960,7 +960,7 @@ namespace Babylon::Polyfills::Internal
         };
         std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
             // clear framebuffer when released
-            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.f, 0);
             this->m_canvas->m_frameBufferPool.Release(frameBuffer);
             frameBuffer->Unbind();
         };

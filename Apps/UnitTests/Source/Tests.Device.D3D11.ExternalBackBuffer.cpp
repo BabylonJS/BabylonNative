@@ -181,7 +181,9 @@ namespace
         {
             device.StartRenderingCurrentFrame();
             Babylon::Graphics::FrameBuffer backBuffer{context, BGFX_INVALID_HANDLE, 0, 0, true, true, true};
-            backBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, color, 1.0f, 0);
+            backBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR,
+                static_cast<uint8_t>(color >> 24) / 255.0f, static_cast<uint8_t>(color >> 16) / 255.0f,
+                static_cast<uint8_t>(color >> 8) / 255.0f, static_cast<uint8_t>(color) / 255.0f, 1.0f, 0);
             device.FinishRenderingCurrentFrame();
         }
         if (!captured->has_value())

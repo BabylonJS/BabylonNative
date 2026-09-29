@@ -349,7 +349,7 @@ namespace Babylon
                               // bgfx::begin failing); skip the clear rather than dereference it.
                               if (clearEncoder != nullptr)
                               {
-                                  frameBuffer.Clear(*clearEncoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                                  frameBuffer.Clear(*clearEncoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.0f, 0);
                               }
 
                               viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;

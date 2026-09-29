@@ -308,6 +308,7 @@ namespace Babylon::Graphics
             }
 
             m_state.Bgfx.Initialized = true;
+            ResetClearPalette();
             UpdateBackBufferState();
 
             m_cancellationSource.emplace();
@@ -666,6 +667,32 @@ namespace Babylon::Graphics
         m_frameVertexLayouts.clear();
     }
 
+    void DeviceImpl::ResetClearPalette()
+    {
+        std::scoped_lock lock{m_clearPaletteMutex};
+        m_clearPaletteSize = 0;
+    }
+
+    uint8_t DeviceImpl::AcquireClearPaletteIndex(const std::array<float, 4>& color)
+    {
+        std::scoped_lock lock{m_clearPaletteMutex};
+        for (uint8_t index = 0; index < m_clearPaletteSize; ++index)
+        {
+            if (m_clearPalette[index] == color)
+            {
+                return index;
+            }
+        }
+        if (m_clearPaletteSize == m_clearPalette.size())
+        {
+            throw std::runtime_error{"Too many distinct floating-point clear colors in one physical frame"};
+        }
+        const auto index = m_clearPaletteSize++;
+        m_clearPalette[index] = color;
+        bgfx::setPaletteColor(index, color.data());
+        return index;
+    }
+
     void DeviceImpl::FlushViewsIfNeeded()
     {
         // Reserve headroom below the hard cap: a single draw/clear operation can
@@ -768,6 +795,7 @@ namespace Babylon::Graphics
         const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
         CompleteReadTextureRequests(frameNumber);
 
+        ResetClearPalette();
         m_nextViewId.store(0);
         m_midFrameFlushCount.fetch_add(1);
 
@@ -787,6 +815,7 @@ namespace Babylon::Graphics
             // Discard the whole frame.
             ReleaseFrameVertexLayouts();
             bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
             if (m_bgfxCallback.IsDeviceLost())
             {
                 return;
@@ -843,6 +872,7 @@ namespace Babylon::Graphics
             // Release the old native swap chain before another one can bind its window.
             ReleaseFrameVertexLayouts();
             bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
             if (m_state.BackBufferColor || m_state.BackBufferDepthStencil)
             {
                 CreateExternalBackBuffer(swapChain);
@@ -861,6 +891,7 @@ namespace Babylon::Graphics
             DestroyBackBuffer();
             ReleaseFrameVertexLayouts();
             bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
         }
 
         if (swapChain.nwh != nullptr)
@@ -947,6 +978,7 @@ namespace Babylon::Graphics
 
         CompleteReadTextureRequests(frameNumber);
 
+        ResetClearPalette();
         m_nextViewId.store(0);
         m_midFrameFlushCount.store(0);
     }

@@ -157,6 +157,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.CreateVertexLayout(layout);
     }
 
+    uint8_t DeviceContext::AcquireClearPaletteIndex(const std::array<float, 4>& color)
+    {
+        return m_graphicsImpl.AcquireClearPaletteIndex(color);
+    }
+
     void DeviceContext::FlushViewsIfNeeded()
     {
         m_graphicsImpl.FlushViewsIfNeeded();
