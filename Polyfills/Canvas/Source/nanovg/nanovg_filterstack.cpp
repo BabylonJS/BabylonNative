@@ -32,7 +32,7 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 
 #define BLUR_MAX_PX 1000
 #define BLUR_TAPS 13
-#define BLUR_UNIFORM_SIZE 5 // fit into vec4: ceil(BLUR_TAPS / 4)
+#define BLUR_UNIFORM_SIZE 5 // Matches u_weights[5] in fs_gaussblur.sc.
 
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
@@ -240,6 +240,7 @@ void nanovg_filterstack::Render(
                     if (sigma < 2)
                     {
                         std::vector<float> kernel = CalculateGaussianKernel(sigma, BLUR_TAPS);
+                        kernel.resize(BLUR_UNIFORM_SIZE * 4, 0.0f);
                         setUniform(m_uniforms.u_direction, &direction, 1);
                         setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
 

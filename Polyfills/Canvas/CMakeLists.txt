@@ -29,6 +29,7 @@ set(SOURCES
     "Source/Font.h"
     "Source/StbTrueType.cpp"
     "Source/nanosvg.h"
+    "Source/nanosvgrast.h"
     "Source/nanovg/nanovg.cpp"
     "Source/nanovg/nanovg.h"
     "Source/nanovg/nanovg_babylon.cpp"

@@ -14,6 +14,7 @@
 #include "../../../Polyfills/Canvas/Source/NativeInstanceRegistry.h"
 #include "../../../Polyfills/Canvas/Source/Path2D.h"
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg.h"
+#include "../../../Polyfills/Canvas/Source/nanovg/nanovg_filterstack.h"
 
 #include <array>
 #include <chrono>
@@ -124,6 +125,69 @@ TEST(CanvasReadback, NativeBrandsRequireTheOriginalReceiver)
         registerToken.Call(newWrapper, {});
         EXPECT_EQ(Registry::TryUnwrap(env, oldWrapper), nullptr);
         EXPECT_EQ(Registry::TryUnwrap(env, newWrapper), &token);
+    });
+}
+
+TEST(CanvasReadback, ImageCallbacksAreJavaScriptOwned)
+{
+    RunCanvasTest([](Napi::Env env) {
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Image").As<Napi::Function>();
+        auto image = constructor.New({});
+        const auto object = env.Global().Get("Object").As<Napi::Object>();
+        const auto descriptor = object.Get("getOwnPropertyDescriptor").As<Napi::Function>();
+        const auto callback = Napi::Function::New(env, [](const Napi::CallbackInfo&) {});
+        for (const auto* event : {"onload", "onerror"})
+        {
+            EXPECT_TRUE(image.Get(event).IsNull());
+            image.Set(event, callback);
+            const auto property = descriptor.Call(object, {image, Napi::String::New(env, event)}).As<Napi::Object>();
+            EXPECT_EQ(property.Get("value"), callback);
+            image.Set(event, env.Null());
+            EXPECT_TRUE(image.Get(event).IsNull());
+        }
+    });
+}
+
+TEST(CanvasReadback, GaussianBlurPadsUniformUploads)
+{
+    RunCanvasTest([](Napi::Env env) {
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+        auto canvas = constructor.New({});
+        canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")});
+        auto* nativeCanvas = Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas);
+        nativeCanvas->UpdateRenderTarget();
+        auto* frameBuffer = &nativeCanvas->GetFrameBuffer();
+        nanovg_filterstack filters;
+        filters.ParseString("blur(1px)");
+        size_t uploads{};
+        filters.Render(BGFX_INVALID_HANDLE,
+            [&](bgfx::UniformHandle handle, const void* data, uint16_t count) {
+                if (handle.idx != nanovg_filterstack::m_uniforms.u_weights.idx)
+                {
+                    return;
+                }
+                ++uploads;
+                ASSERT_EQ(count, 5u);
+                const auto* weights = static_cast<const float*>(data);
+                float sum{};
+                for (size_t i = 0; i < 13; ++i)
+                {
+                    sum += weights[i];
+                    EXPECT_FLOAT_EQ(weights[i], weights[12 - i]);
+                }
+                EXPECT_NEAR(sum, 1.0f, 1e-6f);
+                for (size_t i = 13; i < count * 4u; ++i)
+                {
+                    EXPECT_FLOAT_EQ(weights[i], 0.0f);
+                }
+            },
+            [](bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*) {},
+            [](bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*) {},
+            [](bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*) {},
+            frameBuffer,
+            [frameBuffer] { return frameBuffer; },
+            [](Babylon::Graphics::FrameBuffer*) {});
+        EXPECT_EQ(uploads, 2u);
     });
 }
 
