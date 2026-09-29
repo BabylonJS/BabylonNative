@@ -106,15 +106,10 @@ foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
     endif()
 endforeach()
 
-# WebP parsing is provided by bimg's bundled simplewebp decoder. Set its
-# parser macro explicitly when NativeEngine needs it, even if a parent project
-# disables the other bimg parsers with BIMG_CONFIG_PARSE_ENABLE=0.
 if(TARGET bimg_decode)
-    if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
-        target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_WEBP=0)
-    elseif(BABYLON_NATIVE_PLUGIN_NATIVEENGINE AND BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
-        target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_WEBP=1)
-    endif()
+    foreach(_bimg_format IN ITEMS BMP EXR GIF HDR JPEG PNG TGA WEBP)
+        target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_${_bimg_format}=$<BOOL:${BIMG_CONFIG_PARSE_${_bimg_format}}>)
+    endforeach()
 endif()
 
 if(NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

@@ -118,6 +118,11 @@ option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_L
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
 
+option(BIMG_CONFIG_PARSE_ENABLE "Enable bimg image format parsers by default." OFF)
+foreach(_bimg_format IN ITEMS BMP EXR GIF HDR JPEG PNG TGA WEBP)
+    option(BIMG_CONFIG_PARSE_${_bimg_format} "Enable bimg ${_bimg_format} image parsing." ON)
+endforeach()
+
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
 
@@ -128,12 +133,7 @@ option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin Native
 option(BABYLON_NATIVE_PLUGIN_NATIVEDRACO "Include Babylon Native Plugin NativeDraco." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin NativeEncoding." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
-option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Enable WebP image parsing in NativeEngine (via bimg)." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES "Enable image loading in NativeEngine (LoadTexture, image bitmap, bimg)." ON)
-if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
-    # WebP support relies on image loading code paths; force it off when image loading is disabled.
-    set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP OFF CACHE BOOL "Enable WebP image parsing in NativeEngine (via bimg)." FORCE)
-endif()
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS "Include Babylon Native Plugin NativeEngine - Compile Shaders." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT "Include Babylon Native Plugin NativeMeshopt." OFF)
