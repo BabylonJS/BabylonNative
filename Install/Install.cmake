@@ -216,6 +216,16 @@ if(TARGET Console)
     install_include(Console)
 endif()
 
+if(TARGET Fetch)
+    install_lib(Fetch)
+    install_include(Fetch)
+endif()
+
+if(TARGET File)
+    install_lib(File)
+    install_include(File)
+endif()
+
 if(TARGET Performance)
     install_lib(Performance)
     install_include(Performance)
@@ -224,6 +234,11 @@ endif()
 if(TARGET TextDecoder)
     install_lib(TextDecoder)
     install_include(TextDecoder)
+endif()
+
+if(TARGET TextEncoder)
+    install_lib(TextEncoder)
+    install_include(TextEncoder)
 endif()
 
 if(TARGET URL)
