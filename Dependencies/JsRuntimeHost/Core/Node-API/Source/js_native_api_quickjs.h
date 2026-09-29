@@ -9,6 +9,7 @@
 #pragma clang diagnostic pop
 #endif
 #include <napi/js_native_api_types.h>
+#include "js_native_api_shared.h"
 #include <thread>
 #include <cassert>
 #include <memory>
@@ -27,6 +28,7 @@ struct napi_env__ {
   JSContext* current_context = nullptr;
   napi_extended_error_info last_error{ nullptr, nullptr, 0, napi_ok };
   JSValue has_own_property_function = JS_UNDEFINED;
+  napi_shared::PropertyNameIntrinsics property_name_intrinsics{};
 
   const std::thread::id thread_id{std::this_thread::get_id()};
 

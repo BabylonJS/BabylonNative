@@ -51,13 +51,17 @@ if(NAPI_BUILD_ABI)
         set(SOURCES ${SOURCES}
             "Source/env_quickjs.cc"
             "Source/js_native_api_quickjs.cc"
-            "Source/js_native_api_quickjs.h")
+            "Source/js_native_api_quickjs.h"
+            "Source/js_native_api_shared.cc"
+            "Source/js_native_api_shared.h")
         set(LINK_LIBRARIES ${LINK_LIBRARIES} PUBLIC qjs)
     elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
         set(SOURCES ${SOURCES}
             "Source/env_chakra.cc"
             "Source/js_native_api_chakra.cc"
-            "Source/js_native_api_chakra.h")
+            "Source/js_native_api_chakra.h"
+            "Source/js_native_api_shared.cc"
+            "Source/js_native_api_shared.h")
 
         set(LINK_LIBRARIES ${LINK_LIBRARIES}
             INTERFACE "chakrart.lib")
@@ -65,7 +69,9 @@ if(NAPI_BUILD_ABI)
         set(SOURCES ${SOURCES}
             "Source/env_javascriptcore.cc"
             "Source/js_native_api_javascriptcore.cc"
-            "Source/js_native_api_javascriptcore.h")
+            "Source/js_native_api_javascriptcore.h"
+            "Source/js_native_api_shared.cc"
+            "Source/js_native_api_shared.h")
 
         if(ANDROID)
             set(V8_PACKAGE_NAME "jsc-android")

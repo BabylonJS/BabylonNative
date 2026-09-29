@@ -1,4 +1,5 @@
 #include "js_native_api_javascriptcore.h"
+#include "js_native_api_shared.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -73,7 +74,7 @@ namespace {
       size_t length{JSStringGetLength(_string)};
       const JSChar* chars{JSStringGetCharactersPtr(_string)};
       size_t size{std::min(length, bufsize - 1)};
-      std::memcpy(buf, chars, size);
+      std::memcpy(buf, chars, size * sizeof(JSChar));
       buf[size] = 0;
       if (result != nullptr) {
         *result = size;
@@ -739,23 +740,27 @@ struct napi_ref__ {
     // track the ref values to support weak refs
     CHECK_NAPI(ReferenceInfo::GetObjectId(env, _value, &_objectId));
     if (_objectId == 0) {
-      CHECK_NAPI(ReferenceInfo::Initialize(env, _value, [value = _value](ReferenceInfo* info) {
-        auto entry{info->Env()->active_ref_values.find(value)};
+      CHECK_NAPI(ReferenceInfo::Initialize(env, _value, [state = std::weak_ptr<napi_reference_tracking_state>{env->reference_tracking_state}, value = _value](ReferenceInfo* info) {
+        const auto trackingState{state.lock()};
+        if (!trackingState) {
+          return;
+        }
         // NOTE: The finalizer callback is actually on a "sentinel" JS object that is linked to the
         // actual JS object we are trying to track. This means it is possible for the tracked object
         // to be garbage collected and a new object created at the same memory address before we get
         // the callback for the sentinel object finalizer. Guard against this by checking that the
         // tracked object still has the same unique object id.
-        if (entry != info->Env()->active_ref_values.end() && entry->second == info->GetObjectId()) {
-          info->Env()->active_ref_values.erase(entry);
+        auto entry{trackingState->active_ref_values.find(value)};
+        if (entry != trackingState->active_ref_values.end() && entry->second == info->GetObjectId()) {
+          trackingState->active_ref_values.erase(entry);
         }
       }));
 
       CHECK_NAPI(ReferenceInfo::GetObjectId(env, _value, &_objectId));
       assert(_objectId);
-      env->active_ref_values[_value] = _objectId;
+      env->reference_tracking_state->active_ref_values[_value] = _objectId;
     } else {
-      assert(env->active_ref_values.find(_value) != env->active_ref_values.end());
+      assert(env->reference_tracking_state->active_ref_values.find(_value) != env->reference_tracking_state->active_ref_values.end());
     }
 
     if (_count != 0) {
@@ -795,7 +800,7 @@ struct napi_ref__ {
 
   napi_status value(napi_env env, napi_value* result) const {
     assert(_value);
-    if (env->active_ref_values.find(_value) != env->active_ref_values.end()) {
+    if (env->reference_tracking_state->active_ref_values.find(_value) != env->reference_tracking_state->active_ref_values.end()) {
       std::uintptr_t objectId{};
       // NOTE: This check is needed for the same reason we need a similar check in the init function.
       // See the comment in init for more details.
@@ -964,15 +969,27 @@ napi_status napi_get_property_names(napi_env env,
                                     napi_value object,
                                     napi_value* result) {
   CHECK_ENV(env);
+  CHECK_ARG(env, object);
   CHECK_ARG(env, result);
 
-  napi_value global{}, object_ctor{}, function{};
-  CHECK_NAPI(napi_get_global(env, &global));
-  CHECK_NAPI(napi_get_named_property(env, global, "Object", &object_ctor));
-  CHECK_NAPI(napi_get_named_property(env, object_ctor, "getOwnPropertyNames", &function));
-  CHECK_NAPI(napi_call_function(env, object_ctor, function, 0, nullptr, result));
+  // JavaScriptCore's `JSObjectCopyPropertyNames` walks the prototype chain, but
+  // it does not apply the shadowing rule: `JSObject::getPropertyNames` calls
+  // `getOwnPropertyNames` per level with `DontEnumPropertiesMode::Exclude`, so
+  // a non-enumerable own property is never added to the array and so cannot
+  // suppress a same-named enumerable property further up the chain. The
+  // inherited name is reported where `for...in` correctly omits it. Use the
+  // shared prototype-chain walk instead. It is written against the public
+  // `napi_*` surface and so cannot reach `napi_set_last_error`; do it here,
+  // since `CHECK_NAPI` only propagates the status and the preceding call inside
+  // the walk will have cleared the last error. The success path likewise has to
+  // clear it, so that a rejection recorded by an earlier call does not survive
+  // as the last error of a call that succeeded.
+  const napi_status status{napi_shared::GetEnumerablePropertyNames(env, object, result, env->property_name_intrinsics)};
+  if (status != napi_ok) {
+    return napi_set_last_error(env, status);
+  }
 
-  return napi_ok;
+  return napi_clear_last_error(env);
 }
 
 napi_status napi_set_property(napi_env env,
@@ -1328,14 +1345,33 @@ napi_status napi_get_prototype(napi_env env,
                                napi_value object,
                                napi_value* result) {
   CHECK_ENV(env);
+  CHECK_ARG(env, object);
   CHECK_ARG(env, result);
 
+  // `JSObjectGetPrototype` already yields a JSValueRef, and that value is
+  // `null` at the top of a prototype chain. Running it through
+  // `JSValueToObject` threw "TypeError: null is not an object" there instead of
+  // reporting the end of the chain, which made the chain impossible to walk.
+  // V8 likewise returns the raw prototype value.
+  //
+  // The conversion belongs on the argument rather than the result. V8 coerces
+  // there (`CHECK_TO_OBJECT`), so a primitive yields its wrapper's prototype
+  // and only `null`/`undefined` are rejected. Passing the argument straight to
+  // `ToJSObject` instead would assert in debug and, in release, reinterpret a
+  // non-object `JSValueRef` as a `JSObjectRef` -- so a primitive was undefined
+  // behaviour rather than a status.
+  const JSValueRef value{ToJSValue(object)};
+  if (JSValueIsNull(env->context, value) || JSValueIsUndefined(env->context, value)) {
+    return napi_set_last_error(env, napi_object_expected);
+  }
+
   JSValueRef exception{};
-  JSObjectRef prototype{JSValueToObject(env->context, JSObjectGetPrototype(env->context, ToJSObject(env, object)), &exception)};
+  const JSObjectRef self{JSValueToObject(env->context, value, &exception)};
   CHECK_JSC(env, exception);
 
-  *result = ToNapi(prototype);
-  return napi_ok;
+  *result = ToNapi(JSObjectGetPrototype(env->context, self));
+
+  return napi_clear_last_error(env);
 }
 
 napi_status napi_create_object(napi_env env, napi_value* result) {
@@ -2052,13 +2088,9 @@ napi_status napi_create_reference(napi_env env,
   CHECK_ARG(env, value);
   CHECK_ARG(env, result);
 
-  napi_ref__* ref{new napi_ref__{}};
-  if (ref == nullptr) {
-    return napi_set_last_error(env, napi_generic_failure);
-  }
-
-  ref->init(env, value, initial_refcount);
-  *result = ref;
+  std::unique_ptr<napi_ref__> ref{new napi_ref__{}};
+  CHECK_NAPI(ref->init(env, value, initial_refcount));
+  *result = ref.release();
 
   return napi_ok;
 }

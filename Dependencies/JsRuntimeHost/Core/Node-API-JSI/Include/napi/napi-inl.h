@@ -772,7 +772,10 @@ inline bool Object::Delete(uint32_t index) {
 }
 
 inline Array Object::GetPropertyNames() const {
-  throw std::runtime_error{"TODO"};
+  // `jsi::Object::getPropertyNames` returns the enumerable string-keyed
+  // properties of this object and of its prototype chain, which is exactly what
+  // `napi_get_property_names` is specified to produce.
+  return {_env, _object->getPropertyNames(_env->rt)};
 }
 
 // TODO: not implemented

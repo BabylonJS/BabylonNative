@@ -2,18 +2,25 @@
 
 #include <napi/js_native_api.h>
 #include <napi/js_native_api_types.h>
+#include "js_native_api_shared.h"
 #include <JavaScriptCore/JavaScript.h>
+#include <memory>
 #include <unordered_map>
 #include <list>
 #include <thread>
 #include <cassert>
 #include <map>
 
+struct napi_reference_tracking_state {
+  std::unordered_map<napi_value, std::uintptr_t> active_ref_values{};
+};
+
 struct napi_env__ {
   JSGlobalContextRef context{};
   JSValueRef last_exception{};
   napi_extended_error_info last_error{nullptr, nullptr, 0, napi_ok};
-  std::unordered_map<napi_value, std::uintptr_t> active_ref_values{};
+  napi_shared::PropertyNameIntrinsics property_name_intrinsics{};
+  std::shared_ptr<napi_reference_tracking_state> reference_tracking_state{std::make_shared<napi_reference_tracking_state>()};
   std::list<napi_ref> strong_refs{};
 
   JSValueRef constructor_info_symbol{};
