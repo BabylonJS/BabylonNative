@@ -58,9 +58,14 @@ foreach(_bimg_format IN LISTS BABYLON_NATIVE_IMAGE_PARSER_FORMATS)
     list(APPEND _bimg_selected_formats "${_bimg_format}")
 endforeach()
 
-foreach(_bimg_format IN LISTS _bimg_selected_formats)
+# Normal defaults for every format prevent dependency cache entries from freezing later list changes.
+foreach(_bimg_format IN LISTS _bimg_supported_formats)
     if(NOT DEFINED BIMG_CONFIG_PARSE_${_bimg_format} OR "${BIMG_CONFIG_PARSE_${_bimg_format}}" STREQUAL "")
-        set(BIMG_CONFIG_PARSE_${_bimg_format} ON)
+        if(_bimg_format IN_LIST _bimg_selected_formats)
+            set(BIMG_CONFIG_PARSE_${_bimg_format} ON)
+        else()
+            set(BIMG_CONFIG_PARSE_${_bimg_format} "${BIMG_CONFIG_PARSE_ENABLE}")
+        endif()
     endif()
 endforeach()
 
