@@ -34,8 +34,8 @@ FetchContent_Declare(base-n
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 3947195a451f85da9836adcbb6c165927b145b52
+    GIT_REPOSITORY https://github.com/bghgary/bgfx.cmake.git
+    GIT_TAG a61a035875677a86ae0a7e92b4894ddf09796fcf
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
