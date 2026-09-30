@@ -40,6 +40,7 @@ TEST(BgfxCallback, FailedScreenshotsAreNotReplayedAfterDeviceLoss)
         callback.AddScreenShotCallback([&](auto result) {
             ++canceled;
             ASSERT_TRUE(result.has_error());
+            EXPECT_EQ(result.error(), Babylon::Graphics::ReadbackCanceled());
             try
             {
                 std::rethrow_exception(result.error());

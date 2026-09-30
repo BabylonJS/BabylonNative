@@ -11,6 +11,9 @@
 
 namespace Babylon::Graphics
 {
+    // Shared cancellation exception for screenshot and texture readbacks.
+    std::exception_ptr ReadbackCanceled();
+
     class BgfxCallback : public bgfx::CallbackI
     {
     public:

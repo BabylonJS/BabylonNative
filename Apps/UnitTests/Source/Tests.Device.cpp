@@ -56,6 +56,7 @@ namespace
     void ExpectCanceled(std::exception_ptr error)
     {
         ASSERT_NE(error, nullptr);
+        EXPECT_EQ(error, Babylon::Graphics::ReadbackCanceled());
         try
         {
             std::rethrow_exception(error);

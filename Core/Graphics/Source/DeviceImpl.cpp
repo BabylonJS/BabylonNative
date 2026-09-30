@@ -10,7 +10,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <system_error>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -25,11 +24,6 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
-
-    std::exception_ptr ReadbackCanceled()
-    {
-        return std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled)));
-    }
 
     bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
     {

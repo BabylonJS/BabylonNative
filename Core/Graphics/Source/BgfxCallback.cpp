@@ -19,6 +19,12 @@
 
 namespace Babylon::Graphics
 {
+    std::exception_ptr ReadbackCanceled()
+    {
+        static const auto error = std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled)));
+        return error;
+    }
+
     BgfxCallback::BgfxCallback(std::function<void(const CaptureData&)> captureCallback)
         : m_captureCallback{std::move(captureCallback)}
     {
@@ -46,7 +52,7 @@ namespace Babylon::Graphics
 
     void BgfxCallback::CancelScreenShots()
     {
-        const auto error = std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled)));
+        const auto error = ReadbackCanceled();
         m_captureScreenShot = false;
         std::queue<ScreenShotCallback> submittedCallbacks;
         submittedCallbacks.swap(m_submittedScreenShotCallbacks);
