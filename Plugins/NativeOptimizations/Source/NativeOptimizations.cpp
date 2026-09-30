@@ -1,3 +1,5 @@
+#include <cstring>
+#include <cstdint>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/JsRuntime.h>
 #include <optional>
@@ -273,23 +275,18 @@ namespace
             matrixTransform(finalMatrix, data[index], data[index + 1], data[index + 2]);
         }
     }
-
-    static int sortSplatQSort(const void* p1, const void* p2) {
-        const float* a = (const float*)p1;
-        const float* b = (const float*)p2;
-        if (a[1] < b[1]) {
-            return -1;
-        }
-        if (a[1] > b[1]) {
-            return 1;
-        }
-        return 0;
+    // Maps an IEEE-754 float to an unsigned key whose integer order matches the float order, so the
+    // depth sort can be a stable LSD radix sort instead of a comparison sort.
+    static inline uint32_t FloatToSortableKey(float value)
+    {
+        uint32_t bits;
+        std::memcpy(&bits, &value, sizeof(bits));
+        return (bits & 0x80000000u) ? ~bits : (bits | 0x80000000u);
     }
 
-
-    // This function is not threadsafe because of static
     void sortSplats(const Napi::CallbackInfo& info)
     {
+
         const auto modelView{ info[0].As<Napi::Object>() };
         const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
 
@@ -299,29 +296,78 @@ namespace
 
         auto rightHand{ info[3].As<Napi::Boolean>() };
 
-
         float depthFactor = -1.f;
         if (rightHand) {
             depthFactor = 1.f;
         }
 
         const auto splatCount = indices.ElementLength();
-        float vp[3] = { m[2u], m[6u], m[10u] };
-        static std::vector<float> depthMix;
+        const float vp[3] = { m[2u], m[6u], m[10u] };
+        const float* positionData = positions.Data();
+        float* indexData = indices.Data();
 
-        depthMix.resize(splatCount * 2);
+        // Reused across calls: no per-sort allocation once the splat count is stable.
+        thread_local std::vector<uint32_t> keys, keysScratch, order, orderScratch;
+        keys.resize(splatCount);
+        keysScratch.resize(splatCount);
+        order.resize(splatCount);
+        orderScratch.resize(splatCount);
 
         for (size_t i = 0; i < splatCount; i++)
         {
-            depthMix[i * 2 + 0] = float(i);
-            depthMix[i * 2 + 1] = 10000.f + (vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]) * depthFactor;
+            const float depth = 10000.f + (vp[0] * positionData[4 * i + 0] + vp[1] * positionData[4 * i + 1] + vp[2] * positionData[4 * i + 2]) * depthFactor;
+            keys[i] = FloatToSortableKey(depth);
+            order[i] = static_cast<uint32_t>(i);
         }
 
-        qsort(depthMix.data(), splatCount, 2 * sizeof(float), sortSplatQSort);
+        // Stable LSD radix sort on the 32-bit key, four 8-bit digits: sequential reads, a 256-entry
+        // histogram that stays in L1, and no data-dependent branches. Digits that are identical for
+        // every splat (typically the exponent byte) cost one histogram pass and no scatter.
+        uint32_t* srcKeys = keys.data();
+        uint32_t* dstKeys = keysScratch.data();
+        uint32_t* srcOrder = order.data();
+        uint32_t* dstOrder = orderScratch.data();
+        for (uint32_t shift = 0; shift < 32; shift += 8)
+        {
+            uint32_t histogram[256] = {};
+            for (size_t i = 0; i < splatCount; i++)
+            {
+                histogram[(srcKeys[i] >> shift) & 0xFFu]++;
+            }
+            bool singleBucket = false;
+            for (uint32_t h : histogram)
+            {
+                if (h == splatCount)
+                {
+                    singleBucket = true;
+                    break;
+                }
+            }
+            if (singleBucket)
+            {
+                continue;
+            }
+            uint32_t sum = 0;
+            for (uint32_t& h : histogram)
+            {
+                const uint32_t count = h;
+                h = sum;
+                sum += count;
+            }
+            for (size_t i = 0; i < splatCount; i++)
+            {
+                const uint32_t digit = (srcKeys[i] >> shift) & 0xFFu;
+                const uint32_t destination = histogram[digit]++;
+                dstKeys[destination] = srcKeys[i];
+                dstOrder[destination] = srcOrder[i];
+            }
+            std::swap(srcKeys, dstKeys);
+            std::swap(srcOrder, dstOrder);
+        }
 
         for (size_t i = 0; i < splatCount; i++)
         {
-            indices[i] = depthMix[i * 2 + 0];
+            indexData[i] = static_cast<float>(srcOrder[i]);
         }
     }
 }
