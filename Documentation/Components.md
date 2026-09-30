@@ -46,6 +46,12 @@ as texture attachments rather than replacing bgfx platform data. Screenshots and
 continuous capture use the active back buffer; multiple requests in one frame
 share a single readback.
 
+When synchronously waiting for JS rendering, hosts must use the
+[frame-pumping dispatch APIs](AppRuntime.md#synchronously-dispatching-rendering-work)
+instead of blocking the graphics thread on a plain future. These service
+mid-frame view flushes and Canvas readback without presenting the frame or
+moving graphics to another thread.
+
 Only default framebuffer wrappers created without an explicit handle follow the
 device's current window framebuffer. Explicit targets, including XR eye
 framebuffers with default-back-buffer semantics, retain their supplied handles.

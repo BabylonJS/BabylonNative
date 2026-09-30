@@ -31,8 +31,8 @@ namespace Babylon::Graphics
     // FrameCompletionScope is an RAII guard that prevents the render thread from
     // closing a bgfx frame while JS-thread work is still in flight. While any
     // scope is alive, FinishRenderingCurrentFrame() blocks before bgfx::frame()
-    // — so all encoder commands recorded while a scope was held land in the
-    // same bgfx frame, never split across two.
+    // — so encoder commands stay in the same logical frame. Non-presenting
+    // mid-frame flushes may advance bgfx frames while a scope is held.
     //
     // Acquisition blocks if the gate is closed (m_frameBlocked == true), so a
     // JS thread that picks up work between frames waits for the next Start
@@ -132,7 +132,9 @@ namespace Babylon::Graphics
 
         // Force a mid-frame flush when a FrameCompletionScope is held so pending
         // bgfx::readTexture requests can complete (Canvas toDataURL / drawImage).
-        // Returns false when the render thread cannot service the request.
+        // The host must service requests through FinishRenderingCurrentFrame or
+        // DispatchAndWait. A scope alone does not guarantee an active frame pump.
+        // Returns false on the render thread or without an open frame and scope.
         bool ForceMidFrameFlush();
 
         // TODO: find a different way to get the texture info for frame capture

@@ -137,6 +137,16 @@ namespace Babylon::Graphics
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
+        // Frame-thread only, between StartRenderingCurrentFrame and FinishRenderingCurrentFrame.
+        // Queues callback through dispatch and waits while servicing non-presenting GPU flushes.
+        // The logical frame stays open. Use instead of blocking the frame thread on a JS future.
+        // dispatch must enqueue the callback exactly once on the JS thread, or throw without queuing.
+        // callback must finish synchronously; returned JS Promises are not awaited. The runtime
+        // must not be suspended. Do not hold locks needed by callback or rendering while waiting.
+        // Callback exceptions are rethrown here; Napi::Error becomes std::runtime_error with
+        // its JS error/stack text so no JS references cross to the frame thread.
+        void DispatchAndWait(JsRuntime::DispatchFunctionT dispatch, std::function<void(Napi::Env)> callback);
+
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
         float GetHardwareScalingLevel();

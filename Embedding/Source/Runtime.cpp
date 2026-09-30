@@ -401,6 +401,17 @@ namespace Babylon::Embedding
             });
     }
 
+    void Runtime::RunOnJsThreadAndWait(std::function<void(Napi::Env)> callback, bool afterScriptLoad)
+    {
+        if (!m_impl->m_currentView || !m_impl->m_currentView->m_initialized || IsSuspended())
+        {
+            throw std::runtime_error{"RunOnJsThreadAndWait requires an attached, resized, unsuspended View."};
+        }
+        m_impl->m_device->DispatchAndWait(
+            [this, afterScriptLoad](auto work) { RunOnJsThread(std::move(work), afterScriptLoad); },
+            std::move(callback));
+    }
+
     void Runtime::Suspend()
     {
         // Frame-thread only (see Runtime.h). The atomic is for cross-thread

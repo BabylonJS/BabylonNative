@@ -17,6 +17,62 @@ creating an `AppRuntime` is the fastest and safest way to create and
 control JavaScript in a way that can be easily consumed by Babylon Native
 components.
 
+## Synchronously dispatching rendering work
+
+Do not block the graphics/frame thread on a future or condition variable waiting
+for JavaScript that can render or read pixels. JS may need the frame thread to
+flush accumulated GPU commands before continuing. Holding a frame-completion
+scope protects the encoder but does not make that thread available.
+
+For hosts using the Embedding facade, use `Runtime::RunOnJsThreadAndWait` from
+the frame thread after attaching and resizing a View:
+
+```cpp
+runtime.RunOnJsThreadAndWait([](Napi::Env env) {
+    auto render = env.Global().Get("renderScene").As<Napi::Function>();
+    render.Call({});
+}, true); // Order this callback after previously queued script loads/evaluations.
+view.RenderFrame();
+```
+
+The synchronous call services non-presenting mid-frame flushes on the **calling
+frame thread** while JS runs. JS resumes with a fresh encoder and view IDs after
+each flush, including for synchronous Canvas pixel readback. It does not present
+or close the logical frame; the host still drives `View::RenderFrame` normally.
+No additional graphics thread is created.
+
+Low-level hosts using `Graphics::Device` and `AppRuntime` can use the same pump:
+
+```cpp
+device.StartRenderingCurrentFrame();
+device.DispatchAndWait(
+    [&appRuntime](auto callback) { appRuntime.Dispatch(std::move(callback)); },
+    [](Napi::Env env) {
+        // Synchronous JS/native rendering work; JS bindings are already initialized.
+        env.Global().Get("renderScene").As<Napi::Function>().Call({});
+    });
+device.FinishRenderingCurrentFrame();
+```
+
+`DispatchAndWait` holds a frame-completion scope before queuing the callback.
+Its dispatcher must enqueue the callback exactly once on the JS thread, or throw
+without queuing it. The runtime must be running, not suspended. Neither API
+waits for a JavaScript Promise started by the callback; they wait for the
+callback's synchronous execution. Callback exceptions propagate to the caller;
+JS exceptions are converted to `std::runtime_error` on the JS thread so
+thread-affine JS references are not transferred to the host thread.
+
+Do not hold application locks needed by JS or rendering across a synchronous
+call, and do not invoke it recursively from a render/flush callback. Embedding
+calls require an attached, resized, unsuspended View. Calls from the JS thread,
+outside an open frame, or recursively inside the flush pump are rejected.
+
+Asynchronous hosts can continue dispatching work and entering
+`FinishRenderingCurrentFrame`, which services the same flush requests while
+waiting for frame-completion scopes. Existing asynchronous dispatch APIs and
+view/flush budgets are unchanged. An application-owned plain blocking wait
+cannot service GPU flushes and must be replaced with the pump-aware call.
+
 ## AppRuntime Configuration
 
 For the most part, AppRuntime usage should be quite straightforward, and
