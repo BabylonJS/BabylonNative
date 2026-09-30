@@ -10,7 +10,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <utility>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -25,31 +24,6 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
-
-    std::string GetJavaScriptErrorString(const Napi::Error& error)
-    {
-        // Catch accessor exceptions inside JS. Some JSI adapters abort when a
-        // getter throws through native property access instead.
-        const auto format = Napi::Eval(error.Env(), R"(
-            (function (error) {
-                function read(name) {
-                    try {
-                        const value = error[name];
-                        return value === undefined ? "" : "" + value;
-                    } catch (_) {
-                        return "[JavaScript error " + name + " could not be read]";
-                    }
-                }
-                const message = read("message");
-                const stack = read("stack");
-                if (stack && (!message || stack.indexOf(message) !== -1)) {
-                    return stack;
-                }
-                return (message + (stack ? "\n" + stack : "")) || "JavaScript callback failed.";
-            })
-        )", "native-dispatch-error.js").As<Napi::Function>();
-        return format.Call({error.Value()}).As<Napi::String>().Utf8Value();
-    }
 
     bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
     {
@@ -433,11 +407,6 @@ namespace Babylon::Graphics
 
         ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
-        if (m_pumpingFrameRequests)
-        {
-            throw std::runtime_error{"Cannot finish a frame from inside its flush pump."};
-        }
-
         if (!m_rendering)
         {
             if (!m_firstFrameStarted)
@@ -460,7 +429,20 @@ namespace Babylon::Graphics
         // frame.
         {
             std::unique_lock lock{m_frameSyncMutex};
-            PumpFrameRequests(lock, [this] { return m_pendingFrameScopes == 0; });
+            while (true)
+            {
+                m_frameSyncCV.wait(lock, [this] { return m_pendingFrameScopes == 0 || m_flushRequested; });
+
+                if (m_flushRequested)
+                {
+                    PerformMidFrameViewFlush();
+                    m_flushRequested = false;
+                    m_flushCompleteCV.notify_all();
+                    continue;
+                }
+
+                break;
+            }
             m_frameBlocked = true;
         }
 
@@ -480,109 +462,6 @@ namespace Babylon::Graphics
         m_afterRenderDispatcher.tick(*m_cancellationSource);
 
         m_rendering = false;
-    }
-
-    void DeviceImpl::DispatchAndWait(JsRuntime::DispatchFunctionT dispatch, std::function<void(Napi::Env)> callback)
-    {
-        if (!m_renderThreadAffinity.check())
-        {
-            throw std::runtime_error{"DispatchAndWait must be called on the frame thread."};
-        }
-        if (m_pumpingFrameRequests)
-        {
-            throw std::runtime_error{"Cannot dispatch synchronously from inside a flush pump."};
-        }
-        {
-            std::scoped_lock lock{m_frameSyncMutex};
-            if (!m_rendering || m_frameBlocked)
-            {
-                throw std::runtime_error{"DispatchAndWait requires an open frame."};
-            }
-        }
-        if (!dispatch || !callback)
-        {
-            throw std::invalid_argument{"DispatchAndWait requires a dispatcher and callback."};
-        }
-
-        auto scope = m_context.AcquireFrameCompletionScope();
-        bool completed{};
-        std::exception_ptr error;
-        dispatch([this, &completed, &error, callback = std::move(callback)](Napi::Env env) mutable {
-            {
-                // Release callback captures on the JS thread before waking the host.
-                auto invoke = std::move(callback);
-                try
-                {
-                    try
-                    {
-                        invoke(env);
-                    }
-                    catch (const Napi::Error& jsError)
-                    {
-                        std::string message;
-                        try
-                        {
-                            message = GetJavaScriptErrorString(jsError);
-                        }
-                        catch (const Napi::Error&)
-                        {
-                            message = "DispatchAndWait: JavaScript callback failed and its diagnostics could not be read.";
-                        }
-                        throw std::runtime_error{message};
-                    }
-                }
-#ifdef BABYLON_GRAPHICS_USE_JSI
-                catch (const facebook::jsi::JSError& jsError)
-                {
-                    // Eval can throw JSError directly, bypassing Napi::Error.
-                    error = std::make_exception_ptr(std::runtime_error{jsError.what()});
-                }
-#endif
-                catch (...)
-                {
-                    error = std::current_exception();
-                }
-            }
-            std::scoped_lock lock{m_frameSyncMutex};
-            completed = true;
-            m_frameSyncCV.notify_all();
-        });
-
-        {
-            std::unique_lock lock{m_frameSyncMutex};
-            PumpFrameRequests(lock, [&] { return completed; });
-        }
-        if (error)
-        {
-            std::rethrow_exception(error);
-        }
-    }
-
-    void DeviceImpl::PumpFrameRequests(std::unique_lock<std::mutex>& lock, const std::function<bool()>& completed)
-    {
-        m_pumpingFrameRequests = true;
-        const auto reset = gsl::finally([&] { m_pumpingFrameRequests = false; });
-        for (;;)
-        {
-            m_frameSyncCV.wait(lock, [&] { return m_flushRequested || completed(); });
-            if (!m_flushRequested)
-            {
-                return;
-            }
-
-            try
-            {
-                PerformMidFrameViewFlush();
-            }
-            catch (...)
-            {
-                // Deliver the failure to the waiting JS call so it can unwind its
-                // frame scopes rather than leaving either side of the handshake parked.
-                m_flushError = std::current_exception();
-            }
-            m_flushRequested = false;
-            m_flushCompleteCV.notify_all();
-        }
     }
 
     float DeviceImpl::GetHardwareScalingLevel() const
@@ -763,7 +642,7 @@ namespace Babylon::Graphics
     {
         // The flush advances a bgfx frame, which must happen on the render (bgfx API)
         // thread. This method is only expected to be called from the JS thread while
-        // the render thread is pumping FinishRenderingCurrentFrame or DispatchAndWait.
+        // the render thread is pumping FinishRenderingCurrentFrame.
         // On the render thread (or with affinity unset), there is nothing safe to do here.
         if (m_renderThreadAffinity.check())
         {
@@ -773,7 +652,7 @@ namespace Babylon::Graphics
         std::unique_lock lock{m_frameSyncMutex};
 
         // A scope protects encoder lifetime, not render-thread availability. The
-        // host must enter FinishRenderingCurrentFrame or use DispatchAndWait;
+        // host must enter FinishRenderingCurrentFrame;
         // blocking the frame thread on an ordinary JS future cannot service a flush.
         // Allow requests before the host enters its pump to avoid a scheduling race.
         if (m_frameBlocked || m_pendingFrameScopes == 0)
@@ -784,16 +663,10 @@ namespace Babylon::Graphics
         m_flushRequested = true;
         m_frameSyncCV.notify_all();
         m_flushCompleteCV.wait(lock, [this] { return !m_flushRequested; });
-        const auto error = std::exchange(m_flushError, {});
-        lock.unlock();
-        if (error)
-        {
-            std::rethrow_exception(error);
-        }
         return true;
     }
 
-    // Called on the render thread from PumpFrameRequests while holding
+    // Called on the render thread from FinishRenderingCurrentFrame while holding
     // m_frameSyncMutex, with the requesting JS thread parked in FlushViewsIfNeeded
     // (so the frame encoder is idle). End the current encoder, advance a non-presenting
     // bgfx frame to submit the accumulated views and reset the view counter, then begin
@@ -807,7 +680,6 @@ namespace Babylon::Graphics
             bgfx::end(m_frameEncoder);
             m_frameEncoder = nullptr;
         }
-        const auto restartEncoder = gsl::finally([this] { m_frameEncoder = bgfx::begin(true); });
 
         // BGFX_FRAME_FLUSH executes all queued rendering commands and resets bgfx's per-frame
         // state (including the view counter) without presenting the backbuffer. A plain
@@ -817,6 +689,7 @@ namespace Babylon::Graphics
         // Same completion path as Frame(): a mid-frame flush must unblock
         // readTexture requests on the waiting JS thread.
         const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
+        CompleteReadTextureRequests(frameNumber);
 
         m_nextViewId.store(0);
         m_midFrameFlushCount.fetch_add(1);
@@ -827,7 +700,7 @@ namespace Babylon::Graphics
         // counter, inverting submission order relative to the JS-side draw order.
         m_viewIdGeneration.fetch_add(1);
 
-        CompleteReadTextureRequests(frameNumber);
+        m_frameEncoder = bgfx::begin(true);
     }
 
     void DeviceImpl::UpdateBgfxState()

@@ -70,16 +70,6 @@ namespace Babylon::Embedding
         //     calls, so it observes the JS state after those have finished.
         void RunOnJsThread(std::function<void(Napi::Env)> callback, bool afterScriptLoad = false);
 
-        // Synchronous counterpart for the frame thread. Requires an attached, resized,
-        // unsuspended View. Pumps non-presenting GPU flushes while JS runs, leaving
-        // the logical frame open for View::RenderFrame. Do not replace this with a
-        // future wait around RunOnJsThread: that can deadlock rendering/readback.
-        // Uses the same afterScriptLoad ordering as RunOnJsThread. Waits for callback,
-        // not any JS Promise it starts. Callback failures are rethrown on the caller;
-        // JS errors become std::runtime_error containing the JS error/stack text.
-        // Do not hold locks that JS or rendering needs while calling this method.
-        void RunOnJsThreadAndWait(std::function<void(Napi::Env)> callback, bool afterScriptLoad = false);
-
         // ----- Suspend / Resume -----
         //
         // Orthogonal to view attachment. Use for backgrounding, throttling,

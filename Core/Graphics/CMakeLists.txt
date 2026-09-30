@@ -37,10 +37,6 @@ target_include_directories(Graphics
 target_compile_definitions(Graphics
     PRIVATE NOMINMAX)
 
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    target_compile_definitions(Graphics PRIVATE BABYLON_GRAPHICS_USE_JSI)
-endif()
-
 # TODO: remove this once the #define in GraphicsImpl is removed
 target_compile_definitions(Graphics
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)

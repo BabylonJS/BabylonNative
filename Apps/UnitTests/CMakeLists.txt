@@ -110,11 +110,6 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
-if(BABYLON_NATIVE_EMBEDDING)
-    target_sources(UnitTests PRIVATE "Source/Tests.Embedding.FramePump.cpp")
-    target_link_libraries(UnitTests PRIVATE Embedding)
-endif()
-
 if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
     target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal)
     target_compile_definitions(UnitTests PRIVATE HAS_SHADER_COMPILER)

@@ -2,6 +2,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include "../../../Polyfills/Canvas/Source/Canvas.h"
 #include "../../../Polyfills/Canvas/Source/Context.h"
@@ -154,6 +155,42 @@ TEST(CanvasReadback, UntouchedCanvasReadbackCreatesRenderTarget)
                 EXPECT_EQ(png, blankPng);
             }
             EXPECT_TRUE(nativeCanvas->HasFrameBuffer());
+        }
+    });
+}
+
+TEST(CanvasReadback, FrameFinishServicesSuccessiveSynchronousReadbacks)
+{
+    RunCanvasTest([](Napi::Env env) {
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        auto scope = graphics.AcquireFrameCompletionScope();
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+        auto canvas = constructor.New({});
+        canvas.Set("width", 2);
+        canvas.Set("height", 2);
+        auto context = canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+        const std::array<std::pair<const char*, std::array<uint8_t, 4>>, 2> colors{{
+            {"#ff0000", {255, 0, 0, 255}},
+            {"#00ff00", {0, 255, 0, 255}},
+        }};
+        for (const auto& [color, expected] : colors)
+        {
+            const auto generation = graphics.ViewIdGeneration();
+            context.Set("fillStyle", color);
+            context.Get("fillRect").As<Napi::Function>().Call(context, {
+                Napi::Number::New(env, 0), Napi::Number::New(env, 0),
+                Napi::Number::New(env, 2), Napi::Number::New(env, 2)});
+            auto image = context.Get("getImageData").As<Napi::Function>().Call(context, {
+                Napi::Number::New(env, 0), Napi::Number::New(env, 0),
+                Napi::Number::New(env, 2), Napi::Number::New(env, 2)}).As<Napi::Object>();
+            auto pixels = image.Get("data").As<Napi::Uint8Array>();
+            ASSERT_EQ(pixels.ElementLength(), 16u);
+            for (size_t byte = 0; byte < pixels.ElementLength(); ++byte)
+            {
+                EXPECT_EQ(pixels[byte], expected[byte % 4]);
+            }
+            EXPECT_GT(graphics.ViewIdGeneration(), generation);
+            EXPECT_NE(graphics.GetActiveEncoder(), nullptr);
         }
     });
 }

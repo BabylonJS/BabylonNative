@@ -169,8 +169,8 @@ namespace Babylon::Embedding
             return;
         }
 
-        // Babylon's JS render loop runs between Start and Finish, scheduled
-        // via DeviceUpdate's SafeTimespanGuarantor onto the JS thread.
+        // The frame-start scheduler queues JS rendering with a FrameCompletionScope.
+        // Finish waits for it while servicing mid-frame flush requests.
         impl.m_device->FinishRenderingCurrentFrame();
         impl.m_device->StartRenderingCurrentFrame();
     }

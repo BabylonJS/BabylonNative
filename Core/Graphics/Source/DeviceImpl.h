@@ -67,7 +67,6 @@ namespace Babylon::Graphics
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
-        void DispatchAndWait(JsRuntime::DispatchFunctionT dispatch, std::function<void(Napi::Env)> callback);
 
         float GetHardwareScalingLevel() const;
         void SetHardwareScalingLevel(float level);
@@ -114,8 +113,8 @@ namespace Babylon::Graphics
         // Unconditionally request a mid-frame bgfx flush when a FrameCompletionScope
         // is active (same handshake as FlushViewsIfNeeded). Used by Canvas GPU
         // readback so bgfx::readTexture can complete without waiting for the end of
-        // the logical frame. The host must enter FinishRenderingCurrentFrame or
-        // DispatchAndWait; returns false on the render thread or without a frame/scope.
+        // the logical frame. The host must enter FinishRenderingCurrentFrame;
+        // returns false on the render thread or without an open frame/scope.
         bool ForceMidFrameFlush();
 
         // Frame completion scope support
@@ -156,13 +155,11 @@ namespace Babylon::Graphics
         void Frame();
         void CompleteReadTextureRequests(uint32_t frameNumber);
         void PerformMidFrameViewFlush();
-        void PumpFrameRequests(std::unique_lock<std::mutex>& lock, const std::function<bool()>& completed);
         void CaptureCallback(const BgfxCallback::CaptureData&);
 
         arcana::affinity m_renderThreadAffinity{};
         bool m_rendering{};
         bool m_firstFrameStarted{};
-        bool m_pumpingFrameRequests{};
 
         // Keep platform-owned display resources alive until after bgfx shutdown.
         std::unique_ptr<void, void (*)(void*)> m_nativeDisplay{nullptr, nullptr};
@@ -282,8 +279,8 @@ namespace Babylon::Graphics
         //
         // m_frameSyncMutex + m_frameSyncCV:
         //   - Protects m_frameBlocked and m_pendingFrameScopes
-        //   - CV is waited on by: frame pump (scope/task completion or flush) and JS (for !blocked)
-        //   - CV is notified on: scope release, dispatch completion, flush request, gate opening
+        //   - CV is waited on by: main thread (for scopes==0 or flush) and JS thread (for !blocked)
+        //   - CV is notified on: scope release, flush request, gate opening
         std::mutex m_frameSyncMutex{};
         std::condition_variable m_frameSyncCV{};
         int m_pendingFrameScopes{0};
@@ -291,10 +288,9 @@ namespace Babylon::Graphics
 
         // Mid-frame view-flush handshake (guarded by m_frameSyncMutex):
         //   - JS thread sets m_flushRequested and waits on m_flushCompleteCV.
-        //   - Render thread (in FinishRenderingCurrentFrame or DispatchAndWait) services the
+        //   - Render thread (parked in FinishRenderingCurrentFrame) services the
         //     request via PerformMidFrameViewFlush, clears the flag, and notifies.
         bool m_flushRequested{false};
-        std::exception_ptr m_flushError{};
         std::condition_variable m_flushCompleteCV{};
 
         std::mutex m_captureCallbacksMutex{};

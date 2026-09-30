@@ -132,8 +132,8 @@ namespace Babylon::Graphics
 
         // Force a mid-frame flush when a FrameCompletionScope is held so pending
         // bgfx::readTexture requests can complete (Canvas toDataURL / drawImage).
-        // The host must service requests through FinishRenderingCurrentFrame or
-        // DispatchAndWait. A scope alone does not guarantee an active frame pump.
+        // The host must service requests through FinishRenderingCurrentFrame.
+        // A scope alone does not guarantee an active frame pump.
         // Returns false on the render thread or without an open frame and scope.
         bool ForceMidFrameFlush();
 

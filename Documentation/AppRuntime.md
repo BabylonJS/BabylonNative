@@ -17,63 +17,52 @@ creating an `AppRuntime` is the fastest and safest way to create and
 control JavaScript in a way that can be easily consumed by Babylon Native
 components.
 
-## Synchronously dispatching rendering work
+## Driving frames without blocking GPU flushes
 
 Do not block the graphics/frame thread on a future or condition variable waiting
 for JavaScript that can render or read pixels. JS may need the frame thread to
 flush accumulated GPU commands before continuing. Holding a frame-completion
 scope protects the encoder but does not make that thread available.
 
-For hosts using the Embedding facade, use `Runtime::RunOnJsThreadAndWait` from
-the frame thread after attaching and resizing a View:
-
-```cpp
-runtime.RunOnJsThreadAndWait([](Napi::Env env) {
-    auto render = env.Global().Get("renderScene").As<Napi::Function>();
-    render.Call({});
-}, true); // Order this callback after previously queued script loads/evaluations.
-view.RenderFrame();
-```
-
-The synchronous call services non-presenting mid-frame flushes on the **calling
-frame thread** while JS runs. JS resumes with a fresh encoder and view IDs after
-each flush, including for synchronous Canvas pixel readback. It does not present
-or close the logical frame; the host still drives `View::RenderFrame` normally.
-No additional graphics thread is created.
-
-Low-level hosts using `Graphics::Device` and `AppRuntime` can use the same pump:
+Use the existing frame loop instead. Babylon's `engine.runRenderLoop(...)`
+uses the native frame-start scheduler, which acquires a `FrameCompletionScope`
+before queuing the JS callback. Low-level hosts then drive each frame with:
 
 ```cpp
 device.StartRenderingCurrentFrame();
-device.DispatchAndWait(
-    [&appRuntime](auto callback) { appRuntime.Dispatch(std::move(callback)); },
-    [](Napi::Env env) {
-        // Synchronous JS/native rendering work; JS bindings are already initialized.
-        env.Global().Get("renderScene").As<Napi::Function>().Call({});
-    });
 device.FinishRenderingCurrentFrame();
 ```
 
-`DispatchAndWait` holds a frame-completion scope before queuing the callback.
-Its dispatcher must enqueue the callback exactly once on the JS thread, or throw
-without queuing it. The runtime must be running, not suspended. Neither API
-waits for a JavaScript Promise started by the callback; they wait for the
-callback's synchronous execution. Callback exceptions propagate to the caller;
-JS exceptions are converted to `std::runtime_error` on the JS thread so
-thread-affine JS references are not transferred to the host thread. The error
-includes the message even when the engine's stack omits it. Throwing diagnostic
-accessors are reported without replacing the readable parts of the original error.
+`FinishRenderingCurrentFrame()` is already the wait and flush pump. Enter it
+without first waiting for JS to finish. While frame scopes remain active, it
+services non-presenting GPU flushes on the **existing frame thread**. JS resumes
+with a fresh encoder and view IDs after each flush, including for synchronous
+Canvas pixel readback. Only after the scopes drain does it close and present the
+logical frame. It is not a way to wait while leaving the frame open for more host
+work before presentation.
 
-Do not hold application locks needed by JS or rendering across a synchronous
-call, and do not invoke it recursively from a render/flush callback. Embedding
-calls require an attached, resized, unsuspended View. Calls from the JS thread,
-outside an open frame, or recursively inside the flush pump are rejected.
+For hosts using the Embedding facade, attach and resize the View, install the
+normal JS render loop, and call the existing method from each host draw callback:
 
-Asynchronous hosts can continue dispatching work and entering
-`FinishRenderingCurrentFrame`, which services the same flush requests while
-waiting for frame-completion scopes. Existing asynchronous dispatch APIs and
-view/flush budgets are unchanged. An application-owned plain blocking wait
-cannot service GPU flushes and must be replaced with the pump-aware call.
+```cpp
+view.RenderFrame();
+```
+
+`View::RenderFrame()` finishes the current frame and starts the next. Do not
+precede it with a blocking wait around `Runtime::RunOnJsThread`. That dispatch
+remains asynchronous and does not itself reserve a frame scope.
+
+Native components that schedule custom rendering should follow
+`NativeEngine::ScheduleRequestAnimationFrameCallbacks`: use `FrameStartScheduler`
+and acquire the existing scope **before dispatching** JS, keeping it alive until
+the work completes. Acquiring it only after JS starts can race with the host
+closing the frame. Simply replacing an arbitrary callback's future wait with
+`FinishRenderingCurrentFrame()` is not sufficient without that scope ordering.
+
+Do not hold application locks needed by JS or rendering across frame completion.
+No public API or graphics-thread change is needed, but a host that currently
+blocks the frame thread must change its frame-driving sequence. An unchanged
+application-owned `future.wait()` cannot service GPU flushes.
 
 ## AppRuntime Configuration
 

@@ -81,11 +81,6 @@ namespace Babylon::Graphics
         m_impl->FinishRenderingCurrentFrame();
     }
 
-    void Device::DispatchAndWait(JsRuntime::DispatchFunctionT dispatch, std::function<void(Napi::Env)> callback)
-    {
-        m_impl->DispatchAndWait(std::move(dispatch), std::move(callback));
-    }
-
     void Device::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)
     {
         m_impl->SetDiagnosticOutput(std::move(outputFunction));
