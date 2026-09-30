@@ -19,8 +19,8 @@ components.
 
 ## Driving frames without blocking GPU flushes
 
-Do not block the graphics/frame thread on a future or condition variable waiting
-for JavaScript that can render or read pixels. JS may need the frame thread to
+Do not use a plain, unbounded wait on the graphics/frame thread for JavaScript
+that can render or read pixels. JS may need the frame thread to
 flush accumulated GPU commands before continuing. Holding a frame-completion
 scope protects the encoder but does not make that thread available.
 
@@ -63,6 +63,34 @@ Do not hold application locks needed by JS or rendering across frame completion.
 No public API or graphics-thread change is needed, but a host that currently
 blocks the frame thread must change its frame-driving sequence. An unchanged
 application-owned `future.wait()` cannot service GPU flushes.
+
+### Waiting for an asynchronous operation
+
+For an operation such as loading and rendering an asset, keep driving frames
+until its completion future is ready. A single frame completion is not enough:
+the JS callback might not have started yet, or its Promise may depend on later
+frames. With a frame already open:
+
+```cpp
+while (completion.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
+{
+    device.FinishRenderingCurrentFrame();
+    device.StartRenderingCurrentFrame();
+}
+device.FinishRenderingCurrentFrame();
+completion.get();
+```
+
+The timed wait avoids busy-spinning. While inside frame completion, pending
+mid-frame flushes are serviced immediately through the existing condition
+variable handshake. Between JS tasks the loop may finish whole frames; it does
+not hold a frame scope across an asynchronous Promise that could itself need a
+later frame.
+
+`HeadlessScreenshotApp`, `PrecompiledShaderTest`, and `StyleTransferApp` use the
+app-only `Apps/Shared/FrameCompletion.h` helper for these waits. It closes the
+final frame before returning or propagating a failed completion, so screenshot
+readback and other host-side processing happen after rendering is finished.
 
 ## AppRuntime Configuration
 

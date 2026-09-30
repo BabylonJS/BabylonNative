@@ -17,6 +17,7 @@
 #include <iostream>
 
 #include "RenderDoc.h"
+#include "../../Shared/FrameCompletion.h"
 
 namespace
 {
@@ -128,8 +129,7 @@ int main()
     // Close the script-load frame.
     device.FinishRenderingCurrentFrame();
 
-    // Open a new frame for `startup` so the JS-side resource creation and
-    // startup() call run in the same frame as the wait that observes them.
+    // Keep frames progressing while startup performs JS-side resource creation.
     device.StartRenderingCurrentFrame();
 
     std::promise<void> startup{};
@@ -147,11 +147,7 @@ int main()
         startup.set_value();
     });
 
-    // Wait for `startup` to finish.
-    startup.get_future().wait();
-
-    // Close the startup frame.
-    device.FinishRenderingCurrentFrame();
+    Babylon::Apps::FinishRenderingWhenReady(device, startup.get_future());
 
     struct Asset
     {
@@ -190,11 +186,7 @@ int main()
             CatchAndLogError(jsPromise);
         });
 
-        // Wait for the function to complete.
-        loadAndRenderAsset.get_future().wait();
-
-        // Finish rendering the frame.
-        device.FinishRenderingCurrentFrame();
+        Babylon::Apps::FinishRenderingWhenReady(device, loadAndRenderAsset.get_future());
 
         // Tell RenderDoc to stop capturing.
         RenderDoc::StopFrameCapture(d3dDevice.get());

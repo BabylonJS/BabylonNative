@@ -7,6 +7,7 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include "../../Shared/FrameCompletion.h"
 
 #include <winrt/base.h>
 #include <winrt/Windows.Storage.h>
@@ -332,8 +333,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Close the script-load frame.
     g_device->FinishRenderingCurrentFrame();
 
-    // Open a new frame for `startup` so the JS-side resource creation and
-    // startup() call run in the same frame as the wait that observes them.
+    // Keep frames progressing while startup performs JS-side resource creation.
     g_device->StartRenderingCurrentFrame();
 
     std::promise<void> startup{};
@@ -351,11 +351,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         startup.set_value();
     });
 
-    // Wait for `startup` to finish.
-    startup.get_future().wait();
-
-    // Close the startup frame.
-    g_device->FinishRenderingCurrentFrame();
+    Babylon::Apps::FinishRenderingWhenReady(*g_device, startup.get_future());
 
     // --------------------------- Rendering loop -------------------------
 

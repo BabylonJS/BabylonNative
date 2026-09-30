@@ -1,4 +1,5 @@
 #include "App.h"
+#include "../../Shared/FrameCompletion.h"
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ScriptLoader.h>
@@ -136,8 +137,7 @@ int RunApp(
     // Close the script-load frame.
     device.FinishRenderingCurrentFrame();
 
-    // Open a new frame for `startup` so the JS-side resource creation and
-    // startup() call run in the same frame as the wait that observes them.
+    // Keep frames progressing while startup performs JS-side resource creation.
     device.StartRenderingCurrentFrame();
 
     std::promise<void> startup{};
@@ -155,11 +155,7 @@ int RunApp(
         startup.set_value();
     });
 
-    // Wait for `startup` to finish.
-    startup.get_future().wait();
-
-    // Close the startup frame.
-    device.FinishRenderingCurrentFrame();
+    Babylon::Apps::FinishRenderingWhenReady(device, startup.get_future());
 
     // Start a new frame for rendering the scene.
     device.StartRenderingCurrentFrame();
@@ -180,11 +176,7 @@ int RunApp(
         CatchAndLogError(jsPromise);
     });
 
-    // Wait for the scene to render.
-    renderScene.get_future().wait();
-
-    // Finish the frame.
-    device.FinishRenderingCurrentFrame();
+    Babylon::Apps::FinishRenderingWhenReady(device, renderScene.get_future());
 
     // Save the rendered output as a PNG.
     auto filePath = executablePath / "output.png";

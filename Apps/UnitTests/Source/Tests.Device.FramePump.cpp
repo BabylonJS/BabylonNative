@@ -2,9 +2,11 @@
 
 #include <Babylon/AppRuntime.h>
 #include "../../../Core/Graphics/Source/DeviceImpl.h"
+#include "../../Shared/FrameCompletion.h"
 
 #include <chrono>
 #include <future>
+#include <stdexcept>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -97,5 +99,65 @@ TEST(DeviceFramePump, FrameScheduledWorkFlushesWithoutAnExtraHostWait)
         EXPECT_EQ(callbacks, frame + 1);
         EXPECT_EQ(finishedFrames, frame + 1);
         EXPECT_EQ(context.GetActiveEncoder(), nullptr);
+    }
+}
+
+TEST(DeviceFramePump, AppWaitServicesFlushesAndLaterFrameContinuations)
+{
+    using namespace Babylon::Graphics;
+    Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    std::promise<void> completed;
+    size_t callbacks{};
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&](Napi::Env env) {
+        device.AddToJavaScript(env);
+        auto& context = DeviceContext::GetFromJavaScript(env);
+        auto scope = context.AcquireFrameCompletionScope();
+        const auto generation = context.ViewIdGeneration();
+        for (size_t flush = 0; flush < 3; ++flush)
+        {
+            ReachFlushThreshold(context);
+            context.FlushViewsIfNeeded();
+            EXPECT_EQ(context.ViewIdGeneration(), generation + flush + 1);
+            EXPECT_NE(context.GetActiveEncoder(), nullptr);
+        }
+        ++callbacks;
+
+        // Completion needs another logical frame, as an async JS operation may.
+        arcana::make_task(context.FrameStartScheduler(), arcana::cancellation::none(), [&] {
+            runtime.Dispatch([&, scope = context.AcquireFrameCompletionScope()](Napi::Env) {
+                EXPECT_TRUE(context.ForceMidFrameFlush());
+                ++callbacks;
+                completed.set_value();
+            });
+        });
+    });
+
+    Babylon::Apps::FinishRenderingWhenReady(device, completed.get_future());
+    EXPECT_EQ(callbacks, 2u);
+    device.StartRenderingCurrentFrame();
+    device.FinishRenderingCurrentFrame();
+}
+
+TEST(DeviceFramePump, AppWaitClosesFrameForReadyAndFailedCompletions)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    for (const bool failed : {false, true})
+    {
+        device.StartRenderingCurrentFrame();
+        std::promise<void> completed;
+        if (failed)
+        {
+            completed.set_exception(std::make_exception_ptr(std::runtime_error{"operation failed"}));
+            EXPECT_THROW(Babylon::Apps::FinishRenderingWhenReady(device, completed.get_future()), std::runtime_error);
+        }
+        else
+        {
+            completed.set_value();
+            EXPECT_NO_THROW(Babylon::Apps::FinishRenderingWhenReady(device, completed.get_future()));
+        }
+        device.StartRenderingCurrentFrame();
+        device.FinishRenderingCurrentFrame();
     }
 }
