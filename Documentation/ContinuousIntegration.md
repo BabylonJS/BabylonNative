@@ -57,10 +57,9 @@ These features are multiplatform and the code can be found here : `Apps\Validati
 
 ## The test script
 
-The native runner reuses its engine between scenes. Cleanup restores forward depth
-(`engine.useReverseDepthBuffer = false`), stencil, and scissor state before the next scene.
-Run the cleanup regression without a native build:
-`node --test Apps/Playground/Tests/validation_cleanup.test.cjs`.
+The native runner reuses its engine between scenes. Cleanup disables reverse depth
+and explicitly restores the native `LEQUAL` depth comparison with
+`engine.setDepthFunctionToLessOrEqual()`, along with resetting stencil and scissor state.
 
 It loads the json using XMLHttpRequest, then for each entry in the json, loads the Playground, runs it, make a capture.
 The most important part is the image comparison. It works the same way as babylonjs validation test.
