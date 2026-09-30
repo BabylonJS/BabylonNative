@@ -118,11 +118,6 @@ option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_L
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
 
-option(BIMG_CONFIG_PARSE_ENABLE "Enable bimg image format parsers by default." OFF)
-foreach(_bimg_format IN ITEMS BMP EXR GIF HDR JPEG PNG TGA WEBP)
-    option(BIMG_CONFIG_PARSE_${_bimg_format} "Enable bimg ${_bimg_format} image parsing." ON)
-endforeach()
-
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
 
