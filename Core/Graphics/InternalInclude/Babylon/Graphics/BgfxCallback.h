@@ -36,7 +36,8 @@ namespace Babylon::Graphics
 
         void AddScreenShotCallback(ScreenShotCallback callback);
         bool HasPendingScreenShotCallbacks() const;
-        void CancelScreenShots(std::exception_ptr error);
+        // Complete submitted screenshots with operation_canceled.
+        void CancelScreenShots();
         void CaptureNextScreenShot();
         void CompleteScreenShot(const CaptureData& data);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
@@ -60,7 +61,7 @@ namespace Babylon::Graphics
         std::atomic<bool> m_deviceLost{false};
         std::function<void(const char* output)> m_outputFunction;
 
-        std::queue<ScreenShotCallback> m_screenShotCallbacks;
+        std::queue<ScreenShotCallback> m_submittedScreenShotCallbacks;
         bool m_captureScreenShot{};
 
         CaptureData m_captureData{};

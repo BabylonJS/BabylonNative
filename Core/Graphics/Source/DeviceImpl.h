@@ -294,8 +294,8 @@ namespace Babylon::Graphics
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
 
-        std::mutex m_screenShotCallbacksMutex{};
-        std::queue<BgfxCallback::ScreenShotCallback> m_screenShotCallbacks{};
+        std::mutex m_queuedScreenShotCallbacksMutex{};
+        std::queue<BgfxCallback::ScreenShotCallback> m_queuedScreenShotCallbacks{};
 
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
 

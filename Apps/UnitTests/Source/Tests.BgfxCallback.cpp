@@ -57,9 +57,11 @@ TEST(BgfxCallback, FailedScreenshotsAreNotReplayedAfterDeviceLoss)
     callback.CompleteScreenShot(data);
     EXPECT_EQ(canceled, 0u);
     EXPECT_EQ(captures, 0u);
-    callback.CancelScreenShots(std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled))));
+    callback.CancelScreenShots();
     EXPECT_EQ(canceled, 2u);
     EXPECT_FALSE(callback.HasPendingScreenShotCallbacks());
+    callback.CancelScreenShots();
+    EXPECT_EQ(canceled, 2u);
 
     callback.ClearDeviceLost();
     size_t successful{};

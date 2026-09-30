@@ -546,10 +546,10 @@ namespace Babylon::Graphics
     void DeviceImpl::RequestScreenShot(BgfxCallback::ScreenShotCallback callback)
     {
         {
-            std::scoped_lock lock{m_screenShotCallbacksMutex};
+            std::scoped_lock lock{m_queuedScreenShotCallbacksMutex};
             if (!IsDeviceLost())
             {
-                m_screenShotCallbacks.push(std::move(callback));
+                m_queuedScreenShotCallbacks.push(std::move(callback));
                 return;
             }
         }
@@ -831,15 +831,15 @@ namespace Babylon::Graphics
     bool DeviceImpl::RequestScreenShots()
     {
         bool requested = false;
-        std::queue<BgfxCallback::ScreenShotCallback> callbacks;
+        std::queue<BgfxCallback::ScreenShotCallback> queuedCallbacks;
         {
-            std::scoped_lock lock{m_screenShotCallbacksMutex};
-            callbacks.swap(m_screenShotCallbacks);
+            std::scoped_lock lock{m_queuedScreenShotCallbacksMutex};
+            queuedCallbacks.swap(m_queuedScreenShotCallbacks);
         }
-        while (!callbacks.empty())
+        while (!queuedCallbacks.empty())
         {
-            m_bgfxCallback.AddScreenShotCallback(std::move(callbacks.front()));
-            callbacks.pop();
+            m_bgfxCallback.AddScreenShotCallback(std::move(queuedCallbacks.front()));
+            queuedCallbacks.pop();
             requested = true;
         }
         {
@@ -900,17 +900,17 @@ namespace Babylon::Graphics
     {
         if (m_bgfxCallback.IsDeviceLost())
         {
-            std::queue<BgfxCallback::ScreenShotCallback> callbacks;
+            std::queue<BgfxCallback::ScreenShotCallback> queuedCallbacks;
             {
-                std::scoped_lock lock{m_screenShotCallbacksMutex};
-                callbacks.swap(m_screenShotCallbacks);
+                std::scoped_lock lock{m_queuedScreenShotCallbacksMutex};
+                queuedCallbacks.swap(m_queuedScreenShotCallbacks);
             }
             const auto error = ReadbackCanceled();
-            m_bgfxCallback.CancelScreenShots(error);
-            while (!callbacks.empty())
+            m_bgfxCallback.CancelScreenShots();
+            while (!queuedCallbacks.empty())
             {
-                auto callback = std::move(callbacks.front());
-                callbacks.pop();
+                auto callback = std::move(queuedCallbacks.front());
+                queuedCallbacks.pop();
                 callback(arcana::make_unexpected(error));
             }
             while (!m_readTextureRequests.empty())

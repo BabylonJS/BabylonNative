@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <stdarg.h>
 #include <stdexcept>
+#include <system_error>
 
 #if BX_PLATFORM_WINDOWS
 #   ifndef WIN32_LEAN_AND_MEAN
@@ -35,23 +36,24 @@ namespace Babylon::Graphics
 
     void BgfxCallback::AddScreenShotCallback(ScreenShotCallback callback)
     {
-        m_screenShotCallbacks.emplace(std::move(callback));
+        m_submittedScreenShotCallbacks.emplace(std::move(callback));
     }
 
     bool BgfxCallback::HasPendingScreenShotCallbacks() const
     {
-        return !m_screenShotCallbacks.empty();
+        return !m_submittedScreenShotCallbacks.empty();
     }
 
-    void BgfxCallback::CancelScreenShots(std::exception_ptr error)
+    void BgfxCallback::CancelScreenShots()
     {
+        const auto error = std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled)));
         m_captureScreenShot = false;
-        std::queue<ScreenShotCallback> callbacks;
-        callbacks.swap(m_screenShotCallbacks);
-        while (!callbacks.empty())
+        std::queue<ScreenShotCallback> submittedCallbacks;
+        submittedCallbacks.swap(m_submittedScreenShotCallbacks);
+        while (!submittedCallbacks.empty())
         {
-            auto callback = std::move(callbacks.front());
-            callbacks.pop();
+            auto callback = std::move(submittedCallbacks.front());
+            submittedCallbacks.pop();
             callback(arcana::make_unexpected(error));
         }
     }
@@ -166,13 +168,13 @@ namespace Babylon::Graphics
         {
             return;
         }
-        assert(m_captureScreenShot || !m_screenShotCallbacks.empty());
+        assert(m_captureScreenShot || !m_submittedScreenShotCallbacks.empty());
         if (m_captureScreenShot)
         {
             m_captureScreenShot = false;
             m_captureCallback(CaptureData{width, height, pitch, format, yflip, data, size});
         }
-        if (m_screenShotCallbacks.empty())
+        if (m_submittedScreenShotCallbacks.empty())
         {
             return;
         }
@@ -215,11 +217,11 @@ namespace Babylon::Graphics
             throw std::runtime_error{"Unsupported format for screenshot"};
         }
 
-        const auto count = m_screenShotCallbacks.size();
+        const auto count = m_submittedScreenShotCallbacks.size();
         for (size_t i = 0; i < count; ++i)
         {
-            auto callback = std::move(m_screenShotCallbacks.front());
-            m_screenShotCallbacks.pop();
+            auto callback = std::move(m_submittedScreenShotCallbacks.front());
+            m_submittedScreenShotCallbacks.pop();
             callback(i + 1 == count ? std::move(array) : array);
         }
     }
