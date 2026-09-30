@@ -161,6 +161,9 @@ TEST(CanvasReadback, UntouchedCanvasReadbackCreatesRenderTarget)
 
 TEST(CanvasReadback, FrameFinishServicesSuccessiveSynchronousReadbacks)
 {
+#ifdef USE_NOOP_METAL_DEVICE
+    GTEST_SKIP() << "The no-op test device does not render pixels.";
+#else
     RunCanvasTest([](Napi::Env env) {
         auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
         auto scope = graphics.AcquireFrameCompletionScope();
@@ -193,6 +196,7 @@ TEST(CanvasReadback, FrameFinishServicesSuccessiveSynchronousReadbacks)
             EXPECT_NE(graphics.GetActiveEncoder(), nullptr);
         }
     });
+#endif
 }
 
 TEST(CanvasReadback, EncodesPngWithoutInputImageLoading)
