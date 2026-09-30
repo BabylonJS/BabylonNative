@@ -60,7 +60,9 @@ without queuing it. The runtime must be running, not suspended. Neither API
 waits for a JavaScript Promise started by the callback; they wait for the
 callback's synchronous execution. Callback exceptions propagate to the caller;
 JS exceptions are converted to `std::runtime_error` on the JS thread so
-thread-affine JS references are not transferred to the host thread.
+thread-affine JS references are not transferred to the host thread. The error
+includes the message even when the engine's stack omits it. Throwing diagnostic
+accessors are reported without replacing the readable parts of the original error.
 
 Do not hold application locks needed by JS or rendering across a synchronous
 call, and do not invoke it recursively from a render/flush callback. Embedding

@@ -141,6 +141,17 @@ TEST(DeviceFramePump, CompletionBeforeWaitAndCallbackFailuresLeaveFrameUsable)
     try
     {
         device.DispatchAndWait(dispatch, [](Napi::Env env) {
+            Napi::Eval(env, "throw new Error('evaluated JS failure');", "frame-pump-test.js");
+        });
+        FAIL() << "Evaluated JS exception was not delivered to the host";
+    }
+    catch (const std::runtime_error& error)
+    {
+        EXPECT_NE(std::string{error.what()}.find("evaluated JS failure"), std::string::npos) << error.what();
+    }
+    try
+    {
+        device.DispatchAndWait(dispatch, [](Napi::Env env) {
             auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
             EXPECT_TRUE(context.ForceMidFrameFlush());
             throw Napi::Error::New(env, "JS callback failure");
@@ -149,24 +160,61 @@ TEST(DeviceFramePump, CompletionBeforeWaitAndCallbackFailuresLeaveFrameUsable)
     }
     catch (const std::runtime_error& error)
     {
-        EXPECT_NE(std::string{error.what()}.find("JS callback failure"), std::string::npos);
+        EXPECT_NE(std::string{error.what()}.find("JS callback failure"), std::string::npos) << error.what();
     }
     EXPECT_THROW(device.DispatchAndWait([](auto) {
         throw std::runtime_error{"dispatch failure"};
     }, [](Napi::Env) {}), std::runtime_error);
-    EXPECT_THROW(device.DispatchAndWait(dispatch, [](Napi::Env env) {
-        auto error = Napi::Error::New(env, "callback failure with throwing stack");
-        auto object = env.Global().Get("Object").As<Napi::Object>();
-        auto descriptor = Napi::Object::New(env);
-        descriptor.Set("get", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-            throw Napi::Error::New(info.Env(), "stack getter failure");
-        }));
-        object.Get("defineProperty").As<Napi::Function>().Call(object, {
-            error.Value(), Napi::String::New(env, "stack"), descriptor});
-        throw error;
-    }), std::runtime_error);
+    for (const char* stack : {"", "synthetic.js:42"})
+    {
+        SCOPED_TRACE(stack);
+        try
+        {
+            device.DispatchAndWait(dispatch, [stack](Napi::Env env) {
+                auto error = Napi::Error::New(env, "message absent from stack");
+                error.Set("stack", stack);
+                throw error;
+            });
+            FAIL() << "JS exception was not delivered to the host";
+        }
+        catch (const std::runtime_error& error)
+        {
+            const std::string message{error.what()};
+            EXPECT_NE(message.find("message absent from stack"), std::string::npos) << message;
+            EXPECT_NE(message.find(stack), std::string::npos) << message;
+        }
+    }
+
+    for (const char* property : {"message", "stack"})
+    {
+        SCOPED_TRACE(property);
+        try
+        {
+            device.DispatchAndWait(dispatch, [property](Napi::Env env) {
+                auto error = Napi::Error::New(env, "callback failure with throwing accessor");
+                error.Set("stack", "synthetic.js:42");
+                auto object = env.Global().Get("Object").As<Napi::Object>();
+                auto descriptor = Napi::Object::New(env);
+                descriptor.Set("get", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    throw Napi::Error::New(info.Env(), "accessor failure");
+                }));
+                object.Get("defineProperty").As<Napi::Function>().Call(object, {
+                    error.Value(), Napi::String::New(env, property), descriptor});
+                throw error;
+            });
+            FAIL() << "JS exception was not delivered to the host";
+        }
+        catch (const std::runtime_error& error)
+        {
+            const std::string message{error.what()};
+            EXPECT_NE(message.find(std::string{"[JavaScript error "} + property + " could not be read]"), std::string::npos) << message;
+            EXPECT_NE(message.find(std::string{property} == "stack" ? "callback failure with throwing accessor" : "synthetic.js:42"),
+                std::string::npos) << message;
+        }
+    }
 
     device.DispatchAndWait(dispatch, [&](Napi::Env env) {
+        EXPECT_FALSE(env.IsExceptionPending());
         ++callbacks;
         auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
         EXPECT_NE(context.GetActiveEncoder(), nullptr);

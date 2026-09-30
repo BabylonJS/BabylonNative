@@ -2,7 +2,6 @@
 
 #include <Babylon/Graphics/DeviceQueries.h>
 #include <Babylon/Graphics/Platform.h>
-#include <napi/utilities.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <Babylon/JsRuntime.h>
 #include <arcana/tracing/trace_region.h>
@@ -26,6 +25,31 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
+
+    std::string GetJavaScriptErrorString(const Napi::Error& error)
+    {
+        // Catch accessor exceptions inside JS. Some JSI adapters abort when a
+        // getter throws through native property access instead.
+        const auto format = Napi::Eval(error.Env(), R"(
+            (function (error) {
+                function read(name) {
+                    try {
+                        const value = error[name];
+                        return value === undefined ? "" : "" + value;
+                    } catch (_) {
+                        return "[JavaScript error " + name + " could not be read]";
+                    }
+                }
+                const message = read("message");
+                const stack = read("stack");
+                if (stack && (!message || stack.indexOf(message) !== -1)) {
+                    return stack;
+                }
+                return (message + (stack ? "\n" + stack : "")) || "JavaScript callback failed.";
+            })
+        )", "native-dispatch-error.js").As<Napi::Function>();
+        return format.Call({error.Value()}).As<Napi::String>().Utf8Value();
+    }
 
     bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
     {
@@ -498,15 +522,22 @@ namespace Babylon::Graphics
                         std::string message;
                         try
                         {
-                            message = Napi::GetErrorString(jsError);
+                            message = GetJavaScriptErrorString(jsError);
                         }
                         catch (const Napi::Error&)
                         {
-                            message = "DispatchAndWait: JavaScript callback failed and its stack/message accessor threw.";
+                            message = "DispatchAndWait: JavaScript callback failed and its diagnostics could not be read.";
                         }
                         throw std::runtime_error{message};
                     }
                 }
+#ifdef BABYLON_GRAPHICS_USE_JSI
+                catch (const facebook::jsi::JSError& jsError)
+                {
+                    // Eval can throw JSError directly, bypassing Napi::Error.
+                    error = std::make_exception_ptr(std::runtime_error{jsError.what()});
+                }
+#endif
                 catch (...)
                 {
                     error = std::current_exception();
