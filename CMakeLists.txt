@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 650e4a7c68e68e65b05da882c0b3d6980f9a96d3
+    GIT_TAG 3947195a451f85da9836adcbb6c165927b145b52
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -130,7 +130,7 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin Nativ
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES "Enable image loading in NativeEngine (LoadTexture, image bitmap, bimg)." ON)
 if(NOT DEFINED BABYLON_NATIVE_IMAGE_PARSER_FORMATS)
-    set(BABYLON_NATIVE_IMAGE_PARSER_FORMATS "BMP;EXR;GIF;HDR;JPEG;PNG;TGA;WEBP" CACHE STRING "Bundled bimg image parsers to compile.")
+    set(BABYLON_NATIVE_IMAGE_PARSER_FORMATS "AVIF;BMP;EXR;GIF;HDR;JPEG;PNG;TGA;WEBP" CACHE STRING "Bundled bimg image parsers to compile.")
 endif()
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS "Include Babylon Native Plugin NativeEngine - Compile Shaders." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)

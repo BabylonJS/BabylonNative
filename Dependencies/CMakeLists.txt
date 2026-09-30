@@ -43,7 +43,7 @@ if(NOT DEFINED BIMG_CONFIG_PARSE_ENABLE)
     set(BIMG_CONFIG_PARSE_ENABLE OFF CACHE BOOL "Enable bimg image format parsers.")
 endif()
 
-set(_bimg_supported_formats BMP EXR GIF HDR JPEG PNG TGA WEBP)
+set(_bimg_supported_formats AVIF BMP EXR GIF HDR JPEG PNG TGA WEBP)
 set(_bimg_selected_formats)
 if(BABYLON_NATIVE_IMAGE_PARSER_FORMATS MATCHES "(^;|;;|;$)")
     message(FATAL_ERROR "BABYLON_NATIVE_IMAGE_PARSER_FORMATS contains an empty format name.")
@@ -58,19 +58,11 @@ foreach(_bimg_format IN LISTS BABYLON_NATIVE_IMAGE_PARSER_FORMATS)
     list(APPEND _bimg_selected_formats "${_bimg_format}")
 endforeach()
 
-# Pinned bimg's stb parsers use allocators defined only when its PNG parser is enabled.
-if(NOT BIMG_CONFIG_PARSE_ENABLE AND NOT "PNG" IN_LIST _bimg_selected_formats)
-    foreach(_bimg_stb_format IN ITEMS BMP GIF HDR JPEG TGA)
-        if(_bimg_stb_format IN_LIST _bimg_selected_formats)
-            message(FATAL_ERROR "The pinned bimg decoder requires PNG when ${_bimg_stb_format} is selected in BABYLON_NATIVE_IMAGE_PARSER_FORMATS.")
-        endif()
-    endforeach()
-endif()
-
-# Keep AVIF opt-in, including caches with bgfx.cmake's empty (inherit) default.
-if(NOT DEFINED BIMG_CONFIG_PARSE_AVIF OR "${BIMG_CONFIG_PARSE_AVIF}" STREQUAL "")
-    set(BIMG_CONFIG_PARSE_AVIF OFF)
-endif()
+foreach(_bimg_format IN LISTS _bimg_selected_formats)
+    if(NOT DEFINED BIMG_CONFIG_PARSE_${_bimg_format} OR "${BIMG_CONFIG_PARSE_${_bimg_format}}" STREQUAL "")
+        set(BIMG_CONFIG_PARSE_${_bimg_format} ON)
+    endif()
+endforeach()
 
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
@@ -133,12 +125,6 @@ foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
         target_compile_definitions(${_bimg_target} PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
 endforeach()
-
-if(TARGET bimg_decode)
-    foreach(_bimg_format IN LISTS _bimg_selected_formats)
-        target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_${_bimg_format}=1)
-    endforeach()
-endif()
 
 if(NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(_bx_target IN ITEMS bx bgfx bimg bimg_decode bimg_encode)
