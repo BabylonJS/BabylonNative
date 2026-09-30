@@ -43,10 +43,6 @@ if(NOT DEFINED BIMG_CONFIG_PARSE_ENABLE)
     set(BIMG_CONFIG_PARSE_ENABLE OFF CACHE BOOL "Enable bimg image format parsers.")
 endif()
 
-if(NOT DEFINED BABYLON_NATIVE_IMAGE_PARSER_FORMATS)
-    set(BABYLON_NATIVE_IMAGE_PARSER_FORMATS "BMP;EXR;GIF;HDR;JPEG;PNG;TGA;WEBP" CACHE STRING "Bundled bimg image parsers to compile.")
-endif()
-
 set(_bimg_supported_formats BMP EXR GIF HDR JPEG PNG TGA WEBP)
 set(_bimg_selected_formats)
 if(BABYLON_NATIVE_IMAGE_PARSER_FORMATS MATCHES "(^;|;;|;$)")
