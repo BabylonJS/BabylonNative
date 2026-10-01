@@ -797,7 +797,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        // Optimization: Do not Bind() here as it resets m_viewId per draw call. Bound once in nvgRenderFlush.
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -857,7 +857,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        // Optimization: Do not Bind() here as it resets m_viewId per draw call. Bound once in nvgRenderFlush.
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -900,7 +900,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        // Optimization: Do not Bind() here as it resets m_viewId per draw call. Bound once in nvgRenderFlush.
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -938,7 +938,7 @@ namespace
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
 			};
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-            finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+            // Optimization: Do not Bind() here as it resets m_viewId per draw call. Bound once in nvgRenderFlush.
 
             call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
         }
@@ -1013,6 +1013,12 @@ namespace
             }
 
             bx::memCopy(gl->tvb.data, gl->verts, gl->nverts * sizeof(struct NVGvertex) );
+
+            // Optimization: Bind FrameBuffer ONCE per flush so all 2D calls share the same BGFX ViewID.
+            if (gl->frameBuffer)
+            {
+                gl->frameBuffer->Bind(*gl->encoder);
+            }
 
             for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
             {
