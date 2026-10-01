@@ -28647,7 +28647,10 @@ describe("Native texture readback", function () {
           internalTexture) {_context3.next = 7;break;}throw (
             new Error("Expected an initialized raw texture"));case 7:_i5 = 0, _arr5 =
 
-          [[2, 0, 1, 1], [0, 4, 1, 1], [0, 3, 1, 2], [0, 0, 0, 1]];case 8:if (!(_i5 < _arr5.length)) {_context3.next = 15;break;}_arr5$_i = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_arr5[_i5], 4), _x2 = _arr5$_i[0], _y3 = _arr5$_i[1], width = _arr5$_i[2], height = _arr5$_i[3];
+          [
+          [2, 0, 1, 1], [0, 4, 1, 1], [0, 3, 1, 2], [0, 0, 0, 1],
+          [0, 0, 65535, 65535]];case 8:if (!(_i5 < _arr5.length)) {_context3.next = 15;break;}_arr5$_i = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_arr5[_i5], 4), _x2 = _arr5$_i[0], _y3 = _arr5$_i[1], width = _arr5$_i[2], height = _arr5$_i[3];
+
           error = void 0;_context3.prev = 9;_context3.next = 10;return (
 
             engine._readTexturePixels(internalTexture, width, height, -1, 1, null, true, false, _x2, _y3));case 10:_context3.next = 12;break;case 11:_context3.prev = 11;_t = _context3["catch"](9);

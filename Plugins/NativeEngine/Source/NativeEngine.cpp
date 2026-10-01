@@ -2367,24 +2367,7 @@ namespace Babylon
         const uint16_t width{static_cast<uint16_t>(requestedWidth)};
         const uint16_t height{static_cast<uint16_t>(requestedHeight)};
 
-        // Calculate source texture storage size.
         const auto sourceTextureFormat{texture->Format()};
-        bgfx::TextureInfo sourceTextureInfo{};
-        bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat);
-
-        // Calculate target texture storage size.
-        // Always return pixel data in RBGA8 to match the web.
-        const auto targetTextureFormat{bgfx::TextureFormat::Enum::RGBA8};
-        bgfx::TextureInfo targetTextureInfo{};
-        bgfx::calcTextureSize(targetTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, targetTextureFormat);
-
-        // Create the output buffer if one wasn't passed in.
-        if (buffer.IsNull())
-        {
-            bufferOffset = 0;
-            bufferLength = targetTextureInfo.storageSize;
-            buffer = Napi::ArrayBuffer::New(env, bufferLength);
-        }
 
         // The face/layer index is JS-controlled and is forwarded to encoder->blit as srcZ, so validate it
         // before it can drive an out-of-bounds read inside bgfx. Babylon.js passes this argument for both
@@ -2406,23 +2389,44 @@ namespace Babylon
         if (mipLevel >= mipChainInfo.numMips)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
+            return deferred.Promise();
         }
-        else if (width == 0 || height == 0 ||
+        if (width == 0 || height == 0 ||
             static_cast<uint32_t>(x) + width > mipWidth ||
             static_cast<uint32_t>(y) + height > mipHeight)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture rectangle is out of range for this mip level.").Value());
+            return deferred.Promise();
         }
-        else if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
+        if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture face/layer index is out of range for this texture.").Value());
+            return deferred.Promise();
         }
+
+        // Calculate storage sizes only after validating the requested mip and rectangle.
+        bgfx::TextureInfo sourceTextureInfo{};
+        bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat);
+
+        // Always return pixel data in RGBA8 to match the web.
+        const auto targetTextureFormat{bgfx::TextureFormat::Enum::RGBA8};
+        bgfx::TextureInfo targetTextureInfo{};
+        bgfx::calcTextureSize(targetTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, targetTextureFormat);
+
+        // Create the output buffer if one wasn't passed in.
+        if (buffer.IsNull())
+        {
+            bufferOffset = 0;
+            bufferLength = targetTextureInfo.storageSize;
+            buffer = Napi::ArrayBuffer::New(env, bufferLength);
+        }
+
         // Make sure the buffer is big enough for the offset + length. Both
         // bufferOffset and bufferLength are JS-supplied uint32_t, so widen the
         // addition to 64-bit: computing it in 32-bit can wrap around (e.g. offset
         // 0xF0000000 + length 0x20000000), letting an out-of-range offset pass this
         // gate and overflow the ArrayBuffer backing store in the memcpy below.
-        else if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
+        if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
         }

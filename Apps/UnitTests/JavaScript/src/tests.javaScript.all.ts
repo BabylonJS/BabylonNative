@@ -154,7 +154,10 @@ describe("Native texture readback", function () {
       if (!internalTexture) {
         throw new Error("Expected an initialized raw texture");
       }
-      for (const [x, y, width, height] of [[2, 0, 1, 1], [0, 4, 1, 1], [0, 3, 1, 2], [0, 0, 0, 1]]) {
+      for (const [x, y, width, height] of [
+        [2, 0, 1, 1], [0, 4, 1, 1], [0, 3, 1, 2], [0, 0, 0, 1],
+        [0, 0, 65535, 65535]
+      ]) {
         let error: unknown;
         try {
           await engine._readTexturePixels(internalTexture, width, height, -1, 1, null, true, false, x, y);
