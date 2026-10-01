@@ -7,12 +7,6 @@ and it should be easy to incorporate Babylon Native into other existing projects
 document provides an overview of the concepts underpinning the Babylon Native build system
 and outlines some of the reasoning and intent behind them.
 
-## Image Format Parsing
-
-Bundled image parsers default to AVIF, BMP, EXR, GIF, HDR, JPEG, PNG, TGA, and WebP, matching browser image formats and Babylon.js texture loaders. PIC, PNM, and PSD are disabled by Babylon Native; HEIF is OFF upstream.
-
-Configure the supported formats with bgfx.cmake's `BIMG_CONFIG_PARSE_<FORMAT>` settings (`ON`, `OFF`, or empty), for example `-DBIMG_CONFIG_PARSE_WEBP=OFF`. Empty values inherit `BIMG_CONFIG_PARSE_ENABLE`, which defaults to ON. PIC, PNM, and PSD remain disabled regardless of cache or parent-project settings. These settings do not control bimg's texture-container parsers.
-
 ## Lateral Dependency Management
 
 Scalable dependency management can be a challenge when making heavy use of Git Submodules.
