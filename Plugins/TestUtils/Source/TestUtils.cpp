@@ -96,8 +96,21 @@ namespace Babylon::Plugins::Internal
         const auto callback{ info[0].As<Napi::Function>() };
 
         auto callbackPtr{ std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback)) };
-        m_deviceContext.RequestScreenShot([this, callbackPtr{ std::move(callbackPtr) }](std::vector<uint8_t> array) {
-            m_runtime.Dispatch([callbackPtr{ std::move(callbackPtr) }, array{ std::move(array) }](Napi::Env env) mutable {
+        auto errorCallbackPtr = info[1].IsUndefined() ? nullptr :
+            std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[1].As<Napi::Function>()));
+        m_deviceContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}, errorCallbackPtr{std::move(errorCallbackPtr)}](Graphics::BgfxCallback::ScreenShotResult result) mutable {
+            m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, errorCallbackPtr{std::move(errorCallbackPtr)}, result{std::move(result)}](Napi::Env env) mutable {
+                if (result.has_error())
+                {
+                    const auto error = Napi::Error::New(env, result.error());
+                    if (errorCallbackPtr)
+                    {
+                        errorCallbackPtr->Value().Call({error.Value()});
+                        return;
+                    }
+                    throw error;
+                }
+                auto array = std::move(result.value());
                 auto span = gsl::span<uint8_t>{array};
                 auto arrayBuffer{ Napi::ArrayBuffer::New(env, span.data(), span.size(), [array = std::move(array)](Napi::Env, void*) {}) };
                 auto typedArray{ Napi::Uint8Array::New(env, span.size(), arrayBuffer, 0) };

@@ -77,7 +77,7 @@ namespace Babylon::Graphics
         return m_graphicsImpl.GetActiveEncoder();
     }
 
-    void DeviceContext::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    void DeviceContext::RequestScreenShot(BgfxCallback::ScreenShotCallback callback)
     {
         return m_graphicsImpl.RequestScreenShot(std::move(callback));
     }

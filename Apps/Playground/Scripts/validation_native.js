@@ -309,6 +309,9 @@
     function evaluate(test, referenceImage, done, compareFunction) {
         TestUtils.getFrameBufferData(function (screenshot) {
             evaluateScreenshot(test, screenshot, referenceImage, done, compareFunction);
+        }, function (error) {
+            console.error(error);
+            failTest(done);
         });
     }
 
@@ -384,6 +387,12 @@
                             } else {
                                 pendingScreenshot = data;
                             }
+                        }, function (error) {
+                            evaluated = true;
+                            stopped = true;
+                            pendingScreenshot = null;
+                            console.error(error);
+                            failTest(done);
                         });
                     }
 

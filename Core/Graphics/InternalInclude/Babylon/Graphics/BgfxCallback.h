@@ -1,13 +1,19 @@
 #pragma once
 
 #include <atomic>
+#include <exception>
 #include <functional>
 #include <queue>
+#include <vector>
 
+#include <arcana/expected.h>
 #include <bgfx/bgfx.h>
 
 namespace Babylon::Graphics
 {
+    // Shared cancellation exception for screenshot and texture readbacks.
+    std::exception_ptr ReadbackCanceled();
+
     class BgfxCallback : public bgfx::CallbackI
     {
     public:
@@ -28,8 +34,13 @@ namespace Babylon::Graphics
         bool IsDeviceLost() const;
         void ClearDeviceLost();
 
-        void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
+        using ScreenShotResult = arcana::expected<std::vector<uint8_t>, std::exception_ptr>;
+        using ScreenShotCallback = std::function<void(ScreenShotResult)>;
+
+        void AddScreenShotCallback(ScreenShotCallback callback);
         bool HasPendingScreenShotCallbacks() const;
+        // Complete submitted screenshots with operation_canceled.
+        void CancelScreenShots();
         void CaptureNextScreenShot();
         void CompleteScreenShot(const CaptureData& data);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
@@ -53,7 +64,7 @@ namespace Babylon::Graphics
         std::atomic<bool> m_deviceLost{false};
         std::function<void(const char* output)> m_outputFunction;
 
-        std::queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks;
+        std::queue<ScreenShotCallback> m_submittedScreenShotCallbacks;
         bool m_captureScreenShot{};
 
         CaptureData m_captureData{};
