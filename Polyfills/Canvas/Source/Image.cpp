@@ -132,6 +132,8 @@ namespace Babylon::Polyfills::Internal
 
         m_width = m_imageContainer->m_width;
         m_height = m_imageContainer->m_height;
+        // Bump before onload. A draw in that callback must not reuse the previous texture.
+        ++m_contentGeneration;
 
         if (!m_onloadHandlerRef.IsEmpty())
         {

@@ -2186,6 +2186,57 @@ describe("Canvas image reloads", function () {
     });
   }
 
+  const pixelTest = hasNativeImageLoading && hasGpuRendering && !skipCanvasGpuTests ? it : it.skip;
+  const redPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR42mP4z8DwH4QBEfcD/f6tu5kAAAAASUVORK5CYII=";
+  const greenPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADElEQVR42mNg+A+BAA/5A/3mxKLtAAAAAElFTkSuQmCC";
+  for (const toData of [false, true]) {
+    pixelTest(`draws reloaded pixels instead of the cached texture (URL to ${toData ? "data" : "URL"})`, async function () {
+      const canvas = new _native.Canvas();
+      canvas.width = 4;
+      canvas.height = 4;
+      const context = canvas.getContext("2d");
+      try {
+        const image = new _native.Image();
+        const load = (assign: () => void) => new Promise<void>((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          assign();
+        });
+        const sample = () => context.getImageData(1, 1, 1, 1).data;
+        const expectChannel = (data: any, channel: number) => {
+          expect(data[channel]).to.be.greaterThan(240);
+          expect(data[1 - channel]).to.be.lessThan(20);
+          expect(data[2]).to.be.lessThan(20);
+          expect(data[3]).to.be.greaterThan(240);
+        };
+
+        setImageReloadTestResponse(Buffer.from(redPng, "base64"));
+        await load(() => {
+          image.src = "image-reload-test:///red.png";
+        });
+        context.drawImage(image, 0, 0, 4, 4);
+        expectChannel(sample(), 0);
+
+        if (toData) {
+          await load(() => {
+            image.src = "data:image/png;base64," + greenPng;
+          });
+        } else {
+          setImageReloadTestResponse(Buffer.from(greenPng, "base64"));
+          await load(() => {
+            image.src = "image-reload-test:///green.png";
+          });
+        }
+        context.clearRect(0, 0, 4, 4);
+        context.drawImage(image, 0, 0, 4, 4);
+        expectChannel(sample(), 1);
+      } finally {
+        context.dispose();
+        canvas.dispose();
+      }
+    });
+  }
+
   test("reports load errors and can recover with data and URL loads", async function () {
     const image = new _native.Image();
     let errorCount = 0;

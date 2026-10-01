@@ -181,7 +181,7 @@ namespace Babylon::Polyfills::Internal
             ReleaseImagesAfterFlush();
             for (auto& image : m_nvgImageIndices)
             {
-                nvgDeleteImage(*m_nvg, image.second);
+                nvgDeleteImage(*m_nvg, image.second.index);
             }
             nvgDelete(*m_nvg);
             m_nvg = nullptr;
@@ -1394,15 +1394,24 @@ namespace Babylon::Polyfills::Internal
         }
 
         int imageIndex{-1};
+        const uint32_t generation = canvasImage->GetContentGeneration();
         const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
-        if (nvgImageIter == m_nvgImageIndices.end())
+        // SetBuffer keeps this NativeCanvasImage* and only replaces its pixels. A same-size
+        // reload would otherwise keep drawing the texture created from the old buffer.
+        // Hold the old handle until this frame flushes so an earlier draw can still sample it.
+        if (nvgImageIter == m_nvgImageIndices.end() || nvgImageIter->second.generation != generation)
         {
+            if (nvgImageIter != m_nvgImageIndices.end())
+            {
+                RetainImageUntilFlush(nvgImageIter->second.index);
+                m_nvgImageIndices.erase(nvgImageIter);
+            }
             imageIndex = canvasImage->CreateNVGImageForContext(*m_nvg);
-            m_nvgImageIndices.try_emplace(canvasImage, imageIndex);
+            m_nvgImageIndices.try_emplace(canvasImage, CachedNVGImage{imageIndex, generation});
         }
         else
         {
-            imageIndex = nvgImageIter->second;
+            imageIndex = nvgImageIter->second.index;
         }
         assert(imageIndex != -1);
 

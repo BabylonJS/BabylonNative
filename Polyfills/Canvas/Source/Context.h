@@ -199,7 +199,12 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
-        std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
+        struct CachedNVGImage
+        {
+            int index{-1};
+            uint32_t generation{0};
+        };
+        std::unordered_map<const NativeCanvasImage*, CachedNVGImage> m_nvgImageIndices;
         // Transient ImageData/canvas snapshots stay alive until nvgEndFrame has
         // consumed every queued draw that references them.
         std::vector<int> m_imagesPendingFlush;
