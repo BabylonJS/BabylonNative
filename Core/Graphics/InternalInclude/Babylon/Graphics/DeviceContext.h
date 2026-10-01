@@ -98,7 +98,9 @@ namespace Babylon::Graphics
         void SetActiveEncoder(bgfx::Encoder* encoder);
         bgfx::Encoder* GetActiveEncoder();
 
-        void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        // Readbacks fail with operation_canceled on device loss; requests are not retried after reset.
+        // The callback runs synchronously if the device is already lost.
+        void RequestScreenShot(BgfxCallback::ScreenShotCallback callback);
         void RequestCaptureNextFrame();
         void SetRenderResetCallback(std::function<void()> callback);
 

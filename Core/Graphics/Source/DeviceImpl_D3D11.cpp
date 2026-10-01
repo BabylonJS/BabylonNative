@@ -622,6 +622,16 @@ namespace Babylon::Graphics
         winrt::com_ptr<ID3D11DeviceContext> context;
         device->GetImmediateContext(context.put());
 
+        const auto checkReadbackResult = [&](HRESULT result, const char* message) {
+            if (FAILED(result) && FAILED(device->GetDeviceRemovedReason()))
+            {
+                static_cast<bgfx::CallbackI&>(m_bgfxCallback).fatal(__FILE__, __LINE__, bgfx::Fatal::DeviceLost, message);
+                return false;
+            }
+            ThrowIfFailed(result, message);
+            return true;
+        };
+
         D3D11_TEXTURE2D_DESC copyDesc{};
         copyDesc.Width = colorInfo.Width;
         copyDesc.Height = colorInfo.Height;
@@ -633,9 +643,12 @@ namespace Babylon::Graphics
         copyDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 
         winrt::com_ptr<ID3D11Texture2D> staging;
-        ThrowIfFailed(
+        if (!checkReadbackResult(
             device->CreateTexture2D(&copyDesc, nullptr, staging.put()),
-            "Failed to create staging texture for D3D11 external back buffer capture.");
+            "Failed to create staging texture for D3D11 external back buffer capture."))
+        {
+            return;
+        }
 
         const uint32_t sourceSubresource = D3D11CalcSubresource(
             colorInfo.Mip,
@@ -649,9 +662,12 @@ namespace Babylon::Graphics
             resolveDesc.CPUAccessFlags = 0;
 
             winrt::com_ptr<ID3D11Texture2D> resolved;
-            ThrowIfFailed(
+            if (!checkReadbackResult(
                 device->CreateTexture2D(&resolveDesc, nullptr, resolved.put()),
-                "Failed to create resolve texture for D3D11 external back buffer capture.");
+                "Failed to create resolve texture for D3D11 external back buffer capture."))
+            {
+                return;
+            }
             context->ResolveSubresource(
                 resolved.get(),
                 0,
@@ -674,9 +690,12 @@ namespace Babylon::Graphics
         }
 
         D3D11_MAPPED_SUBRESOURCE mapped{};
-        ThrowIfFailed(
+        if (!checkReadbackResult(
             context->Map(staging.get(), 0, D3D11_MAP_READ, 0, &mapped),
-            "Failed to map D3D11 external back buffer capture.");
+            "Failed to map D3D11 external back buffer capture."))
+        {
+            return;
+        }
         const auto unmap = gsl::finally([&] { context->Unmap(staging.get(), 0); });
 
         m_bgfxCallback.CompleteScreenShot(BgfxCallback::CaptureData{

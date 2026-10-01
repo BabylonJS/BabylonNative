@@ -46,6 +46,17 @@ as texture attachments rather than replacing bgfx platform data. Screenshots and
 continuous capture use the active back buffer; multiple requests in one frame
 share a single readback.
 
+Device loss cancels pending texture readbacks and screenshots with
+`std::errc::operation_canceled`. New readbacks are rejected while
+`Device::IsDeviceLost()` is true; failed requests are not replayed after device
+replacement. Offscreen capture stops on a failed readback and must be restarted
+against the replacement device. Hosts still own device recovery.
+
+`TestUtils.getFrameBufferData(onSuccess, onError)` reports screenshot failures
+through the optional `onError` callback. If omitted, failures are raised through
+the runtime's uncaught-exception handler. The Playground validation runner treats
+these errors as test failures rather than waiting for another screenshot.
+
 Only default framebuffer wrappers created without an explicit handle follow the
 device's current window framebuffer. Explicit targets, including XR eye
 framebuffers with default-back-buffer semantics, retain their supplied handles.

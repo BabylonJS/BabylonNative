@@ -114,6 +114,16 @@ if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
     target_compile_definitions(UnitTests PRIVATE HAS_SHADER_COMPILER)
 endif()
 
+if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
+    target_link_libraries(UnitTests PRIVATE TestUtils)
+    target_compile_definitions(UnitTests PRIVATE HAS_TEST_UTILS)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
+    target_link_libraries(UnitTests PRIVATE NativeCapture)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_CAPTURE)
+endif()
+
 # NativeDraco and NativeMeshopt default to OFF, so link and exercise them only when the
 # consuming build opted in. CI turns both on for the jobs that run UnitTests.
 if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)
