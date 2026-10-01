@@ -15,6 +15,7 @@
 #include <Babylon/Plugins/NativeTracing.h>
 #include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
+#include "NativeAudio.h"
 
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
@@ -120,6 +121,8 @@ AppContext::AppContext(
         m_input = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
         Babylon::Plugins::TestUtils::Initialize(env, window);
+
+        Babylon::Plugins::NativeAudio::Initialize(env);
 
         if (additionalInit)
         {

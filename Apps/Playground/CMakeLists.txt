@@ -20,7 +20,9 @@ set(SCRIPTS
 
 set(SOURCES
     "Shared/AppContext.cpp"
-    "Shared/AppContext.h")
+    "Shared/AppContext.h"
+    "Shared/NativeAudio.cpp"
+    "Shared/NativeAudio.h")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
