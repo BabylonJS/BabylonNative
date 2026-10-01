@@ -77,6 +77,8 @@
         // corrupt later tests (e.g. the glow-layer test).
         engine.setStencilBuffer(false);
         engine.disableScissor();
+        engine.useReverseDepthBuffer = false;
+        engine.setDepthFunctionToLessOrEqual();
 
         // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
         engine.releaseEffects();
