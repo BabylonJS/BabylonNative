@@ -45,17 +45,21 @@ target_link_libraries(
 		   ${TINYEXR_LIBRARIES} #
 )
 
+target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_ENABLE=$<BOOL:${BIMG_CONFIG_PARSE_ENABLE}>)
+
+foreach(FORMAT AVIF;BMP;EXR;GIF;HDR;HEIF;JPEG;PIC;PNG;PNM;PSD;TGA;WEBP)
+	if(NOT "${BIMG_CONFIG_PARSE_${FORMAT}}" STREQUAL "")
+		target_compile_definitions(
+			bimg_decode PRIVATE BIMG_CONFIG_PARSE_${FORMAT}=$<BOOL:${BIMG_CONFIG_PARSE_${FORMAT}}>
+		)
+	endif()
+endforeach()
+
 if("${BIMG_CONFIG_PARSE_AVIF}" STREQUAL "")
 	set(BIMG_PARSE_AVIF "${BIMG_CONFIG_PARSE_ENABLE}")
 else()
 	set(BIMG_PARSE_AVIF "${BIMG_CONFIG_PARSE_AVIF}")
 endif()
-
-target_compile_definitions(
-	bimg_decode PRIVATE
-	BIMG_CONFIG_PARSE_ENABLE=$<BOOL:${BIMG_CONFIG_PARSE_ENABLE}>
-	BIMG_CONFIG_PARSE_AVIF=$<BOOL:${BIMG_PARSE_AVIF}>
-)
 
 if(BIMG_PARSE_AVIF)
 	target_compile_definitions(bimg_decode PRIVATE AVIF_CODEC_DAV1D)
