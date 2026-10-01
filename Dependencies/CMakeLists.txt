@@ -40,9 +40,9 @@ set(BGFX_USE_DEBUG_SUFFIX OFF)
 set(BGFX_CONFIG_VIDEO OFF)
 
 # These formats have neither browser image support nor Babylon.js texture loaders.
-set(BIMG_CONFIG_PARSE_PIC OFF CACHE STRING "Enable PIC parsing (empty uses bimg's default).")
-set(BIMG_CONFIG_PARSE_PNM OFF CACHE STRING "Enable PNM parsing (empty uses bimg's default).")
-set(BIMG_CONFIG_PARSE_PSD OFF CACHE STRING "Enable PSD parsing (empty uses bimg's default).")
+set(BIMG_CONFIG_PARSE_PIC OFF)
+set(BIMG_CONFIG_PARSE_PNM OFF)
+set(BIMG_CONFIG_PARSE_PSD OFF)
 
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 

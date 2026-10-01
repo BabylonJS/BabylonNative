@@ -9,9 +9,9 @@ and outlines some of the reasoning and intent behind them.
 
 ## Image Format Parsing
 
-Bundled image parsers default to AVIF, BMP, EXR, GIF, HDR, JPEG, PNG, TGA, and WebP, matching browser image formats and Babylon.js texture loaders. PIC, PNM, and PSD default to OFF; HEIF is OFF upstream.
+Bundled image parsers default to AVIF, BMP, EXR, GIF, HDR, JPEG, PNG, TGA, and WebP, matching browser image formats and Babylon.js texture loaders. PIC, PNM, and PSD are disabled by Babylon Native; HEIF is OFF upstream.
 
-Configure individual formats with bgfx.cmake's `BIMG_CONFIG_PARSE_<FORMAT>` settings (`ON`, `OFF`, or empty), for example `-DBIMG_CONFIG_PARSE_PSD=ON`. Explicit cache entries and parent-project values are preserved. Empty values inherit `BIMG_CONFIG_PARSE_ENABLE`, which defaults to ON. These settings do not control bimg's texture-container parsers.
+Configure the supported formats with bgfx.cmake's `BIMG_CONFIG_PARSE_<FORMAT>` settings (`ON`, `OFF`, or empty), for example `-DBIMG_CONFIG_PARSE_WEBP=OFF`. Empty values inherit `BIMG_CONFIG_PARSE_ENABLE`, which defaults to ON. PIC, PNM, and PSD remain disabled regardless of cache or parent-project settings. These settings do not control bimg's texture-container parsers.
 
 ## Lateral Dependency Management
 
