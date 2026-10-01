@@ -188,6 +188,11 @@ if(TARGET ShaderCompiler)
     install_lib(ShaderCompiler)
 endif()
 
+if(TARGET TestUtils)
+    install_lib(TestUtils)
+    install_include(TestUtils)
+endif()
+
 if(TARGET ShaderTool)
     install_bin(ShaderTool)
 endif()
