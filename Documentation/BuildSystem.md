@@ -9,13 +9,9 @@ and outlines some of the reasoning and intent behind them.
 
 ## Image Format Parsing
 
-Native AVIF image decoding is disabled by default. This excludes the libavif and
-dav1d sources from the bimg decoder build; other image-format defaults are unchanged.
+Bundled image parsers default to AVIF, BMP, EXR, GIF, HDR, JPEG, PNG, TGA, and WebP, matching browser image formats and Babylon.js texture loaders. PIC, PNM, and PSD default to OFF; HEIF is OFF upstream.
 
-To enable AVIF support, configure Babylon Native with `-DBIMG_CONFIG_PARSE_AVIF=ON`.
-An explicit setting from a parent CMake project is also respected. Unset or empty
-values use Babylon Native's disabled default, including empty cache entries left by
-earlier configurations.
+Configure individual formats with bgfx.cmake's `BIMG_CONFIG_PARSE_<FORMAT>` settings (`ON`, `OFF`, or empty), for example `-DBIMG_CONFIG_PARSE_PSD=ON`. Explicit cache entries and parent-project values are preserved. Empty values inherit `BIMG_CONFIG_PARSE_ENABLE`, which defaults to ON. These settings do not control bimg's texture-container parsers.
 
 ## Lateral Dependency Management
 
