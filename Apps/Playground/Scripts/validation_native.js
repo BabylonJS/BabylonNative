@@ -19,6 +19,10 @@
     const cliCaptureFrame = (typeof opts.captureFrame === "number" && opts.captureFrame > 0) ? (opts.captureFrame | 0) : 0;
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
+    // Stopgap so native validation can pass. Examples should wait for their own
+    // scene, material, GUI, and utility-scene resources; that belongs in the
+    // examples, not this harness. Waiting here only because fixing each test
+    // individually is a much larger task.
     const MAX_CONVERGENCE_TICKS = 240;
     const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
