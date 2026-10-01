@@ -281,6 +281,12 @@ namespace Babylon::Plugins
                 throw std::runtime_error{"Unsupported texture type"};
             }
 
+            // Pinned bgfx uses imported Metal textures as resolve targets, not MSAA attachments.
+            if (ptr->sampleCount() > 1)
+            {
+                throw std::runtime_error{"Multisampled Metal textures are not supported"};
+            }
+
             info.Width = static_cast<uint16_t>(ptr->width());
             info.Height = static_cast<uint16_t>(ptr->height());
             info.MipLevels = static_cast<uint16_t>(ptr->mipmapLevelCount());
@@ -288,12 +294,7 @@ namespace Babylon::Plugins
 
             if ((ptr->usage() & MTL::TextureUsageRenderTarget) != 0)
             {
-                info.Flags |= RenderTargetSamplesToBgfxRtFlag(ptr->sampleCount());
-
-                if (ptr->sampleCount() > 1)
-                {
-                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE;
-                }
+                info.Flags |= BGFX_TEXTURE_RT;
             }
 
             const auto targetFormat = overrideFormat.has_value() ? overrideFormat.value() : ptr->pixelFormat();

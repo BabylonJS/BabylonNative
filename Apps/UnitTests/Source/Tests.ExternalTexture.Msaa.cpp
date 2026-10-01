@@ -164,6 +164,22 @@ TEST(ExternalTexture, PreservesWrappedMsaaFlags)
             continue;
         }
         auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 16, 16, 1, true, samples);
+        if (bgfx::getRendererType() == bgfx::RendererType::Metal && samples > 1)
+        {
+            EXPECT_THROW((Babylon::Plugins::ExternalTexture{nativeTexture}), std::runtime_error);
+
+            auto singleSampleTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 8, 8, 1, true);
+            Babylon::Plugins::ExternalTexture externalTexture{singleSampleTexture};
+            Helpers::DestroyTexture(singleSampleTexture);
+            EXPECT_THROW(externalTexture.Update(nativeTexture), std::runtime_error);
+            EXPECT_EQ(externalTexture.Get(), singleSampleTexture);
+            EXPECT_EQ(externalTexture.Width(), 8u);
+            EXPECT_EQ(externalTexture.Height(), 8u);
+
+            Helpers::DestroyTexture(nativeTexture);
+            device.FinishRenderingCurrentFrame();
+            continue;
+        }
         Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
         Helpers::DestroyTexture(nativeTexture);
         std::promise<std::string> completed;
@@ -226,6 +242,8 @@ TEST(ExternalTexture, RenderWithMsaaSamples4)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_MULTISAMPLE_TESTS)
     GTEST_SKIP();
+#elif defined(__APPLE__)
+    GTEST_SKIP() << "Pinned bgfx cannot import multisampled Metal textures as MSAA attachments";
 #else
     auto pixels = RenderAndReadback(4);
 

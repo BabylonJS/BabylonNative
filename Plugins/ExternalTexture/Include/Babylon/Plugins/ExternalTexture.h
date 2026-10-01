@@ -8,6 +8,7 @@
 namespace Babylon::Plugins
 {
     // All operations of this class must be called from the graphics thread unless otherwise noted.
+    // Construction and Update reject multisampled Metal textures, which bgfx cannot import as MSAA attachments.
     class ExternalTexture final
     {
     public:
