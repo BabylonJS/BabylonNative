@@ -53,10 +53,10 @@ namespace
     {
         const bool depthStencil = format > bgfx::TextureFormat::UnknownDepth;
         const bool multisampled = (flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
-        const auto rendererType = bgfx::getRendererType();
-        // TextureGL::clear is a no-op unless glClearTexSubImage is present. OpenGL ES 3.0 does not require it.
-        const bool openGL = rendererType == bgfx::RendererType::OpenGL || rendererType == bgfx::RendererType::OpenGLES;
-        if (!depthStencil && !multisampled && !openGL)
+        // bgfx::clear covers sampled color on every backend, including OpenGL.
+        // It does not cover depth, or a sampled MSAA resolve image: D3D12 and Vulkan
+        // clear the multisample image, which has only mip 0.
+        if (!depthStencil && !multisampled)
         {
             bgfx::clear(handle);
             return;
