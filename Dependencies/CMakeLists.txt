@@ -39,36 +39,6 @@ set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 set(BGFX_CONFIG_VIDEO OFF)
 
-if(NOT DEFINED BIMG_CONFIG_PARSE_ENABLE)
-    set(BIMG_CONFIG_PARSE_ENABLE OFF CACHE BOOL "Enable bimg image format parsers.")
-endif()
-
-set(_bimg_supported_formats AVIF BMP EXR GIF HDR JPEG PNG TGA WEBP)
-set(_bimg_selected_formats)
-if(BABYLON_NATIVE_IMAGE_PARSER_FORMATS MATCHES "(^;|;;|;$)")
-    message(FATAL_ERROR "BABYLON_NATIVE_IMAGE_PARSER_FORMATS contains an empty format name.")
-endif()
-foreach(_bimg_format IN LISTS BABYLON_NATIVE_IMAGE_PARSER_FORMATS)
-    if(NOT _bimg_format IN_LIST _bimg_supported_formats)
-        message(FATAL_ERROR "Unsupported image parser format '${_bimg_format}' in BABYLON_NATIVE_IMAGE_PARSER_FORMATS.")
-    endif()
-    if(_bimg_format IN_LIST _bimg_selected_formats)
-        message(FATAL_ERROR "Duplicate image parser format '${_bimg_format}' in BABYLON_NATIVE_IMAGE_PARSER_FORMATS.")
-    endif()
-    list(APPEND _bimg_selected_formats "${_bimg_format}")
-endforeach()
-
-# Normal defaults for every format prevent dependency cache entries from freezing later list changes.
-foreach(_bimg_format IN LISTS _bimg_supported_formats)
-    if(NOT DEFINED BIMG_CONFIG_PARSE_${_bimg_format} OR "${BIMG_CONFIG_PARSE_${_bimg_format}}" STREQUAL "")
-        if(_bimg_format IN_LIST _bimg_selected_formats)
-            set(BIMG_CONFIG_PARSE_${_bimg_format} ON)
-        else()
-            set(BIMG_CONFIG_PARSE_${_bimg_format} "${BIMG_CONFIG_PARSE_ENABLE}")
-        endif()
-    endif()
-endforeach()
-
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
