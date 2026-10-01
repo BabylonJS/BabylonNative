@@ -58,11 +58,6 @@ screenshot, and creation-timeout work. A late-loaded scene cannot replace the ne
 This uses published engine APIs; failures that do not emit an effect-error notification
 still depend on the normal timeouts or a separate engine fix.
 
-The host-independent runner regressions execute the complete script with simulated
-host services. Run them from the repository root with
-`node --test Apps/Playground/Tests/validation_native.test.cjs`; CI runs them separately
-from GPU validation.
-
 # Generate Reference Images
 
 Your test list is updated and your playground is ready to test. it's now time to generate a reference image.
