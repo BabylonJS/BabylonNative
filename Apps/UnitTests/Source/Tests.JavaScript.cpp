@@ -16,7 +16,6 @@
 #include <Babylon/Plugins/NativeMeshopt.h>
 #endif
 #include <Babylon/ScriptLoader.h>
-
 #include <cstdlib>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -78,6 +77,11 @@ TEST(JavaScript, All)
         env.Global().Set("hasNativeImageLoading", true);
 #else
         env.Global().Set("hasNativeImageLoading", false);
+#endif
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS) || defined(TEST_INSTALLED_SDK)
+        env.Global().Set("hasAttributeLessInstancing", false);
+#else
+        env.Global().Set("hasAttributeLessInstancing", true);
 #endif
 #ifdef USE_NOOP_METAL_DEVICE
         env.Global().Set("hasGpuRendering", false);

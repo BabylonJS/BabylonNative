@@ -95,6 +95,11 @@ namespace Babylon
             VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
+        else if (instanceCount > 0)
+        {
+            // These draws derive per-instance data from gl_InstanceID instead of an instance buffer.
+            encoder->setInstanceCount(instanceCount);
+        }
 
         uint8_t stream = 0;
         for (const auto& pair : m_vertexBufferRecords)
