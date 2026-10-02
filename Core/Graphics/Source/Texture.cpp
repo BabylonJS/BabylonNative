@@ -8,6 +8,15 @@
 
 namespace
 {
+    const bgfx::Memory* GetZeroImageMemory(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, bool cubeMap)
+    {
+        bgfx::TextureInfo info{};
+        bgfx::calcTextureSize(info, width, height, /*depth*/ 1, cubeMap, hasMips, numLayers, format);
+        const bgfx::Memory* mem = bgfx::alloc(info.storageSize);
+        std::memset(mem->data, 0, mem->size);
+        return mem;
+    }
+
     // Sampled MSAA color lives in a single-sample resolve image. Its mip chain is filled
     // only when resolve runs with BGFX_ATTACHMENT_AUTO_GEN_MIPS, which happens when the
     // backend leaves that framebuffer. A later readback resolves mip 0 and drops this flag.
@@ -266,7 +275,11 @@ namespace Babylon::Graphics
     {
         Dispose();
 
-        m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags);
+        // WebGL texImage2D(..., null) zero-fills every cube face. A cube created without
+        // memory is uninitialized, so render targets must upload explicit zeros.
+        const auto* mem = (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(size, size, hasMips, numLayers, format, true) : nullptr;
+
+        m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags, mem);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create cube texture"};

@@ -290,3 +290,89 @@ TEST(NativeEngineCubeRenderTargets, ClearsEachFaceIndependentlyAndPreserves2DDef
     }
     device.FinishRenderingCurrentFrame();
 }
+
+TEST(NativeEngineCubeRenderTargets, RejectsMultisamplingAndZeroFillsFacesBeforeClear)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP() << "GPU rendering/readback is unavailable in this test configuration";
+#endif
+    device.StartRenderingCurrentFrame();
+    Babylon::AppRuntime runtime{};
+    constexpr uint16_t size = 4;
+    constexpr uint32_t faceCount = 6;
+    std::array<uint8_t, size * size * 4 * faceCount> pixels{};
+    std::promise<void> completed;
+    auto future = completed.get_future();
+    runtime.Dispatch([&](Napi::Env env) {
+        try
+        {
+            device.AddToJavaScript(env);
+            Babylon::Plugins::NativeEngine::Initialize(env);
+            auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+            auto frameScope = context.AcquireFrameCompletionScope();
+            auto engine = env.Global().Get("_native").As<Napi::Object>().Get("Engine").As<Napi::Function>().New({});
+            auto createTexture = engine.Get("createTexture").As<Napi::Function>();
+            auto initializeTexture = engine.Get("initializeTexture").As<Napi::Function>();
+            auto createFrameBuffer = engine.Get("createFrameBuffer").As<Napi::Function>();
+            auto value = createTexture.Call(engine, {});
+            env.Global().Set("_testCube", value);
+            EXPECT_THROW(initializeTexture.Call(engine, {
+                value, Napi::Number::New(env, size), Napi::Number::New(env, size),
+                Napi::Boolean::New(env, false), Napi::Number::New(env, bgfx::TextureFormat::RGBA8),
+                Napi::Boolean::New(env, true), Napi::Boolean::New(env, false),
+                Napi::Number::New(env, 4), Napi::Boolean::New(env, true)}), Napi::Error);
+            initializeTexture.Call(engine, {
+                value, Napi::Number::New(env, size), Napi::Number::New(env, size),
+                Napi::Boolean::New(env, false), Napi::Number::New(env, bgfx::TextureFormat::RGBA8),
+                Napi::Boolean::New(env, true), Napi::Boolean::New(env, false),
+                Napi::Number::New(env, 1), Napi::Boolean::New(env, true)});
+            auto* cube = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+            EXPECT_THROW(createFrameBuffer.Call(engine, {
+                value, Napi::Number::New(env, size), Napi::Number::New(env, size),
+                Napi::Boolean::New(env, false), Napi::Boolean::New(env, false),
+                Napi::Number::New(env, 4), Napi::Number::New(env, 0)}), Napi::Error);
+
+            auto readback = std::make_shared<Babylon::Graphics::Texture>(context);
+            readback->Create2D(size * faceCount, size, false, 1, bgfx::TextureFormat::RGBA8,
+                BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+            for (uint16_t face = 0; face < faceCount; ++face)
+            {
+                bgfx::TextureRegion destination{};
+                destination.init(readback->Handle(), face * size, 0, size, size);
+                bgfx::TextureRegion source{};
+                source.init(cube->Handle(), 0, 0, size, size);
+                source.z = face;
+                source.depth = 1;
+                context.GetActiveEncoder()->blit(context.AcquireNewViewId(), destination, source);
+            }
+            context.ReadTextureAsync(readback->Handle(), gsl::make_span(pixels))
+                .then(arcana::inline_scheduler, arcana::cancellation::none(), [readback, &completed](arcana::expected<void, std::exception_ptr> result) {
+                    readback->Dispose();
+                    if (result.has_error())
+                    {
+                        completed.set_exception(result.error());
+                    }
+                    else
+                    {
+                        completed.set_value();
+                    }
+                });
+        }
+        catch (const std::exception& ex)
+        {
+            completed.set_exception(std::make_exception_ptr(std::runtime_error{ex.what()}));
+        }
+    });
+    while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        device.StartRenderingCurrentFrame();
+    }
+    EXPECT_NO_THROW(future.get());
+    for (const uint8_t channel : pixels)
+    {
+        EXPECT_EQ(channel, 0);
+    }
+    device.FinishRenderingCurrentFrame();
+}
