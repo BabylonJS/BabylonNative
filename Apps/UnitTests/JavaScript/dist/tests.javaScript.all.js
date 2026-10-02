@@ -30618,6 +30618,148 @@ function hexToBytes(hex) {
   });
 });
 
+describe("Canvas image reloads", function () {
+  this.timeout(5000);
+  var test = hasNativeImageLoading ? it : it.skip;
+  var pixelTest = hasNativeImageLoading && hasGpuRendering && !skipCanvasGpuTests ? it : it.skip;
+  var url = "app:///Assets/image-reload.png";
+  var dataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAABCAAAAAA+i0toAAAADElEQVR42mNgqP8PAAIBAX+LG2RhAAAAAElFTkSuQmCC";
+  var redPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR42mP4z8DwH4QBEfcD/f6tu5kAAAAASUVORK5CYII=";
+  var greenPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADElEQVR42mNg+A+BAA/5A/3mxKLtAAAAAElFTkSuQmCC";
+  var expect = chai__WEBPACK_IMPORTED_MODULE_4__.expect;
+
+  [[url, url], [url, dataUrl], [dataUrl, url], [dataUrl, dataUrl]].forEach(function (sources) {
+    test("loads the same image again (" + sources.map(function (source) {
+      return source === url ? "URL" : "data";
+    }).join(" to ") + ")", function () {
+      var image = new _native.Image();
+      return sources.reduce(function (pending, source) {
+        return pending.then(function () {
+          return new Promise(function (resolve, reject) {
+            image.onload = resolve;
+            image.onerror = reject;
+            image.src = source;
+          }).then(function () {
+            expect(image.width).to.equal(source === url ? 2 : 3);
+            expect(image.naturalWidth).to.equal(image.width);
+            expect(image.height).to.equal(1);
+            expect(image.naturalHeight).to.equal(1);
+          });
+        });
+      }, Promise.resolve());
+    });
+  });
+
+  test("reflects the assigned src immediately", function () {
+    var image = new _native.Image();
+    return new Promise(function (resolve, reject) {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = dataUrl;
+      expect(image.src).to.equal(dataUrl);
+    }).then(function () {
+      expect(image.src).to.equal(dataUrl);
+    });
+  });
+
+  [true, false].forEach(function (fromUrl) {
+    test("only delivers the latest assignment after a pending " + (fromUrl ? "URL" : "data") + " load", function () {
+      setImageReloadTestResponse(buffer__WEBPACK_IMPORTED_MODULE_5__.Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=", "base64"));
+      var image = new _native.Image();
+      var barrier = new _native.Image();
+      var loaded = [];
+      var errors = [];
+      return new Promise(function (resolve, reject) {
+        image.onload = function () { loaded.push(image.width); };
+        image.onerror = function (error) { errors.push(error); reject(error); };
+        barrier.onload = resolve;
+        barrier.onerror = reject;
+        image.src = fromUrl ? "image-reload-test:///image.png" : dataUrl;
+        image.src = dataUrl;
+        barrier.src = dataUrl;
+      }).then(function () {
+        expect(image.src).to.equal(dataUrl);
+        expect(loaded).to.deep.equal([3]);
+        expect(errors).to.deep.equal([]);
+        expect(image.width).to.equal(3);
+        expect(barrier.width).to.equal(3);
+      });
+    });
+  });
+
+  [false, true].forEach(function (toData) {
+    pixelTest("draws reloaded pixels instead of the cached texture (URL to " + (toData ? "data" : "URL") + ")", function () {
+      var canvas = new _native.Canvas();
+      canvas.width = 4;
+      canvas.height = 4;
+      var context = canvas.getContext("2d");
+      var image = new _native.Image();
+      function load(assign) {
+        return new Promise(function (resolve, reject) {
+          image.onload = resolve;
+          image.onerror = reject;
+          assign();
+        });
+      }
+      function expectChannel(channel) {
+        var data = context.getImageData(1, 1, 1, 1).data;
+        expect(data[channel]).to.be.greaterThan(240);
+        expect(data[1 - channel]).to.be.lessThan(20);
+        expect(data[2]).to.be.lessThan(20);
+        expect(data[3]).to.be.greaterThan(240);
+      }
+      return load(function () {
+        setImageReloadTestResponse(buffer__WEBPACK_IMPORTED_MODULE_5__.Buffer.from(redPng, "base64"));
+        image.src = "image-reload-test:///red.png";
+      }).then(function () {
+        context.drawImage(image, 0, 0, 4, 4);
+        expectChannel(0);
+        return load(function () {
+          if (toData) {
+            image.src = "data:image/png;base64," + greenPng;
+          } else {
+            setImageReloadTestResponse(buffer__WEBPACK_IMPORTED_MODULE_5__.Buffer.from(greenPng, "base64"));
+            image.src = "image-reload-test:///green.png";
+          }
+        });
+      }).then(function () {
+        context.clearRect(0, 0, 4, 4);
+        context.drawImage(image, 0, 0, 4, 4);
+        expectChannel(1);
+        context.dispose();
+        canvas.dispose();
+      }, function (error) {
+        context.dispose();
+        canvas.dispose();
+        throw error;
+      });
+    });
+  });
+
+  test("reports load errors and can recover with data and URL loads", function () {
+    var image = new _native.Image();
+    var errorCount = 0;
+    return new Promise(function (resolve, reject) {
+      image.onload = function () { reject(new Error("A missing file unexpectedly loaded")); };
+      image.onerror = function () { ++errorCount; resolve(); };
+      image.src = "app:///Assets/nonexistent-image-reload.png";
+    }).then(function () {
+      expect(errorCount).to.equal(1);
+      return [dataUrl, url].reduce(function (pending, source) {
+        return pending.then(function () {
+          return new Promise(function (resolve, reject) {
+            image.onload = resolve;
+            image.onerror = reject;
+            image.src = source;
+          }).then(function () {
+            expect(image.src).to.equal(source);
+            expect(image.width).to.equal(source === url ? 2 : 3);
+          });
+        });
+      }, Promise.resolve());
+    });
+  });
+});
 mocha.run(function (failures) {
   // Test program will wait for code to be set before exiting
   if (failures > 0) {

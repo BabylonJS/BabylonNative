@@ -26,6 +26,9 @@ namespace Babylon::Polyfills::Internal
 
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
+        // Contexts cache a NanoVG image by this pointer. This changes whenever SetBuffer
+        // replaces the decoded pixels, including a same-size URL or data reload.
+        uint32_t GetContentGeneration() const { return m_contentGeneration; }
 
     private:
         Napi::Value GetWidth(const Napi::CallbackInfo&);
@@ -39,10 +42,12 @@ namespace Babylon::Polyfills::Internal
         void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);
         void HandleLoadImageError(const Napi::Error& error);
         bool SetBuffer(gsl::span<const std::byte> buffer);
+        void ReleaseImage();
         void Dispose();
 
         uint32_t m_width{1};
         uint32_t m_height{1};
+        uint32_t m_contentGeneration{0};
 
         std::string m_src{};
 
