@@ -2,24 +2,24 @@ import * as Mocha from "mocha";
 import { expect } from "chai";
 import { Constants, NativeEngine, Scene, Texture } from "@babylonjs/core";
 
-const fixtures: { name: string; png: string; pixels: number[]; width: number }[] = [
+const fixtures: { name: string; png: string; pixels: number[]; width: number; tolerance?: number }[] = [
   {
-    name: "16-bit RGBA", width: 4,
+    name: "16-bit RGBA", width: 4, tolerance: 1,
     png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAYAAACprNOOAAAAI0lEQVR4nGOo/38v9Ene//8MDP//NzBAeAwMIB4D4/9/90IBNYURsvcM43UAAAAASUVORK5CYII=",
     pixels: [128, 222, 227, 255, 0, 255, 128, 128, 222, 227, 0, 0, 255, 0, 255, 222],
   },
   {
-    name: "16-bit RGB", width: 4,
+    name: "16-bit RGB", width: 4, tolerance: 1,
     png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAIAAAAmzkTZAAAAG0lEQVR4nGOo/38v9EkeA8P//w0MMBYD4/9/AKWbDQOAUd17AAAAAElFTkSuQmCC",
     pixels: [128, 222, 227, 255, 0, 255, 128, 255, 222, 227, 0, 255, 255, 0, 255, 255],
   },
   {
-    name: "16-bit grayscale", width: 4,
+    name: "16-bit grayscale", width: 4, tolerance: 1,
     png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAAAAACMx4xSAAAAEUlEQVR4nGOo/38v9Ene//8AGa4GAvbhooAAAAAASUVORK5CYII=",
     pixels: [128, 128, 128, 255, 222, 222, 222, 255, 227, 227, 227, 255, 255, 255, 255, 255],
   },
   {
-    name: "16-bit grayscale with alpha", width: 4,
+    name: "16-bit grayscale with alpha", width: 4, tolerance: 1,
     png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAQAAAADpRsFAAAAF0lEQVR4nGOo/////73Q+v9P8hgYQCwAYP8KsdIXi8oAAAAASUVORK5CYII=",
     pixels: [128, 128, 128, 255, 222, 222, 222, 128, 227, 227, 227, 0, 255, 255, 255, 222],
   },
@@ -34,6 +34,16 @@ const fixtures: { name: string; png: string; pixels: number[]; width: number }[]
     pixels: [0, 0, 0, 0, 127, 127, 127, 64, 255, 255, 255, 255],
   },
 ];
+
+function expectPixels(pixels: Uint8Array, fixture: typeof fixtures[number]): void {
+  expect(pixels.length).to.equal(fixture.pixels.length);
+  // WIC and bundled decoders quantize 16-bit channels to 8-bit with different rounding.
+  for (let index = 0; index < pixels.length; ++index) {
+    const expected = fixture.pixels[index];
+    const tolerance = expected === 0 || expected === 255 ? 0 : fixture.tolerance ?? 0;
+    expect(pixels[index], `channel ${index}`).to.be.closeTo(expected, tolerance);
+  }
+}
 
 export function registerPngTests(
   describe: typeof Mocha.describe,
@@ -60,7 +70,7 @@ export function registerPngTests(
             if (!(pixels instanceof Uint8Array)) {
               throw new Error("Expected unsigned-byte PNG texture readback");
             }
-            expect(Array.from(pixels)).to.deep.equal(fixture.pixels);
+            expectPixels(pixels, fixture);
             expect(texture.getSize().width).to.equal(fixture.width);
             expect(texture.getSize().height).to.equal(1);
             if (generateMips) {
@@ -83,7 +93,7 @@ export function registerPngTests(
           expect(bitmap.width).to.equal(fixture.width);
           expect(bitmap.height).to.equal(1);
           const pixels = engine.resizeImageBitmap(bitmap, fixture.width, 1);
-          expect(Array.from(pixels)).to.deep.equal(fixture.pixels);
+          expectPixels(pixels, fixture);
         } finally {
           engine.dispose();
         }

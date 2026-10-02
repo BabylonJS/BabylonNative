@@ -44,6 +44,10 @@ set(BIMG_CONFIG_PARSE_PIC OFF)
 set(BIMG_CONFIG_PARSE_PNM OFF)
 set(BIMG_CONFIG_PARSE_PSD OFF)
 
+if(WIN32 AND NOT DEFINED BIMG_CONFIG_USE_WIC)
+    set(BIMG_CONFIG_USE_WIC ON)
+endif()
+
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
