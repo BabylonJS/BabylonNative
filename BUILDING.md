@@ -341,6 +341,8 @@ Bundled image parsers default to AVIF, BMP, EXR, GIF, HDR, JPEG, PNG, TGA, and W
 
 Configure the supported formats with bgfx.cmake's `BIMG_CONFIG_PARSE_<FORMAT>` settings (`ON`, `OFF`, or empty), for example `-DBIMG_CONFIG_PARSE_WEBP=OFF`. Empty values inherit `BIMG_CONFIG_PARSE_ENABLE`, which defaults to ON. PIC, PNM, and PSD remain disabled regardless of cache or parent-project settings. These settings do not control bimg's texture-container parsers.
 
+On Windows, `-DBIMG_CONFIG_USE_WIC=ON` selects Windows Imaging Component (WIC) decoding for enabled PNG, JPEG, BMP, and GIF formats instead of their bundled decoders. It defaults to OFF and does not enable formats disabled by their `BIMG_CONFIG_PARSE_<FORMAT>` settings.
+
 ## Selecting the Graphics API
 
 For Win32, UWP, Android, and Linux, it's possible to build for different graphics API.
