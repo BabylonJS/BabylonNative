@@ -18,6 +18,7 @@
 #include <Babylon/ScriptLoader.h>
 
 #include <cstdlib>
+#include <memory>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -38,6 +39,68 @@ namespace
         return "unknown";
     }
 }
+
+#ifdef HAS_NATIVE_MESHOPT
+TEST(NativeMeshopt, LegacyEntryPointMatchesGroupedDecoder)
+{
+    auto done = std::make_shared<std::promise<void>>();
+    auto completion = done->get_future();
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([done](Napi::Env env) {
+        try
+        {
+            Babylon::Plugins::NativeMeshopt::Initialize(env);
+            Napi::Eval(env, R"(
+                (function () {
+                    function bytes(hex) {
+                        return new Uint8Array(hex.match(/../g).map(function (byte) { return parseInt(byte, 16); }));
+                    }
+                    var encoded = bytes(
+                        "a00000013ff000007fffa0606001380000007e0000013ff0000020ff9070480130800000800000013ff0000080ff" +
+                        "a0606001320000007e012aa000000000000000000000000000000000000000000000000000000000800000000000beadde");
+                    var expected = bytes(
+                        "00000000000000800000000000beadde0000c03f000010c00000403f01beadde00004040000090c00000c03f02beadde" +
+                        "000090400000d8c00000104003beadde0000c040000010c10000404004beadde0000f040000034c10000704005beadde");
+                    [
+                        { name: "_native.decodeMeshopt", decode: _native.decodeMeshopt },
+                        { name: "_native.MeshoptCodec.Decode", decode: _native.MeshoptCodec.Decode }
+                    ].forEach(function (entry) {
+                        if (typeof entry.decode !== "function") {
+                            throw new Error(entry.name + ": missing Meshopt entry point");
+                        }
+                        var result;
+                        try {
+                            result = entry.decode(encoded, 6, 16, "ATTRIBUTES");
+                        } catch (error) {
+                            throw new Error(entry.name + ": " + error.message);
+                        }
+                        if (!(result instanceof Uint8Array) || result.length !== expected.length ||
+                            result.some(function (value, index) { return value !== expected[index]; })) {
+                            throw new Error(entry.name + ": expected Uint8Array containing the byte-exact reference output");
+                        }
+                        var rejected = false;
+                        try { entry.decode(encoded, 6, 16, "NOT_A_MODE"); } catch (error) { rejected = true; }
+                        if (!rejected) {
+                            throw new Error(entry.name + ": accepted an invalid mode");
+                        }
+                    });
+                })();
+            )", "meshopt-compatibility.js");
+            done->set_value();
+        }
+        catch (...)
+        {
+            done->set_exception(std::current_exception());
+        }
+    });
+    const auto status = completion.wait_for(std::chrono::seconds{30});
+    EXPECT_EQ(status, std::future_status::ready);
+    if (status == std::future_status::ready)
+    {
+        EXPECT_NO_THROW(completion.get());
+    }
+}
+#endif
 
 TEST(JavaScript, All)
 {

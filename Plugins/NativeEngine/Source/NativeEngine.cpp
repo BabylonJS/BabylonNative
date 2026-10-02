@@ -26,14 +26,15 @@
 #include <stb/stb_image_resize2.h>
 #include <bx/math.h>
 #include <bx/error.h>
-#include <algorithm>
 #endif
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <limits>
 #include <optional>
 #include <array>
+#include <utility>
 
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
 #include <atomic>
@@ -92,6 +93,7 @@ namespace Babylon
         {
             const size_t rowPitch{image.size() / height};
 
+            // Allocate one scratch row per flip without retaining peak readback size.
             std::vector<uint8_t> buffer(rowPitch);
             for (size_t row = 0; row < height / 2; row++)
             {
@@ -1639,8 +1641,10 @@ namespace Babylon
     void NativeEngine::InitializeTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        const auto widthValue = info[1].As<Napi::Number>();
+        const auto heightValue = info[2].As<Napi::Number>();
+        const uint16_t width = static_cast<uint16_t>(widthValue.Uint32Value());
+        const uint16_t height = static_cast<uint16_t>(heightValue.Uint32Value());
         const bool hasMips = info[3].As<Napi::Boolean>();
         const double formatValue = info[4].As<Napi::Number>().DoubleValue();
         if (!std::isfinite(formatValue) || formatValue < 0 || formatValue >= static_cast<double>(bgfx::TextureFormat::Count) ||
@@ -1653,6 +1657,7 @@ namespace Babylon
         const bool renderTarget = info[5].As<Napi::Boolean>();
         const bool srgb = info[6].As<Napi::Boolean>();
         const uint32_t samples = info[7].IsUndefined() ? 1 : info[7].As<Napi::Number>().Uint32Value();
+        const bool isCube = !info[8].IsUndefined() && info[8].As<Napi::Boolean>();
 
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
@@ -1665,12 +1670,12 @@ namespace Babylon
         }
 
         // Texture::Create2D also adds BLIT_DST for Babylon-owned textures.
-        const auto createFlags = flags | BGFX_TEXTURE_BLIT_DST;
-        if (!bgfx::isTextureValid(0, false, 1, format, createFlags))
+        const auto createFlags = isCube ? flags : flags | BGFX_TEXTURE_BLIT_DST;
+        if (!bgfx::isTextureValid(0, isCube, 1, format, createFlags))
         {
             // Some backends support 24-bit depth only with packed stencil storage.
             if (renderTarget && format == bgfx::TextureFormat::D24 &&
-                bgfx::isTextureValid(0, false, 1, bgfx::TextureFormat::D24S8, createFlags))
+                bgfx::isTextureValid(0, isCube, 1, bgfx::TextureFormat::D24S8, createFlags))
             {
                 format = bgfx::TextureFormat::D24S8;
             }
@@ -1678,12 +1683,23 @@ namespace Babylon
             {
                 throw Napi::Error::New(info.Env(), "Unsupported texture format " + std::to_string(format) +
                     " for requested flags (renderTarget=" + (renderTarget ? "true" : "false") +
-                    ", srgb=" + (srgb ? "true" : "false") + ", samples=" + std::to_string(samples) +
+                    ", cube=" + (isCube ? "true" : "false") + ", srgb=" + (srgb ? "true" : "false") + ", samples=" + std::to_string(samples) +
                     ", createFlags=" + std::to_string(createFlags) + ")");
             }
         }
 
-        texture->Create2D(width, height, hasMips, 1, format, flags);
+        if (isCube)
+        {
+            if (widthValue.DoubleValue() != heightValue.DoubleValue())
+            {
+                throw Napi::RangeError::New(info.Env(), "Cube texture width and height must be equal");
+            }
+            texture->CreateCube(width, hasMips, 1, format, flags);
+        }
+        else
+        {
+            texture->Create2D(width, height, hasMips, 1, format, flags);
+        }
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
@@ -2325,11 +2341,11 @@ namespace Babylon
         const Napi::Env env{info.Env()};
 
         Graphics::Texture* texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
-        uint8_t mipLevel{static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value())};
-        const uint16_t x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
-        const uint16_t y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
-        const uint16_t width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
-        const uint16_t height{static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value())};
+        const double requestedMipLevel{info[1].As<Napi::Number>().DoubleValue()};
+        const double requestedX{info[2].As<Napi::Number>().DoubleValue()};
+        const double requestedY{info[3].As<Napi::Number>().DoubleValue()};
+        const double requestedWidth{info[4].As<Napi::Number>().DoubleValue()};
+        const double requestedHeight{info[5].As<Napi::Number>().DoubleValue()};
         auto buffer{info[6].As<Napi::ArrayBuffer>()};
         uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
         uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
@@ -2340,24 +2356,32 @@ namespace Babylon
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
 
-        // Calculate source texture storage size.
-        const auto sourceTextureFormat{texture->Format()};
-        bgfx::TextureInfo sourceTextureInfo{};
-        bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat);
-
-        // Calculate target texture storage size.
-        // Always return pixel data in RBGA8 to match the web.
-        const auto targetTextureFormat{bgfx::TextureFormat::Enum::RGBA8};
-        bgfx::TextureInfo targetTextureInfo{};
-        bgfx::calcTextureSize(targetTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, targetTextureFormat);
-
-        // Create the output buffer if one wasn't passed in.
-        if (buffer.IsNull())
+        // Validate JS numbers before any integer conversion can wrap or truncate them.
+        const auto isUnsignedInteger = [](double value, double maximum) {
+            return value >= 0 && value <= maximum && std::floor(value) == value;
+        };
+        if (!isUnsignedInteger(requestedMipLevel, UINT8_MAX))
         {
-            bufferOffset = 0;
-            bufferLength = targetTextureInfo.storageSize;
-            buffer = Napi::ArrayBuffer::New(env, bufferLength);
+            deferred.Reject(Napi::Error::New(env, "readTexture mip level must be a finite integer between 0 and 255.").Value());
+            return deferred.Promise();
         }
+        const std::pair<const char*, double> rectangleParameters[]{
+            {"x", requestedX}, {"y", requestedY}, {"width", requestedWidth}, {"height", requestedHeight}};
+        for (const auto& [name, value] : rectangleParameters)
+        {
+            if (!isUnsignedInteger(value, UINT16_MAX))
+            {
+                deferred.Reject(Napi::Error::New(env, std::string{"readTexture "} + name + " must be a finite integer between 0 and 65535.").Value());
+                return deferred.Promise();
+            }
+        }
+        uint8_t mipLevel{static_cast<uint8_t>(requestedMipLevel)};
+        const uint16_t x{static_cast<uint16_t>(requestedX)};
+        const uint16_t y{static_cast<uint16_t>(requestedY)};
+        const uint16_t width{static_cast<uint16_t>(requestedWidth)};
+        const uint16_t height{static_cast<uint16_t>(requestedHeight)};
+
+        const auto sourceTextureFormat{texture->Format()};
 
         // The face/layer index is JS-controlled and is forwarded to encoder->blit as srcZ, so validate it
         // before it can drive an out-of-bounds read inside bgfx. Babylon.js passes this argument for both
@@ -2372,20 +2396,51 @@ namespace Babylon
         // without mips has numMips == 1, so this also rejects mipLevel > 0 for that case.
         bgfx::TextureInfo mipChainInfo;
         bgfx::calcTextureSize(mipChainInfo, texture->Width(), texture->Height(), 1, texture->IsCube(), texture->HasMips(), 1, sourceTextureFormat);
+        // Guard the shift independently of the mip-chain check so malformed JS input cannot
+        // trigger undefined behavior while computing the extents used by validation.
+        const uint32_t mipWidth{mipLevel < 32 ? std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel) : 0};
+        const uint32_t mipHeight{mipLevel < 32 ? std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel) : 0};
         if (mipLevel >= mipChainInfo.numMips)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
+            return deferred.Promise();
         }
-        else if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
+        if (width == 0 || height == 0 ||
+            static_cast<uint32_t>(x) + width > mipWidth ||
+            static_cast<uint32_t>(y) + height > mipHeight)
+        {
+            deferred.Reject(Napi::Error::New(env, "readTexture rectangle is out of range for this mip level.").Value());
+            return deferred.Promise();
+        }
+        if (isCubeFace && static_cast<uint32_t>(faceIndex) >= maxSrcZ)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture face/layer index is out of range for this texture.").Value());
+            return deferred.Promise();
         }
+
+        // Calculate storage sizes only after validating the requested mip and rectangle.
+        bgfx::TextureInfo sourceTextureInfo{};
+        bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat);
+
+        // Always return pixel data in RGBA8 to match the web.
+        const auto targetTextureFormat{bgfx::TextureFormat::Enum::RGBA8};
+        bgfx::TextureInfo targetTextureInfo{};
+        bgfx::calcTextureSize(targetTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, targetTextureFormat);
+
+        // Create the output buffer if one wasn't passed in.
+        if (buffer.IsNull())
+        {
+            bufferOffset = 0;
+            bufferLength = targetTextureInfo.storageSize;
+            buffer = Napi::ArrayBuffer::New(env, bufferLength);
+        }
+
         // Make sure the buffer is big enough for the offset + length. Both
         // bufferOffset and bufferLength are JS-supplied uint32_t, so widen the
         // addition to 64-bit: computing it in 32-bit can wrap around (e.g. offset
         // 0xF0000000 + length 0x20000000), letting an out-of-range offset pass this
         // gate and overflow the ArrayBuffer backing store in the memcpy below.
-        else if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
+        if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
         }
@@ -2404,10 +2459,8 @@ namespace Babylon
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture = std::make_shared<bool>(false);
 
-            // Extents of the requested mip. mipLevel was validated against the mip chain above, so the
-            // shifts are well defined here; they floor at 1 to match how bgfx sizes the tail of the chain.
-            const uint32_t mipWidth{std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel)};
-            const uint32_t mipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel)};
+            // WebGL readPixels coordinates start at the bottom, unlike D3D/Metal/Vulkan blit coordinates.
+            const uint16_t blitY{bgfx::getCaps()->originBottomLeft ? y : static_cast<uint16_t>(mipHeight - y - height)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
             // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
@@ -2421,7 +2474,7 @@ namespace Babylon
                 bgfx::TextureRegion dstRegion{};
                 dstRegion.init(blitTextureHandle, /*x*/ 0, /*y*/ 0, width, height);
                 bgfx::TextureRegion srcRegion{};
-                srcRegion.init(sourceTextureHandle, x, y, width, height);
+                srcRegion.init(sourceTextureHandle, x, blitY, width, height);
                 srcRegion.mip = mipLevel;
                 srcRegion.z = srcZ;
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dstRegion, srcRegion);
@@ -2451,7 +2504,8 @@ namespace Babylon
 #endif
                     }
                     assert(textureBuffer.size() == targetTextureInfo.storageSize);
-                    if (bgfx::getCaps()->originBottomLeft)
+                    // Return bottom-up rows, matching WebGL readPixels on every backend.
+                    if (!bgfx::getCaps()->originBottomLeft)
                     {
                         FlipImage(textureBuffer, targetTextureInfo.height);
                     }
@@ -2491,6 +2545,14 @@ namespace Babylon
         const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
         const bool generateDepth = info[4].As<Napi::Boolean>();
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
+        const double layer = info[6].IsUndefined() ? 0 : info[6].As<Napi::Number>().DoubleValue();
+        const bool isCube = texture != nullptr && texture->IsCube();
+        if (!std::isfinite(layer) || layer != std::floor(layer) || layer < 0 || layer > (isCube ? 5 : 0))
+        {
+            throw Napi::RangeError::New(info.Env(), isCube
+                ? "Cube frame buffer face must be an integer between 0 and 5"
+                : "Non-cube frame buffer layer must be 0");
+        }
 
         // A single render target is just the zero-or-one color attachment case of the shared implementation.
         const bool requestDepthStencilTexture = texture != nullptr && !texture->IsValid();
@@ -2502,7 +2564,7 @@ namespace Babylon
         const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr && !requestDepthStencilTexture ? 1u : 0u};
 
         return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples,
-            requestDepthStencilTexture ? texture : nullptr);
+            static_cast<uint16_t>(layer), requestDepthStencilTexture ? texture : nullptr);
     }
 
     Napi::Value NativeEngine::CreateMultiFrameBuffer(const Napi::CallbackInfo& info)
@@ -2530,7 +2592,7 @@ namespace Babylon
         return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples);
     }
 
-    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, Graphics::Texture* depthStencilTexture)
+    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer, Graphics::Texture* depthStencilTexture)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
         const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
@@ -2552,7 +2614,7 @@ namespace Babylon
             // bgfx validation now asserts when trying to use BGFX_ATTACHMENT_AUTO_GEN_MIPS with a texture that doesn't have the BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN flag,
             // but before it would just ignore the flag and not generate mips without any warning. This prevents validation assert, but rendering might be broken if autogen
             // mips were expected. Basically this change preserves previous behavior.
-            attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, 0, 1, 0
+            attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, layer, 1, 0
                 , 0 != (caps->formats[texture->Format()] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) ? BGFX_ATTACHMENT_AUTO_GEN_MIPS : BGFX_ATTACHMENT_NONE
                 );
         }
