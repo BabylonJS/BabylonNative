@@ -335,6 +335,14 @@ export CXX=/usr/bin/g++
 
 You will have to run CMake again to take changes into account.
 
+## Image Format Parsing
+
+Bundled image parsers default to AVIF, BMP, EXR, GIF, HDR, JPEG, PNG, TGA, and WebP, matching browser image formats and Babylon.js texture loaders. PIC, PNM, and PSD are disabled by Babylon Native; HEIF is OFF upstream.
+
+Configure the supported formats with bgfx.cmake's `BIMG_CONFIG_PARSE_<FORMAT>` settings (`ON`, `OFF`, or empty), for example `-DBIMG_CONFIG_PARSE_WEBP=OFF`. Empty values inherit `BIMG_CONFIG_PARSE_ENABLE`, which defaults to ON. PIC, PNM, and PSD remain disabled regardless of cache or parent-project settings. These settings do not control bimg's texture-container parsers.
+
+On Windows, Windows Imaging Component (WIC) decoding defaults to ON for enabled PNG, JPEG, BMP, and GIF formats instead of their bundled decoders. Set `-DBIMG_CONFIG_USE_WIC=OFF` to use the bundled decoders. Explicit cache and parent-project settings are respected; WIC does not enable formats disabled by their `BIMG_CONFIG_PARSE_<FORMAT>` settings.
+
 ## Selecting the Graphics API
 
 For Win32, UWP, Android, and Linux, it's possible to build for different graphics API.

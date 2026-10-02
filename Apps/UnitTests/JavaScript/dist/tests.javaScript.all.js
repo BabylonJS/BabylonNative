@@ -24,22 +24,22 @@ function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol 
 
 var fixtures = [
 {
-  name: "16-bit RGBA", width: 4,
+  name: "16-bit RGBA", width: 4, tolerance: 1,
   png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAYAAACprNOOAAAAI0lEQVR4nGOo/38v9Ene//8MDP//NzBAeAwMIB4D4/9/90IBNYURsvcM43UAAAAASUVORK5CYII=",
   pixels: [128, 222, 227, 255, 0, 255, 128, 128, 222, 227, 0, 0, 255, 0, 255, 222]
 },
 {
-  name: "16-bit RGB", width: 4,
+  name: "16-bit RGB", width: 4, tolerance: 1,
   png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAIAAAAmzkTZAAAAG0lEQVR4nGOo/38v9EkeA8P//w0MMBYD4/9/AKWbDQOAUd17AAAAAElFTkSuQmCC",
   pixels: [128, 222, 227, 255, 0, 255, 128, 255, 222, 227, 0, 255, 255, 0, 255, 255]
 },
 {
-  name: "16-bit grayscale", width: 4,
+  name: "16-bit grayscale", width: 4, tolerance: 1,
   png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAAAAACMx4xSAAAAEUlEQVR4nGOo/38v9Ene//8AGa4GAvbhooAAAAAASUVORK5CYII=",
   pixels: [128, 128, 128, 255, 222, 222, 222, 255, 227, 227, 227, 255, 255, 255, 255, 255]
 },
 {
-  name: "16-bit grayscale with alpha", width: 4,
+  name: "16-bit grayscale with alpha", width: 4, tolerance: 1,
   png: "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAQAAAADpRsFAAAAF0lEQVR4nGOo/////73Q+v9P8hgYQCwAYP8KsdIXi8oAAAAASUVORK5CYII=",
   pixels: [128, 128, 128, 255, 222, 222, 222, 128, 227, 227, 227, 0, 255, 255, 255, 222]
 },
@@ -54,6 +54,16 @@ var fixtures = [
   pixels: [0, 0, 0, 0, 127, 127, 127, 64, 255, 255, 255, 255]
 }];
 
+
+function expectPixels(pixels, fixture) {
+  (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(pixels.length).to.equal(fixture.pixels.length);
+  // WIC and bundled decoders quantize 16-bit channels to 8-bit with different rounding.
+  for (var index = 0; index < pixels.length; ++index) {var _fixture$tolerance;
+    var expected = fixture.pixels[index];
+    var tolerance = expected === 0 || expected === 255 ? 0 : (_fixture$tolerance = fixture.tolerance) !== null && _fixture$tolerance !== void 0 ? _fixture$tolerance : 0;
+    (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(pixels[index], "channel ".concat(index)).to.be.closeTo(expected, tolerance);
+  }
+}
 
 function registerPngTests(
 describe,
@@ -80,7 +90,7 @@ enabled)
                   pixels instanceof Uint8Array) {_context.next = 4;break;}throw (
                     new Error("Expected unsigned-byte PNG texture readback"));case 4:
 
-                  (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(Array.from(pixels)).to.deep.equal(fixture.pixels);
+                  expectPixels(pixels, fixture);
                   (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(texture.getSize().width).to.equal(fixture.width);
                   (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(texture.getSize().height).to.equal(1);if (!
                   generateMips) {_context.next = 6;break;}
@@ -103,7 +113,7 @@ enabled)
                 (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(bitmap.width).to.equal(fixture.width);
                 (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(bitmap.height).to.equal(1);
                 pixels = engine.resizeImageBitmap(bitmap, fixture.width, 1);
-                (0,chai__WEBPACK_IMPORTED_MODULE_2__.expect)(Array.from(pixels)).to.deep.equal(fixture.pixels);case 3:_context2.prev = 3;
+                expectPixels(pixels, fixture);case 3:_context2.prev = 3;
 
                 engine.dispose();return _context2.finish(3);case 4:case "end":return _context2.stop();}}, _callee2, null, [[1,, 3, 4]]);}))
 

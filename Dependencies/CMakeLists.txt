@@ -39,9 +39,13 @@ set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 set(BGFX_CONFIG_VIDEO OFF)
 
-# Keep AVIF opt-in, including caches with bgfx.cmake's empty (inherit) default.
-if(NOT DEFINED BIMG_CONFIG_PARSE_AVIF OR "${BIMG_CONFIG_PARSE_AVIF}" STREQUAL "")
-    set(BIMG_CONFIG_PARSE_AVIF OFF)
+# These formats have neither browser image support nor Babylon.js texture loaders.
+set(BIMG_CONFIG_PARSE_PIC OFF)
+set(BIMG_CONFIG_PARSE_PNM OFF)
+set(BIMG_CONFIG_PARSE_PSD OFF)
+
+if(WIN32 AND NOT DEFINED BIMG_CONFIG_USE_WIC)
+    set(BIMG_CONFIG_USE_WIC ON)
 endif()
 
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
@@ -105,13 +109,6 @@ foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
         target_compile_definitions(${_bimg_target} PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
 endforeach()
-
-# WebP parsing is provided by bimg's bundled simplewebp decoder. Toggle it
-# through bimg's own config macro so disabling the option compiles the parser
-# out of bimg_decode instead of pulling in a separate libwebp dependency.
-if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP AND TARGET bimg_decode)
-    target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_WEBP=0)
-endif()
 
 if(NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     foreach(_bx_target IN ITEMS bx bgfx bimg bimg_decode bimg_encode)
