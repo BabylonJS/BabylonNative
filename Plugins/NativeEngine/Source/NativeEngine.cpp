@@ -2831,6 +2831,10 @@ namespace Babylon
                     throw Napi::Error::New(env, "Multisampled cube render targets are not supported");
                 }
             }
+            if (depthStencilTexture != nullptr && depthStencilTexture->IsCube())
+            {
+                throw Napi::Error::New(env, "Multisampled cube render targets are not supported");
+            }
         }
         const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
         // One slot per color attachment, plus a single depth/stencil attachment only when one is

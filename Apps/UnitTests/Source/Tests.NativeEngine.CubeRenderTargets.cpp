@@ -364,8 +364,13 @@ TEST(NativeEngineCubeRenderTargets, RejectsMultisamplingAndZeroFillsFacesBeforeC
             completed.set_exception(std::make_exception_ptr(std::runtime_error{ex.what()}));
         }
     });
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{30};
     while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
     {
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            FAIL() << "Cube face readback was not fulfilled within 30s";
+        }
         device.FinishRenderingCurrentFrame();
         device.StartRenderingCurrentFrame();
     }
