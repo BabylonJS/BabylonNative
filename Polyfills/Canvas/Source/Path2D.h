@@ -65,8 +65,15 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
 
+        // True only for objects actually produced by this class's constructor. Never use
+        // ObjectWrap::Unwrap on an unchecked object; see NativeInstanceRegistry.
+        static bool IsInstance(Napi::Env env, const Napi::Value& value);
+
+        // Returns the wrapped path, or nullptr when `value` is not one of ours.
+        static NativeCanvasPath2D* TryUnwrap(Napi::Env env, const Napi::Value& value);
+
         explicit NativeCanvasPath2D(const Napi::CallbackInfo& info);
-        // virtual ~NativeCanvasPath2D(); // TODO: destructor? empty queue?
+        ~NativeCanvasPath2D();
 
         typename std::deque<Path2DCommand>::iterator begin();
         typename std::deque<Path2DCommand>::iterator end();
