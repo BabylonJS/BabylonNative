@@ -106,7 +106,7 @@ TEST(NativeEngineTextureFormats, D24RenderTargetUsesSupportedBackingStorage)
         {
             SCOPED_TRACE(samples);
             texture->Dispose();
-            const auto flags = BGFX_TEXTURE_RT | (samples == 4 ? BGFX_TEXTURE_RT_MSAA_X4 : BGFX_TEXTURE_NONE);
+            const auto flags = samples == 4 ? BGFX_TEXTURE_RT_MSAA_X4 | BGFX_TEXTURE_MSAA_SAMPLE : BGFX_TEXTURE_RT;
             const auto expectedFormat = IsSupported(bgfx::TextureFormat::D24, flags)
                 ? bgfx::TextureFormat::D24 : bgfx::TextureFormat::D24S8;
             if (!IsSupported(expectedFormat, flags))
@@ -123,14 +123,11 @@ TEST(NativeEngineTextureFormats, D24RenderTargetUsesSupportedBackingStorage)
             EXPECT_EQ(texture->Height(), 16);
             EXPECT_EQ(texture->Flags(), flags);
 
-            if (samples == 1)
-            {
-                bgfx::Attachment attachment{};
-                attachment.init(texture->Handle(), bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
-                const auto frameBuffer = bgfx::createFrameBuffer(1, &attachment, false);
-                ASSERT_TRUE(bgfx::isValid(frameBuffer));
-                bgfx::destroy(frameBuffer);
-            }
+            bgfx::Attachment attachment{};
+            attachment.init(texture->Handle(), bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
+            const auto frameBuffer = bgfx::createFrameBuffer(1, &attachment, false);
+            ASSERT_TRUE(bgfx::isValid(frameBuffer));
+            bgfx::destroy(frameBuffer);
         }
     });
 }

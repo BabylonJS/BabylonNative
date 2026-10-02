@@ -705,7 +705,7 @@ namespace Babylon
         }
 #endif // BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 
-        auto RenderTargetSamplesToBgfxMsaaFlag(uint32_t renderTargetSamples)
+        auto RenderTargetSamplesToBgfxRtFlag(uint32_t renderTargetSamples)
         {
             switch (renderTargetSamples)
             {
@@ -719,7 +719,7 @@ namespace Babylon
                     return BGFX_TEXTURE_RT_MSAA_X16;
             }
 
-            return BGFX_TEXTURE_NONE;
+            return BGFX_TEXTURE_RT;
         }
 
         using CommandFunctionPointerT = void (NativeEngine::*)(NativeDataStream::Reader&);
@@ -1662,7 +1662,13 @@ namespace Babylon
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
         {
-            flags |= BGFX_TEXTURE_RT | RenderTargetSamplesToBgfxMsaaFlag(samples);
+            // RT and the MSAA levels are values in the same field, not independent bits.
+            flags |= RenderTargetSamplesToBgfxRtFlag(samples);
+            if (format > bgfx::TextureFormat::UnknownDepth && flags != BGFX_TEXTURE_RT)
+            {
+                // Multisampled depth cannot be resolved to single-sample storage.
+                flags |= BGFX_TEXTURE_MSAA_SAMPLE;
+            }
         }
         if (srgb)
         {
@@ -2630,12 +2636,12 @@ namespace Babylon
                 JsConsoleLogger::LogWarn(env, "Stencil without depth is not supported, assuming depth and stencil");
             }
 
-            const auto msaaFlag = RenderTargetSamplesToBgfxMsaaFlag(samples);
-            auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | msaaFlag;
+            const auto rtFlag = RenderTargetSamplesToBgfxRtFlag(samples);
+            auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | rtFlag;
             if (depthStencilTexture != nullptr)
             {
                 // A standalone texture must be readable. Multisampled depth is sampled directly, not resolved.
-                flags = msaaFlag == BGFX_TEXTURE_NONE ? BGFX_TEXTURE_RT : msaaFlag | BGFX_TEXTURE_MSAA_SAMPLE;
+                flags = rtFlag | (rtFlag == BGFX_TEXTURE_RT ? BGFX_TEXTURE_NONE : BGFX_TEXTURE_MSAA_SAMPLE);
             }
 
             // Pick a depth(/stencil) format the active renderer actually supports as an RT.

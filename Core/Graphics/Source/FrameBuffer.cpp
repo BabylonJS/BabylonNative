@@ -213,7 +213,9 @@ namespace Babylon::Graphics
 
     void FrameBuffer::SetBgfxViewPortAndScissor(const Rect& viewPort, const Rect& scissor)
     {
-        if (m_viewId.has_value() && m_viewIdGeneration == m_deviceContext.ViewIdGeneration() &&
+        // A texture initialization clear may have inserted a view since our last draw.
+        if (m_viewId.has_value() && m_viewId.value() + 1u == m_deviceContext.PeekNextViewId() &&
+            m_viewIdGeneration == m_deviceContext.ViewIdGeneration() &&
             viewPort.Equals(m_bgfxViewPort) && scissor.Equals(m_bgfxScissor))
         {
             return;
