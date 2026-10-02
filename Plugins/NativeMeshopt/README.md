@@ -9,7 +9,7 @@ The plugin is **off by default**. Enable it with `-D BABYLON_NATIVE_PLUGIN_NATIV
 ## Limitations
 
 - **Decode only.** Encoding is an authoring-time concern that Babylon Native does not exercise.
-- **Compatibility entry point.** Babylon.js probes `_native.decodeMeshopt`; this free-function entry point uses the same decoder as `_native.MeshoptCodec.Decode`. The grouped API remains available.
+- **Compatibility entry point.** `_native.decodeMeshopt` is a compatibility export. It is not consumed by the pinned Babylon.js 9.21.2 package or the current public `MeshoptCompression` implementation, which use the script-based decoder. The free function uses the same decoder as `_native.MeshoptCodec.Decode`. The grouped API remains available.
 
 ## Design
 

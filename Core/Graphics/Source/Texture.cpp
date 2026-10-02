@@ -6,10 +6,10 @@
 
 namespace
 {
-    const bgfx::Memory* GetZeroImageMemory(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
+    const bgfx::Memory* GetZeroImageMemory(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, bool cubeMap)
     {
         bgfx::TextureInfo info{};
-        bgfx::calcTextureSize(info, width, height, /*depth*/ 1, /*cubeMap*/ false, hasMips, numLayers, format);
+        bgfx::calcTextureSize(info, width, height, /*depth*/ 1, cubeMap, hasMips, numLayers, format);
         const bgfx::Memory* mem = bgfx::alloc(info.storageSize);
         std::memset(mem->data, 0, mem->size);
         return mem;
@@ -83,7 +83,7 @@ namespace Babylon::Graphics
         const auto createFlags = nativeTextureHandle == 0 ? flags | BGFX_TEXTURE_BLIT_DST : flags;
 
         // Make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-        const auto* mem = nativeTextureHandle == 0 && (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
+        const auto* mem = nativeTextureHandle == 0 && (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format, false) : nullptr;
 
         m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, createFlags, mem, nativeTextureHandle);
         if (!bgfx::isValid(m_handle))
@@ -124,7 +124,11 @@ namespace Babylon::Graphics
     {
         Dispose();
 
-        m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags);
+        // WebGL texImage2D(..., null) zero-fills every cube face. A cube created without
+        // memory is uninitialized, so render targets must upload explicit zeros.
+        const auto* mem = (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(size, size, hasMips, numLayers, format, true) : nullptr;
+
+        m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags, mem);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create cube texture"};
