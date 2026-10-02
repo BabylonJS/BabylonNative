@@ -31,6 +31,8 @@ Supported format variables are `AVIF`, `BMP`, `EXR`, `GIF`, `HDR`, `HEIF`, `JPEG
 
 Use `-DBIMG_CONFIG_PARSE_AVIF=OFF` to disable only AVIF, or `-DBIMG_CONFIG_PARSE_ENABLE=OFF -DBIMG_CONFIG_PARSE_PNG=ON -DBIMG_CONFIG_PARSE_JPEG=ON` to enable only PNG and JPEG.
 
+`BIMG_CONFIG_USE_WIC` defaults to `OFF`. Set it to `ON` to use Windows Imaging Component (WIC) instead of the bundled PNG, JPEG, BMP, and GIF decoders on Windows. Their per-format parser settings still apply. Parent projects can set a normal variable before `add_subdirectory`, or users can set a cache value with `-DBIMG_CONFIG_USE_WIC=ON`. On other platforms, bimg disables WIC.
+
 When AVIF is disabled, its parser and the libavif/dav1d sources are excluded from `bimg_decode`. Set these CMake variables rather than only adding preprocessor definitions to compiler flags, so source selection and parser configuration agree.
 
 ## How To Use
