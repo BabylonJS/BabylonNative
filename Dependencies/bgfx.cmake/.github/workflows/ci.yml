@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  # Indicates the CMake build directory where project files and binaries are being produced.
+  CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
+
+jobs:
+  minimum-cmake-version:
+    name: Check compatibility with minimum cmake version
+    runs-on: ubuntu-latest
+    env:
+      CMAKE_VERSION: 3.20.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - name: Check cmake version
+        run: |
+          cmake --version | grep ${{ env.CMAKE_VERSION }}
+      - name: Test config
+        # old way of configuring a build directory
+        run: |
+          mkdir -p "${{ env.CMAKE_BUILD_DIR }}"
+          cd "${{ env.CMAKE_BUILD_DIR }}"
+          cmake ${{ github.workspace }} -GNinja -DCMAKE_BUILD_TYPE=Release
+
+  native:
+    name: ${{ matrix.os }} ${{ matrix.cc }}
+    runs-on: ${{ matrix.os }}
+    needs: minimum-cmake-version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+          - os: ubuntu-latest
+            cc: clang
+            cxx: clang++
+          - os: macos-latest
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+        if: matrix.os == 'ubuntu-latest'
+
+      # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
+      - uses: lukka/get-cmake@latest
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # Run CMake to generate Ninja project files
+      - name: Generate project files
+        run: |
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja -DCMAKE_BUILD_TYPE=Release
+
+      # Build the whole project with Ninja (which is spawn by CMake).
+      - name: Build
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}"
+
+      # Build the examples which are excluded from all
+      - name: Build examples
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target examples
+
+  cross-android:
+    name: cross-android
+    runs-on: ubuntu-latest
+    needs: minimum-cmake-version
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+        if: matrix.os == 'ubuntu-latest'
+
+      # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
+      - uses: lukka/get-cmake@latest
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # Run CMake to generate Ninja project files
+      - name: Generate project files
+        run: |
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake
+
+      # Build the whole project with Ninja (which is spawn by CMake).
+      - name: Build
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}"
+
+      # Build the examples which are excluded from all
+      - name: Build examples
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target examples

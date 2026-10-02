@@ -1,0 +1,770 @@
+/*
+ * Copyright 2011-2026 Branimir Karadzic. All rights reserved.
+ * License: https://github.com/bkaradzic/bimg/blob/master/LICENSE
+ */
+
+#include <bimg/encode.h>
+#include "bimg_p.h"
+
+#include <libsquish/squish.h>
+#include <etc1/etc1.h>
+#include <etcpak/ProcessRGB.hpp>
+#include <nvtt/nvtt.h>
+#include <pvrtc/PvrTcEncoder.h>
+#include <edtaa3/edtaa3func.h>
+#include <astcenc.h>
+
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100) // warning C4100: 'alloc_context': unreferenced formal parameter
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4702) // warning C4702: unreachable code
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter") // warning: unused parameter ‘alloc_context’ [-Wunused-parameter]
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb/stb_image_resize2.h>
+BX_PRAGMA_DIAGNOSTIC_POP();
+
+extern "C" {
+#include <iqa.h>
+}
+
+namespace bimg
+{
+	static uint32_t s_squishQuality[] =
+	{
+		// Standard
+		squish::kColourClusterFit,          // Default
+		squish::kColourIterativeClusterFit, // Highest
+		squish::kColourRangeFit,            // Fastest
+		// Normal map
+		squish::kColourClusterFit,          // Default
+		squish::kColourIterativeClusterFit, // Highest
+		squish::kColourRangeFit,            // Fastest
+	};
+	static_assert(Quality::Count == BX_COUNTOF(s_squishQuality) );
+
+	static const float s_astcQuality[] =
+	{
+		// Standard
+		ASTCENC_PRE_MEDIUM,       // Default
+		ASTCENC_PRE_THOROUGH,     // Highest
+		ASTCENC_PRE_FAST,         // Fastest
+		// Normal map
+		ASTCENC_PRE_MEDIUM,       // Default
+		ASTCENC_PRE_THOROUGH,     // Highest
+		ASTCENC_PRE_FAST,         // Fastest
+	};
+	static_assert(Quality::Count == BX_COUNTOF(s_astcQuality) );
+
+	static uint32_t* etcpakAllocBgraBlocks(
+		  bx::AllocatorI* _allocator
+		, const uint8_t* _src
+		, uint32_t _width
+		, uint32_t _height
+		, uint32_t& _outNumBlocks
+		, uint32_t& _outPaddedWidth
+		)
+	{
+		const uint32_t blockWidth   = (_width  + 3)/4;
+		const uint32_t blockHeight  = (_height + 3)/4;
+		const uint32_t paddedWidth  = blockWidth *4;
+		const uint32_t paddedHeight = blockHeight*4;
+		const uint32_t srcPitch     = _width*4;
+
+		uint32_t* bgra = (uint32_t*)bx::alloc(_allocator, paddedWidth*paddedHeight*sizeof(uint32_t) );
+
+		for (uint32_t yy = 0; yy < paddedHeight; ++yy)
+		{
+			const uint32_t sy = bx::min(yy, _height-1);
+			const uint8_t* srcRow = &_src[sy*srcPitch];
+			uint32_t* dstRow = &bgra[yy*paddedWidth];
+
+			for (uint32_t xx = 0; xx < paddedWidth; ++xx)
+			{
+				const uint32_t sx = bx::min(xx, _width-1);
+				const uint8_t* px = &srcRow[sx*4];
+				dstRow[xx] = 0
+					| (uint32_t(px[3])<<24) // A
+					| (uint32_t(px[0])<<16) // R
+					| (uint32_t(px[1])<< 8) // G
+					| (uint32_t(px[2])    ) // B
+					;
+			}
+		}
+
+		_outNumBlocks   = blockWidth*blockHeight;
+		_outPaddedWidth = paddedWidth;
+
+		return bgra;
+	}
+
+	void imageEncodeFromRgba8(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _format, Quality::Enum _quality, bx::Error* _err)
+	{
+		const uint8_t* src = (const uint8_t*)_src;
+		uint8_t* dst = (uint8_t*)_dst;
+
+		const uint32_t srcPitch = _width*4;
+		const uint32_t srcSlice = _height*srcPitch;
+		const uint32_t dstBpp   = getBitsPerPixel(_format);
+		const uint32_t dstPitch = _width*dstBpp/8;
+		const uint32_t dstSlice = _height*dstPitch;
+
+		for (uint32_t zz = 0; zz < _depth && _err->isOk(); ++zz, src += srcSlice, dst += dstSlice)
+		{
+			switch (_format)
+			{
+			case TextureFormat::BC1:
+			case TextureFormat::BC2:
+			case TextureFormat::BC3:
+			case TextureFormat::BC4:
+			case TextureFormat::BC5:
+				squish::CompressImage(src, _width, _height, dst
+					, s_squishQuality[_quality]
+					| (_format == TextureFormat::BC2 ? squish::kDxt3
+					:  _format == TextureFormat::BC3 ? squish::kDxt5
+					:  _format == TextureFormat::BC4 ? squish::kBc4
+					:  _format == TextureFormat::BC5 ? squish::kBc5
+					:                                  squish::kDxt1)
+					);
+				break;
+
+			case TextureFormat::BC6H:
+			case TextureFormat::BC7:
+				BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				break;
+
+			case TextureFormat::ETC2A1:
+				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A1 is not supported.");
+				break;
+
+			case TextureFormat::ETC1:
+				etc1_encode_image(src, _width, _height, 4, _width*4, dst);
+				break;
+
+			case TextureFormat::ETC2:
+				{
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEtc2Rgb(bgra, (uint64_t*)dst, numBlocks, paddedWidth, true);
+					bx::free(_allocator, bgra);
+				}
+				break;
+
+			case TextureFormat::ETC2A:
+				{
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEtc2Rgba(bgra, (uint64_t*)dst, numBlocks, paddedWidth, true);
+					bx::free(_allocator, bgra);
+				}
+				break;
+
+			case TextureFormat::EACR11:
+				{
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEacR(bgra, (uint64_t*)dst, numBlocks, paddedWidth);
+					bx::free(_allocator, bgra);
+				}
+				break;
+
+			case TextureFormat::EACRG11:
+				{
+					uint32_t numBlocks, paddedWidth;
+					uint32_t* bgra = etcpakAllocBgraBlocks(_allocator, src, _width, _height, numBlocks, paddedWidth);
+					CompressEacRg(bgra, (uint64_t*)dst, numBlocks, paddedWidth);
+					bx::free(_allocator, bgra);
+				}
+				break;
+
+			case TextureFormat::PTC14:
+				{
+					using namespace Javelin;
+					RgbaBitmap bmp;
+					bmp.width  = _width;
+					bmp.height = _height;
+					bmp.data   = const_cast<uint8_t*>(src);
+					PvrTcEncoder::EncodeRgb4Bpp(dst, bmp);
+					bmp.data = NULL;
+				}
+				break;
+
+			case TextureFormat::PTC14A:
+				{
+					using namespace Javelin;
+					RgbaBitmap bmp;
+					bmp.width  = _width;
+					bmp.height = _height;
+					bmp.data   = const_cast<uint8_t*>(src);
+					PvrTcEncoder::EncodeRgba4Bpp(dst, bmp);
+					bmp.data = NULL;
+				}
+				break;
+
+			case TextureFormat::ASTC4x4:
+			case TextureFormat::ASTC5x4:
+			case TextureFormat::ASTC5x5:
+			case TextureFormat::ASTC6x5:
+			case TextureFormat::ASTC6x6:
+			case TextureFormat::ASTC8x5:
+			case TextureFormat::ASTC8x6:
+			case TextureFormat::ASTC8x8:
+			case TextureFormat::ASTC10x5:
+			case TextureFormat::ASTC10x6:
+			case TextureFormat::ASTC10x8:
+			case TextureFormat::ASTC10x10:
+			case TextureFormat::ASTC12x10:
+			case TextureFormat::ASTC12x12:
+				{
+					const bimg::ImageBlockInfo& astcBlockInfo = bimg::getBlockInfo(_format);
+
+					astcenc_config config{};
+
+					uint32_t astcFlags = ASTCENC_FLG_SELF_DECOMPRESS_ONLY;
+
+					if (Quality::NormalMapDefault <= _quality)
+					{
+						astcFlags |= ASTCENC_FLG_MAP_NORMAL;
+					}
+
+					astcenc_error status = astcenc_config_init(
+						  ASTCENC_PRF_LDR
+						, astcBlockInfo.blockWidth
+						, astcBlockInfo.blockHeight
+						, 1
+						, s_astcQuality[_quality]
+						, astcFlags
+						, &config
+						);
+
+					if (status != ASTCENC_SUCCESS)
+					{
+						BX_TRACE("astc error in config init %s", astcenc_get_error_string(status) );
+						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to initialize astc config!");
+						break;
+					}
+
+					astcenc_context* context;
+					status = astcenc_context_alloc(&config, 1, &context);
+
+					if (status != ASTCENC_SUCCESS)
+					{
+						BX_TRACE("astc error in context alloc %s", astcenc_get_error_string(status) );
+						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to alloc astc context!");
+						break;
+					}
+
+					astcenc_image image{};
+					image.dim_x     = _width;
+					image.dim_y     = _height;
+					image.dim_z     = 1;
+					image.data_type = ASTCENC_TYPE_U8;
+					image.data      = (void**)&src;
+
+					const size_t blockCountX = (_width  + astcBlockInfo.blockWidth  - 1) / astcBlockInfo.blockWidth;
+					const size_t blockCountY = (_height + astcBlockInfo.blockHeight - 1) / astcBlockInfo.blockHeight;
+					const size_t compLen     = blockCountX * blockCountY * 16;
+
+					if (Quality::NormalMapDefault <= _quality)
+					{
+						static const astcenc_swizzle swizzle
+						{  //0001/rrrg swizzle corresponds to ASTC_ENC_NORMAL_RA
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_G,
+						};
+
+						status = astcenc_compress_image(context, &image, &swizzle, dst, compLen, 0);
+					}
+					else
+					{
+						static const astcenc_swizzle swizzle
+						{  //0123/rgba swizzle corresponds to ASTC_RGBA
+							ASTCENC_SWZ_R,
+							ASTCENC_SWZ_G,
+							ASTCENC_SWZ_B,
+							ASTCENC_SWZ_A,
+						};
+
+						status = astcenc_compress_image(context, &image, &swizzle, dst, compLen, 0);
+					}
+
+					if (status != ASTCENC_SUCCESS)
+					{
+						BX_TRACE("astc error in compress image %s", astcenc_get_error_string(status) );
+						BX_ERROR_SET(_err, BIMG_ERROR, "Unable to compress astc image!");
+						astcenc_context_free(context);
+						break;
+					}
+
+					astcenc_context_free(context);
+				}
+				break;
+
+			case TextureFormat::BGRA8:
+				imageSwizzleBgra8(dst, dstPitch, _width, _height, src, srcPitch);
+				break;
+
+			case TextureFormat::RGBA8:
+				bx::memCopy(_dst, dstPitch, _src, srcPitch, srcPitch, _height);
+				break;
+
+			default:
+				if (!imageConvert(_allocator, dst, _format, src, TextureFormat::RGBA8, _width, _height, 1) )
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				}
+				break;
+			}
+		}
+	}
+
+	void imageEncodeFromRgba32f(bx::AllocatorI* _allocator, void* _dst, const void* _src, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _dstFormat, Quality::Enum _quality, bx::Error* _err)
+	{
+		BX_ERROR_SCOPE(_err);
+
+		const uint8_t* src = (const uint8_t*)_src;
+
+		switch (_dstFormat)
+		{
+		case TextureFormat::BC6H:
+			nvtt::compressBC6H(src, _width, _height, _width*16, _dst);
+			break;
+
+		case TextureFormat::BC7:
+			nvtt::compressBC7(src, _width, _height, _width*16, _dst);
+			break;
+
+		default:
+			if (!imageConvert(_allocator, _dst, _dstFormat, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
+			{
+				uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*4);
+				if (imageConvert(_allocator, temp, TextureFormat::RGBA8, _src, TextureFormat::RGBA32F, _width, _height, _depth) )
+				{
+					for (uint32_t zz = 0; zz < _depth; ++zz)
+					{
+						const uint32_t zoffset = zz*_width*_height;
+
+						for (uint32_t yy = 0; yy < _height; ++yy)
+						{
+							const uint32_t yoffset = zoffset + yy*_width;
+
+							for (uint32_t xx = 0; xx < _width; ++xx)
+							{
+								const uint32_t offset = yoffset + xx;
+								const float* input = (const float*)&src[offset * 16];
+								uint8_t* output    = &temp[offset * 4];
+								output[0] = uint8_t(bx::clamp(input[0], 0.0f, 1.0f)*255.0f + 0.5f);
+								output[1] = uint8_t(bx::clamp(input[1], 0.0f, 1.0f)*255.0f + 0.5f);
+								output[2] = uint8_t(bx::clamp(input[2], 0.0f, 1.0f)*255.0f + 0.5f);
+								output[3] = uint8_t(bx::clamp(input[3], 0.0f, 1.0f)*255.0f + 0.5f);
+							}
+						}
+					}
+
+					imageEncodeFromRgba8(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+				}
+				else
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				}
+
+				bx::free(_allocator, temp);
+			}
+			break;
+		}
+	}
+
+	void imageEncode(bx::AllocatorI* _allocator, void* _dst, const void* _src, TextureFormat::Enum _srcFormat, uint32_t _width, uint32_t _height, uint32_t _depth, TextureFormat::Enum _dstFormat, Quality::Enum _quality, bx::Error* _err)
+	{
+		switch (_dstFormat)
+		{
+			case TextureFormat::BC1:
+			case TextureFormat::BC2:
+			case TextureFormat::BC3:
+			case TextureFormat::BC4:
+			case TextureFormat::BC5:
+			case TextureFormat::ETC1:
+			case TextureFormat::ETC2:
+			case TextureFormat::ETC2A:
+			case TextureFormat::EACR11:
+			case TextureFormat::EACRG11:
+			case TextureFormat::PTC14:
+			case TextureFormat::PTC14A:
+			case TextureFormat::ASTC4x4:
+			case TextureFormat::ASTC5x4:
+			case TextureFormat::ASTC5x5:
+			case TextureFormat::ASTC6x5:
+			case TextureFormat::ASTC6x6:
+			case TextureFormat::ASTC8x5:
+			case TextureFormat::ASTC8x6:
+			case TextureFormat::ASTC8x8:
+			case TextureFormat::ASTC10x5:
+			case TextureFormat::ASTC10x6:
+			case TextureFormat::ASTC10x8:
+			case TextureFormat::ASTC10x10:
+			case TextureFormat::ASTC12x10:
+			case TextureFormat::ASTC12x12:
+				{
+					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*4);
+					imageDecodeToRgba8(_allocator, temp, _src, _width, _height, _width*4, _srcFormat);
+					imageEncodeFromRgba8(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+					bx::free(_allocator, temp);
+				}
+				break;
+
+			case bimg::TextureFormat::BC6H:
+			case bimg::TextureFormat::BC7:
+				{
+					uint8_t* temp = (uint8_t*)bx::alloc(_allocator, _width*_height*_depth*16);
+					imageDecodeToRgba32f(_allocator, temp, _src, _width, _height, _depth, _width*16, _srcFormat);
+					imageEncodeFromRgba32f(_allocator, _dst, temp, _width, _height, _depth, _dstFormat, _quality, _err);
+					bx::free(_allocator, temp);
+				}
+				break;
+
+			case bimg::TextureFormat::ETC2A1:
+				BX_ERROR_SET(_err, BIMG_ERROR, "Encoding to ETC2A1 is not supported.");
+				break;
+
+			default:
+				if (!imageConvert(_allocator, _dst, _dstFormat, _src, _srcFormat, _width, _height, 1) )
+				{
+					BX_ERROR_SET(_err, BIMG_ERROR, "Unable to convert between input/output formats!");
+				}
+				break;
+		}
+	}
+
+	ImageContainer* imageEncode(bx::AllocatorI* _allocator, TextureFormat::Enum _dstFormat, Quality::Enum _quality, const ImageContainer& _input, bx::Error* _err)
+	{
+		BX_ERROR_USE_TEMP_WHEN_NULL(_err);
+
+		ImageContainer* output = imageAlloc(_allocator
+			, _dstFormat
+			, _input.m_width
+			, _input.m_height
+			, _input.m_depth
+			, _input.m_numLayers
+			, _input.m_cubeMap
+			, 1 < _input.m_numMips
+			);
+
+		if (NULL == output)
+		{
+			BX_ERROR_SET(_err, BIMG_ERROR, "Failed to allocate output image.");
+			return NULL;
+		}
+
+		const uint16_t numSides = _input.m_numLayers * (_input.m_cubeMap ? 6 : 1);
+
+		for (uint16_t side = 0; side < numSides && _err->isOk(); ++side)
+		{
+			for (uint8_t lod = 0, num = _input.m_numMips; lod < num && _err->isOk(); ++lod)
+			{
+				ImageMip mip;
+				if (imageGetRawData(_input, side, lod, _input.m_data, _input.m_size, mip) )
+				{
+					ImageMip dstMip;
+					imageGetRawData(*output, side, lod, output->m_data, output->m_size, dstMip);
+					uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
+
+					imageEncode(
+						  _allocator
+						, dstData
+						, mip.m_data
+						, mip.m_format
+						, mip.m_width
+						, mip.m_height
+						, mip.m_depth
+						, _dstFormat
+						, _quality
+						, _err
+						);
+				}
+			}
+		}
+
+		if (_err->isOk() )
+		{
+			return output;
+		}
+
+		imageFree(output);
+		return NULL;
+	}
+
+	void imageRgba32f11to01(void* _dst, uint32_t _width, uint32_t _height, uint32_t _depth, uint32_t _pitch, const void* _src)
+	{
+		const uint8_t* src = (const uint8_t*)_src;
+		uint8_t* dst = (uint8_t*)_dst;
+
+		for (uint32_t zz = 0; zz < _depth; ++zz)
+		{
+			for (uint32_t yy = 0; yy < _height; ++yy)
+			{
+				for (uint32_t xx = 0; xx < _width; ++xx)
+				{
+					const uint32_t offset = yy*_pitch + xx * 16;
+					const float* input = (const float*)&src[offset];
+					float* output = (float*)&dst[offset];
+					output[0] = input[0]*0.5f + 0.5f;
+					output[1] = input[1]*0.5f + 0.5f;
+					output[2] = input[2]*0.5f + 0.5f;
+					output[3] = input[3]*0.5f + 0.5f;
+				}
+			}
+		}
+	}
+
+	static void edtaa3(bx::AllocatorI* _allocator, double* _dst, uint32_t _width, uint32_t _height, double* _src)
+	{
+		const uint32_t numPixels = _width*_height;
+
+		short* xdist = (short *)bx::alloc(_allocator, numPixels*sizeof(short) );
+		short* ydist = (short *)bx::alloc(_allocator, numPixels*sizeof(short) );
+		double* gx   = (double*)bx::alloc(_allocator, numPixels*sizeof(double) );
+		double* gy   = (double*)bx::alloc(_allocator, numPixels*sizeof(double) );
+
+		::computegradient(_src, _width, _height, gx, gy);
+		::edtaa3(_src, gx, gy, _width, _height, xdist, ydist, _dst);
+
+		for (uint32_t ii = 0; ii < numPixels; ++ii)
+		{
+			if (_dst[ii] < 0.0)
+			{
+				_dst[ii] = 0.0;
+			}
+		}
+
+		bx::free(_allocator, xdist);
+		bx::free(_allocator, ydist);
+		bx::free(_allocator, gx);
+		bx::free(_allocator, gy);
+	}
+
+	void imageMakeDist(bx::AllocatorI* _allocator, void* _dst, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src)
+	{
+		const uint32_t numPixels = _width*_height;
+
+		double* imgIn   = (double*)bx::alloc(_allocator, numPixels*sizeof(double) );
+		double* outside = (double*)bx::alloc(_allocator, numPixels*sizeof(double) );
+		double* inside  = (double*)bx::alloc(_allocator, numPixels*sizeof(double) );
+
+		for (uint32_t yy = 0; yy < _height; ++yy)
+		{
+			const uint8_t* src = (const uint8_t*)_src + yy*_srcPitch;
+			double* dst = &imgIn[yy*_width];
+			for (uint32_t xx = 0; xx < _width; ++xx)
+			{
+				dst[xx] = double(src[xx])/255.0;
+			}
+		}
+
+		edtaa3(_allocator, outside, _width, _height, imgIn);
+
+		for (uint32_t ii = 0; ii < numPixels; ++ii)
+		{
+			imgIn[ii] = 1.0 - imgIn[ii];
+		}
+
+		edtaa3(_allocator, inside, _width, _height, imgIn);
+
+		bx::free(_allocator, imgIn);
+
+		uint8_t* dst = (uint8_t*)_dst;
+
+		for (uint32_t ii = 0; ii < numPixels; ++ii)
+		{
+			double dist = bx::clamp( (outside[ii] - inside[ii]) * 1.0/16.0 + 0.5, 0.0, 1.0);
+			dst[ii] = 255-uint8_t(dist * 255.0);
+		}
+
+		bx::free(_allocator, inside);
+		bx::free(_allocator, outside);
+	}
+
+	static const iqa_ssim_args s_iqaArgs =
+	{
+		0.39f,     // alpha
+		0.731f,    // beta
+		1.12f,     // gamma
+		187,       // L
+		0.025987f, // K1
+		0.0173f,   // K2
+		1          // factor
+	};
+
+	float imageQualityRgba8(
+		  const void* _reference
+		, const void* _data
+		, uint16_t _width
+		, uint16_t _height
+		)
+	{
+		float result = iqa_ssim( (const uint8_t*)_reference
+			, (const uint8_t*)_data
+			, _width
+			, _height
+			, _width*4
+			, 0
+			, &s_iqaArgs
+			);
+		return result;
+	}
+
+	bool imageResizeRgba32fLinear(ImageContainer* _dst, const ImageContainer* _src)
+	{
+		const uint16_t numSides = _src->m_numLayers * (_src->m_cubeMap ? 6 : 1);
+
+		for (uint16_t side = 0; side < numSides; ++side)
+		{
+			bimg::ImageMip srcMip;
+			bimg::imageGetRawData(*_src, side, 0, _src->m_data, _src->m_size, srcMip);
+
+			bimg::ImageMip dstMip;
+			bimg::imageGetRawData(*_dst, side, 0, _dst->m_data, _dst->m_size, dstMip);
+			uint8_t* dstData = const_cast<uint8_t*>(dstMip.m_data);
+
+			const uint32_t srcPitch = _src->m_width*16;
+			const uint32_t srcSlice = _src->m_height*srcPitch;
+			const uint32_t dstPitch = _dst->m_width*16;
+			const uint32_t dstSlice = _dst->m_height*dstPitch;
+
+			for (uint32_t zz = 0, depth = dstMip.m_depth; zz < depth; ++zz, dstData += dstSlice)
+			{
+				const uint32_t srcDataStep = uint32_t(bx::floor(zz * srcMip.m_depth / float(depth) ) );
+				const uint8_t* srcData = &srcMip.m_data[srcDataStep*srcSlice];
+
+				void* result = stbir_resize(
+					  (const float*)srcData, _src->m_width, _src->m_height, srcPitch
+					, (      float*)dstData, _dst->m_width, _dst->m_height, dstPitch
+					, STBIR_RGBA_PM, STBIR_TYPE_FLOAT
+					, STBIR_EDGE_CLAMP
+					, STBIR_FILTER_BOX
+					);
+
+				if (NULL == result)
+				{
+					return false;
+				}
+			}
+
+		}
+
+		return true;
+	}
+
+	static float getAlpha(UnpackFn _unpack, const void* _data)
+	{
+		float rgba[4];
+		_unpack(rgba, _data);
+		return rgba[3];
+	}
+
+	float imageAlphaTestCoverage(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _srcPitch, const void* _src, float _alphaRef, float _scale, uint32_t _upscale)
+	{
+		UnpackFn unpack = getUnpack(_format);
+		if (NULL == unpack)
+		{
+			return 0.0f;
+		}
+
+		float coverage = 0.0f;
+		const uint8_t* src = (const uint8_t*)_src;
+		const uint32_t xstep = getBitsPerPixel(_format) / 8;
+		const uint32_t numSamples = _upscale;
+		const float sampleStep = 1.0f / numSamples;
+
+		for (uint32_t yy = 0, ystep = _srcPitch; yy < _height-1; ++yy, src += ystep)
+		{
+			const uint8_t* data = src;
+			for (uint32_t xx = 0; xx < _width-1; ++xx, data += xstep)
+			{
+				float alpha00 = _scale * getAlpha(unpack, data);
+				float alpha10 = _scale * getAlpha(unpack, data+xstep);
+				float alpha01 = _scale * getAlpha(unpack, data+ystep);
+				float alpha11 = _scale * getAlpha(unpack, data+ystep+xstep);
+
+				for (float fy = 0.0f; fy < 1.0f; fy += sampleStep)
+				{
+					for (float fx = 0.0f; fx < 1.0f; fx += sampleStep)
+					{
+						float alpha = 0.0f
+							+ alpha00 * (1.0f - fx) * (1.0f - fy)
+							+ alpha10 * (       fx) * (1.0f - fy)
+							+ alpha01 * (1.0f - fx) * (       fy)
+							+ alpha11 * (       fx) * (       fy)
+							;
+
+						if (alpha > _alphaRef)
+						{
+							coverage += 1.0f;
+						}
+					}
+				}
+			}
+		}
+
+		return coverage / float(_width*_height*numSamples*numSamples);
+	}
+
+	void imageScaleAlphaToCoverage(TextureFormat::Enum _format, uint32_t _width, uint32_t _height, uint32_t _srcPitch, void* _src, float _desiredCoverage, float _alphaRef, uint32_t _upscale)
+	{
+		PackFn   pack   = getPack(_format);
+		UnpackFn unpack = getUnpack(_format);
+		if (NULL == pack
+		||  NULL == unpack)
+		{
+			return;
+		}
+
+		float min   = 0.0f;
+		float max   = 4.0f;
+		float scale = 1.0f;
+
+		for (uint32_t ii = 0; ii < 10; ++ii)
+		{
+			float coverage = imageAlphaTestCoverage(
+				  _format
+				, _width
+				, _height
+				, _srcPitch
+				, _src
+				, _alphaRef
+				, scale
+				, _upscale
+				);
+
+			if (coverage < _desiredCoverage)
+			{
+				min = scale;
+			}
+			else if (coverage > _desiredCoverage)
+			{
+				max = scale;
+			}
+			else
+			{
+				break;
+			}
+
+			scale = (min + max) * 0.5f;
+		}
+
+		uint8_t* src = (uint8_t*)_src;
+		const uint32_t xstep = getBitsPerPixel(_format) / 8;
+
+		for (uint32_t yy = 0, ystep = _srcPitch; yy < _height; ++yy, src += ystep)
+		{
+			uint8_t* data = src;
+			for (uint32_t xx = 0; xx < _width; ++xx, data += xstep)
+			{
+				float rgba[4];
+				unpack(rgba, data);
+				rgba[3] = bx::clamp(rgba[3]*scale, 0.0f, 1.0f);
+				pack(data, rgba);
+			}
+		}
+	}
+
+} // namespace bimg

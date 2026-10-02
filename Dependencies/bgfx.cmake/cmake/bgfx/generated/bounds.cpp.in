@@ -1,0 +1,1 @@
+#include "@BGFX_DIR@/examples/common/bounds.cpp"
