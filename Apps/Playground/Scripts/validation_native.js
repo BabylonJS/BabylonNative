@@ -22,20 +22,26 @@
     // Stopgap so native validation can pass. Examples should wait for their own
     // scene, material, GUI, and utility-scene resources; that belongs in the
     // examples, not this harness. Waiting here only because fixing each test
-    // individually is a much larger task.
-    const MAX_CONVERGENCE_TICKS = 240;
+    // individually is a much larger task. Bound by elapsed time: a fast render
+    // loop (Ubuntu GCC JavaScriptCore exhausted 240 callbacks in about 405 ms)
+    // must not fail asynchronous GUI work before it can complete.
+    const CONVERGENCE_DEADLINE_MS = 60 * 1000;
     const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
-    const utilityLayerOwners = new WeakMap();
+    const utilityLayerRenderers = new WeakMap();
 
-    // UtilityLayerRenderer exposes both sides of the association, but its utility
-    // scene can have no active camera when the layer is created before the main camera.
+    // Retain the renderer, not only its owner. manualRender never installs the
+    // after-render observer; shouldRender can change after the layer is created.
     const updateUtilityLayerCamera = BABYLON.UtilityLayerRenderer.prototype._updateCamera;
     BABYLON.UtilityLayerRenderer.prototype._updateCamera = function () {
         const result = updateUtilityLayerCamera.apply(this, arguments);
-        utilityLayerOwners.set(this.utilityLayerScene, this.originalScene);
+        utilityLayerRenderers.set(this.utilityLayerScene, this);
         return result;
     };
+
+    function utilityLayerRendersAutomatically(renderer) {
+        return !!(renderer && renderer._afterRenderObserver && renderer.shouldRender !== false);
+    }
 
     function shouldRunTest(test, index) {
         if (testIndices.length > 0 && testIndices.indexOf(index) === -1) {
@@ -335,47 +341,150 @@
         });
     }
 
+    function hasPassId(value) {
+        return value !== undefined && value !== null;
+    }
+
+    function addPass(passes, seen, id) {
+        if (!hasPassId(id) || seen[id]) {
+            return;
+        }
+        seen[id] = true;
+        passes.push(id);
+    }
+
+    function addRenderTargetPass(passes, seen, renderTarget) {
+        if (!renderTarget) {
+            return;
+        }
+        if (typeof renderTarget._shouldRender === "function" && !renderTarget._shouldRender()) {
+            return;
+        }
+        if (hasPassId(renderTarget.renderPassId)) {
+            addPass(passes, seen, renderTarget.renderPassId);
+        }
+    }
+
+    function addCameraRenderTargetPasses(passes, seen, camera) {
+        const targets = camera && camera.customRenderTargets;
+        if (!targets) {
+            return;
+        }
+        for (let i = 0; i < targets.length; i++) {
+            addRenderTargetPass(passes, seen, targets[i]);
+        }
+    }
+
+    // Matches Scene._renderForCamera: outputRenderTarget.renderPassId wins when set.
+    // Multiview-to-single-view assigns the multiview texture only while rendering.
+    function effectiveRenderPassId(camera) {
+        if (camera._useMultiviewToSingleView && camera._multiviewTexture && hasPassId(camera._multiviewTexture.renderPassId)) {
+            return camera._multiviewTexture.renderPassId;
+        }
+        if (camera.outputRenderTarget && hasPassId(camera.outputRenderTarget.renderPassId)) {
+            return camera.outputRenderTarget.renderPassId;
+        }
+        if (hasPassId(camera.renderPassId)) {
+            return camera.renderPassId;
+        }
+        return 0;
+    }
+
+    function renderPassesForNextFrame(scene) {
+        const passes = [];
+        const seen = {};
+        const roots = scene.activeCameras && scene.activeCameras.length > 0
+            ? scene.activeCameras
+            : (scene.activeCamera ? [scene.activeCamera] : []);
+        const rigModeNone = BABYLON.Constants && BABYLON.Constants.RIG_MODE_NONE !== undefined
+            ? BABYLON.Constants.RIG_MODE_NONE
+            : 0;
+        for (let i = 0; i < roots.length; i++) {
+            const camera = roots[i];
+            if (!camera) {
+                continue;
+            }
+            const rigCameras = camera._rigCameras || camera.rigCameras;
+            const renderRigCameras = rigCameras && rigCameras.length > 0 &&
+                camera.cameraRigMode !== rigModeNone &&
+                !camera._renderingMultiview &&
+                !camera._useMultiviewToSingleView;
+            if (renderRigCameras) {
+                addCameraRenderTargetPasses(passes, seen, camera);
+                for (let j = 0; j < rigCameras.length; j++) {
+                    const rigCamera = rigCameras[j];
+                    if (!rigCamera) {
+                        continue;
+                    }
+                    addPass(passes, seen, effectiveRenderPassId(rigCamera));
+                    addCameraRenderTargetPasses(passes, seen, rigCamera);
+                }
+            } else {
+                addPass(passes, seen, effectiveRenderPassId(camera));
+                addCameraRenderTargetPasses(passes, seen, camera);
+            }
+        }
+        if (scene.renderTargetsEnabled !== false && scene.customRenderTargets) {
+            for (let i = 0; i < scene.customRenderTargets.length; i++) {
+                addRenderTargetPass(passes, seen, scene.customRenderTargets[i]);
+            }
+        }
+        return passes;
+    }
+
+    function meshesUseReadyEffects(scene) {
+        let ready = true;
+        for (let i = 0; i < scene.meshes.length; i++) {
+            const mesh = scene.meshes[i];
+            if (!mesh.isEnabled() || !mesh.subMeshes || mesh.subMeshes.length === 0) {
+                continue;
+            }
+            for (let j = 0; j < mesh.subMeshes.length; j++) {
+                const subMesh = mesh.subMeshes[j];
+                const defines = subMesh.materialDefines;
+                if (defines && defines.isDirty) {
+                    ready = false;
+                }
+                const effect = subMesh.effect;
+                if (effect && !effect.isReady()) {
+                    ready = false;
+                }
+            }
+        }
+        return ready;
+    }
+
     function isSceneConverged(scene) {
         const engine = scene.getEngine();
         const previousRenderPassId = engine.currentRenderPassId;
+        let converged = true;
         try {
             if (!scene.isReady()) {
-                return false;
+                converged = false;
             }
             for (let i = 0; i < scene.textures.length; i++) {
                 const texture = scene.textures[i];
                 if (typeof texture.guiIsReady === "function" && !texture.guiIsReady()) {
-                    return false;
+                    converged = false;
                 }
             }
 
             // Hot-swapping materials may report ready while their replacement effect is
-            // still compiling. Inspect the camera's draw wrappers, not an unused pass.
-            const cameraRenderPassId = scene.activeCamera && scene.activeCamera.renderPassId;
-            engine.currentRenderPassId = cameraRenderPassId === null || cameraRenderPassId === undefined
-                ? previousRenderPassId
-                : cameraRenderPassId;
-            for (let i = 0; i < scene.meshes.length; i++) {
-                const mesh = scene.meshes[i];
-                if (!mesh.isEnabled() || !mesh.subMeshes || mesh.subMeshes.length === 0) {
-                    continue;
-                }
-                for (let j = 0; j < mesh.subMeshes.length; j++) {
-                    const subMesh = mesh.subMeshes[j];
-                    const defines = subMesh.materialDefines;
-                    if (defines && defines.isDirty) {
-                        return false;
-                    }
-                    const effect = subMesh.effect;
-                    if (effect && !effect.isReady()) {
-                        return false;
-                    }
+            // still compiling. Inspect every pass the next frame can draw, not an unused one.
+            const passes = renderPassesForNextFrame(scene);
+            if (passes.length === 0) {
+                passes.push(previousRenderPassId);
+            }
+            for (let i = 0; i < passes.length; i++) {
+                engine.currentRenderPassId = passes[i];
+                if (!meshesUseReadyEffects(scene)) {
+                    converged = false;
                 }
             }
         } finally {
             engine.currentRenderPassId = previousRenderPassId;
         }
-        return true;
+        return converged;
     }
 
     function getConvergenceScenes(scene) {
@@ -383,17 +492,98 @@
         const virtualScenes = scene.getEngine()._virtualScenes;
         for (let i = 0; i < virtualScenes.length; i++) {
             const virtualScene = virtualScenes[i];
-            const utilityLayerOwner = utilityLayerOwners.get(virtualScene);
+            if (virtualScene === scene) {
+                continue;
+            }
+            const renderer = utilityLayerRenderers.get(virtualScene);
+            if (renderer) {
+                // Ownership alone includes manual layers and layers with shouldRender false.
+                if (renderer.originalScene === scene && utilityLayerRendersAutomatically(renderer)) {
+                    scenes.push(virtualScene);
+                }
+                continue;
+            }
             // Non-utility virtual scenes can still be associated through a shared camera.
-            const sharesCamera = utilityLayerOwner === undefined &&
-                virtualScene.activeCamera &&
-                virtualScene.activeCamera.getScene() === scene;
-            if (virtualScene !== scene && (utilityLayerOwner === scene || sharesCamera)) {
+            if (virtualScene.activeCamera && virtualScene.activeCamera.getScene() === scene) {
                 scenes.push(virtualScene);
             }
         }
         return scenes;
     }
+
+    function allScenesConverged(scenes) {
+        // Do not stop at the first unready scene. Later scenes must start their
+        // readiness and compilation work in the same callback.
+        let converged = true;
+        for (let i = 0; i < scenes.length; i++) {
+            if (!isSceneConverged(scenes[i])) {
+                converged = false;
+            }
+        }
+        return converged;
+    }
+
+    function assertScheduling(condition, message) {
+        if (!condition) {
+            throw new Error("validation scheduling check failed: " + message);
+        }
+    }
+
+    function passListContains(passes, id) {
+        return passes.indexOf(id) !== -1;
+    }
+
+    function runSchedulingSelfCheck() {
+        const outputScene = {
+            activeCamera: { renderPassId: 3, outputRenderTarget: { renderPassId: 9 } },
+            customRenderTargets: [
+                { renderPassId: 4, _shouldRender: function () { return true; } },
+                { renderPassId: 5, _shouldRender: function () { return false; } }
+            ]
+        };
+        const outputPasses = renderPassesForNextFrame(outputScene);
+        assertScheduling(passListContains(outputPasses, 9) && !passListContains(outputPasses, 3), "output render-target pass");
+        assertScheduling(passListContains(outputPasses, 4) && !passListContains(outputPasses, 5), "scheduled custom render targets");
+
+        const rigScene = {
+            activeCamera: {
+                renderPassId: 1,
+                cameraRigMode: 1,
+                customRenderTargets: [{ renderPassId: 6, _shouldRender: function () { return true; } }],
+                _rigCameras: [
+                    { renderPassId: 2 },
+                    { renderPassId: 8, outputRenderTarget: { renderPassId: 11 } }
+                ]
+            }
+        };
+        const rigPasses = renderPassesForNextFrame(rigScene);
+        assertScheduling(passListContains(rigPasses, 2) && passListContains(rigPasses, 11) && passListContains(rigPasses, 6) && !passListContains(rigPasses, 1), "rig-camera passes");
+
+        const main = { getEngine: function () { return { _virtualScenes: virtualScenes }; } };
+        const autoVirtual = {};
+        const manualVirtual = {};
+        const sharedVirtual = { activeCamera: { getScene: function () { return main; } } };
+        const virtualScenes = [autoVirtual, manualVirtual, sharedVirtual];
+        const autoRenderer = { originalScene: main, utilityLayerScene: autoVirtual, _afterRenderObserver: {}, shouldRender: false };
+        utilityLayerRenderers.set(autoVirtual, autoRenderer);
+        utilityLayerRenderers.set(manualVirtual, { originalScene: main, utilityLayerScene: manualVirtual, _afterRenderObserver: null, shouldRender: true });
+        assertScheduling(getConvergenceScenes(main).indexOf(autoVirtual) === -1, "disabled utility layer excluded");
+        autoRenderer.shouldRender = true;
+        const enabled = getConvergenceScenes(main);
+        assertScheduling(enabled.indexOf(autoVirtual) !== -1 && enabled.indexOf(sharedVirtual) !== -1 && enabled.indexOf(manualVirtual) === -1, "automatic utility layer and shared camera");
+        autoRenderer.shouldRender = false;
+        assertScheduling(getConvergenceScenes(main).indexOf(autoVirtual) === -1, "dynamic utility-layer disable");
+        utilityLayerRenderers.delete(autoVirtual);
+        utilityLayerRenderers.delete(manualVirtual);
+
+        const polled = [];
+        const combined = allScenesConverged([
+            { isReady: function () { polled.push(1); return false; }, textures: [], meshes: [], getEngine: function () { return { currentRenderPassId: 0 }; } },
+            { isReady: function () { polled.push(2); return true; }, textures: [], meshes: [], getEngine: function () { return { currentRenderPassId: 0 }; } }
+        ]);
+        assertScheduling(polled.join(",") === "1,2" && combined === false, "every associated scene is polled");
+    }
+    runSchedulingSelfCheck();
 
     function processCurrentScene(test, renderImage, done, compareFunction) {
         currentScene.useConstantAnimationDeltaTime = true;
@@ -418,7 +608,7 @@
         let stopped = false;
         let pendingScreenshot = null;
         let evaluated = false;
-        let convergenceTicks = 0;
+        let convergenceStartedAt = 0;
         let readinessScenes = [];
         let readyScenes = [];
         let readinessReconcileTimer = null;
@@ -475,16 +665,19 @@
                     // Recompute because utility layers can be attached or disposed while
                     // convergence is pending, updating the engine's virtual-scene list.
                     const convergenceScenes = getConvergenceScenes(currentScene);
-                    if (!convergenceScenes.every(isSceneConverged)) {
-                        if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
+                    if (!allScenesConverged(convergenceScenes)) {
+                        const now = Date.now();
+                        if (convergenceStartedAt === 0) {
+                            convergenceStartedAt = now;
+                        }
+                        if (now - convergenceStartedAt >= CONVERGENCE_DEADLINE_MS) {
                             stopped = true;
                             evaluated = true;
                             console.error("Scene '" + (test.title || "?") + "' did not converge within " +
-                                MAX_CONVERGENCE_TICKS + " render-loop ticks (scene, material, or GUI readiness).");
+                                (CONVERGENCE_DEADLINE_MS / 1000) + "s (scene, material, or GUI readiness).");
                             failTest(done);
                             return;
                         }
-                        convergenceTicks++;
                         // Refresh material readiness without rendering extra animation/particle frames.
                         for (let i = 0; i < convergenceScenes.length; i++) {
                             convergenceScenes[i].incrementRenderId();
