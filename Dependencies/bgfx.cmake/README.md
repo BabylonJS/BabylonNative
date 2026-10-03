@@ -23,6 +23,10 @@ If downloading via zip (instead of using git submodules) manually download bx, b
 When tools and custom targets are enabled, `cmake --build cmake-build --target bgfx-tools`
 builds the enabled tools. This target replaces the generic `tools` target.
 
+### Texture decoding
+
+`BIMG_CONFIG_DECODE_ENABLE` defaults to `ON` and controls bimg's configurable texture decoders. Set `-DBIMG_CONFIG_DECODE_ENABLE=OFF` to disable them. Parent projects can set a normal variable before `add_subdirectory`. This option is private to `bimg`; it does not control the image-format parsers in `bimg_decode`.
+
 ### Image parsing
 
 `BIMG_CONFIG_PARSE_ENABLE` defaults to `ON` and controls bimg's default image-format parsers. Per-format `BIMG_CONFIG_PARSE_<FORMAT>` settings accept an empty string, `ON`, or `OFF`. Empty values omit that format's compiler definition, preserving bimg's default on each configure. Parent projects can set normal variables before `add_subdirectory`; explicit values override the defaults.

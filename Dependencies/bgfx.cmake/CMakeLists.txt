@@ -26,6 +26,7 @@ include(CMakeDependentOption)
 
 option(BX_AMALGAMATED "Amalgamated bx build for faster compilation" OFF)
 option(BX_CONFIG_DEBUG "Log debug messages (default: on in debug)" OFF)
+option(BIMG_CONFIG_DECODE_ENABLE "Enable bimg texture decoding." ON)
 option(BIMG_CONFIG_PARSE_ENABLE "Enable bimg image format parsers." ON)
 option(BIMG_CONFIG_USE_WIC "Use Windows Imaging Component instead of bundled image decoders." OFF)
 option(BGFX_AMALGAMATED "Amalgamated bgfx build for faster compilation" OFF)
