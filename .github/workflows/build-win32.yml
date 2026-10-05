@@ -154,12 +154,11 @@ jobs:
           Set-Location $lite
           pnpm install --no-frozen-lockfile
           pnpm build:lib
-          pnpm add -D -w esbuild
           $dest = Join-Path $env:GITHUB_WORKSPACE "build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Scripts"
           $script = Join-Path $env:GITHUB_WORKSPACE ".github/scripts/bundle-lite-scene.mjs"
           node $script $lite scene1 (Join-Path $dest "scene1.playground.js")
           # brdf-lut.png is fetched at runtime as "/brdf-lut.png" -> redirected
-          # to app:///Scripts/brdf-lut.png by the NativeDawn plugin.
+          # to app:///Scripts/brdf-lut.png by the Lite test harness.
           Copy-Item (Join-Path $lite "lab/public/brdf-lut.png") (Join-Path $dest "brdf-lut.png") -Force
           Get-Item (Join-Path $dest "scene1.playground.js") | Select-Object FullName, Length
 
@@ -169,6 +168,13 @@ jobs:
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground --headless app:///Scripts/lite_native.js
+
+      - name: NativeDawn Runtime Regression Tests
+        if: ${{ inputs.nativedawn }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground --headless app:///Scripts/dawn_runtime_native.js && Playground --headless app:///Scripts/dawn_playground_native.js
 
       # NativeDawn (WebGPU) validation. CI uses the Microsoft software adapter,
       # whose raster output differs substantially from the hardware-generated

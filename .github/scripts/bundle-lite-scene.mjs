@@ -12,7 +12,6 @@
 // Prerequisites (run in the Babylon-Lite clone first):
 //   pnpm install
 //   pnpm build:lib          # produces packages/babylon-lite/build/lib
-//   pnpm add -D -w esbuild   # make esbuild resolvable
 //
 // Usage (cwd = Babylon-Lite clone, so `esbuild` resolves from its node_modules):
 //   pnpm exec node <path>/bundle-lite-scene.mjs <cloneDir> <scene> <outFile>
@@ -28,7 +27,7 @@ const outFile = resolve(process.argv[4] || resolve(cloneDir, `${scene}.playgroun
 
 // Resolve esbuild from the Babylon-Lite clone's node_modules (this script lives
 // in the BabylonNative repo, so a bare `import "esbuild"` would resolve against
-// the wrong tree). `pnpm add -D -w esbuild` in the clone makes it a direct dep.
+// the wrong tree). Babylon-Lite already declares esbuild as a direct dependency.
 const requireFromClone = createRequire(resolve(cloneDir, "package.json"));
 const esbuildEntry = requireFromClone.resolve("esbuild");
 const { build } = await import(pathToFileURL(esbuildEntry));

@@ -21,6 +21,7 @@ namespace Playground
 
     // Queue the standard Babylon.js bootstrap scripts (core, loaders,
     // materials, GUI, serializers, etc.) onto `runtime` in dependency order.
+    // Dawn builds also load the Playground-specific WebGPU engine bootstrap.
     //
     // The `Babylon::Embedding` layer doesn't bundle script loading;
     // each host picks between this multi-UMD route and a pre-bundled

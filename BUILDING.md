@@ -64,6 +64,52 @@ start build\win32\BabylonNative.sln
 By default, the `Playground` demo app will be set as the Visual Studio start-up
 project.
 
+### NativeDawn WebGPU (experimental)
+
+Enable the optional Dawn backend to run Babylon.js WebGPUEngine and Babylon-Lite
+on Windows:
+
+```powershell
+cmake -B build\win32_dawn -A x64 -DBABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON -DNAPI_JAVASCRIPT_ENGINE=V8
+cmake --build build\win32_dawn --config RelWithDebInfo --target Playground UnitTests
+Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
+.\Playground.exe --headless app:///Scripts/dawn_runtime_native.js
+.\Playground.exe --headless app:///Scripts/dawn_playground_native.js
+.\Playground.exe --headless app:///Scripts/validation_native.js
+```
+
+The current integration requires the Canvas, Blob and URL polyfills. Embedding
+initializes the shared JsRuntimeHost polyfills before NativeDawn; standalone
+hosts must do the same. UTF-16 decoding, asynchronous WebAssembly compilation,
+and blob URL resolution use JsRuntimeHost's implementations, not Dawn-specific
+replacements. The V8 finalizer-draining compatibility code is still needed until
+JsRuntimeHost's deferred-finalizer support is merged and the dependency pin is
+updated.
+
+For the Lite smoke test, install dependencies and run `pnpm build:lib` in a
+Babylon-Lite clone, using its declared Node and pnpm versions. From this repository,
+run `node .github\scripts\bundle-lite-scene.mjs <lite-clone> scene1 <playground-dir>\Scripts\scene1.playground.js`
+and copy `<lite-clone>\lab\public\brdf-lut.png` to `<playground-dir>\Scripts`.
+Then run `.\Playground.exe --headless app:///Scripts/lite_native.js`. Only the Lite
+harness redirects lab root-relative asset URLs to `app:///Scripts`; the plugin
+does not rewrite application fetches.
+
+NativeDawn's typed `Tick` and `ResizeSurface` APIs drive frames and the presentation
+canvas; they do not look up global `frame` or `__dawnResize` functions. Babylon.js
+engine creation, the Playground's `NativeEngine` alias, and shader-helper script
+loading live in `Scripts/dawn_playground.js`, explicitly loaded by the Playground
+bootstrap, not in the plugin.
+
+On Windows, running only `lite_native.js` or `dawn_runtime_native.js` skips the
+Babylon.js bootstrap entirely. The Lite test checks that no Babylon.js global or
+pre-created Playground engine is present, then initializes its own WebGPU engine.
+
+The default validation run compares rendered pixels against committed references.
+`--generate-references` only checks scene loading/rendering and writes images; it
+is not a pixel-regression check. Software-adapter output may differ from
+hardware-generated references, so keep the Lite pixel comparison and runtime
+regressions even when using reference-generation mode for the full CI smoke run.
+
 ## **Building on Windows 10, Targeting Universal Windows Platform (UWP)**
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._

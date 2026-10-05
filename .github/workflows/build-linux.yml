@@ -46,13 +46,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build
-          if [ "${{ inputs.graphics-api }}" = "Vulkan" ]; then
+          if [ "${{ inputs.graphics-api }}" = "Vulkan" ] || [ "${{ inputs.nativedawn }}" = "true" ]; then
             sudo apt-get install -y libvulkan-dev mesa-vulkan-drivers xvfb xauth
           fi
-
-      - name: Install Vulkan packages (NativeDawn)
-        if: ${{ inputs.nativedawn }}
-        run: sudo apt-get install -y libvulkan-dev libx11-xcb-dev
+          if [ "${{ inputs.nativedawn }}" = "true" ]; then
+            sudo apt-get install -y libx11-xcb-dev
+          fi
 
       - name: Build X11
         if: ${{ !inputs.nativedawn }}
@@ -71,9 +70,8 @@ jobs:
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux
 
-      # NativeDawn (WebGPU/Dawn, Vulkan backend) build. The Linux Playground host
-      # has no Dawn code path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
-      # compiles/links; the bgfx validation/unit tests don't apply.
+      # The Linux Playground host has no Dawn code path, so compile and link
+      # the plugin target directly.
       - name: Build NativeDawn
         if: ${{ inputs.nativedawn }}
         run: |
@@ -99,7 +97,7 @@ jobs:
           echo "VK_ICD_FILENAMES=$VK_ICD_FILENAMES" >> "$GITHUB_ENV"
 
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'Vulkan' && !inputs.nativedawn }}
+        if: ${{ !inputs.nativedawn && inputs.graphics-api != 'Vulkan' }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
@@ -108,7 +106,7 @@ jobs:
       # The full Vulkan suite currently has broad reference-image differences and
       # crashes in Glow layer and LODs: https://github.com/BabylonJS/BabylonNative/issues/1878
       - name: Vulkan Validation Tests
-        if: ${{ inputs.graphics-api == 'Vulkan' }}
+        if: ${{ !inputs.nativedawn && inputs.graphics-api == 'Vulkan' }}
         timeout-minutes: 5
         run: |
           cd build/Linux/Apps/Playground
@@ -141,7 +139,7 @@ jobs:
           fi
 
       - name: Verify Vulkan Unit Test Results
-        if: ${{ inputs.graphics-api == 'Vulkan' }}
+        if: ${{ !inputs.nativedawn && inputs.graphics-api == 'Vulkan' }}
         run: |
           cd build/Linux/Apps/UnitTests
           # Require both boundary tests, independent of unrelated additions to the suite.
@@ -171,10 +169,10 @@ jobs:
           xvfb-run --auto-servernum ./ModuleLoadTest
 
       - name: Upload Vulkan Test Results
-        if: ${{ always() && inputs.graphics-api == 'Vulkan' }}
+        if: ${{ always() && !inputs.nativedawn && inputs.graphics-api == 'Vulkan' }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-test-results
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.nativedawn && '-nativedawn' || '' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-test-results
           path: |
             build/Linux/Apps/Playground/vulkan-validation.log
             build/Linux/Apps/UnitTests/vulkan-unit-test-results.xml
@@ -183,21 +181,21 @@ jobs:
         if: ${{ always() && !inputs.nativedawn }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.nativedawn && '-nativedawn' || '' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/Linux/Apps/Playground/Results
 
       - name: Upload Error Pictures
         if: ${{ failure() }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.nativedawn && '-nativedawn' || '' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
           path: build/Linux/Apps/Playground/Errors
 
       - name: Upload Core Dumps
         if: ${{ failure() }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.nativedawn && '-nativedawn' || '' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
             build/Linux/Apps/Playground/Playground
             build/Linux/Apps/Playground/core.*

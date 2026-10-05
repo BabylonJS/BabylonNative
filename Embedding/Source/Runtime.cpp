@@ -232,7 +232,7 @@ namespace Babylon::Embedding
             env.Global().Set("globalThis", env.Global());
 
             // 1. Make the Device available to JS.
-#if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
+#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
             implPtr->m_device->AddToJavaScript(env);
 #endif
 
@@ -316,8 +316,8 @@ namespace Babylon::Embedding
 #elif BABYLON_NATIVE_PLUGIN_NATIVEDAWN
             // NativeDawn replaces the bgfx NativeEngine: it creates the Dawn
             // (WebGPU) device + surface bound to `window`, installs navigator.gpu
-            // and the WebGPU globals, and (via its bootstrap) drives the scene on
-            // a WebGPUEngine. `width`/`height` are the initial surface size.
+            // and the WebGPU globals. Engine creation belongs to the host.
+            // `width`/`height` are the initial surface size.
             Babylon::Plugins::NativeDawn::Initialize(env, window, width, height);
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEDRACO

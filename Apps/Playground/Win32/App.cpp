@@ -202,7 +202,19 @@ namespace
 
     void LoadScripts()
     {
-        Playground::LoadBootstrapScripts(*g_runtime);
+        bool loadBootstrap = true;
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+        // These harnesses deliberately exercise Babylon.js-free initialization.
+        if (options.Scripts.size() == 1)
+        {
+            const auto script = std::filesystem::path{options.Scripts.front()}.filename();
+            loadBootstrap = script != "lite_native.js" && script != "dawn_runtime_native.js";
+        }
+#endif
+        if (loadBootstrap)
+        {
+            Playground::LoadBootstrapScripts(*g_runtime);
+        }
 
         if (options.Scripts.empty())
         {

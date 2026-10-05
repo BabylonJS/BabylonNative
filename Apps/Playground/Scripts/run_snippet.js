@@ -23,11 +23,7 @@
         playgroundId += "#0";
     }
 
-    // Backend detection + engine acquisition mirrors validation_native.js: under
-    // NativeDawn the WebGPUEngine is pre-created by the plugin and promoted to
-    // globalThis.__dawnEngine once its async init (driven by host frames)
-    // completes, so we must wait for it rather than construct a second engine.
-    const isDawn = (typeof globalThis._nativeDawnClear === "function");
+    const isDawn = TestUtils.getGraphicsApiName() === "WebGPU";
 
     const snippetUrl = "https://snippet.babylonjs.com";
     const pgRoot = "https://playground.babylonjs.com";
@@ -148,15 +144,10 @@
     }
 
     if (isDawn) {
-        // Wait for the plugin to finish async engine init before rendering.
-        const waitForEngine = function () {
-            if (globalThis.__dawnEngine) {
-                runScene(globalThis.__dawnEngine);
-            } else {
-                setTimeout(waitForEngine, 16);
-            }
-        };
-        waitForEngine();
+        globalThis._playgroundWebGPUReady.then(runScene, function (error) {
+            console.error("Snippet WebGPU initialization failed: " + error);
+            TestUtils.exit(-1);
+        });
     } else {
         runScene(new BABYLON.NativeEngine({ adaptToDeviceRatio: true }));
     }

@@ -59,7 +59,7 @@ namespace Babylon::Embedding
         // never constructed in this configuration; the NativeDawn plugin owns
         // the device/surface/present lifecycle instead. m_dawnInitialized latches
         // the first-attach init; m_dawnFrameInFlight throttles the per-frame
-        // JS-thread dispatch (host RenderFrame → JS frame() + NativeDawn::Tick).
+        // JS-thread dispatch (host RenderFrame -> NativeDawn::Tick).
         bool m_dawnInitialized{false};
         std::atomic<bool> m_dawnFrameInFlight{false};
 #endif

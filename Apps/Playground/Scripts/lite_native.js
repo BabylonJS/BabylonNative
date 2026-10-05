@@ -7,9 +7,8 @@
 // startEngine()), then captures the framebuffer and pixel-compares it against a
 // committed reference image.
 //
-// The bundle is self-contained (it inlines all of Babylon-Lite), so this harness
-// does NOT load babylon.max.js -- it only needs the native TestUtils API plus the
-// NativeDawn-provided navigator.gpu / DOM canvas / requestAnimationFrame.
+// The bundle is self-contained (it inlines all of Babylon-Lite), so the harness
+// and the Windows Dawn host skips Babylon.js bootstrap for this harness.
 //
 // Run (V8 build, WebGPU/NativeDawn):
 //   Playground.exe --headless app:///Scripts/lite_native.js
@@ -32,9 +31,24 @@
     const READY_TIMEOUT_MS = 120000;
     const SETTLE_FRAMES = 30;  // extra rendered frames after readiness to settle
 
+    // The lab bundle expects sibling assets at the dev server's root. This is
+    // test-host policy, not part of the reusable WebGPU plugin.
+    const nativeFetch = globalThis.fetch;
+    globalThis.fetch = function (url, options) {
+        if (typeof url === "string" && url[0] === "/" && url[1] !== "/") {
+            url = "app:///Scripts" + url;
+        }
+        return nativeFetch.call(this, url, options);
+    };
+
     function fail(msg) {
         console.error("LITE_TEST_FAIL: " + msg);
         TestUtils.exit(-1);
+    }
+
+    if (typeof BABYLON !== "undefined" || typeof _playgroundWebGPUEngine !== "undefined") {
+        fail("Lite must run without Babylon.js or a pre-created Playground engine");
+        return;
     }
 
     function getCanvas() {

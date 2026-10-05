@@ -25,8 +25,12 @@ namespace Babylon::Plugins::NativeDawn
     // Does not touch the native window itself.
     void ResizeSurface(uint32_t width, uint32_t height);
 
-    // Drives one host-side frame: ticks the Dawn device (callbacks) and, if the
-    // JS side has rendered into the current surface texture, presents it. Call
-    // once per native frame from the app loop.
+    // Also updates the presentation canvas's client dimensions. Engine-specific
+    // resize handling belongs to the host. Must be called on the JS thread.
+    void ResizeSurface(Napi::Env env, uint32_t width, uint32_t height);
+
+    // Pumps animation callbacks, deferred readback and GPU resource retirement.
+    // Presents submitted surface work before starting the next frame. Call once
+    // per native frame on the JS thread.
     void Tick(Napi::Env env);
 }

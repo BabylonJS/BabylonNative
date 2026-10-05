@@ -4,6 +4,7 @@
 #include <Babylon/Graphics/DeviceQueries.h>
 
 #include <napi/napi.h>
+#include <gsl/util>
 
 #include <stdexcept>
 #include <string>
@@ -151,8 +152,8 @@ namespace Babylon::Embedding
         {
             // Re-attach to an existing Runtime: reconfigure the Dawn surface to
             // the current size on the JS thread (where the Dawn device lives).
-            m_runtime.m_appRuntime->Dispatch([lw, lh](Napi::Env) {
-                Babylon::Plugins::NativeDawn::ResizeSurface(lw, lh);
+            m_runtime.m_appRuntime->Dispatch([lw, lh](Napi::Env env) {
+                Babylon::Plugins::NativeDawn::ResizeSurface(env, lw, lh);
             });
         }
         m_initialized = true;
@@ -217,21 +218,23 @@ namespace Babylon::Embedding
         }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-        // WebGPUEngine drives its render loop from requestAnimationFrame, pumped
-        // by the JS-thread global frame(). Dispatch one frame at a time (throttled
-        // so the JS queue can't flood): flush rAF (runs the engine's render +
-        // GPU submit) and present via NativeDawn::Tick.
+        // Dispatch one frame at a time so the host cannot flood the JS queue.
         if (!impl.m_dawnFrameInFlight.exchange(true))
         {
-            impl.m_appRuntime->Dispatch([implPtr = &impl](Napi::Env env) {
-                Napi::Value frame = env.Global().Get("frame");
-                if (frame.IsFunction())
+            bool dispatched = false;
+            const auto resetOnDispatchFailure = gsl::finally([&] {
+                if (!dispatched)
                 {
-                    frame.As<Napi::Function>().Call({});
+                    impl.m_dawnFrameInFlight.store(false, std::memory_order_relaxed);
                 }
-                Babylon::Plugins::NativeDawn::Tick(env);
-                implPtr->m_dawnFrameInFlight.store(false, std::memory_order_relaxed);
             });
+            impl.m_appRuntime->Dispatch([implPtr = &impl](Napi::Env env) {
+                const auto resetInFlight = gsl::finally([implPtr] {
+                    implPtr->m_dawnFrameInFlight.store(false, std::memory_order_relaxed);
+                });
+                Babylon::Plugins::NativeDawn::Tick(env);
+            });
+            dispatched = true;
         }
 #else
         // Babylon's JS render loop runs between Start and Finish, scheduled
@@ -276,17 +279,9 @@ namespace Babylon::Embedding
         if (m_impl->m_initialized)
         {
 #if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-            // Reconfigure the Dawn surface and the JS engine's drawing buffer on
-            // the JS thread (where the Dawn device lives).
+            // Reconfigure the surface and presentation canvas on the JS thread.
             impl.m_appRuntime->Dispatch([lw, lh](Napi::Env env) {
-                Babylon::Plugins::NativeDawn::ResizeSurface(lw, lh);
-                Napi::Value resizeFn = env.Global().Get("__dawnResize");
-                if (resizeFn.IsFunction())
-                {
-                    resizeFn.As<Napi::Function>().Call({
-                        Napi::Number::New(env, lw),
-                        Napi::Number::New(env, lh)});
-                }
+                Babylon::Plugins::NativeDawn::ResizeSurface(env, lw, lh);
             });
 #else
             impl.m_device->UpdateSize(lw, lh);

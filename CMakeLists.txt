@@ -167,6 +167,9 @@ option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." 
 # and tests remain available. The Embedding target selects NativeDawn when it is
 # enabled, ensuring the Playground installs only one graphics backend.
 if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    if(NOT BABYLON_NATIVE_POLYFILL_CANVAS)
+        message(FATAL_ERROR "NativeDawn currently requires BABYLON_NATIVE_POLYFILL_CANVAS=ON.")
+    endif()
     # NativeDawn's WebGPU shader pipeline transpiles GLSL -> SPIR-V -> WGSL at
     # runtime through Babylon's glslang and twgsl WebAssembly modules. Windows'
     # in-box Chakra engine (the Node-API default here) has a WASM compiler limit

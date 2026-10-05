@@ -207,21 +207,14 @@
         }
     }
 
-    // Backend detection: the NativeDawn (WebGPU) backend pre-creates a
-    // WebGPUEngine (aliased as BABYLON.NativeEngine) and drives its render loop
-    // from the host frame pump, promoting it to globalThis.__dawnEngine once
-    // initAsync (async, driven by host frames) completes. Reuse that same
-    // instance so runRenderLoop targets the engine the host actually presents,
-    // rather than constructing a second one.
-    //
-    // Detect the backend via the plugin-specific `_nativeDawnClear` global (the
-    // bgfx NativeEngine backend has neither it nor navigator.gpu). Note `_native`
-    // exists on BOTH backends here -- the Canvas polyfill provides it -- so it
-    // can't be used to tell them apart.
-    const isDawn = (typeof globalThis._nativeDawnClear === "function");
+    // Reuse the engine owned by Playground's explicit WebGPU bootstrap.
+    const isDawn = TestUtils.getGraphicsApiName() === "WebGPU";
     const engine = isDawn
-        ? (globalThis.__dawnEngine || globalThis.__dawnPendingEngine || new BABYLON.NativeEngine())
+        ? globalThis._playgroundWebGPUEngine
         : new BABYLON.NativeEngine();
+    if (!engine) {
+        throw new Error("Playground WebGPU bootstrap did not create an engine");
+    }
     globalThis.engine = engine;
     // parallelShaderCompile is a WebGL2 (KHR_parallel_shader_compile) cap; on
     // Dawn the caps table isn't populated until initAsync completes, so this is
@@ -1252,23 +1245,15 @@
     };
 
     if (isDawn) {
-        // The WebGPU engine completes initAsync asynchronously, pumped by the
-        // host frame loop (RenderFrame -> frame() -> requestAnimationFrame).
-        // Wait until the NativeDawn plugin promotes it to __dawnEngine before
-        // starting: runRenderLoop needs a fully initialized engine and getCaps()
-        // is only populated post-init. Playground assets load via absolute https
-        // URLs (see loadPG), so _native.RootUrl is left alone here.
-        const waitForEngine = function () {
-            if (globalThis.__dawnEngine) {
-                globalThis.__dawnEngine.getCaps().parallelShaderCompile = undefined;
-                warmShaderTranspilersThen(globalThis.__dawnEngine, function () {
-                    loadFontThen(startValidation);
-                });
-            } else {
-                setTimeout(waitForEngine, 16);
-            }
-        };
-        waitForEngine();
+        globalThis._playgroundWebGPUReady.then(function () {
+            engine.getCaps().parallelShaderCompile = undefined;
+            warmShaderTranspilersThen(engine, function () {
+                loadFontThen(startValidation);
+            });
+        }, function (error) {
+            console.error("Validation WebGPU initialization failed: " + error);
+            TestUtils.exit(-1);
+        });
     } else {
         loadFontThen(function () {
             _native.RootUrl = "https://playground.babylonjs.com";

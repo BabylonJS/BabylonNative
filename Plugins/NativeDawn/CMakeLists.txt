@@ -1,3 +1,7 @@
+if(NOT TARGET Blob OR NOT TARGET URL)
+    message(FATAL_ERROR "NativeDawn requires the JsRuntimeHost Blob and URL polyfills.")
+endif()
+
 set(SOURCES
     "Include/Babylon/Plugins/NativeDawn.h"
     "Source/CanvasDawn.cpp"
@@ -15,6 +19,11 @@ add_library(NativeDawn ${SOURCES})
 
 target_include_directories(NativeDawn
     PUBLIC "Include")
+
+if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
+    target_compile_definitions(NativeDawn PRIVATE BABYLON_NATIVE_PLUGIN_TESTUTILS=1)
+    target_link_libraries(NativeDawn PRIVATE TestUtils)
+endif()
 
 target_link_libraries(NativeDawn
     PUBLIC napi

@@ -145,6 +145,15 @@ namespace Babylon::Plugins::TestUtils
     {
         ExitCallbackStorage() = std::move(callback);
     }
+
+    void BABYLON_API NotifyExit(int exitCode)
+    {
+        auto& cb = ExitCallbackStorage();
+        if (cb)
+        {
+            cb(exitCode);
+        }
+    }
 }
 
 namespace Babylon::Plugins::Internal
@@ -152,10 +161,6 @@ namespace Babylon::Plugins::Internal
     // Bridges per-platform TestUtils::Exit() to the host-registered callback.
     void InvokeExitCallback(int exitCode)
     {
-        auto& cb = ExitCallbackStorage();
-        if (cb)
-        {
-            cb(exitCode);
-        }
+        Babylon::Plugins::TestUtils::NotifyExit(exitCode);
     }
 }

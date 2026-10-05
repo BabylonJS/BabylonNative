@@ -1,5 +1,9 @@
 #include <Babylon/Plugins/NativeDawn.h>
 
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+#include <Babylon/Plugins/TestUtils.h>
+#endif
+
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
@@ -492,62 +496,10 @@ namespace Babylon::Plugins::NativeDawn
             return true;
         }
 
-        // Milestone test: clear the surface to a solid color via Dawn, no bgfx.
-        void ClearToColor(float r, float g, float b)
-        {
-            if (!g_state.ready)
-            {
-                return;
-            }
-
-            WGPUSurfaceTexture st{
-                .nextInChain = nullptr,
-            };
-            wgpuSurfaceGetCurrentTexture(g_state.surface, &st);
-            if (!st.texture)
-            {
-                DawnLog(LogLevel::Error, "GetCurrentTexture: null");
-                return;
-            }
-
-            WGPUTextureView view = wgpuTextureCreateView(st.texture, nullptr);
-
-            WGPURenderPassColorAttachment color{
-                .view = view,
-                .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
-                .loadOp = WGPULoadOp_Clear,
-                .storeOp = WGPUStoreOp_Store,
-                .clearValue = {
-                    .r = r,
-                    .g = g,
-                    .b = b,
-                    .a = 1.0,
-                },
-            };
-
-            WGPURenderPassDescriptor passDesc{
-                .label = EmptyStringView(),
-                .colorAttachmentCount = 1,
-                .colorAttachments = &color,
-            };
-
-            WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(g_state.device, nullptr);
-            WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &passDesc);
-            wgpuRenderPassEncoderEnd(pass);
-            WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, nullptr);
-            wgpuQueueSubmit(g_state.queue, 1, &commands);
-            wgpuSurfacePresent(g_state.surface);
-
-            wgpuCommandBufferRelease(commands);
-            wgpuRenderPassEncoderRelease(pass);
-            wgpuCommandEncoderRelease(encoder);
-            wgpuTextureViewRelease(view);
-            wgpuTextureRelease(st.texture);
-        }
     }
 
     // =========================================================================
-    // WebGPU (navigator.gpu) bindings implemented over Dawn (wgpu C++).
+    // WebGPU (navigator.gpu) bindings implemented over Dawn's WebGPU C API.
     //
     // Each GPU object is a plain Napi::Object carrying a hidden "_h" External<T>
     // wrapping the wgpu handle and a "_type" tag string. Methods are attached as
@@ -806,7 +758,7 @@ namespace Babylon::Plugins::NativeDawn
             {
                 Napi::TypedArray ta = v.As<Napi::TypedArray>();
                 uint8_t* base = static_cast<uint8_t*>(ta.ArrayBuffer().Data());
-                return { base + ta.ByteOffset(), ta.ByteLength() };
+                return { base == nullptr ? nullptr : base + ta.ByteOffset(), ta.ByteLength() };
             }
             if (v.IsArrayBuffer())
             {
@@ -817,38 +769,9 @@ namespace Babylon::Plugins::NativeDawn
             {
                 Napi::DataView dv = v.As<Napi::DataView>();
                 uint8_t* base = static_cast<uint8_t*>(dv.ArrayBuffer().Data());
-                return { base + dv.ByteOffset(), dv.ByteLength() };
+                return { base == nullptr ? nullptr : base + dv.ByteOffset(), dv.ByteLength() };
             }
             return { nullptr, 0 };
-        }
-
-        // ---- base64 (used to turn object-URL blobs into universally-resolvable
-        // data: URLs; see createObjectURL below) ------------------------------
-        std::string Base64Encode(const uint8_t* data, size_t size)
-        {
-            static const char* T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-            std::string out;
-            out.reserve(((size + 2) / 3) * 4);
-            size_t i = 0;
-            for (; i + 2 < size; i += 3)
-            {
-                uint32_t b = (uint32_t(data[i]) << 16) | (uint32_t(data[i + 1]) << 8) | uint32_t(data[i + 2]);
-                out.push_back(T[(b >> 18) & 63]);
-                out.push_back(T[(b >> 12) & 63]);
-                out.push_back(T[(b >> 6) & 63]);
-                out.push_back(T[b & 63]);
-            }
-            if (i < size)
-            {
-                uint32_t b = uint32_t(data[i]) << 16;
-                bool two = (i + 1 < size);
-                if (two) b |= uint32_t(data[i + 1]) << 8;
-                out.push_back(T[(b >> 18) & 63]);
-                out.push_back(T[(b >> 12) & 63]);
-                out.push_back(two ? T[(b >> 6) & 63] : '=');
-                out.push_back('=');
-            }
-            return out;
         }
 
         bool Base64Decode(const char* data, size_t size, std::vector<uint8_t>& out)
@@ -2681,16 +2604,60 @@ namespace Babylon::Plugins::NativeDawn
                 return info.Env().Undefined();
             });
             SetMethod(o, "writeBuffer", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                Napi::Env env = info.Env();
+                if (info.Length() < 3)
+                {
+                    throw Napi::TypeError::New(env, "writeBuffer: buffer, offset and data are required");
+                }
                 WGPUBuffer* b = GetH<WGPUBuffer>(info[0]);
-                if (b == nullptr) return info.Env().Undefined();
-                uint64_t bufferOffset = ArgU64(info, 1, 0);
+                if (b == nullptr)
+                {
+                    throw Napi::TypeError::New(env, "writeBuffer: invalid GPUBuffer");
+                }
+                if (!info[2].IsArrayBuffer() && !info[2].IsTypedArray() && !info[2].IsDataView())
+                {
+                    throw Napi::TypeError::New(env, "writeBuffer: data must be an ArrayBuffer or an ArrayBuffer view");
+                }
+
+                const auto readInteger = [&info, env](size_t index, uint64_t fallback) -> uint64_t {
+                    if (index >= info.Length() || info[index].IsUndefined())
+                    {
+                        return fallback;
+                    }
+                    const double value = info[index].ToNumber().DoubleValue();
+                    if (!std::isfinite(value) || value < 0 || std::floor(value) != value || value > 9007199254740991.0)
+                    {
+                        throw Napi::RangeError::New(env, "writeBuffer: offsets and sizes must be non-negative safe integers");
+                    }
+                    return static_cast<uint64_t>(value);
+                };
+                const uint64_t bufferOffset = readInteger(1, 0);
                 Bytes bytes = GetBytes(info[2]);
-                if (bytes.data == nullptr) return info.Env().Undefined();
-                size_t dataOffset = static_cast<size_t>(ArgU64(info, 3, 0));
-                size_t length = (!ArgIsUndef(info, 4))
-                    ? static_cast<size_t>(ArgU64(info, 4, 0)) : (bytes.size - dataOffset);
-                wgpuQueueWriteBuffer(g_state.queue, *b, bufferOffset, bytes.data + dataOffset, length);
-                return info.Env().Undefined();
+                const size_t elementSize = info[2].IsTypedArray() ? info[2].As<Napi::TypedArray>().ElementSize() : 1;
+                const size_t elementCount = bytes.size / elementSize;
+                const uint64_t dataOffset = readInteger(3, 0);
+                if (dataOffset > elementCount)
+                {
+                    throw Napi::RangeError::New(env, "writeBuffer: dataOffset exceeds the source range");
+                }
+                const uint64_t count = readInteger(4, elementCount - dataOffset);
+                if (count > elementCount - dataOffset)
+                {
+                    throw Napi::RangeError::New(env, "writeBuffer: size exceeds the source range");
+                }
+                const size_t byteOffset = static_cast<size_t>(dataOffset) * elementSize;
+                const size_t byteCount = static_cast<size_t>(count) * elementSize;
+                if (byteCount != 0 && bytes.data == nullptr)
+                {
+                    throw Napi::RangeError::New(env, "writeBuffer: source storage is unavailable");
+                }
+                if (byteCount % 4 != 0)
+                {
+                    throw Napi::RangeError::New(env, "writeBuffer: the byte count must be a multiple of four");
+                }
+                const uint8_t* data = byteCount == 0 ? bytes.data : bytes.data + byteOffset;
+                wgpuQueueWriteBuffer(g_state.queue, *b, bufferOffset, data, byteCount);
+                return env.Undefined();
             });
             SetMethod(o, "writeTexture", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
@@ -3542,30 +3509,6 @@ namespace Babylon::Plugins::NativeDawn
                 return res;
             });
 
-            // Resize the window client area + Dawn surface (used by
-            // TestUtils.updateSize so the framebuffer matches reference-image size).
-            SetMethod(global, "_nativeDawnResize", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                uint32_t w = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Uint32Value() : g_state.width;
-                uint32_t h = info.Length() > 1 && info[1].IsNumber() ? info[1].As<Napi::Number>().Uint32Value() : g_state.height;
-                if (w < 1) w = 1;
-                if (h < 1) h = 1;
-#if defined(_WIN32)
-                if (g_state.hwnd != nullptr)
-                {
-                    HWND hwnd = static_cast<HWND>(g_state.hwnd);
-                    RECT rc{0, 0, static_cast<LONG>(w), static_cast<LONG>(h)};
-                    const DWORD style = static_cast<DWORD>(::GetWindowLongPtrW(hwnd, GWL_STYLE));
-                    const DWORD exStyle = static_cast<DWORD>(::GetWindowLongPtrW(hwnd, GWL_EXSTYLE));
-                    ::AdjustWindowRectEx(&rc, style, FALSE, exStyle);
-                    ::SetWindowPos(hwnd, nullptr, 0, 0, rc.right - rc.left, rc.bottom - rc.top,
-                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-                }
-#endif
-                ResizeDrawingBuffer(w, h);
-                return env.Undefined();
-            });
-
             // Set the window title (TestUtils.setTitle).
             SetMethod(global, "_nativeDawnSetTitle", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
@@ -3576,49 +3519,6 @@ namespace Babylon::Plugins::NativeDawn
                 }
 #endif
                 return env.Undefined();
-            });
-
-            // Terminate the process with the given exit code (TestUtils.exit).
-            SetMethod(global, "_nativeDawnExit", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                const int code = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 0;
-                std::fflush(stdout);
-                std::fflush(stderr);
-                std::quick_exit(code);
-                return info.Env().Undefined();
-            });
-
-            // Read a local file as an ArrayBuffer. Argument is a filesystem path
-            // (forward or back slashes). Returns the bytes, or null if not found.
-            // Backs the Dawn test shim's XMLHttpRequest replacement, whose local
-            // file loads cannot use UrlLib/WinRT (file:// throws there in this app).
-            SetMethod(global, "_nativeDawnReadFileBytes", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                if (info.Length() < 1 || !info[0].IsString())
-                {
-                    return env.Null();
-                }
-                const std::string path = info[0].As<Napi::String>().Utf8Value();
-                std::FILE* f = std::fopen(path.c_str(), "rb");
-                if (f == nullptr)
-                {
-                    return env.Null();
-                }
-                std::fseek(f, 0, SEEK_END);
-                const long size = std::ftell(f);
-                std::fseek(f, 0, SEEK_SET);
-                if (size < 0)
-                {
-                    std::fclose(f);
-                    return env.Null();
-                }
-                Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, static_cast<size_t>(size));
-                if (size > 0)
-                {
-                    const size_t read = std::fread(ab.Data(), 1, static_cast<size_t>(size), f);
-                    (void)read;
-                }
-                std::fclose(f);
-                return ab;
             });
 
             // Decode an encoded image (PNG/JPEG/...) ArrayBuffer/TypedArray to an
@@ -3655,33 +3555,22 @@ namespace Babylon::Plugins::NativeDawn
     namespace
     {
         // ---- Dawn bootstrap glue, implemented in C++ (Napi) -------------------
-        // Formerly dawn_bootstrap.js. Installs, at global scope and before
-        // babylon.max.js loads, everything WebGPUEngine needs to run the standard
-        // (bgfx-oriented) Playground scene scripts unmodified on Dawn/WebGPU:
+        // Installs the browser-like surface needed by WebGPU consumers:
         //   * no-DOM canvas / document / window / location shims,
-        //   * image decoding shims (createImageBitmap / Image / URL.createObjectURL)
+        //   * image decoding shims (createImageBitmap / Image)
         //     backed by the native bimg decoder,
-        //   * a requestAnimationFrame pump driven by globalThis.frame()
-        //     (called each host frame by the Embedding View::RenderFrame),
-        //   * a __dawnResize hook (called by View::Resize),
-        //   * a deferred WebGPUEngine creation that aliases BABYLON.NativeEngine
-        //     once babylon.max.js defines BABYLON, so the scene scripts'
-        //     synchronous `new BABYLON.NativeEngine()` returns the ready engine.
+        //   * requestAnimationFrame callbacks driven by NativeDawn::Tick.
         // Input is NOT handled here (it flows through NativeInput, like bgfx).
         //
         // All state is JS-thread-only (the plugin only ever runs on the JS thread).
 
         std::vector<Napi::FunctionReference> g_rafQueue;
-        Napi::ObjectReference g_blobRegistry;
-        Napi::ObjectReference g_bootstrapCanvas;
-        Napi::Reference<Napi::Value> g_babylon;
-        bool g_engineStarted = false;
-        uint32_t g_blobSeq = 0;
+        Napi::ObjectReference g_presentationCanvas;
 
         // Deferred framebuffer readback for the validation harness. The harness
         // calls TestUtils.getFrameBufferData() from inside the WebGPU render
         // callback, BEFORE the engine's endFrame() submits the GPU commands. We
-        // stash the callback and perform the readback in frame(), after the rAF
+        // stash the callback and perform the readback in Tick(), after the rAF
         // flush (which runs endFrame) but before present, so the surface texture
         // holds the freshly-submitted render.
         bool g_readbackPending = false;
@@ -4202,11 +4091,6 @@ namespace Babylon::Plugins::NativeDawn
                     d.Resolve(Napi::ArrayBuffer::New(env, 0));
                     return d.Promise();
                 }
-                Napi::Value blob = g_blobRegistry.Value().Get(id);
-                if (!blob.IsUndefined())
-                {
-                    return ToArrayBuffer(env, blob);
-                }
                 Napi::Value fetchVal = env.Global().Get("fetch");
                 if (fetchVal.IsFunction())
                 {
@@ -4223,62 +4107,16 @@ namespace Babylon::Plugins::NativeDawn
             return d.Promise();
         }
 
-        // Create + initialize the WebGPUEngine once babylon.max.js has defined
-        // BABYLON, then alias BABYLON.NativeEngine to return it.
-        void OnBabylonReady(Napi::Env env, Napi::Value babylonVal)
+        Napi::Object GetPresentationCanvas(Napi::Env env)
         {
-            if (g_engineStarted || !babylonVal.IsObject())
+            if (!g_presentationCanvas.IsEmpty())
             {
-                return;
+                return g_presentationCanvas.Value();
             }
-            Napi::Object babylon = babylonVal.As<Napi::Object>();
-            Napi::Value wgpuCtor = babylon.Get("WebGPUEngine");
-            if (!wgpuCtor.IsFunction())
-            {
-                return;
-            }
-            g_engineStarted = true;
-
-            // Babylon assigns Tools.LoadScript = _LoadScriptWeb when the `_native`
-            // global is absent -- which it is in the Dawn build (NativeEngine is
-            // disabled). _LoadScriptWeb injects a <script> DOM node and waits for
-            // its onload event, which never fires in this headless host. As a
-            // result Babylon's glslang + twgsl WASM helpers never load, so shaders
-            // authored in GLSL (NodeMaterial GLSL mode, ShaderMaterial,
-            // ProceduralTexture, and various custom particle/post-process effects)
-            // can never be transpiled GLSL -> SPIR-V -> WGSL and their scenes hang
-            // forever on executeWhenReady. Route script loading through the working
-            // file/XHR path instead (mirrors Babylon's own _LoadScriptNative).
-            // WGSL-authored shaders (Standard/PBR/most post-processes) bypass this
-            // path entirely and are unaffected.
-            static const char* kLoadScriptPatch =
-                "(function(){var T=BABYLON&&BABYLON.Tools;"
-                "if(!T||T.__dawnLoadScriptPatched)return;"
-                "T.__dawnLoadScriptPatched=true;"
-                "T.LoadScript=function(url,onSuccess,onError){"
-                "T.LoadFile(url,function(data){"
-                "try{Function(data).apply(null);onSuccess&&onSuccess();}"
-                "catch(e){onError&&onError('NativeDawn LoadScript eval error for '+url,e);}},"
-                "undefined,undefined,false,function(req,ex){"
-                "onError&&onError('NativeDawn LoadScript load error for '+url,ex);});};"
-                "})();";
-            env.RunScript(kLoadScriptPatch);
-
-            // Reuse a canvas already created via document.getElementById (e.g. a
-            // Babylon-Lite scene that grabbed "renderCanvas" before this ran) so
-            // both engines share the single Dawn-surface-wired canvas.
-            Napi::Object canvas;
-            Napi::Value existingCanvas = env.Global().Get("__dawnCanvas");
-            if (existingCanvas.IsObject())
-            {
-                canvas = existingCanvas.As<Napi::Object>();
-            }
-            else
-            {
-                canvas = MakeCanvas(env, g_state.width, g_state.height);
-                env.Global().Set("__dawnCanvas", canvas);
-            }
-            g_bootstrapCanvas = Napi::Persistent(canvas);
+            Napi::Object canvas = MakeCanvas(env,
+                g_requestedWidth != 0 ? g_requestedWidth : g_state.width,
+                g_requestedHeight != 0 ? g_requestedHeight : g_state.height);
+            g_presentationCanvas = Napi::Persistent(canvas);
 
             // On the web, assigning canvas.width/height resizes the drawing buffer.
             // Babylon's setSize() (and therefore setHardwareScalingLevel) does
@@ -4310,41 +4148,7 @@ namespace Babylon::Plugins::NativeDawn
                     }),
             });
 
-            Napi::Object opts = Napi::Object::New(env);
-            opts.Set("antialias", Napi::Boolean::New(env, false));
-            opts.Set("stencil", Napi::Boolean::New(env, true));
-            opts.Set("premultipliedAlpha", Napi::Boolean::New(env, false));
-            opts.Set("enableAllFeatures", Napi::Boolean::New(env, false));
-
-            Napi::Object engine = wgpuCtor.As<Napi::Function>().New({canvas, opts});
-            engine.Set("enableOfflineSupport", Napi::Boolean::New(env, false));
-            engine.Set("disableManifestCheck", Napi::Boolean::New(env, true));
-            // Stash the engine so the async init callback can promote it without
-            // capturing handles; the alias is only installed once ready.
-            env.Global().Set("__dawnPendingEngine", engine);
-
-            Napi::Value initPromise = engine.Get("initAsync").As<Napi::Function>().Call(engine, {});
-            Napi::Function onReady = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                Napi::Object global = env.Global();
-                global.Set("__dawnEngine", global.Get("__dawnPendingEngine"));
-                Napi::Value babylon = global.Get("BABYLON");
-                if (babylon.IsObject())
-                {
-                    babylon.As<Napi::Object>().Set("NativeEngine",
-                        Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                            return info.Env().Global().Get("__dawnEngine");
-                        }));
-                }
-                DawnLog(LogLevel::Log, "WebGPUEngine ready");
-                return env.Undefined();
-            });
-            Napi::Function onErr = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                std::string msg = info.Length() > 0 ? info[0].ToString().Utf8Value() : "?";
-                DawnLog(LogLevel::Error, "engine init failed: " + msg);
-                return info.Env().Undefined();
-            });
-            initPromise.As<Napi::Object>().Get("then").As<Napi::Function>().Call(initPromise, {onReady, onErr});
+            return canvas;
         }
 
         // Install all of the above onto the global object. Replaces the eval of
@@ -4354,9 +4158,6 @@ namespace Babylon::Plugins::NativeDawn
             Napi::Object global = env.Global();
 
             g_rafQueue.clear();
-            g_engineStarted = false;
-            g_blobSeq = 0;
-            g_blobRegistry = Napi::Persistent(Napi::Object::New(env));
 
             // Babylon's WebGPU shader path (and the emscripten glslang/twgsl glue
             // it loads) references the `self` global, which browsers/web-workers
@@ -4389,58 +4190,6 @@ namespace Babylon::Plugins::NativeDawn
                     "g.GPUMapMode=g.GPUMapMode||{READ:1,WRITE:2};"
                     "})();";
                 env.RunScript(kGpuConstPatch);
-            }
-
-            // The host's native TextDecoder polyfill only supports UTF-8, but the
-            // emscripten glue for Babylon's glslang/twgsl WASM modules constructs
-            // `new TextDecoder('utf-16le')` (UTF16ToString). That throws, rejecting
-            // glslang init and hanging every GLSL-shader scene. Install a JS
-            // TextDecoder that adds UTF-16 (LE/BE) support and delegates all other
-            // encodings to the native decoder (preserving correct UTF-8 handling
-            // used by e.g. the glTF/Draco loaders).
-            {
-                static const char* kTextDecoderPatch =
-                    "(function(){var N=globalThis.TextDecoder;"
-                    "if(N&&N.__dawnUtf16)return;"
-                    "function norm(l){return String(l==null?'utf-8':l).trim().toLowerCase();}"
-                    "function TD(label,opts){var l=norm(label);this._label=l;"
-                    "this._le=(l==='utf-16le'||l==='utf-16'||l==='ucs-2'||l==='ucs2'||l==='unicode'||l==='csunicode'||l==='iso-10646-ucs-2');"
-                    "this._be=(l==='utf-16be');"
-                    "if(!this._le&&!this._be&&N){try{this._n=new N(label,opts);}catch(e){this._n=null;}}}"
-                    "TD.__dawnUtf16=true;"
-                    "TD.prototype.decode=function(input,o){if(input==null)return '';var b;"
-                    "if(input instanceof ArrayBuffer)b=new Uint8Array(input);"
-                    "else if(ArrayBuffer.isView(input))b=new Uint8Array(input.buffer,input.byteOffset,input.byteLength);"
-                    "else return '';"
-                    "if(this._le||this._be){var s='',le=this._le;for(var i=0;i+1<b.length;i+=2){var c=le?(b[i]|(b[i+1]<<8)):((b[i]<<8)|b[i+1]);s+=String.fromCharCode(c);}return s;}"
-                    "if(this._n)return this._n.decode(input,o);"
-                    "var out='',i2=0,n=b.length;while(i2<n){var x=b[i2++];if(x<128){out+=String.fromCharCode(x);}"
-                    "else if(x>=192&&x<224){out+=String.fromCharCode(((x&31)<<6)|(b[i2++]&63));}"
-                    "else if(x>=224&&x<240){out+=String.fromCharCode(((x&15)<<12)|((b[i2++]&63)<<6)|(b[i2++]&63));}"
-                    "else{var cp=((x&7)<<18)|((b[i2++]&63)<<12)|((b[i2++]&63)<<6)|(b[i2++]&63);cp-=0x10000;out+=String.fromCharCode(0xD800+(cp>>10),0xDC00+(cp&1023));}}return out;};"
-                    "Object.defineProperty(TD.prototype,'encoding',{get:function(){return this._label;}});"
-                    "globalThis.TextDecoder=TD;})();";
-                env.RunScript(kTextDecoderPatch);
-            }
-
-            // V8's async WebAssembly.instantiate posts compilation completion to a
-            // foreground task runner this host does not pump, so the returned
-            // promise never settles and the glslang/twgsl modules never finish
-            // loading (their scenes hang). Regular Promise microtasks DO run here,
-            // so override instantiate to compile synchronously (via the sync
-            // Module/Instance constructors) and hand back an already-resolved
-            // promise. The glslang/twgsl WASM blobs are small, so the brief
-            // synchronous compile is acceptable.
-            {
-                static const char* kWasmSyncPatch =
-                    "(function(){if(typeof WebAssembly==='undefined'||WebAssembly.__dawnSyncInstantiate)return;"
-                    "WebAssembly.__dawnSyncInstantiate=true;"
-                    "WebAssembly.instantiate=function(bytes,imports){try{"
-                    "if(bytes instanceof WebAssembly.Module){return Promise.resolve(new WebAssembly.Instance(bytes,imports));}"
-                    "var m=new WebAssembly.Module(bytes);var inst=new WebAssembly.Instance(m,imports);"
-                    "return Promise.resolve({module:m,instance:inst});}"
-                    "catch(e){return Promise.reject(e);}};})();";
-                env.RunScript(kWasmSyncPatch);
             }
 
             // ---- canvas / document / window / location shims -----------------
@@ -4494,8 +4243,7 @@ namespace Babylon::Plugins::NativeDawn
                     // document.getElementById("renderCanvas")). Other ids return
                     // null, matching prior behavior so the validation harness (which
                     // never requests a canvas by id) is unaffected. The canvas is
-                    // created lazily and cached as __dawnCanvas so the Babylon.js
-                    // bootstrap and Lite share the same canvas.
+                    // shared by all consumers of the single Dawn surface.
                     Napi::Env env = info.Env();
                     const std::string id = info.Length() > 0 && info[0].IsString()
                         ? info[0].As<Napi::String>().Utf8Value() : "";
@@ -4503,15 +4251,7 @@ namespace Babylon::Plugins::NativeDawn
                     {
                         return env.Null();
                     }
-                    Napi::Object global = env.Global();
-                    Napi::Value existing = global.Get("__dawnCanvas");
-                    if (existing.IsObject())
-                    {
-                        return existing;
-                    }
-                    Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
-                    global.Set("__dawnCanvas", canvas);
-                    return canvas;
+                    return GetPresentationCanvas(env);
                 });
                 // Return an empty array-like for the query methods some Babylon
                 // paths call (e.g. glTF loaders probing for <script>/<link> tags).
@@ -4582,15 +4322,7 @@ namespace Babylon::Plugins::NativeDawn
                                 ? info[0].As<Napi::String>().Utf8Value() : "";
                             if (id == "renderCanvas" || id == "canvas" || id == "babylon-canvas")
                             {
-                                Napi::Object global = env.Global();
-                                Napi::Value existing = global.Get("__dawnCanvas");
-                                if (existing.IsObject())
-                                {
-                                    return existing;
-                                }
-                                Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
-                                global.Set("__dawnCanvas", canvas);
-                                return canvas;
+                                return GetPresentationCanvas(env);
                             }
 
                             Napi::Object document = info.This().As<Napi::Object>();
@@ -4622,15 +4354,7 @@ namespace Babylon::Plugins::NativeDawn
                             if (selector == "canvas" || selector == "#renderCanvas" ||
                                 selector == "#canvas" || selector == "#babylon-canvas")
                             {
-                                Napi::Object global = env.Global();
-                                Napi::Value existing = global.Get("__dawnCanvas");
-                                if (existing.IsObject())
-                                {
-                                    return existing;
-                                }
-                                Napi::Object canvas = MakeCanvas(env, g_state.width, g_state.height);
-                                global.Set("__dawnCanvas", canvas);
-                                return canvas;
+                                return GetPresentationCanvas(env);
                             }
 
                             Napi::Object document = info.This().As<Napi::Object>();
@@ -4672,34 +4396,13 @@ namespace Babylon::Plugins::NativeDawn
                 global.Set("location", location);
             }
 
-            // Babylon's WebGPU engine reloads glTF external-texture object URLs
-            // through its internal XHR/data-URL loader (forceBitmapOverHTML-
-            // ImageElement). That path cannot resolve our `blob:nativedawn/N`
-            // ids (only createImageBitmap's ToArrayBuffer can), so such textures
-            // used to load as 0 bytes -> 1x1 -> black. Stash the source bytes on
-            // each Blob instance (as `__dawnU8`) so createObjectURL below can
-            // return a universally-resolvable `data:` URL instead.
-            {
-                static const char* kBlobStashPatch =
-                    "(function(){var R=globalThis.Blob;"
-                    "if(typeof R!=='function'||R.__dawnStash)return;"
-                    "function W(parts,opts){var b=new R(parts,opts);try{"
-                    "var p=parts&&parts[0],u8=null;"
-                    "if(p instanceof ArrayBuffer)u8=new Uint8Array(p);"
-                    "else if(p&&p.buffer instanceof ArrayBuffer)u8=new Uint8Array(p.buffer,p.byteOffset||0,p.byteLength);"
-                    "if(u8){b.__dawnU8=u8;b.__dawnType=(opts&&opts.type)||'';}"
-                    "}catch(e){}return b;}"
-                    "W.prototype=R.prototype;W.__dawnStash=true;globalThis.Blob=W;})();";
-                env.RunScript(kBlobStashPatch);
-            }
-
             // ---- image decoding shims ----------------------------------------
             // The host's native URL polyfill requires its arguments to be strings
             // and throws "A string was expected" when passed a URL object as the
             // base (e.g. `new URL(".", new URL(src, base))`, which Babylon-Lite's
             // glTF loader does). Browsers stringify such arguments. Wrap URL to
             // coerce non-string url/base args to strings while preserving the
-            // static helpers (createObjectURL/revokeObjectURL) added below.
+            // native static helpers (createObjectURL/revokeObjectURL).
             {
                 static const char* kUrlCoercePatch =
                     "(function(){var N=globalThis.URL;"
@@ -4712,72 +4415,6 @@ namespace Babylon::Plugins::NativeDawn
                     "if(N.revokeObjectURL)W.revokeObjectURL=function(){return N.revokeObjectURL.apply(N,arguments);};"
                     "globalThis.URL=W;})();";
                 env.RunScript(kUrlCoercePatch);
-            }
-
-            // Root-relative asset fetches (e.g. Babylon-Lite scene1's
-            // `fetch("/brdf-lut.png")`, a lab-dev-server convention) resolve to a
-            // local file that doesn't exist in this host, and a failed local fetch
-            // currently crashes the process. Redirect root-relative "/x" fetch URLs
-            // to the app's Scripts directory (app:///Scripts/x) where such assets
-            // can be placed, so self-contained lite bundles that expect their
-            // sibling assets at the site root load correctly.
-            {
-                static const char* kFetchRewritePatch =
-                    "(function(){var f=globalThis.fetch;"
-                    "if(typeof f!=='function'||f.__dawnRewrite)return;"
-                    "function W(u,o){try{"
-                    "if(typeof u==='string'&&u.charAt(0)==='/'&&u.charAt(1)!=='/'){u='app:///Scripts'+u;}"
-                    "else if(u&&typeof u==='object'&&typeof u.url==='string'&&u.url.charAt(0)==='/'&&u.url.charAt(1)!=='/'){u='app:///Scripts'+u.url;}"
-                    "}catch(e){}return f.call(this,u,o);}"
-                    "W.__dawnRewrite=true;globalThis.fetch=W;})();";
-                env.RunScript(kFetchRewritePatch);
-            }
-
-            Napi::Value urlVal = global.Get("URL");
-            if (urlVal.IsObject() || urlVal.IsFunction())
-            {
-                Napi::Object url = urlVal.As<Napi::Object>();
-                if (!url.Get("createObjectURL").IsFunction())
-                {
-                    SetMethod(url, "createObjectURL", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                        Napi::Env env = info.Env();
-                        // If the blob carries stashed source bytes (see Blob patch),
-                        // return a data: URL so Babylon's internal XHR/data-URL
-                        // texture loader can resolve it (blob:nativedawn ids can't
-                        // be resolved by that path). Falls back to the registry.
-                        if (info.Length() > 0 && info[0].IsObject())
-                        {
-                            Napi::Object blob = info[0].As<Napi::Object>();
-                            Napi::Value u8 = blob.Get("__dawnU8");
-                            if (u8.IsTypedArray() || u8.IsArrayBuffer())
-                            {
-                                Bytes b = GetBytes(u8);
-                                if (b.data != nullptr && b.size != 0)
-                                {
-                                    std::string type;
-                                    Napi::Value ty = blob.Get("__dawnType");
-                                    if (ty.IsString()) type = ty.As<Napi::String>().Utf8Value();
-                                    if (type.empty()) type = "application/octet-stream";
-                                    std::string dataUrl = "data:" + type + ";base64," + Base64Encode(b.data, b.size);
-                                    return Napi::String::New(env, dataUrl);
-                                }
-                            }
-                        }
-                        std::string id = "blob:nativedawn/" + std::to_string(++g_blobSeq);
-                        g_blobRegistry.Value().Set(id, info.Length() > 0 ? info[0] : env.Undefined());
-                        return Napi::String::New(env, id);
-                    });
-                }
-                if (!url.Get("revokeObjectURL").IsFunction())
-                {
-                    SetMethod(url, "revokeObjectURL", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                        if (info.Length() > 0 && info[0].IsString())
-                        {
-                            g_blobRegistry.Value().Delete(info[0].As<Napi::String>().Utf8Value());
-                        }
-                        return info.Env().Undefined();
-                    });
-                }
             }
 
             if (global.Get("createImageBitmap").IsUndefined())
@@ -4910,83 +4547,6 @@ namespace Babylon::Plugins::NativeDawn
                 return Napi::Number::New(info.Env(), static_cast<double>(g_rafQueue.size()));
             });
             SetMethod(global, "cancelAnimationFrame", Noop);
-            SetMethod(global, "frame", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                // Present the PREVIOUS frame before running this frame's work.
-                // Babylon reuses its upload/render command encoders across
-                // requestAnimationFrame callbacks, so a render pass recorded
-                // against the surface texture in one frame is often only
-                // submitted during the next one. Presenting destroys the surface
-                // texture, so presenting at the end of the frame that recorded
-                // the work loses it ("Destroyed texture [Texture of [Surface]]
-                // used in a submit") and blanks the frame. Present at the top of
-                // the next frame, and only once the recorded work has actually
-                // been submitted (g_surfaceWorkPending).
-                if (g_surfaceConfigured && g_currentTextureAcquired && !g_surfaceWorkPending)
-                {
-                    wgpuSurfacePresent(g_state.surface);
-                    g_currentTextureAcquired = false;
-                    ApplyPendingSurfaceResize();
-                }
-                if (g_state.instance)
-                {
-                    wgpuInstanceProcessEvents(g_state.instance);
-                }
-                double now = 0.0;
-                Napi::Value perf = env.Global().Get("performance");
-                if (perf.IsObject())
-                {
-                    Napi::Value nowFn = perf.As<Napi::Object>().Get("now");
-                    if (nowFn.IsFunction())
-                    {
-                        now = nowFn.As<Napi::Function>().Call(perf, {}).ToNumber().DoubleValue();
-                    }
-                }
-                std::vector<Napi::FunctionReference> queue;
-                queue.swap(g_rafQueue);
-                for (auto& cb : queue)
-                {
-                    cb.Value().Call({Napi::Number::New(env, now)});
-                }
-                // Deferred framebuffer readback (validation harness): the render
-                // callbacks above ran the engine's beginFrame/render/endFrame, so
-                // the surface texture now holds the submitted frame. Read it back
-                // and invoke the stashed callback BEFORE presenting (present
-                // releases the texture).
-                if (g_readbackPending)
-                {
-                    g_readbackPending = false;
-                    Napi::Value rp = env.Global().Get("_nativeDawnReadPixels");
-                    if (rp.IsFunction() && !g_readbackCallback.IsEmpty())
-                    {
-                        Napi::Object res = rp.As<Napi::Function>().Call({}).As<Napi::Object>();
-                        Napi::ArrayBuffer ab = res.Get("data").As<Napi::ArrayBuffer>();
-                        Napi::Uint8Array u8 = Napi::Uint8Array::New(env, ab.ByteLength(), ab, 0);
-                        g_readbackCallback.Value().Call({u8});
-                    }
-                    g_readbackCallback.Reset();
-                    // Reclaim this frame's short-lived GPU wrappers now: the
-                    // validation harness renders only a frame or two per scene,
-                    // so the gated per-frame pump below may not fire before the
-                    // next scene loads and starts allocating again.
-                    PumpJsFinalizers(env, true);
-                }
-                // The present for this frame is deferred to the top of the next
-                // frame (see the comment there), so nothing is presented here.
-                if (g_state.instance)
-                {
-                    wgpuInstanceProcessEvents(g_state.instance);
-                }
-                // Retire GPU resources whose deferred-destroy delay has elapsed
-                // (see DeferDestroy). Runs after ProcessEvents so completed
-                // submissions have released their references.
-                FlushPendingDestroy();
-                // Bounded-frequency GC + finalizer drain so dropped GPU wrappers
-                // (and the Dawn allocations they hold) don't accumulate across a
-                // long-running session. No-op on non-V8 engines.
-                PumpJsFinalizers(env, false);
-                return env.Undefined();
-            });
 
             // Forward timer/animation methods onto `window` (Window polyfill
             // provides `window` but not these).
@@ -5048,63 +4608,10 @@ namespace Babylon::Plugins::NativeDawn
                 }
             }
 
-            // ---- resize bridge (called by Embedding View::Resize) ------------
-            SetMethod(global, "__dawnResize", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                double width = info.Length() > 0 ? info[0].ToNumber().DoubleValue() : 0.0;
-                double height = info.Length() > 1 ? info[1].ToNumber().DoubleValue() : 0.0;
-                if (!g_bootstrapCanvas.IsEmpty())
-                {
-                    Napi::Object canvas = g_bootstrapCanvas.Value();
-                    canvas.Set("width", Napi::Number::New(env, width));
-                    canvas.Set("height", Napi::Number::New(env, height));
-                    canvas.Set("clientWidth", Napi::Number::New(env, width));
-                    canvas.Set("clientHeight", Napi::Number::New(env, height));
-                }
-                Napi::Value engine = env.Global().Get("__dawnEngine");
-                if (engine.IsObject())
-                {
-                    Napi::Value setSize = engine.As<Napi::Object>().Get("setSize");
-                    if (setSize.IsFunction())
-                    {
-                        setSize.As<Napi::Function>().Call(engine, {
-                            Napi::Number::New(env, width),
-                            Napi::Number::New(env, height),
-                            Napi::Boolean::New(env, true)});
-                    }
-                }
-                return env.Undefined();
-            });
-
-            // ---- deferred WebGPUEngine creation via the BABYLON global hook --
-            g_babylon.Reset();
-            Napi::Value existing = global.Get("BABYLON");
-            if (existing.IsObject() && existing.As<Napi::Object>().Get("WebGPUEngine").IsFunction())
-            {
-                g_babylon = Napi::Persistent(existing);
-                OnBabylonReady(env, existing);
-            }
-            else
-            {
-                Napi::Object desc = Napi::Object::New(env);
-                desc.Set("configurable", Napi::Boolean::New(env, true));
-                desc.Set("get", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                    return g_babylon.IsEmpty() ? info.Env().Undefined() : g_babylon.Value();
-                }));
-                desc.Set("set", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                    Napi::Env env = info.Env();
-                    Napi::Value v = info.Length() > 0 ? info[0] : env.Undefined();
-                    g_babylon = Napi::Persistent(v);
-                    OnBabylonReady(env, v);
-                    return env.Undefined();
-                }));
-                Napi::Object objectCtor = global.Get("Object").As<Napi::Object>();
-                objectCtor.Get("defineProperty").As<Napi::Function>().Call(objectCtor,
-                    {global, Napi::String::New(env, "BABYLON"), desc});
-            }
         }
     } // namespace (bootstrap)
 
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
     namespace
     {
         // Directory containing the running executable (for TestUtils output dir).
@@ -5144,23 +4651,18 @@ namespace Babylon::Plugins::NativeDawn
             });
             SetMethod(tu, "updateSize", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
-                Napi::Object global = env.Global();
                 const uint32_t w = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Uint32Value() : g_state.width;
                 const uint32_t h = info.Length() > 1 && info[1].IsNumber() ? info[1].As<Napi::Number>().Uint32Value() : g_state.height;
                 // Resize the Dawn surface (drawing buffer) to EXACTLY w x h so the
                 // readback matches the reference-image size. Surface-only: don't
                 // tie it to the window client area (which is smaller by the title
                 // bar / menu and would give e.g. 600x380 instead of 600x400).
-                ResizeSurface(w, h);
-                Napi::Value dr = global.Get("__dawnResize");
-                if (dr.IsFunction())
-                {
-                    dr.As<Napi::Function>().Call({Napi::Number::New(env, w), Napi::Number::New(env, h)});
-                }
+                ResizeSurface(env, w, h);
                 return env.Undefined();
             });
             SetMethod(tu, "exit", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 const int code = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 0;
+                Babylon::Plugins::TestUtils::NotifyExit(code);
                 std::fflush(stdout);
                 std::fflush(stderr);
                 std::quick_exit(code);
@@ -5182,7 +4684,7 @@ namespace Babylon::Plugins::NativeDawn
 
             // Framebuffer readback: the harness calls this inside the render loop
             // (after scene.render() but before the engine's endFrame submits). We
-            // defer the actual readback to frame(), which runs after endFrame and
+            // defer the actual readback to Tick(), which runs after endFrame and
             // before present, so the surface texture holds the submitted render.
             SetMethod(tu, "getFrameBufferData", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 g_readbackCallback = Napi::Persistent(info[0].As<Napi::Function>());
@@ -5216,6 +4718,7 @@ namespace Babylon::Plugins::NativeDawn
             global.Set("TestUtils", tu);
         }
     } // namespace (testutils)
+#endif
 
     void Initialize(Napi::Env env, void* window, uint32_t width, uint32_t height)
     {
@@ -5231,22 +4734,13 @@ namespace Babylon::Plugins::NativeDawn
             return;
         }
 
-        // Milestone hook: a global to prove Dawn renders from JS without bgfx.
-        // navigator.gpu and the full WebGPU surface are added incrementally.
-        Napi::Object global = env.Global();
-        global.Set("_nativeDawnClear", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-            float r = info.Length() > 0 ? info[0].ToNumber().FloatValue() : 0.0f;
-            float g = info.Length() > 1 ? info[1].ToNumber().FloatValue() : 0.0f;
-            float b = info.Length() > 2 ? info[2].ToNumber().FloatValue() : 0.0f;
-            ClearToColor(r, g, b);
-            return info.Env().Undefined();
-        }, "_nativeDawnClear"));
-
         if (g_state.ready)
         {
             InstallWebGPU(env);
             InstallBootstrap(env);
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
             InstallTestUtils(env);
+#endif
 
             // Replace the Canvas polyfill's bgfx-backed NativeCanvas (registered
             // earlier in Runtime.cpp) with the Dawn one. The bgfx version's
@@ -5266,11 +4760,7 @@ namespace Babylon::Plugins::NativeDawn
         g_readbackPending = false;
         g_readbackCallback.Reset();
         g_rafQueue.clear();
-        g_blobRegistry.Reset();
-        g_bootstrapCanvas.Reset();
-        g_babylon.Reset();
-        g_engineStarted = false;
-        g_blobSeq = 0;
+        g_presentationCanvas.Reset();
 
         // Drain deferred wrapper finalizers while both the N-API environment and
         // the Dawn device are valid.
@@ -5317,12 +4807,55 @@ namespace Babylon::Plugins::NativeDawn
         g_requestedHeight = 0;
     }
 
-    void Tick(Napi::Env)
+    void Tick(Napi::Env env)
     {
-        if (g_state.ready)
+        if (!g_state.ready)
         {
-            wgpuInstanceProcessEvents(g_state.instance);
+            return;
         }
+
+        // Command encoders can span animation callbacks. Present only after
+        // the previous texture's recorded work has been submitted.
+        if (g_surfaceConfigured && g_currentTextureAcquired && !g_surfaceWorkPending)
+        {
+            wgpuSurfacePresent(g_state.surface);
+            g_currentTextureAcquired = false;
+            ApplyPendingSurfaceResize();
+        }
+        wgpuInstanceProcessEvents(g_state.instance);
+
+        double now = 0.0;
+        Napi::Value perf = env.Global().Get("performance");
+        if (perf.IsObject())
+        {
+            Napi::Value nowFn = perf.As<Napi::Object>().Get("now");
+            if (nowFn.IsFunction())
+            {
+                now = nowFn.As<Napi::Function>().Call(perf, {}).ToNumber().DoubleValue();
+            }
+        }
+        std::vector<Napi::FunctionReference> queue;
+        queue.swap(g_rafQueue);
+        for (auto& cb : queue)
+        {
+            cb.Value().Call({Napi::Number::New(env, now)});
+        }
+
+        // Read back after render callbacks submit, but before the next present.
+        if (g_readbackPending)
+        {
+            g_readbackPending = false;
+            auto callback = std::move(g_readbackCallback);
+            Napi::Object res = env.Global().Get("_nativeDawnReadPixels").As<Napi::Function>().Call({}).As<Napi::Object>();
+            Napi::ArrayBuffer ab = res.Get("data").As<Napi::ArrayBuffer>();
+            Napi::Uint8Array u8 = Napi::Uint8Array::New(env, ab.ByteLength(), ab, 0);
+            callback.Value().Call({u8});
+            // Short validation scenes may not reach the normal wrapper budget.
+            PumpJsFinalizers(env, true);
+        }
+        wgpuInstanceProcessEvents(g_state.instance);
+        FlushPendingDestroy();
+        PumpJsFinalizers(env, false);
     }
 
     void ResizeSurface(uint32_t width, uint32_t height)
@@ -5337,5 +4870,16 @@ namespace Babylon::Plugins::NativeDawn
         // arriving mid-frame cannot destroy the texture the in-flight command
         // buffer is still referencing.
         ResizeDrawingBuffer(width, height);
+    }
+
+    void ResizeSurface(Napi::Env env, uint32_t width, uint32_t height)
+    {
+        ResizeSurface(width, height);
+        if (!g_presentationCanvas.IsEmpty())
+        {
+            Napi::Object canvas = g_presentationCanvas.Value();
+            canvas.Set("clientWidth", Napi::Number::New(env, std::max(width, 1u)));
+            canvas.Set("clientHeight", Napi::Number::New(env, std::max(height, 1u)));
+        }
     }
 }
