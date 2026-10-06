@@ -142,6 +142,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.ViewIdGeneration();
     }
 
+    void DeviceContext::BeforeNextFrame(uintptr_t deviceId, std::function<void()> callback)
+    {
+        m_graphicsImpl.BeforeNextFrame(deviceId, std::move(callback));
+    }
+
     void DeviceContext::FlushViewsIfNeeded()
     {
         m_graphicsImpl.FlushViewsIfNeeded();

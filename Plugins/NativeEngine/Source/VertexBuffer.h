@@ -6,6 +6,8 @@
 #include <array>
 #include <list>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <tuple>
 #include <vector>
@@ -75,6 +77,13 @@ namespace Babylon
             }
         };
 
+        struct LayoutCache
+        {
+            std::mutex Mutex{};
+            std::map<LayoutKey, bgfx::VertexLayoutHandle> Layouts{};
+            bool Scheduled{};
+        };
+
         Graphics::DeviceContext& m_deviceContext;
         const uintptr_t m_deviceId{};
 
@@ -89,6 +98,6 @@ namespace Babylon
         };
 
         bool m_disposed{};
-        std::map<LayoutKey, bgfx::VertexLayoutHandle> m_layouts{};
+        std::shared_ptr<LayoutCache> m_layoutCache{std::make_shared<LayoutCache>()};
     };
 };

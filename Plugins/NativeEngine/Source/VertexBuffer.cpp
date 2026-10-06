@@ -39,14 +39,17 @@ namespace Babylon
             }
         }
 
-        if (m_deviceId == m_deviceContext.GetDeviceId())
         {
-            for (const auto& [key, handle] : m_layouts)
+            std::scoped_lock lock{m_layoutCache->Mutex};
+            if (m_deviceId == m_deviceContext.GetDeviceId())
             {
-                bgfx::destroy(handle);
+                for (const auto& [key, handle] : m_layoutCache->Layouts)
+                {
+                    bgfx::destroy(handle);
+                }
             }
+            m_layoutCache->Layouts.clear();
         }
-        m_layouts.clear();
         m_bytes.clear();
 
         m_disposed = true;
@@ -59,15 +62,16 @@ namespace Babylon
             throw std::runtime_error{"Cannot retain a layout on a disposed or stale vertex buffer"};
         }
 
+        std::scoped_lock lock{m_layoutCache->Mutex};
         LayoutKey key{layout.m_stride};
         std::copy(std::begin(layout.m_offset), std::end(layout.m_offset), key.Offsets.begin());
         std::copy(std::begin(layout.m_attributes), std::end(layout.m_attributes), key.Attributes.begin());
 
-        auto it = m_layouts.find(key);
+        auto it = m_layoutCache->Layouts.find(key);
         bool inserted = false;
-        if (it == m_layouts.end())
+        if (it == m_layoutCache->Layouts.end())
         {
-            // Keep a reference across VAO rebuilds; bgfx defers recycling destroyed handles until a frame completes.
+            // Keep one reference until the physical frame submits all its VAO rebuilds.
             const auto cached = bgfx::createVertexLayout(layout);
             if (!bgfx::isValid(cached))
             {
@@ -75,7 +79,7 @@ namespace Babylon
             }
             try
             {
-                it = m_layouts.emplace(std::move(key), cached).first;
+                it = m_layoutCache->Layouts.emplace(std::move(key), cached).first;
                 inserted = true;
             }
             catch (...)
@@ -85,11 +89,40 @@ namespace Babylon
             }
         }
 
+        if (!m_layoutCache->Scheduled)
+        {
+            try
+            {
+                m_deviceContext.BeforeNextFrame(m_deviceId, [weakCache = std::weak_ptr<LayoutCache>{m_layoutCache}] {
+                    if (auto cache = weakCache.lock())
+                    {
+                        std::scoped_lock lock{cache->Mutex};
+                        for (const auto& [key, handle] : cache->Layouts)
+                        {
+                            bgfx::destroy(handle);
+                        }
+                        cache->Layouts.clear();
+                        cache->Scheduled = false;
+                    }
+                });
+                m_layoutCache->Scheduled = true;
+            }
+            catch (...)
+            {
+                if (inserted)
+                {
+                    bgfx::destroy(it->second);
+                    m_layoutCache->Layouts.erase(it);
+                }
+                throw;
+            }
+        }
+
         const auto handle = bgfx::createVertexLayout(layout);
         if (!bgfx::isValid(handle) && inserted)
         {
             bgfx::destroy(it->second);
-            m_layouts.erase(it);
+            m_layoutCache->Layouts.erase(it);
         }
         return handle;
     }

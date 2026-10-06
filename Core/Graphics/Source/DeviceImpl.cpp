@@ -445,6 +445,7 @@ namespace Babylon::Graphics
             m_frameBlocked = true;
         }
 
+        RunBeforeNextFrame();
         m_beforeRenderDispatcher.tick(*m_cancellationSource);
 
         // End the frame encoder before calling bgfx::frame(). frame() waits for
@@ -609,6 +610,28 @@ namespace Babylon::Graphics
         return m_viewIdGeneration.load();
     }
 
+    void DeviceImpl::BeforeNextFrame(uintptr_t deviceId, std::function<void()> callback)
+    {
+        std::scoped_lock lock{m_beforeNextFrameMutex};
+        m_beforeNextFrameCallbacks.emplace_back(deviceId, std::move(callback));
+    }
+
+    void DeviceImpl::RunBeforeNextFrame()
+    {
+        std::vector<std::pair<uintptr_t, std::function<void()>>> callbacks;
+        {
+            std::scoped_lock lock{m_beforeNextFrameMutex};
+            callbacks.swap(m_beforeNextFrameCallbacks);
+        }
+        for (auto& [deviceId, callback] : callbacks)
+        {
+            if (deviceId == GetId())
+            {
+                callback();
+            }
+        }
+    }
+
     void DeviceImpl::FlushViewsIfNeeded()
     {
         // Reserve headroom below the hard cap: a single draw/clear operation can
@@ -707,6 +730,7 @@ namespace Babylon::Graphics
         // still flips exactly once.
         // Same completion path as Frame(): a mid-frame flush must unblock
         // readTexture requests on the waiting JS thread.
+        RunBeforeNextFrame();
         const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
         CompleteReadTextureRequests(frameNumber);
 
@@ -718,7 +742,6 @@ namespace Babylon::Graphics
         // Without this a cached high id would sort *after* every id handed out from the reset
         // counter, inverting submission order relative to the JS-side draw order.
         m_viewIdGeneration.fetch_add(1);
-
         m_frameEncoder = bgfx::begin(true);
     }
 

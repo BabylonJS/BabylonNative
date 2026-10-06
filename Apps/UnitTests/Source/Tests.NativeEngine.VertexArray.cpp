@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <future>
+#include <memory>
 #include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -105,7 +106,7 @@ TEST_F(NativeEngineVertexArray, RepeatedArraysWithinOneFrameDoNotExhaustLayouts)
     EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
 }
 
-TEST_F(NativeEngineVertexArray, BufferRetainsDistinctLayoutsUntilDisposed)
+TEST_F(NativeEngineVertexArray, BufferReleasesLayoutsAtFrameBoundary)
 {
     const auto baseline = bgfx::getStats()->numVertexLayouts;
     const std::vector<uint8_t> bytes(36);
@@ -121,8 +122,55 @@ TEST_F(NativeEngineVertexArray, BufferRetainsDistinctLayoutsUntilDisposed)
         EXPECT_GE(retainedCount, baseline + 2);
     }
     FlushFrames();
-    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, retainedCount);
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline + 1);
+    {
+        Babylon::VertexArray position{*m_context};
+        Record(position, buffer, 12);
+    }
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline + 1);
     buffer.Dispose();
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
+}
+
+TEST_F(NativeEngineVertexArray, DistinctLayoutsAcrossFramesDoNotExhaustPool)
+{
+    const auto baseline = bgfx::getStats()->numVertexLayouts;
+    constexpr uint32_t stride = 272;
+    const std::vector<uint8_t> bytes(stride * 3);
+    Babylon::VertexBuffer buffer{*m_context, gsl::make_span(bytes), false};
+    for (uint32_t iteration = 0; iteration < bgfx::getCaps()->limits.maxVertexLayouts; ++iteration)
+    {
+        SCOPED_TRACE(iteration);
+        {
+            Babylon::VertexArray array{*m_context};
+            ASSERT_NO_THROW(array.RecordVertexBuffer(&buffer, bgfx::Attrib::Position, iteration * 4, stride, 3, bgfx::AttribType::Float, false, 0));
+        }
+        FlushFrames();
+    }
+    buffer.Dispose();
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
+}
+
+TEST_F(NativeEngineVertexArray, InactiveBuffersDoNotRetainOldLayouts)
+{
+    const auto baseline = bgfx::getStats()->numVertexLayouts;
+    constexpr uint32_t stride = 272;
+    const std::vector<uint8_t> bytes(stride * 3);
+    std::vector<std::unique_ptr<Babylon::VertexBuffer>> buffers;
+    for (uint32_t iteration = 0; iteration < bgfx::getCaps()->limits.maxVertexLayouts; ++iteration)
+    {
+        SCOPED_TRACE(iteration);
+        buffers.emplace_back(std::make_unique<Babylon::VertexBuffer>(*m_context, gsl::make_span(bytes), false));
+        {
+            Babylon::VertexArray array{*m_context};
+            ASSERT_NO_THROW(array.RecordVertexBuffer(buffers.back().get(), bgfx::Attrib::Position, iteration * 4, stride, 3, bgfx::AttribType::Float, false, 0));
+        }
+        FlushFrames();
+    }
+    buffers.clear();
     FlushFrames();
     EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
 }
