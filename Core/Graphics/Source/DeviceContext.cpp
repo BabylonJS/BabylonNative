@@ -142,6 +142,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.ViewIdGeneration();
     }
 
+    bgfx::VertexLayoutHandle DeviceContext::CreateVertexLayout(const bgfx::VertexLayout& layout)
+    {
+        return m_graphicsImpl.CreateVertexLayout(layout);
+    }
+
     void DeviceContext::FlushViewsIfNeeded()
     {
         m_graphicsImpl.FlushViewsIfNeeded();

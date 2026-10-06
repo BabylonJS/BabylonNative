@@ -126,6 +126,7 @@ namespace Babylon::Graphics
         // Bumped whenever a mid-frame flush resets the view counter. Cache this alongside any
         // view id that is retained across draw calls and re-acquire when it changes.
         uint32_t ViewIdGeneration() const;
+        bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
 
         // If the current frame is close to exhausting bgfx views, flush accumulated
         // views (cross-thread bgfx::frame + view-counter reset) so rendering can
