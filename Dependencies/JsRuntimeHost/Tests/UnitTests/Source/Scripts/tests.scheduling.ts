@@ -14,10 +14,10 @@ describe("setTimeout", function () {
     });
 
     it("should call the given function after the given delay", function (done) {
-        const startTime = new Date().getTime();
+        const startTime = performance.now();
         setTimeout(() => {
             try {
-                expect(new Date().getTime() - startTime).to.be.at.least(10);
+                expect(performance.now() - startTime).to.be.at.least(10);
                 done();
             }
             catch (e) {
@@ -27,11 +27,11 @@ describe("setTimeout", function () {
     });
 
     it("should call the given nested function after the given delay", function (done) {
-        const startTime = new Date().getTime();
+        const startTime = performance.now();
         setTimeout(() => {
             setTimeout(() => {
                 try {
-                    expect(new Date().getTime() - startTime).to.be.at.least(20);
+                    expect(performance.now() - startTime).to.be.at.least(20);
                     done();
                 }
                 catch (e) {
@@ -42,10 +42,10 @@ describe("setTimeout", function () {
     });
 
     it("should call the given function after the given delay when the delay is a string representing a valid number", function (done) {
-        const startTime = new Date().getTime();
+        const startTime = performance.now();
         setTimeout(() => {
             try {
-                expect(new Date().getTime() - startTime).to.be.at.least(10);
+                expect(performance.now() - startTime).to.be.at.least(10);
                 done();
             }
             catch (e) {
@@ -143,12 +143,12 @@ describe("setInterval", function () {
     });
 
     it("should call the given function at the given interval", function (done) {
-        let startTime = new Date().getTime();
+        const startTime = performance.now();
         let tickCount = 0;
         const id = setInterval(() => {
             try {
                 tickCount++;
-                expect(new Date().getTime() - startTime).to.be.at.least(tickCount * 10);
+                expect(performance.now() - startTime).to.be.at.least(tickCount * 10);
                 if (tickCount > 2) {
                     clearInterval(id);
                     done();

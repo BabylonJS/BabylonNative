@@ -65,6 +65,8 @@ endif()
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
     set(SOURCES ${SOURCES} "Source/Tests.NodeApi.Chakra.cpp")
+elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+    set(SOURCES ${SOURCES} "Source/Tests.NodeApi.Hermes.cpp")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
     set(SOURCES ${SOURCES} "Source/Tests.NodeApi.JavaScriptCore.cpp")
 endif()

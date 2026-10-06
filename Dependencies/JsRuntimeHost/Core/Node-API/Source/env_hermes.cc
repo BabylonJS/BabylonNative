@@ -164,6 +164,8 @@ namespace Napi
         // exceptions thrown FROM user callbacks are already handled in
         // AppRuntime::Dispatch's try/catch.
         (void)runtime->drainJobs();
+        // WeakRef targets are kept alive only until the current job finishes.
+        runtime->clearKeptObjects();
     }
 
     Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl)
