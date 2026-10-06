@@ -1,0 +1,133 @@
+#
+# Copyright 2011-2026 Branimir Karadzic. All rights reserved.
+# License: https://github.com/bkaradzic/bgfx/blob/master/LICENSE
+#
+
+THISDIR:=$(dir $(lastword $(MAKEFILE_LIST)))
+include $(THISDIR)/../scripts/tools.mk
+
+SHADER_TMP = $(TEMP)/tmp
+
+BIN = vs_debugfont.bin.h \
+	  fs_debugfont.bin.h \
+	  vs_clear.bin.h \
+	  fs_clear0.bin.h \
+	  fs_clear1.bin.h \
+	  fs_clear2.bin.h \
+	  fs_clear3.bin.h \
+	  fs_clear4.bin.h \
+	  fs_clear5.bin.h \
+	  fs_clear6.bin.h \
+	  fs_clear7.bin.h \
+	  cs_mipgen_pow2.bin.h \
+	  cs_mipgen_oddx.bin.h \
+	  cs_mipgen_oddy.bin.h \
+	  cs_mipgen_oddxy.bin.h \
+	  cs_yuv_to_rgb.bin.h \
+	  cs_blit_texture_to_buffer.bin.h \
+	  cs_blit_buffer_to_texture.bin.h \
+
+.PHONY: all
+all: $(BIN)
+
+define shader-embedded
+	@echo [$(<)]
+	 $(SILENT) $(SHADERC) --type $(1) --platform linux   -p 430        -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_glsl
+	 @cat "$(SHADER_TMP)" > $(@)
+	-$(SILENT) $(SHADERC) --type $(1) --platform android -p 300_es     -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_essl
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type $(1) --platform linux   -p spirv      -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_spv
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type $(1) --platform linux   -p wgsl       -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_wgsl
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type $(1) --platform windows -p s_5_0  -O 3 -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_dxbc
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type $(1) --platform windows -p s_6_0 -O 3 -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_dxil
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type $(1) --platform ios     -p metal -O 3 -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_mtl
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-@printf "extern const uint8_t* $(basename $(<))_pssl;\n" | tr -d '\015' >> $(@)
+	-@printf "extern const uint32_t $(basename $(<))_pssl_size;\n" | tr -d '\015' >> $(@)
+endef
+
+vs_debugfont.bin.h : vs_debugfont.sc
+	$(call shader-embedded, v)
+
+fs_debugfont.bin.h : fs_debugfont.sc
+	$(call shader-embedded, f)
+
+vs_clear.bin.h : vs_clear.sc
+	$(call shader-embedded, v)
+
+fs_clear0.bin.h : fs_clear0.sc
+	$(call shader-embedded, f)
+
+fs_clear1.bin.h : fs_clear1.sc
+	$(call shader-embedded, f)
+
+fs_clear2.bin.h : fs_clear2.sc
+	$(call shader-embedded, f)
+
+fs_clear3.bin.h : fs_clear3.sc
+	$(call shader-embedded, f)
+
+fs_clear4.bin.h : fs_clear4.sc
+	$(call shader-embedded, f)
+
+fs_clear5.bin.h : fs_clear5.sc
+	$(call shader-embedded, f)
+
+fs_clear6.bin.h : fs_clear6.sc
+	$(call shader-embedded, f)
+
+fs_clear7.bin.h : fs_clear7.sc
+	$(call shader-embedded, f)
+
+define shader-embedded-compute
+	@echo [$(<)]
+	 $(SILENT) $(SHADERC) --type c --platform linux   -p 430         -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_glsl
+	 @cat "$(SHADER_TMP)" > $(@)
+	-$(SILENT) $(SHADERC) --type c --platform android -p 310_es      -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_essl
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type c --platform linux   -p spirv       -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_spv
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type c --platform linux   -p wgsl        -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_wgsl
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type c --platform windows -p s_5_0  -O 3 -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_dxbc
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type c --platform windows -p s_6_0 -O 3 -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_dxil
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-$(SILENT) $(SHADERC) --type c --platform ios     -p metal -O 3 -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(<))_mtl
+	-@cat "$(SHADER_TMP)" >> $(@)
+	-@printf "extern const uint8_t* $(basename $(<))_pssl;\n" | tr -d '\015' >> $(@)
+	-@printf "extern const uint32_t $(basename $(<))_pssl_size;\n" | tr -d '\015' >> $(@)
+endef
+
+cs_mipgen_pow2.bin.h : cs_mipgen_pow2.sc cs_mipgen.sh
+	$(call shader-embedded-compute)
+
+cs_mipgen_oddx.bin.h : cs_mipgen_oddx.sc cs_mipgen.sh
+	$(call shader-embedded-compute)
+
+cs_mipgen_oddy.bin.h : cs_mipgen_oddy.sc cs_mipgen.sh
+	$(call shader-embedded-compute)
+
+cs_mipgen_oddxy.bin.h : cs_mipgen_oddxy.sc cs_mipgen.sh
+	$(call shader-embedded-compute)
+
+cs_yuv_to_rgb.bin.h : cs_yuv_to_rgb.sc
+	$(call shader-embedded-compute)
+
+cs_blit_texture_to_buffer.bin.h : cs_blit_texture_to_buffer.sc
+	$(call shader-embedded-compute)
+
+cs_blit_buffer_to_texture.bin.h : cs_blit_buffer_to_texture.sc
+	$(call shader-embedded-compute)
+
+.PHONY: clean
+clean:
+	@echo Cleaning...
+	@-rm -vf $(BIN)
+
+.PHONY: rebuild
+rebuild: clean all
