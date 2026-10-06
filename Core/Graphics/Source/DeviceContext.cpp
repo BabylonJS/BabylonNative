@@ -142,9 +142,9 @@ namespace Babylon::Graphics
         return m_graphicsImpl.ViewIdGeneration();
     }
 
-    void DeviceContext::BeforeNextFrame(uintptr_t deviceId, std::function<void()> callback)
+    bgfx::VertexLayoutHandle DeviceContext::CreateVertexLayout(const bgfx::VertexLayout& layout)
     {
-        m_graphicsImpl.BeforeNextFrame(deviceId, std::move(callback));
+        return m_graphicsImpl.CreateVertexLayout(layout);
     }
 
     void DeviceContext::FlushViewsIfNeeded()

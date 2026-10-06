@@ -106,7 +106,7 @@ TEST_F(NativeEngineVertexArray, RepeatedArraysWithinOneFrameDoNotExhaustLayouts)
     EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
 }
 
-TEST_F(NativeEngineVertexArray, BufferReleasesLayoutsAtFrameBoundary)
+TEST_F(NativeEngineVertexArray, FrameRetiresLayoutsWithoutInvalidatingLiveArrays)
 {
     const auto baseline = bgfx::getStats()->numVertexLayouts;
     const std::vector<uint8_t> bytes(36);
@@ -171,6 +171,21 @@ TEST_F(NativeEngineVertexArray, InactiveBuffersDoNotRetainOldLayouts)
         FlushFrames();
     }
     buffers.clear();
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
+}
+
+TEST_F(NativeEngineVertexArray, LiveArrayKeepsLayoutAfterBufferDisposalAndFrame)
+{
+    const auto baseline = bgfx::getStats()->numVertexLayouts;
+    const std::vector<uint8_t> bytes(36);
+    Babylon::VertexBuffer buffer{*m_context, gsl::make_span(bytes), false};
+    Babylon::VertexArray array{*m_context};
+    Record(array, buffer, 12);
+    buffer.Dispose();
+    FlushFrames();
+    EXPECT_GT(bgfx::getStats()->numVertexLayouts, baseline);
+    array.Dispose();
     FlushFrames();
     EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
 }

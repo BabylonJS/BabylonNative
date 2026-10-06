@@ -13,13 +13,14 @@
 
 #include <bgfx/bgfx.h>
 
+#include <array>
 #include <atomic>
 #include <condition_variable>
+#include <map>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
-#include <utility>
-#include <vector>
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
 #include <winrt/base.h>
@@ -102,7 +103,7 @@ namespace Babylon::Graphics
         bgfx::ViewId AcquireNewViewId();
         bgfx::ViewId PeekNextViewId() const;
         uint32_t ViewIdGeneration() const;
-        void BeforeNextFrame(uintptr_t deviceId, std::function<void()> callback);
+        bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
 
         // Mid-frame view flush. If the current logical frame has acquired close to
         // the maximum number of bgfx views, flush the accumulated views via a
@@ -180,10 +181,21 @@ namespace Babylon::Graphics
         // value and re-acquire when it no longer matches, otherwise the cached (high) id would
         // sort after ids acquired from the reset counter and invert submission order.
         std::atomic<uint32_t> m_viewIdGeneration{0};
-        // One-shot resource retirement callbacks, drained before each physical bgfx frame.
-        void RunBeforeNextFrame();
-        std::mutex m_beforeNextFrameMutex{};
-        std::vector<std::pair<uintptr_t, std::function<void()>>> m_beforeNextFrameCallbacks{};
+        struct LayoutKey
+        {
+            uint16_t Stride{};
+            std::array<uint16_t, bgfx::Attrib::Count> Offsets{};
+            std::array<uint16_t, bgfx::Attrib::Count> Attributes{};
+
+            bool operator<(const LayoutKey& other) const
+            {
+                return std::tie(Stride, Offsets, Attributes) < std::tie(other.Stride, other.Offsets, other.Attributes);
+            }
+        };
+
+        void ReleaseFrameVertexLayouts();
+        std::mutex m_frameVertexLayoutsMutex{};
+        std::map<LayoutKey, bgfx::VertexLayoutHandle> m_frameVertexLayouts{};
 
         // Number of mid-frame view flushes performed during the current logical frame; reset
         // when the frame is actually presented. The flush lets a logical frame exceed bgfx's
