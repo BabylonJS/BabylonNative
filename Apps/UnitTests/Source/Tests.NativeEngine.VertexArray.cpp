@@ -89,6 +89,44 @@ TEST_F(NativeEngineVertexArray, SequentialArraysDoNotExhaustLayouts)
     EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
 }
 
+TEST_F(NativeEngineVertexArray, RepeatedArraysWithinOneFrameDoNotExhaustLayouts)
+{
+    const auto baseline = bgfx::getStats()->numVertexLayouts;
+    const std::vector<uint8_t> bytes(36);
+    Babylon::VertexBuffer buffer{*m_context, gsl::make_span(bytes), false};
+    for (uint32_t iteration = 0; iteration < 101; ++iteration)
+    {
+        SCOPED_TRACE(iteration);
+        Babylon::VertexArray array{*m_context};
+        ASSERT_NO_THROW(Record(array, buffer, 12));
+    }
+    buffer.Dispose();
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
+}
+
+TEST_F(NativeEngineVertexArray, BufferRetainsDistinctLayoutsUntilDisposed)
+{
+    const auto baseline = bgfx::getStats()->numVertexLayouts;
+    const std::vector<uint8_t> bytes(36);
+    Babylon::VertexBuffer buffer{*m_context, gsl::make_span(bytes), false};
+    uint32_t retainedCount{};
+    {
+        Babylon::VertexArray position{*m_context};
+        Babylon::VertexArray normal{*m_context};
+        Record(position, buffer, 12);
+        normal.RecordVertexBuffer(&buffer, bgfx::Attrib::Normal, 0, 12, 3, bgfx::AttribType::Float, false, 0);
+        FlushFrames();
+        retainedCount = bgfx::getStats()->numVertexLayouts;
+        EXPECT_GE(retainedCount, baseline + 2);
+    }
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, retainedCount);
+    buffer.Dispose();
+    FlushFrames();
+    EXPECT_EQ(bgfx::getStats()->numVertexLayouts, baseline);
+}
+
 TEST_F(NativeEngineVertexArray, RejectedDuplicateDoesNotRetainLayout)
 {
     const auto baseline = bgfx::getStats()->numVertexLayouts;

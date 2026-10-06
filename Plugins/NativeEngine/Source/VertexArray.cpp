@@ -102,7 +102,7 @@ namespace Babylon
             layout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
             layout.end();
 
-            const auto layoutHandle = bgfx::createVertexLayout(layout);
+            const auto layoutHandle = vertexBuffer->RetainLayout(layout);
             if (!bgfx::isValid(layoutHandle))
             {
                 throw std::runtime_error{"Failed to create vertex layout (attribute=" + std::to_string(location) +

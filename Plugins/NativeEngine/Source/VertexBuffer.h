@@ -3,9 +3,11 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <gsl/gsl>
+#include <array>
 #include <list>
 #include <map>
 #include <optional>
+#include <tuple>
 #include <vector>
 
 namespace Babylon
@@ -30,6 +32,8 @@ namespace Babylon
         void Update(gsl::span<const uint8_t> bytes, size_t byteOffset);
 
         void Build(uint32_t byteStride);
+
+        bgfx::VertexLayoutHandle RetainLayout(const bgfx::VertexLayout& layout);
 
         void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout);
 
@@ -59,6 +63,18 @@ namespace Babylon
             const InstanceDataLayout& layout);
 
     private:
+        struct LayoutKey
+        {
+            uint16_t Stride{};
+            std::array<uint16_t, bgfx::Attrib::Count> Offsets{};
+            std::array<uint16_t, bgfx::Attrib::Count> Attributes{};
+
+            bool operator<(const LayoutKey& other) const
+            {
+                return std::tie(Stride, Offsets, Attributes) < std::tie(other.Stride, other.Offsets, other.Attributes);
+            }
+        };
+
         Graphics::DeviceContext& m_deviceContext;
         const uintptr_t m_deviceId{};
 
@@ -73,5 +89,6 @@ namespace Babylon
         };
 
         bool m_disposed{};
+        std::map<LayoutKey, bgfx::VertexLayoutHandle> m_layouts{};
     };
 };

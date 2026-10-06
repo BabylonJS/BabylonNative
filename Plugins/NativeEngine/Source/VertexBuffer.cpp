@@ -2,6 +2,7 @@
 #include "Babylon/Graphics/DeviceContext.h"
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <string>
 
 namespace Babylon
@@ -38,9 +39,59 @@ namespace Babylon
             }
         }
 
+        if (m_deviceId == m_deviceContext.GetDeviceId())
+        {
+            for (const auto& [key, handle] : m_layouts)
+            {
+                bgfx::destroy(handle);
+            }
+        }
+        m_layouts.clear();
         m_bytes.clear();
 
         m_disposed = true;
+    }
+
+    bgfx::VertexLayoutHandle VertexBuffer::RetainLayout(const bgfx::VertexLayout& layout)
+    {
+        if (m_disposed || m_deviceId != m_deviceContext.GetDeviceId())
+        {
+            throw std::runtime_error{"Cannot retain a layout on a disposed or stale vertex buffer"};
+        }
+
+        LayoutKey key{layout.m_stride};
+        std::copy(std::begin(layout.m_offset), std::end(layout.m_offset), key.Offsets.begin());
+        std::copy(std::begin(layout.m_attributes), std::end(layout.m_attributes), key.Attributes.begin());
+
+        auto it = m_layouts.find(key);
+        bool inserted = false;
+        if (it == m_layouts.end())
+        {
+            // Keep a reference across VAO rebuilds; bgfx defers recycling destroyed handles until a frame completes.
+            const auto cached = bgfx::createVertexLayout(layout);
+            if (!bgfx::isValid(cached))
+            {
+                return cached;
+            }
+            try
+            {
+                it = m_layouts.emplace(std::move(key), cached).first;
+                inserted = true;
+            }
+            catch (...)
+            {
+                bgfx::destroy(cached);
+                throw;
+            }
+        }
+
+        const auto handle = bgfx::createVertexLayout(layout);
+        if (!bgfx::isValid(handle) && inserted)
+        {
+            bgfx::destroy(it->second);
+            m_layouts.erase(it);
+        }
+        return handle;
     }
 
     void VertexBuffer::Update(gsl::span<const uint8_t> bytes, size_t byteOffset)
@@ -75,6 +126,11 @@ namespace Babylon
 
     void VertexBuffer::Build(uint32_t byteStride)
     {
+        if (m_disposed || m_deviceId != m_deviceContext.GetDeviceId())
+        {
+            throw std::runtime_error{"Cannot build a disposed or stale vertex buffer"};
+        }
+
         if (m_byteStride == 0)
         {
             m_byteStride = byteStride;
