@@ -66,14 +66,6 @@ target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 # Expose the path so the OpenGL backends of our own targets can use it.
 set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
 
-# The Canvas polyfill holds a bgfx framebuffer per JS Canvas object and per
-# text-rendering operation, releasing them only on GC finalize, so a long
-# playground sweep exceeds bgfx's default of 128.
-if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
-    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
-endif()
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
-
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
 
