@@ -28,9 +28,7 @@
 #pragma GCC diagnostic pop
 #endif
 
-#define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
-#undef STB_TRUETYPE_IMPLEMENTATION
 
 #include "Canvas.h"
 #include "Context.h"
@@ -50,8 +48,34 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONTEXT_CONSTRUCTOR_NAME = "Context";
 
+    struct Context::ClipMask
+    {
+        NVGclipMask mask;
+        int image{};
+    };
+
     namespace
     {
+        class ScopedPath
+        {
+        public:
+            explicit ScopedPath(NVGcontext* context) : m_context{context}
+            {
+                nvgSavePath(m_context, m_path);
+                nvgBeginPath(m_context);
+            }
+            ~ScopedPath()
+            {
+                nvgRestorePath(m_context, m_path);
+            }
+            ScopedPath(const ScopedPath&) = delete;
+            ScopedPath& operator=(const ScopedPath&) = delete;
+
+        private:
+            NVGcontext* m_context;
+            NVGsavedPath m_path;
+        };
+
         // True only for a finite, non-negative integer that fits in a uint32_t. Used where a
         // dimension arrives from a duck-typed object and so has not been through WebIDL's
         // unsigned long conversion; Uint32Value() would silently wrap -1 into 4294967295.
@@ -61,6 +85,15 @@ namespace Babylon::Polyfills::Internal
                 value >= 0.0 &&
                 value <= static_cast<double>(std::numeric_limits<uint32_t>::max()) &&
                 value == std::trunc(value);
+        }
+
+        void ValidateFillRule(Napi::Env env, const Napi::Value& value)
+        {
+            const auto fillRule = value.ToString().Utf8Value();
+            if (fillRule != "nonzero" && fillRule != "evenodd")
+            {
+                throw Napi::TypeError::New(env, "Context2D.fill: the fill rule must be \"nonzero\" or \"evenodd\".");
+            }
         }
     }
 
@@ -201,12 +234,16 @@ namespace Babylon::Polyfills::Internal
         }
         else if (std::holds_alternative<GradientStyle>(m_state.fillStyle))
         {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.fillStyle)->Value());
+            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(m_state.fillStyle)->Value());
+            if (gradient == nullptr)
+            {
+                throw Napi::TypeError::New(info.Env(), "fillStyle must be a string or CanvasGradient.");
+            }
             nvgFillPaint(*m_nvg, gradient->Paint());
         }
         else
         {
-            throw Napi::Error::New(info.Env(), "Fillstyle is not a color string or a gradient.");
+            throw Napi::TypeError::New(info.Env(), "fillStyle must be a string or CanvasGradient.");
         }
     }
 
@@ -223,12 +260,16 @@ namespace Babylon::Polyfills::Internal
         }
         else if (std::holds_alternative<GradientStyle>(m_state.strokeStyle))
         {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.strokeStyle)->Value());
+            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(m_state.strokeStyle)->Value());
+            if (gradient == nullptr)
+            {
+                throw Napi::TypeError::New(info.Env(), "strokeStyle must be a string or CanvasGradient.");
+            }
             nvgStrokePaint(*m_nvg, gradient->Paint());
         }
         else
         {
-            throw Napi::Error::New(info.Env(), "Strokestyle is not a color string or a gradient.");
+            throw Napi::TypeError::New(info.Env(), "strokeStyle must be a string or CanvasGradient.");
         }
     }
 
@@ -249,14 +290,7 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        // fillRect neither reads nor modifies the current path per spec, so it
-        // would normally start its own. But Clip() can only express a rectangle
-        // (nvgScissor), so a non-rectangular clip path is emulated by leaving it
-        // in the current path and letting this fill render it. See Clip().
-        if (!m_isClipped)
-        {
-            nvgBeginPath(*m_nvg);
-        }
+        ScopedPath temporaryPath{*m_nvg};
 
         nvgRect(*m_nvg, left, top, width, height);
 
@@ -345,14 +379,26 @@ namespace Babylon::Polyfills::Internal
     {
         SetFilterStack();
 
-        const NativeCanvasPath2D* path = info.Length() >= 1 && info[0].IsObject()
-            ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
-            : nullptr;
         // TODO: handle fillRule: nonzero, evenodd
+        // fill(path?, fillRule?) — distinguish Path2D from the string-converted enum overload.
+        const NativeCanvasPath2D* path = nullptr;
+        if (info.Length() >= 1 && !info[0].IsUndefined())
+        {
+            path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
+            if (path == nullptr)
+            {
+                ValidateFillRule(info.Env(), info[0]);
+            }
+        }
+        if (path != nullptr && info.Length() >= 2 && !info[1].IsUndefined())
+        {
+            ValidateFillRule(info.Env(), info[1]);
+        }
 
-        // draw Path2D if exists
+        std::optional<ScopedPath> temporaryPath;
         if (path != nullptr)
         {
+            temporaryPath.emplace(*m_nvg);
             PlayPath2D(path);
         }
 
@@ -377,7 +423,6 @@ namespace Babylon::Polyfills::Internal
     void Context::Restore(const Napi::CallbackInfo&)
     {
         nvgRestore(*m_nvg);
-        m_isClipped = false;
         if (!m_savedStates.empty())
         {
             m_state = std::move(m_savedStates.back());
@@ -399,10 +444,7 @@ namespace Babylon::Polyfills::Internal
         nanovg_filterstack clearFilters;
         nvgFilterStack(*m_nvg, clearFilters);
 
-        // See FillRect: clipping is a scissor, so the path must always be reset. Resetting it
-        // invalidates the emulated clip, which points at a path that no longer exists, and the
-        // nvgRestore below only pops ctx->states -- it does not put the old path back.
-        ResetPathState();
+        ScopedPath temporaryPath{*m_nvg};
 
         nvgRect(*m_nvg, x, y, width, height);
 
@@ -440,8 +482,8 @@ namespace Babylon::Polyfills::Internal
 
     void Context::ResetPathState()
     {
-        m_isClipped = false;
         m_pathHasNonRect = false;
+        m_pathRectangleCount = 0;
         nvgBeginPath(*m_nvg);
     }
 
@@ -459,6 +501,7 @@ namespace Babylon::Polyfills::Internal
 
         nvgRect(*m_nvg, left, top, width, height);
         m_rectangleClipping = {left, top, width, height};
+        ++m_pathRectangleCount;
     }
 
     void Context::RoundRect(const Napi::CallbackInfo& info)
@@ -524,35 +567,58 @@ namespace Babylon::Polyfills::Internal
 
         m_rectangleClipping = {x, y, width, height};
 
-        // Deliberately does not set m_pathHasNonRect, even though rounded corners are not
-        // something nvgScissor can express. Clip()'s emulation for a non-rectangular path is
-        // to leave the path current and let the next fill draw it, and nanovg fills the union
-        // of the subpaths, not their intersection -- so `roundRect(); clip(); fillRect()` would
-        // paint the whole fillRect rather than the rounded region. Measured on the "Native
-        // Canvas" visual test: routing roundRect into the emulation takes the pixel difference
-        // from 1.850% to 20.980%, where the scissor's square bounding box stays at 1.850%.
-        // Dropping the radii is wrong, but it is the far smaller error of the two, and a
-        // correct fix needs real path clipping (a stencil pass in nanovg) rather than this
-        // union trick.
+        m_pathHasNonRect = true;
     }
 
-    void Context::Clip(const Napi::CallbackInfo& /*info*/)
+    void Context::Clip(const Napi::CallbackInfo& info)
     {
-        // A non-rectangular clip path cannot be expressed as a scissor rectangle.
-        // Emulate it by leaving the path current so the next fill draws it, and
-        // leave any enclosing scissor untouched rather than clipping to a
-        // rectangle this path never described.
-        if (m_pathHasNonRect)
+        const auto* path = info.Length() > 0 ? NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]) : nullptr;
+        const auto ruleIndex = path != nullptr ? 1u : 0u;
+        const auto rule = info.Length() > ruleIndex && !info[ruleIndex].IsUndefined() ? info[ruleIndex].ToString().Utf8Value() : "nonzero";
+        if (rule != "nonzero" && rule != "evenodd")
         {
-            m_isClipped = true;
+            throw Napi::TypeError::New(info.Env(), "Context2D.clip: expected nonzero or evenodd fill rule.");
+        }
+        std::optional<ScopedPath> temporaryPath;
+        if (path != nullptr)
+        {
+            temporaryPath.emplace(*m_nvg);
+            PlayPath2D(path);
+        }
+        if (path != nullptr || m_pathHasNonRect || m_pathRectangleCount != 1 ||
+            m_rectangleClipping.width == 0 || m_rectangleClipping.height == 0)
+        {
+            auto clip = std::make_shared<ClipMask>();
+            nvgRasterizeClip(*m_nvg, m_canvas->GetWidth(), m_canvas->GetHeight(), rule == "evenodd", clip->mask);
+            auto& mask = clip->mask;
+            if (m_state.clipMask)
+            {
+                const auto& parent = m_state.clipMask->mask;
+                for (int y = 0; y < mask.height; ++y)
+                {
+                    for (int x = 0; x < mask.width; ++x)
+                    {
+                        const auto px = mask.x + x - parent.x, py = mask.y + y - parent.y;
+                        const auto alpha = px >= 0 && py >= 0 && px < parent.width && py < parent.height
+                            ? parent.rgba[(size_t(py) * parent.width + px) * 4 + 3] : 0;
+                        auto& value = mask.rgba[(size_t(y) * mask.width + x) * 4 + 3];
+                        value = static_cast<uint8_t>((value * alpha + 127) / 255);
+                    }
+                }
+            }
+            clip->image = nvgCreateImageRGBA(*m_nvg, mask.width, mask.height, NVG_IMAGE_NEAREST, mask.rgba.data());
+            if (clip->image == 0)
+            {
+                throw Napi::Error::New(info.Env(), "Cannot allocate Canvas clip texture.");
+            }
+            m_clipMasks.push_back(clip);
+            m_state.clipMask = clip;
+            nvgClipImage(*m_nvg, clip->image, mask.x, mask.y, mask.width, mask.height);
             return;
         }
 
-        m_isClipped = false;
-
-        //By default m_rectangleClipping is not set, in this case we use the canvas width and height.
-        auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetWidth();
-        auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
+        const auto w = m_rectangleClipping.width;
+        const auto h = m_rectangleClipping.height;
         // Canvas rectangles can extend left/up; NanoVG scissors require positive extents.
         const auto left = m_rectangleClipping.left + std::min(w, 0.f);
         const auto top = m_rectangleClipping.top + std::min(h, 0.f);
@@ -562,6 +628,18 @@ namespace Babylon::Polyfills::Internal
         nvgIntersectScissor(*m_nvg, left - 1, top - 1, std::abs(w) + 1, std::abs(h) + 1);
     }
 
+    void Context::ReleaseClipMasksAfterFlush()
+    {
+        m_clipMasks.erase(std::remove_if(m_clipMasks.begin(), m_clipMasks.end(), [this](const auto& clip) {
+            if (clip.use_count() != 1)
+            {
+                return false;
+            }
+            nvgDeleteImage(*m_nvg, clip->image);
+            return true;
+        }), m_clipMasks.end());
+    }
+
     void Context::StrokeRect(const Napi::CallbackInfo& info)
     {
         const auto left = info[0].As<Napi::Number>().FloatValue();
@@ -569,6 +647,7 @@ namespace Babylon::Polyfills::Internal
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
+        ScopedPath temporaryPath{*m_nvg};
         nvgRect(*m_nvg, left, top, width, height);
         BindStrokeStyle(info);
         SetFilterStack();
@@ -577,8 +656,6 @@ namespace Babylon::Polyfills::Internal
 
     void Context::PlayPath2D(const NativeCanvasPath2D* path)
     {
-        m_isClipped = false;
-        m_pathHasNonRect = true;
         nvgBeginPath(*m_nvg);
         for (const auto& command : *path)
         {
@@ -654,10 +731,21 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Stroke(const Napi::CallbackInfo& info)
     {
-        // draw Path2D if exists
-        const NativeCanvasPath2D* path = info.Length() == 1 ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>()) : nullptr;
+        // stroke(path?) — reject non-Path2D first arg.
+        const NativeCanvasPath2D* path = nullptr;
+        if (info.Length() >= 1 && !info[0].IsUndefined())
+        {
+            path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
+            if (path == nullptr)
+            {
+                throw Napi::TypeError::New(info.Env(), "Context2D.stroke: the first argument is not a Path2D.");
+            }
+        }
+
+        std::optional<ScopedPath> temporaryPath;
         if (path != nullptr)
         {
+            temporaryPath.emplace(*m_nvg);
             PlayPath2D(path);
         }
 
@@ -699,8 +787,9 @@ namespace Babylon::Polyfills::Internal
     {
         std::string text{info[0].As<Napi::String>()};
 
-        // Measure against the same face FillText will bind.
+        // SetFont records the face but does not bind it; measure with the same face as FillText.
         const bool fontBound = SetFontFaceId();
+
         // No face available: synthesize Arial-ish metrics so callers still get a finite width.
         if (!fontBound && m_state.font.Size() > 0.f)
         {
@@ -853,7 +942,7 @@ namespace Babylon::Polyfills::Internal
         frameBuffer.Bind();
         if (needClear)
         {
-            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.f, 0);
         }
         frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
         const auto width = m_canvas->GetWidth();
@@ -871,16 +960,17 @@ namespace Babylon::Polyfills::Internal
         };
         std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
             // clear framebuffer when released
-            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.f, 0);
             this->m_canvas->m_frameBufferPool.Release(frameBuffer);
             frameBuffer->Unbind();
         };
 
-        nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
+        nvgSetViewport(*m_nvg, float(width), float(height));
         nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
         nvgSetFrameBufferPool(*m_nvg, { acquire, release });
         nvgEndFrame(*m_nvg);
         ReleaseImagesAfterFlush();
+        ReleaseClipMasksAfterFlush();
         frameBuffer.Unbind();
 
         // Reserve the view id for the eventual canvas->texture blit NOW, while we are
@@ -1200,11 +1290,10 @@ namespace Babylon::Polyfills::Internal
         nvgGlobalCompositeOperation(*m_nvg, NVG_COPY);
 
         NVGpaint imagePaint = nvgImagePattern(*m_nvg, destX, destY, destWidth, destHeight, 0.f, imageIndex, 1.f);
-        ResetPathState();
+        ScopedPath temporaryPath{*m_nvg};
         nvgRect(*m_nvg, destX, destY, destWidth, destHeight);
         nvgFillPaint(*m_nvg, imagePaint);
         nvgFill(*m_nvg);
-
         nvgRestore(*m_nvg);
     }
 
@@ -1255,11 +1344,15 @@ namespace Babylon::Polyfills::Internal
         Napi::Object imageObj = info[0].As<Napi::Object>();
         // Retain the source kind before coercion can change its prototype or properties.
         // Canvas takes precedence over the structural ImageBitmap shape.
-        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
-        NativeCanvas* const srcCanvas = canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>())
-            ? NativeCanvas::Unwrap(imageObj)
+        NativeCanvas* const srcCanvas = NativeCanvas::TryUnwrap(info.Env(), imageObj);
+        const NativeCanvasImage* const canvasImage = srcCanvas == nullptr
+            ? NativeCanvasImage::TryUnwrap(info.Env(), imageObj)
             : nullptr;
-        const bool isImageBitmap = srcCanvas == nullptr && imageObj.Has("data") && imageObj.Get("data").IsTypedArray();
+        const bool isImageBitmap = srcCanvas == nullptr && canvasImage == nullptr && imageObj.Has("data") && imageObj.Get("data").IsTypedArray();
+        if (srcCanvas == nullptr && canvasImage == nullptr && !isImageBitmap)
+        {
+            throw Napi::TypeError::New(info.Env(), "drawImage: first argument must be a Canvas, Image, or ImageBitmap-like object.");
+        }
 
         // Coercion can also resize the source. Do it once, before reading dimensions
         // or creating any graphics resources.
@@ -1386,7 +1479,6 @@ namespace Babylon::Polyfills::Internal
 #endif
         }
 
-        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);
         const auto rectangles = ParseDrawImageRectangles(arguments, canvasImage->GetWidth(), canvasImage->GetHeight());
         if (!rectangles)
         {
@@ -1558,28 +1650,11 @@ namespace Babylon::Polyfills::Internal
             imageIndex,
             1.f);
 
-        if (m_isClipped)
-        {
-            // The current path is the emulated non-rectangular clip. Restrict it to
-            // the destination rectangle with a temporary scissor instead of appending
-            // the rectangle to the path, which would fill and retain their union.
-            nvgSave(*m_nvg);
-            nvgIntersectScissor(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-            nvgRestore(*m_nvg);
-        }
-        else
-        {
-            // Rectangular clips live in NanoVG's scissor state and survive resetting
-            // the temporary draw path. Keep the wrapper's path flags in sync as well.
-            ResetPathState();
-            nvgRect(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-        }
+        ScopedPath temporaryPath{*m_nvg};
+        nvgRect(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
+        nvgFillPaint(*m_nvg, imagePaint);
+        SetFilterStack();
+        nvgFill(*m_nvg);
     }
 
     void Context::RetainImageUntilFlush(int imageIndex)

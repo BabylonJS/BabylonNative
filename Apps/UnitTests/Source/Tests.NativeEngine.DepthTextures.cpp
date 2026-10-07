@@ -83,10 +83,32 @@ TEST(NativeEngineDepthTextures, ExposesReadableDepthAndPreservesFramebufferOwner
                         texture->Dispose();
                         // Disposing the non-owning alias must leave the framebuffer usable.
                         frameBuffer->Clear(*context.GetActiveEncoder(),
-                            BGFX_CLEAR_DEPTH | (stencil ? BGFX_CLEAR_STENCIL : 0), 0, 0.25f, 0);
+                            BGFX_CLEAR_DEPTH | (stencil ? BGFX_CLEAR_STENCIL : 0), 0, 0, 0, 0, 0.25f, 0);
                         frameBuffer->Dispose();
                     }
                 }
+            }
+            {
+                auto value = engine.Get("createTexture").As<Napi::Function>().Call(engine, {});
+                auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+                const auto createSharedDepthFrameBuffer = [&] {
+                    return engine.Get("createMultiFrameBuffer").As<Napi::Function>().Call(engine, {
+                        Napi::Array::New(env), Napi::Number::New(env, 16), Napi::Number::New(env, 16),
+                        Napi::Boolean::New(env, false), Napi::Boolean::New(env, true), Napi::Number::New(env, 1),
+                        env.Undefined(), value});
+                };
+                auto firstValue = createSharedDepthFrameBuffer();
+                auto secondValue = createSharedDepthFrameBuffer();
+                auto* first = firstValue.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();
+                auto* second = secondValue.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();
+                EXPECT_EQ(texture->Handle().idx, bgfx::getTexture(first->Handle(), 0).idx);
+                EXPECT_EQ(texture->Handle().idx, bgfx::getTexture(second->Handle(), 0).idx);
+                first->Dispose();
+                // Shared depth remains texture-owned when one of its framebuffers is disposed.
+                second->Clear(*context.GetActiveEncoder(), BGFX_CLEAR_DEPTH, 0, 0, 0, 0, 0.25f, 0);
+                second->Dispose();
+                EXPECT_TRUE(texture->IsValid());
+                texture->Dispose();
             }
             auto frameBufferValue = createFrameBuffer(env.Null(), false, true);
             auto* frameBuffer = frameBufferValue.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();

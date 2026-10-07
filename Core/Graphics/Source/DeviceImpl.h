@@ -13,10 +13,13 @@
 
 #include <bgfx/bgfx.h>
 
+#include <array>
 #include <atomic>
 #include <condition_variable>
+#include <map>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
@@ -45,6 +48,7 @@ namespace Babylon::Graphics
         void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
+        uint8_t GetMSAASamples() const;
         void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
@@ -100,6 +104,8 @@ namespace Babylon::Graphics
         bgfx::ViewId AcquireNewViewId();
         bgfx::ViewId PeekNextViewId() const;
         uint32_t ViewIdGeneration() const;
+        bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
+        uint8_t AcquireClearPaletteIndex(const std::array<float, 4>& color);
 
         // Mid-frame view flush. If the current logical frame has acquired close to
         // the maximum number of bgfx views, flush the accumulated views via a
@@ -151,6 +157,7 @@ namespace Babylon::Graphics
         void DestroyBackBuffer();
         bool RequestScreenShots();
         void Frame();
+        void ResetClearPalette();
         void CompleteReadTextureRequests(uint32_t frameNumber);
         void PerformMidFrameViewFlush();
         void CaptureCallback(const BgfxCallback::CaptureData&);
@@ -177,6 +184,25 @@ namespace Babylon::Graphics
         // value and re-acquire when it no longer matches, otherwise the cached (high) id would
         // sort after ids acquired from the reset counter and invert submission order.
         std::atomic<uint32_t> m_viewIdGeneration{0};
+        struct LayoutKey
+        {
+            uint16_t Stride{};
+            std::array<uint16_t, bgfx::Attrib::Count> Offsets{};
+            std::array<uint16_t, bgfx::Attrib::Count> Attributes{};
+
+            bool operator<(const LayoutKey& other) const
+            {
+                return std::tie(Stride, Offsets, Attributes) < std::tie(other.Stride, other.Offsets, other.Attributes);
+            }
+        };
+
+        void ReleaseFrameVertexLayouts();
+        std::mutex m_frameVertexLayoutsMutex{};
+        std::map<LayoutKey, bgfx::VertexLayoutHandle> m_frameVertexLayouts{};
+
+        std::mutex m_clearPaletteMutex{};
+        std::array<std::array<float, 4>, 16> m_clearPalette{};
+        uint8_t m_clearPaletteSize{};
 
         // Number of mid-frame view flushes performed during the current logical frame; reset
         // when the frame is actually presented. The flush lets a logical frame exceed bgfx's

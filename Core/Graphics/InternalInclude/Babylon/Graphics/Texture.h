@@ -31,7 +31,9 @@ namespace Babylon::Graphics
         void CreateCube(uint16_t size, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags);
         void UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch = UINT16_MAX);
 
-        void Attach(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags);
+        // ownsHandle=true: Texture destroys the handle on Dispose (e.g. sampleable depth aliased from an FB).
+        // ownsHandle=false: handle is owned elsewhere (framebuffer, external texture, canvas FB).
+        void Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags);
 
         bgfx::TextureHandle Handle() const;
         uint16_t Width() const;
@@ -45,6 +47,8 @@ namespace Babylon::Graphics
         uint64_t Flags() const;
         uint32_t SamplerFlags() const;
         void SamplerFlags(uint32_t);
+        uint8_t SamplerMaxLod() const;
+        void SamplerMaxLod(uint8_t);
 
         // View sub-range used at bind time to select a single array slice of a multi-layer
         // texture (bgfx setTexture view API). ViewNumLayers == 0 means "no override; bind whole texture".
@@ -91,6 +95,7 @@ namespace Babylon::Graphics
         bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Enum::Unknown};
         uint64_t m_flags{BGFX_TEXTURE_NONE};
         uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
+        uint8_t m_samplerMaxLod{UINT8_MAX};
         uint16_t m_viewFirstLayer{0};
         uint16_t m_viewNumLayers{0};
         bgfx::ViewId m_blitViewId{UINT16_MAX};

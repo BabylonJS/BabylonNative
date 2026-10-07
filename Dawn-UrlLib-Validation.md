@@ -1,5 +1,9 @@
 # NativeDawn validation with fixed UrlLib
 
+**Latest results:** [master refresh with clean repository pins](#master-refresh-clean-repository-pins-2026-10-07).
+The original sections below describe earlier override-based 9.21.2 runs, not
+the current pinned 9.29.0 consumer.
+
 **Run date: 2026-10-07.** Both complete Babylon.js WebGPU visualization catalogs
 and the complete Babylon-Lite parity schedule were rerun locally on Windows.
 These are fresh runs, not totals assembled from earlier focused retries.
@@ -455,3 +459,169 @@ dependency pin, catalog exclusion, reference, or threshold was edited for these
 runs. Subsequent publication does not convert override-based results into
 validation of the unchanged pins. This report establishes Windows/V8/D3D12 results only,
 not Apple/Linux or other-engine validation.
+
+## Master refresh: clean repository pins (2026-10-07)
+
+Master `3428526f143f4eec86c4cf62d5bc493c1afca159` is integrated locally on
+previously published HEAD `bcc059023d722e23f640f8e0a0c8c01440d54a68`. The resolved
+master merge and subsequent integration fixes are included in this PR refresh.
+The tested snapshots were uncommitted when executed; their recorded source
+fingerprints remain the exact reproduction identities after publication.
+Incoming changes include Babylon.js 9.29.0,
+native vertex-layout reuse, bgfx.cmake/minz updates, Canvas/Image lifecycle
+improvements and upstream validation re-enablings.
+
+Both local dependency overrides were cleared before configuring and rebuilding.
+This pass uses clean fetched **JsRuntimeHost
+`2f8b9be3a4d691d4a76c85c9c856319eb25f744c`** and **UrlLib
+`0c991337a1160ba7a2d062bf8e342d0a66f48dc9`**. Master's host update does not
+include the separate uncommitted capability/URL fixes. The UrlLib fixes from
+[BabylonJS/UrlLib#39](https://github.com/BabylonJS/UrlLib/pull/39) remain excluded.
+The app lockfile was restored with `npm ci`; the tested Babylon.js bundle is
+the normal repository-downleveled **9.29.0** package, with no isolated font
+backport or diagnostic source replacement.
+
+### Complete fresh results
+
+| Suite / consumer | Executed | Passed | Failed | Timed out | Skipped | Duration | Exit |
+|---|---:|---:|---:|---:|---:|---|---:|
+| Babylon-Lite full original schedule | 537 | 439 | 92 | 6 | 0 | 36m 15.240s | 1 |
+| Babylon.js WebGPU, initial merged runner | 727 | 477 | 250 | 0 | 135 | 16m 59.681s | -1 |
+| Babylon.js WebGPU, corrected Dawn input canvas | 727 | 478 | 249 | 0 | 135 | 14m 17.116s | -1 |
+| Shared Canvas focused native regressions | 15 | 15 | 0 | 0 | 0 | 1.832s | 0 |
+| NativeDawn Babylon.js host checks | 20 | 20 | 0 | 0 | 0 | 1.108s | 0 |
+
+Neither visualization invocation reached its external safety deadline; both
+completed all selected tests and reported **zero missing references**. The
+final 249 failures are all pixel-comparison failures. These are actual
+failures, not a passing renderer result. The 15 shared Canvas tests run through
+BGFX/D3D11 and must not be described as 15 independent Dawn tests.
+
+The standalone NativeDawn runtime invocation fails at
+`dawn_runtime_native.js:548` with
+`Empty-valued URL query flags retain presence and search`. It exits -1 before
+the remaining checks complete; the earlier override-based **111/111** result
+does not apply to this pinned invocation.
+
+The merged catalog has 862 entries: **727 run, 135 are excluded** on WebGPU.
+Compared with the earlier 714-scene run, the 13 newly runnable scenes are:
+SOGS with SH; Nested BBG; Camera rig; ShadowOnlyMaterial; Draco Mesh Compression
+(fallback); Instances manual update + motion blur; Thin instances + motion
+blur; Picking Visual Test; GUI Input Text Area Inside ScrollViewer; GUI Images
+in Grid; Sprites Pixel Perfect; water-material; FrameGraph nrge frozen meshes.
+The separate master-only catalog/backend denominator is not used here.
+
+Lite completed **537/537 scheduled cases in 537 attempts**, without retries or
+skips, and attempted all 262 catalog scenes. Native-reaching scene cases are
+**176/272 passing**; three additional scene cases are browser-oracle-only
+passes. Of 262 non-scene checks, 260 pass; the two failures are explicitly
+unsupported adapter routes for `demo-ocean.html` and `/`, not demonstrated
+renderer failures.
+
+Scene verdicts are 170 PASS, one BEHAVIOR PASS, four HARNESS LIMIT, 13 PIXEL
+MISMATCH, three CRASH, seven FAIL, nine TIMEOUT, 22 ASSET / FETCH FAIL,
+31 RUNTIME FAIL and two DIMENSION MISMATCH. These scene classifications are
+not the same denominator as the six Playwright timed-out cases.
+The three crashes (scenes 12, 186 and 304) retain native stacks in
+`HttpMediaTypeHeaderValue::ToString` / `UrlLib::UrlRequest::Impl::LoadHttpAsync`,
+matching the absent-response-MIME defect excluded from this pinned consumer.
+Readiness/deadline failures remain visible rather than being converted to
+synthetic successful frames.
+
+### Integration corrections and remaining blockers
+
+The first build exposed duplicate Windows output rules for the byte-identical
+`DroidSans.ttf` and Dawn-only `droidsans.ttf`. Removed redundant Dawn packaging
+and use the common upstream asset, with canonical URL capitalization. No
+font bytes or reference images were substituted. Provenance capture now
+resolves fetched dependency sources when no override is configured.
+
+The initial full run also exposed a merge-introduced input regression:
+upstream BGFX's `getRenderingCanvas() => window` /
+`getInputElement() => 0` overrides had replaced Dawn's real canvas methods.
+Restricting those overrides to non-Dawn engines fixes the
+`getBoundingClientRect` TypeError. **Picking Visual Test passes** in a focused
+native run and the second complete catalog run. First-run evidence is retained.
+Lite does not load `validation_native.js`, so that visualization-only guard
+does not invalidate or require repeating its completed run.
+
+The large new visualization failure cluster includes explicit Cube/2D shader
+binding-dimension errors, invalid render pipelines and invalid command buffers.
+A diagnostic-only observer forwards device descriptors unchanged and records
+the actual WGSL, layouts and pipelines. It found invalid JavaScript
+`texture.viewDimension` values containing `{groupIndex, bindingIndex}` rather
+than WebGPU dimension strings, **before NativeDawn translates the descriptors**.
+
+An isolated, GPU/network-free reproduction localizes a concrete packaging
+defect to the upstream ES5 downlevel step: TypeScript 5.9.3 emits the same
+`_40` name for the WGSL processor's dimension value and its destructuring
+temporary. The later assignment overwrites the dimension before
+`_addTextureBindingDescription` is called. The authoritative 9.29.0 source
+returns `"2d"`, `"cube"` and `"2d"` for the three tested texture kinds; the
+tested packaged copy returns binding-coordinate objects for all three.
+Full-program emission and a diagnostic TypeScript 6.0.3 emission also retain
+the collision, so neither was adopted as a fix. The original package and
+reproducible extraction test are retained separately; tested consumers were
+not modified.
+
+This is a proven pre-GPU descriptor-construction fault, **not proof that every
+one of the 249 pixel failures has that sole cause**. The canonical downlevel
+pipeline needs correction while preserving legacy-engine support; inferring
+dimensions or rewriting shaders in NativeDawn would conceal the defect.
+NativeDawn's existing non-string enum defaulting also masks this invalid input
+and needs proper API validation separately. No speculative renderer workaround,
+bundle swap, threshold relaxation or new exclusion was applied. The historical
+9.21.2 Iridescence material-readiness diagnosis is not evidence that its new
+9.29.0 failure has the same cause.
+
+### Retained evidence and reproducibility
+
+Artifact root:
+
+```text
+C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\master-validation-20261007
+```
+
+- [Corrected full summary](build/master-validation-20261007/run-summary-corrected.json),
+  [initial full summary](build/master-validation-20261007/run-summary.json) and
+  [complete Lite scene report](build/master-validation-20261007/lite/report.md).
+- [Corrected visualization log](build/master-validation-20261007/standard-corrected/validation.log),
+  [Lite full-suite log](build/master-validation-20261007/lite/full-suite.log) and
+  [focused input result](build/master-validation-20261007/standard-corrected/picking-smoke.log).
+- [Recorded binding descriptors](build/master-validation-20261007/binding-probe/probe.log),
+  [descriptor analysis](build/master-validation-20261007/binding-probe/analysis.json),
+  [isolated emitter reproduction](build/master-validation-20261007/binding-probe/emitter-reproduction.json)
+  and [reproduction script](build/master-validation-20261007/binding-probe/reproduce-downlevel-collision.mjs).
+- [Corrected provenance](build/master-validation-20261007/standard-corrected/provenance.json)
+  and [Lite provenance](build/master-validation-20261007/lite/provenance.json).
+
+Final visualization result PNGs and red diff overlays are respectively in
+`standard-corrected\consumer\Apps\Playground\Results` and
+`standard-corrected\consumer\Apps\Playground\Errors` under that root.
+There are 704 result files and 242 diff files; multiple catalog tests share
+reference-image filenames, so these are not 727 and 249 unique screenshots.
+The complete log identifies every failed title. Lite screenshots are under
+`lite\references\<scene-slug>\`; its detailed report links individual evidence.
+
+Both native consumers use executable SHA256
+`e365fe841a3ca87e1ad2261eee55d77d3bf584eb75d104a02ce0eda73f23866c`.
+The tested downleveled 9.29.0 bundle is
+`dadfff66301f4bd3ad3137a5528be398ab1a164fd57878eea72930eb102a24f5`.
+The initial/Lite BabylonNative source fingerprint is
+`752dfe9ca215cf3b58a81ef64dc033a1ad2c3003b2a854dfce75bd26228feeb7`;
+the corrected visualization fingerprint is
+`0faa2449fbd3c82371687c564b9d78f8665433d9327b34a4c3092932894c91da`.
+Lite provenance retains its actual earlier source snapshot and records the
+actual Lite executable path after byte-identity verification.
+
+Post-run integrity verification covers 935 corrected visualization consumer
+files, 1,460 Lite consumer files, all 893 original visualization reference
+assets and all 108 original Lite reference files. Both fetched dependencies
+remain clean at their recorded pins. Original assertions, thresholds and
+reference policies were retained. GPU suites ran sequentially; all owned
+test processes finished and the owned Lite server was stopped.
+
+These results are not a controlled single-variable comparison with the
+earlier fixed-UrlLib/capability/font-backport runs: master, Babylon.js and
+dependency source identities changed. They establish the current
+Windows/V8/D3D12 pinned-consumer result, which remains failing.

@@ -12,6 +12,14 @@ const cache = Object.fromEntries((await readFile(resolve(build, "CMakeCache.txt"
         return match ? [[match[1], match[2]]] : [];
     }));
 
+function dependencySource(override, source) {
+    const directory = cache[override] || cache[source];
+    if (!directory) {
+        throw new Error(`Missing dependency source in CMake cache: ${override} / ${source}`);
+    }
+    return resolve(directory);
+}
+
 async function identity(name, directory, excludeReports = false) {
     const git = (...args) => execFileSync("git", ["-C", directory, ...args], { maxBuffer: 20 * 1024 * 1024 });
     const exclusions = excludeReports ? [":!*.md"] : [];
@@ -43,8 +51,8 @@ async function identity(name, directory, excludeReports = false) {
 const executablePath = resolve(process.argv[4] ?? resolve(build, "Apps", "Playground", "Playground.exe"));
 const repositories = {
     BabylonNative: await identity("BabylonNative", resolve("."), true),
-    JsRuntimeHost: await identity("JsRuntimeHost", resolve(cache.FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST)),
-    UrlLib: await identity("UrlLib", resolve(cache.FETCHCONTENT_SOURCE_DIR_URLLIB)),
+    JsRuntimeHost: await identity("JsRuntimeHost", dependencySource("FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST", "JsRuntimeHost_SOURCE_DIR")),
+    UrlLib: await identity("UrlLib", dependencySource("FETCHCONTENT_SOURCE_DIR_URLLIB", "UrlLib_SOURCE_DIR")),
     BabylonLite: await identity("BabylonLite", resolve("build\\lite-parity")),
 };
 await writeFile(output, JSON.stringify({

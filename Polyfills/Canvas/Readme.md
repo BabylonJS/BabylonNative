@@ -30,6 +30,11 @@ the interpolation border, and fontstash blur padding are excluded from those
 bounds. The no-font fallback exposes the same metric properties, but its values
 are estimates rather than measurements of a loaded face.
 
+`actualBoundingBox*` describes glyph ink. GUI line layout should use
+`fontBoundingBox*`, which preserves browser-compatible integral line metrics.
+Text regressions use the packaged Arimo font; its license and provenance ship
+with the font.
+
 The Canvas pixel regressions in `JavaScript.All` require a rendering GPU backend.
 The test host sets `hasGpuRendering` to false only for the explicit no-op Metal
 test configuration (`BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON`), using the

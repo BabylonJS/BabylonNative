@@ -80,7 +80,7 @@ namespace Babylon::Polyfills
                 throw std::runtime_error{"FrameBufferPool::Add: bgfx::createFrameBuffer returned invalid handle (pool exhausted)"};
             }
 
-            FrameBuffer = new Graphics::FrameBuffer(*m_graphicsContext, TextBuffer, m_width, m_height, false, false, false);
+            FrameBuffer = new Graphics::FrameBuffer(*m_graphicsContext, TextBuffer, m_width, m_height, false, false, false, -1, false);
             m_available++;
             mPoolBuffers.push_back({FrameBuffer, true});
         }

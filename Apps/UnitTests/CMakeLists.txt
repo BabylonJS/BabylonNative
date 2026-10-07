@@ -19,6 +19,10 @@ set(TEST_ASSETS
     "JavaScript/dist/tests.shaderCache.basicScene.js"
     "JavaScript/dist/tests.shaderCompilation.comprehensiveGLSL.js")
 
+set(TEST_FONT_ASSETS
+    "../Dependencies/Arimo-Regular.ttf"
+    "../Dependencies/Arimo-OFL.txt"
+    "../Dependencies/Arimo-PROVENANCE.txt")
 set(PACKAGED_TEST_ASSETS
     "Assets/image-reload.png"
     "Assets/droidsans.ttf"
@@ -44,6 +48,7 @@ set(SOURCES
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
     "Source/Tests.NativeEngine.ImageFormats.cpp"
+    "Source/Tests.NativeEngine.Mipmaps.cpp"
     "Source/Tests.NativeEngine.DepthTextures.cpp"
     "Source/Tests.NativeEngine.CubeRenderTargets.cpp"
     "Source/Tests.NativeEngine.Msaa.cpp"
@@ -88,7 +93,7 @@ elseif(WIN32)
     set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
-add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_IMAGE_LOADING)
     target_link_libraries(UnitTests PRIVATE UrlLib)
@@ -110,6 +115,8 @@ target_link_libraries(UnitTests
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
+    PRIVATE bimg_decode
+    PRIVATE bimg_encode
     PRIVATE bimg
     ${ADDITIONAL_LIBRARIES})
 
@@ -118,6 +125,9 @@ target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
     target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal)
     target_compile_definitions(UnitTests PRIVATE HAS_SHADER_COMPILER)
+    if(BABYLON_NATIVE_DISABLE_WEBMIN)
+        target_compile_definitions(UnitTests PRIVATE HAS_SHADER_INTERFACE_BLOCKS)
+    endif()
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
@@ -151,7 +161,12 @@ if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS BABYLON_NATIVE_GRAPHICS_API_D3D12)
 endif()
 
+if(GRAPHICS_API STREQUAL "D3D11")
+    target_compile_definitions(UnitTests PRIVATE BABYLON_NATIVE_GRAPHICS_API_D3D11)
+endif()
+
 if(GRAPHICS_API STREQUAL "Vulkan")
+    target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal spirv-cross-core glslang)
     # Vulkan packaging paths (e.g. the >16 sampler rejection) are gated on this define.
     # ExternalTexture / native-texture helpers are not implemented for Vulkan yet, so skip
     # those tests rather than failing at link or runtime.
@@ -191,7 +206,7 @@ if(ANGLE_LIBEGL)
     )
 endif()
 
-foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS})
+foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS})
     get_filename_component(ASSET_NAME "${ASSET}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
@@ -205,5 +220,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Assets FILES ${TEST_FONT_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Assets PREFIX Assets FILES ${PACKAGED_TEST_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src PREFIX TypeScript FILES ${TEST_SCRIPTS})

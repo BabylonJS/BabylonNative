@@ -32,6 +32,15 @@ file. Essentially, this allows for externally-defined JS files to control
 the behavior of the Playground app as an alternative to experience.js --
 at runtime and without the need to recompile or redeploy.
 
+On Win32, `--headless` also disables the JavaScript debugger listener to avoid
+firewall prompts during automated runs. Interactive debugging is unchanged.
+Validation packages its licensed fonts and Havok runtime; tests marked
+`requiresHavok` initialize Havok before scene creation.
+Between scenes, validation resets engine state and Draco configuration/modules
+so tests can switch codecs without inheriting an incompatible decoder.
+GUI image loading shares the initial scene-readiness deadline; it does not
+consume shader-convergence ticks or advance the comparison frame.
+
 The Playground app also features a "hot reload" capability on certain
 platforms (Win32 and UWP, for now). The current implementation is that 
 pressing a button (`R` at present, likely to be remapped to `F5` in the 

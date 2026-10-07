@@ -44,6 +44,12 @@ namespace Babylon::Graphics
             device.PerformMidFrameViewFlush();
         }
 
+        static size_t CachedVertexLayouts(DeviceImpl& device)
+        {
+            std::scoped_lock lock{device.m_frameVertexLayoutsMutex};
+            return device.m_frameVertexLayouts.size();
+        }
+
         static size_t PendingReadbacks(const DeviceImpl& device)
         {
             return device.m_readTextureRequests.size();
@@ -66,6 +72,40 @@ namespace
             EXPECT_EQ(canceled.code(), std::errc::operation_canceled);
         }
     }
+}
+
+TEST(Device, VertexLayoutsRetireAtFlushFrameAndShutdown)
+{
+    using namespace Babylon::Graphics;
+    DeviceImpl device{g_deviceConfig};
+    device.EnableRendering();
+
+    bgfx::VertexLayout layout{};
+    layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end();
+    device.StartRenderingCurrentFrame();
+    auto handle = device.CreateVertexLayout(layout);
+    ASSERT_TRUE(bgfx::isValid(handle));
+    bgfx::destroy(handle);
+    EXPECT_EQ(DeviceImplTestAccess::CachedVertexLayouts(device), 1u);
+
+    DeviceImplTestAccess::FlushViews(device);
+    EXPECT_EQ(DeviceImplTestAccess::CachedVertexLayouts(device), 0u);
+    handle = device.CreateVertexLayout(layout);
+    ASSERT_TRUE(bgfx::isValid(handle));
+    bgfx::destroy(handle);
+    device.FinishRenderingCurrentFrame();
+    EXPECT_EQ(DeviceImplTestAccess::CachedVertexLayouts(device), 0u);
+
+    handle = device.CreateVertexLayout(layout);
+    ASSERT_TRUE(bgfx::isValid(handle));
+    bgfx::destroy(handle);
+    device.DisableRendering();
+    EXPECT_EQ(DeviceImplTestAccess::CachedVertexLayouts(device), 0u);
+    device.EnableRendering();
+    handle = device.CreateVertexLayout(layout);
+    ASSERT_TRUE(bgfx::isValid(handle));
+    bgfx::destroy(handle);
+    device.DisableRendering();
 }
 
 TEST(Device, DeviceLossCancelsReadbacksBeforeRecovery)
@@ -161,7 +201,8 @@ TEST(Device, DeviceLossCancelsReadbacksBeforeRecovery)
         {
             device.StartRenderingCurrentFrame();
             FrameBuffer backBuffer{device.GetContext(), BGFX_INVALID_HANDLE, 0, 0, true, true, true};
-            backBuffer.Clear(*device.GetActiveEncoder(), BGFX_CLEAR_COLOR, 0x123456ff, 1.0f, 0);
+            backBuffer.Clear(*device.GetActiveEncoder(), BGFX_CLEAR_COLOR,
+                18.0f / 255.0f, 52.0f / 255.0f, 86.0f / 255.0f, 1.0f, 1.0f, 0);
             device.FinishRenderingCurrentFrame();
         }
         EXPECT_EQ(recoveredScreenshots, 1u);

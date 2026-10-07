@@ -1,4 +1,5 @@
 #include <bgfx/bgfx.h>
+#include <cmath>
 #include <map>
 #include "Canvas.h"
 #include "Context.h"
@@ -35,6 +36,11 @@ namespace Babylon::Polyfills::Internal
         // of the alignment baseline.
         const float inkAscent = -bounds[1];
         const float inkDescent = bounds[3];
+        // Keep the browser-compatible integral CSS line box used by Babylon GUI.
+        // The raw font metrics are fractional em-scaled values; Canvas layout rounds
+        // the baseline and total line height independently.
+        const float fontAscent = std::floor(textMetrics[0]);
+        const float fontDescent = std::ceil(textMetrics[2]) - fontAscent;
 
         auto obj{Napi::Object::New(env)};
         obj.Set("width", Napi::Value::From(env, advance));
@@ -44,8 +50,8 @@ namespace Babylon::Polyfills::Internal
         obj.Set("actualBoundingBoxRight", Napi::Value::From(env, bounds[2]));
         obj.Set("actualBoundingBoxAscent", Napi::Value::From(env, inkAscent));
         obj.Set("actualBoundingBoxDescent", Napi::Value::From(env, inkDescent));
-        obj.Set("fontBoundingBoxAscent", Napi::Value::From(env, textMetrics[0]));
-        obj.Set("fontBoundingBoxDescent", Napi::Value::From(env, -textMetrics[1]));
+        obj.Set("fontBoundingBoxAscent", Napi::Value::From(env, fontAscent));
+        obj.Set("fontBoundingBoxDescent", Napi::Value::From(env, fontDescent));
 
         return obj.As<Napi::Value>();
     }

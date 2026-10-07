@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG b53236f4d6dede3252d32b9c11921d0007d705d1
+    GIT_TAG 68daa46f30ad7ad36a2543e219d5c92f2dfdeb4a
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -63,10 +63,17 @@ FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
     GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
     EXCLUDE_FROM_ALL)
+# The codec does not use the transcoder's external dependencies.
+set(_draco_submodules "")
+if(DRACO_TRANSCODER_SUPPORTED)
+    set(_draco_submodules third_party/eigen third_party/filesystem third_party/tinygltf)
+endif()
 FetchContent_Declare(draco
     GIT_REPOSITORY https://github.com/google/draco.git
     GIT_TAG 1.5.7
+    GIT_SUBMODULES "${_draco_submodules}"
     EXCLUDE_FROM_ALL)
+unset(_draco_submodules)
 FetchContent_Declare(meshoptimizer
     GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
     GIT_TAG v0.22
@@ -80,7 +87,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 33e4a233dea178712352ec90a647683084bfbf1d)
+    GIT_TAG 2f8b9be3a4d691d4a76c85c9c856319eb25f744c)
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26

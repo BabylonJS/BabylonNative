@@ -75,6 +75,11 @@ namespace Babylon
 
     void VertexBuffer::Build(uint32_t byteStride)
     {
+        if (m_disposed || m_deviceId != m_deviceContext.GetDeviceId())
+        {
+            throw std::runtime_error{"Cannot build a disposed or stale vertex buffer"};
+        }
+
         if (m_byteStride == 0)
         {
             m_byteStride = byteStride;

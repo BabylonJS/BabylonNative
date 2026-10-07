@@ -1,3 +1,32 @@
+// Non-enumerable ES2019 polyfills for Chakra.
+(function () {
+    function define(proto, name, fn) {
+        if (!proto[name]) {
+            Object.defineProperty(proto, name, { value: fn, writable: true, configurable: true, enumerable: false });
+        }
+    }
+    define(String.prototype, "trimStart", function () { return this.replace(/^[\s\uFEFF\xA0]+/, ""); });
+    define(String.prototype, "trimEnd", function () { return this.replace(/[\s\uFEFF\xA0]+$/, ""); });
+    define(Array.prototype, "flat", function (depth) {
+        var d = depth === undefined ? 1 : Math.floor(depth);
+        if (isNaN(d) || d < 1) { return Array.prototype.slice.call(this); }
+        return Array.prototype.reduce.call(this, function (acc, cur) {
+            if (Array.isArray(cur)) {
+                const values = cur.flat(d - 1);
+                for (let i = 0; i < values.length; ++i) {
+                    acc.push(values[i]);
+                }
+            } else {
+                acc.push(cur);
+            }
+            return acc;
+        }, []);
+    });
+    define(Array.prototype, "flatMap", function (cb, thisArg) {
+        return Array.prototype.map.call(this, cb, thisArg).flat();
+    });
+})();
+
 (function () {
     let currentScene;
     let config;
@@ -6,6 +35,10 @@
     const saveResult = (typeof opts.saveResults === "boolean") ? opts.saveResults : true;
     const testWidth = 600;
     const testHeight = 400;
+    // Browser visualization tests create their engine with antialias=false.
+    if (TestUtils.getGraphicsApiName() !== "WebGPU") {
+        TestUtils.setMSAASamples(0);
+    }
     const generateReferences = !!opts.generateReferences;
     const breakOnFail = !!opts.breakOnFail;
     const stopOnFirstFailure = !!opts.stopOnFirstFailure;
@@ -13,9 +46,7 @@
     const includeExcluded = !!opts.includeExcluded;
     const testFilters = Array.isArray(opts.testFilters) ? opts.testFilters.map(s => String(s).toLowerCase()) : [];
     const testIndices = Array.isArray(opts.testIndices) ? opts.testIndices.map(n => +n) : [];
-    // CLI --capture=N: 1-based frame index at which to call
-    // TestUtils.captureNextFrame() for every executed test. The runner
-    // extends each test's render budget so the .rdc finalizes.
+    // One-based capture frame; extend rendering to let RenderDoc finalize.
     const cliCaptureFrame = (typeof opts.captureFrame === "number" && opts.captureFrame > 0) ? (opts.captureFrame | 0) : 0;
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
@@ -27,6 +58,11 @@
     const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
     const utilityLayerOwners = new WeakMap();
+    const dracoDecoderConfiguration = Object.assign({}, BABYLON.DracoDecoder.DefaultConfiguration);
+    const dracoEncoderConfiguration = Object.assign({}, BABYLON.DracoEncoder.DefaultConfiguration);
+    const dracoDefaultNumWorkers = BABYLON.DracoCompression.DefaultNumWorkers;
+    const dracoDecoderModule = globalThis.DracoDecoderModule;
+    const dracoEncoderModule = globalThis.DracoEncoderModule;
 
     // UtilityLayerRenderer exposes both sides of the association, but its utility
     // scene can have no active camera when the layer is created before the main camera.
@@ -36,6 +72,30 @@
         utilityLayerOwners.set(this.utilityLayerScene, this.originalScene);
         return result;
     };
+    let havokInitializationPromise;
+
+    function initializeHavokAsync() {
+        if (typeof HK !== "undefined") {
+            return Promise.resolve();
+        }
+
+        if (!havokInitializationPromise) {
+            havokInitializationPromise = Promise.all([
+                BABYLON.Tools.LoadFileAsync("app:///Scripts/HavokPhysics_umd.js", false),
+                BABYLON.Tools.LoadFileAsync("app:///Scripts/HavokPhysics.wasm", true)
+            ]).then(function (sources) {
+                (0, eval)(sources[0]);
+                if (typeof HavokPhysics !== "function") {
+                    throw new Error("HavokPhysics_umd.js did not register HavokPhysics");
+                }
+                return HavokPhysics({ wasmBinary: new Uint8Array(sources[1]) });
+            }).then(function (instance) {
+                globalThis.HK = instance;
+            });
+        }
+
+        return havokInitializationPromise;
+    }
 
     function shouldRunTest(test, index) {
         if (testIndices.length > 0 && testIndices.indexOf(index) === -1) {
@@ -54,28 +114,21 @@
     }
 
     function failTest(done) {
-        // done is the once-only completion wrapper from runTest; it stops the
-        // render loop, runs inter-test cleanup, then advances the suite.
         if (breakOnFail) {
-            // Trigger the JS debugger if attached; on no-debugger runs the
-            // host's bx exception filter prints a callstack on the next throw.
             // eslint-disable-next-line no-debugger
             debugger;
         }
         done(false);
     }
 
-    // Dispose the current/stray scenes and reset engine state so the next test
-    // starts clean. Safe to call more than once (guards on currentScene).
+    // Reset the reused engine between tests.
     function cleanupAfterTest() {
         if (currentScene) {
             try { currentScene.dispose(); } catch (e) { console.error(e); }
             currentScene = null;
         }
 
-        // A test can leave extra scenes behind (an async load that created its own scene, a scene
-        // whose creation promise resolved after validation, ...). They stay registered on the
-        // reused engine and keep their resources alive, so dispose them here.
+        // Async loads may leave additional scenes registered on the engine.
         if (engine && engine.scenes) {
             const strayScenes = engine.scenes.slice();
             for (let i = 0; i < strayScenes.length; ++i) {
@@ -89,9 +142,6 @@
 
         engine.setHardwareScalingLevel(1);
 
-        // Reset render state that persists on the reused engine so each test starts fresh.
-        // A test that leaves the stencil test enabled or a scissor rect set would otherwise
-        // corrupt later tests (e.g. the glow-layer test).
         engine.setStencilBuffer(false);
         engine.disableScissor();
         engine.useReverseDepthBuffer = false;
@@ -100,31 +150,28 @@
         // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
         engine.releaseEffects();
 
-        // Textures are cached on the engine by URL (BaseTexture._getFromCache), and the cache key
-        // covers only url/noMipmap/isCube -- not the load-time options. A test that leaves a
-        // reference behind (e.g. assigning one texture to both scene.environmentTexture and a
-        // material's reflectionTexture) keeps its internal texture in that cache across
-        // scene.dispose(), so a later test loading the same URL silently reuses the *previous*
-        // test's texture along with its prefiltering/irradiance settings. Release whatever is
-        // left so every test loads its own textures and results do not depend on run order.
+        // Cache keys omit load-time options; leaked textures can change later tests.
         const leakedTextures = engine.getLoadedTexturesCache();
         for (let i = leakedTextures.length - 1; i >= 0; --i) {
             engine._releaseTexture(leakedTextures[i]);
         }
         engine.clearInternalTexturesCache();
 
-        // SceneLoader.OnPluginActivatedObservable is global and outlives the scene. Snippets use it
-        // to configure the glTF loader (animationStartMode, compileMaterials, ...) and never
-        // unregister, so without this every later glTF test would inherit those settings. The
-        // browser harness reloads the page per test and never sees this; here the engine is reused.
+        // Global loader observers outlive scenes and can leak settings into later tests.
         BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
+
+        // Each scene must load matching Draco JS/WASM modules, not reuse another scene's factory.
+        BABYLON.DracoCompression.ResetDefault();
+        BABYLON.DracoDecoder.ResetDefault();
+        BABYLON.DracoEncoder.ResetDefault();
+        BABYLON.DracoCompression.DefaultNumWorkers = dracoDefaultNumWorkers;
+        BABYLON.DracoDecoder.DefaultConfiguration = Object.assign({}, dracoDecoderConfiguration);
+        BABYLON.DracoEncoder.DefaultConfiguration = Object.assign({}, dracoEncoderConfiguration);
+        globalThis.DracoDecoderModule = dracoDecoderModule;
+        globalThis.DracoEncoderModule = dracoEncoderModule;
     }
 
-    // Wrap the recursiveRunTest callback so every completion path (pixel pass/fail,
-    // render-loop throw, onReadyTimeout, load/eval errors) stops the loop, cleans once,
-    // and only then schedules the next test. Babylon runRenderLoop appends callbacks;
-    // without this, a failing test can leave a stale callback that renders the next
-    // scene or calls done(false) repeatedly under continue-on-failure.
+    // Every completion path must stop rendering and clean up exactly once.
     function makeTestDone(outerDone) {
         let finished = false;
         return function (status) {
@@ -133,7 +180,9 @@
             }
             finished = true;
             try {
-                engine.stopRenderLoop();
+                if (engine) {
+                    engine.stopRenderLoop();
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -142,13 +191,6 @@
         };
     }
 
-    // Emitted after a pixel-comparison failure to make triage faster. Prints the
-    // rendered/diff PNG paths plus a re-run command. For scenes fetched from the
-    // snippet server it also notes that assets/fonts arrive over the network, so
-    // async load timing is one possible cause. A stable pixel-difference count on
-    // re-runs is a reason to open the saved result/diff images -- not proof that
-    // timing has been ruled out (the count discards which pixels changed and by
-    // how much, and a repeatable timing failure can produce the same fallback).
     function logFailureDiagnostics(test) {
         const outDir = TestUtils.getOutputDirectory();
         if (test.referenceImage) {
@@ -195,10 +237,10 @@
 
     function logRunSummary() {
         console.log("Run complete. ran=" + ranCount +
-                    " passed=" + passedCount +
-                    " failed=" + failedCount +
-                    " missingRef=" + missingRefCount +
-                    " skipped=" + skippedCount);
+            " passed=" + passedCount +
+            " failed=" + failedCount +
+            " missingRef=" + missingRefCount +
+            " skipped=" + skippedCount);
         if (failedTitles.length > 0) {
             console.log("Failed tests (" + failedTitles.length + "):");
             for (let n = 0; n < failedTitles.length; n++) {
@@ -207,38 +249,46 @@
         }
     }
 
-    // Reuse the engine owned by Playground's explicit WebGPU bootstrap.
     const isDawn = TestUtils.getGraphicsApiName() === "WebGPU";
-    const engine = isDawn
-        ? globalThis._playgroundWebGPUEngine
-        : new BABYLON.NativeEngine();
-    if (!engine) {
-        throw new Error("Playground WebGPU bootstrap did not create an engine");
-    }
-    globalThis.engine = engine;
-    // parallelShaderCompile is a WebGL2 (KHR_parallel_shader_compile) cap; on
-    // Dawn the caps table isn't populated until initAsync completes, so this is
-    // applied in the Dawn start path below once the engine is ready.
-    if (!isDawn) {
-        engine.getCaps().parallelShaderCompile = undefined;
+    let engine;
+    let useHighPrecisionMatrices = false;
+
+    function createEngine(useLargeWorldRendering) {
+        const nativeEngine = isDawn ? globalThis._playgroundWebGPUEngine : new BABYLON.NativeEngine({
+            useLargeWorldRendering,
+            useHighPrecisionMatrix: useHighPrecisionMatrices
+        });
+        if (!nativeEngine) {
+            throw new Error("Playground WebGPU bootstrap did not create an engine");
+        }
+        if (isDawn && !!nativeEngine.getCreationOptions().useLargeWorldRendering !== useLargeWorldRendering) {
+            throw new Error("The Playground WebGPU bootstrap does not support changing large-world rendering between tests");
+        }
+        nativeEngine.getCaps().parallelShaderCompile = undefined;
+        if (!isDawn) {
+            nativeEngine.getRenderingCanvas = function () { return window; };
+            nativeEngine.getInputElement = function () { return 0; };
+        }
+        if (BABYLON.SceneLoader) {
+            BABYLON.SceneLoader.ShowLoadingScreen = false;
+        }
+        nativeEngine.displayLoadingUI = function () { };
+        nativeEngine.hideLoadingUI = function () { };
+        if (!window.screen) {
+            window.screen = {
+                width: nativeEngine.getRenderWidth(),
+                height: nativeEngine.getRenderHeight(),
+                availWidth: nativeEngine.getRenderWidth(),
+                availHeight: nativeEngine.getRenderHeight(),
+                colorDepth: 24,
+                pixelDepth: 24,
+                orientation: { angle: 0, type: "landscape-primary" }
+            };
+        }
+        return nativeEngine;
     }
 
-    // The default HTML loading screen pokes at DOM nodes (document head, an
-    // <img> logo with a network fetch) that don't meaningfully exist in this
-    // headless host. It's a pure overlay and never part of the captured 3D
-    // frame, so disable it. Prevents SceneLoader (glTF imports) from calling
-    // engine.displayLoadingUI().
-    if (BABYLON.SceneLoader) {
-        BABYLON.SceneLoader.ShowLoadingScreen = false;
-    }
-    engine.displayLoadingUI = function () { };
-    engine.hideLoadingUI = function () { };
-
-    // Broaden Babylon's default retry strategy for the test framework: in addition to
-    // network drops (status 0, the default trigger), also retry transient HTTP errors
-    // (5xx) and rate limits (429). Applies to every BABYLON.Tools.LoadFile request
-    // including the snippet fetches in loadPG below and the texture/asset loads
-    // initiated from inside each playground's createScene().
+    // Retry network failures, transient server errors, and rate limits for all scene assets.
     BABYLON.Tools.DefaultRetryStrategy = function (url, request, retryIndex) {
         const maxRetries = 5;
         if (retryIndex >= maxRetries) {
@@ -255,13 +305,82 @@
         return -1;
     };
 
-    engine.getRenderingCanvas = function () {
-        return window;
+    // Preserve the window/canvas identity used by input handling.
+    if (!window.style) {
+        window.style = {};
     }
+    if (typeof window.focus !== "function") {
+        window.focus = function () { };
+    }
+    if (typeof window.blur !== "function") {
+        window.blur = function () { };
+    }
+    // Dispatch through InputManager's picking paths; simulatePointer* bypasses skipPointer*Picking.
+    const POINTER_INPUT_MOVE = 12;
+    const domListeners = new Map();
+    window.addEventListener = function (type, listener) {
+        if (typeof listener !== "function") {
+            return;
+        }
+        if (!domListeners.has(type)) {
+            domListeners.set(type, []);
+        }
+        domListeners.get(type).push(listener);
+    };
+    window.removeEventListener = function (type, listener) {
+        const list = domListeners.get(type);
+        if (list) {
+            const at = list.indexOf(listener);
+            if (at !== -1) {
+                list.splice(at, 1);
+            }
+        }
+    };
+    window.dispatchEvent = function (evt) {
+        if (!evt) {
+            return true;
+        }
 
-    engine.getInputElement = function () {
-        return 0;
-    }
+        if (evt.target === null || evt.target === undefined) {
+            evt.target = window;
+        }
+
+        const list = domListeners.get(evt.type);
+        if (list) {
+            for (const listener of list.slice()) {
+                listener.call(window, evt);
+            }
+        }
+
+        const inputManager = currentScene && currentScene._inputManager;
+        if (inputManager) {
+            if (evt.button === undefined) {
+                evt.button = 0;
+            }
+            switch (evt.type) {
+                case "pointermove":
+                    evt.inputIndex = POINTER_INPUT_MOVE;
+                    inputManager._onPointerMove(evt);
+                    break;
+                case "pointerdown":
+                    evt.inputIndex = evt.button + 2;
+                    inputManager._onPointerDown(evt);
+                    break;
+                case "pointerup":
+                    evt.inputIndex = evt.button + 2;
+                    inputManager._onPointerUp(evt);
+                    break;
+                case "keydown":
+                    inputManager._onKeyDown(evt);
+                    break;
+                case "keyup":
+                    inputManager._onKeyUp(evt);
+                    break;
+            }
+        }
+
+        return !evt.defaultPrevented;
+    };
 
     const canvas = window;
     globalThis.canvas = canvas;
@@ -338,11 +457,44 @@
         return false; // no error
     }
 
+    // Match browser screenshots: composite over the CSS canvas background, then the white page.
+    // FrameGraph may copy transparent attachments regardless of scene.clearColor.
+    // Legacy paths retain the clear-alpha gate because some write invalid alpha after opaque clears.
+    const CANVAS_BACKGROUND = [173, 255, 47];
+
+    function compositeOverCanvasBackground(data, canvasBackgroundColor) {
+        let background = CANVAS_BACKGROUND;
+        if (canvasBackgroundColor) {
+            const rgba = _native.Canvas.parseColor(canvasBackgroundColor);
+            const alpha = (rgba >>> 24) / 255;
+            background = [rgba & 255, (rgba >>> 8) & 255, (rgba >>> 16) & 255]
+                .map(channel => channel * alpha + 255 * (1 - alpha));
+        }
+        for (let index = 0; index < data.length; index += 4) {
+            const alpha = data[index + 3];
+            if (alpha === 255) {
+                continue;
+            }
+            const src = alpha / 255;
+            const dst = 1 - src;
+            data[index] = Math.round(data[index] * src + background[0] * dst);
+            data[index + 1] = Math.round(data[index + 1] * src + background[1] * dst);
+            data[index + 2] = Math.round(data[index + 2] * src + background[2] * dst);
+            data[index + 3] = 255;
+        }
+        return data;
+    }
+
     function evaluateScreenshot(test, screenshot, referenceImage, done, compareFunction) {
         let testRes = true;
 
+        if (test.canvasBackgroundColor || (currentScene && (currentScene.frameGraph || (currentScene.clearColor && currentScene.clearColor.a < 1)))) {
+            compositeOverCanvasBackground(screenshot, test.canvasBackgroundColor);
+        }
+
         if (!test.onlyVisual) {
 
+            // Historical baseline; lower per-test exceptions as rendering fixes reach this target.
             const defaultErrorRatio = 2.5;
 
             if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
@@ -368,6 +520,12 @@
         });
     }
 
+    function areGuiTexturesReady(scene) {
+        return scene.textures.every(function (texture) {
+            return typeof texture.guiIsReady !== "function" || texture.guiIsReady();
+        });
+    }
+
     function isSceneConverged(scene) {
         const engine = scene.getEngine();
         const previousRenderPassId = engine.currentRenderPassId;
@@ -375,11 +533,8 @@
             if (!scene.isReady()) {
                 return false;
             }
-            for (let i = 0; i < scene.textures.length; i++) {
-                const texture = scene.textures[i];
-                if (typeof texture.guiIsReady === "function" && !texture.guiIsReady()) {
-                    return false;
-                }
+            if (!areGuiTexturesReady(scene)) {
+                return false;
             }
 
             // Hot-swapping materials may report ready while their replacement effect is
@@ -430,19 +585,13 @@
 
     function processCurrentScene(test, renderImage, done, compareFunction) {
         currentScene.useConstantAnimationDeltaTime = true;
-        // Frame at which to read back the framebuffer & validate. This is the
-        // test's renderCount (default 1) and determines pass/fail. NOT shifted
-        // by --capture.
+        // Capture options must not shift the pixel-comparison frame.
         const compareFrame = test.renderCount || 1;
-        // Frame at which to call TestUtils.captureNextFrame(), or 0 if no
-        // capture is requested. CLI --capture=N takes precedence over the
-        // per-test "capture" config flag; the legacy per-test flag triggers
-        // at compareFrame.
+        // CLI capture overrides the legacy per-test capture flag.
         const captureFrame = cliCaptureFrame > 0
             ? cliCaptureFrame
             : (test.capture ? compareFrame : 0);
-        // Stop after this many frames. With --capture we keep rendering past
-        // compareFrame so RenderDoc can finalize the .rdc.
+        // Allow RenderDoc to finalize after the capture frame.
         const stopFrame = captureFrame > 0
             ? Math.max(compareFrame, captureFrame + POST_CAPTURE_FRAMES)
             : compareFrame;
@@ -457,6 +606,8 @@
         let readinessReconcileTimer = null;
         let readinessTimeoutTimer = null;
         let waitingForReadiness = true;
+        // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
+        let effectLayerPrimed = false;
 
         const runEvaluation = function (screenshot) {
             if (evaluated) {
@@ -524,6 +675,13 @@
                         }
                         return;
                     }
+
+                    if (!effectLayerPrimed && currentScene.effectLayers && currentScene.effectLayers.length > 0) {
+                        effectLayerPrimed = true;
+                        currentScene.render();
+                        return;
+                    }
+
                     frameIndex++;
 
                     if (captureFrame > 0 && frameIndex === captureFrame && TestUtils.captureNextFrame) {
@@ -643,7 +801,8 @@
 
                 let allReady = readinessScenes.length > 0;
                 for (let i = 0; i < readinessScenes.length; i++) {
-                    if (readyScenes.indexOf(readinessScenes[i]) === -1) {
+                    // GUI image loads are not included in Scene.executeWhenReady.
+                    if (readyScenes.indexOf(readinessScenes[i]) === -1 || !areGuiTexturesReady(readinessScenes[i])) {
                         allReady = false;
                         break;
                     }
@@ -783,12 +942,7 @@
                             }
 
                             const pgCode = code + "\r\ncreateScene(engine)";
-                            // Defer scene construction to a fresh macrotask so
-                            // eval()/createScene() run at a shallow native-stack
-                            // depth instead of nested inside the native snippet
-                            // load callback. Deep scenes otherwise pile onto the
-                            // native XHR dispatch frames and can overflow engines
-                            // with a small C stack (e.g. QuickJS).
+                            // Leave the native XHR callback stack before constructing deep scenes.
                             setTimeout(async function () {
                                 if (finished) {
                                     return;
@@ -796,21 +950,17 @@
                                 // eslint-disable-next-line no-unused-vars
                                 var name = ""; // see the note on the scriptToRun eval below
                                 try {
-                                    // Runs before the first await, so the eval still happens at the
-                                    // shallow stack depth this setTimeout exists to provide.
+                                    if (test.requiresHavok) {
+                                        await initializeHavokAsync();
+                                        if (finished) {
+                                            return;
+                                        }
+                                    }
+
                                     let createdScene = eval(pgCode);
 
                                     if (createdScene && createdScene.then) {
-                                        // Handle if createScene returns a promise. Guard against a
-                                        // snippet whose promise never resolves (e.g. a scene whose
-                                        // utility-layer executeWhenReady never fires on Native): the
-                                        // onReadyTimeout safety net lives inside processCurrentScene
-                                        // and only applies AFTER the promise resolves, so without this
-                                        // a pending createScene promise hangs the whole suite. Mirror
-                                        // onReadyTimeoutDuration and convert it to a fast failure.
-                                        // Note: this only fires if the JS event loop keeps running; a
-                                        // snippet that blocks the JS thread natively (e.g. manual
-                                        // setInterval frame-driving) is not rescued by this.
+                                        // Bound async creation before scene readiness begins; native blocking needs an external timeout.
                                         const createSceneTimeoutMs = 10 * 60 * 1000;
                                         let createSceneTimeoutId;
                                         try {
@@ -831,12 +981,11 @@
                                             ]);
                                         }
                                         finally {
-                                            // Always clear it: a pending timer would otherwise keep the
-                                            // event loop alive for the full timeout after a scene that
-                                            // resolved normally.
                                             clearTimeout(createSceneTimeoutId);
                                             rejectSceneCreation = undefined;
                                         }
+                                    } else {
+                                        currentScene = createdScene;
                                     }
 
                                     if (finished) {
@@ -925,23 +1074,12 @@
                         }
 
                         const scriptCode = scriptToRun + test.functionToCall + "(engine)";
-                        // Defer scene construction to a fresh macrotask so
-                        // eval()/<functionToCall>() run at a shallow native-stack
-                        // depth instead of nested inside the native XHR
-                        // completion callback. Deep scenes otherwise pile onto
-                        // the native XHR dispatch frames and can overflow engines
-                        // with a small C stack (e.g. QuickJS).
+                        // Leave the native XHR callback stack before constructing deep scenes.
                         setTimeout(function () {
                             if (finished) {
                                 return;
                             }
-                            // Browser scripts sometimes reference `name` without declaring it. In a
-                            // page that silently resolves to window.name (""), so the mistake is
-                            // invisible there but throws "ReferenceError: name is not defined"
-                            // here. eval() below is a *direct* eval, so the evaluated script sees
-                            // this function's scope and finds this binding -- same as it would on
-                            // the web, without leaking an actual global. (A real global `name`
-                            // is not an option: it breaks the Babylon UMD bundles at load time.)
+                            // Direct eval sees the browser's default name through this local binding.
                             // eslint-disable-next-line no-unused-vars
                             var name = "";
                             try {
@@ -983,6 +1121,23 @@
         const testInfo = "Running " + test.title;
         console.log(testInfo);
         TestUtils.setTitle(testInfo);
+
+        try {
+            const useLargeWorldRendering = !!test.useLargeWorldRendering;
+            if (!engine || !!engine.getCreationOptions().useLargeWorldRendering !== useLargeWorldRendering) {
+                if (engine && !isDawn) {
+                    engine.dispose();
+                    engine = undefined;
+                    globalThis.engine = undefined;
+                }
+                engine = createEngine(useLargeWorldRendering);
+                globalThis.engine = engine;
+            }
+        } catch (e) {
+            console.error(e);
+            failTest(done);
+            return;
+        }
 
         seed = 1;
         Math.random = seededRandom;
@@ -1055,13 +1210,10 @@
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);
         } else {
-            // Config validation: missing 'referenceImage' field is a permanent
-            // catalog error (not a runtime asset-missing case), so short-circuit
-            // before issuing the load. onlyVisual tests skip pixel comparison
-            // so they don't need the reference image to exist.
+            // Pixel comparisons require a catalog reference before loading the scene.
             if (!test.onlyVisual && !test.referenceImage) {
                 console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
-                              "' has no 'referenceImage' field in config.json - cannot run pixel comparison.");
+                    "' has no 'referenceImage' field in config.json - cannot run pixel comparison.");
                 missingRefCount++;
                 failTest(done);
                 return;
@@ -1071,13 +1223,10 @@
             const url = "app:///ReferenceImages/" + test.referenceImage;
 
             const onLoadFileError = function (request, exception) {
-                // Reference-image load failures (missing file on disk, etc.)
-                // arrive here via JsRuntimeHost's XHR error event +
-                // BABYLON.Tools.LoadFile's onLoadFileError callback. Tag with
-                // MISSING_REFERENCE_IMAGE: so CI greps still match.
+                // Keep the diagnostic tag used by CI.
                 console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
-                              "' failed to load reference at " + url + ". " +
-                              (exception ? exception : "(no exception details)"));
+                    "' failed to load reference at " + url + ". " +
+                    (exception ? exception : "(no exception details)"));
                 missingRefCount++;
                 failTest(done);
             };
@@ -1115,16 +1264,66 @@
         }
     }
 
+    // Expose the native Canvas Image under its DOM name.
+    if (typeof globalThis.Image === "undefined" && typeof _native !== "undefined" && _native.Image) {
+        globalThis.Image = _native.Image;
+    }
+
+    if (typeof globalThis.KeyboardEvent === "undefined") {
+        // InputManager only needs keyboard-event state, not a DOM event implementation.
+        globalThis.KeyboardEvent = function (type, init) {
+            this.type = type;
+            for (const key in (init || {})) {
+                this[key] = init[key];
+            }
+            if (this.key === undefined) { this.key = ""; }
+            if (this.code === undefined) { this.code = ""; }
+            if (this.keyCode === undefined) { this.keyCode = 0; }
+            if (this.ctrlKey === undefined) { this.ctrlKey = false; }
+            if (this.altKey === undefined) { this.altKey = false; }
+            if (this.shiftKey === undefined) { this.shiftKey = false; }
+            if (this.metaKey === undefined) { this.metaKey = false; }
+            if (this.repeat === undefined) { this.repeat = false; }
+            this.target = null;
+            this.defaultPrevented = false;
+            this.preventDefault = function () { this.defaultPrevented = true; };
+            this.stopPropagation = function () { };
+            this.stopImmediatePropagation = function () { };
+        };
+    }
+
+    // InputManager only needs pointer-event state, not a DOM event implementation.
+    if (typeof globalThis.PointerEvent === "undefined") {
+        globalThis.PointerEvent = function (type, init) {
+            this.type = type;
+            for (const key in (init || {})) {
+                this[key] = init[key];
+            }
+            if (this.pointerId === undefined) { this.pointerId = 1; }
+            if (this.pointerType === undefined) { this.pointerType = "mouse"; }
+            if (this.button === undefined) { this.button = 0; }
+            if (this.buttons === undefined) { this.buttons = 0; }
+            if (this.clientX === undefined) { this.clientX = 0; }
+            if (this.clientY === undefined) { this.clientY = 0; }
+            if (this.movementX === undefined) { this.movementX = 0; }
+            if (this.movementY === undefined) { this.movementY = 0; }
+            this.target = null;
+            this.defaultPrevented = false;
+            this.preventDefault = function () { this.defaultPrevented = true; };
+            this.stopPropagation = function () { };
+        };
+    }
+
     if (typeof document === "undefined") {
         document = {
             createElement: function (type) {
                 if (type === "canvas") {
-                    return new OffscreenCanvas(64, 64);
+                    return engine.createCanvas(64, 64);
                 }
                 return {};
             },
             removeEventListener: function () { }
-        }
+        };
     }
 
     const xhr = new XMLHttpRequest();
@@ -1135,29 +1334,24 @@
             config = JSON.parse(xhr.responseText);
 
             if (listTests) {
-                // Canonical TSV: index<TAB>title<TAB>referenceImage<TAB>exclusionReason.
-                // exclusionReason reflects config state (ignores --include-excluded)
-                // so the listing is the same regardless of run flags.
+                // TSV exclusions reflect the catalog, regardless of --include-excluded.
                 for (let i = 0; i < config.tests.length; ++i) {
                     const t = config.tests[i];
                     const reason = getExclusionReason(t) || "";
                     console.log(i + "\t" + (t.title || "") + "\t" + (t.referenceImage || "") + "\t" + reason);
                 }
-                engine.dispose();
                 TestUtils.exit(0);
                 return;
             }
 
+            const runnableTests = config.tests.filter((test, index) => shouldRunTest(test, index) && getSkipReason(test) === null);
+            const selectedTests = justOnce ? runnableTests.slice(0, 1) : runnableTests;
+            // Precision is global, and cached matrices can only be promoted before the first engine.
+            useHighPrecisionMatrices = selectedTests.some(test => test.useLargeWorldRendering || test.useHighPrecisionMatrix);
+
             // Run tests
             const recursiveRunTest = function (i) {
-                // Skip filtered-out tests cheaply (don't count toward --once
-                // and don't re-init the engine).
-                //
-                // Skipped tests (excludeFromAutomaticTesting / onlyVisual /
-                // excludedGraphicsApis) are logged loudly when a filter is
-                // active so the user sees that --test "X" matched but was
-                // skipped. Filter mismatches stay silent to avoid noise on
-                // unfiltered runs.
+                // Filter mismatches stay silent and do not consume --once.
                 while (i < config.tests.length) {
                     const t = config.tests[i];
                     const matchesFilter = shouldRunTest(t, i);
@@ -1176,7 +1370,9 @@
                 }
                 if (i >= config.tests.length) {
                     logRunSummary();
-                    engine.dispose();
+                    if (engine) {
+                        engine.dispose();
+                    }
                     TestUtils.exit(failedCount > 0 ? -1 : 0);
                     return;
                 }
@@ -1199,7 +1395,9 @@
                     i++;
                     if (justOnce || i >= config.tests.length) {
                         logRunSummary();
-                        engine.dispose();
+                        if (engine) {
+                            engine.dispose();
+                        }
                         TestUtils.exit(failedCount > 0 ? -1 : 0);
                         return;
                     }
@@ -1221,15 +1419,6 @@
         xhr.send();
     }
 
-    // The canvas font is registered globally (NativeCanvas::loadTTF populates a
-    // static font table that every 2D context reads), so both rendering paths
-    // need it before any GUI/DynamicTexture text can rasterize.
-    const loadFontThen = function (next) {
-        BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-            _native.Canvas.loadTTFAsync("droidsans", data).then(next, next);
-        }, undefined, undefined, true);
-    };
-
     // The WebGPU engine loads its GLSL -> SPIR-V -> WGSL transpilers (the glslang
     // and twgsl WASM modules) lazily, on the first effect that is authored in
     // GLSL: _preparePipelineContextAsync awaits prepareGlslangAndTintAsync()
@@ -1241,33 +1430,39 @@
     // earlier test already warmed the modules, which makes results depend on test
     // ordering (a test can pass in a full run and fail in isolation). Warm the
     // transpilers once up front so every test starts from the same state.
-    const warmShaderTranspilersThen = function (engine, next) {
+    const warmShaderTranspilersAsync = function (engine) {
         if (typeof engine.prepareGlslangAndTintAsync !== "function") {
-            next();
-            return;
+            return Promise.resolve();
         }
-        engine.prepareGlslangAndTintAsync().then(next, function (e) {
-            // Non-fatal: only GLSL-authored shaders need these, and they will
-            // retry the load on first use.
-            console.error("Failed to preload glslang/twgsl: " + e);
-            next();
-        });
+        return engine.prepareGlslangAndTintAsync();
     };
 
-    if (isDawn) {
-        globalThis._playgroundWebGPUReady.then(function () {
-            engine.getCaps().parallelShaderCompile = undefined;
-            warmShaderTranspilersThen(engine, function () {
-                loadFontThen(startValidation);
-            });
-        }, function (error) {
-            console.error("Validation WebGPU initialization failed: " + error);
-            TestUtils.exit(-1);
-        });
-    } else {
-        loadFontThen(function () {
-            _native.RootUrl = "https://playground.babylonjs.com";
-            startValidation();
+    function loadFontAssetAsync(url) {
+        return BABYLON.Tools.LoadFileAsync(url, true).then(function (data) {
+            if (!(data instanceof ArrayBuffer) || data.byteLength === 0) {
+                throw new Error("Invalid font response from " + url);
+            }
+            return data;
         });
     }
+
+    const initializeEngine = isDawn ? globalThis._playgroundWebGPUReady.then(function (engine) {
+        return warmShaderTranspilersAsync(engine);
+    }) : Promise.resolve();
+    initializeEngine.then(function () {
+        return Promise.all([
+            loadFontAssetAsync("app:///Scripts/DroidSans.ttf"),
+            loadFontAssetAsync("app:///Scripts/Arimo-Regular.ttf")
+        ]);
+    }).then(function (fonts) {
+        _native.Canvas.loadTTF("droidsans", fonts[0]);
+        _native.Canvas.loadTTF("monospace", fonts[0]);
+        return _native.Canvas.loadTTFAsync("Arial", fonts[1]);
+    }).then(function () {
+        _native.RootUrl = "https://playground.babylonjs.com";
+        startValidation();
+    }).catch(function (error) {
+        console.error("Failed to initialize validation resources: " + (error.stack || error));
+        TestUtils.exit(1);
+    });
 })();

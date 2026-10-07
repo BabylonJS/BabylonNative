@@ -1,6 +1,8 @@
 FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
 
 set(BABYLON_SCRIPTS
+    "../node_modules/@babylonjs/havok/lib/umd/HavokPhysics_umd.js"
+    "../node_modules/@babylonjs/havok/lib/umd/HavokPhysics.wasm"
     "../node_modules/babylonjs-addons/babylonjs.addons.js"
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs/babylon.max.js"
@@ -11,15 +13,18 @@ set(BABYLON_SCRIPTS
     "../node_modules/earcut/dist/earcut.min.js")
 
 set(DEPENDENCIES
+    "../Dependencies/Arimo-Regular.ttf"
+    "../Dependencies/Arimo-OFL.txt"
+    "../Dependencies/Arimo-PROVENANCE.txt"
+    "../Dependencies/DroidSans.ttf"
+    "../Dependencies/DroidSans-APACHE-2.0.txt"
+    "../Dependencies/DroidSans-PROVENANCE.txt"
     "../Dependencies/ammo.js"
     "../Dependencies/meshwriter.min.js"
     "../Dependencies/recast.js")
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
-    set(DAWN_TEST_ASSETS "../UnitTests/Assets/droidsans.ttf")
-endif()
-
 set(SCRIPTS
+    "Scripts/native_env.js"
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/run_snippet.js"
@@ -147,16 +152,6 @@ else()
 endif()
 
 warnings_as_errors(Playground)
-if(DAWN_TEST_ASSETS)
-    target_sources(Playground PRIVATE ${DAWN_TEST_ASSETS})
-    if(APPLE)
-        if(IOS OR VISIONOS)
-            set_source_files_properties(${DAWN_TEST_ASSETS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
-        else()
-            set_source_files_properties(${DAWN_TEST_ASSETS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
-        endif()
-    endif()
-endif()
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
 
@@ -281,11 +276,11 @@ if(APPLE)
 endif()
 
 if(WINDOWS_STORE)
-    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${DAWN_TEST_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${DAWN_TEST_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
         set_property(SOURCE ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_LOCATION "ReferenceImages")
 else()
-    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${DAWN_TEST_ASSETS})
+    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
         add_custom_command(
             OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -309,5 +304,4 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Scripts FIL
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${REFERENCE_IMAGES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group("Dawn test assets" FILES ${DAWN_TEST_ASSETS})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)

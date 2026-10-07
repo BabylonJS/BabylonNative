@@ -40,7 +40,8 @@ public:
         std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer* inBuffer, Babylon::Graphics::FrameBuffer* outBuffer)> finalPass,
         Babylon::Graphics::FrameBuffer* finalFrameBuffer,
         std::function<Babylon::Graphics::FrameBuffer*()> acquire,
-        std::function<void(Babylon::Graphics::FrameBuffer*)> release
+        std::function<void(Babylon::Graphics::FrameBuffer*)> release,
+        bool separateComposite = false
     );
     void Render(std::function<void()> element);
 

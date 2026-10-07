@@ -22,6 +22,13 @@
 #include <memory.h>
 
 #include "nanovg.h"
+#include "../nanosvg.h"
+#define NANOSVGRAST_IMPLEMENTATION
+#include "../nanosvgrast.h"
+#undef NANOSVGRAST_IMPLEMENTATION
+#include <algorithm>
+#include <memory>
+#include <stdexcept>
 
 #include <bx/bx.h>
 #include "nanovg_filterstack.h"
@@ -1013,6 +1020,105 @@ void nvgResetScissor(NVGcontext* ctx)
 	state->scissor.extent[1] = -1.0f;
 }
 
+void nvgClipImage(NVGcontext* ctx, int image, int x, int y, int width, int height)
+{
+	auto& scissor = nvg__getState(ctx)->scissor;
+	scissor.clipImage = image;
+	scissor.clipBounds[0] = float(x);
+	scissor.clipBounds[1] = float(y);
+	scissor.clipBounds[2] = float(width);
+	scissor.clipBounds[3] = float(height);
+}
+
+void nvgSetViewport(NVGcontext* ctx, float width, float height)
+{
+	ctx->params.renderViewport(ctx->params.userPtr, width, height, ctx->devicePxRatio);
+	ctx->drawCallCount = 0;
+	ctx->fillTriCount = 0;
+	ctx->strokeTriCount = 0;
+	ctx->textTriCount = 0;
+}
+
+void nvgRasterizeClip(NVGcontext* ctx, int width, int height, bool evenOdd, NVGclipMask& mask)
+{
+	// Commands already contain device-space coordinates. Rasterize their original
+	// winding, before NanoVG's fill tessellator reorients contours as solids.
+	std::vector<std::vector<float>> contours;
+	float minX = float(width), minY = float(height), maxX = 0, maxY = 0;
+	auto point = [&](float x, float y) {
+		if (!std::isfinite(x) || !std::isfinite(y))
+			throw std::runtime_error("Canvas clip path contains non-finite coordinates");
+		contours.back().insert(contours.back().end(), {x, y});
+		minX = std::min(minX, x); minY = std::min(minY, y);
+		maxX = std::max(maxX, x); maxY = std::max(maxY, y);
+	};
+	auto line = [&](float x, float y) {
+		auto& points = contours.back();
+		const auto px = points[points.size() - 2], py = points.back();
+		point(px, py);
+		point(x, y);
+		point(x, y);
+	};
+	for (int i = 0; i < ctx->ncommands;) {
+		const float* command = ctx->commands + i;
+		switch (int(command[0])) {
+			case NVG_MOVETO:
+				contours.emplace_back();
+				point(command[1], command[2]);
+				i += 3;
+				break;
+			case NVG_LINETO:
+				if (!contours.empty()) line(command[1], command[2]);
+				i += 3;
+				break;
+			case NVG_BEZIERTO:
+				if (!contours.empty()) {
+					for (int p = 1; p < 7; p += 2) point(command[p], command[p + 1]);
+				}
+				i += 7;
+				break;
+			case NVG_CLOSE:
+				if (!contours.empty()) line(contours.back()[0], contours.back()[1]);
+				++i;
+				break;
+			case NVG_WINDING:
+				i += 2;
+				break;
+			default:
+				throw std::runtime_error("Unsupported Canvas clip path command");
+		}
+	}
+
+	mask.x = int(std::clamp(floorf(minX), 0.f, float(width)));
+	mask.y = int(std::clamp(floorf(minY), 0.f, float(height)));
+	mask.width = std::max(1, int(std::clamp(ceilf(maxX), 0.f, float(width))) - mask.x);
+	mask.height = std::max(1, int(std::clamp(ceilf(maxY), 0.f, float(height))) - mask.y);
+	mask.rgba.resize(size_t(mask.width) * mask.height * 4);
+	std::vector<NSVGpath> paths(contours.size());
+	NSVGshape shape{};
+	shape.fill.type = NSVG_PAINT_COLOR;
+	shape.fill.color = 0xffffffff;
+	shape.opacity = 1.f;
+	shape.flags = NSVG_FLAGS_VISIBLE;
+	shape.fillRule = evenOdd ? NSVG_FILLRULE_EVENODD : NSVG_FILLRULE_NONZERO;
+	for (size_t i = 0; i < contours.size(); ++i) {
+		if (contours[i].size() < 8) continue;
+		paths[i].pts = contours[i].data();
+		paths[i].npts = int(contours[i].size() / 2);
+		paths[i].closed = 1;
+		paths[i].next = shape.paths;
+		shape.paths = &paths[i];
+	}
+	NSVGimage image{};
+	image.width = float(width);
+	image.height = float(height);
+	image.shapes = &shape;
+	std::unique_ptr<NSVGrasterizer, decltype(&nsvgDeleteRasterizer)> rasterizer{nsvgCreateRasterizer(), nsvgDeleteRasterizer};
+	if (!rasterizer) throw std::runtime_error("Cannot allocate Canvas clip rasterizer");
+	nsvgRasterize(rasterizer.get(), &image, -float(mask.x), -float(mask.y), 1.f,
+		mask.rgba.data(), mask.width, mask.height, mask.width * 4);
+}
+
 // Global composite operation.
 void nvgGlobalCompositeOperation(NVGcontext* ctx, int op)
 {
@@ -1959,6 +2065,23 @@ void nvgBeginPath(NVGcontext* ctx)
 {
 	ctx->ncommands = 0;
 	nvg__clearPathCache(ctx);
+}
+
+void nvgSavePath(NVGcontext* ctx, NVGsavedPath& path)
+{
+	path.commands.assign(ctx->commands, ctx->commands + ctx->ncommands);
+	path.x = ctx->commandx;
+	path.y = ctx->commandy;
+}
+
+void nvgRestorePath(NVGcontext* ctx, const NVGsavedPath& path)
+{
+	nvgBeginPath(ctx);
+	if (!path.commands.empty())
+		memcpy(ctx->commands, path.commands.data(), path.commands.size() * sizeof(float));
+	ctx->ncommands = int(path.commands.size());
+	ctx->commandx = path.x;
+	ctx->commandy = path.y;
 }
 
 void nvgMoveTo(NVGcontext* ctx, float x, float y)

@@ -32,7 +32,7 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 
 #define BLUR_MAX_PX 1000
 #define BLUR_TAPS 13
-#define BLUR_UNIFORM_SIZE 5 // fit into vec4: ceil(BLUR_TAPS / 4)
+#define BLUR_UNIFORM_SIZE 5 // Matches u_weights[5] in fs_gaussblur.sc.
 
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
@@ -80,6 +80,8 @@ void nanovg_filterstack::DisposeBgfx()
         return;
     }
 
+    // Destroy only on the last live canvas/NVG context, then clear handles so a
+    // later InitBgfx starts clean and stale handles are never double-destroyed.
     if (bgfx::isValid(m_uniforms.u_strength))
     {
         bgfx::destroy(m_uniforms.u_strength);
@@ -192,7 +194,8 @@ void nanovg_filterstack::Render(
     std::function<void(bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*)> finalPass,
     Babylon::Graphics::FrameBuffer* finalFrameBuffer,
     std::function<Babylon::Graphics::FrameBuffer*()> acquire,
-    std::function<void(Babylon::Graphics::FrameBuffer*)> release
+    std::function<void(Babylon::Graphics::FrameBuffer*)> release,
+    bool separateComposite
 )
 {
     if (!stackElementCount)
@@ -230,13 +233,14 @@ void nanovg_filterstack::Render(
                 for (int i = 0; i < 2; i++)
                 {
                     const std::array<float, 4>& direction = directions[i];
-                    bool last = lastElement && i == 1;
+                    bool last = lastElement && i == 1 && !separateComposite;
                     float sigma = i == 0 ? element.blurElement.horizontal : element.blurElement.vertical;
 
                     // use gaussian blur for sigma < 2, box blur for sigma >= 2
                     if (sigma < 2)
                     {
                         std::vector<float> kernel = CalculateGaussianKernel(sigma, BLUR_TAPS);
+                        kernel.resize(BLUR_UNIFORM_SIZE * 4, 0.0f);
                         setUniform(m_uniforms.u_direction, &direction, 1);
                         setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
 

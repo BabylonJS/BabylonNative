@@ -102,7 +102,7 @@ namespace Babylon
             layout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
             layout.end();
 
-            const auto layoutHandle = bgfx::createVertexLayout(layout);
+            const auto layoutHandle = m_deviceContext.CreateVertexLayout(layout);
             if (!bgfx::isValid(layoutHandle))
             {
                 throw std::runtime_error{"Failed to create vertex layout (attribute=" + std::to_string(location) +
@@ -139,6 +139,11 @@ namespace Babylon
             bgfx::InstanceDataBuffer instanceDataBuffer{};
             VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
+        }
+        else if (instanceCount > 0)
+        {
+            // These draws derive per-instance data from gl_InstanceID instead of an instance buffer.
+            encoder->setInstanceCount(instanceCount);
         }
 
         uint8_t stream = 0;

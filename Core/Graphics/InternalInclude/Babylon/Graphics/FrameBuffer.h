@@ -20,7 +20,7 @@ namespace Babylon::Graphics
     class FrameBuffer final
     {
     public:
-        FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex = -1);
+        FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex = -1, bool isMultisampled = false, uint8_t depthOneVolumeAttachmentMask = 0);
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
@@ -32,11 +32,14 @@ namespace Babylon::Graphics
         uint16_t Width() const;
         uint16_t Height() const;
         bool DefaultBackBuffer() const;
+        bool IsMultisampled() const;
 
         void Bind();
         void Unbind();
 
-        void Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
+        // Floating-point colors preserve HDR values through bgfx's clear palette.
+        // More than 16 distinct palette colors in a physical frame throws rather than overwriting pending clears.
+        void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX);
         void SetViewPort(float x, float y, float width, float height);
         void SetScissor(float x, float y, float width, float height);
         void Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
@@ -60,6 +63,8 @@ namespace Babylon::Graphics
         const bool m_useDeviceBackBuffer{};
         const bool m_hasDepth{};
         const bool m_hasStencil{};
+        const bool m_isMultisampled{};
+        const uint8_t m_depthOneVolumeAttachmentMask{};
 
         std::optional<bgfx::ViewId> m_viewId{};
 

@@ -159,7 +159,7 @@
         assert(canvas.getAttribute("__proto__") === "attribute", "Canvas attribute names do not mutate prototypes");
         canvas.removeAttribute("__proto__");
         assertThrows(function () { canvas.setAttribute("bad name", "value"); }, "Invalid canvas attribute name");
-        _native.Canvas.loadTTF("dawn-runtime-fallback", await loadXHR("app:///Scripts/droidsans.ttf"));
+        _native.Canvas.loadTTF("dawn-runtime-fallback", await loadXHR("app:///Scripts/DroidSans.ttf"));
         const textCanvas = document.createElement("canvas");
         const textContext = textCanvas.getContext("2d");
         textContext.font = "50px unavailable-family";

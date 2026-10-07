@@ -146,7 +146,8 @@ namespace
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.ListTests = true; }},
 
         FlagSpec{"--headless", "", FlagKind::Boolean, "",
-            "Don't show a window (still creates HWND).", "",
+            "Don't show a window (still creates HWND).",
+            "                              Disables the JavaScript debugger listener.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.Headless = true; }},
 
         FlagSpec{"--break-on-fail", "", FlagKind::Boolean, "",

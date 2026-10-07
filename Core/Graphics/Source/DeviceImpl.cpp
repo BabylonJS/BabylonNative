@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -208,6 +209,13 @@ namespace Babylon::Graphics
         m_state.Bgfx.Dirty = true;
     }
 
+    uint8_t DeviceImpl::GetMSAASamples() const
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        const auto level = (m_state.Bgfx.InitState.swapChain.flags & BGFX_SWAP_CHAIN_MSAA_MASK) >> BGFX_SWAP_CHAIN_MSAA_SHIFT;
+        return static_cast<uint8_t>(1u << level);
+    }
+
     void DeviceImpl::UpdateAlphaPremultiplied(bool enabled)
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -274,6 +282,7 @@ namespace Babylon::Graphics
                     if (m_state.Bgfx.Initialized)
                     {
                         DestroyBackBuffer();
+                        ReleaseFrameVertexLayouts();
                         bgfx::shutdown();
                         m_state.Bgfx.Initialized = false;
                         ++m_bgfxId;
@@ -299,6 +308,7 @@ namespace Babylon::Graphics
             }
 
             m_state.Bgfx.Initialized = true;
+            ResetClearPalette();
             UpdateBackBufferState();
 
             m_cancellationSource.emplace();
@@ -351,6 +361,7 @@ namespace Babylon::Graphics
             m_cancellationSource->cancel();
 
             DestroyBackBuffer();
+            ReleaseFrameVertexLayouts();
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
             m_bgfxId++;
@@ -609,6 +620,79 @@ namespace Babylon::Graphics
         return m_viewIdGeneration.load();
     }
 
+    bgfx::VertexLayoutHandle DeviceImpl::CreateVertexLayout(const bgfx::VertexLayout& layout)
+    {
+        std::scoped_lock lock{m_frameVertexLayoutsMutex};
+        LayoutKey key{layout.m_stride};
+        std::copy(std::begin(layout.m_offset), std::end(layout.m_offset), key.Offsets.begin());
+        std::copy(std::begin(layout.m_attributes), std::end(layout.m_attributes), key.Attributes.begin());
+
+        auto it = m_frameVertexLayouts.find(key);
+        bool inserted = false;
+        if (it == m_frameVertexLayouts.end())
+        {
+            const auto cached = bgfx::createVertexLayout(layout);
+            if (!bgfx::isValid(cached))
+            {
+                return cached;
+            }
+            try
+            {
+                it = m_frameVertexLayouts.emplace(std::move(key), cached).first;
+                inserted = true;
+            }
+            catch (...)
+            {
+                bgfx::destroy(cached);
+                throw;
+            }
+        }
+
+        const auto handle = bgfx::createVertexLayout(layout);
+        if (!bgfx::isValid(handle) && inserted)
+        {
+            bgfx::destroy(it->second);
+            m_frameVertexLayouts.erase(it);
+        }
+        return handle;
+    }
+
+    void DeviceImpl::ReleaseFrameVertexLayouts()
+    {
+        std::scoped_lock lock{m_frameVertexLayoutsMutex};
+        for (const auto& [key, handle] : m_frameVertexLayouts)
+        {
+            bgfx::destroy(handle);
+        }
+        m_frameVertexLayouts.clear();
+    }
+
+    void DeviceImpl::ResetClearPalette()
+    {
+        std::scoped_lock lock{m_clearPaletteMutex};
+        m_clearPaletteSize = 0;
+    }
+
+    uint8_t DeviceImpl::AcquireClearPaletteIndex(const std::array<float, 4>& color)
+    {
+        std::scoped_lock lock{m_clearPaletteMutex};
+        for (uint8_t index = 0; index < m_clearPaletteSize; ++index)
+        {
+            if (m_clearPalette[index] == color)
+            {
+                return index;
+            }
+        }
+        if (m_clearPaletteSize == m_clearPalette.size())
+        {
+            throw std::runtime_error{"Too many distinct floating-point clear colors in one physical frame"};
+        }
+        const auto index = m_clearPaletteSize++;
+        m_clearPalette[index] = color;
+        bgfx::setPaletteColor(index, color.data());
+        return index;
+    }
+
     void DeviceImpl::FlushViewsIfNeeded()
     {
         // Reserve headroom below the hard cap: a single draw/clear operation can
@@ -707,9 +791,11 @@ namespace Babylon::Graphics
         // still flips exactly once.
         // Same completion path as Frame(): a mid-frame flush must unblock
         // readTexture requests on the waiting JS thread.
+        ReleaseFrameVertexLayouts();
         const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
         CompleteReadTextureRequests(frameNumber);
 
+        ResetClearPalette();
         m_nextViewId.store(0);
         m_midFrameFlushCount.fetch_add(1);
 
@@ -718,7 +804,6 @@ namespace Babylon::Graphics
         // Without this a cached high id would sort *after* every id handed out from the reset
         // counter, inverting submission order relative to the JS-side draw order.
         m_viewIdGeneration.fetch_add(1);
-
         m_frameEncoder = bgfx::begin(true);
     }
 
@@ -728,7 +813,9 @@ namespace Babylon::Graphics
         if (m_state.Bgfx.Dirty)
         {
             // Discard the whole frame.
+            ReleaseFrameVertexLayouts();
             bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
             if (m_bgfxCallback.IsDeviceLost())
             {
                 return;
@@ -783,7 +870,9 @@ namespace Babylon::Graphics
         {
             DestroyBackBuffer();
             // Release the old native swap chain before another one can bind its window.
+            ReleaseFrameVertexLayouts();
             bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
             if (m_state.BackBufferColor || m_state.BackBufferDepthStencil)
             {
                 CreateExternalBackBuffer(swapChain);
@@ -800,7 +889,9 @@ namespace Babylon::Graphics
             (m_windowHandle != swapChain.nwh || m_displayHandle != swapChain.ndt))
         {
             DestroyBackBuffer();
+            ReleaseFrameVertexLayouts();
             bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
         }
 
         if (swapChain.nwh != nullptr)
@@ -875,6 +966,7 @@ namespace Babylon::Graphics
 
         // Advance frame and render!
         const uint8_t frameFlags = m_captureNextFrame.exchange(false) ? BGFX_FRAME_DEBUG_CAPTURE : 0;
+        ReleaseFrameVertexLayouts();
         uint32_t frameNumber{bgfx::frame(frameFlags)};
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
@@ -886,6 +978,7 @@ namespace Babylon::Graphics
 
         CompleteReadTextureRequests(frameNumber);
 
+        ResetClearPalette();
         m_nextViewId.store(0);
         m_midFrameFlushCount.store(0);
     }

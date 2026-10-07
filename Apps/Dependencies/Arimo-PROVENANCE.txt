@@ -1,0 +1,11 @@
+Arimo-Regular.ttf
+
+Source repository: https://github.com/googlefonts/Arimo
+Source commit: 4a6255f269916ae7ad3fc2706b0935e7621396b8
+Source file: fonts/ttf/Arimo-Regular.ttf
+Immutable URL: https://raw.githubusercontent.com/googlefonts/Arimo/4a6255f269916ae7ad3fc2706b0935e7621396b8/fonts/ttf/Arimo-Regular.ttf
+Git blob: d6b78c111a336f8c42e4cf5b6546c7b3386146cd
+SHA-256: 41B22BC8F0B51F932825D37BC55B5EB6BA67DFE599A626E4AFF2B43B624F9F8C
+
+Copyright 2026 The Arimo Project Authors (https://github.com/googlefonts/Arimo)
+Licensed under the SIL Open Font License, Version 1.1. See Arimo-OFL.txt.
