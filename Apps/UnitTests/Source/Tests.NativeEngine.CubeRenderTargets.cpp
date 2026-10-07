@@ -328,6 +328,18 @@ TEST(NativeEngineCubeRenderTargets, RejectsMultisamplingAndZeroFillsFacesBeforeC
                 Napi::Boolean::New(env, true), Napi::Boolean::New(env, false),
                 Napi::Number::New(env, 1), Napi::Boolean::New(env, true)});
             auto* cube = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+            if (bgfx::isTextureValid(0, true, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT))
+            {
+                // Depth cubes take the per-face framebuffer clear path.
+                auto depthCube = createTexture.Call(engine, {});
+                env.Global().Set("_testDepthCube", depthCube);
+                EXPECT_NO_THROW(initializeTexture.Call(engine, {
+                    depthCube, Napi::Number::New(env, size), Napi::Number::New(env, size),
+                    Napi::Boolean::New(env, false), Napi::Number::New(env, bgfx::TextureFormat::D24S8),
+                    Napi::Boolean::New(env, true), Napi::Boolean::New(env, false),
+                    Napi::Number::New(env, 1), Napi::Boolean::New(env, true)}));
+                EXPECT_TRUE(depthCube.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get()->IsCube());
+            }
             EXPECT_THROW(createFrameBuffer.Call(engine, {
                 value, Napi::Number::New(env, size), Napi::Number::New(env, size),
                 Napi::Boolean::New(env, false), Napi::Boolean::New(env, false),
@@ -369,6 +381,7 @@ TEST(NativeEngineCubeRenderTargets, RejectsMultisamplingAndZeroFillsFacesBeforeC
     {
         if (std::chrono::steady_clock::now() >= deadline)
         {
+            device.FinishRenderingCurrentFrame();
             FAIL() << "Cube face readback was not fulfilled within 30s";
         }
         device.FinishRenderingCurrentFrame();

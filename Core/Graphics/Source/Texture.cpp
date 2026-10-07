@@ -8,15 +8,6 @@
 
 namespace
 {
-    const bgfx::Memory* GetZeroImageMemory(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, bool cubeMap)
-    {
-        bgfx::TextureInfo info{};
-        bgfx::calcTextureSize(info, width, height, /*depth*/ 1, cubeMap, hasMips, numLayers, format);
-        const bgfx::Memory* mem = bgfx::alloc(info.storageSize);
-        std::memset(mem->data, 0, mem->size);
-        return mem;
-    }
-
     // Sampled MSAA color lives in a single-sample resolve image. Its mip chain is filled
     // only when resolve runs with BGFX_ATTACHMENT_AUTO_GEN_MIPS, which happens when the
     // backend leaves that framebuffer. A later readback resolves mip 0 and drops this flag.
@@ -59,11 +50,11 @@ namespace
     }
 
     void ClearRenderTarget(Babylon::Graphics::DeviceContext& context, bgfx::TextureHandle handle,
-        uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
+        uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, bool cubeMap = false)
     {
         const bool depthStencil = format > bgfx::TextureFormat::UnknownDepth;
         const bool multisampled = (flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
-        // bgfx::clear covers sampled color on every backend, including OpenGL.
+        // bgfx::clear covers sampled color on every backend, including OpenGL, and every cube face.
         // It does not cover depth, or a sampled MSAA resolve image: D3D12 and Vulkan
         // clear the multisample image, which has only mip 0.
         if (!depthStencil && !multisampled)
@@ -82,8 +73,10 @@ namespace
         // BGFX_TEXTURE_MSAA_SAMPLE keeps the sampled image multisampled, so it has no resolve mip chain.
         const bool resolveMipChain = multisampled && !depthStencil && info.numMips > 1 &&
             (flags & BGFX_TEXTURE_MSAA_SAMPLE) == 0;
+        // Cube faces are attached as layer * 6 + face.
+        const uint32_t numSlices = uint32_t{info.numLayers} * (cubeMap ? 6 : 1);
         auto scope = context.AcquireFrameCompletionScope();
-        for (uint16_t layer = 0; layer < info.numLayers; ++layer)
+        for (uint16_t layer = 0; layer < numSlices; ++layer)
         {
             for (uint8_t mip = 0; mip < info.numMips; ++mip)
             {
@@ -275,11 +268,7 @@ namespace Babylon::Graphics
     {
         Dispose();
 
-        // WebGL texImage2D(..., null) zero-fills every cube face. A cube created without
-        // memory is uninitialized, so render targets must upload explicit zeros.
-        const auto* mem = (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(size, size, hasMips, numLayers, format, true) : nullptr;
-
-        m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags, mem);
+        m_handle = bgfx::createTextureCube(size, hasMips, numLayers, format, flags);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create cube texture"};
@@ -287,6 +276,12 @@ namespace Babylon::Graphics
 
         m_ownsHandle = true;
         SetMetadata(size, size, 0, hasMips, true, false, numLayers, format, flags);
+
+        // WebGL texImage2D(..., null) zero-fills every cube face; render targets must match.
+        if ((flags & BGFX_TEXTURE_RT_MASK) != 0)
+        {
+            ClearRenderTarget(m_deviceContext, m_handle, size, size, hasMips, numLayers, format, flags, /*cubeMap*/ true);
+        }
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
