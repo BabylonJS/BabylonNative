@@ -7,8 +7,6 @@ This repo contains cmake configuration files that can be used to build bgfx with
 
 ## Building
 
-CMake 3.21 or newer is required.
-
 ```bash
 git clone https://github.com/bkaradzic/bgfx.cmake.git
 cd bgfx.cmake
@@ -20,21 +18,19 @@ cmake --build cmake-build
 
 If downloading via zip (instead of using git submodules) manually download bx, bimg and bgfx and copy them into the root directory, or locate them via `BX_DIR`, `BIMG_DIR` and `BGFX_DIR` CMake variables.
 
-### Texture decoding
+### bimg configuration
 
-`BIMG_CONFIG_DECODE_ENABLE` defaults to `ON` and controls bimg's configurable texture decoders. Set `-DBIMG_CONFIG_DECODE_ENABLE=OFF` to disable them. Parent projects can set a normal variable before `add_subdirectory`. This option is private to `bimg`; it does not control the image-format parsers in `bimg_decode`.
+| Variable | Default | Description |
+| --- | --- | --- |
+| `BIMG_CONFIG_DECODE_ENABLE` | `ON` | Texture block decoders (BC, ETC, ASTC, ...) in `bimg`. |
+| `BIMG_CONFIG_PARSE_ENABLE` | `ON` | Default for every image format parser in `bimg_decode`. |
+| `BIMG_CONFIG_PARSE_<FORMAT>` | empty | Per-format override: `ON`, `OFF`, or empty to use bimg's default. Formats: `AVIF`, `BMP`, `EXR`, `GIF`, `HDR`, `HEIF`, `JPEG`, `PIC`, `PNG`, `PNM`, `PSD`, `SVG`, `TGA`, `WEBP`. |
+| `BIMG_CONFIG_USE_STB_IMAGE` | `ON` | Use stb_image for BMP, GIF, HDR, JPEG, PIC, PNM, PSD and TGA. |
+| `BIMG_CONFIG_USE_WIC` | `OFF` | Use Windows Imaging Component for PNG, JPEG, BMP and GIF (Windows only). |
 
-### Image parsing
+For example, `-DBIMG_CONFIG_PARSE_ENABLE=OFF -DBIMG_CONFIG_PARSE_PNG=ON` builds only the PNG parser. When AVIF is disabled the libavif/dav1d sources are not compiled. HEIF is off by default in bimg and requires an externally supplied libheif.
 
-`BIMG_CONFIG_PARSE_ENABLE` defaults to `ON` and controls bimg's default image-format parsers. Per-format `BIMG_CONFIG_PARSE_<FORMAT>` settings accept an empty string, `ON`, or `OFF`. Empty values omit that format's compiler definition, preserving bimg's default on each configure. Parent projects can set normal variables before `add_subdirectory`; explicit values override the defaults.
-
-Supported format variables are `AVIF`, `BMP`, `EXR`, `GIF`, `HDR`, `HEIF`, `JPEG`, `PIC`, `PNG`, `PNM`, `PSD`, `TGA`, and `WEBP`. All default to empty except `HEIF`, which defaults to `OFF`. HEIF requires externally supplied libheif headers and libraries; enabling its parser does not add that dependency.
-
-Use `-DBIMG_CONFIG_PARSE_AVIF=OFF` to disable only AVIF, or `-DBIMG_CONFIG_PARSE_ENABLE=OFF -DBIMG_CONFIG_PARSE_PNG=ON -DBIMG_CONFIG_PARSE_JPEG=ON` to enable only PNG and JPEG.
-
-`BIMG_CONFIG_USE_WIC` defaults to `OFF`. Set it to `ON` to use Windows Imaging Component (WIC) instead of the bundled PNG, JPEG, BMP, and GIF decoders on Windows. Their per-format parser settings still apply. Parent projects can set a normal variable before `add_subdirectory`, or users can set a cache value with `-DBIMG_CONFIG_USE_WIC=ON`. On other platforms, bimg disables WIC.
-
-When AVIF is disabled, its parser and the libavif/dav1d sources are excluded from `bimg_decode`. Set these CMake variables rather than only adding preprocessor definitions to compiler flags, so source selection and parser configuration agree.
+These can also be set as normal variables by a parent project before `add_subdirectory`.
 
 ## How To Use
 This project is setup to be included a few different ways. To include bgfx source code in your project simply use add_subdirectory to include this project. To build bgfx binaries build the `INSTALL` target (or `make install`). The installed files will be in the directory specified by `CMAKE_INSTALL_PREFIX` which we recommend you set to `./install` so it will export to your build directory. Note you may want to build install on both `Release` and `Debug` configurations.
