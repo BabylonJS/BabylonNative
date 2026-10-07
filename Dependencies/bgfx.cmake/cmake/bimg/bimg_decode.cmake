@@ -21,7 +21,6 @@ file(
 	${BIMG_DIR}/src/image_decode*.* #
 	#
 	${LOADPNG_SOURCES} #
-	${MINIZ_SOURCES} #
 )
 
 # AVIF decoding (libavif + dav1d), enabled by default in bimg

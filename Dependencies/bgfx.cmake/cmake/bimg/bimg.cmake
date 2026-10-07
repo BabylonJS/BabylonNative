@@ -22,7 +22,6 @@ file(
 	${BIMG_DIR}/src/image_gnf.cpp #
 	#
 	${ASTC_ENCODER_SOURCES}
-	${MINIZ_SOURCES}
 )
 
 add_library(bimg STATIC ${BIMG_SOURCES})

@@ -15,9 +15,5 @@ if(NOT IS_DIRECTORY ${BIMG_DIR})
 endif()
 
 if(NOT MINIZ_LIBRARIES)
-	file(GLOB_RECURSE #
-		 MINIZ_SOURCES #
-		 ${BIMG_DIR}/3rdparty/tinyexr/deps/miniz/miniz.* #
-	)
 	set(MINIZ_INCLUDE_DIR ${BIMG_DIR}/3rdparty/tinyexr/deps)
 endif()
