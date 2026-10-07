@@ -11,8 +11,6 @@ set(SOURCES
     "Source/ImageDataDawn.cpp"
     "Source/ImageDataDawn.h"
     "Source/ImageDecode.cpp"
-    "Source/MeasureTextDawn.cpp"
-    "Source/MeasureTextDawn.h"
     "Source/NativeDawn.cpp")
 
 add_library(NativeDawn ${SOURCES})

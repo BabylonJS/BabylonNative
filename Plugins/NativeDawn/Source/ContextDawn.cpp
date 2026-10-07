@@ -28,7 +28,7 @@
 
 #include "CanvasDawn.h"
 #include "ContextDawn.h"
-#include "MeasureTextDawn.h"
+#include "MeasureText.h"
 #include "Image.h"
 #include "ImageDataDawn.h"
 #include "Path2D.h"
@@ -245,7 +245,22 @@ namespace Babylon::Plugins::Internal
         BindFillStyle(info);
 
         SetFilterStack();
+        float transform[6];
+        nvgCurrentTransform(*m_nvg, transform);
+        const auto integral = [](float value) { return std::isfinite(value) && std::floor(value) == value; };
+        const bool pixelAligned = !m_isClipped && transform[1] == 0.f && transform[2] == 0.f &&
+            integral(left * transform[0] + transform[4]) &&
+            integral((left + width) * transform[0] + transform[4]) &&
+            integral(top * transform[3] + transform[5]) &&
+            integral((top + height) * transform[3] + transform[5]);
+        // Pixel-aligned rectangles need no fringe, which can overblend thin translucent fills.
+        nvgSave(*m_nvg);
+        if (pixelAligned)
+        {
+            nvgShapeAntiAlias(*m_nvg, 0);
+        }
         nvgFill(*m_nvg);
+        nvgRestore(*m_nvg);
     }
 
     Napi::Value ContextDawn::GetFillStyle(const Napi::CallbackInfo&)
@@ -340,10 +355,8 @@ namespace Babylon::Plugins::Internal
     void ContextDawn::Save(const Napi::CallbackInfo&)
     {
         nvgSave(*m_nvg);
-        // Track our wrapper-side fillStyle/strokeStyle alongside the nvg state stack so that
-        // ctx.restore() correctly rewinds them — otherwise FillText/BindFillStyle would re-bind
-        // a stale color from after a fillStyle change that nvg has since popped.
-        m_savedStyles.push_back({m_fillStyle, m_strokeStyle});
+        // BindFillStyle/SetFontFaceId must not rebind state that NanoVG has already restored.
+        m_savedStyles.push_back({m_fillStyle, m_strokeStyle, m_font, m_currentFontId});
     }
 
     void ContextDawn::Restore(const Napi::CallbackInfo&)
@@ -355,6 +368,8 @@ namespace Babylon::Plugins::Internal
             const auto& saved = m_savedStyles.back();
             m_fillStyle = saved.fillStyle;
             m_strokeStyle = saved.strokeStyle;
+            m_font = saved.font;
+            m_currentFontId = saved.currentFontId;
             m_savedStyles.pop_back();
         }
     }
@@ -649,37 +664,8 @@ namespace Babylon::Plugins::Internal
     Napi::Value ContextDawn::MeasureTextDawn(const Napi::CallbackInfo& info)
     {
         std::string text{info[0].As<Napi::String>()};
-
-        // If the JS-requested font family hasn't been loaded, return Arial-equivalent metrics
-        // instead of measuring with whatever fallback font is bound. Browsers use the system
-        // Arial for "Arial"/"sans-serif"/etc.; here we have e.g. droidsans only, which is
-        // ~1.7x wider per em. Returning droidsans widths makes Babylon helpers like
-        // DynamicTexture.drawText center text via t = (canvas - measureText.width)/2 to a
-        // negative x and clip the text off-canvas. Arial-ish synthesised metrics keep the
-        // centering on-canvas, while the actual FillText still substitutes our loaded font.
-        const bool familyAvailable = !m_font.Familiy().empty()
-            && m_fonts.find(m_font.Familiy()) != m_fonts.end();
-
-        if (!familyAvailable && m_font.Size() > 0.f)
-        {
-            // Approximate Arial proportional metrics: average advance ~ 0.55 em.
-            const float fontSize = m_font.Size();
-            const float advance = fontSize * 0.55f;
-            const float width = advance * static_cast<float>(text.length());
-            const float ascent = fontSize * 0.75f;
-            const float descent = fontSize * 0.25f;
-
-            auto obj{Napi::Object::New(info.Env())};
-            obj.Set("width", Napi::Value::From(info.Env(), width));
-            obj.Set("height", Napi::Value::From(info.Env(), ascent + descent));
-            obj.Set("actualBoundingBoxLeft", Napi::Value::From(info.Env(), 0.f));
-            obj.Set("actualBoundingBoxRight", Napi::Value::From(info.Env(), width));
-            obj.Set("fontBoundingBoxAscent", Napi::Value::From(info.Env(), ascent));
-            obj.Set("fontBoundingBoxDescent", Napi::Value::From(info.Env(), descent));
-            return obj.As<Napi::Value>();
-        }
-
-        return MeasureTextDawn::CreateInstance(info.Env(), this, text);
+        SetFontFaceId();
+        return MeasureText::CreateInstance(info.Env(), *m_nvg, text);
     }
 
     bool ContextDawn::SetFontFaceId()
@@ -876,6 +862,7 @@ namespace Babylon::Plugins::Internal
         // replace (rather than blend) semantics.
         nvgSave(*m_nvg);
         nvgReset(*m_nvg);
+        nvgShapeAntiAlias(*m_nvg, 0);
         nvgGlobalCompositeOperation(*m_nvg, NVG_COPY);
 
         NVGpaint imagePaint = nvgImagePattern(*m_nvg, destX, destY, destWidth, destHeight, 0.f, imageIndex, 1.f);
@@ -887,9 +874,6 @@ namespace Babylon::Plugins::Internal
         nvgRestore(*m_nvg);
         nvgDeleteImage(*m_nvg, imageIndex);
 
-        // Keep the CPU mirror that getImageData() reads from in sync.
-        BlitPixelsToCpu(patch.data(), copyWidth, copyHeight, 0, 0, copyWidth, copyHeight,
-            dx + x0, dy + y0, copyWidth, copyHeight);
     }
 
     void ContextDawn::Arc(const Napi::CallbackInfo& info)
@@ -904,116 +888,38 @@ namespace Babylon::Plugins::Internal
         nvgArc(*m_nvg, x, y, radius, startAngle, endAngle, winding);
     }
 
-    void ContextDawn::EnsureCpuBuffer()
-    {
-        const uint32_t width = m_canvas != nullptr ? m_canvas->GetWidth() : 0;
-        const uint32_t height = m_canvas != nullptr ? m_canvas->GetHeight() : 0;
-        if (width != m_cpuWidth || height != m_cpuHeight || m_cpuPixels.empty())
-        {
-            m_cpuWidth = width;
-            m_cpuHeight = height;
-
-            const uint64_t pixelCount = static_cast<uint64_t>(width) * height;
-            if (pixelCount > std::numeric_limits<size_t>::max() / 4)
-            {
-                // Leave the mirror empty; drawImage and getImageData both no-op safely on it.
-                m_cpuPixels.clear();
-                return;
-            }
-
-            m_cpuPixels.assign(static_cast<size_t>(pixelCount) * 4, 0);
-        }
-    }
-
-    void ContextDawn::BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh)
-    {
-        if (src == nullptr || dw == 0 || dh == 0 || sw == 0 || sh == 0 || srcWidth == 0 || srcHeight == 0)
-        {
-            return;
-        }
-
-        EnsureCpuBuffer();
-        if (m_cpuPixels.empty())
-        {
-            return;
-        }
-
-        // Clamp the iteration range to the destination rect's intersection with the canvas up
-        // front. The destination size is caller-controlled (and reaches us as an unsigned value,
-        // so a negative width wraps to ~4e9), and iterating the full rect just to reject every
-        // pixel would stall the JS thread. int64_t keeps dx/dy + dw/dh from overflowing.
-        const int64_t iBegin = std::max<int64_t>(0, -static_cast<int64_t>(dx));
-        const int64_t iEnd = std::min<int64_t>(dw, static_cast<int64_t>(m_cpuWidth) - dx);
-        const int64_t jBegin = std::max<int64_t>(0, -static_cast<int64_t>(dy));
-        const int64_t jEnd = std::min<int64_t>(dh, static_cast<int64_t>(m_cpuHeight) - dy);
-
-        for (int64_t j = jBegin; j < jEnd; ++j)
-        {
-            // Nearest-neighbor sample of the source row (exact when dh == sh).
-            const int64_t srcY = sy + static_cast<int64_t>(j) * sh / dh;
-            if (srcY < 0 || srcY >= static_cast<int64_t>(srcHeight))
-            {
-                continue;
-            }
-
-            const size_t destRow = static_cast<size_t>(dy + j) * m_cpuWidth;
-            const size_t srcRow = static_cast<size_t>(srcY) * srcWidth;
-
-            for (int64_t i = iBegin; i < iEnd; ++i)
-            {
-                const int64_t srcX = sx + static_cast<int64_t>(i) * sw / dw;
-                if (srcX < 0 || srcX >= static_cast<int64_t>(srcWidth))
-                {
-                    continue;
-                }
-
-                const size_t srcIndex = (srcRow + static_cast<size_t>(srcX)) * 4;
-                const size_t destIndex = (destRow + static_cast<size_t>(dx + i)) * 4;
-                m_cpuPixels[destIndex + 0] = src[srcIndex + 0];
-                m_cpuPixels[destIndex + 1] = src[srcIndex + 1];
-                m_cpuPixels[destIndex + 2] = src[srcIndex + 2];
-                m_cpuPixels[destIndex + 3] = src[srcIndex + 3];
-            }
-        }
-    }
-
     void ContextDawn::ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst)
     {
         const size_t total = static_cast<size_t>(w) * h * 4;
         std::memset(dst, 0, total);
 
-        // Resync the mirror to the canvas first. Without this, a canvas resize followed by
-        // getImageData with no intervening drawImage would read the old buffer using the old
-        // dimensions and hand back stale pixels; EnsureCpuBuffer reallocates and zero-fills.
-        EnsureCpuBuffer();
-        if (m_cpuPixels.empty())
+        const auto self = Value();
+        self.Get("flush").As<Napi::Function>().Call(self, {});
+        const uint32_t width = m_canvas->GetWidth();
+        const uint32_t height = m_canvas->GetHeight();
+        if (width == 0 || height == 0)
         {
             return;
         }
-
-        for (uint32_t j = 0; j < h; ++j)
+        std::vector<uint8_t> pixels;
+        if (!m_canvas->ReadPixels(pixels))
         {
-            const int32_t srcY = sy + static_cast<int32_t>(j);
-            if (srcY < 0 || srcY >= static_cast<int32_t>(m_cpuHeight))
-            {
-                continue;
-            }
+            throw Napi::Error::New(Env(), "Context2D.getImageData: GPU readback failed");
+        }
 
-            for (uint32_t i = 0; i < w; ++i)
-            {
-                const int32_t srcX = sx + static_cast<int32_t>(i);
-                if (srcX < 0 || srcX >= static_cast<int32_t>(m_cpuWidth))
-                {
-                    continue;
-                }
-
-                const size_t srcIndex = (static_cast<size_t>(srcY) * m_cpuWidth + srcX) * 4;
-                const size_t destIndex = (static_cast<size_t>(j) * w + i) * 4;
-                dst[destIndex + 0] = m_cpuPixels[srcIndex + 0];
-                dst[destIndex + 1] = m_cpuPixels[srcIndex + 1];
-                dst[destIndex + 2] = m_cpuPixels[srcIndex + 2];
-                dst[destIndex + 3] = m_cpuPixels[srcIndex + 3];
-            }
+        const int64_t left = std::max<int64_t>(0, sx);
+        const int64_t top = std::max<int64_t>(0, sy);
+        const int64_t right = std::min<int64_t>(width, static_cast<int64_t>(sx) + w);
+        const int64_t bottom = std::min<int64_t>(height, static_cast<int64_t>(sy) + h);
+        if (right <= left || bottom <= top)
+        {
+            return;
+        }
+        for (int64_t y = top; y < bottom; ++y)
+        {
+            std::memcpy(dst + (static_cast<size_t>(y - sy) * w + left - sx) * 4,
+                pixels.data() + (static_cast<size_t>(y) * width + left) * 4,
+                static_cast<size_t>(right - left) * 4);
         }
     }
 
@@ -1084,7 +990,7 @@ namespace Babylon::Plugins::Internal
             }
 
             const int imageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, rgba.data());
-            DrawImageCommon(info, imageIndex, rgba.data(), width, height);
+            DrawImageCommon(info, imageIndex, width, height);
             nvgDeleteImage(*m_nvg, imageIndex);
             return;
 #else
@@ -1122,7 +1028,7 @@ namespace Babylon::Plugins::Internal
 
             const auto* pixels = static_cast<const uint8_t*>(arrayBuffer.Data());
             const int canvasImageIndex = nvgCreateImageRGBA(*m_nvg, static_cast<int>(width), static_cast<int>(height), 0, pixels);
-            DrawImageCommon(info, canvasImageIndex, pixels, width, height);
+            DrawImageCommon(info, canvasImageIndex, width, height);
             nvgDeleteImage(*m_nvg, canvasImageIndex);
             return;
         }
@@ -1150,10 +1056,10 @@ namespace Babylon::Plugins::Internal
         }
         assert(imageIndex != -1);
 
-        DrawImageCommon(info, imageIndex, canvasImage->GetPixels(), canvasImage->GetWidth(), canvasImage->GetHeight());
+        DrawImageCommon(info, imageIndex, canvasImage->GetWidth(), canvasImage->GetHeight());
     }
 
-    void ContextDawn::DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, const uint8_t* srcPixels, uint32_t srcWidth, uint32_t srcHeight)
+    void ContextDawn::DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, uint32_t srcWidth, uint32_t srcHeight)
     {
         const auto imgWidth = static_cast<float>(srcWidth);
         const auto imgHeight = static_cast<float>(srcHeight);
@@ -1176,8 +1082,6 @@ namespace Babylon::Plugins::Internal
             SetFilterStack();
             nvgFill(*m_nvg);
 
-            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight,
-                static_cast<int32_t>(dx), static_cast<int32_t>(dy), srcWidth, srcHeight);
         }
         else if (info.Length() == 5)
         {
@@ -1207,8 +1111,6 @@ namespace Babylon::Plugins::Internal
             SetFilterStack();
             nvgFill(*m_nvg);
 
-            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, 0, 0, srcWidth, srcHeight,
-                dxInt, dyInt, static_cast<uint32_t>(dWidthInt), static_cast<uint32_t>(dHeightInt));
         }
         else if (info.Length() == 9)
         {
@@ -1226,14 +1128,15 @@ namespace Babylon::Plugins::Internal
                 return;
             }
 
-            const auto sWidth = static_cast<uint32_t>(sWidthInt);
-            const auto sHeight = static_cast<uint32_t>(sHeightInt);
             const auto dx = static_cast<float>(dxInt);
             const auto dy = static_cast<float>(dyInt);
             const auto dWidth = static_cast<float>(dWidthInt);
             const auto dHeight = static_cast<float>(dHeightInt);
 
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
+            const float scaleX = dWidth / sWidthInt;
+            const float scaleY = dHeight / sHeightInt;
+            NVGpaint imagePaint = nvgImagePattern(*m_nvg, dx - sx * scaleX, dy - sy * scaleY,
+                imgWidth * scaleX, imgHeight * scaleY, 0.f, imageIndex, 1.f);
 
             nvgBeginPath(*m_nvg);
 
@@ -1242,8 +1145,6 @@ namespace Babylon::Plugins::Internal
             SetFilterStack();
             nvgFill(*m_nvg);
 
-            BlitPixelsToCpu(srcPixels, srcWidth, srcHeight, sx, sy, sWidth, sHeight,
-                dxInt, dyInt, static_cast<uint32_t>(dWidthInt), static_cast<uint32_t>(dHeightInt));
         }
         else
         {

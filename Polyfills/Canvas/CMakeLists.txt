@@ -8,6 +8,8 @@ set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
     "Source/Canvas.cpp"
     "Source/Canvas.h"
+    "Source/CanvasEncoding.cpp"
+    "Source/CanvasEncoding.h"
     "Source/Colors.h"
     "Source/FrameBufferPool.cpp"
     "Source/FrameBufferPool.h"

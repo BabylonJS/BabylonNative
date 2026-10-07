@@ -53,6 +53,10 @@
 #include <Babylon/Polyfills/Scheduling.h>
 #endif
 
+#if JSRUNTIMEHOST_POLYFILL_COMPRESSION
+#include <Babylon/Polyfills/Compression.h>
+#endif
+
 #if JSRUNTIMEHOST_POLYFILL_URL
 #include <Babylon/Polyfills/URL.h>
 #endif
@@ -292,6 +296,9 @@ namespace Babylon::Embedding
 #endif
 #if JSRUNTIMEHOST_POLYFILL_SCHEDULING
             Babylon::Polyfills::Scheduling::Initialize(env);
+#endif
+#if JSRUNTIMEHOST_POLYFILL_COMPRESSION
+            Babylon::Polyfills::Compression::Initialize(env);
 #endif
 #if JSRUNTIMEHOST_POLYFILL_URL
             Babylon::Polyfills::URL::Initialize(env);

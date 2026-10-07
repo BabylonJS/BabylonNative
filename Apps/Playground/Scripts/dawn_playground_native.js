@@ -69,6 +69,11 @@
         await checkFrame(80, 48, new BABYLON.Color4(1, 0, 0, 1), [255, 0, 0, 255]);
 
         engine.stopRenderLoop();
+        await new Promise(function (resolve) { setTimeout(resolve, 100); });
+        const frozenPixels = await new Promise(function (resolve) { TestUtils.getFrameBufferData(resolve); });
+        assert(frozenPixels.length === 80 * 48 * 4, "Stopped render-loop readback keeps framebuffer dimensions");
+        assert(Array.from(frozenPixels).every(function (value, index) { return value === [255, 0, 0, 255][index % 4]; }),
+            "Stopped render-loop readback preserves the actual last presented frame");
         scene.dispose();
         engine.dispose();
         clearTimeout(timeout);

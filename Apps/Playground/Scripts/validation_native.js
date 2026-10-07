@@ -602,6 +602,16 @@
 
                 for (let i = 0; i < newScenes.length; i++) {
                     const scene = newScenes[i];
+                    if (engine.isWebGPU && BABYLON.DynamicTexture) {
+                        for (let j = 0; j < scene.textures.length; j++) {
+                            const texture = scene.textures[j];
+                            // WebGPU canvas textures need an actual initial upload before
+                            // material readiness can succeed and start GUI rendering.
+                            if (texture instanceof BABYLON.DynamicTexture && !texture.isReady()) {
+                                texture.update();
+                            }
+                        }
+                    }
                     // Scene.executeWhenReady drops its callbacks on timeout or disposal.
                     // Keep a runner-owned deadline and reconcile virtual-scene membership
                     // independently so removed scenes cannot strand this wait.

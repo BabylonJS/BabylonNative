@@ -69,6 +69,11 @@ if(TARGET Scheduling)
     target_link_libraries(Embedding PRIVATE Scheduling)
 endif()
 
+if(TARGET Compression)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_COMPRESSION=1)
+    target_link_libraries(Embedding PRIVATE Compression)
+endif()
+
 if(TARGET URL)
     target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_URL=1)
     target_link_libraries(Embedding PRIVATE URL)

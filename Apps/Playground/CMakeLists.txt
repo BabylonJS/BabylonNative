@@ -15,12 +15,17 @@ set(DEPENDENCIES
     "../Dependencies/meshwriter.min.js"
     "../Dependencies/recast.js")
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    set(DAWN_TEST_ASSETS "../UnitTests/Assets/droidsans.ttf")
+endif()
+
 set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/run_snippet.js"
     "Scripts/validation_native.js"
     "Scripts/lite_native.js"
+    "Scripts/lite_parity_native.js"
     "Scripts/dawn_playground.js"
     "Scripts/dawn_playground_native.js"
     "Scripts/dawn_runtime_native.js"
@@ -142,6 +147,16 @@ else()
 endif()
 
 warnings_as_errors(Playground)
+if(DAWN_TEST_ASSETS)
+    target_sources(Playground PRIVATE ${DAWN_TEST_ASSETS})
+    if(APPLE)
+        if(IOS OR VISIONOS)
+            set_source_files_properties(${DAWN_TEST_ASSETS} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
+        else()
+            set_source_files_properties(${DAWN_TEST_ASSETS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
+        endif()
+    endif()
+endif()
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
 
@@ -266,11 +281,11 @@ if(APPLE)
 endif()
 
 if(WINDOWS_STORE)
-    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
-    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${DAWN_TEST_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${DAWN_TEST_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
         set_property(SOURCE ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_LOCATION "ReferenceImages")
 else()
-    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
+    foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${DAWN_TEST_ASSETS})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
         add_custom_command(
             OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -294,4 +309,5 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Scripts FIL
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${REFERENCE_IMAGES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+source_group("Dawn test assets" FILES ${DAWN_TEST_ASSETS})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)

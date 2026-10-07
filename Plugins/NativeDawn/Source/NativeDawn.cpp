@@ -50,6 +50,7 @@
 #include <vector>
 
 #include "CanvasDawn.h"
+#include "CanvasEncoding.h"
 
 namespace Babylon::Plugins::NativeDawn
 {
@@ -1347,6 +1348,73 @@ namespace Babylon::Plugins::NativeDawn
         // destroys the surface texture, so we must not present until the work
         // that targets it has actually been submitted.
         bool g_surfaceWorkPending = false;
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+        WGPUTexture g_lastPresentedTexture{};
+
+        void ReleasePresentedTexture()
+        {
+            if (g_lastPresentedTexture)
+            {
+                wgpuTextureDestroy(g_lastPresentedTexture);
+                wgpuTextureRelease(g_lastPresentedTexture);
+                g_lastPresentedTexture = nullptr;
+            }
+        }
+#endif
+
+        void ReleaseSurfaceTexture()
+        {
+            if (g_state.currentSurfaceTexture)
+            {
+                wgpuTextureRelease(g_state.currentSurfaceTexture);
+                g_state.currentSurfaceTexture = nullptr;
+            }
+            g_currentTextureAcquired = false;
+        }
+
+        void PresentSurface()
+        {
+            if (!g_surfaceConfigured || !g_currentTextureAcquired || g_surfaceWorkPending)
+            {
+                return;
+            }
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+            // Presentation invalidates the swapchain texture. Preserve actual GPU
+            // pixels so a later screenshot also works after the render loop stops.
+            if (!g_lastPresentedTexture)
+            {
+                WGPUTextureDescriptor descriptor{
+                    .label = {"NativeDawn.lastPresentedFrame", WGPU_STRLEN},
+                    .usage = WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst,
+                    .dimension = WGPUTextureDimension_2D,
+                    .size = {g_state.width, g_state.height, 1},
+                    .format = g_state.surfaceFormat,
+                    .mipLevelCount = 1,
+                    .sampleCount = 1,
+                };
+                g_lastPresentedTexture = wgpuDeviceCreateTexture(g_state.device, &descriptor);
+                if (!g_lastPresentedTexture)
+                {
+                    throw std::runtime_error{"NativeDawn: failed to preserve the presented frame"};
+                }
+            }
+            const WGPUTexelCopyTextureInfo source{
+                .texture = g_state.currentSurfaceTexture, .aspect = WGPUTextureAspect_All,
+            };
+            const WGPUTexelCopyTextureInfo destination{
+                .texture = g_lastPresentedTexture, .aspect = WGPUTextureAspect_All,
+            };
+            const WGPUExtent3D extent{g_state.width, g_state.height, 1};
+            const auto encoder = wgpuDeviceCreateCommandEncoder(g_state.device, nullptr);
+            wgpuCommandEncoderCopyTextureToTexture(encoder, &source, &destination, &extent);
+            const auto command = wgpuCommandEncoderFinish(encoder, nullptr);
+            wgpuQueueSubmit(g_state.queue, 1, &command);
+            wgpuCommandBufferRelease(command);
+            wgpuCommandEncoderRelease(encoder);
+#endif
+            wgpuSurfacePresent(g_state.surface);
+            g_currentTextureAcquired = false;
+        }
 
         // Remembered from the last GPUCanvasContext.configure() so the surface can
         // be re-configured on a resize without losing the requested usage/alpha.
@@ -1375,12 +1443,11 @@ namespace Babylon::Plugins::NativeDawn
 
             g_state.width = g_requestedWidth;
             g_state.height = g_requestedHeight;
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+            ReleasePresentedTexture();
+#endif
 
-            if (g_state.currentSurfaceTexture != nullptr)
-            {
-                wgpuTextureRelease(g_state.currentSurfaceTexture);
-                g_state.currentSurfaceTexture = nullptr;
-            }
+            ReleaseSurfaceTexture();
             // The reconfigure destroys the texture the surface handed out, so it can no
             // longer be presented; the next acquire replaces it.
             g_currentTextureAcquired = false;
@@ -1426,7 +1493,7 @@ namespace Babylon::Plugins::NativeDawn
         Napi::Object MakeAdapter(Napi::Env env);
         Napi::Object MakeDevice(Napi::Env env);
         Napi::Object MakeQueue(Napi::Env env);
-        Napi::Object MakeBuffer(Napi::Env env, WGPUBuffer h, uint64_t size, uint32_t usage, bool mapped);
+        Napi::Object MakeBuffer(Napi::Env env, WGPUBuffer h, uint64_t size, uint32_t usage);
         Napi::Object MakeTexture(Napi::Env env, WGPUTexture h, uint32_t w, uint32_t ht, uint32_t depth,
             uint32_t mip, uint32_t sample, const std::string& fmt, uint32_t usage, const std::string& dim);
         Napi::Object MakeTextureView(Napi::Env env, WGPUTextureView h, uint32_t w, uint32_t ht, WGPUTexture src);
@@ -1487,14 +1554,48 @@ namespace Babylon::Plugins::NativeDawn
             return set;
         }
 
+        Napi::Error MakeOperationError(Napi::Env env, const std::string& message)
+        {
+            auto error = Napi::Error::New(env, message);
+            error.Value().Set("name", "OperationError");
+            return error;
+        }
+
+        struct BufferMapResult
+        {
+            bool success{};
+            std::string message;
+        };
+
+        BufferMapResult MapBuffer(WGPUBuffer buffer, WGPUMapMode mode, uint64_t offset, uint64_t size)
+        {
+            BufferMapResult result;
+            WGPUBufferMapCallbackInfo callback{
+                .mode = WGPUCallbackMode_WaitAnyOnly,
+                .callback = [](WGPUMapAsyncStatus status, WGPUStringView message, void* data, void*) {
+                    auto& result = *static_cast<BufferMapResult*>(data);
+                    result.success = status == WGPUMapAsyncStatus_Success;
+                    result.message = SvToStr(message);
+                },
+                .userdata1 = &result,
+            };
+            WaitFuture(wgpuBufferMapAsync(buffer, mode, static_cast<size_t>(offset), static_cast<size_t>(size), callback));
+            return result;
+        }
+
         // ---- GPUBuffer -------------------------------------------------------
-        Napi::Object MakeBuffer(Napi::Env env, WGPUBuffer h, uint64_t size, uint32_t usage, bool mapped)
+        Napi::Object MakeBuffer(Napi::Env env, WGPUBuffer h, uint64_t size, uint32_t usage)
         {
             Napi::Object o = NewGPUObject(env, "GPUBuffer");
             SetHandle(o, h);
             o.Set("size", Napi::Number::New(env, static_cast<double>(size)));
             o.Set("usage", Napi::Number::New(env, usage));
-            o.Set("mapState", Napi::String::New(env, mapped ? "mapped" : "unmapped"));
+            o.DefineProperty(Napi::PropertyDescriptor::Accessor(env, o, "mapState",
+                [h](const Napi::CallbackInfo& info) -> Napi::Value {
+                    const auto state = wgpuBufferGetMapState(h);
+                    return Napi::String::New(info.Env(), state == WGPUBufferMapState_Mapped ? "mapped" :
+                        state == WGPUBufferMapState_Pending ? "pending" : "unmapped");
+                }));
 
             // Outstanding getMappedRange() shadow buffers for this GPUBuffer.
             // getMappedRange must NOT hand V8 a raw pointer into Dawn's mapped
@@ -1517,26 +1618,35 @@ namespace Babylon::Plugins::NativeDawn
                 uint64_t offset = ArgU64(info, 1, 0);
                 uint64_t size = ArgIsUndef(info, 2) ? WGPU_WHOLE_MAP_SIZE : ArgU64(info, 2, 0);
                 auto d = Napi::Promise::Deferred::New(env);
-                WGPUBufferMapCallbackInfo mapCb{
-                    .mode = WGPUCallbackMode_WaitAnyOnly,
-                    .callback = [](WGPUMapAsyncStatus, WGPUStringView, void*, void*) {},
-                };
-                WGPUFuture f = wgpuBufferMapAsync(h, WGPUMapMode(mode), static_cast<size_t>(offset),
-                    static_cast<size_t>(size), mapCb);
-                WaitFuture(f);
-                d.Resolve(env.Undefined());
+                const auto result = MapBuffer(h, WGPUMapMode(mode), offset, size);
+                if (result.success)
+                {
+                    d.Resolve(env.Undefined());
+                }
+                else
+                {
+                    d.Reject(MakeOperationError(env, "GPUBuffer.mapAsync failed: " + result.message).Value());
+                }
                 return d.Promise();
             });
             SetMethod(o, "getMappedRange", [h, ranges](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 uint64_t offset = ArgU64(info, 0, 0);
+                if (offset > wgpuBufferGetSize(h))
+                {
+                    throw MakeOperationError(env, "GPUBuffer.getMappedRange offset exceeds the buffer size");
+                }
                 uint64_t size = ArgIsUndef(info, 1)
                     ? (wgpuBufferGetSize(h) - offset) : ArgU64(info, 1, 0);
-                Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, static_cast<size_t>(size));
                 // Seed from Dawn's current mapped bytes so read-maps work. For a
                 // write/mappedAtCreation map the source is writable too.
                 const void* src = wgpuBufferGetConstMappedRange(h, static_cast<size_t>(offset), static_cast<size_t>(size));
-                if (src != nullptr && size > 0)
+                if (src == nullptr)
+                {
+                    throw MakeOperationError(env, "GPUBuffer.getMappedRange requires a valid mapped range");
+                }
+                Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, static_cast<size_t>(size));
+                if (size > 0)
                 {
                     std::memcpy(ab.Data(), src, static_cast<size_t>(size));
                 }
@@ -1679,12 +1789,51 @@ namespace Babylon::Plugins::NativeDawn
         {
             Napi::Object o = NewGPUObject(env, "GPUShaderModule");
             SetHandle(o, h);
-            SetMethod(o, "getCompilationInfo", [](const Napi::CallbackInfo& info) -> Napi::Value {
+            SetMethod(o, "getCompilationInfo", [h](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 auto d = Napi::Promise::Deferred::New(env);
-                Napi::Object res = Napi::Object::New(env);
-                res.Set("messages", Napi::Array::New(env));
-                d.Resolve(res);
+                struct Result
+                {
+                    Napi::Env env;
+                    Napi::Array messages;
+                    bool success{};
+                } result{env, Napi::Array::New(env)};
+                WGPUCompilationInfoCallbackInfo callback{
+                    .mode = WGPUCallbackMode_WaitAnyOnly,
+                    .callback = [](WGPUCompilationInfoRequestStatus status, const WGPUCompilationInfo* compilation, void* data, void*) {
+                        auto& result = *static_cast<Result*>(data);
+                        result.success = status == WGPUCompilationInfoRequestStatus_Success && compilation != nullptr;
+                        if (!result.success)
+                        {
+                            return;
+                        }
+                        for (size_t i = 0; i < compilation->messageCount; ++i)
+                        {
+                            const auto& source = compilation->messages[i];
+                            auto message = Napi::Object::New(result.env);
+                            message.Set("message", SvToStr(source.message));
+                            message.Set("type", source.type == WGPUCompilationMessageType_Error ? "error" :
+                                source.type == WGPUCompilationMessageType_Warning ? "warning" : "info");
+                            message.Set("lineNum", Napi::Number::New(result.env, static_cast<double>(source.lineNum)));
+                            message.Set("linePos", Napi::Number::New(result.env, static_cast<double>(source.linePos)));
+                            message.Set("offset", Napi::Number::New(result.env, static_cast<double>(source.offset)));
+                            message.Set("length", Napi::Number::New(result.env, static_cast<double>(source.length)));
+                            result.messages.Set(static_cast<uint32_t>(i), message);
+                        }
+                    },
+                    .userdata1 = &result,
+                };
+                WaitFuture(wgpuShaderModuleGetCompilationInfo(h, callback));
+                if (result.success)
+                {
+                    auto compilation = Napi::Object::New(env);
+                    compilation.Set("messages", result.messages);
+                    d.Resolve(compilation);
+                }
+                else
+                {
+                    d.Reject(Napi::Error::New(env, "Shader compilation info request was cancelled").Value());
+                }
                 return d.Promise();
             });
             return o;
@@ -1738,6 +1887,41 @@ namespace Babylon::Plugins::NativeDawn
             return o;
         }
 
+        struct PipelineConstants
+        {
+            std::vector<std::string> keys;
+            std::vector<WGPUConstantEntry> entries;
+
+            void Parse(Napi::Object stage)
+            {
+                const auto value = stage.Get("constants");
+                if (value.IsUndefined())
+                {
+                    return;
+                }
+                if (!value.IsObject())
+                {
+                    throw Napi::TypeError::New(stage.Env(), "Pipeline constants must be a record");
+                }
+                const auto constants = value.As<Napi::Object>();
+                const auto names = stage.Env().Global().Get("Object").As<Napi::Object>()
+                    .Get("keys").As<Napi::Function>().Call({constants}).As<Napi::Array>();
+                keys.reserve(names.Length());
+                entries.reserve(names.Length());
+                for (uint32_t i = 0; i < names.Length(); ++i)
+                {
+                    const auto name = names.Get(i);
+                    const auto number = constants.Get(name).ToNumber().DoubleValue();
+                    if (!std::isfinite(number))
+                    {
+                        throw Napi::TypeError::New(stage.Env(), "Pipeline constant values must be finite");
+                    }
+                    keys.push_back(name.As<Napi::String>().Utf8Value());
+                    entries.push_back(WGPUConstantEntry{.key = StrView(keys.back()), .value = number});
+                }
+            }
+        };
+
         // ---- createRenderPipeline (shared by sync + async) -------------------
         Napi::Object DoCreateRenderPipeline(Napi::Env env, Napi::Value descVal)
         {
@@ -1780,6 +1964,7 @@ namespace Babylon::Plugins::NativeDawn
             std::string vEntry;
             std::vector<WGPUVertexBufferLayout> vBuffers;
             std::vector<std::vector<WGPUVertexAttribute>> vAttrs;
+            PipelineConstants vertexConstants;
             {
                 Napi::Value vtxV = desc.Get("vertex");
                 if (!vtxV.IsObject())
@@ -1791,6 +1976,9 @@ namespace Babylon::Plugins::NativeDawn
                 if (mod != nullptr) rp.vertex.module = *mod;
                 vEntry = PropStr(vtx, "entryPoint");
                 if (!vEntry.empty()) rp.vertex.entryPoint = StrView(vEntry);
+                vertexConstants.Parse(vtx);
+                rp.vertex.constantCount = vertexConstants.entries.size();
+                rp.vertex.constants = vertexConstants.entries.data();
 
                 Napi::Value buffersV = vtx.Get("buffers");
                 if (buffersV.IsArray())
@@ -1923,6 +2111,7 @@ namespace Babylon::Plugins::NativeDawn
             };
             std::vector<WGPUColorTargetState> fTargets;
             std::vector<WGPUBlendState> fBlends;
+            PipelineConstants fragmentConstants;
             {
                 Napi::Value frV = desc.Get("fragment");
                 if (frV.IsObject())
@@ -1932,6 +2121,9 @@ namespace Babylon::Plugins::NativeDawn
                     if (mod != nullptr) fs.module = *mod;
                     fEntry = PropStr(fr, "entryPoint");
                     if (!fEntry.empty()) fs.entryPoint = StrView(fEntry);
+                    fragmentConstants.Parse(fr);
+                    fs.constantCount = fragmentConstants.entries.size();
+                    fs.constants = fragmentConstants.entries.data();
 
                     Napi::Value tV = fr.Get("targets");
                     if (tV.IsArray())
@@ -2018,6 +2210,10 @@ namespace Babylon::Plugins::NativeDawn
             if (mod != nullptr) cp.compute.module = *mod;
             cEntry = PropStr(co, "entryPoint");
             if (!cEntry.empty()) cp.compute.entryPoint = StrView(cEntry);
+            PipelineConstants constants;
+            constants.Parse(co);
+            cp.compute.constantCount = constants.entries.size();
+            cp.compute.constants = constants.entries.data();
 
             WGPUComputePipeline pipe = wgpuDeviceCreateComputePipeline(g_state.device, &cp);
             return MakeComputePipeline(env, pipe);
@@ -2698,21 +2894,11 @@ namespace Babylon::Plugins::NativeDawn
                 uint32_t h = PropU32(bmp, "height", 0);
                 if (px.data == nullptr || w == 0 || h == 0)
                 {
-                    // Tolerant path: some sources arrive without pixels -- e.g. GUI /
-                    // DynamicTexture canvases whose 2D text/gradient content we don't
-                    // rasterize, or a texture whose async decode yielded nothing.
-                    // Rather than throw an uncaught error that aborts the entire
-                    // scene (failing otherwise-correct tests on one incidental
-                    // texture), skip this upload and leave the destination texture
-                    // unchanged so the rest of the frame still renders.
-                    static bool warned = false;
-                    if (!warned)
-                    {
-                        warned = true;
-                        DawnLogF(LogLevel::Warn, "copyExternalImageToTexture: source has no decoded pixels; skipping (w=%u h=%u hasPixels=%d)",
-                            w, h, px.data != nullptr ? 1 : 0);
-                    }
-                    return env.Undefined();
+                    throw Napi::Error::New(env, "copyExternalImageToTexture: source has no decoded pixels");
+                }
+                if (static_cast<uint64_t>(w) * h * 4 > px.size)
+                {
+                    throw Napi::RangeError::New(env, "copyExternalImageToTexture: source pixel storage is too small");
                 }
                 bool flipY = false;
                 {
@@ -2723,27 +2909,32 @@ namespace Babylon::Plugins::NativeDawn
                 Napi::Object destDesc = info[1].As<Napi::Object>();
                 WGPUTexelCopyTextureInfo tci = ParseTexelCopyTexture(destDesc);
                 WGPUExtent3D ext = ParseExtent3D(info[2]);
-                if (ext.width == 0) ext.width = w;
-                if (ext.height == 0) ext.height = h;
-                if (ext.depthOrArrayLayers == 0) ext.depthOrArrayLayers = 1;
-
-                // Clamp the copy extent to the destination texture's mip bounds.
-                // Source canvases/bitmaps can be a pixel larger than the texture
-                // Babylon created from a fractional CSS/GUI size (e.g. 3380x103
-                // into a 3379x102 texture); an out-of-bounds WriteTexture is a
-                // Dawn validation error that loses the whole device and cascades
-                // into every subsequent test failing.
-                if (tci.texture)
+                if (ext.width == 0 || ext.height == 0 || ext.depthOrArrayLayers == 0)
                 {
-                    const uint32_t mip = tci.mipLevel;
-                    uint32_t tw = wgpuTextureGetWidth(tci.texture) >> mip;  if (tw == 0) tw = 1;
-                    uint32_t th = wgpuTextureGetHeight(tci.texture) >> mip; if (th == 0) th = 1;
-                    const uint32_t availW = (tci.origin.x < tw) ? (tw - tci.origin.x) : 0u;
-                    const uint32_t availH = (tci.origin.y < th) ? (th - tci.origin.y) : 0u;
-                    if (ext.width > availW) ext.width = availW;
-                    if (ext.height > availH) ext.height = availH;
-                    if (ext.width == 0 || ext.height == 0) return env.Undefined();
+                    return env.Undefined();
                 }
+                const WGPUOrigin3D sourceOrigin = ParseOrigin3D(srcDesc.Get("origin"));
+                if (sourceOrigin.x > w || sourceOrigin.y > h ||
+                    ext.width > w - sourceOrigin.x || ext.height > h - sourceOrigin.y ||
+                    ext.depthOrArrayLayers != 1)
+                {
+                    throw Napi::RangeError::New(env, "copyExternalImageToTexture: copy exceeds source bounds");
+                }
+                std::vector<uint8_t> cropped;
+                if (sourceOrigin.x != 0 || sourceOrigin.y != 0 || ext.width != w || ext.height != h || flipY)
+                {
+                    cropped.resize(static_cast<size_t>(ext.width) * ext.height * 4u);
+                    for (uint32_t y = 0; y < ext.height; ++y)
+                    {
+                        const uint32_t sourceY = sourceOrigin.y + (flipY ? ext.height - 1 - y : y);
+                        std::memcpy(cropped.data() + static_cast<size_t>(y) * ext.width * 4u,
+                            px.data + (static_cast<size_t>(sourceY) * w + sourceOrigin.x) * 4u,
+                            static_cast<size_t>(ext.width) * 4u);
+                    }
+                    px = {cropped.data(), cropped.size()};
+                }
+                w = ext.width;
+                h = ext.height;
 
                 // Destination texture format (the spec allows the source RGBA8 to
                 // be converted to the destination format on copy).
@@ -2757,11 +2948,23 @@ namespace Babylon::Plugins::NativeDawn
                     }
                 }
 
-                // Access the source RGBA8 row, honoring flipY.
                 const uint32_t srcRowBytes = w * 4u;
+                std::vector<uint8_t> premultiplied;
+                if (PropBool(destDesc, "premultipliedAlpha", false))
+                {
+                    premultiplied.assign(px.data, px.data + static_cast<size_t>(srcRowBytes) * h);
+                    for (size_t i = 0; i < premultiplied.size(); i += 4)
+                    {
+                        for (size_t channel = 0; channel < 3; ++channel)
+                        {
+                            premultiplied[i + channel] = static_cast<uint8_t>(
+                                (premultiplied[i + channel] * premultiplied[i + 3] + 127u) / 255u);
+                        }
+                    }
+                }
+                const auto* sourcePixels = premultiplied.empty() ? px.data : premultiplied.data();
                 auto srcRow = [&](uint32_t y) -> const uint8_t* {
-                    uint32_t sy = flipY ? (h - 1 - y) : y;
-                    return px.data + static_cast<size_t>(sy) * srcRowBytes;
+                    return sourcePixels + static_cast<size_t>(y) * srcRowBytes;
                 };
 
                 WGPUTexelCopyBufferLayout tbl{
@@ -2825,36 +3028,38 @@ namespace Babylon::Plugins::NativeDawn
                 }
                 else
                 {
-                    // rgba8unorm / rgba8unorm-srgb and default: copy as-is (with
-                    // flipY applied per row if needed).
                     tbl.bytesPerRow = srcRowBytes;
-                    if (flipY)
-                    {
-                        std::vector<uint8_t> flipped(static_cast<size_t>(srcRowBytes) * h);
-                        for (uint32_t y = 0; y < h; ++y)
-                        {
-                            std::memcpy(&flipped[static_cast<size_t>(y) * srcRowBytes], srcRow(y), srcRowBytes);
-                        }
-                        wgpuQueueWriteTexture(g_state.queue, &tci, flipped.data(),
-                            static_cast<size_t>(srcRowBytes) * h, &tbl, &ext);
-                    }
-                    else
-                    {
-                        wgpuQueueWriteTexture(g_state.queue, &tci, px.data,
-                            static_cast<size_t>(srcRowBytes) * h, &tbl, &ext);
-                    }
+                    wgpuQueueWriteTexture(g_state.queue, &tci, sourcePixels,
+                        static_cast<size_t>(srcRowBytes) * h, &tbl, &ext);
                 }
                 return env.Undefined();
             });
             SetMethod(o, "onSubmittedWorkDone", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 auto d = Napi::Promise::Deferred::New(env);
+                struct Result
+                {
+                    bool success{};
+                    std::string message;
+                } result;
                 WGPUQueueWorkDoneCallbackInfo cb{
                     .mode = WGPUCallbackMode_WaitAnyOnly,
-                    .callback = [](WGPUQueueWorkDoneStatus, WGPUStringView, void*, void*) {},
+                    .callback = [](WGPUQueueWorkDoneStatus status, WGPUStringView message, void* data, void*) {
+                        auto& result = *static_cast<Result*>(data);
+                        result.success = status == WGPUQueueWorkDoneStatus_Success;
+                        result.message = SvToStr(message);
+                    },
+                    .userdata1 = &result,
                 };
                 WaitFuture(wgpuQueueOnSubmittedWorkDone(g_state.queue, cb));
-                d.Resolve(env.Undefined());
+                if (result.success)
+                {
+                    d.Resolve(env.Undefined());
+                }
+                else
+                {
+                    d.Reject(Napi::Error::New(env, "Submitted GPU work failed: " + result.message).Value());
+                }
                 return d.Promise();
             });
             o.Set("label", Napi::String::New(env, ""));
@@ -2901,7 +3106,7 @@ namespace Babylon::Plugins::NativeDawn
                 if (!label.empty()) bd.label = StrView(label);
                 WGPUBuffer buf = wgpuDeviceCreateBuffer(g_state.device, &bd);
                 if (!buf) throw Napi::Error::New(env, "NativeDawn: createBuffer failed");
-                return MakeBuffer(env, buf, bd.size, usage, mapped);
+                return MakeBuffer(env, buf, bd.size, usage);
             });
             SetMethod(o, "createTexture", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
@@ -3204,12 +3409,51 @@ namespace Babylon::Plugins::NativeDawn
                 return MakeQuerySet(env, wgpuDeviceCreateQuerySet(g_state.device, &qsd), count);
             });
             SetMethod(o, "pushErrorScope", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                const auto filter = info[0].ToString().Utf8Value();
+                if (filter != "validation" && filter != "out-of-memory" && filter != "internal")
+                {
+                    throw Napi::TypeError::New(info.Env(), "Invalid GPU error scope filter");
+                }
+                const auto nativeFilter = filter == "validation" ? WGPUErrorFilter_Validation :
+                    filter == "out-of-memory" ? WGPUErrorFilter_OutOfMemory : WGPUErrorFilter_Internal;
+                wgpuDevicePushErrorScope(g_state.device, nativeFilter);
                 return info.Env().Undefined();
             });
             SetMethod(o, "popErrorScope", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 auto d = Napi::Promise::Deferred::New(env);
-                d.Resolve(env.Null());
+                struct Result
+                {
+                    bool success{};
+                    WGPUErrorType type{WGPUErrorType_NoError};
+                    std::string message;
+                } result;
+                WGPUPopErrorScopeCallbackInfo callback{
+                    .mode = WGPUCallbackMode_WaitAnyOnly,
+                    .callback = [](WGPUPopErrorScopeStatus status, WGPUErrorType type, WGPUStringView message, void* data, void*) {
+                        auto& result = *static_cast<Result*>(data);
+                        result.success = status == WGPUPopErrorScopeStatus_Success;
+                        result.type = type;
+                        result.message = SvToStr(message);
+                    },
+                    .userdata1 = &result,
+                };
+                WaitFuture(wgpuDevicePopErrorScope(g_state.device, callback));
+                if (!result.success)
+                {
+                    d.Reject(Napi::Error::New(env, "GPU error scope failed: " + result.message).Value());
+                }
+                else if (result.type == WGPUErrorType_NoError)
+                {
+                    d.Resolve(env.Null());
+                }
+                else
+                {
+                    auto error = NewGPUObject(env, result.type == WGPUErrorType_Validation ? "GPUValidationError" :
+                        result.type == WGPUErrorType_OutOfMemory ? "GPUOutOfMemoryError" : "GPUInternalError");
+                    error.Set("message", result.message);
+                    d.Resolve(error);
+                }
                 return d.Promise();
             });
             SetMethod(o, "destroy", [](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -3288,6 +3532,10 @@ namespace Babylon::Plugins::NativeDawn
                 Napi::Object desc = info[0].As<Napi::Object>();
                 std::string fmt = PropStr(desc, "format");
                 WGPUTextureFormat f = fmt.empty() ? g_state.surfaceFormat : textureFormat(fmt);
+                ReleaseSurfaceTexture();
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+                ReleasePresentedTexture();
+#endif
                 g_state.surfaceFormat = f;
                 uint32_t usage = PropU32(desc, "usage", static_cast<uint32_t>(WGPUTextureUsage_RenderAttachment));
                 std::string am = PropStr(desc, "alphaMode");
@@ -3312,6 +3560,10 @@ namespace Babylon::Plugins::NativeDawn
                 {
                     wgpuSurfaceUnconfigure(g_state.surface);
                     g_surfaceConfigured = false;
+                    ReleaseSurfaceTexture();
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+                    ReleasePresentedTexture();
+#endif
                 }
                 return info.Env().Undefined();
             });
@@ -3383,11 +3635,7 @@ namespace Babylon::Plugins::NativeDawn
                 return MakeCanvasContext(info.Env());
             });
             SetMethod(global, "_nativeDawnPresent", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                if (g_surfaceConfigured && g_currentTextureAcquired && !g_surfaceWorkPending)
-                {
-                    wgpuSurfacePresent(g_state.surface);
-                    g_currentTextureAcquired = false;
-                }
+                PresentSurface();
                 if (g_state.instance)
                 {
                     wgpuInstanceProcessEvents(g_state.instance);
@@ -3410,9 +3658,17 @@ namespace Babylon::Plugins::NativeDawn
             // Dawn test shim's TestUtils.getFrameBufferData for pixel comparison.
             SetMethod(global, "_nativeDawnReadPixels", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
-                if (!g_state.currentSurfaceTexture)
+                WGPUTexture source = g_currentTextureAcquired && !g_surfaceWorkPending ?
+                    g_state.currentSurfaceTexture : nullptr;
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+                if (!source)
                 {
-                    throw Napi::Error::New(env, "_nativeDawnReadPixels: no surface texture acquired");
+                    source = g_lastPresentedTexture;
+                }
+#endif
+                if (!source)
+                {
+                    throw Napi::Error::New(env, "_nativeDawnReadPixels: no completed framebuffer is available");
                 }
                 const uint32_t w = g_state.width;
                 const uint32_t h = g_state.height;
@@ -3428,7 +3684,7 @@ namespace Babylon::Plugins::NativeDawn
                 WGPUBuffer buf = wgpuDeviceCreateBuffer(g_state.device, &bd);
 
                 WGPUTexelCopyTextureInfo src{
-                    .texture = g_state.currentSurfaceTexture,
+                    .texture = source,
                     .mipLevel = 0,
                     .origin = {
                         .x = 0,
@@ -3456,44 +3712,48 @@ namespace Babylon::Plugins::NativeDawn
                 WGPUCommandBuffer cmd = wgpuCommandEncoderFinish(enc, nullptr);
                 wgpuQueueSubmit(g_state.queue, 1, &cmd);
 
-                WGPUBufferMapCallbackInfo mapCb{
-                    .mode = WGPUCallbackMode_WaitAnyOnly,
-                    .callback = [](WGPUMapAsyncStatus, WGPUStringView, void*, void*) {},
-                };
-                WaitFuture(wgpuBufferMapAsync(buf, WGPUMapMode_Read, 0, bufSize, mapCb));
-
-                const uint8_t* mapped = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(buf, 0, bufSize));
+                const auto result = MapBuffer(buf, WGPUMapMode_Read, 0, bufSize);
+                const uint8_t* mapped = result.success ?
+                    static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(buf, 0, bufSize)) : nullptr;
+                if (!result.success || mapped == nullptr)
+                {
+                    if (result.success)
+                    {
+                        wgpuBufferUnmap(buf);
+                    }
+                    wgpuCommandBufferRelease(cmd);
+                    wgpuCommandEncoderRelease(enc);
+                    wgpuBufferRelease(buf);
+                    throw Napi::Error::New(env, "NativeDawn framebuffer readback failed: " + result.message);
+                }
                 const size_t outSize = static_cast<size_t>(unpadded) * h;
                 Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, outSize);
                 uint8_t* out = static_cast<uint8_t*>(ab.Data());
                 const bool bgra = (g_state.surfaceFormat == WGPUTextureFormat_BGRA8Unorm ||
                                    g_state.surfaceFormat == WGPUTextureFormat_BGRA8UnormSrgb);
-                if (mapped != nullptr)
+                for (uint32_t y = 0; y < h; ++y)
                 {
-                    for (uint32_t y = 0; y < h; ++y)
+                    const uint8_t* srcRow = mapped + static_cast<size_t>(y) * padded;
+                    uint8_t* dstRow = out + static_cast<size_t>(y) * unpadded;
+                    for (uint32_t x = 0; x < w; ++x)
                     {
-                        const uint8_t* srcRow = mapped + static_cast<size_t>(y) * padded;
-                        uint8_t* dstRow = out + static_cast<size_t>(y) * unpadded;
-                        for (uint32_t x = 0; x < w; ++x)
+                        const uint8_t c0 = srcRow[x * 4 + 0];
+                        const uint8_t c1 = srcRow[x * 4 + 1];
+                        const uint8_t c2 = srcRow[x * 4 + 2];
+                        const uint8_t c3 = srcRow[x * 4 + 3];
+                        if (bgra)
                         {
-                            const uint8_t c0 = srcRow[x * 4 + 0];
-                            const uint8_t c1 = srcRow[x * 4 + 1];
-                            const uint8_t c2 = srcRow[x * 4 + 2];
-                            const uint8_t c3 = srcRow[x * 4 + 3];
-                            if (bgra)
-                            {
-                                dstRow[x * 4 + 0] = c2;
-                                dstRow[x * 4 + 1] = c1;
-                                dstRow[x * 4 + 2] = c0;
-                                dstRow[x * 4 + 3] = c3;
-                            }
-                            else
-                            {
-                                dstRow[x * 4 + 0] = c0;
-                                dstRow[x * 4 + 1] = c1;
-                                dstRow[x * 4 + 2] = c2;
-                                dstRow[x * 4 + 3] = c3;
-                            }
+                            dstRow[x * 4 + 0] = c2;
+                            dstRow[x * 4 + 1] = c1;
+                            dstRow[x * 4 + 2] = c0;
+                            dstRow[x * 4 + 3] = c3;
+                        }
+                        else
+                        {
+                            dstRow[x * 4 + 0] = c0;
+                            dstRow[x * 4 + 1] = c1;
+                            dstRow[x * 4 + 2] = c2;
+                            dstRow[x * 4 + 3] = c3;
                         }
                     }
                 }
@@ -3578,329 +3838,10 @@ namespace Babylon::Plugins::NativeDawn
 
         Napi::Value Noop(const Napi::CallbackInfo& info) { return info.Env().Undefined(); }
 
-        // ---- minimal 2D canvas raster (enough for WebGPU texture upload) -----
-        // Babylon's WebGPU texture path sometimes draws a decoded image onto a 2D
-        // canvas (e.g. for invert-Y or resize) and uses that canvas as the
-        // copyExternalImageToTexture source. We back the 2D context with the
-        // canvas's `__pixels` RGBA8 buffer so the canvas is a valid image source.
-        struct Ctm { float sx{1}, sy{1}, tx{0}, ty{0}; std::vector<std::array<float, 4>> stack; };
-
-        Napi::ArrayBuffer EnsureCanvasBuffer(Napi::Env env, Napi::Object canvas)
-        {
-            uint32_t w = canvas.Get("width").ToNumber().Uint32Value();
-            uint32_t h = canvas.Get("height").ToNumber().Uint32Value();
-            if (w == 0) w = 1;
-            if (h == 0) h = 1;
-            const size_t need = static_cast<size_t>(w) * h * 4u;
-            Napi::Value pv = canvas.Get("__pixels");
-            if (pv.IsArrayBuffer() && pv.As<Napi::ArrayBuffer>().ByteLength() == need)
-            {
-                return pv.As<Napi::ArrayBuffer>();
-            }
-            Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, need);
-            std::memset(ab.Data(), 0, need);
-            canvas.Set("__pixels", ab);
-            return ab;
-        }
-
-        // 2D context methods read their canvas back off `this` rather than
-        // capturing it: getContext caches the context on the canvas, so a
-        // captured strong reference would form a JS->native->JS cycle that V8
-        // cannot collect, pinning the canvas and its pixel buffer forever.
-        Napi::Object CtxCanvas(const Napi::CallbackInfo& info)
-        {
-            return info.This().As<Napi::Object>().Get("canvas").As<Napi::Object>();
-        }
-
-        Napi::Object Make2DContext(Napi::Env env, Napi::Object canvas)
-        {
-            auto ctm = std::make_shared<Ctm>();
-            Napi::Object ctx = Napi::Object::New(env);
-            ctx.Set("canvas", canvas);
-            ctx.Set("fillStyle", Napi::String::New(env, "#000000"));
-            ctx.Set("strokeStyle", Napi::String::New(env, "#000000"));
-            ctx.Set("globalAlpha", Napi::Number::New(env, 1));
-            ctx.Set("imageSmoothingEnabled", Napi::Boolean::New(env, true));
-
-            SetMethod(ctx, "save", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
-                ctm->stack.push_back({ctm->sx, ctm->sy, ctm->tx, ctm->ty});
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "restore", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
-                if (!ctm->stack.empty()) { auto a = ctm->stack.back(); ctm->stack.pop_back(); ctm->sx = a[0]; ctm->sy = a[1]; ctm->tx = a[2]; ctm->ty = a[3]; }
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "translate", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
-                ctm->tx += ctm->sx * info[0].ToNumber().FloatValue();
-                ctm->ty += ctm->sy * info[1].ToNumber().FloatValue();
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "scale", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
-                ctm->sx *= info[0].ToNumber().FloatValue();
-                ctm->sy *= info[1].ToNumber().FloatValue();
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "setTransform", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
-                if (info.Length() >= 6)
-                {
-                    ctm->sx = info[0].ToNumber().FloatValue();
-                    ctm->sy = info[3].ToNumber().FloatValue();
-                    ctm->tx = info[4].ToNumber().FloatValue();
-                    ctm->ty = info[5].ToNumber().FloatValue();
-                }
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "resetTransform", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
-                ctm->sx = 1; ctm->sy = 1; ctm->tx = 0; ctm->ty = 0;
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "transform", Noop);
-            SetMethod(ctx, "rotate", Noop);
-            SetMethod(ctx, "beginPath", Noop);
-            SetMethod(ctx, "closePath", Noop);
-            SetMethod(ctx, "fill", Noop);
-            SetMethod(ctx, "stroke", Noop);
-            SetMethod(ctx, "moveTo", Noop);
-            SetMethod(ctx, "lineTo", Noop);
-            SetMethod(ctx, "rect", Noop);
-            SetMethod(ctx, "clip", Noop);
-            SetMethod(ctx, "fillText", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                // Text rasterization is not supported on the WebGPU backend (the
-                // bgfx/nanovg Canvas polyfill is unavailable). Ensure the backing
-                // buffer exists so the canvas is still a valid texture source.
-                EnsureCanvasBuffer(info.Env(), CtxCanvas(info));
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "strokeText", Noop);
-            SetMethod(ctx, "setLineDash", Noop);
-            // Path / shape ops we don't rasterize (GUI backgrounds, rounded rects,
-            // arcs). No-ops keep the canvas a valid texture source; strokeRect just
-            // ensures the backing buffer exists like fillRect.
-            SetMethod(ctx, "strokeRect", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                EnsureCanvasBuffer(info.Env(), CtxCanvas(info));
-                return info.Env().Undefined();
-            });
-            SetMethod(ctx, "arc", Noop);
-            SetMethod(ctx, "arcTo", Noop);
-            SetMethod(ctx, "ellipse", Noop);
-            SetMethod(ctx, "quadraticCurveTo", Noop);
-            SetMethod(ctx, "bezierCurveTo", Noop);
-            SetMethod(ctx, "roundRect", Noop);
-            SetMethod(ctx, "clearHitCanvas", Noop);
-            // Gradients / patterns: return a stub carrying addColorStop so GUI code
-            // that builds a gradient fillStyle doesn't throw. We don't rasterize
-            // the gradient, but the object shape is honored.
-            auto makeGradient = [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Object g = Napi::Object::New(info.Env());
-                SetMethod(g, "addColorStop", Noop);
-                return g;
-            };
-            SetMethod(ctx, "createLinearGradient", makeGradient);
-            SetMethod(ctx, "createRadialGradient", makeGradient);
-            SetMethod(ctx, "createConicGradient", makeGradient);
-            SetMethod(ctx, "createPattern", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                return info.Env().Null();
-            });
-            SetMethod(ctx, "measureText", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Object o = Napi::Object::New(info.Env());
-                o.Set("width", Napi::Number::New(info.Env(), 8));
-                return o;
-            });
-            SetMethod(ctx, "getContextAttributes", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                return Napi::Object::New(info.Env());
-            });
-            SetMethod(ctx, "fillRect", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                EnsureCanvasBuffer(info.Env(), CtxCanvas(info));
-                return info.Env().Undefined();
-            });
-
-            SetMethod(ctx, "clearRect", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                Napi::Object canvas = CtxCanvas(info);
-                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
-                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
-                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
-                int x = info[0].ToNumber().Int32Value();
-                int y = info[1].ToNumber().Int32Value();
-                int w = info[2].ToNumber().Int32Value();
-                int h = info[3].ToNumber().Int32Value();
-                uint8_t* buf = static_cast<uint8_t*>(ab.Data());
-                for (int yy = y; yy < y + h && yy < ch; ++yy)
-                {
-                    if (yy < 0) continue;
-                    for (int xx = x; xx < x + w && xx < cw; ++xx)
-                    {
-                        if (xx < 0) continue;
-                        uint8_t* p = buf + (static_cast<size_t>(yy) * cw + xx) * 4;
-                        p[0] = p[1] = p[2] = p[3] = 0;
-                    }
-                }
-                return env.Undefined();
-            });
-
-            SetMethod(ctx, "drawImage", [ctm](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                if (info.Length() < 3 || !info[0].IsObject()) return env.Undefined();
-                Napi::Object img = info[0].As<Napi::Object>();
-                Bytes src = GetBytes(img.Get("__pixels"));
-                uint32_t iw = PropU32(img, "width", 0);
-                uint32_t ih = PropU32(img, "height", 0);
-                if (iw == 0) iw = PropU32(img, "naturalWidth", 0);
-                if (ih == 0) ih = PropU32(img, "naturalHeight", 0);
-                if (src.data == nullptr || iw == 0 || ih == 0)
-                {
-                    // Source not yet decoded (e.g. an unrendered DynamicTexture
-                    // label). Leave the destination buffer as-is.
-                    return env.Undefined();
-                }
-
-                double sx = 0, sy = 0, sw = iw, sh = ih, dx, dy, dw, dh;
-                if (info.Length() >= 9)
-                {
-                    sx = info[1].ToNumber().DoubleValue(); sy = info[2].ToNumber().DoubleValue();
-                    sw = info[3].ToNumber().DoubleValue(); sh = info[4].ToNumber().DoubleValue();
-                    dx = info[5].ToNumber().DoubleValue(); dy = info[6].ToNumber().DoubleValue();
-                    dw = info[7].ToNumber().DoubleValue(); dh = info[8].ToNumber().DoubleValue();
-                }
-                else if (info.Length() >= 5)
-                {
-                    dx = info[1].ToNumber().DoubleValue(); dy = info[2].ToNumber().DoubleValue();
-                    dw = info[3].ToNumber().DoubleValue(); dh = info[4].ToNumber().DoubleValue();
-                }
-                else
-                {
-                    dx = info[1].ToNumber().DoubleValue(); dy = info[2].ToNumber().DoubleValue();
-                    dw = iw; dh = ih;
-                }
-
-                Napi::Object canvas = CtxCanvas(info);
-                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
-                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
-                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
-                uint8_t* dst = static_cast<uint8_t*>(ab.Data());
-                const int idw = static_cast<int>(std::lround(dw));
-                const int idh = static_cast<int>(std::lround(dh));
-                for (int ddy = 0; ddy < idh; ++ddy)
-                {
-                    int syi = static_cast<int>(sy + ((ddy + 0.5) / dh) * sh);
-                    if (syi < 0) syi = 0;
-                    if (syi >= static_cast<int>(ih)) syi = ih - 1;
-                    for (int ddx = 0; ddx < idw; ++ddx)
-                    {
-                        int sxi = static_cast<int>(sx + ((ddx + 0.5) / dw) * sw);
-                        if (sxi < 0) sxi = 0;
-                        if (sxi >= static_cast<int>(iw)) sxi = iw - 1;
-                        const uint8_t* sp = src.data + (static_cast<size_t>(syi) * iw + sxi) * 4;
-                        const double px = dx + ddx + 0.5;
-                        const double py = dy + ddy + 0.5;
-                        const int bx = static_cast<int>(std::floor(ctm->sx * px + ctm->tx));
-                        const int by = static_cast<int>(std::floor(ctm->sy * py + ctm->ty));
-                        if (bx < 0 || by < 0 || bx >= cw || by >= ch) continue;
-                        uint8_t* dp = dst + (static_cast<size_t>(by) * cw + bx) * 4;
-                        dp[0] = sp[0]; dp[1] = sp[1]; dp[2] = sp[2]; dp[3] = sp[3];
-                    }
-                }
-                return env.Undefined();
-            });
-
-            SetMethod(ctx, "getImageData", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                Napi::Object canvas = CtxCanvas(info);
-                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
-                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
-                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
-                int x = info[0].ToNumber().Int32Value();
-                int y = info[1].ToNumber().Int32Value();
-                int w = info[2].ToNumber().Int32Value();
-                int h = info[3].ToNumber().Int32Value();
-                if (w <= 0 || h <= 0) { w = cw; h = ch; x = 0; y = 0; }
-                Napi::ArrayBuffer out = Napi::ArrayBuffer::New(env, static_cast<size_t>(w) * h * 4u);
-                uint8_t* od = static_cast<uint8_t*>(out.Data());
-                std::memset(od, 0, static_cast<size_t>(w) * h * 4u);
-                const uint8_t* sd = static_cast<const uint8_t*>(ab.Data());
-                for (int yy = 0; yy < h; ++yy)
-                {
-                    const int syy = y + yy;
-                    if (syy < 0 || syy >= ch) continue;
-                    for (int xx = 0; xx < w; ++xx)
-                    {
-                        const int sxx = x + xx;
-                        if (sxx < 0 || sxx >= cw) continue;
-                        std::memcpy(od + (static_cast<size_t>(yy) * w + xx) * 4, sd + (static_cast<size_t>(syy) * cw + sxx) * 4, 4);
-                    }
-                }
-                Napi::Function u8c = env.Global().Get("Uint8ClampedArray").As<Napi::Function>();
-                Napi::Object dataArr = u8c.New({out, Napi::Number::New(env, 0), Napi::Number::New(env, static_cast<double>(w) * h * 4)}).As<Napi::Object>();
-                Napi::Object res = Napi::Object::New(env);
-                res.Set("data", dataArr);
-                res.Set("width", Napi::Number::New(env, w));
-                res.Set("height", Napi::Number::New(env, h));
-                return res;
-            });
-
-            SetMethod(ctx, "putImageData", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                if (!info[0].IsObject()) return env.Undefined();
-                Napi::Object imgData = info[0].As<Napi::Object>();
-                const int dx = info.Length() > 1 ? info[1].ToNumber().Int32Value() : 0;
-                const int dy = info.Length() > 2 ? info[2].ToNumber().Int32Value() : 0;
-                const uint32_t iw = PropU32(imgData, "width", 0);
-                const uint32_t ih = PropU32(imgData, "height", 0);
-                Bytes src = GetBytes(imgData.Get("data"));
-                if (src.data == nullptr || iw == 0 || ih == 0) return env.Undefined();
-                Napi::Object canvas = CtxCanvas(info);
-                Napi::ArrayBuffer ab = EnsureCanvasBuffer(env, canvas);
-                const int cw = static_cast<int>(canvas.Get("width").ToNumber().Uint32Value());
-                const int ch = static_cast<int>(canvas.Get("height").ToNumber().Uint32Value());
-                uint8_t* dst = static_cast<uint8_t*>(ab.Data());
-                for (uint32_t yy = 0; yy < ih; ++yy)
-                {
-                    const int by = dy + static_cast<int>(yy);
-                    if (by < 0 || by >= ch) continue;
-                    for (uint32_t xx = 0; xx < iw; ++xx)
-                    {
-                        const int bx = dx + static_cast<int>(xx);
-                        if (bx < 0 || bx >= cw) continue;
-                        std::memcpy(dst + (static_cast<size_t>(by) * cw + bx) * 4, src.data + (static_cast<size_t>(yy) * iw + xx) * 4, 4);
-                    }
-                }
-                return env.Undefined();
-            });
-
-            SetMethod(ctx, "createImageData", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                uint32_t w = 1;
-                uint32_t h = 1;
-                if (info.Length() >= 2 && info[0].IsNumber())
-                {
-                    w = info[0].ToNumber().Uint32Value();
-                    h = info[1].ToNumber().Uint32Value();
-                }
-                else if (info.Length() >= 1 && info[0].IsObject())
-                {
-                    Napi::Object o = info[0].As<Napi::Object>();
-                    w = PropU32(o, "width", 1);
-                    h = PropU32(o, "height", 1);
-                }
-                Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, static_cast<size_t>(w) * h * 4u);
-                std::memset(ab.Data(), 0, static_cast<size_t>(w) * h * 4u);
-                Napi::Function u8c = env.Global().Get("Uint8ClampedArray").As<Napi::Function>();
-                Napi::Object dataArr = u8c.New({ab, Napi::Number::New(env, 0), Napi::Number::New(env, static_cast<double>(w) * h * 4)}).As<Napi::Object>();
-                Napi::Object res = Napi::Object::New(env);
-                res.Set("data", dataArr);
-                res.Set("width", Napi::Number::New(env, w));
-                res.Set("height", Napi::Number::New(env, h));
-                return res;
-            });
-
-            return ctx;
-        }
-
-        // Build a no-DOM canvas whose getContext("webgpu") returns the Dawn context
-        // and getContext("2d") returns the raster context above.
         Napi::Object MakeDataset(Napi::Env env)
         {
-            Napi::Object target = Napi::Object::New(env);
+            Napi::Object target = env.Global().Get("Object").As<Napi::Object>()
+                .Get("create").As<Napi::Function>().Call({env.Null()}).As<Napi::Object>();
             Napi::Object handler = Napi::Object::New(env);
             SetMethod(handler, "set", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 if (info.Length() >= 3 && info[0].IsObject())
@@ -3910,6 +3851,66 @@ namespace Babylon::Plugins::NativeDawn
                 return Napi::Boolean::New(info.Env(), true);
             });
             return env.Global().Get("Proxy").As<Napi::Function>().New({target, handler});
+        }
+
+        std::string AttributeName(const Napi::CallbackInfo& info)
+        {
+            if (info.Length() == 0)
+            {
+                throw Napi::TypeError::New(info.Env(), "Canvas attribute methods require a name");
+            }
+            std::string name = info[0].ToString().Utf8Value();
+            std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) {
+                return c >= 'A' && c <= 'Z' ? c + ('a' - 'A') : c;
+            });
+            return name;
+        }
+
+        std::string DatasetKey(const std::string& attribute)
+        {
+            std::string key;
+            for (size_t i = 5; i < attribute.size(); ++i)
+            {
+                if (attribute[i] == '-' && i + 1 < attribute.size() &&
+                    attribute[i + 1] >= 'a' && attribute[i + 1] <= 'z')
+                {
+                    key.push_back(attribute[++i] - ('a' - 'A'));
+                }
+                else
+                {
+                    key.push_back(attribute[i]);
+                }
+            }
+            return key;
+        }
+
+        uint32_t CanvasDimension(Napi::Value attribute, uint32_t fallback)
+        {
+            const auto text = attribute.ToString().Utf8Value();
+            size_t i = text.find_first_not_of(" \t\r\n\f");
+            if (i == std::string::npos)
+            {
+                return fallback;
+            }
+            if (text[i] == '+')
+            {
+                ++i;
+            }
+            if (i == text.size() || text[i] < '0' || text[i] > '9')
+            {
+                return fallback;
+            }
+            uint32_t value{};
+            for (; i < text.size() && text[i] >= '0' && text[i] <= '9'; ++i)
+            {
+                const uint32_t digit = text[i] - '0';
+                if (value > (static_cast<uint32_t>(INT32_MAX) - digit) / 10)
+                {
+                    return fallback;
+                }
+                value = value * 10 + digit;
+            }
+            return value;
         }
 
         Napi::Object MakeCanvas(Napi::Env env, uint32_t width, uint32_t height)
@@ -3923,6 +3924,56 @@ namespace Babylon::Plugins::NativeDawn
             // DOMStringMap stringifies assigned values (dataset.ready = true is
             // observed as "true"). Babylon-Lite uses this contract for readiness.
             canvas.Set("dataset", MakeDataset(env));
+            canvas.Set("__attributes", env.Global().Get("Object").As<Napi::Object>()
+                .Get("create").As<Napi::Function>().Call({env.Null()}));
+            for (const auto* name : {"width", "height", "id", "tabIndex"})
+            {
+                const std::string property{name};
+                const std::string attribute = property == "tabIndex" ? "tabindex" : property;
+                canvas.DefineProperty(Napi::PropertyDescriptor::Accessor(env, canvas, property,
+                    [property, attribute](const Napi::CallbackInfo& info) -> Napi::Value {
+                        const auto attributes = info.This().As<Napi::Object>().Get("__attributes").As<Napi::Object>();
+                        if (property == "id")
+                        {
+                            return attributes.HasOwnProperty(attribute) ? attributes.Get(attribute) : Napi::String::New(info.Env(), "");
+                        }
+                        if (property == "width" || property == "height")
+                        {
+                            const uint32_t fallback = property == "width" ? 300 : 150;
+                            return Napi::Number::New(info.Env(), attributes.HasOwnProperty(attribute) ?
+                                CanvasDimension(attributes.Get(attribute), fallback) : fallback);
+                        }
+                        return attributes.HasOwnProperty(attribute) ? attributes.Get(attribute).ToNumber() :
+                            Napi::Number::New(info.Env(), property == "width" ? 300 : property == "height" ? 150 : -1);
+                    },
+                    [property, attribute](const Napi::CallbackInfo& info) {
+                        Napi::String value;
+                        uint32_t dimension{};
+                        if (property == "id")
+                        {
+                            value = info[0].ToString();
+                        }
+                        else
+                        {
+                            const auto number = info[0].ToNumber();
+                            dimension = number.Uint32Value();
+                            if ((property == "width" || property == "height") && dimension > INT32_MAX)
+                            {
+                                dimension = property == "width" ? 300 : 150;
+                            }
+                            value = Napi::Number::New(info.Env(), property == "tabIndex" ?
+                                static_cast<double>(number.Int32Value()) : dimension).ToString();
+                        }
+                        info.This().As<Napi::Object>().Get("__attributes").As<Napi::Object>().Set(attribute, value);
+                        const auto contextCanvas = info.This().As<Napi::Object>().Get("__nvgCanvas");
+                        if ((property == "width" || property == "height") && contextCanvas.IsObject())
+                        {
+                            contextCanvas.As<Napi::Object>().Set(property, dimension);
+                        }
+                    }, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
+            }
+            canvas.Set("width", width);
+            canvas.Set("height", height);
             SetMethod(canvas, "getContext", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 const std::string type = info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
@@ -3938,22 +3989,10 @@ namespace Babylon::Plugins::NativeDawn
                     {
                         return existing;
                     }
-                    // Prefer the real NanoVG-on-WebGPU context so text, paths and
-                    // gradients actually rasterize (GUI, DynamicTexture). Fall back
-                    // to the blit-only stub if the canvas backend isn't up yet.
-                    Napi::Value c;
-                    try
-                    {
-                        c = Babylon::Plugins::Internal::AttachDawn2DContext(env, self);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        DawnLogF(LogLevel::Warn, "getContext('2d'): NanoVG canvas unavailable (%s); using blit-only stub", e.what());
-                        c = Napi::Value{};
-                    }
+                    const auto c = Babylon::Plugins::Internal::AttachDawn2DContext(env, self);
                     if (!c.IsObject())
                     {
-                        c = Make2DContext(env, self);
+                        throw Napi::Error::New(env, "NativeDawn Canvas2D backend is not initialized");
                     }
                     self.Set("__ctx2d", c);
                     return c;
@@ -3976,14 +4015,73 @@ namespace Babylon::Plugins::NativeDawn
                 r.Set("height", Napi::Number::New(env, h));
                 return r;
             });
-            SetMethod(canvas, "setAttribute", Noop);
-            SetMethod(canvas, "removeAttribute", Noop);
-            // toDataURL: we don't PNG-encode here; return a 1x1 transparent PNG so
-            // callers (screenshot/serialization helpers) get a valid data: URL
-            // instead of throwing "toDataURL is not a function".
+            SetMethod(canvas, "setAttribute", [](const Napi::CallbackInfo& info) {
+                if (info.Length() < 2)
+                {
+                    throw Napi::TypeError::New(info.Env(), "setAttribute requires a name and value");
+                }
+                const auto name = AttributeName(info);
+                if (name.empty() || name.find_first_of(" \t\r\n\f/>'\"=") != std::string::npos)
+                {
+                    throw Napi::TypeError::New(info.Env(), "Invalid canvas attribute name");
+                }
+                const auto self = info.This().As<Napi::Object>();
+                const bool data = name.rfind("data-", 0) == 0;
+                if (name == "width" || name == "height")
+                {
+                    self.Set(name, CanvasDimension(info[1], name == "width" ? 300 : 150));
+                }
+                self.Get(data ? "dataset" : "__attributes").As<Napi::Object>()
+                    .Set(data ? DatasetKey(name) : name, info[1].ToString());
+            });
+            SetMethod(canvas, "getAttribute", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                const auto name = AttributeName(info);
+                const bool data = name.rfind("data-", 0) == 0;
+                const auto attributes = info.This().As<Napi::Object>()
+                    .Get(data ? "dataset" : "__attributes").As<Napi::Object>();
+                const auto key = data ? DatasetKey(name) : name;
+                return attributes.HasOwnProperty(key) ? attributes.Get(key) : info.Env().Null();
+            });
+            SetMethod(canvas, "hasAttribute", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                const auto name = AttributeName(info);
+                const bool data = name.rfind("data-", 0) == 0;
+                const auto attributes = info.This().As<Napi::Object>()
+                    .Get(data ? "dataset" : "__attributes").As<Napi::Object>();
+                return Napi::Boolean::New(info.Env(), attributes.HasOwnProperty(data ? DatasetKey(name) : name));
+            });
+            SetMethod(canvas, "removeAttribute", [](const Napi::CallbackInfo& info) {
+                const auto name = AttributeName(info);
+                const bool data = name.rfind("data-", 0) == 0;
+                const auto self = info.This().As<Napi::Object>();
+                if (name == "width" || name == "height")
+                {
+                    self.Set(name, name == "width" ? 300 : 150);
+                }
+                self.Get(data ? "dataset" : "__attributes").As<Napi::Object>()
+                    .Delete(data ? DatasetKey(name) : name);
+            });
             SetMethod(canvas, "toDataURL", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                return Napi::String::New(info.Env(),
-                    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+                const auto self = info.This().As<Napi::Object>();
+                const auto width = PropU32(self, "width", 0);
+                const auto height = PropU32(self, "height", 0);
+                if (width == 0 || height == 0)
+                {
+                    return Napi::String::New(info.Env(), "data:,");
+                }
+                if (!Babylon::Plugins::Internal::SyncDawnCanvasPixels(info.Env(), self))
+                {
+                    throw Napi::Error::New(info.Env(), "Canvas.toDataURL: no readable 2D canvas");
+                }
+                const auto pixels = GetBytes(self.Get("__pixels"));
+                try
+                {
+                    return Napi::String::New(info.Env(), Babylon::Polyfills::Internal::EncodeCanvasPNG(
+                        width, height, {pixels.data, pixels.size}));
+                }
+                catch (const std::exception& error)
+                {
+                    throw Napi::Error::New(info.Env(), error.what());
+                }
             });
             SetMethod(canvas, "addEventListener", Noop);
             SetMethod(canvas, "removeEventListener", Noop);
@@ -4027,10 +4125,7 @@ namespace Babylon::Plugins::NativeDawn
             std::vector<uint8_t> rgba;
             if (in.data == nullptr || in.size == 0 || !DecodeRGBA(in.data, in.size, rgba, w, h))
             {
-                bmp.Set("width", Napi::Number::New(env, 1));
-                bmp.Set("height", Napi::Number::New(env, 1));
-                bmp.Set("__pixels", Napi::ArrayBuffer::New(env, 4));
-                return bmp;
+                throw Napi::Error::New(env, "createImageBitmap: the source image cannot be decoded");
             }
             Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, rgba.size());
             std::memcpy(ab.Data(), rgba.data(), rgba.size());
@@ -4133,6 +4228,8 @@ namespace Babylon::Plugins::NativeDawn
                         {
                             ResizeDrawingBuffer(info[0].As<Napi::Number>().Uint32Value(),
                                 g_requestedHeight != 0 ? g_requestedHeight : g_state.height);
+                            info.This().As<Napi::Object>().Get("__attributes").As<Napi::Object>()
+                                .Set("width", Napi::Number::New(info.Env(), g_requestedWidth).ToString());
                         }
                     }),
                 Napi::PropertyDescriptor::Accessor(env, canvas, "height",
@@ -4144,6 +4241,8 @@ namespace Babylon::Plugins::NativeDawn
                         {
                             ResizeDrawingBuffer(g_requestedWidth != 0 ? g_requestedWidth : g_state.width,
                                 info[0].As<Napi::Number>().Uint32Value());
+                            info.This().As<Napi::Object>().Get("__attributes").As<Napi::Object>()
+                                .Set("height", Napi::Number::New(info.Env(), g_requestedHeight).ToString());
                         }
                     }),
             });
@@ -4431,7 +4530,14 @@ namespace Babylon::Plugins::NativeDawn
                     Napi::Value p = ToArrayBuffer(env, src);
                     Napi::Function onAb = Napi::Function::New(env, [deferred](const Napi::CallbackInfo& info) -> Napi::Value {
                         Napi::Env env = info.Env();
-                        deferred.Resolve(DecodeToBitmap(env, info.Length() > 0 ? info[0] : env.Undefined()));
+                        try
+                        {
+                            deferred.Resolve(DecodeToBitmap(env, info.Length() > 0 ? info[0] : env.Undefined()));
+                        }
+                        catch (const Napi::Error& error)
+                        {
+                            deferred.Reject(error.Value());
+                        }
                         return env.Undefined();
                     });
                     Napi::Function onErr = Napi::Function::New(env, [deferred](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -4773,13 +4879,11 @@ namespace Babylon::Plugins::NativeDawn
             pending.second();
         }
         g_pendingDestroy.clear();
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+        ReleasePresentedTexture();
+#endif
 
-        if (g_state.currentSurfaceTexture)
-        {
-            wgpuTextureRelease(g_state.currentSurfaceTexture);
-            g_state.currentSurfaceTexture = nullptr;
-        }
-        g_currentTextureAcquired = false;
+        ReleaseSurfaceTexture();
 
         if (g_surfaceConfigured && g_state.surface)
         {
@@ -4818,8 +4922,7 @@ namespace Babylon::Plugins::NativeDawn
         // the previous texture's recorded work has been submitted.
         if (g_surfaceConfigured && g_currentTextureAcquired && !g_surfaceWorkPending)
         {
-            wgpuSurfacePresent(g_state.surface);
-            g_currentTextureAcquired = false;
+            PresentSurface();
             ApplyPendingSurfaceResize();
         }
         wgpuInstanceProcessEvents(g_state.instance);

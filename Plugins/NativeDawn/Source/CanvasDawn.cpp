@@ -12,6 +12,7 @@
 
 #include <napi/pointer.h>
 
+#include <algorithm>
 #include <cstring>
 #include <stdexcept>
 
@@ -445,6 +446,16 @@ namespace Babylon::Plugins::Internal
             {
                 std::memcpy(out.data() + static_cast<size_t>(y) * unpadded,
                     mapped + static_cast<size_t>(y) * padded, unpadded);
+            }
+            // NanoVG renders premultiplied colors; Canvas pixel APIs expose straight RGBA.
+            for (size_t i = 0; i < out.size(); i += 4)
+            {
+                const uint32_t alpha = out[i + 3];
+                for (size_t channel = 0; channel < 3; ++channel)
+                {
+                    out[i + channel] = alpha == 0 ? 0 :
+                        static_cast<uint8_t>(std::min(255u, (out[i + channel] * 255u + alpha / 2u) / alpha));
+                }
             }
             ok = true;
         }

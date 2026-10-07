@@ -86,6 +86,55 @@ replacements. The V8 finalizer-draining compatibility code is still needed until
 JsRuntimeHost's deferred-finalizer support is merged and the dependency pin is
 updated.
 
+The extended Lite regression run also uses local JsRuntimeHost and UrlLib fixes
+that are not provided by the unchanged dependency pins. Configure an existing
+Dawn build with explicit source overrides before rebuilding:
+
+```powershell
+cmake -S . -B build\dawn `
+    -DFETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST="C:\path\to\JsRuntimeHost-worktree" `
+    -DFETCHCONTENT_SOURCE_DIR_URLLIB="C:\path\to\UrlLib-worktree" `
+    -DJSRUNTIMEHOST_POLYFILL_COMPRESSION=ON
+cmake --build build\dawn --config RelWithDebInfo --target Playground UnitTests
+```
+
+The shared host supplies multipart Blob/File, Streams and gzip decompression,
+queueMicrotask, V8 structuredClone, and URL query-flag/duplicate preservation.
+Embedding initializes Compression only when that optional host target exists,
+so the older pinned host remains build-compatible. UrlLib supplies data-URL GET
+decoding, missing response Content-Type handling, and byte-preserving Windows
+POST bodies with case-insensitive Content-Type handling; these changes are in
+[BabylonJS/UrlLib#39](https://github.com/BabylonJS/UrlLib/pull/39).
+An override is a local integration experiment, not a dependency-pin update.
+Results against those sources must not be attributed to the default pins.
+
+NativeDawn Canvas2D uses real NanoVG/Dawn rasterization and straight-RGBA GPU
+readback for getImageData, PNG encoding, and external-image uploads. Backend
+initialization and mapping failures are explicit errors; there is no blit-only
+or fake-image fallback. The WebGPU validation runner initializes unready
+DynamicTexture canvases with an actual texture update before waiting for
+material readiness, avoiding a GUI initialization cycle without forcing ready
+flags or advancing test render frames.
+
+Canvas gradients interpolate straight RGBA stops, as verified against Chrome;
+premultiplication happens during painting, not while interpolating the ramp.
+Dawn text measurement uses the shared Canvas glyph advances and ink/font
+extents for the same loaded face used by drawing, rather than estimated Arial
+widths. Font state is restored together with NanoVG state. The standalone Dawn
+regression uses the existing Droid Sans test fixture copied under `Scripts`,
+so its font checks do not depend on a network download.
+
+Accurate Canvas metrics also expose a Babylon.js headless font-layout difference:
+its canvas-only `getFontOffset` fallback currently prefers `Hg` ink extents,
+whereas its DOM path measures the font line box. The canonical upstream
+correction prefers a complete usable font-bounds pair, with ink bounds and the
+CSS-size estimate retained as fallbacks. A source-generated backport into an
+isolated 9.21.2 consumer passes the original GUI subset; the default bundle and
+dependency pins remain unchanged. Preserve the upstream patch, backport script,
+bundle hash and executable identity when reproducing this experiment. These
+consumer results are not a permanent plugin workaround or evidence that the
+default Babylon.js catalog passes.
+
 For the Lite smoke test, install dependencies and run `pnpm build:lib` in a
 Babylon-Lite clone, using its declared Node and pnpm versions. From this repository,
 run `node .github\scripts\bundle-lite-scene.mjs <lite-clone> scene1 <playground-dir>\Scripts\scene1.playground.js`
@@ -100,9 +149,62 @@ engine creation, the Playground's `NativeEngine` alias, and shader-helper script
 loading live in `Scripts/dawn_playground.js`, explicitly loaded by the Playground
 bootstrap, not in the plugin.
 
-On Windows, running only `lite_native.js` or `dawn_runtime_native.js` skips the
+On Windows, running only `lite_native.js`, `lite_parity_native.js`, or
+`dawn_runtime_native.js` skips the
 Babylon.js bootstrap entirely. The Lite test checks that no Babylon.js global or
 pre-created Playground engine is present, then initializes its own WebGPU engine.
+
+For the full Lite parity catalog, clone Babylon-Lite under `build\lite-parity`,
+install its locked dependencies using its declared Node/pnpm versions, and build
+its library. Run `bundle-lite-parity.mjs` to produce a classic bundle for every
+`scene-config.json` entry, then `prepare-lite-parity.mjs` to generate an isolated
+copy of its Playwright tests:
+
+```powershell
+node .github\scripts\bundle-lite-parity.mjs build\lite-parity <playground-dir>\Scripts\lite-parity
+node .github\scripts\prepare-lite-parity.mjs build\lite-parity <playground-dir>\Playground.exe build\lite-parity-results 60000
+# Serve the Lite lab on 127.0.0.1:5179. From the Lite clone:
+pnpm exec playwright test --config .native-parity\playwright.config.mjs
+# From BabylonNative:
+node .github\scripts\report-lite-parity.mjs
+```
+
+Use a new result directory for a post-fix run, and pass that directory to both
+preparation and reporting. Preparation accepts an optional final generated-test
+directory after the timeout; use a separate directory inside the Lite clone
+when another suite is running, so its fixture and reference paths remain unchanged.
+Concurrent native suites also require separate executable directories: the bridge
+bootstrap configuration lives under each executable's `Scripts` directory.
+Unset `RECAPTURE_GOLDEN` (the string `"false"` is
+truthy in the upstream helper), unset `NATIVE_PARITY_BROWSER`, and set
+`REUSE_BROWSER=0`. After rebuilding and before changing sources again, record
+the executable and exact local-source fingerprints:
+
+```powershell
+node .github\scripts\capture-dawn-provenance.mjs build\dawn build\lite-parity-postfix-results\provenance.json
+```
+
+The capture utility saves tracked patches and new-file contents beside the
+provenance file under `source-patches`. Its optional final argument selects an
+alternate executable when validating a separate build artifact.
+
+The reporter retains all attempts but summarizes the latest outcome per source
+test location and full title path, including its project. Playwright gives
+`--repeat-each` attempts different IDs; those attempts must not inflate distinct
+case coverage. Metrics retain the actual attempt IDs and timestamps so failed
+retry metrics do not contaminate the latest outcome. Oracle-only scene cases
+and browser-only bundle-size/catalog checks are counted separately from native
+cases.
+
+The native Page fixture transports evaluation and canvas readback over a
+loopback-only bridge. Each native navigation gets a fresh Playground process;
+Babylon.js reference navigations still use real Chrome. The adapter preserves
+scene assertions and thresholds, rejects dimension mismatches, and attempts
+quarantined scenes rather than omitting them. Unsupported native browser APIs
+fail explicitly. Browser-only bundle-size checks are not native rendering
+coverage. `Dawn-Lite-Parity.md` records each scene's outcome and evidence; a
+timeout or unavailable oracle is not a pixel-parity pass. Generated tests,
+copied references, logs, and images remain in the build directories.
 
 The default validation run compares rendered pixels against committed references.
 `--generate-references` only checks scene loading/rendering and writes images; it
