@@ -1,6 +1,6 @@
 import * as Mocha from "mocha";
 import { expect } from "chai";
-import { Constants, NativeEngine, Scene, Texture } from "@babylonjs/core";
+import { Constants, NativeEngine, RawTexture, Scene, Texture } from "@babylonjs/core";
 
 const fixtures: { name: string; png: string; pixels: number[]; width?: number; height?: number; tolerance?: number }[] = [
     {
@@ -142,5 +142,6 @@ export function registerPngTests(
                 }
             });
         }
+
     });
 }

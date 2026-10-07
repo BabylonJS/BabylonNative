@@ -37,8 +37,8 @@ namespace Babylon::ShaderCompilerCommon
 
     std::string ProcessSamplerFlip(std::string_view source)
     {
-        // The AST traverser flips 2D/volume coordinates, including explicit gradients and
-        // integer fetches, while preserving raw array rows and cube directions.
+        // The AST traverser flips 2D/array/volume coordinates, including explicit gradients
+        // and integer fetches, while preserving layers and cube directions.
         // Retain this identity passthrough for the existing backend call sites.
         return std::string{source};
     }

@@ -573,6 +573,107 @@ TEST(ShaderCompilation, VolumeCoordinateSideEffectsExecuteOnce)
 #endif
 }
 
+TEST(ShaderCompilation, RawArraySamplingPreservesRowsAndLayers)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_FLIPPED_SAMPLING_TESTS)
+    GTEST_SKIP();
+#else
+    for (const std::string sample : {
+             "texture(arrayTexture, (vec3(coord) + vec3(0.5, 0.5, 0.0)) / vec3(2.0, 2.0, 1.0))",
+             "texelFetch(arrayTexture, coord, 0)",
+             "textureGrad(arrayTexture, (vec3(coord) + vec3(0.5, 0.5, 0.0)) / vec3(2.0, 2.0, 1.0), vec2(0.0), vec2(0.0))"})
+    {
+        SCOPED_TRACE(sample);
+        const std::string fragmentShader = R"(
+            precision highp float;
+            uniform highp sampler2DArray arrayTexture;
+            void main() {
+                ivec3 coord = ivec3(int(gl_FragCoord.x) % 2, int(gl_FragCoord.y), int(gl_FragCoord.x) / 2);
+                gl_FragColor = )" + sample + R"(;
+            }
+        )";
+        const auto pixels = RenderFullScreenQuad(4, 2,
+            "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+            fragmentShader, false, R"(
+                var data = new Uint8Array(32);
+                for (var layer = 0; layer < 2; ++layer) {
+                    for (var y = 0; y < 2; ++y) {
+                        for (var x = 0; x < 2; ++x) {
+                            data.set([64 + layer * 128, 64 + y * 128, 32 + x * 64, 255],
+                                ((layer * 2 + y) * 2 + x) * 4);
+                        }
+                    }
+                }
+                var original = Array.from(data).join(",");
+                var array = BABYLON.RawTexture2DArray.CreateRGBATexture(
+                    data, 2, 2, 2, scene, false, false, BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                if (Array.from(data).join(",") !== original) {
+                    throw new Error("Array upload modified its source");
+                }
+                material.setTexture("arrayTexture", array);
+            )");
+        ASSERT_EQ(pixels.size(), 32u);
+        for (uint32_t row = 0; row < 2; ++row)
+        {
+            for (uint32_t x = 0; x < 4; ++x)
+            {
+                const auto offset = (row * 4 + x) * 4;
+                EXPECT_EQ(pixels[offset], 64 + (x / 2) * 128);
+                EXPECT_EQ(pixels[offset + 1], 64 + (1 - row) * 128);
+                EXPECT_EQ(pixels[offset + 2], 32 + (x % 2) * 64);
+                EXPECT_EQ(pixels[offset + 3], 255);
+            }
+        }
+    }
+#endif
+}
+
+TEST(ShaderCompilation, CompressedArraySamplingPreservesPartialRowsAndLayers)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_FLIPPED_SAMPLING_TESTS)
+    GTEST_SKIP();
+#else
+    for (const std::string sample : {
+             "texture(arrayTexture, vec3(0.5, gl_FragCoord.y / 6.0, floor(gl_FragCoord.x)))",
+             "texelFetch(arrayTexture, ivec3(1, int(gl_FragCoord.y), int(gl_FragCoord.x)), 0)"})
+    {
+        SCOPED_TRACE(sample);
+        const auto pixels = RenderFullScreenQuad(2, 6,
+            "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+            "precision highp float; uniform highp sampler2DArray arrayTexture; void main() { gl_FragColor = " + sample + "; }",
+            false, R"(
+                var data = new Uint8Array([
+                    0x00, 0xf8, 0x00, 0xf8, 0, 0, 0, 0,
+                    0xe0, 0x07, 0xe0, 0x07, 0, 0, 0, 0,
+                    0x1f, 0x00, 0x1f, 0x00, 0, 0, 0, 0,
+                    0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0
+                ]);
+                var original = Array.from(data).join(",");
+                var array = new BABYLON.RawTexture2DArray(
+                    data, 3, 6, 2, BABYLON.Constants.TEXTUREFORMAT_COMPRESSED_RGB_S3TC_DXT1,
+                    scene, false, false, BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                if (Array.from(data).join(",") !== original) {
+                    throw new Error("Compressed array upload modified its source");
+                }
+                material.setTexture("arrayTexture", array);
+            )");
+        ASSERT_EQ(pixels.size(), 48u);
+        for (uint32_t row = 0; row < 6; ++row)
+        {
+            const auto offset = row * 8;
+            EXPECT_EQ(pixels[offset], row < 2 ? 0 : 255);
+            EXPECT_EQ(pixels[offset + 1], row < 2 ? 255 : 0);
+            EXPECT_EQ(pixels[offset + 2], 0);
+            EXPECT_EQ(pixels[offset + 3], 255);
+            EXPECT_EQ(pixels[offset + 4], row < 2 ? 255 : 0);
+            EXPECT_EQ(pixels[offset + 5], row < 2 ? 255 : 0);
+            EXPECT_EQ(pixels[offset + 6], 255);
+            EXPECT_EQ(pixels[offset + 7], 255);
+        }
+    }
+#endif
+}
+
 TEST(ShaderCompilation, IntegerVolumeCoordinatesExecuteOnce)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -660,23 +761,20 @@ TEST(NativeEngineReadback, FloatTexturesUsePinnedJavaScriptByteContract)
                 var texture = BABYLON.RawTexture.CreateRGBATexture(
                     new Float32Array([0.25, 0.5, 0.75, 1.0]), 1, 1, scene, false, false,
                     BABYLON.Texture.NEAREST_SAMPLINGMODE, BABYLON.Constants.TEXTURETYPE_FLOAT);
-                return texture.readPixels().then(function (bytes) {
-                    if (!(bytes instanceof Uint8Array) || bytes.length !== 4) {
-                        throw new Error("Default float readback must contain four RGBA8 bytes");
-                    }
+                var handle = texture.getInternalTexture()._hardwareTexture.underlyingResource;
+                return engine._engine.readTexture(handle, 0, 0, 0, 1, 1, null, 0, 0, -1).then(function (buffer) {
+                    if (buffer.byteLength !== 4) throw new Error("Legacy readTexture must return four RGBA8 bytes");
+                    var bytes = new Uint8Array(buffer);
                     [64, 128, 191, 255].forEach(function (value, index) {
-                        if (Math.abs(bytes[index] - value) > 1) {
-                            throw new Error("Incorrect float-to-byte readback at channel " + index);
-                        }
+                        if (Math.abs(bytes[index] - value) > 1) throw new Error("Incorrect legacy readback");
                     });
                     var destination = new Uint8Array(12);
                     destination.fill(91);
-                    var region = destination.subarray(4, 8);
-                    return texture.readPixels(0, 0, region).then(function (result) {
-                        if (result !== region) throw new Error("Readback replaced the supplied buffer");
+                    return engine._engine.readTexture(handle, 0, 0, 0, 1, 1, destination.buffer, 4, 4, -1).then(function () {
                         for (var i = 0; i < destination.length; ++i) {
-                            var expected = i >= 4 && i < 8 ? bytes[i - 4] : 91;
-                            if (destination[i] !== expected) throw new Error("Readback changed bytes outside its view");
+                            if (destination[i] !== (i >= 4 && i < 8 ? bytes[i - 4] : 91)) {
+                                throw new Error("Legacy readback changed values outside its view");
+                            }
                         }
                     });
                 });
@@ -1163,5 +1261,342 @@ TEST(ShaderCompilation, InterfaceBlocksReserveAllMemberLocations)
     EXPECT_NEAR(pixels[1], 128, 1);
     EXPECT_NEAR(pixels[2], 191, 1);
     EXPECT_EQ(pixels[3], 255);
+#endif
+}
+
+TEST(NativeEngineShadows, PointLightCubeOrientationMatchesAllShadowLookups)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    constexpr uint32_t CELL_SIZE = 8;
+    constexpr uint32_t FACE_COUNT = 6;
+    constexpr uint32_t WIDTH = FACE_COUNT * 2 * CELL_SIZE;
+    constexpr uint32_t HEIGHT = CELL_SIZE;
+
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "attribute vec2 uv;\n"
+        "varying vec2 vUV;\n"
+        "void main(void) { vUV = uv; gl_Position = vec4(position, 1.0); }\n";
+
+    struct ShadowCase
+    {
+        int Filter;
+        const char* Name;
+        bool BackFaceCulling;
+        bool CullBackFaces;
+        bool ForceBackFacesOnly;
+        const char* Lookup;
+    };
+    const ShadowCase cases[] = {
+        {0, "none/back-cull", true, true, false, "computeShadowCube(worldPos, vec3(0.0), shadowSampler, 0.0, vec2(0.1, 10.1))"},
+        {0, "none/front-cull", true, false, false, "computeShadowCube(worldPos, vec3(0.0), shadowSampler, 0.0, vec2(0.1, 10.1))"},
+        {0, "none/force-back-faces", true, true, true, "computeShadowCube(worldPos, vec3(0.0), shadowSampler, 0.0, vec2(0.1, 10.1))"},
+        {1, "esm", true, true, false, "computeShadowWithESMCube(worldPos, vec3(0.0), shadowSampler, 0.0, 20.0, vec2(0.1, 10.1))"},
+        {2, "poisson", true, true, false, "computeShadowWithPoissonSamplingCube(worldPos, vec3(0.0), shadowSampler, 1.0 / 64.0, 0.0, vec2(0.1, 10.1))"},
+        {4, "close-esm", true, true, false, "computeShadowWithCloseESMCube(worldPos, vec3(0.0), shadowSampler, 0.0, 20.0, vec2(0.1, 10.1))"},
+    };
+
+    for (const auto& shadowCase : cases)
+    {
+        SCOPED_TRACE(shadowCase.Name);
+
+        // Each pair addresses one cube face in PointLight.getShadowDirection order:
+        // +X, -X, -Y, +Y, +Z, -Z. The first ray goes through an off-axis
+        // caster; the second reflects that ray across the face's projection-Y
+        // axis and must stay lit. The +/-Y faces use Z as their vertical axis.
+        const std::string fragmentShader =
+            "precision highp float;\n"
+            "varying vec2 vUV;\n"
+            "uniform samplerCube shadowSampler;\n"
+            "#define SHADOWS\n"
+            "#include<shadowsFragmentFunctions>\n"
+            "void main(void) {\n"
+            "    float cell = floor(min(vUV.x, 0.999999) * 12.0);\n"
+            "    vec3 direction;\n"
+            "    if (cell < 0.5) direction = vec3( 1.00,  0.31,  0.17);\n"
+            "    else if (cell < 1.5) direction = vec3( 1.00, -0.31,  0.17);\n"
+            "    else if (cell < 2.5) direction = vec3(-1.00, -0.27,  0.19);\n"
+            "    else if (cell < 3.5) direction = vec3(-1.00,  0.27,  0.19);\n"
+            "    else if (cell < 4.5) direction = vec3( 0.23, -1.00,  0.37);\n"
+            "    else if (cell < 5.5) direction = vec3( 0.23, -1.00, -0.37);\n"
+            "    else if (cell < 6.5) direction = vec3(-0.21,  1.00,  0.33);\n"
+            "    else if (cell < 7.5) direction = vec3(-0.21,  1.00, -0.33);\n"
+            "    else if (cell < 8.5) direction = vec3( 0.29,  0.35,  1.00);\n"
+            "    else if (cell < 9.5) direction = vec3( 0.29, -0.35,  1.00);\n"
+            "    else if (cell < 10.5) direction = vec3(-0.25, -0.33, -1.00);\n"
+            "    else direction = vec3(-0.25,  0.33, -1.00);\n"
+            "    vec3 worldPos = normalize(direction) * 6.0;\n"
+            "    float visibility = " +
+            std::string{shadowCase.Lookup} +
+            ";\n"
+            "    gl_FragColor = vec4(vec3(visibility), 1.0);\n"
+            "}\n";
+
+        const std::string setupScript =
+            R"(
+                var filter = )" +
+            std::to_string(shadowCase.Filter) +
+            R"(;
+                var backFaceCulling = )" +
+            std::string{shadowCase.BackFaceCulling ? "true" : "false"} +
+            R"(;
+                var cullBackFaces = )" +
+            std::string{shadowCase.CullBackFaces ? "true" : "false"} +
+            R"(;
+                var forceBackFacesOnly = )" +
+            std::string{shadowCase.ForceBackFacesOnly ? "true" : "false"} +
+            R"(;
+
+                camera.layerMask = 0x1;
+                quad.layerMask = 0x1;
+                quad.renderingGroupId = 1;
+
+                var light = new BABYLON.PointLight("shadowLight", BABYLON.Vector3.Zero(), scene);
+                light.shadowMinZ = 0.1;
+                light.shadowMaxZ = 10.0;
+
+                // Force the portable packed-RGBA shadow path so the lookup
+                // shader has one format on every Native backend.
+                var caps = engine.getCaps();
+                var capNames = [
+                    "textureHalfFloatRender",
+                    "textureHalfFloatLinearFiltering",
+                    "textureFloatRender",
+                    "textureFloatLinearFiltering"
+                ];
+                var savedCaps = capNames.map(function (name) { return caps[name]; });
+                var shadowGenerator;
+                try {
+                    capNames.forEach(function (name) { caps[name] = false; });
+                    shadowGenerator = new BABYLON.ShadowGenerator(64, light);
+                } finally {
+                    capNames.forEach(function (name, index) { caps[name] = savedCaps[index]; });
+                }
+                shadowGenerator.filter = filter;
+                shadowGenerator.bias = 0.0;
+                shadowGenerator.depthScale = 20.0;
+                shadowGenerator.forceBackFacesOnly = forceBackFacesOnly;
+
+                var casterMaterial = new BABYLON.StandardMaterial("casterMaterial", scene);
+                casterMaterial.disableLighting = true;
+                casterMaterial.backFaceCulling = backFaceCulling;
+                casterMaterial.cullBackFaces = cullBackFaces;
+
+                var casterDirections = [
+                    new BABYLON.Vector3( 1.00,  0.31,  0.17),
+                    new BABYLON.Vector3(-1.00, -0.27,  0.19),
+                    new BABYLON.Vector3( 0.23, -1.00,  0.37),
+                    new BABYLON.Vector3(-0.21,  1.00,  0.33),
+                    new BABYLON.Vector3( 0.29,  0.35,  1.00),
+                    new BABYLON.Vector3(-0.25, -0.33, -1.00)
+                ];
+                casterDirections.forEach(function (direction, face) {
+                    direction.normalize();
+                    var caster = BABYLON.MeshBuilder.CreateBox(
+                        "caster" + face,
+                        { width: 0.8, height: 0.8, depth: 0.8 },
+                        scene);
+                    caster.position.copyFrom(direction.scale(3.0));
+                    caster.material = casterMaterial;
+                    caster.layerMask = 0x2;
+                    shadowGenerator.addShadowCaster(caster, false);
+                });
+
+                material.options.samplers.push("shadowSampler");
+                material.setTexture("shadowSampler", shadowGenerator.getShadowMapForRendering());
+                globalThis.__prepare = function () {
+                    return Promise.all([
+                        shadowGenerator.forceCompilationAsync(),
+                        material.forceCompilationAsync(quad)
+                    ]);
+                };
+            )";
+
+        const auto pixels = RenderFullScreenQuad(WIDTH, HEIGHT, vertexShader, fragmentShader, false, setupScript);
+        ASSERT_EQ(pixels.size(), static_cast<size_t>(WIDTH) * HEIGHT * 4);
+
+        const auto redAtCell = [&pixels](uint32_t cell) {
+            const uint32_t x = cell * CELL_SIZE + CELL_SIZE / 2;
+            const uint32_t y = HEIGHT / 2;
+            return static_cast<int>(pixels[(static_cast<size_t>(y) * WIDTH + x) * 4]);
+        };
+        const char* faceNames[] = {"+X", "-X", "-Y", "+Y", "+Z", "-Z"};
+        for (uint32_t face = 0; face < FACE_COUNT; ++face)
+        {
+            const int shadowed = redAtCell(face * 2);
+            const int lit = redAtCell(face * 2 + 1);
+            EXPECT_LT(shadowed, 64)
+                << faceNames[face] << " off-axis caster ray was not shadowed (visibility=" << shadowed << ")";
+            EXPECT_GT(lit, 192)
+                << faceNames[face] << " projection-Y mirror ray was not lit (visibility=" << lit << ")";
+        }
+    }
+#endif
+}
+
+TEST(NativeEngineTextureSampling, NoMipSamplingPreservesFiltersAndModeChanges)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "attribute vec2 uv;\n"
+        "varying vec2 vUV;\n"
+        "void main(void) { vUV = uv; gl_Position = vec4(position, 1.0); }\n";
+    struct SamplingCase
+    {
+        int Mode;
+        int Anisotropy;
+        int Red;
+        int Green;
+        int MagnifiedRed;
+    };
+    const SamplingCase cases[] = {
+        {1, 1, 0, 0, 255},   // Nearest, no mips.
+        {2, 1, 128, 0, 191}, // Linear, no mips.
+        {2, 4, 255, 0, 255}, // Anisotropic, constant-color base mip.
+        {3, 1, 0, 255, 191}, // Linear mip filtering restored.
+        {4, 1, 0, 255, 255}, // Point mip filtering restored.
+    };
+    for (const auto& sample : cases)
+    {
+        SCOPED_TRACE(::testing::Message() << "mode=" << sample.Mode << ", anisotropy=" << sample.Anisotropy);
+        const std::string setupScript = R"(
+            var requestedMode = )" + std::to_string(sample.Mode) + R"(;
+            var anisotropy = )" + std::to_string(sample.Anisotropy) + R"(;
+            // Distinct lower mips separate mip selection from spatial filtering.
+            var sampled;
+            for (var mip = 0, size = 8; size >= 1; mip++, size /= 2) {
+                var pixels = new Uint8Array(size * size * 4);
+                var offset = 0;
+                for (var y = 0; y < size; y++) {
+                    for (var x = 0; x < size; x++) {
+                        pixels[offset++] = mip === 0 && (anisotropy > 1 || x % 2 === 0) ? 255 : 0;
+                        pixels[offset++] = mip === 0 ? 0 : 255;
+                        pixels[offset++] = 0;
+                        pixels[offset++] = 255;
+                    }
+                }
+                if (mip === 0) {
+                    sampled = BABYLON.RawTexture.CreateRGBATexture(pixels, size, size, scene, true, false, 1);
+                } else {
+                    engine.updateTextureData(sampled.getInternalTexture(), pixels, 0, 0, size, size, 0, mip);
+                }
+            }
+            sampled.anisotropicFilteringLevel = anisotropy;
+            sampled.updateSamplingMode(4);
+            sampled.updateSamplingMode(requestedMode);
+            material.setTexture("inputSampler", sampled);
+        )";
+        for (const bool magnify : {false, true})
+        {
+            SCOPED_TRACE(::testing::Message() << "magnify=" << magnify);
+            const std::string fragmentShader =
+                "precision highp float;\n"
+                "uniform sampler2D inputSampler;\n"
+                "varying vec2 vUV;\n"
+                "void main(void) { gl_FragColor = texture2D(inputSampler, vUV * " +
+                std::string{magnify ? "0.125" : "0.5"} + " + 0.25); }\n";
+            const auto pixels = RenderFullScreenQuad(2, 2, vertexShader, fragmentShader, true, setupScript);
+            ASSERT_EQ(pixels.size(), 16u);
+            for (size_t offset = 0; offset < pixels.size(); offset += 4)
+            {
+                EXPECT_NEAR(pixels[offset], magnify ? sample.MagnifiedRed : sample.Red, 1);
+                EXPECT_NEAR(pixels[offset + 1], magnify ? 0 : sample.Green, 1);
+                EXPECT_EQ(pixels[offset + 2], 0);
+                EXPECT_EQ(pixels[offset + 3], 255);
+            }
+        }
+    }
+#endif
+}
+
+TEST(ShaderCompilation, PbrRoughnessSquareInNestedLoops)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "void main(void) { gl_Position = vec4(position, 1.0); }\n";
+
+    // Use the production include: FXC can replace roughness squared with
+    // roughness when the saturated value is used inside nested dynamic loops.
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "uniform vec2 targetSize;\n"
+        "#include<helperFunctions>\n"
+        "#include<pbrHelperFunctions>\n"
+        "void main(void) {\n"
+        "    vec3 result = vec3(0.0);\n"
+        "    for (int i = 0; i < int(targetSize.x); ++i) {\n"
+        "        for (int j = 0; j < int(targetSize.y); ++j) {\n"
+        "            float roughness = clamp(1.0 / targetSize.x, 0.0, 1.0);\n"
+        "            result = vec3(roughness, convertRoughnessToAverageSlope(roughness), sqrt(roughness));\n"
+        "        }\n"
+        "    }\n"
+        "    gl_FragColor = vec4(result, 1.0);\n"
+        "}\n";
+
+    auto pixels = RenderFullScreenQuad(2, 1, vertexShader, fragmentShader, false);
+    ASSERT_EQ(pixels.size(), 8u);
+    for (size_t offset = 0; offset < pixels.size(); offset += 4)
+    {
+        EXPECT_NEAR(pixels[offset], 128, 1);
+        EXPECT_NEAR(pixels[offset + 1], 64, 1) << "roughness 0.5 must produce alphaG 0.2505, not 0.5005";
+        EXPECT_NEAR(pixels[offset + 2], 180, 1);
+        EXPECT_EQ(pixels[offset + 3], 255);
+    }
+#endif
+}
+
+TEST(ShaderCompilation, SaturatedArithmeticInNestedLoops)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "void main(void) { gl_Position = vec4(position, 1.0); }\n";
+    const std::string arithmetic =
+        "float value = clamp(1.0 / targetSize.x, 0.0, 1.0);\n"
+        "float squared = value * value;\n"
+        "float fifth = squared * squared * value;\n"
+        "float attenuation = clamp(1.0 - value, 0.0, 1.0);\n"
+        "attenuation *= attenuation;\n"
+        "result = vec3(squared, fifth, attenuation);\n";
+    const std::vector<std::pair<std::string, std::string>> loops{
+        {"for (int i = 0; i < int(targetSize.x); ++i) { for (int j = 0; j < int(targetSize.y); ++j) {\n", "}}\n"},
+        {"int i = 0; while (i++ < int(targetSize.x)) { int j = 0; while (j++ < int(targetSize.y)) {\n", "}}\n"},
+        {"int i = 0; do { int j = 0; do {\n", "} while (++j < int(targetSize.y)); } while (++i < int(targetSize.x));\n"},
+    };
+    for (const auto& loop : loops)
+    {
+        SCOPED_TRACE(loop.first);
+        const std::string fragmentShader =
+            "precision highp float;\n"
+            "uniform vec2 targetSize;\n"
+            "void main(void) {\n"
+            "vec3 result = vec3(0.0);\n" +
+            loop.first + arithmetic + loop.second +
+            "gl_FragColor = vec4(result, 1.0);\n"
+            "}\n";
+        auto pixels = RenderFullScreenQuad(2, 1, vertexShader, fragmentShader, false);
+        ASSERT_EQ(pixels.size(), 8u);
+        for (size_t offset = 0; offset < pixels.size(); offset += 4)
+        {
+            EXPECT_NEAR(pixels[offset], 64, 1);
+            EXPECT_NEAR(pixels[offset + 1], 8, 1);
+            EXPECT_NEAR(pixels[offset + 2], 64, 1);
+            EXPECT_EQ(pixels[offset + 3], 255);
+        }
+    }
 #endif
 }

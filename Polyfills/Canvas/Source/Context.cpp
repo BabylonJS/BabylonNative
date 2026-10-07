@@ -967,7 +967,12 @@ namespace Babylon::Polyfills::Internal
 
         nvgSetViewport(*m_nvg, float(width), float(height));
         nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
-        nvgSetFrameBufferPool(*m_nvg, { acquire, release });
+        const auto samplerFlags = [this] {
+            // Border colors share bgfx's palette with framebuffer clears.
+            const auto transparent = m_graphicsContext.AcquireClearPaletteIndex({0.f, 0.f, 0.f, 0.f});
+            return BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(transparent);
+        };
+        nvgSetFrameBufferPool(*m_nvg, { acquire, release, samplerFlags });
         nvgEndFrame(*m_nvg);
         ReleaseImagesAfterFlush();
         ReleaseClipMasksAfterFlush();

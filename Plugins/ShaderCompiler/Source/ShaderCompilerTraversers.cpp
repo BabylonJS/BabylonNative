@@ -2163,7 +2163,7 @@ namespace Babylon::ShaderCompilerTraversers
                     auto& sequence = node->getSequence();
                     if (sequence.size() >= 2)
                     {
-                        // Raw array uploads keep their rows; leave array coordinates and cube directions unchanged.
+                        // Raw uploads and rendered layers share the framebuffer origin; preserve cube directions.
                         auto* sampler = sequence[0]->getAsTyped();
                         auto* coordinate = sequence[1]->getAsTyped();
                         if (sampler != nullptr && coordinate != nullptr &&
@@ -2173,7 +2173,7 @@ namespace Babylon::ShaderCompilerTraversers
                         {
                             const TSampler& samp = sampler->getType().getSampler();
                             const int vecSize = coordinate->getType().getVectorSize();
-                            if (!samp.arrayed && (samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
+                            if ((samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
                             {
                                 sequence[1] = FlipVerticalCoordinate(coordinate);
                                 if (node->getOp() == EOpTextureGrad)
@@ -2200,7 +2200,8 @@ namespace Babylon::ShaderCompilerTraversers
                             !coordinate->getType().isArray())
                         {
                             const int vecSize = coordinate->getType().getVectorSize();
-                            if (vecSize == 2 || (vecSize == 3 && sampler->getType().getSampler().dim == Esd3D))
+                            const auto& samp = sampler->getType().getSampler();
+                            if (vecSize == 2 || (vecSize == 3 && (samp.dim == Esd3D || samp.arrayed)))
                             {
                                 const auto& loc = coordinate->getLoc();
                                 TIntermSymbol coordinateTemp{m_ids.Next(), "bnTexelCoordinate", TType{EbtInt, EvqTemporary, vecSize}};

@@ -38,7 +38,9 @@ namespace
 
         auto compiler = std::make_unique<spirv_cross::CompilerHLSL>(parser->get_parsed_ir());
 
-        compiler->set_hlsl_options({40, true});
+        spirv_cross::CompilerHLSL::Options options{40, true};
+        options.enable_fxc_nested_loop_workaround = true;
+        compiler->set_hlsl_options(options);
 
         for (const auto& attribute : attributes)
         {

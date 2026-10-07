@@ -26,6 +26,7 @@ struct PoolInterface
 {
     std::function<Babylon::Graphics::FrameBuffer*()> acquire;
     std::function<void(Babylon::Graphics::FrameBuffer*)> release;
+    std::function<uint32_t()> samplerFlags;
 };
 
 void nvgSetFrameBufferPool(NVGcontext* _ctx, PoolInterface pool);

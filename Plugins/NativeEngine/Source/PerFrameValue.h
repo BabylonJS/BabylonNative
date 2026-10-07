@@ -4,6 +4,8 @@
 
 #include <arcana/threading/cancellation.h>
 
+#include <memory>
+
 namespace Babylon
 {
     // This type contains a per-frame value which automatically resets to
@@ -12,9 +14,9 @@ namespace Babylon
     class PerFrameValue
     {
     public:
-        PerFrameValue(Graphics::DeviceContext& context, arcana::cancellation_source& cancellation, T defaultValue)
+        PerFrameValue(Graphics::DeviceContext& context, std::shared_ptr<arcana::cancellation_source> cancellation, T defaultValue)
             : m_context{context}
-            , m_cancellationSource{cancellation}
+            , m_cancellationSource{std::move(cancellation)}
             , m_defaultValue{defaultValue}
             , m_value{defaultValue}
             , m_isResetScheduled{false}
@@ -31,7 +33,8 @@ namespace Babylon
             m_value = value;
             if (!m_isResetScheduled)
             {
-                arcana::make_task(m_context.AfterRenderScheduler(), m_cancellationSource, [this]() {
+                // The task may outlive this object, so it keeps the cancellation source alive.
+                arcana::make_task(m_context.AfterRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
                     m_value = m_defaultValue;
                     m_isResetScheduled = false;
                 });
@@ -41,7 +44,7 @@ namespace Babylon
 
     private:
         Graphics::DeviceContext& m_context;
-        arcana::cancellation_source& m_cancellationSource;
+        std::shared_ptr<arcana::cancellation_source> m_cancellationSource;
         const T m_defaultValue{};
         T m_value{};
         bool m_isResetScheduled{};

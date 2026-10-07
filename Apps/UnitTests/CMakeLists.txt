@@ -187,9 +187,13 @@ if(GRAPHICS_API STREQUAL "OpenGL")
     # OpenGL the "device" is a context bgfx created, and a bare context carries no display or
     # surface, so Helpers::CreateDevice cannot make one current to allocate against.
     # See https://github.com/BabylonJS/BabylonNative/issues/1810.
+    #
+    # Flipped sampling: the sampler and texture row flips these tests cover only run on
+    # top-left-origin backends; GLSL samples in GL's native bottom-left orientation.
     target_compile_definitions(UnitTests PRIVATE
         SKIP_MULTISAMPLE_TESTS
-        SKIP_DEVICE_LOSS_TESTS)
+        SKIP_DEVICE_LOSS_TESTS
+        SKIP_FLIPPED_SAMPLING_TESTS)
 endif()
 
 add_test(NAME UnitTests COMMAND UnitTests)

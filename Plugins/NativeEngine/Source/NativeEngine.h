@@ -123,6 +123,8 @@ namespace Babylon
         void DiscardAllTextures(NativeDataStream::Reader& data);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value ReadTexture(const Napi::CallbackInfo& info);
+        Napi::Value ReadTexture2(const Napi::CallbackInfo& info);
+        Napi::Value ReadTextureImpl(const Napi::CallbackInfo& info, bool preserveFloat);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, bool autoGenerateMips = true, Graphics::Texture* depthStencilTexture = nullptr);
@@ -135,6 +137,8 @@ namespace Babylon
         void Draw(NativeDataStream::Reader& data);
         void DrawInstanced(NativeDataStream::Reader& data);
         void Clear(NativeDataStream::Reader& data);
+        void Clear2(NativeDataStream::Reader& data);
+        void ClearImpl(NativeDataStream::Reader& data, bool hasAttachmentMask);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
         Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
@@ -144,6 +148,8 @@ namespace Babylon
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetRenderResetCallback(const Napi::CallbackInfo& info);
         void SetStencil(NativeDataStream::Reader& data);
+        void SetStencil2(NativeDataStream::Reader& data);
+        void SetStencilImpl(NativeDataStream::Reader& data, bool hasComparisonMask);
         void SetViewPort(NativeDataStream::Reader& data);
         void SetScissor(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);

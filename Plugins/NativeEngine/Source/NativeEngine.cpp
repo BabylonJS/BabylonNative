@@ -127,6 +127,27 @@ namespace Babylon
             constexpr uint32_t DARKEN = 5;
         }
 
+        constexpr bool IsFloatTextureFormat(bgfx::TextureFormat::Enum format)
+        {
+            switch (format)
+            {
+                case bgfx::TextureFormat::R16F:
+                case bgfx::TextureFormat::RG16F:
+                case bgfx::TextureFormat::RGBA16F:
+                case bgfx::TextureFormat::R32F:
+                case bgfx::TextureFormat::RG32F:
+                case bgfx::TextureFormat::RGBA32F:
+                case bgfx::TextureFormat::RGB9E5F:
+                case bgfx::TextureFormat::RG11B10F:
+                case bgfx::TextureFormat::D16F:
+                case bgfx::TextureFormat::D24F:
+                case bgfx::TextureFormat::D32F:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         void FlipImage(gsl::span<uint8_t> image, uint32_t height)
         {
             const size_t rowPitch{image.size() / height};
@@ -1018,7 +1039,9 @@ namespace Babylon
                 StaticValue("COMMAND_DRAW", Napi::FunctionPointer::Create(env, &NativeEngine::Draw)),
                 StaticValue("COMMAND_DRAWINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawInstanced)),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
+                StaticValue("COMMAND_CLEAR2", Napi::FunctionPointer::Create(env, &NativeEngine::Clear2)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
+                StaticValue("COMMAND_SETSTENCIL2", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil2)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
                 StaticValue("COMMAND_SETSCISSOR", Napi::FunctionPointer::Create(env, &NativeEngine::SetScissor)),
                 StaticValue("COMMAND_COPYTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::CopyTexture)),
@@ -1063,6 +1086,7 @@ namespace Babylon
                 InstanceMethod("setTextureComparisonFunction", &NativeEngine::SetTextureComparisonFunction),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
+                InstanceMethod("readTexture2", &NativeEngine::ReadTexture2),
 
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
@@ -1105,7 +1129,7 @@ namespace Babylon
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
-        , m_boundFrameBufferNeedsRebinding{m_deviceContext, *m_cancellationSource, true}
+        , m_boundFrameBufferNeedsRebinding{m_deviceContext, m_cancellationSource, true}
     {
         // Set features supported by the NativeEngine from Babylon.js.
         if (!info[0].IsUndefined())
@@ -2099,8 +2123,13 @@ namespace Babylon
         // are ever uploaded or sampled (the shader indexes an explicit layer).
         const uint16_t allocLayers{depth > 1 ? depth : static_cast<uint16_t>(2)};
 
+        const bool flipRows = !bgfx::getCaps()->originBottomLeft;
+        const bool decodeBlocks = flipRows && bimg::isCompressed(format);
+        const auto uploadFormat = decodeBlocks
+            ? (bimg::isFloat(format) ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA8)
+            : format;
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
-        texture->Create2D(width, height, generateMips, allocLayers, Cast(format), flags);
+        texture->Create2D(width, height, generateMips, allocLayers, Cast(uploadFormat), flags);
 
         if (!data.IsNull())
         {
@@ -2120,7 +2149,8 @@ namespace Babylon
 
             // bgfx::Memory uses a 32-bit size; reject a per-layer payload that
             // would be truncated by the bgfx::copy cast below.
-            if (textureSize > UINT32_MAX)
+            const auto uploadSize = bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, uploadFormat);
+            if (textureSize > UINT32_MAX || uploadSize > UINT32_MAX)
             {
                 throw Napi::Error::New(Env(), "The 2D texture array layer size is too large.");
             }
@@ -2128,7 +2158,33 @@ namespace Babylon
             for (uint16_t i = 0; i < depth; i++)
             {
                 uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
-                const bgfx::Memory* dataCopy = bgfx::copy(begin, static_cast<uint32_t>(textureSize)); // This is required since BGFX must manage the data the memory.
+                using ImagePtr = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
+                ImagePtr decoded{nullptr, bimg::imageFree};
+                gsl::span<const uint8_t> upload{begin, textureSize};
+                if (decodeBlocks)
+                {
+                    // Compressed blocks are not pixel rows; decode before flipping, including partial edge blocks.
+                    auto& allocator = Graphics::DeviceContext::GetDefaultAllocator();
+                    ImagePtr source{bimg::imageAlloc(&allocator, format, width, height, 0, 1, false, false, begin), bimg::imageFree};
+                    if (!source)
+                    {
+                        throw Napi::Error::New(Env(), "Failed to allocate the compressed array layer.");
+                    }
+                    source->m_width = width;
+                    source->m_height = height;
+                    decoded.reset(bimg::imageConvert(&allocator, uploadFormat, *source, false));
+                    if (!decoded || decoded->m_size != uploadSize)
+                    {
+                        throw Napi::Error::New(Env(), "Failed to decode the compressed array layer.");
+                    }
+                    upload = {static_cast<const uint8_t*>(decoded->m_data), decoded->m_size};
+                }
+                const bgfx::Memory* dataCopy = bgfx::copy(upload.data(), static_cast<uint32_t>(upload.size()));
+                if (flipRows)
+                {
+                    // Match rendered array layers without modifying the caller's data.
+                    FlipImage({dataCopy->data, upload.size()}, height);
+                }
                 texture->Update2D(i, 0, 0, 0, width, height, dataCopy);
             }
         }
@@ -2542,6 +2598,16 @@ namespace Babylon
 
     Napi::Value NativeEngine::ReadTexture(const Napi::CallbackInfo& info)
     {
+        return ReadTextureImpl(info, false);
+    }
+
+    Napi::Value NativeEngine::ReadTexture2(const Napi::CallbackInfo& info)
+    {
+        return ReadTextureImpl(info, true);
+    }
+
+    Napi::Value NativeEngine::ReadTextureImpl(const Napi::CallbackInfo& info, bool preserveFloat)
+    {
         const Napi::Env env{info.Env()};
 
         Graphics::Texture* texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
@@ -2640,7 +2706,7 @@ namespace Babylon
         }
 
         // Check the full storage size before bgfx narrows it to uint32.
-        const auto targetTextureFormat{bgfx::TextureFormat::RGBA8};
+        const auto targetTextureFormat{preserveFloat && IsFloatTextureFormat(sourceTextureFormat) ? bgfx::TextureFormat::RGBA32F : bgfx::TextureFormat::RGBA8};
         const auto storageSize = [&](bgfx::TextureFormat::Enum format) {
             return bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, static_cast<bimg::TextureFormat::Enum>(format));
         };
@@ -3227,6 +3293,16 @@ namespace Babylon
 
     void NativeEngine::Clear(NativeDataStream::Reader& data)
     {
+        ClearImpl(data, false);
+    }
+
+    void NativeEngine::Clear2(NativeDataStream::Reader& data)
+    {
+        ClearImpl(data, true);
+    }
+
+    void NativeEngine::ClearImpl(NativeDataStream::Reader& data, bool hasAttachmentMask)
+    {
         uint16_t flags{0};
 
         const bool shouldClearColor{static_cast<bool>(data.ReadUint32())};
@@ -3238,6 +3314,7 @@ namespace Babylon
         const float depth{data.ReadFloat32()};
         const bool shouldClearStencil{static_cast<bool>(data.ReadUint32())};
         const uint8_t stencil{static_cast<uint8_t>(data.ReadUint32())};
+        const uint8_t colorAttachmentMask{static_cast<uint8_t>(hasAttachmentMask ? data.ReadUint32() : UINT8_MAX)};
 
         bgfx::Encoder* encoder = GetEncoder();
 
@@ -3257,7 +3334,7 @@ namespace Babylon
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil);
+        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask);
         // FrameBuffer::Clear touches its view, discarding bgfx bindings. WebGL clears retain them.
         RestoreBoundTextures(encoder);
     }
@@ -3450,14 +3527,25 @@ namespace Babylon
 
     void NativeEngine::SetStencil(NativeDataStream::Reader& data)
     {
+        SetStencilImpl(data, false);
+    }
+
+    void NativeEngine::SetStencil2(NativeDataStream::Reader& data)
+    {
+        SetStencilImpl(data, true);
+    }
+
+    void NativeEngine::SetStencilImpl(NativeDataStream::Reader& data, bool hasComparisonMask)
+    {
         const uint32_t writeMask{data.ReadUint32()};
         const uint32_t stencilOpFail{data.ReadUint32()};
         const uint32_t depthOpFail{data.ReadUint32()};
         const uint32_t depthOpPass{data.ReadUint32()};
         const uint32_t func{data.ReadUint32()};
         const uint32_t ref{data.ReadUint32()};
+        const uint32_t funcMask{hasComparisonMask ? data.ReadUint32() : UINT8_MAX};
 
-        m_stencilState = BGFX_STENCIL_FUNC_RMASK(0xFF);
+        m_stencilState = BGFX_STENCIL_FUNC_RMASK(funcMask & 0xFFu);
         m_stencilState |= stencilOpFail;
         m_stencilState |= depthOpFail;
         // bgfx write mask is always 0xFF, to not change stencil value when writemask is 0
@@ -3545,7 +3633,6 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), exception);
         }
     }
-
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
     {
         const auto stats{bgfx::getStats()};

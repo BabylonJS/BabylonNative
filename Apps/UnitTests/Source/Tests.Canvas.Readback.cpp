@@ -194,6 +194,44 @@ TEST(CanvasReadback, GaussianBlurPadsUniformUploads)
     });
 }
 
+TEST(CanvasReadback, FilterBordersDoNotReuseClearPaletteColors)
+{
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    RunCanvasTest([](Napi::Env env) {
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        auto scope = graphics.AcquireFrameCompletionScope();
+        graphics.AcquireClearPaletteIndex({0.2f, 0.4f, 0.8f, 1.f});
+        Napi::Eval(env, R"JS(
+            const source = new _native.Canvas();
+            const destination = new _native.Canvas();
+            source.width = destination.width = 16;
+            source.height = destination.height = 16;
+            const sourceContext = source.getContext("2d");
+            const destinationContext = destination.getContext("2d");
+            try {
+                sourceContext.fillStyle = "#ffffff";
+                sourceContext.fillRect(4, 4, 8, 8);
+                destinationContext.filter = "blur(2px)";
+                destinationContext.drawImage(source, 0, 0);
+                const pixels = destinationContext.getImageData(0, 0, 16, 16).data;
+                const offset = (8 * 16 + 3) * 4;
+                if (pixels[offset] !== pixels[offset + 1] || pixels[offset + 1] !== pixels[offset + 2] ||
+                    pixels[offset + 3] === 0 || pixels[offset + 3] === 255) {
+                    throw new Error("Canvas filter border inherited a framebuffer clear color");
+                }
+            } finally {
+                sourceContext.dispose();
+                destinationContext.dispose();
+                source.dispose();
+                destination.dispose();
+            }
+        )JS", "canvas-filter-border-palette.js");
+    });
+#endif
+}
+
 #ifdef HAS_NATIVE_IMAGE_LOADING
 TEST(CanvasImages, SvgUsesBimgParserAndRgbaPixels)
 {
