@@ -32,6 +32,8 @@ export function registerIblCdfTests(
                     }
                 }
                 const texture = RawTexture.CreateRGBATexture(data, 4, 4, scene, false, false, Constants.TEXTURE_NEAREST_SAMPLINGMODE);
+                texture.wrapU = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+                texture.wrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
                 const material = new ShaderMaterial("cdfBins", scene, {
                     vertexSource: `
                         precision highp float;
@@ -40,7 +42,6 @@ export function registerIblCdfTests(
                     fragmentSource: `
                         precision highp float;
                         uniform sampler2D icdf;
-                        #include<iblCdfFunctions>
                         void main() {
                             float index = floor(gl_FragCoord.x);
                             float coordinate = index / 4.0;
@@ -48,7 +49,7 @@ export function registerIblCdfTests(
                             if (index == 6.0) coordinate = 1.5;
                             if (index == 7.0) coordinate = 0.5 - 1.0 / 1024.0;
                             if (index == 8.0) coordinate = 0.5 + 1.0 / 1024.0;
-                            gl_FragColor = sampleIcdf(icdf, vec2(coordinate));
+                            gl_FragColor = texture2D(icdf, vec2(coordinate));
                         }`,
                 }, { attributes: ["position"], uniforms: [], samplers: ["icdf"] });
                 material.backFaceCulling = false;
@@ -60,6 +61,7 @@ export function registerIblCdfTests(
                     samples: 1,
                 });
                 target.renderList = [plane];
+                await material.forceCompilationAsync(plane);
                 await scene.whenReadyAsync();
                 target.render();
                 const pixels = await target.readPixels();

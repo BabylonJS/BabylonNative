@@ -45,7 +45,8 @@ namespace Babylon::Plugins::ShaderCache
     //    version-5 entries for those shaders skip compilation and omit the uniform.
     // 7: shader binaries are bgfx BGFX_SHADER_BIN_VERSION 13 and, on D3D, record each
     //    sampler's register index and its paired texture's dimension.
-    static const uint32_t CACHE_VERSION = 7;
+    // 8: preserve application uniform aliases and inject nearest-sampler state.
+    static const uint32_t CACHE_VERSION = 8;
 
     void ShaderCacheImpl::Clear()
     {
@@ -92,6 +93,13 @@ namespace Babylon::Plugins::ShaderCache
             {
                 SaveString(stream, uniformStages.first);
                 stream.write(reinterpret_cast<const char*>(&uniformStages.second), sizeof(uint8_t));
+            }
+            const auto nameCount = static_cast<uint32_t>(info->UniformNames.size());
+            stream.write(reinterpret_cast<const char*>(&nameCount), sizeof(nameCount));
+            for (const auto& [compiledName, originalName] : info->UniformNames)
+            {
+                SaveString(stream, compiledName);
+                SaveString(stream, originalName);
             }
         }
         return cacheSize;
@@ -154,6 +162,16 @@ namespace Babylon::Plugins::ShaderCache
                 info->UniformStages[stageName] = stageIndex;
             }
 
+            uint32_t nameCount{};
+            stream.read(reinterpret_cast<char*>(&nameCount), sizeof(nameCount));
+            for (uint32_t index = 0; index < nameCount; ++index)
+            {
+                std::string compiledName;
+                std::string originalName;
+                LoadString(stream, compiledName);
+                LoadString(stream, originalName);
+                info->UniformNames.emplace(std::move(compiledName), std::move(originalName));
+            }
             m_cache.emplace(hash, std::move(info));
         }
         return cacheSize;

@@ -1,6 +1,10 @@
 #include "ShaderCompilerCommon.h"
 #include <bx/bx.h>
 #include <bgfx/bgfx.h>
+#include <glslang/Public/ResourceLimits.h>
+#include <algorithm>
+#include <cctype>
+#include <set>
 
 #define BGFX_UNIFORM_FRAGMENTBIT UINT8_C(0x10) // Copy-pasta from bgfx_p.h
 #define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20)  // Copy-pasta from bgfx_p.h
@@ -13,6 +17,187 @@ namespace bgfx
 
 namespace Babylon::ShaderCompilerCommon
 {
+    namespace
+    {
+        struct ShaderToken
+        {
+            size_t Offset;
+            std::string_view Text;
+        };
+
+        std::vector<ShaderToken> TokenizeShader(std::string_view source)
+        {
+            std::vector<ShaderToken> tokens;
+            for (size_t offset = 0; offset < source.size();)
+            {
+                const auto start = offset;
+                const auto character = static_cast<unsigned char>(source[offset]);
+                if (std::isspace(character))
+                {
+                    ++offset;
+                    continue;
+                }
+                if (source.substr(offset, 2) == "//")
+                {
+                    const auto end = source.find('\n', offset + 2);
+                    offset = end == std::string_view::npos ? source.size() : end;
+                    continue;
+                }
+                if (source.substr(offset, 2) == "/*")
+                {
+                    const auto end = source.find("*/", offset + 2);
+                    if (end == std::string_view::npos)
+                    {
+                        throw std::runtime_error{"Unterminated shader comment."};
+                    }
+                    offset = end + 2;
+                    continue;
+                }
+                if (character == '"')
+                {
+                    ++offset;
+                    while (offset < source.size() && source[offset] != '"')
+                    {
+                        offset += source[offset] == '\\' && offset + 1 < source.size() ? 2 : 1;
+                    }
+                    if (offset == source.size())
+                    {
+                        throw std::runtime_error{"Unterminated shader string."};
+                    }
+                    ++offset;
+                }
+                else if (std::isalpha(character) || character == '_')
+                {
+                    do
+                    {
+                        ++offset;
+                    } while (offset < source.size() &&
+                        (std::isalnum(static_cast<unsigned char>(source[offset])) || source[offset] == '_'));
+                }
+                else
+                {
+                    ++offset;
+                }
+                tokens.push_back({start, source.substr(start, offset - start)});
+            }
+            return tokens;
+        }
+    }
+
+    std::string PreprocessShader(EShLanguage stage, std::string_view source)
+    {
+        std::string input{source};
+        size_t insertion{};
+        const auto tokens = TokenizeShader(source);
+        if (tokens.size() >= 2 && tokens[0].Text == "#" && tokens[1].Text == "version")
+        {
+            const auto end = source.find('\n', tokens[0].Offset);
+            if (end == std::string_view::npos)
+            {
+                input += '\n';
+                insertion = input.size();
+            }
+            else
+            {
+                insertion = end + 1;
+            }
+        }
+        // Keep #version first, including after glslang serializes the preprocessed source.
+        input.insert(insertion, "#extension GL_EXT_shader_implicit_conversions : enable\n");
+        glslang::TShader shader{stage};
+        const char* data = input.data();
+        const int length = gsl::narrow_cast<int>(input.size());
+        shader.setStringsWithLengths(&data, &length, 1);
+        glslang::TShader::ForbidIncluder includer;
+        std::string result;
+        if (!shader.preprocess(GetDefaultResources(), 310, EProfile::EEsProfile, true, true, EShMsgDefault, &result, includer))
+        {
+            throw std::runtime_error{shader.getInfoLog()};
+        }
+        return result;
+    }
+
+    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource)
+    {
+        const auto first = TokenizeShader(source);
+        const auto second = pairedSource ? TokenizeShader(*pairedSource) : std::vector<ShaderToken>{};
+        std::set<std::string> names;
+        std::set<std::string> candidates;
+        std::set<std::string> firstCandidates;
+        std::set<std::string> secondCandidates;
+        constexpr std::string_view predefined[] = {
+            "u_viewRect", "u_viewTexel", "u_view", "u_invView", "u_proj", "u_invProj",
+            "u_viewProj", "u_invViewProj", "u_model", "u_modelView", "u_invModelView",
+            "u_modelViewProj", "u_alphaRef", "u_alphaRef4", "bgfx_indirectArgBase"};
+        const auto collect = [&](const std::vector<ShaderToken>& tokens, std::set<std::string>& stageCandidates) {
+            bool uniform{};
+            for (const auto& token : tokens)
+            {
+                names.emplace(token.Text);
+                if (token.Text == "uniform")
+                {
+                    uniform = true;
+                }
+                else if (token.Text == ";" || token.Text == "{")
+                {
+                    uniform = false;
+                }
+                else if (uniform && (token.Text == "textureSize" || token.Text.starts_with(Graphics::SAMPLER_STATE_UNIFORM_PREFIX) ||
+                    std::find(std::begin(predefined), std::end(predefined), token.Text) != std::end(predefined)))
+                {
+                    candidates.emplace(token.Text);
+                    stageCandidates.emplace(token.Text);
+                }
+            }
+        };
+        collect(first, firstCandidates);
+        collect(second, secondCandidates);
+
+        std::map<std::string, std::string> renamed;
+        std::map<std::string, std::string> originalNames;
+        for (const auto& name : candidates)
+        {
+            const auto prefix = "bnUserUniform_" + name;
+            auto replacement = prefix;
+            for (size_t suffix = 1; names.count(replacement); ++suffix)
+            {
+                replacement = prefix + std::to_string(suffix);
+            }
+            names.emplace(replacement);
+            renamed.emplace(name, replacement);
+            originalNames.emplace(replacement, name);
+        }
+        const auto rewrite = [&](std::string& text, const std::vector<ShaderToken>& tokens, const std::set<std::string>& stageCandidates) {
+            std::string result;
+            size_t copied{};
+            for (size_t index = 0; index < tokens.size(); ++index)
+            {
+                const auto& token = tokens[index];
+                const auto replacement = renamed.find(std::string{token.Text});
+                if (replacement == renamed.end() || !stageCandidates.count(replacement->first) ||
+                    (token.Text == "textureSize" && index + 1 < tokens.size() && tokens[index + 1].Text == "("))
+                {
+                    continue;
+                }
+                result.append(text, copied, token.Offset - copied);
+                result += replacement->second;
+                copied = token.Offset + token.Text.size();
+            }
+            result.append(text, copied);
+            return result;
+        };
+        if (!renamed.empty())
+        {
+            auto rewritten = rewrite(source, first, firstCandidates);
+            if (pairedSource)
+            {
+                *pairedSource = rewrite(*pairedSource, second, secondCandidates);
+            }
+            source = std::move(rewritten);
+        }
+        return originalNames;
+    }
+
     // The synthetic instance-data locations must line up with the live bgfx::Attrib enum so that
     // per-instance inputs land on the top TEXCOORD semantics bgfx binds them to, and so that they
     // sort above every real vertex attribute (and can therefore be excluded from the shader's

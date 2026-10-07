@@ -88,6 +88,11 @@ namespace Babylon::Plugins
 
     Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, const std::map<std::string, uint32_t>& instancedAttributes)
     {
+        auto vertexText = PreprocessShader(EShLangVertex, vertexSource);
+        auto fragmentText = PreprocessShader(EShLangFragment, fragmentSource);
+        auto uniformNames = RenameShaderUniforms(vertexText, &fragmentText);
+        vertexSource = vertexText;
+        fragmentSource = fragmentText;
         glslang::TProgram program;
 
         glslang::TShader vertexShader{EShLangVertex};
@@ -127,9 +132,11 @@ namespace Babylon::Plugins
         std::string fragmentMSL(fragmentSource.data(), fragmentSource.size());
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentMSL);
 
-        return CreateBgfxShader(
+        auto result = CreateBgfxShader(
             {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexMSL.data()), vertexMSL.size()), std::move(vertexAttributeRenaming)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentMSL.data()), fragmentMSL.size()), {}},
             std::move(builtInInstanceDataSlots));
+        result.UniformNames = std::move(uniformNames);
+        return result;
     }
 }

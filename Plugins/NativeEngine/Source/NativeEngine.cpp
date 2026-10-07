@@ -55,6 +55,13 @@ namespace Babylon
 {
     namespace
     {
+        float PointSampleHeight(const Graphics::Texture& texture)
+        {
+            const auto filters = texture.SamplerFlags() & (BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK);
+            return filters == (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT) &&
+                (!texture.HasMips() || texture.SamplerMaxLod() == 0) ? static_cast<float>(texture.Height()) : 0.0f;
+        }
+
         uint32_t ReadUnsignedInteger(const Napi::Value& value, const char* name, uint32_t maximum, uint32_t minimum = 0, bool truncate = false)
         {
             double number = value.As<Napi::Number>().DoubleValue();
@@ -1945,6 +1952,11 @@ namespace Babylon
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
+        if (m_commandStream)
+        {
+            SubmitCommands(info);
+        }
+
         bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, /*depth*/ 0, 1, false, false, bytes)};
 
         // Unlike the async load paths, this one runs on the JavaScript thread, so a std::exception
@@ -1958,7 +1970,38 @@ namespace Babylon
             throw Napi::Error::New(Env(), exception.what());
         }
 
-        LoadTextureFromImage(texture, image, srgb);
+        if (texture->IsValid() && m_deviceContext.PeekNextViewId() != 0)
+        {
+            if (texture->Width() != image->m_width || texture->Height() != image->m_height)
+            {
+                bimg::imageFree(image);
+                throw Napi::Error::New(Env(), "Cannot update texture from image of different size");
+            }
+
+            // bgfx uploads precede every draw in a frame. Stage repeated uploads and
+            // copy them in view order so earlier cameras retain their light data.
+            auto scope = m_deviceContext.AcquireFrameCompletionScope();
+            auto* encoder = GetEncoder();
+            Graphics::Texture staging{m_deviceContext};
+            const auto mipCount = image->m_numMips;
+            LoadTextureFromImage(&staging, image, srgb);
+            const auto viewId = m_deviceContext.AcquireNewViewId();
+            bgfx::resetView(viewId);
+            for (uint8_t mip = 0; mip < mipCount; ++mip)
+            {
+                bgfx::TextureRegion destination{};
+                destination.init(texture->Handle());
+                destination.mip = mip;
+                bgfx::TextureRegion source{};
+                source.init(staging.Handle());
+                source.mip = mip;
+                encoder->blit(viewId, destination, source);
+            }
+        }
+        else
+        {
+            LoadTextureFromImage(texture, image, srgb);
+        }
 #endif
     }
 
@@ -2545,6 +2588,7 @@ namespace Babylon
         bound.FirstLayer = texture->ViewNumLayers() != 0 ? texture->ViewFirstLayer() : 0;
         bound.NumLayers = texture->ViewNumLayers() != 0 ? texture->ViewNumLayers() : UINT16_MAX;
         bound.MaxLod = texture->SamplerMaxLod();
+        bound.PointSampleHeight = PointSampleHeight(*texture);
         m_boundTextures[uniformInfo->Stage] = bound;
 
         encoder->setTexture(uniformInfo->Stage, bound.Handle, bound.Texture,
@@ -3703,6 +3747,13 @@ namespace Babylon
         {
             const UniformValue& value = it.second;
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
+        }
+        for (const auto& [stage, uniform] : m_currentProgram->SamplerStateUniforms())
+        {
+            const auto texture = m_boundTextures.find(stage);
+            const float values[4]{
+                texture == m_boundTextures.end() ? 0.0f : texture->second.PointSampleHeight, 0.0f, 0.0f, 0.0f};
+            encoder->setUniform(uniform, values);
         }
 
         // Resolve the gl_FragCoord Y flip the shader compiler injected (see

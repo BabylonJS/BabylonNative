@@ -71,6 +71,7 @@ namespace Babylon
         const std::map<std::string, uint32_t>& VertexAttributeLocations() const { return m_vertexAttributeLocations; }
         // Null for shaders that never read gl_FragCoord; the compiler omits the uniform there.
         const UniformInfo* FragCoordTargetSizeUniform() const { return m_fragCoordTargetSizeUniform; }
+        const std::map<uint8_t, bgfx::UniformHandle>& SamplerStateUniforms() const { return m_samplerStateUniforms; }
 
         // Compiler-assigned i_data slot for each built-in attribute location.
         const std::map<uint32_t, uint32_t>& BuiltInInstanceDataSlots() const { return m_builtInInstanceDataSlots; }
@@ -83,6 +84,7 @@ namespace Babylon
         std::map<std::string, uint16_t> m_uniformNameToIndex;
         std::map<uint16_t, UniformInfo> m_uniformInfos;
         std::map<std::string, uint32_t> m_vertexAttributeLocations;
+        std::map<uint8_t, bgfx::UniformHandle> m_samplerStateUniforms;
         std::map<uint32_t, uint32_t> m_builtInInstanceDataSlots;
         const UniformInfo* m_fragCoordTargetSizeUniform{nullptr};
         std::string m_vertexSource;

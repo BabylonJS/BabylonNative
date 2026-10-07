@@ -212,6 +212,71 @@ TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
     EXPECT_FALSE(shader.FragmentBytes.empty());
 }
 
+TEST(ShaderCompilation, UniformNamesDoNotCollideWithIntrinsicsOrBgfx)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    const auto shader = compiler.Compile(R"(#version 310 es
+        in vec2 position;
+        uniform mat4 u_view;
+        void main() { gl_Position = u_view * vec4(position, 0.0, 1.0); }
+    )", R"(#version 310 es
+        precision highp float;
+        #define SIZE_NAME textureSize
+        uniform vec2 SIZE_NAME;
+        uniform mat4 u_view;
+        uniform float bnUserUniform_textureSize;
+        uniform highp sampler2D inputSampler;
+        out vec4 color;
+        void main() {
+            color = vec4(SIZE_NAME / vec2(textureSize(inputSampler, 0)),
+                u_view[0][0] + bnUserUniform_textureSize, 1.0);
+        }
+    )");
+    ASSERT_EQ(shader.UniformNames.size(), 2u);
+    EXPECT_EQ(shader.UniformNames.at("bnUserUniform_textureSize1"), "textureSize");
+    EXPECT_EQ(shader.UniformNames.at("bnUserUniform_u_view"), "u_view");
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
+TEST(ShaderCompilation, UnsupportedSamplerArrayReportsError)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    EXPECT_THROW(compiler.Compile(R"(
+        precision highp float;
+        in vec3 position;
+        void main() { gl_Position = vec4(position, 1.0); }
+    )", R"(
+        precision highp float;
+        uniform sampler2D sources[2];
+        out vec4 color;
+        void main() { color = texture(sources[0], vec2(0.5)) + texture(sources[1], vec2(0.5)); }
+    )"), std::runtime_error);
+}
+#endif
+
+TEST(ShaderCompilation, UnsignedShaderArgumentsAcceptIntegerConstants)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    EXPECT_NO_THROW(compiler.Compile(R"(
+        in vec2 position;
+        void main() { gl_Position = vec4(position, 0.0, 1.0); }
+    )", R"(
+        precision highp float;
+        precision highp int;
+        #define NUM_SAMPLES 4
+        out vec4 color;
+        float sampleValue(uint index, uint count) { return float(index) / float(count); }
+        void main() {
+            float sum = 0.0;
+            for (uint index = 0u; index < NUM_SAMPLES; ++index) {
+                sum += sampleValue(index, NUM_SAMPLES);
+            }
+            color = vec4(sum);
+        }
+    )"));
+}
+
 TEST(ShaderCompilation, SamplerCoordinatesAcceptConditionalExpressions)
 {
     Babylon::Plugins::ShaderCompiler compiler{};

@@ -1,9 +1,34 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/JsRuntime.h>
+#include <array>
 #include <optional>
 
 namespace
 {
+    // Babylon.js stores matrices in a plain Array when useHighPrecisionMatrix is set.
+    std::array<float, 16> ReadMatrix(const Napi::Object& transform)
+    {
+        const auto value{transform.Get("_m")};
+        std::array<float, 16> m{};
+        if (value.IsArray())
+        {
+            const auto elements{value.As<Napi::Array>()};
+            for (uint32_t i = 0; i < m.size(); ++i)
+            {
+                m[i] = elements.Get(i).As<Napi::Number>().FloatValue();
+            }
+        }
+        else
+        {
+            const auto elements{value.As<Napi::Float32Array>()};
+            for (uint32_t i = 0; i < m.size(); ++i)
+            {
+                m[i] = elements[i];
+            }
+        }
+        return m;
+    }
+
     void MatrixScaleAdd(const float inputMatrix[16], float scale, float outputMatrix[16])
     {
         for (size_t i = 0; i < 16; ++i)
@@ -39,9 +64,10 @@ namespace
     {
         auto coordinates{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
-        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
-        const auto length{info[3].As<Napi::Number>().Uint32Value()};
+        const auto m{ReadMatrix(transform)};
+        // offset and length are optional in Babylon.js, defaulting to the whole array.
+        const auto offset{info[2].IsUndefined() ? 0 : info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].IsUndefined() ? static_cast<uint32_t>(coordinates.ElementLength()) : info[3].As<Napi::Number>().Uint32Value()};
 
         for (size_t index = offset; index < offset + length; index += 3)
         {
@@ -61,9 +87,10 @@ namespace
     {
         auto normals{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
-        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
-        const auto length{info[3].As<Napi::Number>().Uint32Value()};
+        const auto m{ReadMatrix(transform)};
+        // offset and length are optional in Babylon.js, defaulting to the whole array.
+        const auto offset{info[2].IsUndefined() ? 0 : info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].IsUndefined() ? static_cast<uint32_t>(normals.ElementLength()) : info[3].As<Napi::Number>().Uint32Value()};
 
         for (size_t index = offset; index < offset + length; index += 3)
         {
@@ -79,9 +106,10 @@ namespace
     {
         auto normals{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
-        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
-        const auto length{info[3].As<Napi::Number>().Uint32Value()};
+        const auto m{ReadMatrix(transform)};
+        // offset and length are optional in Babylon.js, defaulting to the whole array.
+        const auto offset{info[2].IsUndefined() ? 0 : info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].IsUndefined() ? static_cast<uint32_t>(normals.ElementLength()) : info[3].As<Napi::Number>().Uint32Value()};
 
         for (size_t index = offset; index < offset + length; index += 4)
         {
@@ -107,8 +135,8 @@ namespace
     void FlipFaces(const Napi::CallbackInfo& info)
     {
         auto indices{info[0].As<Napi::TypedArray>()};
-        const auto offset{info[1].As<Napi::Number>().Uint32Value()};
-        const auto length{info[2].As<Napi::Number>().Uint32Value()};
+        const auto offset{info[1].IsUndefined() ? 0 : info[1].As<Napi::Number>().Uint32Value()};
+        const auto length{info[2].IsUndefined() ? static_cast<uint32_t>(indices.ElementLength()) : info[2].As<Napi::Number>().Uint32Value()};
 
         if (indices.TypedArrayType() == napi_typedarray_type::napi_int32_array)
         {

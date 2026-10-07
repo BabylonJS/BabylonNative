@@ -5,11 +5,17 @@
 #include <gsl/gsl>
 #include <spirv_cross.hpp>
 #include <spirv_parser.hpp>
+#include <glslang/Public/ShaderLang.h>
 #include <map>
 #include <string>
 
 namespace Babylon::ShaderCompilerCommon
 {
+    std::string PreprocessShader(EShLanguage stage, std::string_view source);
+
+    // Returns compiled uniform names mapped to the names supplied by the application.
+    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr);
+
     std::string ProcessShaderCoordinates(std::string_view source);
 
     std::string ProcessSamplerFlip(std::string_view source);

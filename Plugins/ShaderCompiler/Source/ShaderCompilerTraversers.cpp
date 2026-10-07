@@ -2150,6 +2150,7 @@ namespace Babylon::ShaderCompilerTraversers
                     if (intermediate != nullptr)
                     {
                         FlipSamplerCoordinatesTraverser traverser{intermediate, ids};
+                        traverser.AddSamplerStates();
                         intermediate->getTreeRoot()->traverse(&traverser);
                     }
                 }
@@ -2175,7 +2176,7 @@ namespace Babylon::ShaderCompilerTraversers
                             const int vecSize = coordinate->getType().getVectorSize();
                             if ((samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
                             {
-                                sequence[1] = FlipVerticalCoordinate(coordinate);
+                                sequence[1] = FlipSampleCoordinate(coordinate, sampler);
                                 if (node->getOp() == EOpTextureGrad)
                                 {
                                     sequence[2] = FlipVerticalCoordinate(sequence[2]->getAsTyped(), true);
@@ -2183,6 +2184,25 @@ namespace Babylon::ShaderCompilerTraversers
                                 }
                             }
                         }
+                    }
+                }
+                else if (visit == EvPostVisit && node->getOp() == EOpFunctionCall)
+                {
+                    const auto function = m_functionStates.find(node->getName().c_str());
+                    if (function != m_functionStates.end())
+                    {
+                        auto& arguments = node->getSequence();
+                        auto& qualifiers = node->getQualifierList();
+                        if (arguments.size() != qualifiers.size())
+                        {
+                            throw std::runtime_error{"Sampler state call qualifiers do not match arguments."};
+                        }
+                        for (const auto index : function->second.Parameters)
+                        {
+                            arguments.push_back(SamplerHeight(arguments[index]->getAsTyped()));
+                            qualifiers.push_back(EvqIn);
+                        }
+                        node->setName(function->second.Name.c_str());
                     }
                 }
                 else if (visit == EvPostVisit && node->getOp() == EOpTextureFetch)
@@ -2221,6 +2241,131 @@ namespace Babylon::ShaderCompilerTraversers
             }
 
         private:
+            struct FunctionState
+            {
+                std::string Name;
+                std::vector<size_t> Parameters;
+            };
+
+            static bool NeedsSamplerState(const TType& type)
+            {
+                return type.getBasicType() == EbtSampler && !type.isArray() && type.getSampler().isCombined() &&
+                    (type.getSampler().is2D() || type.getSampler().dim == Esd3D);
+            }
+
+            void AddSamplerStates()
+            {
+                auto* root = m_intermediate->getTreeRoot()->getAsAggregate();
+                for (auto* node : root->getSequence())
+                {
+                    auto* aggregate = node->getAsAggregate();
+                    if (aggregate == nullptr)
+                    {
+                        continue;
+                    }
+                    if (aggregate->getOp() == EOpLinkerObjects)
+                    {
+                        TIntermSequence states;
+                        for (auto* declaration : aggregate->getSequence())
+                        {
+                            auto* sampler = declaration->getAsSymbolNode();
+                            if (sampler != nullptr && NeedsSamplerState(sampler->getType()))
+                            {
+                                const auto name = std::string{Graphics::SAMPLER_STATE_UNIFORM_PREFIX} + sampler->getName().c_str();
+                                auto* state = m_intermediate->addSymbol(TIntermSymbol{
+                                    m_ids.Next(), name.c_str(), TType{EbtFloat, EvqUniform, 4}});
+                                m_samplerStates.emplace(sampler->getId(), state);
+                                states.push_back(state);
+                            }
+                        }
+                        aggregate->getSequence().insert(aggregate->getSequence().end(), states.begin(), states.end());
+                    }
+                    else if (aggregate->getOp() == EOpFunction)
+                    {
+                        auto* parameters = aggregate->getSequence().front()->getAsAggregate();
+                        auto& sequence = parameters->getSequence();
+                        const auto count = sequence.size();
+                        FunctionState function;
+                        for (size_t index = 0; index < count; ++index)
+                        {
+                            auto* sampler = sequence[index]->getAsSymbolNode();
+                            if (NeedsSamplerState(sampler->getType()))
+                            {
+                                const auto name = std::string{sampler->getName().c_str()} + "BnSamplerHeight";
+                                auto* state = m_intermediate->addSymbol(TIntermSymbol{
+                                    m_ids.Next(), name.c_str(), TType{EbtFloat, EvqIn}});
+                                m_samplerStates.emplace(sampler->getId(), state);
+                                sequence.push_back(state);
+                                function.Parameters.push_back(index);
+                            }
+                        }
+                        if (!function.Parameters.empty())
+                        {
+                            const std::string originalName{aggregate->getName().c_str()};
+                            TString name{originalName.substr(0, originalName.find('(') + 1).c_str()};
+                            for (auto* parameter : sequence)
+                            {
+                                parameter->getAsTyped()->getType().appendMangledName(name);
+                            }
+                            function.Name = name.c_str();
+                            aggregate->setName(name);
+                            m_functionStates.emplace(originalName, std::move(function));
+                        }
+                    }
+                }
+            }
+
+            TIntermTyped* SamplerHeight(TIntermTyped* sampler)
+            {
+                auto* symbol = sampler->getAsSymbolNode();
+                if (symbol == nullptr || !m_samplerStates.count(symbol->getId()))
+                {
+                    throw std::runtime_error{"Sampler filter state requires a standalone sampler uniform or function parameter."};
+                }
+                auto* state = m_intermediate->addSymbol(*m_samplerStates.at(symbol->getId()));
+                if (state->getType().isVector())
+                {
+                    return Component(state, 0);
+                }
+                return state;
+            }
+
+            TIntermTyped* Component(TIntermTyped* vector, int index)
+            {
+                const auto& loc = vector->getLoc();
+                auto* result = m_intermediate->addIndex(EOpIndexDirect, vector, m_intermediate->addConstantUnion(index, loc), loc);
+                result->setType(TType{EbtFloat, EvqTemporary});
+                return result;
+            }
+
+            TIntermTyped* FlipSampleCoordinate(TIntermTyped* coordinate, TIntermTyped* sampler)
+            {
+                const auto& loc = coordinate->getLoc();
+                const auto size = coordinate->getType().getVectorSize();
+                TIntermSymbol temporary{m_ids.Next(), "bnSampleCoordinate", TType{EbtFloat, EvqTemporary, size}};
+                auto* capture = m_intermediate->addAssign(EOpAssign, m_intermediate->addSymbol(temporary), coordinate, loc);
+                auto* height = SamplerHeight(sampler);
+                auto* y = Component(m_intermediate->addSymbol(temporary), 1);
+                auto* pixel = m_intermediate->addBinaryMath(EOpMul, y, height, loc);
+                auto* rounded = m_intermediate->addBuiltInFunctionCall(loc, EOpFloor, true, pixel, TType{EbtFloat, EvqTemporary});
+                auto* center = m_intermediate->addBinaryMath(EOpAdd, rounded, m_intermediate->addConstantUnion(0.5, EbtFloat, loc), loc);
+                auto* normalized = m_intermediate->addBinaryMath(EOpDiv, center, SamplerHeight(sampler), loc);
+                auto* components = m_intermediate->makeAggregate(Component(m_intermediate->addSymbol(temporary), 0), loc);
+                components = m_intermediate->growAggregate(components, normalized, loc);
+                for (int index = 2; index < size; ++index)
+                {
+                    components = m_intermediate->growAggregate(components, Component(m_intermediate->addSymbol(temporary), index), loc);
+                }
+                const auto operation = size == 2 ? EOpConstructVec2 : size == 3 ? EOpConstructVec3 : EOpConstructVec4;
+                auto* snapped = m_intermediate->setAggregateOperator(components, operation, temporary.getType(), loc);
+                auto* enabled = m_intermediate->addBinaryMath(EOpGreaterThan, SamplerHeight(sampler),
+                    m_intermediate->addConstantUnion(0.0, EbtFloat, loc), loc);
+                // Select the GL nearest texel before changing origins. Flipping a boundary first
+                // selects the adjacent row. Linear and mip-filtered samples retain their coordinates.
+                auto* selected = m_intermediate->addSelection(enabled, snapped, m_intermediate->addSymbol(temporary), loc);
+                return m_intermediate->addComma(capture, FlipVerticalCoordinate(selected), loc);
+            }
+
             // Rewrite texelFetch after nested samples have been visited.
             FlipSamplerCoordinatesTraverser(TIntermediate* intermediate, IdGenerator& ids)
                 : TIntermTraverser{true, false, true}
@@ -2379,6 +2524,8 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
             IdGenerator& m_ids;
+            std::map<long long, TIntermSymbol*> m_samplerStates;
+            std::map<std::string, FunctionState> m_functionStates;
         };
 
         /// Convert gl_FragCoord to GL coordinates on top-left-origin backends.

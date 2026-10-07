@@ -8,6 +8,7 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/ExternalTexture.h>
 #include <Babylon/ScriptLoader.h>
 #include <napi/pointer.h>
@@ -23,6 +24,7 @@
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -429,6 +431,59 @@ namespace
     }
 }
 
+TEST(ShaderCompilation, UniformNamesSurviveNativeBindingAndCache)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    Babylon::Plugins::ShaderCache::Enable();
+    Babylon::Plugins::ShaderCache::Clear();
+    const auto disableCache = gsl::finally([] {
+        Babylon::Plugins::ShaderCache::Clear();
+        Babylon::Plugins::ShaderCache::Disable();
+    });
+    const auto render = [] {
+        return RenderFullScreenQuad(4, 4,
+            "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+            R"(
+                precision highp float;
+                uniform highp sampler2D inputSampler;
+                uniform vec2 textureSize;
+                uniform mat4 u_view;
+                uniform float bnUserUniform_textureSize;
+                uniform float bnSamplerState_inputSampler;
+                void main() {
+                    gl_FragColor = vec4(textureSize.x / float(textureSize(inputSampler, 0).x),
+                        u_view[0][0], bnUserUniform_textureSize * bnSamplerState_inputSampler,
+                        texture2D(inputSampler, vec2(0.5)).a);
+                }
+            )", true, R"(
+                material.setVector2("textureSize", new BABYLON.Vector2(1, 2));
+                material.setMatrix("u_view", BABYLON.Matrix.Scaling(0.5, 0.5, 0.5));
+                material.setFloat("bnUserUniform_textureSize", 0.75);
+                material.setFloat("bnSamplerState_inputSampler", 1.0);
+            )");
+    };
+    const auto original = render();
+    ASSERT_EQ(original.size(), 4u * 4u * 4u);
+    for (size_t offset = 0; offset < original.size(); offset += 4)
+    {
+        EXPECT_NEAR(original[offset], 64, 1);
+        EXPECT_NEAR(original[offset + 1], 128, 1);
+        EXPECT_NEAR(original[offset + 2], 191, 1);
+        EXPECT_EQ(original[offset + 3], 255);
+    }
+    std::stringstream stream{std::ios::in | std::ios::out | std::ios::binary};
+    const auto count = Babylon::Plugins::ShaderCache::Save(stream);
+    ASSERT_GT(count, 0u);
+    Babylon::Plugins::ShaderCache::Clear();
+    EXPECT_EQ(Babylon::Plugins::ShaderCache::Load(stream), count);
+    EXPECT_EQ(render(), original);
+    std::stringstream after;
+    EXPECT_EQ(Babylon::Plugins::ShaderCache::Save(after), count);
+#endif
+}
+
 TEST(ShaderCompilation, FragCoordSetupAndPreparationFailuresPropagate)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -535,6 +590,68 @@ TEST(ShaderCompilation, MultiRowMorphTextureMatchesVertexAttributes)
             ASSERT_EQ(expected.size(), 32u * 32u * 4u);
             EXPECT_EQ(expected[0], 0);
             EXPECT_EQ(expected[(16 * 32 + 16) * 4], 255);
+        }
+    }
+#endif
+}
+
+TEST(ShaderCompilation, NearestSamplerBoundariesPreserveLinearFilteringAndWrapModes)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS) || defined(SKIP_FLIPPED_SAMPLING_TESTS)
+    GTEST_SKIP();
+#else
+    const std::array<std::array<uint8_t, 7>, 3> point{{
+        {32, 32, 64, 128, 224, 224, 224},
+        {224, 32, 64, 128, 224, 32, 64},
+        {32, 32, 64, 128, 224, 224, 128},
+    }};
+    const std::array<std::array<uint8_t, 7>, 3> linear{{
+        {32, 32, 48, 96, 176, 224, 224},
+        {176, 128, 48, 96, 176, 128, 48},
+        {48, 32, 48, 96, 176, 224, 176},
+    }};
+    for (int wrap = 0; wrap < 3; ++wrap)
+    {
+        for (const std::string sample : {"texture2D(source, uv)", "textureLod(source, uv, 0.0)",
+                 "textureGrad(source, uv, vec2(0.0), vec2(0.0))"})
+        {
+            SCOPED_TRACE(std::to_string(wrap) + ": " + sample);
+            const auto pixels = RenderFullScreenQuad(7, 1,
+                "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+                R"(
+                    precision highp float;
+                    uniform highp sampler2D pointSampler, linearSampler;
+                    int calls = 0;
+                    vec2 nextCoordinate() {
+                        calls++;
+                        return vec2(0.5, (floor(gl_FragCoord.x) - 1.0) / 4.0);
+                    }
+                    vec4 innerSample(sampler2D source, vec2 uv) { return )" + sample + R"(; }
+                    vec4 outerSample(sampler2D source, vec2 uv) { return innerSample(source, uv); }
+                    void main() {
+                        vec2 uv = vec2(0.5, (floor(gl_FragCoord.x) - 1.0) / 4.0);
+                        vec4 point = outerSample(pointSampler, nextCoordinate());
+                        vec4 linear = outerSample(linearSampler, uv);
+                        gl_FragColor = vec4(point.r, linear.r, float(calls) * 0.25, 1.0);
+                    }
+                )", false,
+                "var wrap = " + std::to_string(wrap) + R"(;
+                    var data = new Uint8Array([32,0,0,255, 64,0,0,255, 128,0,0,255, 224,0,0,255]);
+                    for (var i = 0; i < 2; ++i) {
+                        var texture = BABYLON.RawTexture.CreateRGBATexture(data, 1, 4, scene, false, false,
+                            i ? BABYLON.Texture.BILINEAR_SAMPLINGMODE : BABYLON.Texture.NEAREST_SAMPLINGMODE);
+                        texture.wrapV = wrap;
+                        material.setTexture(i ? "linearSampler" : "pointSampler", texture);
+                    }
+                )");
+            ASSERT_EQ(pixels.size(), 28u);
+            for (size_t index = 0; index < 7; ++index)
+            {
+                EXPECT_EQ(pixels[index * 4], point[wrap][index]);
+                EXPECT_NEAR(pixels[index * 4 + 1], linear[wrap][index], 1);
+                EXPECT_NEAR(pixels[index * 4 + 2], 64, 1);
+                EXPECT_EQ(pixels[index * 4 + 3], 255);
+            }
         }
     }
 #endif
@@ -1432,6 +1549,57 @@ TEST(NativeEngineShadows, PointLightCubeOrientationMatchesAllShadowLookups)
                 << faceNames[face] << " off-axis caster ray was not shadowed (visibility=" << shadowed << ")";
             EXPECT_GT(lit, 192)
                 << faceNames[face] << " projection-Y mirror ray was not lit (visibility=" << lit << ")";
+        }
+    }
+#endif
+}
+
+TEST(NativeEngineTextureSampling, RawUploadsPreserveEarlierCameraDraws)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "void main(void) { gl_Position = vec4(position, 1.0); }\n";
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "uniform sampler2D inputSampler;\n"
+        "void main(void) { gl_FragColor = textureLod(inputSampler, vec2(0.5), 1.0); }\n";
+    for (const bool mipmaps : {false, true})
+    {
+        SCOPED_TRACE(mipmaps);
+        const std::string setupScript = std::string{R"(
+            var source = BABYLON.RawTexture.CreateRGBATexture(
+                new Uint8Array(16), 2, 2, scene, )"} + (mipmaps ? "true" : "false") + R"(,
+                false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+            material.options.samplers.push("inputSampler");
+            material.setTexture("inputSampler", source);
+            scene.autoClear = false;
+            scene.autoClearDepthAndStencil = false;
+            camera.viewport = new BABYLON.Viewport(0, 0, 0.5, 1);
+            var second = camera.clone("second");
+            second.viewport = new BABYLON.Viewport(0.5, 0, 0.5, 1);
+            second.outputRenderTarget = outputTexture;
+            scene.activeCameras = [camera, second];
+            scene.onBeforeCameraRenderObservable.add(function (active) {
+                var color = active === camera ? [255, 0, 0, 255] : [0, 255, 0, 255];
+                source.update(new Uint8Array(color.concat(color, color, color)));
+            });
+        )";
+        const auto pixels = RenderFullScreenQuad(8, 4, vertexShader, fragmentShader, false, setupScript);
+        ASSERT_EQ(pixels.size(), 8u * 4u * 4u);
+        for (uint32_t y = 0; y < 4; ++y)
+        {
+            for (uint32_t x = 0; x < 8; ++x)
+            {
+                const auto offset = (y * 8 + x) * 4;
+                EXPECT_EQ(pixels[offset], x < 4 ? 255 : 0);
+                EXPECT_EQ(pixels[offset + 1], x < 4 ? 0 : 255);
+                EXPECT_EQ(pixels[offset + 2], 0);
+                EXPECT_EQ(pixels[offset + 3], 255);
+            }
         }
     }
 #endif
