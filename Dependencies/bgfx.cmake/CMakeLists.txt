@@ -8,7 +8,7 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-cmake_minimum_required(VERSION 3.20) # C++20 support required
+cmake_minimum_required(VERSION 3.21)
 project(bgfx)
 cmake_policy(SET CMP0054 NEW)
 
@@ -59,15 +59,28 @@ set(BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version")
 set(BGFX_LIBRARY_TYPE "STATIC" CACHE STRING "Linking type for library")
 set_property(CACHE BGFX_LIBRARY_TYPE PROPERTY STRINGS "STATIC" "SHARED")
 
-set(BIMG_CONFIG_PARSE_FORMATS AVIF BMP EXR GIF HDR HEIF JPEG PIC PNG PNM PSD SVG TGA WEBP)
-foreach(FORMAT ${BIMG_CONFIG_PARSE_FORMATS})
-	if(NOT DEFINED BIMG_CONFIG_PARSE_${FORMAT})
-		set(BIMG_CONFIG_PARSE_${FORMAT} "" CACHE STRING "Enable ${FORMAT} parsing (empty uses bimg's default)")
-	endif()
-	if(DEFINED CACHE{BIMG_CONFIG_PARSE_${FORMAT}})
-		set_property(CACHE BIMG_CONFIG_PARSE_${FORMAT} PROPERTY STRINGS "" ON OFF)
-	endif()
-endforeach()
+set(BIMG_CONFIG_PARSE_OPTIONS "")
+function(bimg_parse_option NAME DOC)
+	set(${NAME} "" CACHE STRING "${DOC}")
+	set_property(CACHE ${NAME} PROPERTY STRINGS "" ON OFF)
+	list(APPEND BIMG_CONFIG_PARSE_OPTIONS "${NAME}")
+	set(BIMG_CONFIG_PARSE_OPTIONS "${BIMG_CONFIG_PARSE_OPTIONS}" PARENT_SCOPE)
+endfunction()
+
+bimg_parse_option(BIMG_CONFIG_PARSE_AVIF "Enable AVIF parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_BMP "Enable BMP parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_EXR "Enable EXR parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_GIF "Enable GIF parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_HDR "Enable HDR parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_HEIF "Enable HEIF parsing (empty uses bimg's default; requires external libheif)")
+bimg_parse_option(BIMG_CONFIG_PARSE_JPEG "Enable JPEG parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_PIC "Enable PIC parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_PNG "Enable PNG parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_PNM "Enable PNM parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_PSD "Enable PSD parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_SVG "Enable SVG parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_TGA "Enable TGA parsing (empty uses bimg's default)")
+bimg_parse_option(BIMG_CONFIG_PARSE_WEBP "Enable WEBP parsing (empty uses bimg's default)")
 
 # Declare a bgfx compile-time option and record it for forwarding to the bgfx target.
 #

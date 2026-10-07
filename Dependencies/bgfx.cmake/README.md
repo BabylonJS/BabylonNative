@@ -7,6 +7,8 @@ This repo contains cmake configuration files that can be used to build bgfx with
 
 ## Building
 
+CMake 3.21 or newer is required.
+
 ```bash
 git clone https://github.com/bkaradzic/bgfx.cmake.git
 cd bgfx.cmake

@@ -59,11 +59,9 @@ target_compile_definitions(
 			BIMG_CONFIG_USE_STB_IMAGE=$<BOOL:${BIMG_CONFIG_USE_STB_IMAGE}> #
 )
 
-foreach(FORMAT ${BIMG_CONFIG_PARSE_FORMATS})
-	if(NOT "${BIMG_CONFIG_PARSE_${FORMAT}}" STREQUAL "")
-		target_compile_definitions(
-			bimg_decode PRIVATE BIMG_CONFIG_PARSE_${FORMAT}=$<BOOL:${BIMG_CONFIG_PARSE_${FORMAT}}>
-		)
+foreach(OPTION ${BIMG_CONFIG_PARSE_OPTIONS})
+	if(NOT "${${OPTION}}" STREQUAL "")
+		target_compile_definitions(bimg_decode PRIVATE ${OPTION}=$<BOOL:${${OPTION}}>)
 	endif()
 endforeach()
 
@@ -77,7 +75,7 @@ if(BIMG_DECODE_AVIF)
 	target_sources(bimg_decode PRIVATE ${BIMG_DECODE_AVIF_SOURCES})
 
 	# dav1d amalgamated sources require C11
-	set_source_files_properties(${BIMG_DECODE_AVIF_SOURCES} PROPERTIES C_STANDARD 11)
+	set_target_properties(bimg_decode PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
 
 	target_compile_definitions(bimg_decode PRIVATE AVIF_CODEC_DAV1D)
 
