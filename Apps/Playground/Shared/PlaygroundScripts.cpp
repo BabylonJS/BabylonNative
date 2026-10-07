@@ -32,6 +32,8 @@ namespace Playground
 
     void LoadBootstrapScripts(Babylon::Embedding::Runtime& runtime)
     {
+        // UMD bundles require these globals before loading.
+        runtime.LoadScript("app:///Scripts/native_env.js");
         runtime.LoadScript("app:///Scripts/ammo.js");
         // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
         // runtime.LoadScript("app:///Scripts/recast.js");
@@ -44,10 +46,11 @@ namespace Playground
         runtime.LoadScript("app:///Scripts/babylonjs.addons.js");
         runtime.LoadScript("app:///Scripts/babylonjs.loaders.js");
         runtime.LoadScript("app:///Scripts/babylonjs.materials.js");
+        // Procedural-textures library (Fire/Wood/Marble/... ProceduralTexture).
+        runtime.LoadScript("app:///Scripts/babylonjs.proceduralTextures.js");
         runtime.LoadScript("app:///Scripts/babylon.gui.js");
         runtime.LoadScript("app:///Scripts/meshwriter.min.js");
         runtime.LoadScript("app:///Scripts/babylonjs.serializers.js");
-        runtime.LoadScript("app:///Scripts/babylonjs.proceduralTextures.js");
     }
 
     std::function<void(Babylon::Embedding::LogLevel, std::string_view)>

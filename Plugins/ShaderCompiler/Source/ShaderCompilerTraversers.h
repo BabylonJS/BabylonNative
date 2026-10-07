@@ -160,29 +160,22 @@ namespace Babylon::ShaderCompilerTraversers
     /// Only needed for the fxc (DXBC) backend; dxc accepts the indexable range.
     void FlattenNarrowVaryingArrays(glslang::TProgram& program, IdGenerator& ids);
 
+    /// Match varyings by name and interface blocks by type, shared before vertex-only outputs.
+    /// Reserve complete matrix, array and block-member ranges. Run after FlattenNarrowVaryingArrays.
+    void AssignInterStageVaryingLocations(glslang::TProgram& program, IdGenerator& ids);
+
     /// Invert dFdy operands similar to bgfx_shader.sh
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L62-L65
     void InvertYDerivativeOperands(glslang::TProgram& program);
 
-    /// Flip the vertical (V) component of 2D texture sample coordinates, i.e. rewrite the
-    /// coordinate `uv` of every `texture()`/`textureLod()` call to `vec2(uv.x, 1.0 - uv.y)`.
-    ///
-    /// bgfx's D3D/Metal/Vulkan backends sample textures with the opposite V-orientation from
-    /// WebGL/OpenGL. This was historically corrected by injecting a `#define texture(x,y)
-    /// texture(x, flip(y))` preprocessor macro into the shader source, but a 2-argument
-    /// function-like macro cannot match the 3-argument bias form `texture(sampler, uv, bias)`
-    /// that some Babylon.js shaders emit (e.g. GreasedLine), and glslang's preprocessor has no
-    /// variadic-macro support. Performing the flip on the AST handles every texture()/textureLod()
-    /// arity and sampler type. Only 2-component (sampler2D-style) coordinates are flipped, matching
-    /// the previous `flip(vec2)`/`flip(vec3)` overloads where vec3+ coordinates were left untouched.
-    /// Must only be used on the backends that apply ProcessSamplerFlip (D3D, Metal, Vulkan); the
-    /// OpenGL backend shares bgfx's V-orientation and must not flip.
-    void FlipSamplerCoordinates(glslang::TProgram& program);
+    /// Flip only texture-coordinate Y on D3D/Metal/Vulkan, including shadow and volume samplers.
+    /// For textureGrad, also reflect gradient Y without translation. For texelFetch, capture
+    /// coordinates and LOD once and use the selected mip height. Preserve other components and cube directions.
+    /// Leave raw array coordinates unchanged. Do not apply on OpenGL.
+    void FlipSamplerCoordinates(glslang::TProgram& program, IdGenerator& ids);
 
-    /// Rewrite every read of gl_FragCoord to present it in OpenGL's bottom-left-origin space.
-    /// Must run before MoveNonSamplerUniformsIntoStruct so the target-size uniform it declares is
-    /// collected with the others, and only on the backends that apply FlipSamplerCoordinates
-    /// (D3D, Metal, Vulkan); OpenGL already matches WebGL's origin.
+    /// Convert fragment coordinates with bnFragCoordTargetSize on D3D/Metal/Vulkan.
+    /// Run before uniform collection; shaders without gl_FragCoord remain unchanged.
     void FlipFragCoordY(glslang::TProgram& program, IdGenerator& ids);
 }

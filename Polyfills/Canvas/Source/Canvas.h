@@ -7,6 +7,7 @@
 #include <Babylon/Graphics/Texture.h>
 
 #include "FrameBufferPool.h"
+#include <array>
 
 namespace Babylon::Polyfills
 {
@@ -16,6 +17,14 @@ namespace Babylon::Polyfills
         explicit Impl(Napi::Env);
 
         void FlushGraphicResources();
+
+        struct WeakIdentity
+        {
+            Napi::ObjectReference Receivers;
+            Napi::FunctionReference Has;
+        };
+
+        WeakIdentity CreateWeakIdentity(const Napi::Object& value);
 
         static Canvas::Impl& GetFromJavaScript(Napi::Env env);
 
@@ -39,6 +48,9 @@ namespace Babylon::Polyfills
         };
 
     private:
+        struct JavaScriptData;
+        static JavaScriptData& GetJavaScriptData(Napi::Env env);
+
         Napi::Env m_env;
 
         void AddToJavaScript(Napi::Env env);
@@ -61,12 +73,15 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
 
+        static NativeCanvas* TryUnwrap(Napi::Env env, const Napi::Value& value);
+
         explicit NativeCanvas(const Napi::CallbackInfo& info);
         virtual ~NativeCanvas();
 
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
 
+        // Bound 2D context, if getContext("2d") has been called; nullptr otherwise.
         Context* GetBoundContext() const { return m_context; }
         void SetBoundContext(Context* context) { m_context = context; }
 
@@ -82,6 +97,7 @@ namespace Babylon::Polyfills::Internal
         {
             m_blitViewId = viewId;
             m_blitViewIdGeneration = generation;
+            m_blitViewUsedForConversion = false;
         }
 
         Graphics::DeviceContext& GetGraphicsContext()
@@ -96,9 +112,11 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetHeight(const Napi::CallbackInfo&);
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
+        Graphics::Texture& GetConvertedTexture(bool premulAlpha, bool generateMipMaps);
         Napi::Value ToDataURL(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
+        // Share validation while naming the entry point the caller used.
         static void LoadTTFCore(const Napi::CallbackInfo& info, const char* methodName);
         static Napi::Value ParseColor(const Napi::CallbackInfo& info);
         void Remove(const Napi::CallbackInfo& info);
@@ -115,8 +133,18 @@ namespace Babylon::Polyfills::Internal
 
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
         std::unique_ptr<Graphics::Texture> m_texture{};
+        struct ConvertedTexture
+        {
+            std::unique_ptr<Graphics::FrameBuffer> FrameBuffer{};
+            std::unique_ptr<Graphics::Texture> Texture{};
+        };
+        std::array<ConvertedTexture, 3> m_convertedTextures{};
+        bgfx::ProgramHandle m_unpremultiplyProgram{BGFX_INVALID_HANDLE};
+        bgfx::UniformHandle m_copySampler{BGFX_INVALID_HANDLE};
+        bgfx::UniformHandle m_copyParams{BGFX_INVALID_HANDLE};
         bgfx::ViewId m_blitViewId{UINT16_MAX};
         uint32_t m_blitViewIdGeneration{0};
+        bool m_blitViewUsedForConversion{};
         bool m_dirty{};
         bool m_clear{};
 

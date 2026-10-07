@@ -36,6 +36,7 @@ namespace Babylon::Plugins::Internal
                 {
                     ParentT::InstanceMethod("exit", &TestUtils::Exit),
                     ParentT::InstanceMethod("updateSize", &TestUtils::UpdateSize),
+                    ParentT::InstanceMethod("setMSAASamples", &TestUtils::SetMSAASamples),
                     ParentT::InstanceMethod("setTitle", &TestUtils::SetTitle),
                     ParentT::InstanceMethod("getGraphicsApiName", &TestUtils::GetGraphicsApiName),
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
@@ -68,6 +69,7 @@ namespace Babylon::Plugins::Internal
 
         void Exit(const Napi::CallbackInfo& info);
         void UpdateSize(const Napi::CallbackInfo& info);
+        void SetMSAASamples(const Napi::CallbackInfo& info);
         void SetTitle(const Napi::CallbackInfo& info);
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info);
 

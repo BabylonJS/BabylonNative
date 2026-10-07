@@ -201,7 +201,8 @@ TEST(Device, DeviceLossCancelsReadbacksBeforeRecovery)
         {
             device.StartRenderingCurrentFrame();
             FrameBuffer backBuffer{device.GetContext(), BGFX_INVALID_HANDLE, 0, 0, true, true, true};
-            backBuffer.Clear(*device.GetActiveEncoder(), BGFX_CLEAR_COLOR, 0x123456ff, 1.0f, 0);
+            backBuffer.Clear(*device.GetActiveEncoder(), BGFX_CLEAR_COLOR,
+                18.0f / 255.0f, 52.0f / 255.0f, 86.0f / 255.0f, 1.0f, 1.0f, 0);
             device.FinishRenderingCurrentFrame();
         }
         EXPECT_EQ(recoveredScreenshots, 1u);

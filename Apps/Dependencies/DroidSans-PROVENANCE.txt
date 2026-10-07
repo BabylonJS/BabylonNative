@@ -1,0 +1,13 @@
+DroidSans.ttf
+
+Source repository: https://github.com/CedricGuillemet/dump
+Source commit: 3937c4fe7a24eb5352e529a06604c2a94c9d1bc7
+Source file: droidsans.ttf
+Immutable URL: https://raw.githubusercontent.com/CedricGuillemet/dump/3937c4fe7a24eb5352e529a06604c2a94c9d1bc7/droidsans.ttf
+SHA-256: 4E2371BC0E4CF6983342E150412F140DA79D674C9BE0B56458401F581072ECD3
+
+Font name metadata:
+Digitized data copyright 2007, Google Corporation.
+Version 1.00 build 113.
+Licensed under the Apache License, Version 2.0.
+See DroidSans-APACHE-2.0.txt.

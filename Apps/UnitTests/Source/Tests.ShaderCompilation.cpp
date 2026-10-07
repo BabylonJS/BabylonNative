@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <gsl/span>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -11,14 +12,112 @@
 #include <Babylon/ScriptLoader.h>
 
 #include <chrono>
+#include <cstring>
 #include <cstdlib>
 #include <future>
 #include <iostream>
+#include <map>
+#include <stdexcept>
 #include <string>
+#include <vector>
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
+#include <d3d11shader.h>
+#include <d3dcompiler.h>
+#include <wrl/client.h>
+#endif
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+#include <Babylon/Plugins/ShaderCompiler.h>
+#include <spirv_cross.hpp>
+#endif
 
 using namespace std::chrono_literals;
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11) || defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+namespace
+{
+    gsl::span<const uint8_t> ReadUniformFreeShader(const std::vector<uint8_t>& bytes)
+    {
+        // These fixtures have no uniforms: bgfx v12's code length starts at byte 22.
+        constexpr size_t codeOffset = 26;
+        if (bytes.size() < codeOffset || bytes[3] != 12 || bytes[20] != 0 || bytes[21] != 0)
+        {
+            throw std::runtime_error{"Expected a uniform-free bgfx v12 shader"};
+        }
+        uint32_t codeSize{};
+        std::memcpy(&codeSize, bytes.data() + codeOffset - sizeof(codeSize), sizeof(codeSize));
+        if (codeSize > bytes.size() - codeOffset)
+        {
+            throw std::runtime_error{"Invalid shader byte length"};
+        }
+        return {bytes.data() + codeOffset, codeSize};
+    }
+}
+#endif
+
+#if defined(HAS_SHADER_COMPILER) && defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
+TEST(ShaderCompilation, InterfaceBlocksHaveMatchingD3D11Semantics)
+{
+#if !defined(HAS_SHADER_INTERFACE_BLOCKS)
+    GTEST_SKIP() << "Interface blocks require BABYLON_NATIVE_DISABLE_WEBMIN";
+#else
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto shader = compiler.Compile(R"(
+        #extension GL_EXT_shader_io_blocks : require
+        precision highp float;
+        in vec3 position;
+        out Payload { vec3 tint; } vertexData;
+        void main() {
+            gl_Position = vec4(position, 1.0);
+            vertexData.tint = position;
+        }
+    )", R"(
+        #extension GL_EXT_shader_io_blocks : require
+        precision highp float;
+        in Payload { vec3 tint; } fragmentData;
+        out vec4 color;
+        void main() { color = vec4(fragmentData.tint, 1.0); }
+    )");
+    const auto readSignature = [](const std::vector<uint8_t>& bytes, bool vertex) {
+        const auto code = ReadUniformFreeShader(bytes);
+        Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
+        if (FAILED(D3DReflect(code.data(), code.size(), IID_PPV_ARGS(&reflection))))
+        {
+            throw std::runtime_error{"Could not reflect DXBC shader"};
+        }
+        D3D11_SHADER_DESC description{};
+        if (FAILED(reflection->GetDesc(&description)))
+        {
+            throw std::runtime_error{"Could not read DXBC shader description"};
+        }
+        std::map<unsigned, unsigned> signature;
+        const auto count = vertex ? description.OutputParameters : description.InputParameters;
+        for (UINT i = 0; i < count; ++i)
+        {
+            D3D11_SIGNATURE_PARAMETER_DESC parameter{};
+            const auto result = vertex ? reflection->GetOutputParameterDesc(i, &parameter) : reflection->GetInputParameterDesc(i, &parameter);
+            if (FAILED(result))
+            {
+                throw std::runtime_error{"Could not read DXBC signature parameter"};
+            }
+            if (std::strcmp(parameter.SemanticName, "TEXCOORD") == 0)
+            {
+                EXPECT_TRUE(signature.emplace(parameter.SemanticIndex, parameter.Mask).second);
+            }
+        }
+        return signature;
+    };
+    const auto outputs = readSignature(shader.VertexBytes, true);
+    const auto inputs = readSignature(shader.FragmentBytes, false);
+    ASSERT_EQ(outputs.size(), 1u);
+    ASSERT_EQ(inputs.size(), 1u);
+    EXPECT_EQ(outputs, inputs);
+#endif
+}
+#endif
 
 #ifdef HAS_SHADER_COMPILER
 TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
@@ -37,6 +136,36 @@ TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
             void main() { fragColor = readValue(); }
         )");
 
+    EXPECT_FALSE(shader.VertexBytes.empty());
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+
+TEST(ShaderCompilation, SamplerCoordinatesAcceptConditionalExpressions)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    auto shader = compiler.Compile(
+        R"(
+            in vec2 position;
+            void main() { gl_Position = vec4(position, 0.0, 1.0); }
+        )",
+        R"(
+            precision highp float;
+            uniform highp sampler3D volume;
+            uniform highp sampler2DShadow shadow;
+            uniform highp sampler2DArrayShadow shadowArray;
+            uniform vec4 coordinate;
+            layout(location = 0) out vec4 fragColor;
+            void main()
+            {
+                vec3 alternate = coordinate.zyx;
+                fragColor = texture(volume, coordinate.x > 0.0 ? coordinate.xyz : alternate);
+                fragColor += textureLod(volume, coordinate.x > 0.0 ? alternate : coordinate.xyz, 0.0);
+                fragColor += textureGrad(volume, coordinate.x > 0.0 ? coordinate.xyz : alternate, vec3(0.01), vec3(0.02));
+                fragColor += texelFetch(volume, coordinate.x > 0.0 ? ivec3(coordinate.xyz) : ivec3(0), coordinate.x > 0.0 ? 0 : 1);
+                fragColor += vec4(texture(shadow, coordinate.x > 0.0 ? alternate : coordinate.xyz));
+                fragColor += vec4(texture(shadowArray, coordinate.x > 0.0 ? coordinate : coordinate.wzyx));
+            }
+        )");
     EXPECT_FALSE(shader.VertexBytes.empty());
     EXPECT_FALSE(shader.FragmentBytes.empty());
 }
@@ -319,6 +448,18 @@ TEST(ShaderCompilation, PartiallySharedStageSamplersCompile)
 #if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
 namespace
 {
+    spirv_cross::Compiler ReadVulkanShader(const std::vector<uint8_t>& bytes)
+    {
+        const auto code = ReadUniformFreeShader(bytes);
+        if (code.size() % sizeof(uint32_t) != 0)
+        {
+            throw std::runtime_error{"Invalid SPIR-V byte length"};
+        }
+        std::vector<uint32_t> words(code.size() / sizeof(uint32_t));
+        std::memcpy(words.data(), code.data(), code.size());
+        return spirv_cross::Compiler{std::move(words)};
+    }
+
     struct SamplerCompilationResult
     {
         bool IsReady;
@@ -420,5 +561,197 @@ TEST(ShaderCompilation, VulkanRejectsMoreThanSixteenSamplers)
     // Assert outside the script's catch path so unexpected success cannot pass.
     EXPECT_FALSE(result.IsReady);
     EXPECT_NE(result.Error.find("Vulkan shader uses more than 16 distinct sampler textures"), std::string::npos) << result.Error;
+}
+
+TEST(ShaderCompilation, VulkanAssignsMatchingVaryingLocations)
+{
+    Babylon::Plugins::ShaderCompiler compiler;
+    for (unsigned explicitStages = 0; explicitStages < 4; ++explicitStages)
+    {
+        SCOPED_TRACE(explicitStages);
+        const std::string vertexLocation = (explicitStages & 1) ? "layout(location = 3) " : "";
+        const std::string fragmentLocation = (explicitStages & 2) ? "layout(location = 3) " : "";
+        const auto info = compiler.Compile(
+            "#version 310 es\nprecision highp float;\nin vec3 position;\n" +
+                vertexLocation + R"(out vec3 colorValue;
+                out vec2 extraValue;
+                void main() {
+                    gl_Position = vec4(position, 1.0);
+                    colorValue = position;
+                    extraValue = position.xy;
+                })",
+            "#version 310 es\nprecision highp float;\nin vec2 extraValue;\n" +
+                fragmentLocation + R"(in vec3 colorValue;
+                layout(location = 0) out vec4 color;
+                void main() { color = vec4(colorValue.xy + extraValue, colorValue.z, 1.0); })");
+        auto vertex = ReadVulkanShader(info.VertexBytes);
+        auto fragment = ReadVulkanShader(info.FragmentBytes);
+        const auto outputs = vertex.get_shader_resources().stage_outputs;
+        const auto inputs = fragment.get_shader_resources().stage_inputs;
+        ASSERT_EQ(outputs.size(), 2u);
+        ASSERT_EQ(inputs.size(), 2u);
+        EXPECT_NE(vertex.get_decoration(outputs[0].id, spv::DecorationLocation),
+            vertex.get_decoration(outputs[1].id, spv::DecorationLocation));
+        for (const auto& output : outputs)
+        {
+            ASSERT_TRUE(vertex.has_decoration(output.id, spv::DecorationLocation)) << output.name;
+            bool matched{};
+            for (const auto& input : inputs)
+            {
+                if (input.name == output.name)
+                {
+                    ASSERT_TRUE(fragment.has_decoration(input.id, spv::DecorationLocation)) << input.name;
+                    EXPECT_EQ(vertex.get_decoration(output.id, spv::DecorationLocation),
+                        fragment.get_decoration(input.id, spv::DecorationLocation));
+                    if (explicitStages != 0 && output.name == "colorValue")
+                    {
+                        EXPECT_EQ(vertex.get_decoration(output.id, spv::DecorationLocation), 3u);
+                    }
+                    matched = true;
+                }
+            }
+            EXPECT_TRUE(matched) << output.name;
+        }
+    }
+}
+
+TEST(ShaderCompilation, VulkanReservesMatrixArrayLocations)
+{
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto info = compiler.Compile(
+        R"(#version 310 es
+            precision highp float;
+            in vec3 position;
+            out mat2 matrixValue[2];
+            out vec3 colorValue;
+            out vec2 vertexOnly;
+            void main() {
+                gl_Position = vec4(position, 1.0);
+                matrixValue[0] = mat2(1.0);
+                matrixValue[1] = mat2(2.0);
+                colorValue = position;
+                vertexOnly = position.xy;
+            })",
+        R"(#version 310 es
+            precision highp float;
+            layout(location = 3) in vec3 colorValue;
+            in mat2 matrixValue[2];
+            out vec4 color;
+            void main() { color = vec4(matrixValue[0] * matrixValue[1] * colorValue.xy, colorValue.z, 1.0); })");
+    auto vertex = ReadVulkanShader(info.VertexBytes);
+    auto fragment = ReadVulkanShader(info.FragmentBytes);
+    for (const auto* stage : {&vertex, &fragment})
+    {
+        const auto resources = stage->get_shader_resources();
+        const auto& varyings = stage == &vertex ? resources.stage_outputs : resources.stage_inputs;
+        ASSERT_EQ(varyings.size(), stage == &vertex ? 3u : 2u);
+        for (const auto& varying : varyings)
+        {
+            ASSERT_TRUE(stage->has_decoration(varying.id, spv::DecorationLocation));
+            const auto location = stage->get_decoration(varying.id, spv::DecorationLocation);
+            if (varying.name == "matrixValue")
+            {
+                EXPECT_EQ(location, 4u);
+            }
+            else if (varying.name == "colorValue")
+            {
+                EXPECT_EQ(location, 3u);
+            }
+            else
+            {
+                EXPECT_EQ(varying.name, "vertexOnly");
+                EXPECT_EQ(location, 0u);
+            }
+        }
+    }
+    const auto outputs = fragment.get_shader_resources().stage_outputs;
+    ASSERT_EQ(outputs.size(), 1u);
+    EXPECT_TRUE(fragment.has_decoration(outputs[0].id, spv::DecorationLocation));
+    EXPECT_EQ(fragment.get_decoration(outputs[0].id, spv::DecorationLocation), 0u);
+    const auto inputs = vertex.get_shader_resources().stage_inputs;
+    ASSERT_EQ(inputs.size(), 1u);
+    EXPECT_EQ(vertex.get_decoration(inputs[0].id, spv::DecorationLocation), 0u);
+}
+
+TEST(ShaderCompilation, VulkanLinksBlocksWithDifferentInstanceNames)
+{
+#if defined(GLSLANG_WEB)
+    GTEST_SKIP() << "Interface blocks require BABYLON_NATIVE_DISABLE_WEBMIN";
+#else
+    Babylon::Plugins::ShaderCompiler compiler;
+    for (const std::string fragmentLocation : {"", "layout(location = 4) "})
+    {
+        SCOPED_TRACE(fragmentLocation);
+        const auto info = compiler.Compile(
+            R"(#version 310 es
+                #extension GL_EXT_shader_io_blocks : require
+                precision highp float;
+                in vec3 position;
+                out Payload { mat2 transform; vec3 tint; } vertexData;
+                out vec2 extraValue;
+                void main() {
+                    gl_Position = vec4(position, 1.0);
+                    vertexData.transform = mat2(1.0);
+                    vertexData.tint = position;
+                    extraValue = position.xy;
+                })",
+            "#version 310 es\n#extension GL_EXT_shader_io_blocks : require\n"
+            "precision highp float;\nin vec2 extraValue;\n" +
+                fragmentLocation + R"(in Payload { mat2 transform; vec3 tint; } fragmentData;
+                layout(location = 0) out vec4 color;
+                void main() { color = vec4(fragmentData.transform * extraValue, fragmentData.tint.z, 1.0); })");
+        auto vertex = ReadVulkanShader(info.VertexBytes);
+        auto fragment = ReadVulkanShader(info.FragmentBytes);
+        std::map<std::string, unsigned> vertexLocations;
+        std::map<std::string, unsigned> fragmentLocations;
+        for (const auto* stage : {&vertex, &fragment})
+        {
+            const auto resources = stage->get_shader_resources();
+            const auto& varyings = stage == &vertex ? resources.stage_outputs : resources.stage_inputs;
+            ASSERT_EQ(varyings.size(), 2u);
+            auto& locations = stage == &vertex ? vertexLocations : fragmentLocations;
+            for (const auto& varying : varyings)
+            {
+                ASSERT_TRUE(stage->has_decoration(varying.id, spv::DecorationLocation));
+                locations[varying.name] = stage->get_decoration(varying.id, spv::DecorationLocation);
+            }
+        }
+        ASSERT_EQ(vertexLocations.count("Payload"), 1u);
+        ASSERT_EQ(vertexLocations.count("extraValue"), 1u);
+        EXPECT_EQ(vertexLocations, fragmentLocations);
+        const auto blockLocation = vertexLocations.at("Payload");
+        const auto extraLocation = vertexLocations.at("extraValue");
+        EXPECT_TRUE(extraLocation < blockLocation || extraLocation >= blockLocation + 3);
+        if (!fragmentLocation.empty())
+        {
+            EXPECT_EQ(blockLocation, 4u);
+        }
+    }
+#endif
+}
+
+TEST(ShaderCompilation, VulkanUsesVertexAndInstanceIndexBuiltins)
+{
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto info = compiler.Compile(
+        R"(#version 310 es
+            precision highp float;
+            void main() { gl_Position = vec4(float(gl_VertexID), float(gl_InstanceID), 0.0, 1.0); })",
+        R"(#version 310 es
+            precision highp float;
+            layout(location = 0) out vec4 color;
+            void main() { color = vec4(1.0); })");
+    auto vertex = ReadVulkanShader(info.VertexBytes);
+    bool vertexIndex{};
+    bool instanceIndex{};
+    for (const auto& input : vertex.get_shader_resources().builtin_inputs)
+    {
+        EXPECT_NE(input.builtin, spv::BuiltInVertexId);
+        EXPECT_NE(input.builtin, spv::BuiltInInstanceId);
+        vertexIndex |= input.builtin == spv::BuiltInVertexIndex;
+        instanceIndex |= input.builtin == spv::BuiltInInstanceIndex;
+    }
+    EXPECT_TRUE(vertexIndex);
+    EXPECT_TRUE(instanceIndex);
 }
 #endif

@@ -27,6 +27,20 @@ namespace Babylon::Plugins::Internal
         return Napi::Value::From(info.Env(), STRINGIZE(GRAPHICS_API));
     }
 
+    void TestUtils::SetMSAASamples(const Napi::CallbackInfo& info)
+    {
+        if (info.Length() == 0 || !info[0].IsNumber())
+        {
+            throw Napi::TypeError::New(info.Env(), "MSAA samples must be a number.");
+        }
+        const auto samples = info[0].As<Napi::Number>().DoubleValue();
+        if (samples != 0 && samples != 1 && samples != 2 && samples != 4 && samples != 8 && samples != 16)
+        {
+            throw Napi::RangeError::New(info.Env(), "MSAA samples must be 0, 1, 2, 4, 8, or 16.");
+        }
+        m_deviceContext.UpdateMSAA(static_cast<uint8_t>(samples));
+    }
+
     void TestUtils::WritePNG(const Napi::CallbackInfo& info)
     {
 #ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
@@ -83,9 +97,27 @@ namespace Babylon::Plugins::Internal
             return info.Env().Undefined();
         }
 
-        auto data = Napi::Uint8Array::New(info.Env(), imageData->m_Image->m_size);
-        const auto ptr = static_cast<uint8_t*>(imageData->m_Image->m_data);
-        memcpy(data.Data(), ptr, imageData->m_Image->m_size);
+        // Normalize reference PNGs to RGBA8 to match native screenshots.
+        const bimg::ImageContainer* src = imageData->m_Image;
+        const uint32_t width = src->m_width;
+        const uint32_t height = src->m_height;
+        const size_t rgbaSize = static_cast<size_t>(width) * height * 4;
+        auto data = Napi::Uint8Array::New(info.Env(), rgbaSize);
+        uint8_t* dst = data.Data();
+        const uint8_t* ptr = static_cast<const uint8_t*>(src->m_data);
+
+        if (src->m_format == bimg::TextureFormat::RGBA8)
+        {
+            if (src->m_size < rgbaSize)
+            {
+                throw Napi::Error::New(info.Env(), "Reference image RGBA8 buffer is smaller than width*height*4.");
+            }
+            memcpy(dst, ptr, rgbaSize);
+        }
+        else if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), dst, bimg::TextureFormat::RGBA8, ptr, src->m_format, width, height, 1))
+        {
+            throw Napi::Error::New(info.Env(), "Failed to convert reference image to RGBA8.");
+        }
 
         return Napi::Value::From(info.Env(), data);
 #endif

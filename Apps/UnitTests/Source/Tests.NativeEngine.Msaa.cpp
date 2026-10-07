@@ -241,8 +241,8 @@ TEST(NativeEngineMsaa, PreservesSampleCountsAndAllocatesSampledStorage)
                 Babylon::Graphics::Texture target{context};
                 target.Create2D(16, 16, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
                 auto handle = target.Handle();
-                Babylon::Graphics::FrameBuffer frameBuffer{context, bgfx::createFrameBuffer(1, &handle), 16, 16, false, false, false};
-                frameBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, 0, 0.0f, 0);
+                Babylon::Graphics::FrameBuffer frameBuffer{context, bgfx::createFrameBuffer(1, &handle), 16, 16, false, false, false, -1, false};
+                frameBuffer.Clear(*context.GetActiveEncoder(), BGFX_CLEAR_COLOR, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0);
                 const auto beforeInitialization = context.PeekNextViewId();
                 Babylon::Graphics::Texture inserted{context};
                 inserted.Create2D(16, 16, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT_MSAA_X2);

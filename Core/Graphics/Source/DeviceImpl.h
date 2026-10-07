@@ -48,6 +48,7 @@ namespace Babylon::Graphics
         void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
+        uint8_t GetMSAASamples() const;
         void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
@@ -104,6 +105,7 @@ namespace Babylon::Graphics
         bgfx::ViewId PeekNextViewId() const;
         uint32_t ViewIdGeneration() const;
         bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
+        uint8_t AcquireClearPaletteIndex(const std::array<float, 4>& color);
 
         // Mid-frame view flush. If the current logical frame has acquired close to
         // the maximum number of bgfx views, flush the accumulated views via a
@@ -155,6 +157,7 @@ namespace Babylon::Graphics
         void DestroyBackBuffer();
         bool RequestScreenShots();
         void Frame();
+        void ResetClearPalette();
         void CompleteReadTextureRequests(uint32_t frameNumber);
         void PerformMidFrameViewFlush();
         void CaptureCallback(const BgfxCallback::CaptureData&);
@@ -196,6 +199,10 @@ namespace Babylon::Graphics
         void ReleaseFrameVertexLayouts();
         std::mutex m_frameVertexLayoutsMutex{};
         std::map<LayoutKey, bgfx::VertexLayoutHandle> m_frameVertexLayouts{};
+
+        std::mutex m_clearPaletteMutex{};
+        std::array<std::array<float, 4>, 16> m_clearPalette{};
+        uint8_t m_clearPaletteSize{};
 
         // Number of mid-frame view flushes performed during the current logical frame; reset
         // when the frame is actually presented. The flush lets a logical frame exceed bgfx's

@@ -3,9 +3,47 @@
 #include <arcana/macros.h>
 #include <cmath>
 
+namespace
+{
+    // setViewClear accepts eight attachment indices.
+    constexpr uint8_t MaxColorAttachments{8};
+
+    std::optional<uint32_t> PackClearColor(const std::array<float, 4>& color)
+    {
+        uint32_t packed{};
+        for (const float component : color)
+        {
+            if (!std::isfinite(component) || component < 0 || component > 1)
+            {
+                return std::nullopt;
+            }
+            const auto byte = static_cast<uint32_t>(std::round(component * 255.f));
+            if (static_cast<float>(byte) / 255.f != component)
+            {
+                return std::nullopt;
+            }
+            packed = (packed << 8) | byte;
+        }
+        return packed;
+    }
+
+    // Only D3D11/12 treat UINT8_MAX as an attachment skip; other backends clamp it into the palette.
+    bool SupportsClearAttachmentMasking()
+    {
+        switch (bgfx::getRendererType())
+        {
+            case bgfx::RendererType::Direct3D11:
+            case bgfx::RendererType::Direct3D12:
+                return true;
+            default:
+                return false;
+        }
+    }
+}
+
 namespace Babylon::Graphics
 {
-    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex)
+    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex, bool isMultisampled, uint8_t depthOneVolumeAttachmentMask)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
         , m_handle{handle}
@@ -16,6 +54,8 @@ namespace Babylon::Graphics
         , m_useDeviceBackBuffer{defaultBackBuffer && !bgfx::isValid(handle)}
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
+        , m_isMultisampled{isMultisampled}
+        , m_depthOneVolumeAttachmentMask{depthOneVolumeAttachmentMask}
         , m_disposed{false}
         , m_depthStencilAttachmentIndex{depthStencilAttachmentIndex}
     {
@@ -71,6 +111,12 @@ namespace Babylon::Graphics
         return m_defaultBackBuffer;
     }
 
+    bool FrameBuffer::IsMultisampled() const
+    {
+        // The window's sample count can change without recreating its wrapper.
+        return m_defaultBackBuffer && !bgfx::isValid(m_handle) ? m_deviceContext.GetMSAASamples() > 1 : m_isMultisampled;
+    }
+
     void FrameBuffer::Bind()
     {
         m_viewId.reset();
@@ -78,16 +124,54 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Unbind()
     {
+        if (m_depthOneVolumeAttachmentMask == 0 || !m_viewId.has_value())
+        {
+            return;
+        }
+        const auto view = m_deviceContext.AcquireNewViewId();
+        bgfx::resetView(view);
+        for (uint8_t attachment = 0; attachment < MaxColorAttachments; ++attachment)
+        {
+            if ((m_depthOneVolumeAttachmentMask & (1 << attachment)) != 0)
+            {
+                bgfx::TextureRegion source{};
+                source.init(bgfx::getTexture(m_handle, attachment), 0, 0, Width(), Height());
+                source.depth = 1;
+                auto destination = source;
+                destination.z = 1;
+                m_deviceContext.GetActiveEncoder()->blit(view, destination, source);
+            }
+        }
     }
 
-    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
+    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask)
     {
+        const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
+        const std::array<float, 4> color{r, g, b, a};
+        const auto packedColor = maskColorAttachments ? std::nullopt : PackClearColor(color);
+        const bool usePalette = (flags & BGFX_CLEAR_COLOR) != 0 && !packedColor.has_value();
+        const auto paletteIndex = usePalette ? m_deviceContext.AcquireClearPaletteIndex(color) : uint8_t{};
+
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
         m_viewId = m_deviceContext.AcquireNewViewId();
         m_viewIdGeneration = m_deviceContext.ViewIdGeneration();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
-        bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
+        // Float palette entries preserve HDR clears and per-attachment masks.
+        if (usePalette)
+        {
+            uint8_t indices[MaxColorAttachments];
+            for (uint8_t attachment = 0; attachment < MaxColorAttachments; ++attachment)
+            {
+                indices[attachment] = !maskColorAttachments || (colorAttachmentMask & (1 << attachment)) != 0 ? paletteIndex : UINT8_MAX;
+            }
+            bgfx::setViewClear(m_viewId.value(), flags, depth, stencil,
+                indices[0], indices[1], indices[2], indices[3], indices[4], indices[5], indices[6], indices[7]);
+        }
+        else
+        {
+            bgfx::setViewClear(m_viewId.value(), flags, packedColor.value_or(0), depth, stencil);
+        }
         bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         // If a scissor is not set, WebGL clears the entire screen, so set the view rect to cover the entire screen

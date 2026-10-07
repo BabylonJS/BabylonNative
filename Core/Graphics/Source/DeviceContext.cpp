@@ -107,6 +107,16 @@ namespace Babylon::Graphics
         m_graphicsImpl.SetHardwareScalingLevel(level);
     }
 
+    void DeviceContext::UpdateMSAA(uint8_t samples)
+    {
+        m_graphicsImpl.UpdateMSAA(samples);
+    }
+
+    uint8_t DeviceContext::GetMSAASamples() const
+    {
+        return m_graphicsImpl.GetMSAASamples();
+    }
+
     size_t DeviceContext::GetWidth() const
     {
         return m_graphicsImpl.GetWidth();
@@ -145,6 +155,11 @@ namespace Babylon::Graphics
     bgfx::VertexLayoutHandle DeviceContext::CreateVertexLayout(const bgfx::VertexLayout& layout)
     {
         return m_graphicsImpl.CreateVertexLayout(layout);
+    }
+
+    uint8_t DeviceContext::AcquireClearPaletteIndex(const std::array<float, 4>& color)
+    {
+        return m_graphicsImpl.AcquireClearPaletteIndex(color);
     }
 
     void DeviceContext::FlushViewsIfNeeded()

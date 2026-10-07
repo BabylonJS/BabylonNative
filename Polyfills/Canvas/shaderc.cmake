@@ -243,7 +243,7 @@ function(add_bgfx_shader FILE FOLDER)
         # glsl
         set(GLSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/glsl/${FILENAME}.h)
         if(NOT "${TYPE}" STREQUAL "COMPUTE")
-            _bn_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 140 OUTPUT ${GLSL_OUTPUT} BIN2C "${FILENAME}_glsl")
+            _bn_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 330 OUTPUT ${GLSL_OUTPUT} BIN2C "${FILENAME}_glsl")
         else()
             _bn_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT} BIN2C "${FILENAME}_glsl")
         endif()
