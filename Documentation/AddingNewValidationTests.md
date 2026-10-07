@@ -31,24 +31,21 @@ In order to add a new test scene, first thing to do is to add a few lines in `Ap
 # Readiness and deterministic capture
 
 The Native runner waits for scene readiness, GUI image readiness, and clean material
-defines with ready effects in every render pass the next frame can use, including an
-output render target and each rig camera. Only utility layers that render automatically
-participate; manual layers and layers with `shouldRender` false do not. Inspection
-restores the previous render pass, including on errors.
+defines with ready effects in the active camera's render pass. Utility scenes using
+the main scene's camera participate in the same check. Inspection restores the
+previous render pass, including on errors.
 
 The initial readiness wait and its 10-minute timeout cover both the main scene
 and associated utility scenes. Their pending model/texture loads do not consume
 the subsequent convergence checks.
 
 Readiness polling does not render extra frames or consume `renderCount`. It refreshes
-scene render IDs so material readiness is checked again on the next tick. Waiting is
-bounded by wall-clock time, not callback count: a fast render loop can exhaust a tick
-cap before asynchronous GUI work finishes. A scene that still has not converged after
-60 seconds fails explicitly and follows normal once-only cleanup and suite continuation.
-Each associated scene is polled before the results are combined, including every render
-pass the next frame can use. Screenshot and RenderDoc capture indices still count
-rendered frames only. Failures invalidate pending screenshot callbacks so they cannot
-evaluate after cleanup or during the next scene.
+scene render IDs so material readiness is checked again on the next tick. A scene
+that still has not converged after 240 waiting render-loop ticks fails explicitly
+and follows normal once-only cleanup and suite continuation. Screenshot and
+RenderDoc capture indices still count rendered frames only. Failures invalidate
+pending screenshot callbacks so they cannot evaluate after cleanup or during the
+next scene.
 
 Each test restores both the seeded `Math.random` function and its seed, so a snippet
 that replaces `Math.random` cannot change the sequence used by the next test.
