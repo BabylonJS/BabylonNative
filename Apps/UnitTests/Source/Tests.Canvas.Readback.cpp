@@ -105,7 +105,7 @@ TEST(CanvasReadback, FlushOwnsFrameScopeWithActiveEncoder)
 {
     RunCanvasTest([](Napi::Env env) {
         const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
-        const auto canvas = constructor.New({});
+        auto canvas = constructor.New({});
         canvas.Set("width", Napi::Number::New(env, 16));
         canvas.Set("height", Napi::Number::New(env, 16));
         const auto context = canvas.Get("getContext").As<Napi::Function>()
