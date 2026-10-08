@@ -85,6 +85,41 @@ TEST(CanvasReadback, HostOwnerMayOutliveRuntime)
     canvas.reset();
 }
 
+TEST(CanvasReadback, FlushOwnsFrameScopeWithActiveEncoder)
+{
+    RunCanvasTest([](Napi::Env env) {
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+        const auto canvas = constructor.New({});
+        canvas.Set("width", Napi::Number::New(env, 16));
+        canvas.Set("height", Napi::Number::New(env, 16));
+        const auto context = canvas.Get("getContext").As<Napi::Function>()
+                                 .Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+        const auto dispose = gsl::finally([&] {
+            context.Get("dispose").As<Napi::Function>().Call(context, {});
+            canvas.Get("dispose").As<Napi::Function>().Call(canvas, {});
+        });
+        context.Get("fillRect").As<Napi::Function>().Call(context, {
+            Napi::Number::New(env, 0), Napi::Number::New(env, 0),
+            Napi::Number::New(env, 16), Napi::Number::New(env, 16)});
+
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        ASSERT_NE(graphics.GetActiveEncoder(), nullptr);
+        const auto generation = graphics.ViewIdGeneration();
+        // An exhausted view budget makes the flush handshake require scope ownership,
+        // even though the render thread has already published an encoder.
+        while (graphics.PeekNextViewId() < bgfx::getCaps()->limits.maxViews)
+        {
+            graphics.AcquireNewViewId();
+        }
+
+        context.Get("flush").As<Napi::Function>().Call(context, {});
+
+        EXPECT_GT(graphics.ViewIdGeneration(), generation);
+        EXPECT_TRUE(Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas)->HasFrameBuffer());
+        EXPECT_NO_THROW(canvas.Get("getCanvasTexture").As<Napi::Function>().Call(canvas, {}));
+    });
+}
+
 TEST(CanvasReadback, NativeBrandsRequireTheOriginalReceiver)
 {
     RunCanvasTest([](Napi::Env env) {
