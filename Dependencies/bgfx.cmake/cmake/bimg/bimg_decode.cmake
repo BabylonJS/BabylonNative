@@ -48,10 +48,10 @@ target_link_libraries(
 target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_ENABLE=$<BOOL:${BIMG_CONFIG_PARSE_ENABLE}>)
 target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_USE_WIC=$<BOOL:${BIMG_CONFIG_USE_WIC}>)
 
-foreach(FORMAT AVIF;BMP;EXR;GIF;HDR;HEIF;JPEG;PIC;PNG;PNM;PSD;TGA;WEBP)
-	if(NOT "${BIMG_CONFIG_PARSE_${FORMAT}}" STREQUAL "")
+foreach(BIMG_CONFIG_PARSE_OPTION IN LISTS BIMG_CONFIG_PARSE_OPTIONS)
+	if(NOT "${${BIMG_CONFIG_PARSE_OPTION}}" STREQUAL "")
 		target_compile_definitions(
-			bimg_decode PRIVATE BIMG_CONFIG_PARSE_${FORMAT}=$<BOOL:${BIMG_CONFIG_PARSE_${FORMAT}}>
+			bimg_decode PRIVATE ${BIMG_CONFIG_PARSE_OPTION}=$<BOOL:${${BIMG_CONFIG_PARSE_OPTION}}>
 		)
 	endif()
 endforeach()

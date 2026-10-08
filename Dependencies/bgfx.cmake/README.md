@@ -42,6 +42,10 @@ When AVIF is disabled, its parser and the libavif/dav1d sources are excluded fro
 ## How To Use
 This project is setup to be included a few different ways. To include bgfx source code in your project simply use add_subdirectory to include this project. To build bgfx binaries build the `INSTALL` target (or `make install`). The installed files will be in the directory specified by `CMAKE_INSTALL_PREFIX` which we recommend you set to `./install` so it will export to your build directory. Note you may want to build install on both `Release` and `Debug` configurations.
 
+## Configuration
+
+See [CMakeLists.txt](CMakeLists.txt) for available settings and defaults. Set them with `-D` or as normal variables in a parent project before `add_subdirectory`; parent normal variables take precedence over cache values. Empty numeric bgfx overrides leave the corresponding library defaults unchanged. Image parser settings and their dependencies are described under [Image parsing](#image-parsing).
+
 ## Features
 * No outside dependencies besides bx, bimg, bgfx, and CMake.
 * Tested on
