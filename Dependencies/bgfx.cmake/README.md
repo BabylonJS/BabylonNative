@@ -20,6 +20,8 @@ cmake --build cmake-build
 
 If downloading via zip (instead of using git submodules) manually download bx, bimg and bgfx and copy them into the root directory, or locate them via `BX_DIR`, `BIMG_DIR` and `BGFX_DIR` CMake variables.
 
+Apple universal builds containing x86 slices require Xcode 14+ (or upstream Clang 14+) for scoped unused-argument handling of the architecture-specific SSE4.2 options.
+
 ### bimg configuration
 
 | Variable | Default | Description |
