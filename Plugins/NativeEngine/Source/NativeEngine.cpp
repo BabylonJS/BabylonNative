@@ -172,6 +172,53 @@ namespace Babylon
             }
         }
 
+        // WebGL reads exactly the texels an upload needs and ignores trailing bytes. It also accepts
+        // 3-component RGB sources for formats that Native, like ANGLE on D3D, stores as RGBA. Returns the
+        // bytes to upload, widening tightly packed RGB data into `storage` with an opaque alpha, or an
+        // empty span when the data is too small for the upload.
+        gsl::span<const uint8_t> ResolveRawUpload(gsl::span<const uint8_t> data, uint64_t requiredSize, uint64_t texelCount,
+            bgfx::TextureFormat::Enum format, std::vector<uint8_t>& storage)
+        {
+            if (requiredSize != 0 && data.size() >= requiredSize)
+            {
+                return data.first(static_cast<size_t>(requiredSize));
+            }
+
+            uint32_t componentBytes{0};
+            uint32_t alpha{0};
+            switch (format)
+            {
+                case bgfx::TextureFormat::RGBA8: componentBytes = 1; alpha = 0xFF; break;
+                case bgfx::TextureFormat::RGBA8S: componentBytes = 1; alpha = 0x7F; break;
+                case bgfx::TextureFormat::RGBA8I:
+                case bgfx::TextureFormat::RGBA8U: componentBytes = 1; alpha = 1; break;
+                case bgfx::TextureFormat::RGBA16: componentBytes = 2; alpha = 0xFFFF; break;
+                case bgfx::TextureFormat::RGBA16S: componentBytes = 2; alpha = 0x7FFF; break;
+                case bgfx::TextureFormat::RGBA16F: componentBytes = 2; alpha = 0x3C00; break;
+                case bgfx::TextureFormat::RGBA16I:
+                case bgfx::TextureFormat::RGBA16U: componentBytes = 2; alpha = 1; break;
+                case bgfx::TextureFormat::RGBA32F: componentBytes = 4; alpha = 0x3F800000; break;
+                case bgfx::TextureFormat::RGBA32I:
+                case bgfx::TextureFormat::RGBA32U: componentBytes = 4; alpha = 1; break;
+                default: return {};
+            }
+
+            if (texelCount == 0 || data.size() != texelCount * 3 * componentBytes || texelCount * 4 * componentBytes != requiredSize)
+            {
+                return {};
+            }
+
+            storage.resize(static_cast<size_t>(requiredSize));
+            const size_t rgbBytes{3u * componentBytes};
+            for (size_t texel = 0; texel < texelCount; ++texel)
+            {
+                uint8_t* destination{storage.data() + texel * 4 * componentBytes};
+                std::memcpy(destination, data.data() + texel * rgbBytes, rgbBytes);
+                std::memcpy(destination + rgbBytes, &alpha, componentBytes);
+            }
+            return storage;
+        }
+
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
@@ -1947,11 +1994,14 @@ namespace Babylon
         const auto invertY{info[6].As<Napi::Boolean>().Value()};
         const auto srgb{info.Length() > 7 && !info[7].IsUndefined() ? info[7].As<Napi::Boolean>().Value() : false};
 
-        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
-        if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
+        std::vector<uint8_t> widened;
+        const auto upload{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+            bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format), static_cast<uint64_t>(width) * height, Cast(format), widened)};
+        if (upload.empty())
         {
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
+        const auto bytes{upload.data()};
 
         if (m_commandStream)
         {
@@ -2058,7 +2108,10 @@ namespace Babylon
         bgfx::TextureInfo textureInfo;
         bgfx::calcTextureSize(textureInfo, width, height, 1, false, false, 1, texture->Format());
         const uint32_t requiredSize{textureInfo.storageSize};
-        if (requiredSize == 0 || data.ByteLength() < requiredSize)
+        std::vector<uint8_t> widened;
+        const auto upload{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+            requiredSize, static_cast<uint64_t>(width) * height, texture->Format(), widened)};
+        if (requiredSize == 0 || upload.empty())
         {
             throw Napi::Error::New(info.Env(), "updateTextureData data size does not match width, height, and texture format");
         }
@@ -2077,37 +2130,99 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "updateTextureData does not support block-compressed texture formats");
         }
 
-        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
-
         // Cube uploads honor invertY directly; only 2D uploads compensate for the backend origin.
         const bool flip{texture->IsCube()
                 ? invertY
                 : (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)};
-        const uint16_t targetY{flip ? static_cast<uint16_t>(mipHeight - y - height) : y};
-        const bgfx::Memory* mem{bgfx::alloc(requiredSize)};
-        if (flip)
-        {
-            const uint32_t rowBytes{requiredSize / height};
-            for (uint16_t row = 0; row < height; ++row)
+        const auto uploadLevel = [texture, flip, layer](uint8_t level, uint16_t levelX, uint16_t levelY, uint16_t levelWidth, uint16_t levelHeight, const uint8_t* bytes, uint32_t size) {
+            const uint32_t levelMipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> level)};
+            const uint16_t targetY{flip ? static_cast<uint16_t>(levelMipHeight - levelY - levelHeight) : levelY};
+            const bgfx::Memory* mem{bgfx::alloc(size)};
+            if (flip)
             {
-                std::memcpy(mem->data + static_cast<size_t>(row) * rowBytes, bytes + static_cast<size_t>(height - 1 - row) * rowBytes, rowBytes);
+                const uint32_t rowBytes{size / levelHeight};
+                for (uint16_t row = 0; row < levelHeight; ++row)
+                {
+                    std::memcpy(mem->data + static_cast<size_t>(row) * rowBytes, bytes + static_cast<size_t>(levelHeight - 1 - row) * rowBytes, rowBytes);
+                }
             }
-        }
-        else
+            else
+            {
+                std::memcpy(mem->data, bytes, size);
+            }
+            if (texture->IsCube())
+            {
+                // bgfx addresses a cube texture by (array layer, side 0-5), but the JS side packs both into the
+                // single "layer" argument it also uses for 2D-array slices (6 consecutive faces per array layer,
+                // which is what the bounds check above allows). Decompose it, otherwise a cube-array face index
+                // above 5 would be forwarded as an out-of-range side and every update would land on array layer 0.
+                texture->UpdateCube(static_cast<uint16_t>(layer / 6), static_cast<uint8_t>(layer % 6), level, levelX, targetY, levelWidth, levelHeight, mem);
+            }
+            else
+            {
+                texture->Update2D(layer, level, levelX, targetY, levelWidth, levelHeight, mem);
+            }
+        };
+        uploadLevel(mip, x, y, width, height, upload.data(), requiredSize);
+
+        // Optional WebGL generateMipmap for this face/layer: rebuild the rest of the chain from the full
+        // level that was just uploaded. bgfx cannot generate mips for textures that are not render targets.
+        const bool generateMips{info.Length() > 9 && !info[9].IsUndefined() && info[9].As<Napi::Boolean>().Value()};
+        if (!generateMips || mipChainInfo.numMips <= mip + 1)
         {
-            std::memcpy(mem->data, bytes, requiredSize);
+            return;
         }
-        if (texture->IsCube())
+        if (x != 0 || y != 0 || width != mipWidth || height != mipHeight)
         {
-            // bgfx addresses a cube texture by (array layer, side 0-5), but the JS side packs both into the
-            // single "layer" argument it also uses for 2D-array slices (6 consecutive faces per array layer,
-            // which is what the bounds check above allows). Decompose it, otherwise a cube-array face index
-            // above 5 would be forwarded as an out-of-range side and every update would land on array layer 0.
-            texture->UpdateCube(static_cast<uint16_t>(layer / 6), static_cast<uint8_t>(layer % 6), mip, x, targetY, width, height, mem);
+            throw Napi::Error::New(info.Env(), "updateTextureData can only generate mips from a full mip level");
         }
-        else
+        auto& allocator{Graphics::DeviceContext::GetDefaultAllocator()};
+        using ImagePtr = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
+        const auto format{static_cast<bimg::TextureFormat::Enum>(texture->Format())};
+        // gl.generateMipmap box-filters linear values; bimg's mip generator applies a gamma curve, so filter here.
+        ImagePtr source{bimg::imageAlloc(&allocator, format, width, height, 0, 1, false, false, upload.data()), bimg::imageFree};
+        ImagePtr converted{source ? bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *source, false) : nullptr, bimg::imageFree};
+        if (!converted)
         {
-            texture->Update2D(layer, mip, x, targetY, width, height, mem);
+            throw Napi::Error::New(info.Env(), std::string{"updateTextureData cannot generate mips for format "} + bimg::getName(format));
+        }
+
+        const float* levelSource{static_cast<const float*>(converted->m_data)};
+        std::vector<float> levelTexels;
+        uint32_t levelWidth{width};
+        uint32_t levelHeight{height};
+        for (uint8_t level = static_cast<uint8_t>(mip + 1); level < mipChainInfo.numMips; ++level)
+        {
+            const uint32_t nextWidth{std::max(1u, levelWidth >> 1)};
+            const uint32_t nextHeight{std::max(1u, levelHeight >> 1)};
+            std::vector<float> next(static_cast<size_t>(nextWidth) * nextHeight * 4);
+            for (uint32_t row = 0; row < nextHeight; ++row)
+            {
+                for (uint32_t column = 0; column < nextWidth; ++column)
+                {
+                    const uint32_t x0{std::min(column * 2, levelWidth - 1)};
+                    const uint32_t x1{std::min(column * 2 + 1, levelWidth - 1)};
+                    const uint32_t y0{std::min(row * 2, levelHeight - 1)};
+                    const uint32_t y1{std::min(row * 2 + 1, levelHeight - 1)};
+                    for (uint32_t channel = 0; channel < 4; ++channel)
+                    {
+                        const auto at = [&](uint32_t sx, uint32_t sy) { return levelSource[(static_cast<size_t>(sy) * levelWidth + sx) * 4 + channel]; };
+                        next[(static_cast<size_t>(row) * nextWidth + column) * 4 + channel] = (at(x0, y0) + at(x1, y0) + at(x0, y1) + at(x1, y1)) * 0.25f;
+                    }
+                }
+            }
+            levelTexels = std::move(next);
+            levelSource = levelTexels.data();
+            levelWidth = nextWidth;
+            levelHeight = nextHeight;
+
+            const auto levelSize{static_cast<uint32_t>(bimg::imageGetSize(nullptr, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), 1, false, false, 1, format))};
+            std::vector<uint8_t> levelBytes(levelSize);
+            if (!bimg::imageConvert(&allocator, levelBytes.data(), format, levelSource, bimg::TextureFormat::RGBA32F, levelWidth, levelHeight, 1))
+            {
+                throw Napi::Error::New(info.Env(), std::string{"updateTextureData cannot convert generated mips to format "} + bimg::getName(format));
+            }
+            uploadLevel(level, 0, 0, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), levelBytes.data(), levelSize);
         }
     }
 
@@ -2181,13 +2296,16 @@ namespace Babylon
             // 64-bit byte length so a crafted width/height/depth cannot wrap the
             // expected size and slip an undersized buffer past this check.
             const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)};
-            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
+            std::vector<uint8_t> widened;
+            const auto resolved{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+                expectedSize, static_cast<uint64_t>(width) * height * depth, Cast(format), widened)};
+            if (expectedSize == 0 || resolved.empty())
             {
                 throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
 
-            uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-            size_t dataSize = data.ByteLength();
+            const uint8_t* dataPtr = resolved.data();
+            size_t dataSize = resolved.size();
 
             size_t textureSize = dataSize / static_cast<size_t>(depth);
 
@@ -2201,7 +2319,7 @@ namespace Babylon
 
             for (uint16_t i = 0; i < depth; i++)
             {
-                uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
+                const uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
                 using ImagePtr = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
                 ImagePtr decoded{nullptr, bimg::imageFree};
                 gsl::span<const uint8_t> upload{begin, textureSize};
@@ -2285,13 +2403,16 @@ namespace Babylon
             // crafted width/height/depth cannot wrap the expected size and slip an undersized buffer past
             // this check. A 3D texture is a single volume (numLayers = 1) whose depth is the 3rd argument.
             const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, depth, false, false, 1, format)};
-            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
+            std::vector<uint8_t> widened;
+            const auto resolved{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+                expectedSize, static_cast<uint64_t>(width) * height * depth, Cast(format), widened)};
+            if (expectedSize == 0 || resolved.empty())
             {
                 throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
 
-            uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-            const size_t dataSize = data.ByteLength();
+            const uint8_t* dataPtr = resolved.data();
+            const size_t dataSize = resolved.size();
 
             // bgfx::Memory uses a 32-bit size; reject a payload that would be truncated by the bgfx::copy
             // cast below.
