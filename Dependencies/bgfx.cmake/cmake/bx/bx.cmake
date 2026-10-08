@@ -38,6 +38,7 @@ if(BX_AMALGAMATED)
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/file.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/filepath.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/hash.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/literal-parser.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/math.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/mutex.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/os.cpp")
@@ -47,6 +48,7 @@ if(BX_AMALGAMATED)
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/settings.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/sort.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/string.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/superluminal.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/thread.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/timer.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/url.cpp")
@@ -126,14 +128,15 @@ if(APPLE)
 		target_compile_options(bx PUBLIC "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-msse4.2>")
 	else()
 		# -Xarch_ scopes the minspec to the x86 slices so arm64 keeps bx's NEON path.
-		# -Wno-unused-command-line-argument is required because one invocation need not cover
-		# every slice: Xcode compiles per slice, and ios-cmake's COMBINED platforms narrow the
-		# slice list further per SDK.
-		set(BX_SSE_MINSPEC "")
+		# One invocation need not cover every slice: Xcode compiles per slice, and ios-cmake's
+		# COMBINED platforms narrow the slice list per SDK. Suppress unused-argument warnings
+		# only for our -Xarch_ pairs, preserving diagnostics for other options in consumers.
+		# Universal builds with x86 slices require Xcode 14+ (or upstream Clang 14+).
+		set(BX_SSE_MINSPEC "--start-no-unused-arguments")
 		foreach(BX_X86_ARCH IN LISTS BX_X86_ARCHS)
 			list(APPEND BX_SSE_MINSPEC "-Xarch_${BX_X86_ARCH}" "-msse4.2")
 		endforeach()
-		list(APPEND BX_SSE_MINSPEC "-Wno-unused-command-line-argument")
+		list(APPEND BX_SSE_MINSPEC "--end-no-unused-arguments")
 		list(JOIN BX_SSE_MINSPEC " " BX_SSE_MINSPEC)
 		target_compile_options(bx PUBLIC "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:SHELL:${BX_SSE_MINSPEC}>")
 		unset(BX_SSE_MINSPEC)
