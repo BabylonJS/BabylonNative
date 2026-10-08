@@ -18,8 +18,10 @@
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg.h"
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg_filterstack.h"
 #include <napi/pointer.h>
+#include "DeviceImplTestAccess.h"
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <future>
 #include <limits>
@@ -34,7 +36,7 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 namespace
 {
     template<typename CallbackT>
-    void RunCanvasTest(CallbackT callback)
+    void RunCanvasTest(CallbackT callback, bool waitForFlushRequest = false)
     {
         Babylon::Graphics::Device device{g_deviceConfig};
         device.StartRenderingCurrentFrame();
@@ -42,11 +44,16 @@ namespace
         Babylon::AppRuntime runtime{};
         std::promise<std::string> completed;
         auto future = completed.get_future();
+        std::atomic<Babylon::Graphics::DeviceImpl*> graphics{};
         runtime.Dispatch([&](Napi::Env env) {
             std::string error;
             try
             {
                 device.AddToJavaScript(env);
+                if (waitForFlushRequest)
+                {
+                    graphics.store(&Babylon::Graphics::DeviceImpl::GetFromJavaScript(env));
+                }
                 canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
                 callback(env);
             }
@@ -59,6 +66,15 @@ namespace
 
         while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
         {
+            if (waitForFlushRequest)
+            {
+                // Keep the primed frame intact until FlushCore requests its mid-frame flush.
+                auto* impl = graphics.load();
+                if (impl == nullptr || !Babylon::Graphics::DeviceImplTestAccess::WaitForFlushRequest(*impl, std::chrono::milliseconds{16}))
+                {
+                    continue;
+                }
+            }
             device.FinishRenderingCurrentFrame();
             device.StartRenderingCurrentFrame();
         }
@@ -122,7 +138,7 @@ TEST(CanvasReadback, FlushOwnsFrameScopeWithActiveEncoder)
         EXPECT_GT(graphics.ViewIdGeneration(), generation);
         EXPECT_TRUE(Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas)->HasFrameBuffer());
         EXPECT_NO_THROW(canvas.Get("getCanvasTexture").As<Napi::Function>().Call(canvas, {}));
-    });
+    }, true);
 }
 
 TEST(CanvasReadback, NativeBrandsRequireTheOriginalReceiver)
