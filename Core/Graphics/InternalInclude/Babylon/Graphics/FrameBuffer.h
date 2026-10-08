@@ -39,7 +39,8 @@ namespace Babylon::Graphics
 
         // Floating-point colors preserve HDR values through bgfx's clear palette.
         // More than 16 distinct palette colors in a physical frame throws rather than overwriting pending clears.
-        void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX);
+        // ignoreScissor clears the whole framebuffer regardless of the current scissor.
+        void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX, bool ignoreScissor = false);
         void SetViewPort(float x, float y, float width, float height);
         void SetScissor(float x, float y, float width, float height);
         void Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags);

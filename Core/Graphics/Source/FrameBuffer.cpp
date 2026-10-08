@@ -144,7 +144,7 @@ namespace Babylon::Graphics
         }
     }
 
-    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask)
+    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask, bool ignoreScissor)
     {
         const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
         const std::array<float, 4> color{r, g, b, a};
@@ -182,7 +182,7 @@ namespace Babylon::Graphics
         // the view scissor is set.
         //
         // Note that the view rect and view scissor are reset to the desired dimensions before the encoder is submitted.
-        if (m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f)
+        if (ignoreScissor || (m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f))
         {
             bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
             m_bgfxViewPort = {0, 0, 1, 1};

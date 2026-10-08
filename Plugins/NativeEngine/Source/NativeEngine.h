@@ -161,6 +161,7 @@ namespace Babylon
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
+        void ResetDefaultFrameBuffer();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
@@ -239,6 +240,9 @@ namespace Babylon
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
+
+        // WebGL resets the drawing buffer's depth and stencil at the start of every frame.
+        PerFrameValue<bool> m_defaultFrameBufferNeedsReset;
 
         // Last material texture binds on the frame encoder. bgfx drops encoder bindings when work
         // moves to another view (clears, resolves, blits); WebGL keeps them, so they are replayed.
