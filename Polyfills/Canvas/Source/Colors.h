@@ -274,13 +274,27 @@ namespace Babylon::Polyfills::Internal
             std::smatch hslMatch;
             if (std::regex_match(str, hslMatch, hslRegex))
             {
-                // Hue is an angle in degrees; nvgHSLA wraps it internally but
-                // expects turns. Saturation and lightness are percentages
-                // whether or not the '%' is spelled out.
-                const float hue = toFloat(hslMatch[1]) / 360.0f;
-                const float saturation = std::clamp(toFloat(hslMatch[3]) / 100.0f, 0.0f, 1.0f);
-                const float lightness = std::clamp(toFloat(hslMatch[5]) / 100.0f, 0.0f, 1.0f);
-                return nvgHSLA(hue, saturation, lightness, alpha(hslMatch, 7));
+                const auto component = [](const std::ssub_match& match) {
+                    const auto text = match.str();
+                    const double value = std::strtod(text.c_str(), nullptr);
+                    return std::clamp(value, std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max());
+                };
+                double hue = std::fmod(component(hslMatch[1]), 360.0);
+                if (hue < 0)
+                {
+                    hue += 360.0;
+                }
+                const double saturation = std::clamp(component(hslMatch[3]) / 100.0, 0.0, 1.0);
+                const double lightness = std::clamp(component(hslMatch[5]) / 100.0, 0.0, 1.0);
+                const double amplitude = saturation * std::min(lightness, 1.0 - lightness);
+                // CSS colors round to bytes before rasterization, unlike GPU UNORM's
+                // ties-to-even conversion of NanoVG's unquantized HSL floats.
+                const auto channel = [&](double offset) {
+                    const double k = std::fmod(hue / 30.0 + offset, 12.0);
+                    const double value = lightness - amplitude * std::clamp(std::min(k - 3.0, 9.0 - k), -1.0, 1.0);
+                    return static_cast<unsigned char>(std::lround(std::clamp(value, 0.0, 1.0) * 255.0));
+                };
+                return nvgRGBA(channel(0), channel(8), channel(4), alpha(hslMatch, 7));
             }
         }
         throw Napi::Error::New(env, std::string{"Unable to parse color: "} + str);

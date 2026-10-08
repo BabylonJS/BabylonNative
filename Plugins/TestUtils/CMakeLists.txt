@@ -13,7 +13,7 @@ target_include_directories(TestUtils PUBLIC
 target_link_libraries(TestUtils
     PUBLIC napi
     PRIVATE JsRuntimeInternal
-    PRIVATE GraphicsDevice
+    PUBLIC GraphicsDevice
     PRIVATE GraphicsDeviceContext)
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)

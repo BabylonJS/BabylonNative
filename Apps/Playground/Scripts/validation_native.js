@@ -36,7 +36,9 @@
     const testWidth = 600;
     const testHeight = 400;
     // Browser visualization tests create their engine with antialias=false.
-    TestUtils.setMSAASamples(0);
+    if (TestUtils.getGraphicsApiName() !== "WebGPU") {
+        TestUtils.setMSAASamples(0);
+    }
     const generateReferences = !!opts.generateReferences;
     const breakOnFail = !!opts.breakOnFail;
     const stopOnFirstFailure = !!opts.stopOnFirstFailure;
@@ -210,6 +212,9 @@
     let missingRefCount = 0;
     const failedTitles = [];
 
+    // BABYLON classes exposing a static ForceGLSL, discovered lazily once.
+    let forceGlslOwners;
+
     function getExclusionReason(t) {
         if (t.onlyVisual) {
             return "onlyVisual";
@@ -244,17 +249,31 @@
         }
     }
 
+    const isDawn = TestUtils.getGraphicsApiName() === "WebGPU";
     let engine;
     let useHighPrecisionMatrices = false;
 
     function createEngine(useLargeWorldRendering) {
-        const nativeEngine = new BABYLON.NativeEngine({
+        const nativeEngine = isDawn ? globalThis._playgroundWebGPUEngine : new BABYLON.NativeEngine({
             useLargeWorldRendering,
             useHighPrecisionMatrix: useHighPrecisionMatrices
         });
+        if (!nativeEngine) {
+            throw new Error("Playground WebGPU bootstrap did not create an engine");
+        }
+        if (isDawn && !!nativeEngine.getCreationOptions().useLargeWorldRendering !== useLargeWorldRendering) {
+            throw new Error("The Playground WebGPU bootstrap does not support changing large-world rendering between tests");
+        }
         nativeEngine.getCaps().parallelShaderCompile = undefined;
-        nativeEngine.getRenderingCanvas = function () { return window; };
-        nativeEngine.getInputElement = function () { return 0; };
+        if (!isDawn) {
+            nativeEngine.getRenderingCanvas = function () { return window; };
+            nativeEngine.getInputElement = function () { return 0; };
+        }
+        if (BABYLON.SceneLoader) {
+            BABYLON.SceneLoader.ShowLoadingScreen = false;
+        }
+        nativeEngine.displayLoadingUI = function () { };
+        nativeEngine.hideLoadingUI = function () { };
         if (!window.screen) {
             window.screen = {
                 width: nativeEngine.getRenderWidth(),
@@ -366,7 +385,14 @@
     const canvas = window;
     globalThis.canvas = canvas;
 
-    // Random replacement
+    // Random replacement. Deterministic so reference images are reproducible.
+    // Reinstalled per-test (see runTest) because some playgrounds overwrite
+    // Math.random with their own closure -- e.g. "Selection outline layer with
+    // instances" (#UR9706#0) does `window.Math.random = ... window.seed ...`,
+    // leaving a global RNG that the harness's `seed = 1` reset can no longer
+    // touch. Left in place, every later test (notably GPU particle systems,
+    // whose random textures are filled from Math.random) gets shifted random
+    // values and drifts across the pixel-diff threshold.
     let seed = 1;
     function seededRandom() {
         const x = Math.sin(seed++) * 10000;
@@ -734,6 +760,16 @@
 
                 for (let i = 0; i < newScenes.length; i++) {
                     const scene = newScenes[i];
+                    if (engine.isWebGPU && BABYLON.DynamicTexture) {
+                        for (let j = 0; j < scene.textures.length; j++) {
+                            const texture = scene.textures[j];
+                            // WebGPU canvas textures need an actual initial upload before
+                            // material readiness can succeed and start GUI rendering.
+                            if (texture instanceof BABYLON.DynamicTexture && !texture.isReady()) {
+                                texture.update();
+                            }
+                        }
+                    }
                     // Scene.executeWhenReady drops its callbacks on timeout or disposal.
                     // Keep a runner-owned deadline and reconcile virtual-scene membership
                     // independently so removed scenes cannot strand this wait.
@@ -992,13 +1028,28 @@
             const request = new XMLHttpRequest();
             request.open('GET', config.root + test.scriptToRun, true);
 
-            request.onreadystatechange = function () {
+            // Babylon Native's XMLHttpRequest polyfill only dispatches to
+            // addEventListener; assigning the DOM on<event> properties silently
+            // does nothing and the load hangs forever.
+            let handled = false;
+            request.addEventListener('readystatechange', function () {
                 if (request.readyState === 4) {
                     if (finished) {
                         return;
                     }
                     try {
-                        request.onreadystatechange = null;
+                        if (handled) {
+                            return;
+                        }
+                        handled = true;
+
+                        // The polyfill sets readyState=4 before raising 'error',
+                        // so a failed fetch reaches here first.
+                        if (request.status < 200 || request.status >= 300) {
+                            console.error("Failed to load " + test.scriptToRun + ": status " + request.status);
+                            failTest(done);
+                            return;
+                        }
 
                         let scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
@@ -1046,11 +1097,15 @@
                         failTest(done);
                     }
                 }
-            };
-            request.onerror = function () {
+            });
+            request.addEventListener('error', function () {
+                if (handled) {
+                    return;
+                }
+                handled = true;
                 console.error("Network error during test load.");
                 failTest(done);
-            }
+            });
 
             request.send(null);
         }
@@ -1070,7 +1125,7 @@
         try {
             const useLargeWorldRendering = !!test.useLargeWorldRendering;
             if (!engine || !!engine.getCreationOptions().useLargeWorldRendering !== useLargeWorldRendering) {
-                if (engine) {
+                if (engine && !isDawn) {
                     engine.dispose();
                     engine = undefined;
                     globalThis.engine = undefined;
@@ -1086,6 +1141,71 @@
 
         seed = 1;
         Math.random = seededRandom;
+
+        // Restore per-test isolation for global Babylon loader state. Some
+        // playgrounds add a BABYLON.SceneLoader.OnPluginActivatedObservable
+        // observer and never remove it -- e.g. "Yeti" (#QATUCH#32) forces the
+        // glTF loader's animationStartMode to ALL. Left in place, every later
+        // glTF scene auto-plays EVERY animation group instead of just the first,
+        // blending all animations and rendering the wrong animated pose (this is
+        // why "GLTF Serializer Skinning and Animation" failed only when a prior
+        // test leaked such an observer). Clearing here drops leaked observers; a
+        // test's own observer is (re)added later in its own createScene.
+        if (BABYLON.SceneLoader && BABYLON.SceneLoader.OnPluginActivatedObservable) {
+            BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
+        }
+
+        // Reset global engine flags that some playgrounds set and never restore.
+        // e.g. "Reverse depth buffer and shadows" (#WL4Q8J#20) and the CSM variant
+        // set engine.useReverseDepthBuffer = true; left on, every later test renders
+        // with a reversed depth test and depth-sensitive tests fail (e.g. "Sample
+        // depth texture" rendered black). A test that needs it re-enables it in its
+        // own createScene.
+        if (typeof engine.useReverseDepthBuffer !== "undefined") {
+            engine.useReverseDepthBuffer = false;
+        }
+
+        // Reset snapshot rendering. "FAST snapshot CPU particles" (#AW6Q7E#0)
+        // uses BABYLON.SnapshotRenderingHelper.enableSnapshotRendering(), which
+        // sets engine.snapshotRendering = true. Snapshot mode caches the render
+        // command buffer, so every later test replays the snapshot's draws
+        // instead of its own -- GPU particle systems in particular then render
+        // stale/shifted output and drift across the pixel-diff threshold. A test
+        // that needs snapshot mode re-enables it in its own createScene.
+        if (typeof engine.snapshotRendering !== "undefined") {
+            engine.snapshotRendering = false;
+        }
+
+        // Reset the per-class ForceGLSL statics. "Test code inlining" (#YG3BBF#51)
+        // sets BABYLON.PBRBaseMaterial.ForceGLSL = true and never restores it. On
+        // bgfx that is a no-op (GLSL is the only path), but on WebGPU it pushes
+        // every later PBR material onto the GLSL transpiler, which then rejects
+        // shader includes that rely on the WGSL path -- the Atmosphere scenes fail
+        // to compile ("unexpected SAMPLER2D") and never become ready. Collect the
+        // classes once, then restore the default before each test; a test that
+        // wants GLSL sets it again in its own createScene.
+        if (forceGlslOwners === undefined) {
+            forceGlslOwners = [];
+            for (const key of Object.keys(BABYLON)) {
+                let value;
+                try {
+                    value = BABYLON[key];
+                } catch (e) {
+                    continue;
+                }
+                if ((typeof value === "function" || (value && typeof value === "object")) &&
+                    Object.getOwnPropertyDescriptor(value, "ForceGLSL")) {
+                    forceGlslOwners.push(value);
+                }
+            }
+        }
+        for (const owner of forceGlslOwners) {
+            try {
+                owner.ForceGLSL = false;
+            } catch (e) {
+                // Read-only on some classes; nothing to restore in that case.
+            }
+        }
 
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);
@@ -1124,18 +1244,24 @@
         }
     }
 
-    OffscreenCanvas = function (width, height) {
-        return {
-            width: width
-            , height: height
-            , getContext: function (type) {
-                return {
-                    fillRect: function (x, y, w, h) { }
-                    , measureText: function (text) { return 8; }
-                    , fillText: function (text, x, y) { }
-                };
-            }
-        };
+    // Only define no-op DOM stubs if the host hasn't already provided functional
+    // ones. The NativeDawn (WebGPU) backend installs a real 2D canvas + document
+    // (needed for WebGPU texture upload); the bgfx backend provides neither, so
+    // these fallbacks apply there.
+    if (typeof OffscreenCanvas === "undefined") {
+        OffscreenCanvas = function (width, height) {
+            return {
+                width: width
+                , height: height
+                , getContext: function (type) {
+                    return {
+                        fillRect: function (x, y, w, h) { }
+                        , measureText: function (text) { return 8; }
+                        , fillText: function (text, x, y) { }
+                    };
+                }
+            };
+        }
     }
 
     // Expose the native Canvas Image under its DOM name.
@@ -1188,15 +1314,16 @@
         };
     }
 
-    document = {
-        createElement: function (type) {
-            if (type === "canvas") {
-                // Image-processing snippets need a real 2D drawing/readback context.
-                return engine.createCanvas(64, 64);
-            }
-            return {};
-        },
-        removeEventListener: function () { }
+    if (typeof document === "undefined") {
+        document = {
+            createElement: function (type) {
+                if (type === "canvas") {
+                    return engine.createCanvas(64, 64);
+                }
+                return {};
+            },
+            removeEventListener: function () { }
+        };
     }
 
     const xhr = new XMLHttpRequest();
@@ -1285,6 +1412,31 @@
     }, false);
 
 
+    function startValidation() {
+        console.log("Starting");
+        TestUtils.setTitle("Starting Native Validation Tests");
+        TestUtils.updateSize(testWidth, testHeight);
+        xhr.send();
+    }
+
+    // The WebGPU engine loads its GLSL -> SPIR-V -> WGSL transpilers (the glslang
+    // and twgsl WASM modules) lazily, on the first effect that is authored in
+    // GLSL: _preparePipelineContextAsync awaits prepareGlslangAndTintAsync()
+    // whenever shaderLanguage is GLSL and _glslangAndTintAreFullyLoaded is false.
+    // That await makes the *first* GLSL effect compile asynchronously no matter
+    // what, even with disableParallelShaderCompilation, so a scene that probes
+    // effect.isReady() right after createEffect sees false and takes its "not
+    // ready" branch. Whether it sees true then depends purely on whether some
+    // earlier test already warmed the modules, which makes results depend on test
+    // ordering (a test can pass in a full run and fail in isolation). Warm the
+    // transpilers once up front so every test starts from the same state.
+    const warmShaderTranspilersAsync = function (engine) {
+        if (typeof engine.prepareGlslangAndTintAsync !== "function") {
+            return Promise.resolve();
+        }
+        return engine.prepareGlslangAndTintAsync();
+    };
+
     function loadFontAssetAsync(url) {
         return BABYLON.Tools.LoadFileAsync(url, true).then(function (data) {
             if (!(data instanceof ArrayBuffer) || data.byteLength === 0) {
@@ -1294,21 +1446,23 @@
         });
     }
 
-    Promise.all([
-        loadFontAssetAsync("app:///Scripts/DroidSans.ttf"),
-        loadFontAssetAsync("app:///Scripts/Arimo-Regular.ttf")
-    ]).then(function (fonts) {
+    const initializeEngine = isDawn ? globalThis._playgroundWebGPUReady.then(function (engine) {
+        return warmShaderTranspilersAsync(engine);
+    }) : Promise.resolve();
+    initializeEngine.then(function () {
+        return Promise.all([
+            loadFontAssetAsync("app:///Scripts/DroidSans.ttf"),
+            loadFontAssetAsync("app:///Scripts/Arimo-Regular.ttf")
+        ]);
+    }).then(function (fonts) {
         _native.Canvas.loadTTF("droidsans", fonts[0]);
         _native.Canvas.loadTTF("monospace", fonts[0]);
         return _native.Canvas.loadTTFAsync("Arial", fonts[1]);
     }).then(function () {
         _native.RootUrl = "https://playground.babylonjs.com";
-        console.log("Starting");
-        TestUtils.setTitle("Starting Native Validation Tests");
-        TestUtils.updateSize(testWidth, testHeight);
-        xhr.send();
+        startValidation();
     }).catch(function (error) {
-        console.error("Failed to initialize validation fonts: " + error);
+        console.error("Failed to initialize validation resources: " + (error.stack || error));
         TestUtils.exit(1);
     });
 })();

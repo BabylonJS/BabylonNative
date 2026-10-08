@@ -37,6 +37,15 @@ if (project.hasProperty("importHostCompilers")) {
     cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property('importHostCompilers')}")
 }
 
+// NativeDawn (WebGPU/Dawn, Vulkan backend) build: enabling the plugin
+// force-disables NativeEngine. The Android app native lib has no Dawn code
+// path, so restrict the CMake build to the NativeDawn plugin target (see the
+// `targets` call below) to validate it compiles/links.
+def nativeDawn = project.hasProperty("NativeDawn") && project.property("NativeDawn") == "ON"
+if (nativeDawn) {
+    cmakeArguments.add("-DBABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON")
+}
+
 // The experimental codec plugins default to OFF in CMake. Allow the caller (CI) to
 // turn them on so the NDK toolchain gets build coverage for their third-party
 // dependencies, without changing the default for local Android builds.
@@ -65,6 +74,9 @@ android {
             cmake {
                 abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
                 arguments(*cmakeArguments)
+                if (nativeDawn) {
+                    targets "NativeDawn"
+                }
                 cppFlags += ["-Wno-deprecated-literal-operator"]
             }
         }
