@@ -48,10 +48,59 @@
     const cliCaptureFrame = (typeof opts.captureFrame === "number" && opts.captureFrame > 0) ? (opts.captureFrame | 0) : 0;
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
-    // Stopgap so native validation can pass. Examples should wait for their own
-    // scene, material, GUI, and utility-scene resources; that belongs in the
-    // examples, not this harness. Waiting here only because fixing each test
-    // individually is a much larger task.
+    // Workarounds for bugs in the examples, not in Babylon Native. A test opts in
+    // by listing IDs in its config.json "workarounds" array, so that list is also
+    // the list of examples to fix.
+    const WORKAROUNDS = {
+        // Example renders before its utility scenes, GUI images, or material effects are ready.
+        "wait-for-readiness": "wait for utility scenes, GUI textures, and material effects before rendering",
+        // Example reads the browser-only global `name` (window.name).
+        "undeclared-name": "declare `name` for the example code",
+        // Example captures effect-layer output before its render targets were submitted once.
+        "prime-effect-layers": "render one extra frame before capture when effect layers exist",
+        // Example leaves scenes, textures, or Draco state behind for later tests.
+        "leak-cleanup": "dispose leaked scenes and textures and reset Draco after the test",
+        // Example starts an async model load in createScene without awaiting it.
+        "wait-for-import": "wait for loader promises started by createScene before rendering",
+        // Example clears opaque but writes alpha < 1 that the browser would composite.
+        "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
+    };
+    let appliedWorkarounds = [];
+
+    function hasWorkaround(test, id) {
+        return !!test && Array.isArray(test.workarounds) && test.workarounds.indexOf(id) !== -1;
+    }
+
+    // Logged only when the workaround changed what the runner did for the test.
+    function noteWorkaround(test, id) {
+        if (appliedWorkarounds.indexOf(id) !== -1) {
+            return;
+        }
+        appliedWorkarounds.push(id);
+        console.log("Workaround '" + id + "' applied for '" + ((test && test.title) || "(unnamed)") + "'");
+    }
+
+    function validateWorkarounds(tests) {
+        const errors = [];
+        for (let i = 0; i < tests.length; ++i) {
+            const ids = tests[i].workarounds;
+            if (ids === undefined) {
+                continue;
+            }
+            if (!Array.isArray(ids)) {
+                errors.push("test " + i + " '" + (tests[i].title || "") + "': workarounds must be an array");
+                continue;
+            }
+            for (let j = 0; j < ids.length; ++j) {
+                if (!Object.prototype.hasOwnProperty.call(WORKAROUNDS, ids[j])) {
+                    errors.push("test " + i + " '" + (tests[i].title || "") + "': unknown workaround '" + ids[j] + "'");
+                }
+            }
+        }
+        return errors;
+    }
+
+    // wait-for-readiness limits.
     const MAX_CONVERGENCE_TICKS = 240;
     const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
@@ -62,8 +111,8 @@
     const dracoDecoderModule = globalThis.DracoDecoderModule;
     const dracoEncoderModule = globalThis.DracoEncoderModule;
 
-    // UtilityLayerRenderer exposes both sides of the association, but its utility
-    // scene can have no active camera when the layer is created before the main camera.
+    // Used by wait-for-readiness. UtilityLayerRenderer exposes both sides of the association,
+    // but its utility scene can have no active camera when the layer is created before the main camera.
     const updateUtilityLayerCamera = BABYLON.UtilityLayerRenderer.prototype._updateCamera;
     BABYLON.UtilityLayerRenderer.prototype._updateCamera = function () {
         const result = updateUtilityLayerCamera.apply(this, arguments);
@@ -111,6 +160,62 @@
         return true;
     }
 
+    // undeclared-name: browsers resolve a bare `name` to window.name (""). A direct eval
+    // here sees this local, without a real global (which breaks the UMD bundles) or
+    // rewriting the example text (which would shift line numbers and "use strict").
+    function evalWithName(code) {
+        // eslint-disable-next-line no-unused-vars
+        var name = "";
+        return eval(code);
+    }
+
+    function evalExample(test, code) {
+        if (hasWorkaround(test, "undeclared-name")) {
+            noteWorkaround(test, "undeclared-name");
+            return evalWithName(code);
+        }
+        return eval(code);
+    }
+
+    // wait-for-import: while a tracker is active, loader promises are recorded so the
+    // runner can wait for loads the example did not await.
+    let importTracker = null;
+    function wrapImportFunction(owner, name) {
+        const original = owner && owner[name];
+        if (typeof original !== "function") {
+            return;
+        }
+        owner[name] = function () {
+            const promise = original.apply(this, arguments);
+            if (importTracker && promise && typeof promise.then === "function") {
+                const entry = { settled: false };
+                entry.promise = promise.then(
+                    function () { entry.settled = true; },
+                    function (error) { entry.settled = true; throw error; });
+                // Keep abandoned trackers quiet; waitForTrackedImports still sees the rejection.
+                entry.promise.catch(function () { });
+                importTracker.push(entry);
+            }
+            return promise;
+        };
+    }
+    ["ImportMeshAsync", "AppendSceneAsync", "LoadAssetContainerAsync"].forEach(function (name) {
+        wrapImportFunction(BABYLON, name);
+    });
+    ["ImportMeshAsync", "AppendAsync", "LoadAssetContainerAsync"].forEach(function (name) {
+        wrapImportFunction(BABYLON.SceneLoader, name);
+    });
+
+    function waitForTrackedImports(test, scene) {
+        const tracked = importTracker || [];
+        importTracker = null;
+        if (tracked.some(function (entry) { return !entry.settled; })) {
+            noteWorkaround(test, "wait-for-import");
+        }
+        return Promise.all(tracked.map(function (entry) { return entry.promise; }))
+            .then(function () { return scene; });
+    }
+
     function failTest(done) {
         if (breakOnFail) {
             // eslint-disable-next-line no-debugger
@@ -119,23 +224,71 @@
         done(false);
     }
 
+    function hasDracoStateChanged() {
+        function configChanged(current, saved) {
+            const keys = Object.keys(Object.assign({}, current, saved));
+            for (let i = 0; i < keys.length; ++i) {
+                if (current[keys[i]] !== saved[keys[i]]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return BABYLON.DracoCompression.DefaultNumWorkers !== dracoDefaultNumWorkers ||
+            configChanged(BABYLON.DracoDecoder.DefaultConfiguration, dracoDecoderConfiguration) ||
+            configChanged(BABYLON.DracoEncoder.DefaultConfiguration, dracoEncoderConfiguration) ||
+            globalThis.DracoDecoderModule !== dracoDecoderModule ||
+            globalThis.DracoEncoderModule !== dracoEncoderModule;
+    }
+
+    // leak-cleanup: release state the example left behind so it cannot change later tests.
+    function cleanupLeaks(test) {
+        let leaked = false;
+
+        // Async loads may leave additional scenes registered on the engine.
+        const strayScenes = engine.scenes.slice();
+        leaked = leaked || strayScenes.length > 0;
+        for (let i = 0; i < strayScenes.length; ++i) {
+            try { strayScenes[i].dispose(); } catch (e) { console.error(e); }
+        }
+
+        // Cache keys omit load-time options; leaked textures can change later tests.
+        const leakedTextures = engine.getLoadedTexturesCache();
+        leaked = leaked || leakedTextures.length > 0;
+        for (let i = leakedTextures.length - 1; i >= 0; --i) {
+            engine._releaseTexture(leakedTextures[i]);
+        }
+        engine.clearInternalTexturesCache();
+
+        // Each scene must load matching Draco JS/WASM modules, not reuse another scene's factory.
+        leaked = leaked || hasDracoStateChanged();
+        BABYLON.DracoCompression.ResetDefault();
+        BABYLON.DracoDecoder.ResetDefault();
+        BABYLON.DracoEncoder.ResetDefault();
+        BABYLON.DracoCompression.DefaultNumWorkers = dracoDefaultNumWorkers;
+        BABYLON.DracoDecoder.DefaultConfiguration = Object.assign({}, dracoDecoderConfiguration);
+        BABYLON.DracoEncoder.DefaultConfiguration = Object.assign({}, dracoEncoderConfiguration);
+        globalThis.DracoDecoderModule = dracoDecoderModule;
+        globalThis.DracoEncoderModule = dracoEncoderModule;
+
+        if (leaked) {
+            noteWorkaround(test, "leak-cleanup");
+        }
+    }
+
     // Reset the reused engine between tests.
-    function cleanupAfterTest() {
+    function cleanupAfterTest(test) {
         if (currentScene) {
             try { currentScene.dispose(); } catch (e) { console.error(e); }
             currentScene = null;
         }
 
-        // Async loads may leave additional scenes registered on the engine.
-        if (engine && engine.scenes) {
-            const strayScenes = engine.scenes.slice();
-            for (let i = 0; i < strayScenes.length; ++i) {
-                try { strayScenes[i].dispose(); } catch (e) { console.error(e); }
-            }
-        }
-
         if (!engine) {
             return;
+        }
+
+        if (hasWorkaround(test, "leak-cleanup")) {
+            cleanupLeaks(test);
         }
 
         engine.setHardwareScalingLevel(1);
@@ -148,29 +301,12 @@
         // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
         engine.releaseEffects();
 
-        // Cache keys omit load-time options; leaked textures can change later tests.
-        const leakedTextures = engine.getLoadedTexturesCache();
-        for (let i = leakedTextures.length - 1; i >= 0; --i) {
-            engine._releaseTexture(leakedTextures[i]);
-        }
-        engine.clearInternalTexturesCache();
-
         // Global loader observers outlive scenes and can leak settings into later tests.
         BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
-
-        // Each scene must load matching Draco JS/WASM modules, not reuse another scene's factory.
-        BABYLON.DracoCompression.ResetDefault();
-        BABYLON.DracoDecoder.ResetDefault();
-        BABYLON.DracoEncoder.ResetDefault();
-        BABYLON.DracoCompression.DefaultNumWorkers = dracoDefaultNumWorkers;
-        BABYLON.DracoDecoder.DefaultConfiguration = Object.assign({}, dracoDecoderConfiguration);
-        BABYLON.DracoEncoder.DefaultConfiguration = Object.assign({}, dracoEncoderConfiguration);
-        globalThis.DracoDecoderModule = dracoDecoderModule;
-        globalThis.DracoEncoderModule = dracoEncoderModule;
     }
 
     // Every completion path must stop rendering and clean up exactly once.
-    function makeTestDone(outerDone) {
+    function makeTestDone(outerDone, test) {
         let finished = false;
         return function (status) {
             if (finished) {
@@ -184,7 +320,7 @@
             } catch (e) {
                 console.error(e);
             }
-            cleanupAfterTest();
+            cleanupAfterTest(test);
             outerDone(status);
         };
     }
@@ -432,8 +568,6 @@
     }
 
     // Match browser screenshots: composite over the CSS canvas background, then the white page.
-    // FrameGraph may copy transparent attachments regardless of scene.clearColor.
-    // Legacy paths retain the clear-alpha gate because some write invalid alpha after opaque clears.
     const CANVAS_BACKGROUND = [173, 255, 47];
 
     function compositeOverCanvasBackground(data, canvasBackgroundColor) {
@@ -459,10 +593,27 @@
         return data;
     }
 
+    function hasTranslucentPixel(data) {
+        for (let index = 3; index < data.length; index += 4) {
+            if (data[index] !== 255) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function evaluateScreenshot(test, screenshot, referenceImage, done, compareFunction) {
         let testRes = true;
 
-        if (test.canvasBackgroundColor || (currentScene && (currentScene.frameGraph || (currentScene.clearColor && currentScene.clearColor.a < 1)))) {
+        // opaque-clear-alpha: the browser always composites; skip it when the scene clears opaque
+        // (FrameGraph may copy transparent attachments regardless of scene.clearColor).
+        const opaqueClear = !test.canvasBackgroundColor && currentScene && !currentScene.frameGraph &&
+            !(currentScene.clearColor && currentScene.clearColor.a < 1);
+        if (opaqueClear && hasWorkaround(test, "opaque-clear-alpha")) {
+            if (hasTranslucentPixel(screenshot)) {
+                noteWorkaround(test, "opaque-clear-alpha");
+            }
+        } else {
             compositeOverCanvasBackground(screenshot, test.canvasBackgroundColor);
         }
 
@@ -580,6 +731,12 @@
         let readinessReconcileTimer = null;
         let readinessTimeoutTimer = null;
         let waitingForReadiness = true;
+        const waitForReadiness = hasWorkaround(test, "wait-for-readiness");
+        // Without wait-for-readiness, match the browser: main-scene executeWhenReady only.
+        const getReadinessScenes = waitForReadiness
+            ? getConvergenceScenes
+            : function (scene) { return [scene]; };
+        const primeEffectLayers = hasWorkaround(test, "prime-effect-layers");
         // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
         let effectLayerPrimed = false;
 
@@ -632,8 +789,9 @@
                     }
                     // Recompute because utility layers can be attached or disposed while
                     // convergence is pending, updating the engine's virtual-scene list.
-                    const convergenceScenes = getConvergenceScenes(currentScene);
+                    const convergenceScenes = waitForReadiness ? getConvergenceScenes(currentScene) : [];
                     if (!convergenceScenes.every(isSceneConverged)) {
+                        noteWorkaround(test, "wait-for-readiness");
                         if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
                             stopped = true;
                             evaluated = true;
@@ -650,8 +808,9 @@
                         return;
                     }
 
-                    if (!effectLayerPrimed && currentScene.effectLayers && currentScene.effectLayers.length > 0) {
+                    if (primeEffectLayers && !effectLayerPrimed && currentScene.effectLayers && currentScene.effectLayers.length > 0) {
                         effectLayerPrimed = true;
+                        noteWorkaround(test, "prime-effect-layers");
                         currentScene.render();
                         return;
                     }
@@ -716,7 +875,7 @@
                     readinessReconcileTimer = null;
                 }
 
-                const scenes = getConvergenceScenes(currentScene);
+                const scenes = getReadinessScenes(currentScene);
                 const newScenes = [];
                 for (let i = 0; i < scenes.length; i++) {
                     if (readinessScenes.indexOf(scenes[i]) === -1) {
@@ -766,10 +925,15 @@
                 let allReady = readinessScenes.length > 0;
                 for (let i = 0; i < readinessScenes.length; i++) {
                     // GUI image loads are not included in Scene.executeWhenReady.
-                    if (readyScenes.indexOf(readinessScenes[i]) === -1 || !areGuiTexturesReady(readinessScenes[i])) {
+                    if (readyScenes.indexOf(readinessScenes[i]) === -1 ||
+                        (waitForReadiness && !areGuiTexturesReady(readinessScenes[i]))) {
                         allReady = false;
                         break;
                     }
+                }
+                if (!allReady && readyScenes.indexOf(currentScene) !== -1) {
+                    // The browser would have started rendering here.
+                    noteWorkaround(test, "wait-for-readiness");
                 }
                 if (allReady) {
                     startRendering();
@@ -911,8 +1075,6 @@
                                 if (finished) {
                                     return;
                                 }
-                                // eslint-disable-next-line no-unused-vars
-                                var name = ""; // see the note on the scriptToRun eval below
                                 try {
                                     if (test.requiresHavok) {
                                         await initializeHavokAsync();
@@ -921,7 +1083,13 @@
                                         }
                                     }
 
-                                    let createdScene = eval(pgCode);
+                                    importTracker = hasWorkaround(test, "wait-for-import") ? [] : null;
+                                    let createdScene = evalExample(test, pgCode);
+                                    if (importTracker) {
+                                        createdScene = Promise.resolve(createdScene).then(function (scene) {
+                                            return waitForTrackedImports(test, scene);
+                                        });
+                                    }
 
                                     if (createdScene && createdScene.then) {
                                         // Bound async creation before scene readiness begins; native blocking needs an external timeout.
@@ -1028,11 +1196,8 @@
                             if (finished) {
                                 return;
                             }
-                            // Direct eval sees the browser's default name through this local binding.
-                            // eslint-disable-next-line no-unused-vars
-                            var name = "";
                             try {
-                                currentScene = eval(scriptCode);
+                                currentScene = evalExample(test, scriptCode);
                                 stopSceneProcessing = processCurrentScene(test, referenceImage, done, compareFunction);
                             }
                             catch (e) {
@@ -1056,13 +1221,14 @@
         }
     }
     function runTest(index, outerDone) {
-        const done = makeTestDone(outerDone);
+        const test = config.tests[index];
+        const done = makeTestDone(outerDone, test);
+        appliedWorkarounds = [];
         if (index >= config.tests.length) {
             done(false);
             return;
         }
 
-        const test = config.tests[index];
         const testInfo = "Running " + test.title;
         console.log(testInfo);
         TestUtils.setTitle(testInfo);
@@ -1206,12 +1372,23 @@
         if (xhr.status === 200) {
             config = JSON.parse(xhr.responseText);
 
+            const workaroundErrors = validateWorkarounds(config.tests);
+            if (workaroundErrors.length > 0) {
+                for (let i = 0; i < workaroundErrors.length; ++i) {
+                    console.error("config.json: " + workaroundErrors[i]);
+                }
+                console.error("Known workarounds: " + Object.keys(WORKAROUNDS).join(", "));
+                TestUtils.exit(1);
+                return;
+            }
+
             if (listTests) {
                 // TSV exclusions reflect the catalog, regardless of --include-excluded.
                 for (let i = 0; i < config.tests.length; ++i) {
                     const t = config.tests[i];
                     const reason = getExclusionReason(t) || "";
-                    console.log(i + "\t" + (t.title || "") + "\t" + (t.referenceImage || "") + "\t" + reason);
+                    const workarounds = Array.isArray(t.workarounds) ? t.workarounds.join(",") : "";
+                    console.log(i + "\t" + (t.title || "") + "\t" + (t.referenceImage || "") + "\t" + reason + "\t" + workarounds);
                 }
                 TestUtils.exit(0);
                 return;

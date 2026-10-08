@@ -141,8 +141,9 @@ namespace
         FlagSpec{"--list", "-l", FlagKind::Boolean, "",
             "List configured tests as TSV and exit (0).",
             "                              Columns: index, title, referenceImage,\n"
-            "                              exclusionReason. exclusionReason reflects\n"
-            "                              config state (ignores --include-excluded).\n",
+            "                              exclusionReason, workarounds. exclusionReason\n"
+            "                              reflects config state (ignores\n"
+            "                              --include-excluded).\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.ListTests = true; }},
 
         FlagSpec{"--headless", "", FlagKind::Boolean, "",
