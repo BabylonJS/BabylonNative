@@ -39,6 +39,11 @@ set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 set(BGFX_CONFIG_VIDEO OFF)
 
+# Canvas workloads can exceed bgfx's default of 128 framebuffer handles.
+if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
+    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
+endif()
+
 # These formats have neither browser image support nor Babylon.js texture loaders.
 set(BIMG_CONFIG_PARSE_PIC OFF)
 set(BIMG_CONFIG_PARSE_PNM OFF)
