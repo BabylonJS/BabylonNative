@@ -191,7 +191,9 @@
                 const entry = { settled: false };
                 entry.promise = promise.then(
                     function () { entry.settled = true; },
-                    function () { entry.settled = true; });
+                    function (error) { entry.settled = true; throw error; });
+                // Keep abandoned trackers quiet; waitForTrackedImports still sees the rejection.
+                entry.promise.catch(function () { });
                 importTracker.push(entry);
             }
             return promise;
