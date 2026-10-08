@@ -58,8 +58,8 @@
         "undeclared-name": "declare `name` for the example code",
         // Example captures effect-layer output before its render targets were submitted once.
         "prime-effect-layers": "render one extra frame before capture when effect layers exist",
-        // Example leaves scenes, textures, or Draco state behind for later tests.
-        "leak-cleanup": "dispose leaked scenes and textures and reset Draco after the test",
+        // Example leaves textures or Draco state behind for later tests.
+        "leak-cleanup": "release leaked textures and reset Draco after the test",
         // Example starts an async model load in createScene without awaiting it.
         "wait-for-import": "wait for loader promises started by createScene before rendering",
         // Example clears opaque but writes alpha < 1 that the browser would composite.
@@ -245,13 +245,6 @@
     function cleanupLeaks(test) {
         let leaked = false;
 
-        // Async loads may leave additional scenes registered on the engine.
-        const strayScenes = engine.scenes.slice();
-        leaked = leaked || strayScenes.length > 0;
-        for (let i = 0; i < strayScenes.length; ++i) {
-            try { strayScenes[i].dispose(); } catch (e) { console.error(e); }
-        }
-
         // Cache keys omit load-time options; leaked textures can change later tests.
         const leakedTextures = engine.getLoadedTexturesCache();
         leaked = leaked || leakedTextures.length > 0;
@@ -285,6 +278,13 @@
 
         if (!engine) {
             return;
+        }
+
+        // Async loads may leave additional scenes registered on the engine, including when a
+        // failed test never assigned currentScene, so dispose them for every test.
+        const strayScenes = engine.scenes.slice();
+        for (let i = 0; i < strayScenes.length; ++i) {
+            try { strayScenes[i].dispose(); } catch (e) { console.error(e); }
         }
 
         if (hasWorkaround(test, "leak-cleanup")) {
