@@ -103,15 +103,20 @@ TEST(CanvasReadback, FlushOwnsFrameScopeWithActiveEncoder)
             Napi::Number::New(env, 16), Napi::Number::New(env, 16)});
 
         auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
-        ASSERT_NE(graphics.GetActiveEncoder(), nullptr);
-        const auto generation = graphics.ViewIdGeneration();
-        // An exhausted view budget makes the flush handshake require scope ownership,
-        // even though the render thread has already published an encoder.
-        while (graphics.PeekNextViewId() < bgfx::getCaps()->limits.maxViews)
+        uint32_t generation{};
         {
-            graphics.AcquireNewViewId();
+            auto setupScope = graphics.AcquireFrameCompletionScope();
+            ASSERT_NE(graphics.GetActiveEncoder(), nullptr);
+            generation = graphics.ViewIdGeneration();
+            // An exhausted view budget makes the flush handshake require scope ownership,
+            // even though the render thread has already published an encoder.
+            while (graphics.PeekNextViewId() < bgfx::getCaps()->limits.maxViews)
+            {
+                graphics.AcquireNewViewId();
+            }
         }
 
+        // Release the setup scope so FlushCore must acquire its own.
         context.Get("flush").As<Napi::Function>().Call(context, {});
 
         EXPECT_GT(graphics.ViewIdGeneration(), generation);
