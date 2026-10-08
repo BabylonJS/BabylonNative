@@ -60,6 +60,10 @@
         "prime-effect-layers": "render one extra frame before capture when effect layers exist",
         // Example leaves scenes, textures, or Draco state behind for later tests.
         "leak-cleanup": "dispose leaked scenes and textures and reset Draco after the test",
+        // Example starts an async model load in createScene without awaiting it.
+        "wait-for-import": "wait for loader promises started by createScene before rendering",
+        // Example clears opaque but writes alpha < 1 that the browser would composite.
+        "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
     };
     let appliedWorkarounds = [];
 
@@ -166,7 +170,48 @@
     }
 
     function evalExample(test, code) {
-        return hasWorkaround(test, "undeclared-name") ? evalWithName(code) : eval(code);
+        if (hasWorkaround(test, "undeclared-name")) {
+            noteWorkaround(test, "undeclared-name");
+            return evalWithName(code);
+        }
+        return eval(code);
+    }
+
+    // wait-for-import: while a tracker is active, loader promises are recorded so the
+    // runner can wait for loads the example did not await.
+    let importTracker = null;
+    function wrapImportFunction(owner, name) {
+        const original = owner && owner[name];
+        if (typeof original !== "function") {
+            return;
+        }
+        owner[name] = function () {
+            const promise = original.apply(this, arguments);
+            if (importTracker && promise && typeof promise.then === "function") {
+                const entry = { settled: false };
+                entry.promise = promise.then(
+                    function () { entry.settled = true; },
+                    function () { entry.settled = true; });
+                importTracker.push(entry);
+            }
+            return promise;
+        };
+    }
+    ["ImportMeshAsync", "AppendSceneAsync", "LoadAssetContainerAsync"].forEach(function (name) {
+        wrapImportFunction(BABYLON, name);
+    });
+    ["ImportMeshAsync", "AppendAsync", "LoadAssetContainerAsync"].forEach(function (name) {
+        wrapImportFunction(BABYLON.SceneLoader, name);
+    });
+
+    function waitForTrackedImports(test, scene) {
+        const tracked = importTracker || [];
+        importTracker = null;
+        if (tracked.some(function (entry) { return !entry.settled; })) {
+            noteWorkaround(test, "wait-for-import");
+        }
+        return Promise.all(tracked.map(function (entry) { return entry.promise; }))
+            .then(function () { return scene; });
     }
 
     function failTest(done) {
@@ -521,8 +566,6 @@
     }
 
     // Match browser screenshots: composite over the CSS canvas background, then the white page.
-    // FrameGraph may copy transparent attachments regardless of scene.clearColor.
-    // Legacy paths retain the clear-alpha gate because some write invalid alpha after opaque clears.
     const CANVAS_BACKGROUND = [173, 255, 47];
 
     function compositeOverCanvasBackground(data, canvasBackgroundColor) {
@@ -548,10 +591,27 @@
         return data;
     }
 
+    function hasTranslucentPixel(data) {
+        for (let index = 3; index < data.length; index += 4) {
+            if (data[index] !== 255) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function evaluateScreenshot(test, screenshot, referenceImage, done, compareFunction) {
         let testRes = true;
 
-        if (test.canvasBackgroundColor || (currentScene && (currentScene.frameGraph || (currentScene.clearColor && currentScene.clearColor.a < 1)))) {
+        // opaque-clear-alpha: the browser always composites; skip it when the scene clears opaque
+        // (FrameGraph may copy transparent attachments regardless of scene.clearColor).
+        const opaqueClear = !test.canvasBackgroundColor && currentScene && !currentScene.frameGraph &&
+            !(currentScene.clearColor && currentScene.clearColor.a < 1);
+        if (opaqueClear && hasWorkaround(test, "opaque-clear-alpha")) {
+            if (hasTranslucentPixel(screenshot)) {
+                noteWorkaround(test, "opaque-clear-alpha");
+            }
+        } else {
             compositeOverCanvasBackground(screenshot, test.canvasBackgroundColor);
         }
 
@@ -1021,7 +1081,13 @@
                                         }
                                     }
 
+                                    importTracker = hasWorkaround(test, "wait-for-import") ? [] : null;
                                     let createdScene = evalExample(test, pgCode);
+                                    if (importTracker) {
+                                        createdScene = Promise.resolve(createdScene).then(function (scene) {
+                                            return waitForTrackedImports(test, scene);
+                                        });
+                                    }
 
                                     if (createdScene && createdScene.then) {
                                         // Bound async creation before scene readiness begins; native blocking needs an external timeout.
