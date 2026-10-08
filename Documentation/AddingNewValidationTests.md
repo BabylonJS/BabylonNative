@@ -53,7 +53,7 @@ TSV column. When a workaround changes what the runner does for a test, the runne
 | `wait-for-readiness` | Renders before utility-layer scenes, GUI images, or material effects are ready | Waits for those as described below |
 | `undeclared-name` | Reads the browser-only global `name` (`window.name`) | Declares `var name = ""` for the example code |
 | `prime-effect-layers` | Captures effect-layer (glow/highlight) output on the first frame | Renders one extra frame before counting frames |
-| `leak-cleanup` | Leaves scenes, textures, or Draco state behind after disposal | Disposes stray scenes, releases leaked textures, and resets Draco after the test |
+| `leak-cleanup` | Leaves textures or Draco state behind after disposal | Releases leaked textures and resets Draco after the test (stray scenes are disposed after every test) |
 | `wait-for-import` | Starts `ImportMeshAsync`/`AppendSceneAsync`/`LoadAssetContainerAsync` in `createScene` without awaiting it | Waits for loader promises started before the scene is returned |
 | `opaque-clear-alpha` | Clears opaque but leaves alpha < 1 in the final image | Skips canvas-background compositing unless the test sets `canvasBackgroundColor`, the scene uses a frame graph, or `clearColor.a < 1` |
 
