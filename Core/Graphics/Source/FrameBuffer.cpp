@@ -189,13 +189,15 @@ namespace Babylon::Graphics
         }
         else
         {
+            const Rect scissor{ToTargetRect(m_desiredScissor, static_cast<float>(Height()))};
             bgfx::setViewRect(
                 m_viewId.value(),
-                static_cast<uint16_t>(m_desiredScissor.X),
-                static_cast<uint16_t>(m_desiredScissor.Y),
-                static_cast<uint16_t>(m_desiredScissor.Width),
-                static_cast<uint16_t>(m_desiredScissor.Height));
+                static_cast<uint16_t>(scissor.X),
+                static_cast<uint16_t>(scissor.Y),
+                static_cast<uint16_t>(scissor.Width),
+                static_cast<uint16_t>(scissor.Height));
 
+            // Kept in the desired (unmirrored) space it is compared against.
             m_bgfxViewPort = {
                 m_desiredScissor.X / Width(),
                 m_desiredScissor.Y / Height(),
@@ -313,19 +315,31 @@ namespace Babylon::Graphics
         bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         m_bgfxViewPort = viewPort;
+        const Rect targetViewPort{ToTargetRect(viewPort, 1.0f)};
         bgfx::setViewRect(m_viewId.value(),
-            static_cast<uint16_t>(m_bgfxViewPort.X * Width()),
-            static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
-            static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
-            static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
+            static_cast<uint16_t>(targetViewPort.X * Width()),
+            static_cast<uint16_t>(targetViewPort.Y * Height()),
+            static_cast<uint16_t>(targetViewPort.Width * Width()),
+            static_cast<uint16_t>(targetViewPort.Height * Height()));
 
         m_bgfxScissor = scissor;
+        const Rect targetScissor{ToTargetRect(scissor, static_cast<float>(Height()))};
         bgfx::setViewScissor(
             m_viewId.value(),
-            static_cast<uint16_t>(m_bgfxScissor.X),
-            static_cast<uint16_t>(m_bgfxScissor.Y),
-            static_cast<uint16_t>(m_bgfxScissor.Width),
-            static_cast<uint16_t>(m_bgfxScissor.Height));
+            static_cast<uint16_t>(targetScissor.X),
+            static_cast<uint16_t>(targetScissor.Y),
+            static_cast<uint16_t>(targetScissor.Width),
+            static_cast<uint16_t>(targetScissor.Height));
+    }
+
+    Rect FrameBuffer::ToTargetRect(const Rect& rect, float height) const
+    {
+        // Rects are kept top-left; GL-row-order targets store GL's bottom row first.
+        if (!m_glRowOrder || (rect.Width == 0.0f && rect.Height == 0.0f))
+        {
+            return rect;
+        }
+        return Rect{rect.X, height - rect.Y - rect.Height, rect.Width, rect.Height};
     }
 
     bool Rect::Equals(const Rect& other) const

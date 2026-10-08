@@ -2802,7 +2802,9 @@ namespace Babylon
             auto tempTexture = std::make_shared<bool>(false);
 
             // WebGL readPixels coordinates start at the bottom, unlike D3D/Metal/Vulkan blit coordinates.
-            const uint16_t blitY{bgfx::getCaps()->originBottomLeft ? y : static_cast<uint16_t>(mipHeight - y - height)};
+            // Cube faces are stored in GL row order on every backend, for uploads and rendering alike.
+            const bool glRowOrder{bgfx::getCaps()->originBottomLeft || texture->IsCube()};
+            const uint16_t blitY{glRowOrder ? y : static_cast<uint16_t>(mipHeight - y - height)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
             // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
@@ -2831,7 +2833,7 @@ namespace Babylon
 
             // Read the source texture (async — completes after bgfx::frame).
             m_deviceContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
-                .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo, glRowOrder]() mutable {
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
 #ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
@@ -2847,7 +2849,7 @@ namespace Babylon
                     }
                     assert(textureBuffer.size() == targetTextureInfo.storageSize);
                     // Return bottom-up rows, matching WebGL readPixels on every backend.
-                    if (!bgfx::getCaps()->originBottomLeft)
+                    if (!glRowOrder)
                     {
                         FlipImage(textureBuffer, targetTextureInfo.height);
                     }
@@ -3163,6 +3165,21 @@ namespace Babylon
 
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, frameBufferDepthOwnerIndex, isMultisampled, depthOneVolumeAttachmentMask);
+
+        // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
+        // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
+        // uploaded faces and with WebGL without any Babylon.js compensation. 2D targets keep top-left rows,
+        // which the shader compiler's sampler coordinate flip already accounts for.
+        if (!caps->originBottomLeft)
+        {
+            bool cubeTarget{false};
+            for (Graphics::Texture* texture : colorTextures)
+            {
+                cubeTarget = cubeTarget || (texture != nullptr && bgfx::isValid(texture->Handle()) && texture->IsCube());
+            }
+            cubeTarget = cubeTarget || (explicitDepthTexture != nullptr && explicitDepthTexture->IsCube());
+            frameBuffer->SetGLRowOrder(cubeTarget);
+        }
 
         return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
@@ -3765,19 +3782,19 @@ namespace Babylon
             encoder->setUniform(uniform, values);
         }
 
-        // Resolve the gl_FragCoord Y flip the shader compiler injected (see
-        // ShaderCompilerTraversers::FlipFragCoordY). The height must be the bound framebuffer's,
-        // not the bgfx view rect's: FrameBuffer::SetBgfxViewPortAndScissor narrows the view rect to
-        // the viewport whenever one is set, while gl_FragCoord is relative to the whole target.
-        if (const UniformInfo* fragCoordTargetSize = m_currentProgram->FragCoordTargetSizeUniform())
+        // Resolve the injected render target transform (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME).
+        // The height must be the bound framebuffer's, not the bgfx view rect's: FrameBuffer::SetBgfxViewPortAndScissor
+        // narrows the view rect to the viewport whenever one is set, while gl_FragCoord is relative to the whole target.
+        const Graphics::FrameBuffer& transformFrameBuffer = GetBoundFrameBuffer();
+        const bool glRowOrder = transformFrameBuffer.GLRowOrder();
+        if (const UniformInfo* renderTargetTransform = m_currentProgram->RenderTargetTransformUniform())
         {
-            const Graphics::FrameBuffer& frameBuffer = GetBoundFrameBuffer();
-            const float targetSize[4]{
-                static_cast<float>(frameBuffer.Width()),
-                static_cast<float>(frameBuffer.Height()),
-                0.0f,
+            const float transform[4]{
+                glRowOrder ? 0.0f : static_cast<float>(transformFrameBuffer.Height()),
+                glRowOrder ? 1.0f : -1.0f,
+                glRowOrder ? -1.0f : 1.0f,
                 0.0f};
-            encoder->setUniform(fragCoordTargetSize->Handle, targetSize, 1);
+            encoder->setUniform(renderTargetTransform->Handle, transform, 1);
         }
 
         // Generic divisor-driven attributes are per-vertex inputs in the base shader. Recompile a
@@ -3824,14 +3841,17 @@ namespace Babylon
         auto& boundFrameBuffer = GetBoundFrameBuffer();
         // D3D11 also uses this flag to select its line coverage algorithm on single-sample targets.
         const uint64_t multisampleMask = boundFrameBuffer.IsMultisampled() ? UINT64_MAX : ~BGFX_STATE_MSAA;
+        // The vertex Y flip for GL-row-order targets mirrors the winding; bgfx culls relative to the
+        // front face, so swapping it keeps both culling and gl_FrontFacing as WebGL defines them.
+        const uint64_t engineState = glRowOrder ? (m_engineState ^ BGFX_STATE_FRONT_CCW) : m_engineState;
         if (boundFrameBuffer.HasDepth())
         {
-            const uint64_t drawState = (m_engineState | fillModeState);
+            const uint64_t drawState = (engineState | fillModeState);
             encoder->setState(drawState & multisampleMask);
         }
         else
         {
-            const uint64_t drawState = ((m_engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
+            const uint64_t drawState = ((engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
             encoder->setState(drawState & multisampleMask);
         }
 

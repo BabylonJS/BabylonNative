@@ -121,7 +121,6 @@ namespace Babylon::Plugins
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
-        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         // clang-format off
         static const spirv_cross::HLSLVertexAttributeRemap attributes[] = {

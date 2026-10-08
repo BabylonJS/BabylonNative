@@ -46,7 +46,9 @@ namespace Babylon::Plugins::ShaderCache
     // 7: shader binaries are bgfx BGFX_SHADER_BIN_VERSION 13 and, on D3D, record each
     //    sampler's register index and its paired texture's dimension.
     // 8: preserve application uniform aliases and inject nearest-sampler state.
-    static const uint32_t CACHE_VERSION = 8;
+    // 9: bnFragCoordTargetSize became bnRenderTargetTransform, which vertex shaders also read
+    //    to render cube faces in GL row order, and dFdy now scales by it.
+    static const uint32_t CACHE_VERSION = 9;
 
     void ShaderCacheImpl::Clear()
     {

@@ -62,10 +62,18 @@ namespace Babylon::Graphics
         }
         return false;
     }
-    /// Uniform declared in fragment shaders that read gl_FragCoord, holding the bound
-    /// framebuffer's width/height in .x/.y. Deliberately outside the u_ namespace Babylon.js
-    /// uses so it cannot collide with a shader uniform.
-    inline constexpr const char* FRAGCOORD_TARGET_SIZE_UNIFORM_NAME{"bnFragCoordTargetSize"};
+    /// Per-draw render target orientation, injected on top-left-origin backends (D3D/Metal/Vulkan).
+    /// Like ANGLE's driver uniforms, it lets one compiled shader address either storage order:
+    ///   .x/.y: window Y to GL Y, glY = x + y * windowY; also the dFdy sign (.y)
+    ///   .z:    gl_Position.y scale
+    /// Ordinary targets keep top-left rows, so NativeEngine writes (height, -1, 1, 0). Cube faces are
+    /// rendered upside down into GL row order, as on OpenGL, so they get (0, 1, -1, 0).
+    ///
+    /// The height must be the bound framebuffer's, not bgfx's u_viewRect, which
+    /// FrameBuffer::SetBgfxViewPortAndScissor narrows to the viewport whenever one is set, whereas
+    /// gl_FragCoord is relative to the whole render target. The name is deliberately outside the
+    /// u_ namespace Babylon.js uses for its own uniforms so it cannot collide with a shader uniform.
+    inline constexpr const char* RENDER_TARGET_TRANSFORM_UNIFORM_NAME{"bnRenderTargetTransform"};
     inline constexpr const char* SAMPLER_STATE_UNIFORM_PREFIX{"bnSamplerState_"};
 
     struct BgfxShaderInfo

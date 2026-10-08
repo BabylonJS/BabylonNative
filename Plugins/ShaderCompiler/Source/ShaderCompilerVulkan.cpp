@@ -405,7 +405,6 @@ namespace Babylon::Plugins
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ApplyBgfxVulkanResourceBindings(program);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
-        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         std::vector<uint32_t> spirvVS;
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, spirvVS);

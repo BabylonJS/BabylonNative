@@ -124,7 +124,6 @@ namespace Babylon::Plugins
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
-        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         std::string vertexMSL(vertexSource.data(), vertexSource.size());
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexMSL);

@@ -4,6 +4,7 @@
 #include <glslang/Public/ResourceLimits.h>
 #include <algorithm>
 #include <cctype>
+#include <regex>
 #include <set>
 
 #define BGFX_UNIFORM_FRAGMENTBIT UINT8_C(0x10) // Copy-pasta from bgfx_p.h
@@ -128,7 +129,8 @@ namespace Babylon::ShaderCompilerCommon
         constexpr std::string_view predefined[] = {
             "u_viewRect", "u_viewTexel", "u_view", "u_invView", "u_proj", "u_invProj",
             "u_viewProj", "u_invViewProj", "u_model", "u_modelView", "u_invModelView",
-            "u_modelViewProj", "u_alphaRef", "u_alphaRef4", "bgfx_indirectArgBase"};
+            "u_modelViewProj", "u_alphaRef", "u_alphaRef4", "bgfx_indirectArgBase",
+            Graphics::RENDER_TARGET_TRANSFORM_UNIFORM_NAME};
         const auto collect = [&](const std::vector<ShaderToken>& tokens, std::set<std::string>& stageCandidates) {
             bool uniform{};
             for (const auto& token : tokens)
@@ -209,6 +211,7 @@ namespace Babylon::ShaderCompilerCommon
 
     // Patching shader code to append clip space coordinates for the current rendering API.
     // Can be done with glslang shader traversal. Done with string patching for now.
+    // Also flips clip-space Y for GL-row-order targets (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME).
     std::string ProcessShaderCoordinates(std::string_view source)
     {
         size_t lastBrace = source.find_last_of('}');
@@ -217,7 +220,18 @@ namespace Babylon::ShaderCompilerCommon
             throw std::runtime_error{"ProcessShaderCoordinates: Could not find closing brace."};
         }
 
-        return std::string{source}.substr(0, lastBrace) + "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+        std::smatch match;
+        const std::string body{source.substr(0, lastBrace)};
+        static const std::regex mainPattern{R"(\bvoid\s+main\s*\()"};
+        if (!std::regex_search(body, match, mainPattern))
+        {
+            throw std::runtime_error{"ProcessShaderCoordinates: Could not find main."};
+        }
+
+        const std::string uniformName{Graphics::RENDER_TARGET_TRANSFORM_UNIFORM_NAME};
+        const auto mainOffset = static_cast<size_t>(match.position(0));
+        return body.substr(0, mainOffset) + "uniform vec4 " + uniformName + ";\n" + body.substr(mainOffset) +
+               "gl_Position.y *= " + uniformName + ".z; gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
     }
 
     std::string ProcessSamplerFlip(std::string_view source)

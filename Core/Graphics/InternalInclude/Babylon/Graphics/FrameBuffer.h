@@ -50,7 +50,13 @@ namespace Babylon::Graphics
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
 
+        // Rendered upside down so rows are stored in GL order on a top-left-origin backend.
+        // Viewport and scissor rects are mirrored to match (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME).
+        void SetGLRowOrder(bool glRowOrder) { m_glRowOrder = glRowOrder; }
+        bool GLRowOrder() const { return m_glRowOrder; }
+
     private:
+        Rect ToTargetRect(const Rect& rect, float height) const;
         Rect GetBgfxScissor(float x, float y, float width, float height) const;
         void SetBgfxViewPortAndScissor(const Rect& viewPort, const Rect& scissor);
 
@@ -81,6 +87,7 @@ namespace Babylon::Graphics
         Rect m_desiredScissor{};
 
         bool m_disposed{};
+        bool m_glRowOrder{};
         int8_t m_depthStencilAttachmentIndex{-1};
     };
 }
