@@ -81,8 +81,6 @@ namespace Babylon
                 return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
-            m_sessionEnding = false;
-
             Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(m_env);
 
             // Don't try to start a session while it is still ending.
@@ -91,6 +89,7 @@ namespace Babylon
                     assert(m_sessionState == nullptr);
 
                     m_sessionState = std::make_unique<SessionState>(context);
+                    m_sessionEnding = false;
 
                     if (!m_system.IsInitialized() &&
                         !m_system.TryInitialize())
