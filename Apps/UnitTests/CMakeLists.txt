@@ -61,6 +61,7 @@ set(SOURCES
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
     "Source/Tests.UniformPadding.cpp"
     "Source/Helpers.h"
+    "Source/DeviceImplTestAccess.h"
     "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")

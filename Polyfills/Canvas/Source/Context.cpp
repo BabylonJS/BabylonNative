@@ -894,14 +894,9 @@ namespace Babylon::Polyfills::Internal
         // Pick up any fonts loaded after this Context was created (#1683).
         EnsureFontsLoaded();
 
-        // If called outside the frame cycle (e.g., during initialization/font loading
-        // or async texture load callbacks), acquire a FrameCompletionScope which blocks
-        // until StartRenderingCurrentFrame provides the encoder.
-        std::optional<Graphics::FrameCompletionScope> scope;
-        if (m_graphicsContext.GetActiveEncoder() == nullptr)
-        {
-            scope.emplace(m_graphicsContext.AcquireFrameCompletionScope());
-        }
+        // Encoder presence does not protect its lifetime in timer or image-load callbacks.
+        // Hold our own scope through the view-flush handshake and all encoder work.
+        auto scope = m_graphicsContext.AcquireFrameCompletionScope();
 
         // A canvas flush is the one stretch of a frame that acquires views without ever
         // reaching NativeEngine::GetEncoder, so no budget check runs inside it. Its cost is
