@@ -81,6 +81,8 @@ namespace Babylon
                 return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
+            m_sessionEnding = false;
+
             Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(m_env);
 
             // Don't try to start a session while it is still ending.
@@ -108,8 +110,18 @@ namespace Babylon
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::EndSessionAsync()
         {
+            if (m_sessionEnding || !m_beginTask)
+            {
+                return m_endTask;
+            }
+
             assert(m_beginTask);
             assert(m_sessionState != nullptr);
+
+            // Publish the shared task before cancellation can synchronously request another end.
+            arcana::task_completion_source<void, std::exception_ptr> endCompletion{};
+            m_endTask = endCompletion.as_task();
+            m_sessionEnding = true;
 
             m_sessionState->CancellationSource.cancel();
 
@@ -120,7 +132,7 @@ namespace Babylon
             m_sessionState->CreateRenderTexture.Reset();
 
             // Don't try to end the session while it is still starting.
-            m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
+            m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
                                        // Also don't try to end the session while a frame is in progress.
                                        return m_sessionState->FrameTask;
                                    })
@@ -145,6 +157,9 @@ namespace Babylon
                                 m_sessionState.reset();
                                 m_beginTask.reset();
                                 NotifySessionStateChanged(false);
+                            })
+                            .then(arcana::inline_scheduler, arcana::cancellation::none(), [endCompletion](const arcana::expected<void, std::exception_ptr>& result) mutable {
+                                endCompletion.complete(result);
                             });
 
             return m_endTask;

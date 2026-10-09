@@ -358,3 +358,24 @@ If no `GRAPHICS_API` is provided, the build will use the default.
 
 - For Apple devices, Metal is the only possible choice.
 - Vulkan and D3D12 are under development and might not be stable enough for production purposes.
+
+## Testing NativeXR Shutdown Without XR Hardware
+
+The `NativeXrShutdown.*` GoogleTest cases run with the desktop `UnitTests` target
+when NativeXR is enabled. They compile the production `BeginSessionAsync` and
+`EndSessionAsync` methods against a deterministic graphics scheduler and mock XR
+backend, using the repository's pinned Arcana dependency.
+
+To run just these tests without building the graphics or JavaScript runtime:
+
+```sh
+cmake -S Plugins/NativeXr/Tests -B build/NativeXrShutdown -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/NativeXrShutdown --config Debug
+ctest --test-dir build/NativeXrShutdown -C Debug --output-on-failure
+```
+
+The tests cover duplicate shutdown requests while a frame is pending, synchronous
+cancellation reentrancy, repeated requests after teardown, a subsequent session,
+and propagation of the same teardown failure to every caller. Shutdown is shared
+until the next accepted session start; a rejected start does not reset the guard.
+These tests do not exercise ARCore or consumer-app navigation and input handling.
