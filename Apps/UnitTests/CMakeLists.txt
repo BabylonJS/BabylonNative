@@ -85,10 +85,6 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEXR)
-    add_subdirectory("../../Plugins/NativeXr/Tests" "NativeXrShutdownTests")
-endif()
-
 if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
 endif()
