@@ -771,6 +771,12 @@ namespace xr {
                 ActiveFrameViews[0].DepthTexturePointer = nil;
             }
 
+            if (ActiveFrameViews[0].CameraTexturePointer != nil) {
+                id<MTLTexture> oldCameraTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].CameraTexturePointer;
+                [oldCameraTexture setPurgeableState:MTLPurgeableStateEmpty];
+                ActiveFrameViews[0].CameraTexturePointer = nil;
+            }
+
             Planes.clear();
             Meshes.clear();
             CleanupAnchor(nil);
@@ -885,6 +891,27 @@ namespace xr {
                     ActiveFrameViews[0].DepthTextureFormat = TextureFormat::D24S8;
                     ActiveFrameViews[0].DepthTextureSize = {width, height};
                 }
+
+                // WebXR raw camera access: allocate the standalone camera texture.
+                // The camera image is also pre-composited into the color texture above, but that
+                // texture is the scene render target, so it cannot double as a sampled camera
+                // image. This dedicated texture receives its own YUV->RGB pass below.
+                {
+                    if (ActiveFrameViews[0].CameraTexturePointer != nil) {
+                        id<MTLTexture> oldCameraTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].CameraTexturePointer;
+                        deletedTextureAsyncCallback(ActiveFrameViews[0].CameraTexturePointer).then(arcana::inline_scheduler, arcana::cancellation::none(), [oldCameraTexture]() {
+                            [oldCameraTexture setPurgeableState:MTLPurgeableStateEmpty];
+                        });
+                        ActiveFrameViews[0].CameraTexturePointer = nil;
+                    }
+
+                    MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:width height:height mipmapped:NO];
+                    textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+                    id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:textureDescriptor];
+
+                    ActiveFrameViews[0].CameraTexturePointer = (__bridge_retained void*)texture;
+                    ActiveFrameViews[0].CameraTextureSize = {width, height};
+                }
             }
 
             // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
@@ -943,6 +970,28 @@ namespace xr {
                         [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
                     }
                 }];
+            }
+
+            // WebXR raw camera access: render the camera image into its own
+            // sampled texture. Reuses the shared shader via screenPipelineState (which has
+            // no depth/stencil attachments); the babylonTexture slot (0) is intentionally
+            // left unbound so the shader takes the camera YUV->RGB branch.
+            if (ActiveFrameViews[0].CameraTexturePointer != nil && cameraTextureY != nil && cameraTextureCbCr != nil) {
+                MTLRenderPassDescriptor *cameraPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                if (cameraPassDescriptor != nil) {
+                    cameraPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].CameraTexturePointer;
+                    cameraPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                    cameraPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+                    id<MTLRenderCommandEncoder> cameraEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor:cameraPassDescriptor];
+                    cameraEncoder.label = @"XRRawCameraAccessEncoder";
+                    [cameraEncoder setRenderPipelineState:screenPipelineState];
+                    [cameraEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                    [cameraEncoder setFragmentTexture:cameraTextureY atIndex:1];
+                    [cameraEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
+                    [cameraEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+                    [cameraEncoder endEncoding];
+                }
             }
 
             // Finalize rendering here & push the command buffer to the GPU.
