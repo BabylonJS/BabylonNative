@@ -39,6 +39,11 @@ set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 set(BGFX_CONFIG_VIDEO OFF)
 
+# Canvas workloads can exceed bgfx's default of 128 framebuffer handles.
+if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
+    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
+endif()
+
 # These formats have neither browser image support nor Babylon.js texture loaders.
 set(BIMG_CONFIG_PARSE_PIC OFF)
 set(BIMG_CONFIG_PARSE_PNM OFF)
@@ -65,14 +70,6 @@ target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 # directory, and Windows has no system copy the way Linux and Android do.
 # Expose the path so the OpenGL backends of our own targets can use it.
 set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
-
-# The Canvas polyfill holds a bgfx framebuffer per JS Canvas object and per
-# text-rendering operation, releasing them only on GC finalize, so a long
-# playground sweep exceeds bgfx's default of 128.
-if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
-    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 2048)
-endif()
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
 
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
