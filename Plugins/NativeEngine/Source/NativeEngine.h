@@ -234,6 +234,20 @@ namespace Babylon
         Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
 
+        // Last material texture binds on the frame encoder. bgfx drops encoder bindings when work
+        // moves to another view (clears, resolves, blits); WebGL keeps them, so they are replayed.
+        struct BoundTexture
+        {
+            bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
+            bgfx::TextureHandle Texture{bgfx::kInvalidHandle};
+            uint32_t Flags{};
+            uint16_t FirstLayer{};
+            uint16_t NumLayers{};
+            uint8_t MaxLod{UINT8_MAX};
+        };
+        std::map<uint8_t, BoundTexture> m_boundTextures{};
+        void RestoreBoundTextures(bgfx::Encoder* encoder);
+
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
 
