@@ -1,5 +1,6 @@
 import * as Mocha from "mocha";
 import { expect } from "chai";
+import { registerTriangleStripDepthTests } from "./tests.nativeEngine.triangleStripDepth";
 import { registerPngTests } from "./tests.nativeEngine.png";
 import { registerCanvasImageTests } from "./tests.nativeEngine.canvasImage";
 import { Buffer } from "buffer";
@@ -42,6 +43,8 @@ declare const setExitCode: (code: number) => void;
 declare const setImageReloadTestResponse: (bytes: Uint8Array) => void;
 declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
+
+registerTriangleStripDepthTests(describe, it, skipCanvasGpuTests);
 registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
 registerAttributeLessInstancingTests(describe, it, hasAttributeLessInstancing);
 

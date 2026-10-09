@@ -9,6 +9,8 @@ set(SOURCES
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/PerFrameValue.h"
+    "Source/PrimitiveModeExpansion.cpp"
+    "Source/PrimitiveModeExpansion.h"
     "Source/Program.cpp"
     "Source/Program.h"
     "Source/ShaderProvider.h"
