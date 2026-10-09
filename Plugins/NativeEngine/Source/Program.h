@@ -53,6 +53,10 @@ namespace Babylon
         ~Program();
 
         void Initialize(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo);
+
+        // Creates a bgfx compute program (single CSH shader) from shaderInfo->ComputeBytes.
+        void InitializeCompute(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo);
+
         void Dispose();
 
         // Stores the original GLSL sources so divisor-driven instanced variants can be
@@ -70,7 +74,7 @@ namespace Babylon
         const std::map<uint16_t, UniformValue>& Uniforms() const { return m_uniforms; }
         const std::map<std::string, uint32_t>& VertexAttributeLocations() const { return m_vertexAttributeLocations; }
         // The render target orientation uniform the shader compiler injects on top-left-origin
-        // backends (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME). Null on OpenGL.
+        // backends (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME). Null on OpenGL and for compute.
         // Resolved once at initialization because it is consulted on every draw.
         const UniformInfo* RenderTargetTransformUniform() const { return m_renderTargetTransformUniform; }
         const std::map<uint8_t, bgfx::UniformHandle>& SamplerStateUniforms() const { return m_samplerStateUniforms; }

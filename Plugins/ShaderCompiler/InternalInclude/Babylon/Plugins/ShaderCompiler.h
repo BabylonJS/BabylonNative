@@ -23,5 +23,12 @@ namespace Babylon::Plugins
         /// each attribute from the slot bgfx fills. An empty map preserves the legacy per-vertex
         /// mapping for all non-built-in attributes.
         Graphics::BgfxShaderInfo Compile(std::string_view vertexSource, std::string_view fragmentSource, const std::map<std::string, uint32_t>& instancedAttributes = {});
+
+        /// Compiles a single GLSL compute shader (GLSL ES 3.10 `layout(local_size_*)`) into a bgfx
+        /// CSH (compute) shader binary for the active backend (HLSL/DXBC, HLSL/DXIL, SPIR-V, MSL or
+        /// GLSL ES 3.10). Storage buffers/images are bound at dispatch time via bgfx::setBuffer/setImage
+        /// using the stage index that equals the GLSL binding; samplers need explicit bindings past
+        /// the storage buffer stages. Requires BGFX_CAPS_COMPUTE at runtime.
+        Graphics::BgfxShaderInfo CompileCompute(std::string_view computeSource);
     };
 }

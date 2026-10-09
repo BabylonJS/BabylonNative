@@ -123,6 +123,16 @@ namespace Babylon
         m_renderTargetTransformUniform = GetUniformInfo(Graphics::RENDER_TARGET_TRANSFORM_UNIFORM_NAME);
     }
 
+    void Program::InitializeCompute(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo)
+    {
+        arcana::trace_region region{"Program::InitializeCompute"};
+
+        auto computeShader = CreateShader(shaderInfo, shaderInfo->ComputeBytes);
+        InitUniformInfos(computeShader, shaderInfo->UniformStages, shaderInfo->UniformNames, m_uniformInfos, m_uniformNameToIndex, m_samplerStateUniforms);
+
+        m_handle = bgfx::createProgram(computeShader, true);
+    }
+
     void Program::SetSources(std::string vertexSource, std::string fragmentSource)
     {
         m_vertexSource = std::move(vertexSource);

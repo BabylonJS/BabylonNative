@@ -80,6 +80,7 @@ namespace Babylon::Graphics
     {
         std::vector<uint8_t> VertexBytes{};
         std::vector<uint8_t> FragmentBytes{};
+        std::vector<uint8_t> ComputeBytes{};
         std::map<std::string, uint32_t> VertexAttributeLocations{};
         std::map<std::string, uint32_t> BuiltInInstanceDataSlots{};
         std::map<std::string, uint8_t> UniformStages{};

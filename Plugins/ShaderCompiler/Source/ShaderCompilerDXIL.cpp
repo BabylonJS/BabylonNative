@@ -86,7 +86,8 @@ namespace
 
         auto compiler = std::make_unique<spirv_cross::CompilerHLSL>(parser->get_parsed_ir());
 
-        compiler->set_hlsl_options({40, true});
+        // Compute needs SM5 for (RW)ByteAddressBuffer storage buffers.
+        compiler->set_hlsl_options({stage == EShLangCompute ? 50u : 40u, true});
 
         for (const auto& attribute : attributes)
         {
@@ -99,7 +100,7 @@ namespace
 
         auto& dxc = GetDxcCompiler();
 
-        const wchar_t* target = stage == EShLangVertex ? L"vs_6_0" : L"ps_6_0";
+        const wchar_t* target = stage == EShLangVertex ? L"vs_6_0" : stage == EShLangFragment ? L"ps_6_0" : L"cs_6_0";
 
         std::vector<LPCWSTR> args = {L"-E", L"main", L"-T", target};
 #ifdef _DEBUG
@@ -140,6 +141,23 @@ namespace
         }
 
         return {std::move(parser), std::move(compiler)};
+    }
+
+    // SPIRV-Cross emits read-only storage buffers as ByteAddressBuffer (t#) and writable ones as
+    // RWByteAddressBuffer (u#), both at the GLSL binding. bgfx needs those slots flagged raw.
+    void ReflectRawBindings(Babylon::ShaderCompilerCommon::ShaderInfo& shaderInfo)
+    {
+        const auto& compiler = *shaderInfo.Compiler;
+        for (const auto& buffer : compiler.get_shader_resources(compiler.get_active_interface_variables()).storage_buffers)
+        {
+            const uint32_t binding = compiler.get_decoration(buffer.id, spv::DecorationBinding);
+            if (binding >= 32)
+            {
+                throw std::runtime_error{"Raw buffer binding exceeds bgfx's 32-bit shader mask"};
+            }
+            auto& mask = compiler.get_buffer_block_flags(buffer.id).get(spv::DecorationNonWritable) ? shaderInfo.RawSrvMask : shaderInfo.RawUavMask;
+            mask |= uint32_t{1} << binding;
+        }
     }
 }
 
@@ -260,6 +278,45 @@ namespace Babylon::Plugins
             {}};
 
         auto result = CreateBgfxShader(std::move(vertexShaderInfo), std::move(fragmentShaderInfo), std::move(builtInInstanceDataSlots));
+        result.UniformNames = std::move(uniformNames);
+        return result;
+    }
+
+    Graphics::BgfxShaderInfo ShaderCompiler::CompileCompute(std::string_view computeSource)
+    {
+        auto source = PreprocessShader(EShLangCompute, computeSource);
+        auto uniformNames = RenameShaderUniforms(source);
+        computeSource = source;
+        glslang::TProgram program;
+
+        glslang::TShader computeShader{EShLangCompute};
+        AddShader(program, computeShader, ProcessSamplerFlip(computeSource));
+
+        glslang::SpvVersion spv{};
+        spv.spv = 0x10000;
+        computeShader.getIntermediate()->setSpv(spv);
+
+        if (!program.link(EShMsgDefault))
+        {
+            throw std::runtime_error{program.getInfoLog()};
+        }
+
+        ShaderCompilerTraversers::IdGenerator ids{};
+        ShaderCompilerTraversers::FlipSamplerCoordinates(program, ids);
+        auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
+        auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
+        ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
+
+        Microsoft::WRL::ComPtr<IDxcBlob> computeBlob;
+        auto [computeParser, computeCompiler] = CompileShader(program, EShLangCompute, {}, &computeBlob);
+        ShaderInfo computeShaderInfo{
+            std::move(computeParser),
+            std::move(computeCompiler),
+            gsl::make_span(static_cast<uint8_t*>(computeBlob->GetBufferPointer()), computeBlob->GetBufferSize()),
+            {}};
+        ReflectRawBindings(computeShaderInfo);
+
+        auto result = CreateBgfxComputeShader(std::move(computeShaderInfo));
         result.UniformNames = std::move(uniformNames);
         return result;
     }

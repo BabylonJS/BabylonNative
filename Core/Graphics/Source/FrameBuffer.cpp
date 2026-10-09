@@ -234,6 +234,17 @@ namespace Babylon::Graphics
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
     }
 
+    void FrameBuffer::Compute(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint32_t numX, uint32_t numY, uint32_t numZ)
+    {
+        // Each dispatch gets its own view, so views run it after earlier work on this frame buffer, and
+        // bgfx unbinds its storage buffers before the next one binds them the other way round (D3D11
+        // drops a read binding of a buffer that is still bound for writing). Taking a view also moves
+        // the next draw on this frame buffer to a later view (see SetBgfxViewPortAndScissor).
+        const bgfx::ViewId viewId = m_deviceContext.AcquireNewViewId();
+        bgfx::resetView(viewId);
+        encoder.dispatch(viewId, programHandle, numX, numY, numZ);
+    }
+
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
     {
         // In order for Blit to work properly we need to force the creation of a new ViewID.

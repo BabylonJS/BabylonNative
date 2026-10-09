@@ -365,7 +365,13 @@ namespace Babylon::ShaderCompilerCommon
             // validate this, so the bug was GL-only). Each sampler now gets its own distinct unit,
             // mirroring WebGL's Effect._bindSamplerUniformToChannel. Keyed on the recovered
             // pre-transpile name (see above) so both stages agree on the same identifier.
-            if (stages.find(name) == stages.end())
+            if (compiler.get_execution_model() == spv::ExecutionModelGLCompute)
+            {
+                // Compute samplers declare explicit bindings that sit after the storage buffer
+                // stages; sequential units would alias the buffers.
+                stages[name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
+            }
+            else if (stages.find(name) == stages.end())
             {
                 stages[name] = static_cast<uint8_t>(stages.size());
             }
@@ -589,9 +595,8 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
         AppendBytes(vertexBytes, BX_MAKEFOURCC('V', 'S', 'H', BGFX_SHADER_BIN_VERSION));
         AppendBytes(vertexBytes, vertexOutputsHash);
         AppendBytes(vertexBytes, fragmentInputsHash);
-        // Raw SRV/UAV masks (bgfx v12). BN runtime shaders don't expose raw buffers here.
-        AppendBytes(vertexBytes, static_cast<uint32_t>(0));
-        AppendBytes(vertexBytes, static_cast<uint32_t>(0));
+        AppendBytes(vertexBytes, vertexShaderInfo.RawSrvMask);
+        AppendBytes(vertexBytes, vertexShaderInfo.RawUavMask);
 
         AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
         AppendUniformBuffer(vertexBytes, uniformsInfo, false);
@@ -647,9 +652,8 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
         AppendBytes(fragmentBytes, BX_MAKEFOURCC('F', 'S', 'H', BGFX_SHADER_BIN_VERSION));
         AppendBytes(fragmentBytes, vertexOutputsHash);
         AppendBytes(fragmentBytes, fragmentInputsHash);
-        // Raw SRV/UAV masks (bgfx v12). BN runtime shaders don't expose raw buffers here.
-        AppendBytes(fragmentBytes, static_cast<uint32_t>(0));
-        AppendBytes(fragmentBytes, static_cast<uint32_t>(0));
+        AppendBytes(fragmentBytes, fragmentShaderInfo.RawSrvMask);
+        AppendBytes(fragmentBytes, fragmentShaderInfo.RawUavMask);
 
         AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
         AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
@@ -664,6 +668,100 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
 
         AppendBytes(fragmentBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
     }
+
+    return bgfxShaderInfo;
+}
+
+Graphics::BgfxShaderInfo CreateBgfxComputeShader(ShaderInfo computeShaderInfo)
+{
+    return CreateBgfxComputeShader(std::move(computeShaderInfo), SamplerResourceSet::SampledImages, AppendSamplers);
+}
+
+Graphics::BgfxShaderInfo CreateBgfxComputeShader(ShaderInfo computeShaderInfo, SamplerResourceSet samplerResources, AppendSamplersFn appendSamplers)
+{
+    Graphics::BgfxShaderInfo bgfxShaderInfo{};
+
+    // Must match BGFX_SHADER_BIN_VERSION in bgfx tools/shaderc/shaderc.cpp.
+    // bgfx rejects anything older than v12; v13 makes it trust the samplers' texDimension.
+    constexpr uint8_t BGFX_SHADER_BIN_VERSION{13};
+
+    // Compute shaders have no vertex-varying interface, so both interface hashes are zero
+    // (bgfx's own shaderc writes 0 for the compute input hash).
+    constexpr uint32_t inputHash{0};
+    constexpr uint32_t outputHash{0};
+
+    std::vector<uint8_t>& computeBytes{bgfxShaderInfo.ComputeBytes};
+
+    const spirv_cross::Compiler& compiler{*computeShaderInfo.Compiler};
+    const spirv_cross::ShaderResources resources{compiler.get_shader_resources()};
+    const auto uniformsInfo{CollectNonSamplerUniforms(*computeShaderInfo.Parser, compiler)};
+    // Compute shaders keep combined samplers everywhere except Vulkan, whose descriptor model
+    // needs separate images and samplers. A sampler's stage is its binding, which compute
+    // shaders declare explicitly so it doesn't collide with storage buffer stages.
+    const spirv_cross::SmallVector<spirv_cross::Resource>& samplers{SelectSamplers(resources, samplerResources)};
+#if VULKAN
+    // bgfx's Vulkan backend builds its descriptor set layout from the uniform table, so storage
+    // buffers and images get entries (type End, regCount = descriptor type id) as shaderc emits.
+    const size_t numStorage{resources.storage_buffers.size() + resources.storage_images.size()};
+#else
+    const size_t numStorage{0};
+#endif
+    const size_t numUniforms{uniformsInfo.Uniforms.size() + samplers.size() + numStorage};
+
+    AppendBytes(computeBytes, BX_MAKEFOURCC('C', 'S', 'H', BGFX_SHADER_BIN_VERSION));
+    AppendBytes(computeBytes, inputHash);
+    AppendBytes(computeBytes, outputHash);
+    AppendBytes(computeBytes, computeShaderInfo.RawSrvMask);
+    AppendBytes(computeBytes, computeShaderInfo.RawUavMask);
+
+    AppendBytes(computeBytes, static_cast<uint16_t>(numUniforms));
+    AppendUniformBuffer(computeBytes, uniformsInfo, false);
+    appendSamplers(computeBytes, compiler, computeShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
+#if VULKAN
+    {
+        // Copy-pasta from bgfx_p.h and bgfx/src/shader.cpp (s_descriptorTypeToId).
+        constexpr uint8_t BGFX_UNIFORM_READONLYBIT{0x40};
+        constexpr uint16_t DESCRIPTOR_TYPE_STORAGE_BUFFER_ID{0x0007};
+        constexpr uint16_t DESCRIPTOR_TYPE_STORAGE_IMAGE_ID{0x0003};
+        const auto appendStorage = [&](const spirv_cross::Resource& resource, uint16_t descriptorTypeId, uint8_t texDimension) {
+            const auto flags = descriptorTypeId == DESCRIPTOR_TYPE_STORAGE_BUFFER_ID
+                ? compiler.get_buffer_block_flags(resource.id)
+                : compiler.get_decoration_bitset(resource.id);
+            const bool readOnly = flags.get(spv::DecorationNonWritable);
+            AppendBytes(computeBytes, static_cast<uint8_t>(resource.name.size()));
+            AppendBytes(computeBytes, resource.name);
+            AppendBytes(computeBytes, static_cast<uint8_t>(bgfx::UniformType::End | (readOnly ? BGFX_UNIFORM_READONLYBIT : 0)));
+            AppendBytes(computeBytes, uint8_t{0});
+            AppendBytes(computeBytes, static_cast<uint16_t>(compiler.get_decoration(resource.id, spv::DecorationBinding)));
+            AppendBytes(computeBytes, descriptorTypeId);
+            AppendUniformTextureMeta(computeBytes, /*texComponent*/ 0, texDimension);
+        };
+        for (const auto& buffer : resources.storage_buffers)
+        {
+            appendStorage(buffer, DESCRIPTOR_TYPE_STORAGE_BUFFER_ID, 0);
+        }
+        for (const auto& image : resources.storage_images)
+        {
+            appendStorage(image, DESCRIPTOR_TYPE_STORAGE_IMAGE_ID, TextureDimensionIdFromResource(compiler, image));
+        }
+    }
+#endif
+#if __APPLE__
+    // bgfx's Metal backend reads the threadgroup size from the binary; MSL doesn't carry it.
+    for (uint32_t dimension = 0; dimension < 3; ++dimension)
+    {
+        AppendBytes(computeBytes, static_cast<uint16_t>(compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, dimension)));
+    }
+#endif
+
+    AppendBytes(computeBytes, static_cast<uint32_t>(computeShaderInfo.Bytes.size()));
+    AppendBytes(computeBytes, computeShaderInfo.Bytes);
+    AppendBytes(computeBytes, static_cast<uint8_t>(0));
+
+    // Compute shaders have no vertex attributes.
+    AppendBytes(computeBytes, static_cast<uint8_t>(0));
+
+    AppendBytes(computeBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
 
     return bgfxShaderInfo;
 }
