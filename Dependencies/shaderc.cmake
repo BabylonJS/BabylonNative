@@ -1,3 +1,12 @@
+include_guard(GLOBAL)
+
+if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
+    set(SHADERC_PATH "" CACHE FILEPATH "Optional full path to shaderc built from bgfx.")
+    if(SHADERC_PATH AND NOT EXISTS "${SHADERC_PATH}")
+        message(FATAL_ERROR "'${SHADERC_PATH}' does not exist.")
+    endif()
+endif()
+
 # Copy of bgfx _bgfx_shaderc_parse function adapted for Babylon Native
 # Function is not guarded behind BGFX_TOOLS_SHADERC and shaderx path is set by SHADERC_PATH variable.
 # Usage:
@@ -233,12 +242,14 @@ function(add_bgfx_shader FILE FOLDER)
         set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}Metal, ")
 
         # essl
-        if(NOT "${TYPE}" STREQUAL "COMPUTE")
-            set(ESSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/essl/${FILENAME}.h)
+        set(ESSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/essl/${FILENAME}.h)
+        if("${TYPE}" STREQUAL "COMPUTE")
+            _bn_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 310_es OUTPUT ${ESSL_OUTPUT} BIN2C "${FILENAME}_essl")
+        else()
             _bn_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 300_es OUTPUT ${ESSL_OUTPUT} BIN2C "${FILENAME}_essl")
-            list(APPEND OUTPUTS "ESSL")
-            set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, ")
         endif()
+        list(APPEND OUTPUTS "ESSL")
+        set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, ")
 
         # glsl
         set(GLSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/glsl/${FILENAME}.h)
@@ -251,14 +262,12 @@ function(add_bgfx_shader FILE FOLDER)
         set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLSL, ")
 
         # spirv
-        if(NOT "${TYPE}" STREQUAL "COMPUTE")
-            set(SPIRV_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/spirv/${FILENAME}.h)
-            _bn_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT} BIN2C "${FILENAME}_spv")
-            list(APPEND OUTPUTS "SPIRV")
-            set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV")
-            set(OUTPUT_FILES "")
-            set(COMMANDS "")
-        endif()
+        set(SPIRV_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/spirv/${FILENAME}.h)
+        _bn_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT} BIN2C "${FILENAME}_spv")
+        list(APPEND OUTPUTS "SPIRV")
+        set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV")
+        set(OUTPUT_FILES "")
+        set(COMMANDS "")
 
         foreach(OUT ${OUTPUTS})
             list(APPEND OUTPUT_FILES ${${OUT}_OUTPUT})
@@ -270,7 +279,9 @@ function(add_bgfx_shader FILE FOLDER)
         file(RELATIVE_PATH PRINT_NAME ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders ${FILE})
         add_custom_command(
             MAIN_DEPENDENCY ${FILE} OUTPUT ${OUTPUT_FILES} ${COMMANDS}
+            DEPENDS "${BGFX_DIR}/src/bgfx_shader.sh" "${BGFX_DIR}/src/bgfx_compute.sh"
             COMMENT "Compiling shader ${PRINT_NAME} for ${OUTPUTS_PRETTY}"
+            VERBATIM
         )
     endif()
 endfunction()

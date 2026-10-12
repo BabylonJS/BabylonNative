@@ -1,7 +1,11 @@
+include(${CMAKE_CURRENT_LIST_DIR}/../../Dependencies/shaderc.cmake)
+
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
     "Source/IndexBuffer.cpp"
     "Source/IndexBuffer.h"
+    "Source/InstanceRepacker.cpp"
+    "Source/InstanceRepacker.h"
     "Source/JsConsoleLogger.h"
     "Source/JsConsoleLogger.cpp"
     "Source/NativeDataStream.h"
@@ -22,7 +26,16 @@ set(SOURCES
     "Source/VertexBuffer.cpp"
     "Source/VertexBuffer.h")
 
-add_library(NativeEngine ${SOURCES})
+set(SHADERS "Source/Shaders/cs_instance_repack.sc")
+foreach(BACKEND dxbc dxil essl glsl metal spirv)
+    list(APPEND SHADERS "Source/Shaders/${BACKEND}/cs_instance_repack.h")
+endforeach()
+
+add_library(NativeEngine ${SOURCES} ${SHADERS})
+
+if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
+    add_bgfx_shader("${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/cs_instance_repack.sc" "")
+endif()
 
 warnings_as_errors(NativeEngine)
 

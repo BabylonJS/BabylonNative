@@ -13,6 +13,19 @@ namespace Babylon::ShaderCompilerCommon
 {
     std::string PreprocessShader(EShLanguage stage, std::string_view source);
 
+    struct TransformFeedbackShader
+    {
+        std::string Source{};
+        // Vertex inputs in the order of the generated bnTfInputLayout entries.
+        std::vector<std::string> InputNames{};
+    };
+
+    /// Rewrites a preprocessed GLSL ES 3.00 vertex shader that feeds WebGL2 transform feedback into
+    /// a GLSL ES 3.10 compute shader: one invocation per vertex reads the vertex inputs from a float
+    /// storage buffer (described by bnTfInputLayout) and writes the captured varyings, tightly
+    /// packed in `varyings` order (GL_INTERLEAVED_ATTRIBS), into a second float storage buffer.
+    TransformFeedbackShader GenerateTransformFeedbackShader(std::string_view vertexSource, const std::vector<std::string>& varyings);
+
     // Returns compiled uniform names mapped to the names supplied by the application.
     std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr);
 

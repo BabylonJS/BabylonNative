@@ -56,10 +56,12 @@ set(SOURCES
     "Source/Tests.NativeEngine.CubeRenderTargets.cpp"
     "Source/Tests.NativeEngine.Msaa.cpp"
     "Source/Tests.NativeEngine.Teardown.cpp"
+    "Source/Tests.NativeEngine.TransformFeedback.cpp"
     "Source/Tests.NativeEngine.TextureFormats.cpp"
     "Source/Tests.NativeOptimizations.cpp"
     "Source/Tests.NativeEngine.VertexArray.cpp"
     "Source/Tests.ShaderCache.cpp"
+    "Source/Tests.ShaderCache.TransformFeedback.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
     "Source/Tests.UniformPadding.cpp"
@@ -115,6 +117,7 @@ target_link_libraries(UnitTests
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
+    PRIVATE ShaderCacheInternal
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main

@@ -1,8 +1,4 @@
-include(${CMAKE_CURRENT_LIST_DIR}/shaderc.cmake)
-
-if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
-    set(SHADERC_PATH "" CACHE FILEPATH "Optional full path to shaderc built from bgfx.")
-endif()
+include(${CMAKE_CURRENT_LIST_DIR}/../../Dependencies/shaderc.cmake)
 
 set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
@@ -63,12 +59,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
 endif()
 
 if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
-    if(EXISTS "${SHADERC_PATH}")
-        message(STATUS "Using shaderc from: ${SHADERC_PATH}")
-    else()
-        message(FATAL_ERROR " '${SHADERC_PATH}' does not exist.")
-    endif()
-
     foreach(SHADER ${SHADERS})
         add_bgfx_shader(${SHADER} "")
     endforeach()

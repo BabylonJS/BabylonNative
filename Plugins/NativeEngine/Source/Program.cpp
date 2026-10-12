@@ -133,6 +133,19 @@ namespace Babylon
         m_handle = bgfx::createProgram(computeShader, true);
     }
 
+    void Program::InitializeTransformFeedback(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo)
+    {
+        InitializeCompute(shaderInfo);
+        m_vertexAttributeLocations = shaderInfo->VertexAttributeLocations;
+        m_transformFeedbackParams = GetUniformInfo(Graphics::TRANSFORM_FEEDBACK_PARAMS_UNIFORM);
+        m_transformFeedbackInputLayout = GetUniformInfo(Graphics::TRANSFORM_FEEDBACK_INPUT_LAYOUT_UNIFORM);
+        if (m_transformFeedbackParams == nullptr)
+        {
+            throw std::runtime_error{"Transform feedback program is missing its parameter uniform."};
+        }
+        m_transformFeedbackInputCount = static_cast<uint32_t>(m_vertexAttributeLocations.size());
+    }
+
     void Program::SetSources(std::string vertexSource, std::string fragmentSource)
     {
         m_vertexSource = std::move(vertexSource);
@@ -191,6 +204,9 @@ namespace Babylon
         m_samplerStateUniforms.clear();
         m_vertexAttributeLocations.clear();
         m_builtInInstanceDataSlots.clear();
+        m_transformFeedbackParams = nullptr;
+        m_transformFeedbackInputLayout = nullptr;
+        m_transformFeedbackInputCount = 0;
     }
 
     void Program::SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength)

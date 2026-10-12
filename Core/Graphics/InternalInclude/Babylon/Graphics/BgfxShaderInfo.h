@@ -76,6 +76,34 @@ namespace Babylon::Graphics
     inline constexpr const char* RENDER_TARGET_TRANSFORM_UNIFORM_NAME{"bnRenderTargetTransform"};
     inline constexpr const char* SAMPLER_STATE_UNIFORM_PREFIX{"bnSamplerState_"};
 
+    /// WebGL2 transform feedback is emulated by compiling the capturing vertex shader into a
+    /// compute shader (one invocation per vertex). Its vertex inputs report attribute locations
+    /// starting at TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE, far above any bgfx attribute or
+    /// instance-data location, so vertex arrays can record them as raw storage-buffer inputs.
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE{0x10000};
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_WORKGROUP_SIZE{64};
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_INPUT_BINDING{0};
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_OUTPUT_BINDING{1};
+    /// Vertex inputs may come from up to TRANSFORM_FEEDBACK_MAX_INPUT_BUFFERS vertex buffers. The first
+    /// is bound at TRANSFORM_FEEDBACK_INPUT_BINDING, the rest from TRANSFORM_FEEDBACK_EXTRA_INPUT_BINDING.
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_MAX_INPUT_BUFFERS{4};
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_EXTRA_INPUT_BINDING{2};
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_FIRST_SAMPLER_BINDING{TRANSFORM_FEEDBACK_EXTRA_INPUT_BINDING + TRANSFORM_FEEDBACK_MAX_INPUT_BUFFERS - 1};
+    inline constexpr uint32_t TRANSFORM_FEEDBACK_MAX_SAMPLER_BINDING{16};
+    /// x = vertex count, y = first vertex.
+    inline constexpr const char* TRANSFORM_FEEDBACK_PARAMS_UNIFORM{"bnTfParams"};
+    /// Per vertex input: x = byte offset, y = byte stride, z = component count (0 = unbound),
+    /// w = buffer index * 16 + TransformFeedbackInputType * 2 + normalized.
+    inline constexpr const char* TRANSFORM_FEEDBACK_INPUT_LAYOUT_UNIFORM{"bnTfInputLayout"};
+    enum class TransformFeedbackInputType : uint32_t
+    {
+        Float = 0,
+        Int8 = 1,
+        Uint8 = 2,
+        Int16 = 3,
+        Uint16 = 4,
+    };
+
     struct BgfxShaderInfo
     {
         std::vector<uint8_t> VertexBytes{};

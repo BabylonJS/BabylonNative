@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 #include <Babylon/Graphics/BgfxShaderInfo.h>
 
 namespace Babylon::Plugins
@@ -30,5 +31,12 @@ namespace Babylon::Plugins
         /// using the stage index that equals the GLSL binding; samplers need explicit bindings past
         /// the storage buffer stages. Requires BGFX_CAPS_COMPUTE at runtime.
         Graphics::BgfxShaderInfo CompileCompute(std::string_view computeSource);
+
+        /// Emulates WebGL2 transform feedback: compiles the capturing GLSL ES 3.00 vertex shader into
+        /// a compute shader that runs once per vertex and writes `varyings` (interleaved, tightly
+        /// packed floats) into a storage buffer. Vertex inputs are read from a float storage buffer;
+        /// VertexAttributeLocations maps each input to TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE + i.
+        /// Supported wherever CompileCompute is.
+        Graphics::BgfxShaderInfo CompileTransformFeedback(std::string_view vertexSource, const std::vector<std::string>& varyings);
     };
 }

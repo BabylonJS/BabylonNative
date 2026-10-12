@@ -87,6 +87,9 @@ To obtain shaderc:
 
 If `SHADERC_PATH` is set but does not point to a valid executable, CMake will display a fatal error during project generation.
 When correctly configured, the BabylonNative project will automatically use shaderc to compile all .sc shader files.
+Canvas and NativeEngine's fixed instance-repacking shaders share the generator in
+`Dependencies/shaderc.cmake`. Commit the regenerated headers alongside their `.sc`
+source; ordinary builds consume those headers without requiring shaderc.
 
 ## Embedding Shaders:
 

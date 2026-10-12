@@ -57,6 +57,15 @@ namespace Babylon
         // Creates a bgfx compute program (single CSH shader) from shaderInfo->ComputeBytes.
         void InitializeCompute(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo);
 
+        // Creates the compute program that emulates a transform feedback vertex shader (see
+        // ShaderCompiler::CompileTransformFeedback). Vertex inputs keep their reported locations.
+        void InitializeTransformFeedback(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo);
+        bool IsTransformFeedback() const { return m_transformFeedbackParams != nullptr; }
+        const UniformInfo* TransformFeedbackParams() const { return m_transformFeedbackParams; }
+        // Null when the shader has no vertex inputs (glslang strips the unused array).
+        const UniformInfo* TransformFeedbackInputLayout() const { return m_transformFeedbackInputLayout; }
+        uint32_t TransformFeedbackInputCount() const { return m_transformFeedbackInputCount; }
+
         void Dispose();
 
         // Stores the original GLSL sources so divisor-driven instanced variants can be
@@ -96,5 +105,8 @@ namespace Babylon
         std::string m_vertexSource;
         std::string m_fragmentSource;
         std::map<std::map<std::string, uint32_t>, bgfx::ProgramHandle> m_instancedVariants;
+        const UniformInfo* m_transformFeedbackParams{nullptr};
+        const UniformInfo* m_transformFeedbackInputLayout{nullptr};
+        uint32_t m_transformFeedbackInputCount{};
     };
 }

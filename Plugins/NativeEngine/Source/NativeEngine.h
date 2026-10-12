@@ -37,6 +37,8 @@ namespace Babylon
         class Texture;
     }
 
+    class InstanceRepacker;
+
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
@@ -70,6 +72,7 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
+        void ReadTransformFeedbackBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
@@ -136,6 +139,7 @@ namespace Babylon
         void DrawIndexedInstanced(NativeDataStream::Reader& data);
         void Draw(NativeDataStream::Reader& data);
         void DrawInstanced(NativeDataStream::Reader& data);
+        void DrawTransformFeedback(NativeDataStream::Reader& data);
         void Clear(NativeDataStream::Reader& data);
         void Clear2(NativeDataStream::Reader& data);
         void ClearImpl(NativeDataStream::Reader& data, bool hasAttachmentMask);
@@ -158,6 +162,13 @@ namespace Babylon
         void BeginFrame(const Napi::CallbackInfo&);
         void EndFrame(const Napi::CallbackInfo&);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout);
+
+        // Dispatches the GPU instance-data repack for a vertex array whose per-instance sources are
+        // GPU storage buffers, returning the dynamic vertex buffer to bind as instance data (or an
+        // invalid handle when there is nothing to repack). Must be called before the draw bindings
+        // are set, since dispatch resets the encoder's pending draw state.
+        bgfx::DynamicVertexBufferHandle RepackStorageInstances(VertexArray* vertexArray,
+            const VertexBuffer::InstanceDataLayout& instanceDataLayout, uint32_t instanceCount);
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
@@ -237,6 +248,9 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         VertexArray* m_boundVertexArray{};
+        std::unique_ptr<InstanceRepacker> m_instanceRepacker{};
+        // Copies a storage buffer into an R32F image for readTransformFeedbackBuffer; created on first use.
+        std::shared_ptr<Program> m_bufferReadbackProgram{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
@@ -245,7 +259,8 @@ namespace Babylon
         PerFrameValue<bool> m_defaultFrameBufferNeedsReset;
 
         // Last material texture binds on the frame encoder. bgfx drops encoder bindings when work
-        // moves to another view (clears, resolves, blits); WebGL keeps them, so they are replayed.
+        // moves to another view (clears, resolves, blits, compute dispatches); WebGL keeps them,
+        // so they are replayed.
         struct BoundTexture
         {
             bgfx::UniformHandle Handle{bgfx::kInvalidHandle};

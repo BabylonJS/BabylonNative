@@ -39,6 +39,7 @@ namespace Babylon
         }
         m_vertexBufferRecords.clear();
         m_vertexBufferInstances.clear();
+        m_transformFeedbackInputs.clear();
         if (m_deviceId == m_deviceContext.GetDeviceId())
         {
             for (const auto& [key, buffer] : m_unindexedExpandedBuffers)
@@ -73,6 +74,48 @@ namespace Babylon
         }
 
         auto attribType = static_cast<bgfx::AttribType::Enum>(type);
+
+        if (location >= Graphics::TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE)
+        {
+            Graphics::TransformFeedbackInputType inputType{};
+            uint32_t componentSize{};
+            switch (attribType)
+            {
+                case bgfx::AttribType::Float:
+                    inputType = Graphics::TransformFeedbackInputType::Float;
+                    componentSize = 4;
+                    break;
+                case bgfx::AttribType::Int8:
+                    inputType = Graphics::TransformFeedbackInputType::Int8;
+                    componentSize = 1;
+                    break;
+                case bgfx::AttribType::Uint8:
+                    inputType = Graphics::TransformFeedbackInputType::Uint8;
+                    componentSize = 1;
+                    break;
+                case bgfx::AttribType::Int16:
+                    inputType = Graphics::TransformFeedbackInputType::Int16;
+                    componentSize = 2;
+                    break;
+                case bgfx::AttribType::Uint16:
+                    inputType = Graphics::TransformFeedbackInputType::Uint16;
+                    componentSize = 2;
+                    break;
+                default:
+                    throw std::runtime_error{"Unsupported transform feedback vertex input type"};
+            }
+            if (divisor != 0)
+            {
+                throw std::runtime_error{"Transform feedback vertex inputs cannot be instanced"};
+            }
+            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > 4)
+            {
+                throw std::runtime_error{"Transform feedback vertex inputs must be aligned to their component size"};
+            }
+            m_transformFeedbackInputs[location - Graphics::TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE] = {
+                vertexBuffer, byteOffset, byteStride != 0 ? byteStride : numElements * componentSize, numElements, inputType, normalized};
+            return;
+        }
 
         if (divisor == 1)
         {
@@ -137,6 +180,18 @@ namespace Babylon
         }
     }
 
+    bool VertexArray::HasStorageInstances() const
+    {
+        for (const auto& pair : m_vertexBufferInstances)
+        {
+            if (pair.second.ResolveStorage() != nullptr)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void VertexArray::SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
     {
         if (m_indexBuffer != nullptr)
@@ -197,13 +252,13 @@ namespace Babylon
 
     void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
-        if (!m_vertexBufferInstances.empty())
+        if (!m_vertexBufferInstances.empty() && !HasStorageInstances())
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
             VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
-        else if (instanceCount > 0)
+        else if (instanceCount > 0 && !HasStorageInstances())
         {
             // Attribute-less instancing: the draw requests multiple instances but has no per-instance
             // vertex data (e.g. the clustered-light tile-mask proxies, which derive the light index,
