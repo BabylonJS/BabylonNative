@@ -26,7 +26,7 @@ For pure RenderDoc CLI usage (any app, not BN-specific), see
 | `Apps/Playground/Shared/Diagnostics.{h,cpp}` | Crash handler, `DumpFailure`, finish-line, exit-code tracking. |
 | `Apps/Playground/Win32/App.cpp` (and the other per-host `App.*`) | Wires the `RuntimeOptions::log` callback into `DumpFailure` (`JS CONSOLE ERROR` for `LogLevel::Error`, `UNCAUGHT JS ERROR` for `LogLevel::Fatal`) and injects `_playgroundOptions` into JS via `Runtime::RunOnJsThread`. |
 | `Apps/Playground/Scripts/validation_native.js` | Test runner. Reads `_playgroundOptions`, picks tests, calls `TestUtils.captureNextFrame()`. Reference-image load failures arrive via `BABYLON.Tools.LoadFile`'s `onLoadFileError` and are tagged with `MISSING_REFERENCE_IMAGE:`. |
-| `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`renderCount`/`capture`/`threshold`/`errorRatio`. |
+| `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`renderCount`/`capture`/`threshold`/`errorRatio`/`workarounds`. |
 | `Plugins/TestUtils/Source/TestUtils.cpp` | Native side of `TestUtils.captureNextFrame()` -- calls `m_deviceContext.RequestCaptureNextFrame()`. |
 | `Core/Graphics/Source/BgfxCallback.cpp` | bgfx trace/fatal sink. Routes bgfx output to stdout in headless mode and to `OutputDebugString` always. |
 
@@ -194,7 +194,7 @@ debugging.
 ```powershell
 .\Playground.exe --list
 ```
-Prints TSV with index, title, referenceImage, exclusionReason. Pipe to
+Prints TSV with index, title, referenceImage, exclusionReason, workarounds. Pipe to
 `findstr` / `Select-String` for filtering.
 
 ### Pixel-diff investigation
@@ -280,6 +280,7 @@ the assert.
 | `errorRatio: F` | % of pixels allowed to differ (default 2.5) |
 | `replace: "src,dst,..."` | String-replace pairs applied to the playground source before `eval` |
 | `specificRoot: "..."` | Override `BABYLON.Tools.BaseUrl` for asset loads |
+| `workarounds: ["id", ...]` | Enable runner workarounds for bugs in this example (see `Documentation/AddingNewValidationTests.md`). Unknown IDs fail config load. Only tests that list an ID get it; the list doubles as the to-fix list for examples. |
 
 ## Adding new diagnostic output -- guidelines
 

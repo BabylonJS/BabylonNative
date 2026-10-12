@@ -96,6 +96,7 @@ namespace Babylon
             void* m_windowPtr{};
             std::optional<arcana::task<void, std::exception_ptr>> m_beginTask{};
             arcana::task<void, std::exception_ptr> m_endTask{arcana::task_from_result<std::exception_ptr>()};
+            bool m_sessionEnding{false};
 
             struct ViewConfiguration final
             {

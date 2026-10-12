@@ -39,6 +39,7 @@ namespace Babylon
 
             JsRuntimeScheduler m_runtimeScheduler;
             std::shared_ptr<Plugins::NativeXr::Impl> m_xr;
+            Napi::ObjectReference m_endPromise{};
             Napi::ObjectReference m_jsXRFrame{};
             Plugins::XRFrame& m_xrFrame;
             uint32_t m_timestamp{ 0 };

@@ -1743,6 +1743,10 @@ namespace Babylon
         // Optional array-layer count; also carries volume depth when is3D is set.
         const uint16_t numLayers = (info.Length() > 9 && !info[9].IsUndefined()) ? static_cast<uint16_t>(ReadUnsignedInteger(info[9], "Texture layer/depth count", UINT16_MAX)) : 1;
         const bool is3D = info.Length() > 10 && !info[10].IsUndefined() && info[10].As<Napi::Boolean>();
+        if (isCube && samples > 1)
+        {
+            throw Napi::Error::New(info.Env(), "Multisampled cube render targets are not supported");
+        }
 
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
@@ -2739,6 +2743,10 @@ namespace Babylon
         const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
         const double layer = info[6].IsUndefined() ? 0 : info[6].As<Napi::Number>().DoubleValue();
         const bool isCube = texture != nullptr && texture->IsCube();
+        if (isCube && samples > 1)
+        {
+            throw Napi::Error::New(info.Env(), "Multisampled cube render targets are not supported");
+        }
         const uint16_t maxLayer = texture == nullptr ? 0 : isCube ? 5 :
             texture->Is3D() ? texture->Depth() - 1 : texture->NumLayers() - 1;
         if (!std::isfinite(layer) || layer != std::floor(layer) || layer < 0 || layer > maxLayer)
@@ -2814,6 +2822,20 @@ namespace Babylon
     Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer, uint16_t mip, gsl::span<const uint16_t> perAttachmentLayers, Graphics::Texture* explicitDepthTexture, bool autoGenerateMips, Graphics::Texture* depthStencilTexture)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
+        if (samples > 1)
+        {
+            for (Graphics::Texture* texture : colorTextures)
+            {
+                if (texture != nullptr && texture->IsCube())
+                {
+                    throw Napi::Error::New(env, "Multisampled cube render targets are not supported");
+                }
+            }
+            if (depthStencilTexture != nullptr && depthStencilTexture->IsCube())
+            {
+                throw Napi::Error::New(env, "Multisampled cube render targets are not supported");
+            }
+        }
         const uint32_t colorCount = static_cast<uint32_t>(colorTextures.size());
         // One slot per color attachment, plus a single depth/stencil attachment only when one is
         // generated. bgfx caps the total via maxFBAttachments; reject out-of-range counts up front
