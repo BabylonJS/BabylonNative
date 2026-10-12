@@ -680,7 +680,7 @@ namespace Babylon
             auto deferred{ Napi::Promise::Deferred::New(info.Env()) };
             m_endPromise = Napi::Persistent(deferred.Promise().As<Napi::Object>());
             m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
-                [this, deferred, jsSession{Napi::Persistent(Value())}](const arcana::expected<void, std::exception_ptr>& result) {
+                [this, deferred, jsSession{Napi::Persistent(info.This().As<Napi::Object>())}](const arcana::expected<void, std::exception_ptr>& result) {
                     if (result.has_error())
                     {
                         deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
