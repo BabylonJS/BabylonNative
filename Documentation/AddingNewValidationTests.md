@@ -50,7 +50,7 @@ TSV column. When a workaround changes what the runner does for a test, the runne
 
 | ID | Example bug | Runner behavior |
 |---|---|---|
-| `wait-for-readiness` | Renders before utility-layer scenes, GUI images, or material effects are ready | Waits for those as described below |
+| `wait-for-readiness` | Renders before utility-layer scenes, GUI images, sprites, or material effects are ready | Waits for those as described below |
 | `undeclared-name` | Reads the browser-only global `name` (`window.name`) | Declares `var name = ""` for the example code |
 | `prime-effect-layers` | Captures effect-layer (glow/highlight) output on the first frame | Renders one extra frame before counting frames |
 | `leak-cleanup` | Leaves textures or Draco state behind after disposal | Releases leaked textures and resets Draco after the test (stray scenes are disposed after every test) |
@@ -65,10 +65,13 @@ main scene's `executeWhenReady` (10-minute timeout), then renders `renderCount` 
 
 ## wait-for-readiness
 
-The runner waits for scene readiness, GUI image readiness, and clean material
+The runner waits for scene readiness, GUI image readiness, sprite-manager readiness, and clean material
 defines with ready effects in the active camera's render pass. Utility scenes using
 the main scene's camera participate in the same check. Inspection restores the
 previous render pass, including on errors.
+
+Sprite-manager readiness includes packed-atlas metadata, which `Scene.executeWhenReady`
+does not wait for. Disabled sprites do not participate in this check.
 
 The initial readiness wait and its 10-minute timeout cover both the main scene
 and associated utility scenes. Their pending model/texture loads do not consume
