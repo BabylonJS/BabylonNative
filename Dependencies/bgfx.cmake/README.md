@@ -105,16 +105,11 @@ bgfx_compile_shaders(
 	VARYING_DEF filename
 	OUTPUT_DIR directory
 	[AS_HEADERS]
-	[NO_SOURCE_GROUP]
-	[PROFILES profiles]
 )
 ```
 This defines a shaderc command to generate binaries or headers for a number of `TYPE` shaders with `SHADERS` files and `VARYING_DEF` file in the `OUTPUT_DIR` directory. There will be one generated shader for each supported rendering API on this current platform according to the `BGFX_EMBEDDED_SHADER` macro in `bgfx/embedded_shader.h` for headers and in the directory expected by `load_shader` in `bgfx_utils.h`.
 
-`PROFILES` overrides the platform's default profile list, for example `PROFILES spirv s_6_0`.
-`NO_SOURCE_GROUP` suppresses the automatic IDE shader source group.
-
-The generated headers will have names in the format of `${RENDERING_API}/${SHADERS}.bin[.h]` where `RENDERING_API` can be `glsl`, `essl`, `spirv`, `dxbc`, `dxil`, `wgsl` and `metal` depending on the selected profiles and platform.
+The generated headers will have names in the format of `${RENDERING_API}/${SHADERS}.bin[.h]` where `RENDERING_API` can be `glsl`, `essl`, `spirv`, `dx11` and `metal` depending on the availability of the platform.
 
 Adding these `SHADERS` as source files to a target will run `shaderc` at build time and they will rebuild if either the contents of the `SHADERS` or the `VARYING_DEF` change.
 
