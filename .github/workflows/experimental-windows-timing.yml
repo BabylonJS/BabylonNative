@@ -1,0 +1,124 @@
+name: Experimental Windows visual timing
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/experimental-windows-timing.yml"
+      - "Apps/scripts/windowsTiming/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      npm_config_fetch_retries: "5"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Checkout exact native prototype
+        uses: actions/checkout@v5
+        with:
+          repository: bghgary/BabylonNative
+          ref: 397d5c09ec01fce62b206ba4b68b2fc189b4f744
+          path: Build/TimingSource
+          persist-credentials: false
+
+      - name: Checkout exact shared suite and references
+        uses: actions/checkout@v5
+        with:
+          repository: bghgary/Babylon.js
+          ref: d09f642c3813c8df178215acadc27f649510675a
+          path: Build/TimingSuite
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Apps/scripts/windowsTiming/package-lock.json
+
+      - name: Install experimental runner dependencies
+        working-directory: Apps/scripts/windowsTiming
+        run: npm ci --no-audit --no-fund
+
+      - name: Configure and build pinned Release V8 D3D11 Playground
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $watch = [Diagnostics.Stopwatch]::StartNew()
+          cmake -S Build\TimingSource -B Build\WindowsTiming -G "Visual Studio 17 2022" -A x64 `
+            -DNAPI_JAVASCRIPT_ENGINE=V8 -DGRAPHICS_API=D3D11 `
+            -DBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -DBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON `
+            -DBX_CONFIG_DEBUG=OFF -DBABYLON_DEBUG_TRACE=OFF
+          if ($LASTEXITCODE -ne 0) { throw 'Configure failed.' }
+          $configureMs = $watch.Elapsed.TotalMilliseconds
+          $watch.Restart()
+          cmake --build Build\WindowsTiming --config Release --target Playground -- /m
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+          New-Item -ItemType Directory -Force Build\timing-artifacts | Out-Null
+          @{
+            configureMs = $configureMs
+            buildMs = $watch.Elapsed.TotalMilliseconds
+            nativeHead = (git -C Build\TimingSource rev-parse HEAD)
+            suiteHead = (git -C Build\TimingSuite rev-parse HEAD)
+            v8Packages = @(Get-ChildItem Build\WindowsTiming\NuGet\packages -Directory |
+              Where-Object Name -Like 'v8-*' | Select-Object -ExpandProperty Name)
+          } | ConvertTo-Json | Set-Content Build\timing-artifacts\build.json
+
+      - name: Verify runtime package pins
+        shell: pwsh
+        run: |
+          $versions = @{}
+          foreach ($name in @('babylonjs', 'babylonjs-addons', 'babylonjs-loaders')) {
+            $package = Get-Content "Build\TimingSource\Apps\node_modules\$name\package.json" -Raw | ConvertFrom-Json
+            $versions[$name] = $package.version
+            if ($package.version -ne '9.15.0') { throw "Unexpected $name version." }
+          }
+          $versions | ConvertTo-Json | Set-Content Build\timing-artifacts\packages.json
+          $files = @{
+            'babylonjs' = 'babylon.max.js'
+            'babylonjs-addons' = 'babylonjs.addons.js'
+            'babylonjs-loaders' = 'babylonjs.loaders.js'
+          }
+          foreach ($name in $files.Keys) {
+            $source = Get-FileHash "Build\TimingSource\Apps\node_modules\$name\$($files[$name])"
+            $runtime = Get-FileHash "Build\WindowsTiming\Apps\Playground\Release\Scripts\$($files[$name])"
+            if ($source.Hash -ne $runtime.Hash) { throw "Runtime bundle differs: $name" }
+          }
+
+      - name: Run identical 305 scenes with one then two workers
+        timeout-minutes: 120
+        shell: pwsh
+        run: |
+          & .\Apps\scripts\windowsTiming\run.ps1 `
+            -SuiteRoot .\Build\TimingSuite `
+            -Playground .\Build\WindowsTiming\Apps\Playground\Release\Playground.exe `
+            -Artifacts .\Build\timing-artifacts
+
+      - name: Summarize actual timing and coverage
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          "## Experimental Windows timing (not a migration gate)" >> $env:GITHUB_STEP_SUMMARY
+          $file = 'Build\timing-artifacts\summary.json'
+          if (Test-Path $file) {
+            $summary = Get-Content $file -Raw | ConvertFrom-Json
+            foreach ($phase in $summary.phases) {
+              "$($phase.mode): selected=$($phase.selected), executed=$($phase.executed), passed=$($phase.passed), failed=$($phase.failed), completed=$($phase.completed), runner=$([math]::Round($phase.runnerWallMs / 1000, 3))s, process=$([math]::Round($phase.processWallMs / 1000, 3))s." >> $env:GITHUB_STEP_SUMMARY
+            }
+          } else {
+            "No complete timing report. This run establishes no Windows execution timing." >> $env:GITHUB_STEP_SUMMARY
+          }
+
+      - name: Upload timing reports and image differences
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: experimental-windows-305-scenes
+          path: Build/timing-artifacts/
+          if-no-files-found: warn
