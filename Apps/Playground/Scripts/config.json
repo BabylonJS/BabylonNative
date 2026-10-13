@@ -2362,7 +2362,8 @@
         {
             "title": "Sprites Pixel Perfect",
             "playgroundId": "#ZX8DJ3#10",
-            "referenceImage": "Sprites-Pixel-Perfect.png"
+            "referenceImage": "Sprites-Pixel-Perfect.png",
+            "workarounds": ["wait-for-readiness"]
         },
         {
             "title": "Rounding values on controls inside StackPanel",

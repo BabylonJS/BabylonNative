@@ -52,8 +52,8 @@
     // by listing IDs in its config.json "workarounds" array, so that list is also
     // the list of examples to fix.
     const WORKAROUNDS = {
-        // Example renders before its utility scenes, GUI images, or material effects are ready.
-        "wait-for-readiness": "wait for utility scenes, GUI textures, and material effects before rendering",
+        // Example renders before its utility scenes, GUI images, sprites, or material effects are ready.
+        "wait-for-readiness": "wait for utility scenes, GUI textures, sprites, and material effects before rendering",
         // Example reads the browser-only global `name` (window.name).
         "undeclared-name": "declare `name` for the example code",
         // Example captures effect-layer output before its render targets were submitted once.
@@ -645,10 +645,14 @@
         });
     }
 
-    function areGuiTexturesReady(scene) {
-        return scene.textures.every(function (texture) {
+    function areSceneResourcesReady(scene) {
+        const guiReady = scene.textures.every(function (texture) {
             return typeof texture.guiIsReady !== "function" || texture.guiIsReady();
         });
+        const spritesReady = !scene.spritesEnabled || !scene.spriteManagers || scene.spriteManagers.every(function (manager) {
+            return manager.isReady();
+        });
+        return guiReady && spritesReady;
     }
 
     function isSceneConverged(scene) {
@@ -658,7 +662,7 @@
             if (!scene.isReady()) {
                 return false;
             }
-            if (!areGuiTexturesReady(scene)) {
+            if (!areSceneResourcesReady(scene)) {
                 return false;
             }
 
@@ -924,9 +928,9 @@
 
                 let allReady = readinessScenes.length > 0;
                 for (let i = 0; i < readinessScenes.length; i++) {
-                    // GUI image loads are not included in Scene.executeWhenReady.
+                    // GUI images and packed sprite metadata are not included in Scene.executeWhenReady.
                     if (readyScenes.indexOf(readinessScenes[i]) === -1 ||
-                        (waitForReadiness && !areGuiTexturesReady(readinessScenes[i]))) {
+                        (waitForReadiness && !areSceneResourcesReady(readinessScenes[i]))) {
                         allReady = false;
                         break;
                     }
