@@ -43,7 +43,9 @@ namespace Babylon::Plugins::ShaderCache
     //    SRV/UAV masks + tex meta); stale v4 cache entries would be rejected by bgfx.
     // 6: FlipFragCoordY rewrites gl_FragCoord and injects bnFragCoordTargetSize;
     //    version-5 entries for those shaders skip compilation and omit the uniform.
-    static const uint32_t CACHE_VERSION = 6;
+    // 7: shader binaries are bgfx BGFX_SHADER_BIN_VERSION 13 and, on D3D, record each
+    //    sampler's register index and its paired texture's dimension.
+    static const uint32_t CACHE_VERSION = 7;
 
     void ShaderCacheImpl::Clear()
     {
