@@ -92,7 +92,19 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info)
     {
         auto env{info.Env()};
-        return Napi::Value::From(env, Graphics::DeviceContext::GetFromJavaScript(env).GetDevicePixelRatio());
+        try
+        {
+            return Napi::Value::From(env, Graphics::DeviceContext::GetFromJavaScript(env).GetDevicePixelRatio());
+        }
+        catch (const Napi::Error&)
+        {
+            // No graphics device context is registered (e.g. the NativeDawn /
+            // WebGPU backend, which does not create a bgfx Graphics device).
+            // Default to a 1.0 device-pixel ratio so windowing consumers — e.g.
+            // WebGPUEngine's constructor, which reads devicePixelRatio — work
+            // without a bgfx device rather than throwing "Invalid argument".
+            return Napi::Value::From(env, 1.0f);
+        }
     }
 }
 
