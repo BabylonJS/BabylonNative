@@ -38,10 +38,25 @@ namespace
 
         spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
 
-        options.version = 300;
+        // Compute shaders and storage buffers need GLSL ES 3.10.
+        options.version = stage == EShLangCompute ? 310 : 300;
         options.es = true;
 
         compiler->set_common_options(options);
+
+        // GLSL ES 3.00 flattens interface blocks into varyings prefixed with the stage-local
+        // instance name, so name each instance after its block to keep the stages linked.
+        const auto resources = compiler->get_shader_resources();
+        for (const auto* interfaceResources : {&resources.stage_inputs, &resources.stage_outputs})
+        {
+            for (const auto& resource : *interfaceResources)
+            {
+                if (compiler->has_decoration(resource.base_type_id, spv::DecorationBlock))
+                {
+                    compiler->set_name(resource.id, compiler->get_name(resource.base_type_id));
+                }
+            }
+        }
 
         glsl = compiler->compile();
 
@@ -65,6 +80,11 @@ namespace Babylon::Plugins
 
     Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, const std::map<std::string, uint32_t>& instancedAttributes)
     {
+        auto vertexText = PreprocessShader(EShLangVertex, vertexSource);
+        auto fragmentText = PreprocessShader(EShLangFragment, fragmentSource);
+        auto uniformNames = RenameShaderUniforms(vertexText, &fragmentText);
+        vertexSource = vertexText;
+        fragmentSource = fragmentText;
         glslang::TProgram program;
 
         glslang::TShader vertexShader{EShLangVertex};
@@ -94,9 +114,42 @@ namespace Babylon::Plugins
         std::string fragmentGLSL(fragmentSource.data(), fragmentSource.size());
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
 
-        return CreateBgfxShader(
+        auto result = CreateBgfxShader(
             {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size()), std::move(vertexAttributeRenaming)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size()), {}},
             std::move(builtInInstanceDataSlots));
+        result.UniformNames = std::move(uniformNames);
+        return result;
+    }
+
+    Graphics::BgfxShaderInfo ShaderCompiler::CompileCompute(std::string_view computeSource)
+    {
+        auto source = PreprocessShader(EShLangCompute, computeSource);
+        auto uniformNames = RenameShaderUniforms(source);
+        computeSource = source;
+        glslang::TProgram program;
+
+        glslang::TShader computeShader{EShLangCompute};
+        AddShader(program, computeShader, computeSource);
+
+        glslang::SpvVersion spv{};
+        spv.spv = 0x10000;
+        computeShader.getIntermediate()->setSpv(spv);
+
+        if (!program.link(EShMsgDefault))
+        {
+            throw std::runtime_error{program.getInfoLog()};
+        }
+
+        ShaderCompilerTraversers::IdGenerator ids{};
+        auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
+
+        std::string computeGLSL;
+        auto [computeParser, computeCompiler] = CompileShader(program, EShLangCompute, computeGLSL);
+
+        auto result = CreateBgfxComputeShader(
+            {std::move(computeParser), std::move(computeCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(computeGLSL.data()), computeGLSL.size()), {}});
+        result.UniformNames = std::move(uniformNames);
+        return result;
     }
 }

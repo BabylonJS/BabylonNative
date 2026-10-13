@@ -6,6 +6,8 @@
 #include <string>
 
 #include "JsConsoleLogger.h"
+#include "InstanceRepacker.h"
+#include "StorageBuffer.h"
 
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
@@ -55,6 +57,13 @@ namespace Babylon
 {
     namespace
     {
+        float PointSampleHeight(const Graphics::Texture& texture)
+        {
+            const auto filters = texture.SamplerFlags() & (BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK);
+            return filters == (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT) &&
+                (!texture.HasMips() || texture.SamplerMaxLod() == 0) ? static_cast<float>(texture.Height()) : 0.0f;
+        }
+
         uint32_t ReadUnsignedInteger(const Napi::Value& value, const char* name, uint32_t maximum, uint32_t minimum = 0, bool truncate = false)
         {
             double number = value.As<Napi::Number>().DoubleValue();
@@ -127,6 +136,27 @@ namespace Babylon
             constexpr uint32_t DARKEN = 5;
         }
 
+        constexpr bool IsFloatTextureFormat(bgfx::TextureFormat::Enum format)
+        {
+            switch (format)
+            {
+                case bgfx::TextureFormat::R16F:
+                case bgfx::TextureFormat::RG16F:
+                case bgfx::TextureFormat::RGBA16F:
+                case bgfx::TextureFormat::R32F:
+                case bgfx::TextureFormat::RG32F:
+                case bgfx::TextureFormat::RGBA32F:
+                case bgfx::TextureFormat::RGB9E5F:
+                case bgfx::TextureFormat::RG11B10F:
+                case bgfx::TextureFormat::D16F:
+                case bgfx::TextureFormat::D24F:
+                case bgfx::TextureFormat::D32F:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         void FlipImage(gsl::span<uint8_t> image, uint32_t height)
         {
             const size_t rowPitch{image.size() / height};
@@ -142,6 +172,53 @@ namespace Babylon
                 std::memcpy(frontPtr, backPtr, rowPitch);
                 std::memcpy(backPtr, buffer.data(), rowPitch);
             }
+        }
+
+        // WebGL reads exactly the texels an upload needs and ignores trailing bytes. It also accepts
+        // 3-component RGB sources for formats that Native, like ANGLE on D3D, stores as RGBA. Returns the
+        // bytes to upload, widening tightly packed RGB data into `storage` with an opaque alpha, or an
+        // empty span when the data is too small for the upload.
+        gsl::span<const uint8_t> ResolveRawUpload(gsl::span<const uint8_t> data, uint64_t requiredSize, uint64_t texelCount,
+            bgfx::TextureFormat::Enum format, std::vector<uint8_t>& storage)
+        {
+            if (requiredSize != 0 && data.size() >= requiredSize)
+            {
+                return data.first(static_cast<size_t>(requiredSize));
+            }
+
+            uint32_t componentBytes{0};
+            uint32_t alpha{0};
+            switch (format)
+            {
+                case bgfx::TextureFormat::RGBA8: componentBytes = 1; alpha = 0xFF; break;
+                case bgfx::TextureFormat::RGBA8S: componentBytes = 1; alpha = 0x7F; break;
+                case bgfx::TextureFormat::RGBA8I:
+                case bgfx::TextureFormat::RGBA8U: componentBytes = 1; alpha = 1; break;
+                case bgfx::TextureFormat::RGBA16: componentBytes = 2; alpha = 0xFFFF; break;
+                case bgfx::TextureFormat::RGBA16S: componentBytes = 2; alpha = 0x7FFF; break;
+                case bgfx::TextureFormat::RGBA16F: componentBytes = 2; alpha = 0x3C00; break;
+                case bgfx::TextureFormat::RGBA16I:
+                case bgfx::TextureFormat::RGBA16U: componentBytes = 2; alpha = 1; break;
+                case bgfx::TextureFormat::RGBA32F: componentBytes = 4; alpha = 0x3F800000; break;
+                case bgfx::TextureFormat::RGBA32I:
+                case bgfx::TextureFormat::RGBA32U: componentBytes = 4; alpha = 1; break;
+                default: return {};
+            }
+
+            if (texelCount == 0 || data.size() != texelCount * 3 * componentBytes || texelCount * 4 * componentBytes != requiredSize)
+            {
+                return {};
+            }
+
+            storage.resize(static_cast<size_t>(requiredSize));
+            const size_t rgbBytes{3u * componentBytes};
+            for (size_t texel = 0; texel < texelCount; ++texel)
+            {
+                uint8_t* destination{storage.data() + texel * 4 * componentBytes};
+                std::memcpy(destination, data.data() + texel * rgbBytes, rgbBytes);
+                std::memcpy(destination + rgbBytes, &alpha, componentBytes);
+            }
+            return storage;
         }
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
@@ -1017,12 +1094,21 @@ namespace Babylon
                 StaticValue("COMMAND_DRAWINDEXEDINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexedInstanced)),
                 StaticValue("COMMAND_DRAW", Napi::FunctionPointer::Create(env, &NativeEngine::Draw)),
                 StaticValue("COMMAND_DRAWINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawInstanced)),
+                // Transform feedback is emulated with compute; without it Babylon.js falls back to CPU particles.
+                StaticValue("COMMAND_DRAWTRANSFORMFEEDBACK", 0 != (bgfx::getCaps()->supported & BGFX_CAPS_COMPUTE)
+                    ? Napi::FunctionPointer::Create(env, &NativeEngine::DrawTransformFeedback)
+                    : env.Undefined()),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
+                StaticValue("COMMAND_CLEAR2", Napi::FunctionPointer::Create(env, &NativeEngine::Clear2)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
+                StaticValue("COMMAND_SETSTENCIL2", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil2)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
                 StaticValue("COMMAND_SETSCISSOR", Napi::FunctionPointer::Create(env, &NativeEngine::SetScissor)),
                 StaticValue("COMMAND_COPYTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::CopyTexture)),
 
+                InstanceValue("supportsPrimitiveModeExpansion", Napi::Boolean::From(env, true)),
+                InstanceValue("supportsDynamicTextureMipMaps", Napi::Boolean::From(env,
+                    0 != (bgfx::getCaps()->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN))),
                 InstanceMethod("dispose", &NativeEngine::Dispose),
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
                 InstanceMethod("_disposeDrainTestSchedule", &NativeEngine::DisposeDrainTestSchedule),
@@ -1039,6 +1125,7 @@ namespace Babylon
                 InstanceMethod("createVertexBuffer", &NativeEngine::CreateVertexBuffer),
                 InstanceMethod("recordVertexBuffer", &NativeEngine::RecordVertexBuffer),
                 InstanceMethod("updateDynamicVertexBuffer", &NativeEngine::UpdateDynamicVertexBuffer),
+                InstanceMethod("readTransformFeedbackBuffer", &NativeEngine::ReadTransformFeedbackBuffer),
 
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
                 InstanceMethod("createProgramAsync", &NativeEngine::CreateProgramAsync),
@@ -1060,6 +1147,7 @@ namespace Babylon
                 InstanceMethod("setTextureComparisonFunction", &NativeEngine::SetTextureComparisonFunction),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
+                InstanceMethod("readTexture2", &NativeEngine::ReadTexture2),
 
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
@@ -1102,7 +1190,8 @@ namespace Babylon
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
-        , m_boundFrameBufferNeedsRebinding{m_deviceContext, *m_cancellationSource, true}
+        , m_boundFrameBufferNeedsRebinding{m_deviceContext, m_cancellationSource, true}
+        , m_defaultFrameBufferNeedsReset{m_deviceContext, m_cancellationSource, true}
     {
         // Set features supported by the NativeEngine from Babylon.js.
         if (!info[0].IsUndefined())
@@ -1176,7 +1265,12 @@ namespace Babylon
 
     void NativeEngine::DeleteVertexArray(NativeDataStream::Reader& data)
     {
-        data.ReadPointer<VertexArray>()->Dispose();
+        VertexArray* vertexArray = data.ReadPointer<VertexArray>();
+        if (m_instanceRepacker != nullptr)
+        {
+            m_instanceRepacker->Forget(vertexArray);
+        }
+        vertexArray->Dispose();
         // TODO: should we clear the m_boundVertexArray if it gets deleted?
         //assert(vertexArray != m_boundVertexArray);
     }
@@ -1340,16 +1434,171 @@ namespace Babylon
         }
     }
 
+    // WebGL's getBufferSubData after transform feedback is synchronous; ANGLE stalls on the GPU. Do the same:
+    // copy the captured storage buffer into an R32F image, read it back and run mid-frame flushes until the
+    // read completes.
+    void NativeEngine::ReadTransformFeedbackBuffer(const Napi::CallbackInfo& info)
+    {
+        VertexBuffer* vertexBuffer = info[0].As<Napi::Pointer<VertexBuffer>>().Get();
+        const Napi::ArrayBuffer target = info[1].As<Napi::ArrayBuffer>();
+        const uint32_t targetByteOffset = info[2].As<Napi::Number>().Uint32Value();
+        const uint32_t targetByteLength = info[3].As<Napi::Number>().Uint32Value();
+        if (static_cast<uint64_t>(targetByteOffset) + targetByteLength > target.ByteLength())
+        {
+            throw Napi::RangeError::New(info.Env(), "readTransformFeedbackBuffer target range is out of bounds");
+        }
+        if ((bgfx::getCaps()->supported & BGFX_CAPS_COMPUTE) == 0)
+        {
+            throw Napi::Error::New(info.Env(), "readTransformFeedbackBuffer requires compute support");
+        }
+
+        if (m_commandStream)
+        {
+            SubmitCommands(info);
+        }
+
+        StorageBuffer& storage = vertexBuffer->PromoteToGpuStorage();
+        if (targetByteLength > storage.ByteLength())
+        {
+            throw Napi::RangeError::New(info.Env(), "readTransformFeedbackBuffer source range is out of bounds");
+        }
+        const uint32_t count = targetByteLength / static_cast<uint32_t>(sizeof(float));
+        if (count == 0)
+        {
+            return;
+        }
+
+        constexpr uint32_t kWidth = 256;
+        const uint32_t height = (count + kWidth - 1) / kWidth;
+        if (height > bgfx::getCaps()->limits.maxTextureSize)
+        {
+            throw Napi::RangeError::New(info.Env(), "readTransformFeedbackBuffer buffer is too large");
+        }
+
+        if (m_bufferReadbackProgram == nullptr)
+        {
+            static constexpr const char* kSource = R"(#version 310 es
+precision highp float;
+precision highp int;
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+layout(std430, binding = 0) readonly buffer Source { float sourceData[]; };
+layout(r32f, binding = 1) writeonly uniform highp image2D destination;
+uniform vec4 readbackCount;
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= uint(readbackCount.x)) { return; }
+    imageStore(destination, ivec2(int(i % 256u), int(i / 256u)), vec4(sourceData[i], 0.0, 0.0, 0.0));
+}
+)";
+            auto program = std::make_shared<Program>(m_deviceContext);
+            program->InitializeCompute(m_shaderProvider.GetCompute(kSource));
+            m_bufferReadbackProgram = std::move(program);
+        }
+
+        // Keeps the render thread parked in FinishRenderingCurrentFrame so ForceMidFrameFlush can run.
+        auto frameScope = m_deviceContext.AcquireFrameCompletionScope();
+
+        const bgfx::TextureHandle texture = bgfx::createTexture2D(static_cast<uint16_t>(kWidth), static_cast<uint16_t>(height),
+            /*hasMips*/ false, /*numLayers*/ 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_COMPUTE_WRITE);
+        const bgfx::TextureHandle readbackTexture = bgfx::createTexture2D(static_cast<uint16_t>(kWidth), static_cast<uint16_t>(height),
+            /*hasMips*/ false, /*numLayers*/ 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+        const auto destroyTextures = gsl::finally([texture, readbackTexture] {
+            if (bgfx::isValid(texture))
+            {
+                bgfx::destroy(texture);
+            }
+            if (bgfx::isValid(readbackTexture))
+            {
+                bgfx::destroy(readbackTexture);
+            }
+        });
+        if (!bgfx::isValid(texture) || !bgfx::isValid(readbackTexture))
+        {
+            throw Napi::Error::New(info.Env(), "readTransformFeedbackBuffer could not allocate a readback texture");
+        }
+
+        bgfx::Encoder* encoder = GetEncoder();
+        // An explicit count instead of .length(): Metal would need unbound buffer-size constants for it.
+        const float readbackCount[4]{static_cast<float>(count), 0.0f, 0.0f, 0.0f};
+        encoder->setUniform(m_bufferReadbackProgram->GetUniformInfo("readbackCount")->Handle, readbackCount);
+        encoder->setImage(1, texture, 0, bgfx::Access::Write, bgfx::TextureFormat::R32F);
+        storage.SetCompute(encoder, 0, bgfx::Access::Read);
+        GetBoundFrameBuffer().Compute(*encoder, m_bufferReadbackProgram->Handle(), (count + 63) / 64, 1, 1);
+        bgfx::TextureRegion destinationRegion{};
+        destinationRegion.init(readbackTexture);
+        bgfx::TextureRegion sourceRegion{};
+        sourceRegion.init(texture);
+        encoder->blit(m_deviceContext.AcquireNewViewId(), destinationRegion, sourceRegion);
+        RestoreBoundTextures(encoder);
+
+        // The read may complete after this call if it times out, so the continuation shares ownership of the pixels.
+        struct Readback
+        {
+            std::vector<uint8_t> Pixels;
+            std::atomic<bool> Done{false};
+            std::atomic<bool> Failed{false};
+        };
+        auto readback = std::make_shared<Readback>();
+        readback->Pixels.resize(static_cast<size_t>(kWidth) * height * sizeof(float));
+        m_deviceContext.ReadTextureAsync(readbackTexture, readback->Pixels)
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [readback](const arcana::expected<void, std::exception_ptr>& result) {
+                readback->Failed = result.has_error();
+                readback->Done = true;
+            });
+
+        constexpr int kMaxFlushes = 8;
+        for (int flush = 0; flush < kMaxFlushes && !readback->Done; ++flush)
+        {
+            if (!m_deviceContext.ForceMidFrameFlush())
+            {
+                break;
+            }
+        }
+
+        if (!readback->Done || readback->Failed)
+        {
+            throw Napi::Error::New(info.Env(), "readTransformFeedbackBuffer could not read the buffer back");
+        }
+
+        std::memcpy(static_cast<uint8_t*>(target.Data()) + targetByteOffset, readback->Pixels.data(), static_cast<size_t>(count) * sizeof(float));
+    }
+
+    namespace
+    {
+        // Optional transform feedback varyings argument of createProgram/createProgramAsync.
+        std::vector<std::string> ReadTransformFeedbackVaryings(const Napi::CallbackInfo& info, size_t index)
+        {
+            std::vector<std::string> varyings;
+            if (info.Length() > index && info[index].IsArray())
+            {
+                const auto array = info[index].As<Napi::Array>();
+                for (uint32_t element = 0; element < array.Length(); ++element)
+                {
+                    varyings.push_back(array.Get(element).As<Napi::String>().Utf8Value());
+                }
+            }
+            return varyings;
+        }
+    }
+
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
         const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
         const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const std::vector<std::string> varyings = ReadTransformFeedbackVaryings(info, 2);
         Program* program = new Program{m_deviceContext};
         Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
         {
-            program->SetSources(vertexSource, fragmentSource);
-            program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
+            if (!varyings.empty())
+            {
+                program->InitializeTransformFeedback(m_shaderProvider.GetTransformFeedback(vertexSource, varyings));
+            }
+            else
+            {
+                program->SetSources(vertexSource, fragmentSource);
+                program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
+            }
         }
         catch (const std::exception& ex)
         {
@@ -1364,20 +1613,31 @@ namespace Babylon
         std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
         const Napi::Function onSuccess = info[2].As<Napi::Function>();
         const Napi::Function onError = info[3].As<Napi::Function>();
+        std::vector<std::string> varyings = ReadTransformFeedbackVaryings(info, 4);
 
         Program* program = new Program{m_deviceContext};
         Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
-        program->SetSources(vertexSource, fragmentSource);
+        if (varyings.empty())
+        {
+            program->SetSources(vertexSource, fragmentSource);
+        }
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}]() {
+            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), varyings = std::move(varyings), program, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}]() {
                 // Skip touching graphics resources if teardown has already begun.
                 if (cancellationSource->cancelled())
                 {
                     return;
                 }
-                program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
+                if (!varyings.empty())
+                {
+                    program->InitializeTransformFeedback(m_shaderProvider.GetTransformFeedback(vertexSource, varyings));
+                }
+                else
+                {
+                    program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
+                }
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [jsProgramRef{Napi::Persistent(jsProgram)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (result.has_error())
@@ -1912,10 +2172,18 @@ namespace Babylon
         const auto invertY{info[6].As<Napi::Boolean>().Value()};
         const auto srgb{info.Length() > 7 && !info[7].IsUndefined() ? info[7].As<Napi::Boolean>().Value() : false};
 
-        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
-        if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
+        std::vector<uint8_t> widened;
+        const auto upload{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+            bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format), static_cast<uint64_t>(width) * height, Cast(format), widened)};
+        if (upload.empty())
         {
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
+        }
+        const auto bytes{upload.data()};
+
+        if (m_commandStream)
+        {
+            SubmitCommands(info);
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, /*depth*/ 0, 1, false, false, bytes)};
@@ -1931,7 +2199,38 @@ namespace Babylon
             throw Napi::Error::New(Env(), exception.what());
         }
 
-        LoadTextureFromImage(texture, image, srgb);
+        if (texture->IsValid() && m_deviceContext.PeekNextViewId() != 0)
+        {
+            if (texture->Width() != image->m_width || texture->Height() != image->m_height)
+            {
+                bimg::imageFree(image);
+                throw Napi::Error::New(Env(), "Cannot update texture from image of different size");
+            }
+
+            // bgfx uploads precede every draw in a frame. Stage repeated uploads and
+            // copy them in view order so earlier cameras retain their light data.
+            auto scope = m_deviceContext.AcquireFrameCompletionScope();
+            auto* encoder = GetEncoder();
+            Graphics::Texture staging{m_deviceContext};
+            const auto mipCount = image->m_numMips;
+            LoadTextureFromImage(&staging, image, srgb);
+            const auto viewId = m_deviceContext.AcquireNewViewId();
+            bgfx::resetView(viewId);
+            for (uint8_t mip = 0; mip < mipCount; ++mip)
+            {
+                bgfx::TextureRegion destination{};
+                destination.init(texture->Handle());
+                destination.mip = mip;
+                bgfx::TextureRegion source{};
+                source.init(staging.Handle());
+                source.mip = mip;
+                encoder->blit(viewId, destination, source);
+            }
+        }
+        else
+        {
+            LoadTextureFromImage(texture, image, srgb);
+        }
 #endif
     }
 
@@ -1987,7 +2286,10 @@ namespace Babylon
         bgfx::TextureInfo textureInfo;
         bgfx::calcTextureSize(textureInfo, width, height, 1, false, false, 1, texture->Format());
         const uint32_t requiredSize{textureInfo.storageSize};
-        if (requiredSize == 0 || data.ByteLength() < requiredSize)
+        std::vector<uint8_t> widened;
+        const auto upload{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+            requiredSize, static_cast<uint64_t>(width) * height, texture->Format(), widened)};
+        if (requiredSize == 0 || upload.empty())
         {
             throw Napi::Error::New(info.Env(), "updateTextureData data size does not match width, height, and texture format");
         }
@@ -2006,37 +2308,99 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "updateTextureData does not support block-compressed texture formats");
         }
 
-        const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
-
         // Cube uploads honor invertY directly; only 2D uploads compensate for the backend origin.
         const bool flip{texture->IsCube()
                 ? invertY
                 : (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)};
-        const uint16_t targetY{flip ? static_cast<uint16_t>(mipHeight - y - height) : y};
-        const bgfx::Memory* mem{bgfx::alloc(requiredSize)};
-        if (flip)
-        {
-            const uint32_t rowBytes{requiredSize / height};
-            for (uint16_t row = 0; row < height; ++row)
+        const auto uploadLevel = [texture, flip, layer](uint8_t level, uint16_t levelX, uint16_t levelY, uint16_t levelWidth, uint16_t levelHeight, const uint8_t* bytes, uint32_t size) {
+            const uint32_t levelMipHeight{std::max(1u, static_cast<uint32_t>(texture->Height()) >> level)};
+            const uint16_t targetY{flip ? static_cast<uint16_t>(levelMipHeight - levelY - levelHeight) : levelY};
+            const bgfx::Memory* mem{bgfx::alloc(size)};
+            if (flip)
             {
-                std::memcpy(mem->data + static_cast<size_t>(row) * rowBytes, bytes + static_cast<size_t>(height - 1 - row) * rowBytes, rowBytes);
+                const uint32_t rowBytes{size / levelHeight};
+                for (uint16_t row = 0; row < levelHeight; ++row)
+                {
+                    std::memcpy(mem->data + static_cast<size_t>(row) * rowBytes, bytes + static_cast<size_t>(levelHeight - 1 - row) * rowBytes, rowBytes);
+                }
             }
-        }
-        else
+            else
+            {
+                std::memcpy(mem->data, bytes, size);
+            }
+            if (texture->IsCube())
+            {
+                // bgfx addresses a cube texture by (array layer, side 0-5), but the JS side packs both into the
+                // single "layer" argument it also uses for 2D-array slices (6 consecutive faces per array layer,
+                // which is what the bounds check above allows). Decompose it, otherwise a cube-array face index
+                // above 5 would be forwarded as an out-of-range side and every update would land on array layer 0.
+                texture->UpdateCube(static_cast<uint16_t>(layer / 6), static_cast<uint8_t>(layer % 6), level, levelX, targetY, levelWidth, levelHeight, mem);
+            }
+            else
+            {
+                texture->Update2D(layer, level, levelX, targetY, levelWidth, levelHeight, mem);
+            }
+        };
+        uploadLevel(mip, x, y, width, height, upload.data(), requiredSize);
+
+        // Optional WebGL generateMipmap for this face/layer: rebuild the rest of the chain from the full
+        // level that was just uploaded. bgfx cannot generate mips for textures that are not render targets.
+        const bool generateMips{info.Length() > 9 && !info[9].IsUndefined() && info[9].As<Napi::Boolean>().Value()};
+        if (!generateMips || mipChainInfo.numMips <= mip + 1)
         {
-            std::memcpy(mem->data, bytes, requiredSize);
+            return;
         }
-        if (texture->IsCube())
+        if (x != 0 || y != 0 || width != mipWidth || height != mipHeight)
         {
-            // bgfx addresses a cube texture by (array layer, side 0-5), but the JS side packs both into the
-            // single "layer" argument it also uses for 2D-array slices (6 consecutive faces per array layer,
-            // which is what the bounds check above allows). Decompose it, otherwise a cube-array face index
-            // above 5 would be forwarded as an out-of-range side and every update would land on array layer 0.
-            texture->UpdateCube(static_cast<uint16_t>(layer / 6), static_cast<uint8_t>(layer % 6), mip, x, targetY, width, height, mem);
+            throw Napi::Error::New(info.Env(), "updateTextureData can only generate mips from a full mip level");
         }
-        else
+        auto& allocator{Graphics::DeviceContext::GetDefaultAllocator()};
+        using ImagePtr = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
+        const auto format{static_cast<bimg::TextureFormat::Enum>(texture->Format())};
+        // gl.generateMipmap box-filters linear values; bimg's mip generator applies a gamma curve, so filter here.
+        ImagePtr source{bimg::imageAlloc(&allocator, format, width, height, 0, 1, false, false, upload.data()), bimg::imageFree};
+        ImagePtr converted{source ? bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *source, false) : nullptr, bimg::imageFree};
+        if (!converted)
         {
-            texture->Update2D(layer, mip, x, targetY, width, height, mem);
+            throw Napi::Error::New(info.Env(), std::string{"updateTextureData cannot generate mips for format "} + bimg::getName(format));
+        }
+
+        const float* levelSource{static_cast<const float*>(converted->m_data)};
+        std::vector<float> levelTexels;
+        uint32_t levelWidth{width};
+        uint32_t levelHeight{height};
+        for (uint8_t level = static_cast<uint8_t>(mip + 1); level < mipChainInfo.numMips; ++level)
+        {
+            const uint32_t nextWidth{std::max(1u, levelWidth >> 1)};
+            const uint32_t nextHeight{std::max(1u, levelHeight >> 1)};
+            std::vector<float> next(static_cast<size_t>(nextWidth) * nextHeight * 4);
+            for (uint32_t row = 0; row < nextHeight; ++row)
+            {
+                for (uint32_t column = 0; column < nextWidth; ++column)
+                {
+                    const uint32_t x0{std::min(column * 2, levelWidth - 1)};
+                    const uint32_t x1{std::min(column * 2 + 1, levelWidth - 1)};
+                    const uint32_t y0{std::min(row * 2, levelHeight - 1)};
+                    const uint32_t y1{std::min(row * 2 + 1, levelHeight - 1)};
+                    for (uint32_t channel = 0; channel < 4; ++channel)
+                    {
+                        const auto at = [&](uint32_t sx, uint32_t sy) { return levelSource[(static_cast<size_t>(sy) * levelWidth + sx) * 4 + channel]; };
+                        next[(static_cast<size_t>(row) * nextWidth + column) * 4 + channel] = (at(x0, y0) + at(x1, y0) + at(x0, y1) + at(x1, y1)) * 0.25f;
+                    }
+                }
+            }
+            levelTexels = std::move(next);
+            levelSource = levelTexels.data();
+            levelWidth = nextWidth;
+            levelHeight = nextHeight;
+
+            const auto levelSize{static_cast<uint32_t>(bimg::imageGetSize(nullptr, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), 1, false, false, 1, format))};
+            std::vector<uint8_t> levelBytes(levelSize);
+            if (!bimg::imageConvert(&allocator, levelBytes.data(), format, levelSource, bimg::TextureFormat::RGBA32F, levelWidth, levelHeight, 1))
+            {
+                throw Napi::Error::New(info.Env(), std::string{"updateTextureData cannot convert generated mips to format "} + bimg::getName(format));
+            }
+            uploadLevel(level, 0, 0, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), levelBytes.data(), levelSize);
         }
     }
 
@@ -2096,8 +2460,13 @@ namespace Babylon
         // are ever uploaded or sampled (the shader indexes an explicit layer).
         const uint16_t allocLayers{depth > 1 ? depth : static_cast<uint16_t>(2)};
 
+        const bool flipRows = !bgfx::getCaps()->originBottomLeft;
+        const bool decodeBlocks = flipRows && bimg::isCompressed(format);
+        const auto uploadFormat = decodeBlocks
+            ? (bimg::isFloat(format) ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA8)
+            : format;
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
-        texture->Create2D(width, height, generateMips, allocLayers, Cast(format), flags);
+        texture->Create2D(width, height, generateMips, allocLayers, Cast(uploadFormat), flags);
 
         if (!data.IsNull())
         {
@@ -2105,27 +2474,57 @@ namespace Babylon
             // 64-bit byte length so a crafted width/height/depth cannot wrap the
             // expected size and slip an undersized buffer past this check.
             const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)};
-            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
+            std::vector<uint8_t> widened;
+            const auto resolved{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+                expectedSize, static_cast<uint64_t>(width) * height * depth, Cast(format), widened)};
+            if (expectedSize == 0 || resolved.empty())
             {
                 throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
 
-            uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-            size_t dataSize = data.ByteLength();
+            const uint8_t* dataPtr = resolved.data();
+            size_t dataSize = resolved.size();
 
             size_t textureSize = dataSize / static_cast<size_t>(depth);
 
             // bgfx::Memory uses a 32-bit size; reject a per-layer payload that
             // would be truncated by the bgfx::copy cast below.
-            if (textureSize > UINT32_MAX)
+            const auto uploadSize = bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, uploadFormat);
+            if (textureSize > UINT32_MAX || uploadSize > UINT32_MAX)
             {
                 throw Napi::Error::New(Env(), "The 2D texture array layer size is too large.");
             }
 
             for (uint16_t i = 0; i < depth; i++)
             {
-                uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
-                const bgfx::Memory* dataCopy = bgfx::copy(begin, static_cast<uint32_t>(textureSize)); // This is required since BGFX must manage the data the memory.
+                const uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
+                using ImagePtr = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
+                ImagePtr decoded{nullptr, bimg::imageFree};
+                gsl::span<const uint8_t> upload{begin, textureSize};
+                if (decodeBlocks)
+                {
+                    // Compressed blocks are not pixel rows; decode before flipping, including partial edge blocks.
+                    auto& allocator = Graphics::DeviceContext::GetDefaultAllocator();
+                    ImagePtr source{bimg::imageAlloc(&allocator, format, width, height, 0, 1, false, false, begin), bimg::imageFree};
+                    if (!source)
+                    {
+                        throw Napi::Error::New(Env(), "Failed to allocate the compressed array layer.");
+                    }
+                    source->m_width = width;
+                    source->m_height = height;
+                    decoded.reset(bimg::imageConvert(&allocator, uploadFormat, *source, false));
+                    if (!decoded || decoded->m_size != uploadSize)
+                    {
+                        throw Napi::Error::New(Env(), "Failed to decode the compressed array layer.");
+                    }
+                    upload = {static_cast<const uint8_t*>(decoded->m_data), decoded->m_size};
+                }
+                const bgfx::Memory* dataCopy = bgfx::copy(upload.data(), static_cast<uint32_t>(upload.size()));
+                if (flipRows)
+                {
+                    // Match rendered array layers without modifying the caller's data.
+                    FlipImage({dataCopy->data, upload.size()}, height);
+                }
                 texture->Update2D(i, 0, 0, 0, width, height, dataCopy);
             }
         }
@@ -2182,13 +2581,16 @@ namespace Babylon
             // crafted width/height/depth cannot wrap the expected size and slip an undersized buffer past
             // this check. A 3D texture is a single volume (numLayers = 1) whose depth is the 3rd argument.
             const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, depth, false, false, 1, format)};
-            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
+            std::vector<uint8_t> widened;
+            const auto resolved{ResolveRawUpload({static_cast<const uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength()},
+                expectedSize, static_cast<uint64_t>(width) * height * depth, Cast(format), widened)};
+            if (expectedSize == 0 || resolved.empty())
             {
                 throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
 
-            uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-            const size_t dataSize = data.ByteLength();
+            const uint8_t* dataPtr = resolved.data();
+            const size_t dataSize = resolved.size();
 
             // bgfx::Memory uses a 32-bit size; reject a payload that would be truncated by the bgfx::copy
             // cast below.
@@ -2478,10 +2880,19 @@ namespace Babylon
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
         bgfx::Encoder* encoder = GetEncoder();
-        const uint16_t firstLayer = texture->ViewNumLayers() != 0 ? texture->ViewFirstLayer() : 0;
-        const uint16_t numLayers = texture->ViewNumLayers() != 0 ? texture->ViewNumLayers() : UINT16_MAX;
-        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(),
-            firstLayer, numLayers, 0, UINT8_MAX, texture->SamplerFlags(), 0, texture->SamplerMaxLod());
+
+        BoundTexture bound{};
+        bound.Handle = uniformInfo->Handle;
+        bound.Texture = texture->Handle();
+        bound.Flags = texture->SamplerFlags();
+        bound.FirstLayer = texture->ViewNumLayers() != 0 ? texture->ViewFirstLayer() : 0;
+        bound.NumLayers = texture->ViewNumLayers() != 0 ? texture->ViewNumLayers() : UINT16_MAX;
+        bound.MaxLod = texture->SamplerMaxLod();
+        bound.PointSampleHeight = PointSampleHeight(*texture);
+        m_boundTextures[uniformInfo->Stage] = bound;
+
+        encoder->setTexture(uniformInfo->Stage, bound.Handle, bound.Texture,
+            bound.FirstLayer, bound.NumLayers, 0, UINT8_MAX, bound.Flags, 0, bound.MaxLod);
     }
 
     void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)
@@ -2489,23 +2900,57 @@ namespace Babylon
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
 
         bgfx::Encoder* encoder = GetEncoder();
+        m_boundTextures.erase(uniformInfo->Stage);
         encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, BGFX_INVALID_HANDLE);
     }
 
     void NativeEngine::DiscardAllTextures(NativeDataStream::Reader&)
     {
         bgfx::Encoder* encoder = GetEncoder();
+        m_boundTextures.clear();
         encoder->discard(BGFX_DISCARD_BINDINGS);
+    }
+
+    void NativeEngine::RestoreBoundTextures(bgfx::Encoder* encoder)
+    {
+        if (encoder == nullptr)
+        {
+            return;
+        }
+        for (const auto& [stage, bound] : m_boundTextures)
+        {
+            if (!bgfx::isValid(bound.Handle) || !bgfx::isValid(bound.Texture))
+            {
+                continue;
+            }
+            encoder->setTexture(stage, bound.Handle, bound.Texture,
+                bound.FirstLayer, bound.NumLayers, 0, UINT8_MAX, bound.Flags, 0, bound.MaxLod);
+        }
     }
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        // Deleting a bound WebGL texture unbinds it.
+        for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
+        {
+            it = it->second.Texture.idx == texture->Handle().idx ? m_boundTextures.erase(it) : std::next(it);
+        }
         m_deviceContext.RemoveTexture(texture->Handle());
         texture->Dispose();
     }
 
     Napi::Value NativeEngine::ReadTexture(const Napi::CallbackInfo& info)
+    {
+        return ReadTextureImpl(info, false);
+    }
+
+    Napi::Value NativeEngine::ReadTexture2(const Napi::CallbackInfo& info)
+    {
+        return ReadTextureImpl(info, true);
+    }
+
+    Napi::Value NativeEngine::ReadTextureImpl(const Napi::CallbackInfo& info, bool preserveFloat)
     {
         const Napi::Env env{info.Env()};
 
@@ -2605,7 +3050,7 @@ namespace Babylon
         }
 
         // Check the full storage size before bgfx narrows it to uint32.
-        const auto targetTextureFormat{bgfx::TextureFormat::RGBA8};
+        const auto targetTextureFormat{preserveFloat && IsFloatTextureFormat(sourceTextureFormat) ? bgfx::TextureFormat::RGBA32F : bgfx::TextureFormat::RGBA8};
         const auto storageSize = [&](bgfx::TextureFormat::Enum format) {
             return bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, static_cast<bimg::TextureFormat::Enum>(format));
         };
@@ -2656,7 +3101,9 @@ namespace Babylon
             auto tempTexture = std::make_shared<bool>(false);
 
             // WebGL readPixels coordinates start at the bottom, unlike D3D/Metal/Vulkan blit coordinates.
-            const uint16_t blitY{bgfx::getCaps()->originBottomLeft ? y : static_cast<uint16_t>(mipHeight - y - height)};
+            // Cube faces are stored in GL row order on every backend, for uploads and rendering alike.
+            const bool glRowOrder{bgfx::getCaps()->originBottomLeft || texture->IsCube()};
+            const uint16_t blitY{glRowOrder ? y : static_cast<uint16_t>(mipHeight - y - height)};
 
             // If the image needs to be cropped, the texture lacks the READ_BACK flag, or we are reading a
             // specific cube-map face, blit to a temp 2D texture. bgfx::read addresses a whole mip of one
@@ -2685,7 +3132,7 @@ namespace Babylon
 
             // Read the source texture (async — completes after bgfx::frame).
             m_deviceContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
-                .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo, glRowOrder]() mutable {
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
 #ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
@@ -2701,7 +3148,7 @@ namespace Babylon
                     }
                     assert(textureBuffer.size() == targetTextureInfo.storageSize);
                     // Return bottom-up rows, matching WebGL readPixels on every backend.
-                    if (!bgfx::getCaps()->originBottomLeft)
+                    if (!glRowOrder)
                     {
                         FlipImage(textureBuffer, targetTextureInfo.height);
                     }
@@ -3018,6 +3465,21 @@ namespace Babylon
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, frameBufferDepthOwnerIndex, isMultisampled, depthOneVolumeAttachmentMask);
 
+        // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
+        // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
+        // uploaded faces and with WebGL without any Babylon.js compensation. 2D targets keep top-left rows,
+        // which the shader compiler's sampler coordinate flip already accounts for.
+        if (!caps->originBottomLeft)
+        {
+            bool cubeTarget{false};
+            for (Graphics::Texture* texture : colorTextures)
+            {
+                cubeTarget = cubeTarget || (texture != nullptr && bgfx::isValid(texture->Handle()) && texture->IsCube());
+            }
+            cubeTarget = cubeTarget || (explicitDepthTexture != nullptr && explicitDepthTexture->IsCube());
+            frameBuffer->SetGLRowOrder(cubeTarget);
+        }
+
         return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
@@ -3073,13 +3535,31 @@ namespace Babylon
         const uint32_t indexCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        // A pending back buffer reset clears the encoder, so run it before binding geometry.
+        GetBoundFrameBuffer();
         const auto instanceDataLayout = GetInstanceDataLayout();
+        bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
+            if (fillMode == 5 || fillMode == 8)
+            {
+                shouldDraw = m_boundVertexArray->SetExpandedIndexBuffer(
+                    encoder, static_cast<PrimitiveModeExpansion::Mode>(fillMode), indexStart, indexCount);
+            }
+            else
+            {
+                m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
+            }
             m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), 0, instanceDataLayout);
         }
-        DrawInternal(encoder, fillMode, instanceDataLayout);
+        else if (fillMode == 5 || fillMode == 8)
+        {
+            throw std::runtime_error{"Primitive expansion requires a bound vertex array"};
+        }
+        if (shouldDraw)
+        {
+            DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
     }
 
     void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
@@ -3090,13 +3570,37 @@ namespace Babylon
         const uint32_t instanceCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        // A pending back buffer reset clears the encoder, so run it before binding geometry.
+        GetBoundFrameBuffer();
         const auto instanceDataLayout = GetInstanceDataLayout();
+        bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
+            const bgfx::DynamicVertexBufferHandle repacked = RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount);
+            RestoreBoundTextures(encoder);
+            if (fillMode == 5 || fillMode == 8)
+            {
+                shouldDraw = m_boundVertexArray->SetExpandedIndexBuffer(
+                    encoder, static_cast<PrimitiveModeExpansion::Mode>(fillMode), indexStart, indexCount);
+            }
+            else
+            {
+                m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
+            }
             m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount, instanceDataLayout);
+            if (bgfx::isValid(repacked))
+            {
+                encoder->setInstanceDataBuffer(repacked, 0, instanceCount);
+            }
         }
-        DrawInternal(encoder, fillMode, instanceDataLayout);
+        else if (fillMode == 5 || fillMode == 8)
+        {
+            throw std::runtime_error{"Primitive expansion requires a bound vertex array"};
+        }
+        if (shouldDraw)
+        {
+            DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
     }
 
     // Note: For legacy reasons JS might call this function for instance drawing.
@@ -3108,12 +3612,27 @@ namespace Babylon
         const uint32_t verticesCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        // A pending back buffer reset clears the encoder, so run it before binding geometry.
+        GetBoundFrameBuffer();
         const auto instanceDataLayout = GetInstanceDataLayout();
+        bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, 0, instanceDataLayout);
+            if (fillMode == 5 || fillMode == 8)
+            {
+                shouldDraw = m_boundVertexArray->SetExpandedUnindexedBuffer(
+                    encoder, static_cast<PrimitiveModeExpansion::Mode>(fillMode), verticesCount);
+            }
         }
-        DrawInternal(encoder, fillMode, instanceDataLayout);
+        else if (fillMode == 5 || fillMode == 8)
+        {
+            throw std::runtime_error{"Primitive expansion requires a bound vertex array"};
+        }
+        if (shouldDraw)
+        {
+            DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
     }
 
     void NativeEngine::DrawInstanced(NativeDataStream::Reader& data)
@@ -3124,15 +3643,48 @@ namespace Babylon
         const uint32_t instanceCount = data.ReadUint32();
 
         bgfx::Encoder* encoder = GetEncoder();
+        // A pending back buffer reset clears the encoder, so run it before binding geometry.
+        GetBoundFrameBuffer();
         const auto instanceDataLayout = GetInstanceDataLayout();
+        bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
+            // GPU-written instance sources (transform feedback output) are repacked into bgfx i_data
+            // slots by a compute dispatch, which clears the encoder's texture bindings.
+            const bgfx::DynamicVertexBufferHandle repacked = RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount);
+            RestoreBoundTextures(encoder);
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, instanceDataLayout);
+            if (fillMode == 5 || fillMode == 8)
+            {
+                shouldDraw = m_boundVertexArray->SetExpandedUnindexedBuffer(
+                    encoder, static_cast<PrimitiveModeExpansion::Mode>(fillMode), verticesCount);
+            }
+            if (bgfx::isValid(repacked))
+            {
+                encoder->setInstanceDataBuffer(repacked, 0, instanceCount);
+            }
         }
-        DrawInternal(encoder, fillMode, instanceDataLayout);
+        else if (fillMode == 5 || fillMode == 8)
+        {
+            throw std::runtime_error{"Primitive expansion requires a bound vertex array"};
+        }
+        if (shouldDraw)
+        {
+            DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
     }
 
     void NativeEngine::Clear(NativeDataStream::Reader& data)
+    {
+        ClearImpl(data, false);
+    }
+
+    void NativeEngine::Clear2(NativeDataStream::Reader& data)
+    {
+        ClearImpl(data, true);
+    }
+
+    void NativeEngine::ClearImpl(NativeDataStream::Reader& data, bool hasAttachmentMask)
     {
         uint16_t flags{0};
 
@@ -3145,6 +3697,7 @@ namespace Babylon
         const float depth{data.ReadFloat32()};
         const bool shouldClearStencil{static_cast<bool>(data.ReadUint32())};
         const uint8_t stencil{static_cast<uint8_t>(data.ReadUint32())};
+        const uint8_t colorAttachmentMask{static_cast<uint8_t>(hasAttachmentMask ? data.ReadUint32() : UINT8_MAX)};
 
         bgfx::Encoder* encoder = GetEncoder();
 
@@ -3164,7 +3717,9 @@ namespace Babylon
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil);
+        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask);
+        // FrameBuffer::Clear touches its view, discarding bgfx bindings. WebGL clears retain them.
+        RestoreBoundTextures(encoder);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -3355,14 +3910,25 @@ namespace Babylon
 
     void NativeEngine::SetStencil(NativeDataStream::Reader& data)
     {
+        SetStencilImpl(data, false);
+    }
+
+    void NativeEngine::SetStencil2(NativeDataStream::Reader& data)
+    {
+        SetStencilImpl(data, true);
+    }
+
+    void NativeEngine::SetStencilImpl(NativeDataStream::Reader& data, bool hasComparisonMask)
+    {
         const uint32_t writeMask{data.ReadUint32()};
         const uint32_t stencilOpFail{data.ReadUint32()};
         const uint32_t depthOpFail{data.ReadUint32()};
         const uint32_t depthOpPass{data.ReadUint32()};
         const uint32_t func{data.ReadUint32()};
         const uint32_t ref{data.ReadUint32()};
+        const uint32_t funcMask{hasComparisonMask ? data.ReadUint32() : UINT8_MAX};
 
-        m_stencilState = BGFX_STENCIL_FUNC_RMASK(0xFF);
+        m_stencilState = BGFX_STENCIL_FUNC_RMASK(funcMask & 0xFFu);
         m_stencilState |= stencilOpFail;
         m_stencilState |= depthOpFail;
         // bgfx write mask is always 0xFF, to not change stencil value when writemask is 0
@@ -3450,7 +4016,6 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), exception);
         }
     }
-
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
     {
         const auto stats{bgfx::getStats()};
@@ -3472,9 +4037,125 @@ namespace Babylon
         // Nothing to do here.
     }
 
+    // Emulates a WebGL2 transform feedback draw (rasterizer discarded, POINTS, interleaved
+    // capture into one buffer). Stream layout: output VertexBuffer*, first vertex, vertex count.
+    // The current program must be a transform feedback program; the bound vertex array supplies
+    // its inputs, all from one vertex buffer. Both buffers move to GPU storage on first use, after
+    // which later renders read the captured data from there.
+    void NativeEngine::DrawTransformFeedback(NativeDataStream::Reader& data)
+    {
+        VertexBuffer* output = data.ReadPointer<VertexBuffer>();
+        const uint32_t first = data.ReadUint32();
+        const uint32_t count = data.ReadUint32();
+
+        if (m_currentProgram == nullptr || !m_currentProgram->IsTransformFeedback())
+        {
+            throw std::runtime_error{"Transform feedback draw requires a transform feedback program"};
+        }
+        if (count == 0)
+        {
+            return;
+        }
+
+        std::vector<VertexBuffer*> inputs;
+        const uint32_t inputCount = m_currentProgram->TransformFeedbackInputCount();
+        std::vector<float> inputLayout(std::max<size_t>(inputCount, 1) * 4, 0.0f);
+        if (m_boundVertexArray != nullptr)
+        {
+            for (const auto& [index, record] : m_boundVertexArray->GetTransformFeedbackInputs())
+            {
+                if (index >= inputCount)
+                {
+                    continue;
+                }
+                if (record.Buffer == output)
+                {
+                    throw std::runtime_error{"Transform feedback cannot capture into a buffer it reads from"};
+                }
+                auto found = std::find(inputs.begin(), inputs.end(), record.Buffer);
+                if (found == inputs.end())
+                {
+                    if (inputs.size() == Graphics::TRANSFORM_FEEDBACK_MAX_INPUT_BUFFERS)
+                    {
+                        throw std::runtime_error{"Transform feedback inputs come from too many vertex buffers"};
+                    }
+                    found = inputs.insert(inputs.end(), record.Buffer);
+                }
+                const uint32_t buffer = static_cast<uint32_t>(found - inputs.begin());
+                inputLayout[index * 4 + 0] = static_cast<float>(record.ByteOffset);
+                inputLayout[index * 4 + 1] = static_cast<float>(record.ByteStride);
+                inputLayout[index * 4 + 2] = static_cast<float>(record.NumElements);
+                inputLayout[index * 4 + 3] = static_cast<float>(buffer * 16 + static_cast<uint32_t>(record.Type) * 2 + (record.Normalized ? 1 : 0));
+            }
+        }
+
+        StorageBuffer& outputStorage = output->PromoteToGpuStorage();
+
+        bgfx::Encoder* encoder = GetEncoder();
+        RestoreBoundTextures(encoder);
+        for (const auto& [handle, value] : m_currentProgram->Uniforms())
+        {
+            encoder->setUniform({handle}, value.Data.data(), value.ElementLength);
+        }
+        for (const auto& [stage, uniform] : m_currentProgram->SamplerStateUniforms())
+        {
+            const auto texture = m_boundTextures.find(stage);
+            const float values[4]{
+                texture == m_boundTextures.end() ? 0.0f : texture->second.PointSampleHeight, 0.0f, 0.0f, 0.0f};
+            encoder->setUniform(uniform, values);
+        }
+        const float params[4]{static_cast<float>(count), static_cast<float>(first), 0.0f, 0.0f};
+        encoder->setUniform(m_currentProgram->TransformFeedbackParams()->Handle, params);
+        if (const UniformInfo* layout = m_currentProgram->TransformFeedbackInputLayout())
+        {
+            encoder->setUniform(layout->Handle, inputLayout.data(), static_cast<uint16_t>(std::max<uint32_t>(inputCount, 1)));
+        }
+
+        // Buffers share bgfx binding slots with textures, so bind them after restoring textures. Every
+        // declared input buffer needs a binding (Vulkan descriptors), so unused ones repeat a bound
+        // buffer, or the output when there are no inputs.
+        for (uint32_t buffer = 0; buffer < Graphics::TRANSFORM_FEEDBACK_MAX_INPUT_BUFFERS; ++buffer)
+        {
+            const auto stage = static_cast<uint8_t>(buffer == 0 ? Graphics::TRANSFORM_FEEDBACK_INPUT_BINDING : Graphics::TRANSFORM_FEEDBACK_EXTRA_INPUT_BINDING + buffer - 1);
+            if (inputs.empty())
+            {
+                outputStorage.SetCompute(encoder, stage, bgfx::Access::Read);
+            }
+            else
+            {
+                inputs[buffer < inputs.size() ? buffer : 0]->SetComputeRead(encoder, stage);
+            }
+        }
+        outputStorage.SetCompute(encoder, static_cast<uint8_t>(Graphics::TRANSFORM_FEEDBACK_OUTPUT_BINDING), bgfx::Access::Write);
+
+        const uint32_t groups = (count + Graphics::TRANSFORM_FEEDBACK_WORKGROUP_SIZE - 1) / Graphics::TRANSFORM_FEEDBACK_WORKGROUP_SIZE;
+        GetBoundFrameBuffer().Compute(*encoder, m_currentProgram->Handle(), groups, 1, 1);
+
+        // The dispatch clears the encoder's bindings. Later dispatches and draws in this frame are
+        // ordered after it (see FrameBuffer::Compute), so no flush is needed for them to see the writes.
+        RestoreBoundTextures(encoder);
+    }
+
+    bgfx::DynamicVertexBufferHandle NativeEngine::RepackStorageInstances(VertexArray* vertexArray,
+        const VertexBuffer::InstanceDataLayout& instanceDataLayout, uint32_t instanceCount)
+    {
+        if (vertexArray == nullptr || instanceCount == 0 || !vertexArray->HasStorageInstances())
+        {
+            return BGFX_INVALID_HANDLE;
+        }
+
+        if (m_instanceRepacker == nullptr)
+        {
+            m_instanceRepacker = std::make_unique<InstanceRepacker>(m_deviceContext);
+        }
+
+        return m_instanceRepacker->Repack(GetBoundFrameBuffer(), vertexArray, vertexArray->GetInstances(), instanceDataLayout, instanceCount);
+    }
+
     void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
         uint64_t fillModeState{0}; // indexed triangle list
+
         switch (fillMode)
         {
             case 0: // MATERIAL_TriangleFillMode
@@ -3496,7 +4177,7 @@ namespace Babylon
             }
             case 5: // MATERIAL_LineLoopDrawMode
             {
-                // TODO: unsupported mode
+                fillModeState = BGFX_STATE_PT_LINES;
                 break;
             }
             case 6: // MATERIAL_LineStripDrawMode
@@ -3511,7 +4192,7 @@ namespace Babylon
             }
             case 8: // MATERIAL_TriangleFanDrawMode
             {
-                // TODO: unsupported mode
+                fillModeState = 0;
                 break;
             }
         }
@@ -3521,19 +4202,27 @@ namespace Babylon
             const UniformValue& value = it.second;
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
-
-        // Resolves the gl_FragCoord Y flip injected by ShaderCompilerTraversers::FlipFragCoordY.
-        // Must be the framebuffer's height, not the bgfx view rect's, which
-        // SetBgfxViewPortAndScissor narrows to the viewport when one is set.
-        if (const UniformInfo* fragCoordTargetSize = m_currentProgram->FragCoordTargetSizeUniform())
+        for (const auto& [stage, uniform] : m_currentProgram->SamplerStateUniforms())
         {
-            const Graphics::FrameBuffer& frameBuffer = GetBoundFrameBuffer();
-            const float targetSize[4]{
-                static_cast<float>(frameBuffer.Width()),
-                static_cast<float>(frameBuffer.Height()),
-                0.0f,
+            const auto texture = m_boundTextures.find(stage);
+            const float values[4]{
+                texture == m_boundTextures.end() ? 0.0f : texture->second.PointSampleHeight, 0.0f, 0.0f, 0.0f};
+            encoder->setUniform(uniform, values);
+        }
+
+        // Resolve the injected render target transform (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME).
+        // The height must be the bound framebuffer's, not the bgfx view rect's: FrameBuffer::SetBgfxViewPortAndScissor
+        // narrows the view rect to the viewport whenever one is set, while gl_FragCoord is relative to the whole target.
+        const Graphics::FrameBuffer& transformFrameBuffer = GetBoundFrameBuffer();
+        const bool glRowOrder = transformFrameBuffer.GLRowOrder();
+        if (const UniformInfo* renderTargetTransform = m_currentProgram->RenderTargetTransformUniform())
+        {
+            const float transform[4]{
+                glRowOrder ? 0.0f : static_cast<float>(transformFrameBuffer.Height()),
+                glRowOrder ? 1.0f : -1.0f,
+                glRowOrder ? -1.0f : 1.0f,
                 0.0f};
-            encoder->setUniform(fragCoordTargetSize->Handle, targetSize, 1);
+            encoder->setUniform(renderTargetTransform->Handle, transform, 1);
         }
 
         // Generic divisor-driven attributes are per-vertex inputs in the base shader. Recompile a
@@ -3545,6 +4234,9 @@ namespace Babylon
             const auto& instances = m_boundVertexArray->GetInstances();
             if (!instances.empty())
             {
+                // bgfx delivers instance slot k at TEXCOORD(31 - k); the highest-location instance
+                // attribute is packed at byte offset 0 (i_data0 == TEXCOORD31 ==
+                // INSTANCE_DATA_FIRST_LOCATION), matching BuildInstanceDataBuffer's reverse packing.
                 std::map<std::string, uint32_t> genericInstancedAttributes;
                 const auto& attributeLocations = m_currentProgram->VertexAttributeLocations();
                 for (const auto& instance : instances)
@@ -3577,14 +4269,17 @@ namespace Babylon
         auto& boundFrameBuffer = GetBoundFrameBuffer();
         // D3D11 also uses this flag to select its line coverage algorithm on single-sample targets.
         const uint64_t multisampleMask = boundFrameBuffer.IsMultisampled() ? UINT64_MAX : ~BGFX_STATE_MSAA;
+        // The vertex Y flip for GL-row-order targets mirrors the winding; bgfx culls relative to the
+        // front face, so swapping it keeps both culling and gl_FrontFacing as WebGL defines them.
+        const uint64_t engineState = glRowOrder ? (m_engineState ^ BGFX_STATE_FRONT_CCW) : m_engineState;
         if (boundFrameBuffer.HasDepth())
         {
-            const uint64_t drawState = (m_engineState | fillModeState);
+            const uint64_t drawState = (engineState | fillModeState);
             encoder->setState(drawState & multisampleMask);
         }
         else
         {
-            const uint64_t drawState = ((m_engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
+            const uint64_t drawState = ((engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
             encoder->setState(drawState & multisampleMask);
         }
 
@@ -3608,7 +4303,38 @@ namespace Babylon
         }
 
         m_boundFrameBufferNeedsRebinding.Set(false);
+
+        if (m_boundFrameBuffer == &m_defaultFrameBuffer && m_defaultFrameBufferNeedsReset.Get())
+        {
+            ResetDefaultFrameBuffer();
+        }
+
         return *m_boundFrameBuffer;
+    }
+
+    void NativeEngine::ResetDefaultFrameBuffer()
+    {
+        // Like a WebGL drawing buffer without preserveDrawingBuffer, the first use of the back buffer
+        // in a frame sees depth 1 and stencil 0 rather than whatever the previous frame left (or the
+        // zero-initialized surface when only render targets were ever cleared). Colour is preserved so
+        // content that is not redrawn every frame stays on screen. Not GetEncoder(): a view flush there
+        // would replace the encoder the caller already holds.
+        bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
+        if (encoder == nullptr)
+        {
+            return;
+        }
+
+        m_defaultFrameBufferNeedsReset.Set(false);
+
+        const uint16_t flags = static_cast<uint16_t>((m_defaultFrameBuffer.HasDepth() ? BGFX_CLEAR_DEPTH : 0) | (m_defaultFrameBuffer.HasStencil() ? BGFX_CLEAR_STENCIL : 0));
+        if (flags == 0)
+        {
+            return;
+        }
+
+        m_defaultFrameBuffer.Clear(*encoder, flags, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0, UINT8_MAX, true);
+        RestoreBoundTextures(encoder);
     }
 
     void NativeEngine::ScheduleRequestAnimationFrameCallbacks()
