@@ -41,11 +41,11 @@ namespace
 {
     gsl::span<const uint8_t> ReadUniformFreeShader(const std::vector<uint8_t>& bytes)
     {
-        // These fixtures have no uniforms: bgfx v12's code length starts at byte 22.
+        // These fixtures have no uniforms: bgfx v13's code length starts at byte 22.
         constexpr size_t codeOffset = 26;
-        if (bytes.size() < codeOffset || bytes[3] != 12 || bytes[20] != 0 || bytes[21] != 0)
+        if (bytes.size() < codeOffset || bytes[3] != 13 || bytes[20] != 0 || bytes[21] != 0)
         {
-            throw std::runtime_error{"Expected a uniform-free bgfx v12 shader"};
+            throw std::runtime_error{"Expected a uniform-free bgfx v13 shader"};
         }
         uint32_t codeSize{};
         std::memcpy(&codeSize, bytes.data() + codeOffset - sizeof(codeSize), sizeof(codeSize));
@@ -55,6 +55,78 @@ namespace
         }
         return {bytes.data() + codeOffset, codeSize};
     }
+}
+#endif
+
+#if defined(HAS_SHADER_COMPILER) && (defined(BABYLON_NATIVE_GRAPHICS_API_D3D11) || defined(BABYLON_NATIVE_GRAPHICS_API_D3D12))
+TEST(ShaderCompilation, SamplersReportStageAndDimension)
+{
+    // bgfx keys D3D sampler dimensions by regIndex and binds multisampled depth as
+    // multisampled unless the sampler at that stage reports a non-multisampled dimension.
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto shader = compiler.Compile(
+        "in vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        R"(
+            precision highp float;
+            uniform sampler2D first;
+            uniform samplerCube cube;
+            uniform sampler2D depth;
+            out vec4 color;
+            void main() {
+                color = texture(first, vec2(0.5)) + texture(cube, vec3(1.0)) + texture(depth, vec2(0.5));
+            }
+        )");
+
+    struct Sampler
+    {
+        uint16_t RegIndex;
+        uint8_t TexDimension;
+    };
+    std::map<std::string, Sampler> samplers;
+    const auto& bytes = shader.FragmentBytes;
+    ASSERT_GE(bytes.size(), 22u);
+    EXPECT_EQ(bytes[3], 13);
+    size_t offset = 20;
+    const auto read = [&](auto& value) {
+        ASSERT_LE(offset + sizeof(value), bytes.size());
+        std::memcpy(&value, bytes.data() + offset, sizeof(value));
+        offset += sizeof(value);
+    };
+    uint16_t count{};
+    read(count);
+    for (uint16_t i = 0; i < count; ++i)
+    {
+        uint8_t nameSize{};
+        read(nameSize);
+        ASSERT_LE(offset + nameSize, bytes.size());
+        const std::string name{reinterpret_cast<const char*>(bytes.data() + offset), nameSize};
+        offset += nameSize;
+        uint8_t type{}, num{}, texComponent{}, texDimension{};
+        uint16_t regIndex{}, regCount{}, texFormat{};
+        read(type);
+        read(num);
+        read(regIndex);
+        read(regCount);
+        read(texComponent);
+        read(texDimension);
+        read(texFormat);
+        if ((type & 0x20) != 0) // BGFX_UNIFORM_SAMPLERBIT
+        {
+            samplers[name] = {regIndex, texDimension};
+        }
+    }
+
+    ASSERT_EQ(samplers.size(), 3u);
+    for (const auto& [name, sampler] : samplers)
+    {
+        SCOPED_TRACE(name);
+        ASSERT_TRUE(shader.UniformStages.contains(name));
+        EXPECT_EQ(sampler.RegIndex, shader.UniformStages.at(name));
+    }
+    EXPECT_NE(shader.UniformStages.at("depth"), 0);
+    EXPECT_EQ(samplers.at("first").TexDimension, 0x02);
+    EXPECT_EQ(samplers.at("cube").TexDimension, 0x04);
+    EXPECT_EQ(samplers.at("depth").TexDimension, 0x02);
 }
 #endif
 

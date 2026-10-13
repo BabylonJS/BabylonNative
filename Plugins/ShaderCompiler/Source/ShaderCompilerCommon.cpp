@@ -113,6 +113,9 @@ namespace Babylon::ShaderCompilerCommon
 
     void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::ParsedIR& originalIr, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages)
     {
+#if D3D11 || D3D12
+        const spirv_cross::SmallVector<spirv_cross::Resource> images{compiler.get_shader_resources().separate_images};
+#endif
         for (const spirv_cross::Resource& sampler : samplers)
         {
             // SPIRV-Cross's HLSL/MSL backends rename resources whose name collides with a reserved
@@ -128,15 +131,29 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(bytes, name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
 
-            // num / regIndex / regCount: only Vulkan (and WebGPU) consume these; default packaging
-            // leaves them zero. Vulkan's appender (ShaderCompilerVulkan) fills regIndex.
+            // num / regIndex / regCount: Vulkan's appender (ShaderCompilerVulkan) fills regIndex.
+            // D3D keys each sampler's texture dimension by regIndex, and an unknown dimension
+            // makes bgfx bind multisampled depth as multisampled; other backends ignore it.
             uint8_t num{0};
             uint16_t regIndex{0};
             uint16_t regCount{0};
+            uint8_t texDimension{TextureDimensionIdFromResource(compiler, sampler)};
+#if D3D11 || D3D12
+            // D3D samplers are split into a SamplerState and a texture sharing its binding.
+            regIndex = static_cast<uint16_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
+            for (const spirv_cross::Resource& image : images)
+            {
+                if (compiler.get_decoration(image.id, spv::DecorationBinding) == regIndex)
+                {
+                    texDimension = TextureDimensionIdFromResource(compiler, image);
+                    break;
+                }
+            }
+#endif
             AppendBytes(bytes, num);
             AppendBytes(bytes, regIndex);
             AppendBytes(bytes, regCount);
-            AppendUniformTextureMeta(bytes, /*texComponent*/ 0, TextureDimensionIdFromResource(compiler, sampler));
+            AppendUniformTextureMeta(bytes, /*texComponent*/ 0, texDimension);
 
 #if OPENGL
             // A program's vertex and fragment shaders share this stages map, and Babylon's
@@ -350,7 +367,9 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
     // Must match BGFX_SHADER_BIN_VERSION in bgfx tools/shaderc/shaderc.cpp.
     // v12 requires raw SRV/UAV binding masks after the in/out hashes, and
     // uniform entries always carry texComponent/texDimension/texFormat (v8/v10).
-    constexpr uint8_t BGFX_SHADER_BIN_VERSION{12};
+    // v13: bgfx resolves sampled multisampled depth for samplers that report a
+    // non-multisampled texDimension (older binaries are assumed multisampled).
+    constexpr uint8_t BGFX_SHADER_BIN_VERSION{13};
 
     // These hashes are generated internally by BGFX's custom shader compilation pipeline,
     // which we don't have access to.  Fortunately, however, they aren't used for anything
