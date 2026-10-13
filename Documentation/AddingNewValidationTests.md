@@ -71,7 +71,8 @@ the main scene's camera participate in the same check. Inspection restores the
 previous render pass, including on errors.
 
 Sprite-manager readiness includes packed-atlas metadata, which `Scene.executeWhenReady`
-does not wait for. Disabled sprites do not participate in this check.
+does not wait for. When `scene.spritesEnabled` is false, sprite-manager readiness is
+skipped; otherwise, all sprite managers must be ready.
 
 The initial readiness wait and its 10-minute timeout cover both the main scene
 and associated utility scenes. Their pending model/texture loads do not consume
