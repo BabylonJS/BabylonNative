@@ -42,10 +42,10 @@ class Contracts:
         self.environment["GIT_CONFIG_COUNT"] = str(count + len(PINS))
         self.sequence = 0
 
-    def run(self, *command, failure=False):
+    def run(self, *command, failure=False, cwd=None):
         self.sequence += 1
         result = subprocess.run([str(arg) for arg in command], env=self.environment,
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=cwd)
         log = self.work / f"{self.sequence:02d}.log"
         log.write_text(f"{' '.join(map(str, command))}\nexit={result.returncode}\n{result.stdout}",
                        encoding="utf-8")
@@ -53,7 +53,7 @@ class Contracts:
             f"{log}\n{result.stdout[-12000:]}"
         return result.stdout
 
-    def configure(self, name, settings=None, failure=False, source=None):
+    def configure(self, name, settings=None, failure=False, source=None, cwd=None):
         binary = self.work / name
         command = [self.args.cmake, "-S", source or self.fixture, "-B", binary,
                    "-G", self.args.generator, f"-DTEST_WRAPPER={WRAPPER}",
@@ -61,7 +61,7 @@ class Contracts:
         if self.args.platform:
             command += ["-A", self.args.platform]
         command += [f"-D{key}={value}" for key, value in (settings or {}).items()]
-        output = self.run(*command, failure=failure)
+        output = self.run(*command, failure=failure, cwd=cwd)
         return binary, output
 
     def explicit(self):
@@ -150,6 +150,14 @@ class Contracts:
         binary, _ = self.configure("legacy-wrapper-override", settings)
         assert Path(self.resolved(binary)[3]) == local
         self.assert_roots(binary)
+        launch = self.work / "launch with spaces" / "nested"
+        launch.mkdir(parents=True, exist_ok=True)
+        settings["FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE"] = Path(os.path.relpath(local, launch)).as_posix()
+        binary, _ = self.configure("legacy-wrapper-relative", settings, cwd=launch)
+        assert Path(self.resolved(binary)[3]) == local
+        self.assert_roots(binary)
+        cache = (binary / "CMakeCache.txt").read_text()
+        assert f"FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE:PATH={local.as_posix()}" in cache
 
     def package(self):
         package = self.work / "package" / "bgfx.cmake-src"
