@@ -1,10 +1,13 @@
 include(FetchContent)
 
+# Match FetchContent's cache typing and command-line relative-path normalization.
+set(FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}"
+	CACHE PATH "Override source directory for bgfx.cmake")
 get_filename_component(_bgfx_tracked_wrapper "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set(bgfx.cmake_SOURCE_DIR "${_bgfx_tracked_wrapper}")
 if(NOT "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}" STREQUAL "")
 	get_filename_component(bgfx.cmake_SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}"
-		ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+		ABSOLUTE)
 endif()
 if(NOT EXISTS "${bgfx.cmake_SOURCE_DIR}/CMakeLists.txt")
 	message(FATAL_ERROR "FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE is not a local wrapper: ${bgfx.cmake_SOURCE_DIR}")

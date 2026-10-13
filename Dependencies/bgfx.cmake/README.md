@@ -43,6 +43,8 @@ wrapper beside the selected children in `_deps/bgfx.cmake-src`. Existing
 packagers can copy this directory, strip Git metadata and configure a fresh
 offline build with `FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE` pointing at it.
 This legacy wrapper override selects a local `add_subdirectory`, not a fetch.
+Untyped relative command-line overrides are normalized against the configure
+process's working directory, matching FetchContent.
 Custom selected child roots are copied into the package without modifying
 the originals.
 
