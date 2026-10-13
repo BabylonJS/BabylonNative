@@ -158,6 +158,14 @@ class Contracts:
         before = (self.sources / "bgfx/src/version.h").read_bytes()
         binary, _ = self.configure("stage", settings)
         self.configure("stage", settings)
+        if os.name == "nt":
+            lease = package / "bgfx/.staging-lease"
+            lease.write_text("Keep this staged directory open during refresh.", encoding="ascii")
+            with lease.open("rb"):
+                _, output = self.configure("stage", settings, failure=True)
+                assert "Cannot refresh the staged bgfx source directory" in output
+            lease.unlink()
+            self.configure("stage", settings)
         version = self.resolved(binary)[5]
         assert not list(package.rglob(".git"))
         assert (self.sources / "bgfx/src/version.h").read_bytes() == before
