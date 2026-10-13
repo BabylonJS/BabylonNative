@@ -1,9 +1,74 @@
 #include <Babylon/AppRuntime.h>
 #include <gtest/gtest.h>
+#include <array>
 #include <cstdint>
 #include <future>
+#include <napi/env.h>
 #include <string>
 #include <string_view>
+
+#if defined(JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+TEST(NodeApi, ThrownHostErrorClearsPendingException)
+{
+    Babylon::AppRuntime runtime{};
+    std::promise<std::array<bool, 3>> result;
+
+    runtime.Dispatch([&result](Napi::Env env) {
+        env.Global().Set("throwFromVoid", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+            napi_env rawEnv{info.Env()};
+            Napi::Error{rawEnv, facebook::jsi::Value{rawEnv->rt, static_cast<const facebook::jsi::Value&>(info[1])}}.ThrowAsJavaScriptException();
+            throw Napi::Error{rawEnv, facebook::jsi::Value{rawEnv->rt, static_cast<const facebook::jsi::Value&>(info[0])}};
+        }));
+        env.Global().Set("throwFromValue", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+            napi_env rawEnv{info.Env()};
+            Napi::Error{rawEnv, facebook::jsi::Value{rawEnv->rt, static_cast<const facebook::jsi::Value&>(info[1])}}.ThrowAsJavaScriptException();
+            throw Napi::Error{rawEnv, facebook::jsi::Value{rawEnv->rt, static_cast<const facebook::jsi::Value&>(info[0])}};
+        }));
+        env.Global().Set("nextCallback", Napi::Function::New(env, [](const Napi::CallbackInfo&) {}));
+
+        std::array<bool, 3> passed{true, true, true};
+        for (const char* callback : {"throwFromVoid", "throwFromValue"})
+        {
+            env.Global().Set("throwingCallback", env.Global().Get(callback));
+            for (bool sameError : {true, false})
+            {
+                env.Global().Set("sameError", sameError);
+                const bool originalErrorCaught = Napi::Eval(env, R"(
+                    (() => {
+                        const thrown = new TypeError("thrown");
+                        const pending = sameError ? thrown : new RangeError("pending");
+                        try {
+                            throwingCallback(thrown, pending);
+                        } catch (error) {
+                            return error === thrown;
+                        }
+                        return false;
+                    })()
+                )", "").As<Napi::Boolean>().Value();
+                const bool exceptionCleared{!env.IsExceptionPending()};
+                const bool nextCallbackSucceeded = Napi::Eval(env, R"(
+                    (() => {
+                        try {
+                            return nextCallback() === undefined;
+                        } catch (error) {
+                            return false;
+                        }
+                    })()
+                )", "").As<Napi::Boolean>().Value();
+                passed[0] = passed[0] && originalErrorCaught;
+                passed[1] = passed[1] && exceptionCleared;
+                passed[2] = passed[2] && nextCallbackSucceeded;
+            }
+        }
+        result.set_value(passed);
+    });
+
+    const auto passed{result.get_future().get()};
+    EXPECT_TRUE(passed[0]) << "The JavaScript catch must receive the thrown error object";
+    EXPECT_TRUE(passed[1]) << "The caught host error must not remain pending";
+    EXPECT_TRUE(passed[2]) << "The next host callback must return without throwing";
+}
+#endif
 
 // The V8JSI Node-API shim does not implement napi_create_dataview /
 // napi_get_dataview_info (its DataView::New throws "TODO"), so this native test

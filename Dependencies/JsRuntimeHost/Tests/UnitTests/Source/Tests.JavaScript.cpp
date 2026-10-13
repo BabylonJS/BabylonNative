@@ -95,6 +95,11 @@ TEST(JavaScript, All)
             "setExitCode");
         env.Global().Set("setExitCode", setExitCodeCallback);
 
+        env.Global().Set("throwPendingAfterCallback", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+            info[0].As<Napi::Function>().Call({});
+            Napi::TypeError::New(info.Env(), "pending exception after callback").ThrowAsJavaScriptException();
+        }));
+
         env.Global().Set("hostPlatform", Napi::Value::From(env, JSRUNTIMEHOST_PLATFORM));
         env.Global().Set("hostEngine", Napi::Value::From(env, NAPI_JAVASCRIPT_ENGINE));
 

@@ -1324,11 +1324,30 @@ inline const T* TypedArrayOf<T>::Data() const {
 
 namespace details
 {
+  // Native callbacks report JavaScript errors either by throwing Napi::Error or by leaving an
+  // exception pending after ThrowAsJavaScriptException(). Convert both forms at the host-function
+  // boundary so JSI observes the original JavaScript value, matching the other Node-API backends.
+  template <typename Call>
+  inline jsi::Value CallHost(napi_env env, jsi::Runtime& rt, Call&& call) {
+    try {
+      auto result = call();
+      if (!env->last_exception.isUndefined()) {
+        auto error = std::move(env->last_exception);
+        env->last_exception = jsi::Value::undefined();
+        throw jsi::JSError{rt, jsi::Value{rt, error}};
+      }
+      return result;
+    } catch (const Napi::Error& error) {
+      env->last_exception = jsi::Value::undefined();
+      throw jsi::JSError{rt, jsi::Value{rt, static_cast<const jsi::Value&>(error.Value())}};
+    }
+  }
+
   template <typename Callable, typename Return>
   struct Function {
     static inline jsi::Value Callback(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t count, void* data, Callable cb) {
       CallbackInfo callbackInfo{env, thisVal, args, count, {}, data};
-      return {env->rt, cb(callbackInfo)};
+      return CallHost(env, env->rt, [&]() -> jsi::Value { return {env->rt, cb(callbackInfo)}; });
     }
   };
 
@@ -1336,8 +1355,7 @@ namespace details
   struct Function<Callable, void> {
     static inline jsi::Value Callback(napi_env env, const jsi::Value& thisVal, const jsi::Value* args, size_t count, void* data, Callable cb) {
       CallbackInfo callbackInfo{env, thisVal, args, count, {}, data};
-      cb(callbackInfo);
-      return {};
+      return CallHost(env, env->rt, [&]() -> jsi::Value { cb(callbackInfo); return {}; });
     }
   };
 }
@@ -2298,8 +2316,10 @@ ObjectWrap<T>::DefineClass(napi_env env,
       [env, newTarget, data](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
         CallbackInfo callbackInfo{env, thisVal, args, count, *newTarget, data};
         // TODO: use prototype to wrap object?
-        thisVal.getObject(rt).setProperty(rt, env->native_name, jsi::Object::createFromHostObject(rt, std::make_shared<T>(callbackInfo)));
-        return {};
+        return details::CallHost(env, rt, [&]() -> jsi::Value {
+          thisVal.getObject(rt).setProperty(rt, env->native_name, jsi::Object::createFromHostObject(rt, std::make_shared<T>(callbackInfo)));
+          return {};
+        });
       })).getObject(rt).getFunction(rt)};
 
   *newTarget = {rt, static_cast<const jsi::Object&>(constructor)};
@@ -2319,28 +2339,26 @@ ObjectWrap<T>::DefineClass(napi_env env,
 
     if (p.staticVoidMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
-          [env, method{p.staticVoidMethod}, data{p.data}](jsi::Runtime& /*rt*/, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-            (*method)({env, thisVal, args, count, nullptr, data});
-            return {};
+          [env, method{p.staticVoidMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
+            return details::CallHost(env, rt, [&]() -> jsi::Value { (*method)({env, thisVal, args, count, nullptr, data}); return {}; });
       }));
     } else if (p.staticMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
           [env, method{p.staticMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-            return {rt, (*method)({env, thisVal, args, count, nullptr, data})};
+            return details::CallHost(env, rt, [&]() -> jsi::Value { return {rt, (*method)({env, thisVal, args, count, nullptr, data})}; });
       }));
     } else if (p.staticGetter != nullptr || p.staticSetter != nullptr) {
       if (p.staticGetter != nullptr)
       {
           descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0,
             [env, getter{p.staticGetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
-              return {rt, (*getter)({env, thisVal, args, count, nullptr, data})};
+              return details::CallHost(env, rt, [&]() -> jsi::Value { return {rt, (*getter)({env, thisVal, args, count, nullptr, data})}; });
           }));
       }
       if (p.staticSetter != nullptr) {
           descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0,
             [env, setter{p.staticSetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count)-> jsi::Value {
-              (*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}});
-              return {};
+              return details::CallHost(env, rt, [&]() -> jsi::Value { (*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}}); return {}; });
           }));
       }
     } else if (!p.staticValue.IsEmpty()) {
@@ -2349,30 +2367,38 @@ ObjectWrap<T>::DefineClass(napi_env env,
     } else if (p.instanceVoidMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
         [env, method{p.instanceVoidMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-          T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
-          (nativeObject->*method)({env, thisVal, args, count, nullptr, data});
-          return {};
+          return details::CallHost(env, rt, [&]() -> jsi::Value {
+            T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
+            (nativeObject->*method)({env, thisVal, args, count, nullptr, data});
+            return {};
+          });
         }));
     } else if (p.instanceMethod != nullptr) {
       descriptor.setProperty(rt, "value", jsi::Function::createFromHostFunction(rt, name, 0,
         [env, method{p.instanceMethod}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-          T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
-          return {rt, (nativeObject->*method)({env, thisVal, args, count, nullptr, data})};
+          return details::CallHost(env, rt, [&]() -> jsi::Value {
+            T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
+            return {rt, (nativeObject->*method)({env, thisVal, args, count, nullptr, data})};
+          });
         }));
     } else if (p.instanceGetter != nullptr || p.instanceSetter != nullptr) {
       if (p.instanceGetter != nullptr) {
         descriptor.setProperty(rt, "get", jsi::Function::createFromHostFunction(rt, name, 0,
           [env, getter{p.instanceGetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-            T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
-            return {rt, (nativeObject->*getter)({env, thisVal, args, count, nullptr, data})};
+            return details::CallHost(env, rt, [&]() -> jsi::Value {
+              T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
+              return {rt, (nativeObject->*getter)({env, thisVal, args, count, nullptr, data})};
+            });
           }));
       }
       if (p.instanceSetter != nullptr) {
         descriptor.setProperty(rt, "set", jsi::Function::createFromHostFunction(rt, name, 0,
           [env, setter{p.instanceSetter}, data{p.data}](jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
-            T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
-            (nativeObject->*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}});
-            return {};
+            return details::CallHost(env, rt, [&]() -> jsi::Value {
+              T* nativeObject{Unwrap(env, thisVal.getObject(rt))};
+              (nativeObject->*setter)({env, thisVal, args, count, nullptr, data}, {env, {rt, args[0]}});
+              return {};
+            });
           }));
       }
     } else if (!p.instanceValue.IsEmpty()) {

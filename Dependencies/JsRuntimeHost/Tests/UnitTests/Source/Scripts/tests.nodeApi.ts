@@ -1,5 +1,38 @@
 import { expect } from "chai";
 
+describe("native exceptions", function () {
+    it("reach scripts as the thrown error object, with its class and message, on every engine", function () {
+        // A polyfill throwing Napi::TypeError from native code must arrive as that TypeError. The JSI
+        // adapter used to deliver a generic Error("Exception in HostFunction: ...") instead.
+        let fromMethod: any;
+        try {
+            URL.createObjectURL({} as any);
+        } catch (e) {
+            fromMethod = e;
+        }
+        expect(fromMethod).to.be.an.instanceof(TypeError);
+        expect(fromMethod.message).to.match(/not a Blob/);
+        expect(fromMethod.message).to.not.match(/HostFunction/);
+
+        let fromConstructor: any;
+        try {
+            new URL("not a url");
+        } catch (e) {
+            fromConstructor = e;
+        }
+        expect(fromConstructor).to.be.an.instanceof(TypeError);
+        expect(fromConstructor.message).to.match(/Invalid URL/);
+        expect(fromConstructor.message).to.not.match(/HostFunction/);
+    });
+
+    it("propagate from the pending exception slot after a reentrant callback", function () {
+        let callbackRan = false;
+        expect(() => throwPendingAfterCallback(() => { callbackRan = true; }))
+            .to.throw(TypeError, "pending exception after callback");
+        expect(callbackRan).to.equal(true);
+    });
+});
+
 describe("napi class prototype isolation (#172)", function () {
     // Regression coverage for #172: napi-defined class constructors must each
     // get a fresh per-class object as their `.prototype` property. Previously
