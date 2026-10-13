@@ -1,0 +1,47 @@
+# bgfx.cmake provenance
+
+This wrapper was imported from https://github.com/BabylonJS/bgfx.cmake at
+`8fd48e454f624f964ced930af597fa5b4526be18`. Its 53 blob files were initially
+imported byte-for-byte with their original modes. Its CC0 dedication remains
+unchanged in [LICENSE](LICENSE); the original attribution headers are retained.
+
+All 706 reachable commits were rewritten under `Dependencies/bgfx.cmake` and
+merged without squashing. Authors, author/committer dates, messages, historical
+renames, empty commits, and merge topology are preserved. Every historical
+mode-160000 gitlink was removed; no bgfx, bx, or bimg implementation or history
+was imported. The rewritten tip is
+`39f003f6ae0b6e92b1c3bd0152f164c0e56000b2`.
+Path rewriting necessarily changes commit IDs and invalidates old signatures.
+[UPSTREAM_COMMIT_MAP.txt](UPSTREAM_COMMIT_MAP.txt) maps all original commit IDs
+to their imported IDs. BabylonNative's existing history was not rewritten.
+
+The former gitlinks now correspond to pinned CMake source acquisitions:
+
+| Source | Repository | Revision |
+|---|---|---|
+| bgfx | https://github.com/BabylonJS/bgfx | `f15c1ff18254f3fb85ffc1a669d1870c9714afc9` |
+| bx | https://github.com/bkaradzic/bx | `a9a71f8ef449c11042607feaeae0b8f46d22869a` |
+| bimg | https://github.com/bkaradzic/bimg | `671fe06dd7012a1ab85aa931019ed16112909756` |
+
+The nested `.github` files are archived upstream material, not active
+BabylonNative workflows. Their standalone release/submodule automation is not
+a supported update path here.
+
+## Verification and updates
+
+Run `python Dependencies\bgfx.cmake\tests\verify-import.py <original-repository>
+<BabylonNative-checkout> Dependencies\bgfx.cmake\UPSTREAM_COMMIT_MAP.txt`
+against a full original clone. This verifies every historical tree's blob
+hashes/modes, identities, messages and parent graph, zero historical gitlinks,
+and mapped `git log --follow` results for all 53 original current files.
+
+For a future wrapper update, fetch the original full history into a disposable
+clone, use the same path/gitlink transformation without pruning commits, and
+reuse the mapped import ancestry before merging new wrapper changes. Keep
+adaptations separate and extend the map and verification for the new tip.
+Update child pins only deliberately in `cmake/dependencies.cmake`; CMake
+updates managed sources on reconfigure but never checks out explicit roots.
+
+**Do not squash this import when landing.** Upstream currently permits only
+squash merges. Landing requires a maintainer-approved history-preserving
+mechanism; a normal squash merge discards the imported ancestry.

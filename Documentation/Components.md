@@ -30,11 +30,14 @@ by Arcana. However, no Arcana types are exposed by Babylon Native's APIs.
 Babylon Native uses the 
 [bgfx](https://bkaradzic.github.io/bgfx/overview.html) family of 
 technologies internally as a graphics abstraction for cross-platform native
-rendering. Babylon Native consumes these dependencies through a 
-[fork](https://github.com/BabylonJS/bgfx.cmake) of the 
+rendering. Babylon Native consumes these dependencies through the tracked
+[wrapper](../Dependencies/bgfx.cmake), imported with full history from the
+[BabylonJS fork](https://github.com/BabylonJS/bgfx.cmake) of the
 [bgfx.cmake](https://github.com/widberg/bgfx.cmake) project, which provides
 an easy integration layer by which bgfx can be brought into Babylon 
-Native's CMake-based build system. The bgfx family of technologies are used
+Native's CMake-based build system. The wrapper fetches pinned bgfx, bx and bimg
+sources with CMake instead of Git submodules; their implementations remain
+external in this migration step. The bgfx family of technologies are used
 internally by Babylon Native components that need a cross-platform 
 abstraction for GPU access and rendering work. However, no bgfx types are
 exposed by Babylon Native's APIs. 

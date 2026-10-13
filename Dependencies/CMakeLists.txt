@@ -53,7 +53,7 @@ if(WIN32 AND NOT DEFINED BIMG_CONFIG_USE_WIC)
     set(BIMG_CONFIG_USE_WIC ON)
 endif()
 
-FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+include(bgfx.cmake/cmake/babylon-native.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
 # This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
@@ -69,7 +69,7 @@ target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 # bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
 # directory, and Windows has no system copy the way Linux and Android do.
 # Expose the path so the OpenGL backends of our own targets can use it.
-set(BGFX_KHRONOS_INCLUDE_DIR "${bgfx.cmake_SOURCE_DIR}/bgfx/3rdparty/khronos" CACHE INTERNAL "")
+set(BGFX_KHRONOS_INCLUDE_DIR "${BGFX_DIR}/3rdparty/khronos" CACHE INTERNAL "" FORCE)
 
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
