@@ -104,15 +104,17 @@ jobs:
             reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
           )
 
+      # Visual validation runs only on V8 so results don't depend on engine-specific
+      # quirks of Chakra/JSI/Hermes/QuickJS; the other engines still run UnitTests.
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures
-        if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
@@ -120,7 +122,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload Error Pictures
-        if: failure()
+        if: ${{ failure() && inputs.napi-type == 'V8' }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
