@@ -23,9 +23,10 @@ The former gitlinks now correspond to pinned CMake source acquisitions:
 | bx | https://github.com/bkaradzic/bx | `a9a71f8ef449c11042607feaeae0b8f46d22869a` |
 | bimg | https://github.com/bkaradzic/bimg | `671fe06dd7012a1ab85aa931019ed16112909756` |
 
-The nested `.github` files are archived upstream material, not active
-BabylonNative workflows. Their standalone release/submodule automation is not
-a supported update path here.
+The upstream `.github` directory is excluded from the vendored working tree in
+a separate BabylonNative-only commit. All five files and their histories remain
+in the imported ancestry. This exclusion is not an upstream wrapper change;
+never export it as a deletion of upstream's automation.
 
 ## Verification and updates
 
@@ -41,6 +42,32 @@ reuse the mapped import ancestry before merging new wrapper changes. Keep
 adaptations separate and extend the map and verification for the new tip.
 Update child pins only deliberately in `cmake/dependencies.cmake`; CMake
 updates managed sources on reconfigure but never checks out explicit roots.
+
+## Exporting wrapper changes upstream
+
+Keep vendor-only exclusions separate from upstreamable wrapper changes when
+adding commits or importing later wrapper updates. Do not send the `.github`
+exclusion commit upstream, and do not export an unrestricted subtree diff from
+the import tip: that would delete upstream's automation.
+
+From the BabylonNative root, the following exports candidate wrapper CMake
+changes without `.github`, BabylonNative integration/staging helpers, provenance,
+or the mixed integration/packaging test harness:
+
+```powershell
+git -C Dependencies\bgfx.cmake diff --binary --relative `
+  --output=..\..\build\bgfx-wrapper.patch `
+  39f003f6ae0b6e92b1c3bd0152f164c0e56000b2 HEAD -- `
+  CMakeLists.txt .gitmodules cmake `
+  ':(exclude)cmake/babylon-native.cmake' ':(exclude)cmake/stage-sources.cmake'
+```
+
+Create `build` first if needed. Review the candidate patch in a standalone
+upstream checkout before sending it; the import deliberately removed gitlinks,
+so upstream submodule removal must be handled separately there. Adapt wrapper
+documentation and tests for standalone use rather than copying this directory's
+BabylonNative-specific material wholesale. In particular, verify that the
+candidate contains no `.github` deletions and leaves upstream automation intact.
 
 **Do not squash this import when landing.** Upstream currently permits only
 squash merges. Landing requires a maintainer-approved history-preserving
