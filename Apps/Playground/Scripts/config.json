@@ -3092,8 +3092,7 @@
         {
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon Native renders only the clear color on the first frame (all draws are submitted and effects are ready); passes when a second frame is rendered",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
@@ -3128,8 +3127,7 @@
         {
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon Native renders only the clear color on the first frame (all draws are submitted and effects are ready); passes when a second frame is rendered",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
@@ -3154,8 +3152,7 @@
         {
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon Native renders only the clear color on the first frame (all draws are submitted and effects are ready); passes when a second frame is rendered",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {

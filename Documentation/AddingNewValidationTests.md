@@ -56,6 +56,7 @@ TSV column. When a workaround changes what the runner does for a test, the runne
 | `leak-cleanup` | Leaves textures or Draco state behind after disposal | Releases leaked textures and resets Draco after the test (stray scenes are disposed after every test) |
 | `wait-for-import` | Starts `ImportMeshAsync`/`AppendSceneAsync`/`LoadAssetContainerAsync` in `createScene` without awaiting it | Waits for loader promises started before the scene is returned |
 | `refresh-export-matrices` | Changes node transforms right before a glTF export; the exporter's no-op root-node check reads stale cached world matrices and drops the node | Recomputes every node's world matrix before `GLTF2Export.GLTFAsync`/`GLBAsync` |
+| `wait-for-clustered-lights` | Uses a `ClusteredLightContainer`; Babylon.js 9.29 scene readiness skips its proxy shader, so lit materials can all report not-ready on the first frame and draw nothing | Calls `_isReady()` on each container (which starts compiling the proxy shader) and waits, without rendering, until all are ready |
 | `opaque-clear-alpha` | Clears opaque but leaves alpha < 1 in the final image | Skips canvas-background compositing unless the test sets `canvasBackgroundColor`, the scene uses a frame graph, or `clearColor.a < 1` |
 
 Without `opaque-clear-alpha`, the runner matches the browser screenshot and always composites

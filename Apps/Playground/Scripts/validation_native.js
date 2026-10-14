@@ -67,6 +67,9 @@
         // Example changes node transforms right before a glTF export; the exporter's no-op root
         // check reads cached world matrices and can drop a scaled root node.
         "refresh-export-matrices": "recompute world matrices before glTF export",
+        // Babylon.js 9.29 scene readiness skips the clustered-light proxy shader, so lit
+        // materials can all report not-ready on the first frame and draw nothing.
+        "wait-for-clustered-lights": "prepare clustered-light proxies before rendering",
     };
     let appliedWorkarounds = [];
 
@@ -770,6 +773,7 @@
             ? getConvergenceScenes
             : function (scene) { return [scene]; };
         const primeEffectLayers = hasWorkaround(test, "prime-effect-layers");
+        const waitForClusteredLights = hasWorkaround(test, "wait-for-clustered-lights");
         // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
         let effectLayerPrimed = false;
 
@@ -838,6 +842,25 @@
                         for (let i = 0; i < convergenceScenes.length; i++) {
                             convergenceScenes[i].incrementRenderId();
                         }
+                        return;
+                    }
+
+                    // _isReady() also starts compiling the proxy shader, so this wait converges.
+                    if (waitForClusteredLights && frameIndex === 0 &&
+                        !currentScene.lights.every(function (light) {
+                            return light.getClassName() !== "ClusteredLightContainer" || !light.isSupported ||
+                                !light.isEnabled() || light._isReady();
+                        })) {
+                        noteWorkaround(test, "wait-for-clustered-lights");
+                        if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
+                            stopped = true;
+                            evaluated = true;
+                            console.error("Scene '" + (test.title || "?") + "' clustered lights did not become ready within " +
+                                MAX_CONVERGENCE_TICKS + " render-loop ticks.");
+                            failTest(done);
+                            return;
+                        }
+                        convergenceTicks++;
                         return;
                     }
 
