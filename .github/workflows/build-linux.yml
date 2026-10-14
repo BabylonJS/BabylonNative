@@ -72,8 +72,11 @@ jobs:
           test -n "$VK_ICD_FILENAMES"
           echo "VK_ICD_FILENAMES=$VK_ICD_FILENAMES" >> "$GITHUB_ENV"
 
+      # Visual validation runs only on JavaScriptCore so results don't depend on
+      # engine-specific quirks of Hermes/QuickJS; the other engines still run
+      # UnitTests and ModuleLoadTest. Win32 applies the same rule with V8.
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'Vulkan' }}
+        if: ${{ inputs.graphics-api != 'Vulkan' && inputs.js-engine == 'JavaScriptCore' }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
@@ -82,7 +85,7 @@ jobs:
       # The full Vulkan suite currently has broad reference-image differences and
       # crashes in Glow layer and LODs: https://github.com/BabylonJS/BabylonNative/issues/1878
       - name: Vulkan Validation Tests
-        if: ${{ inputs.graphics-api == 'Vulkan' }}
+        if: ${{ inputs.graphics-api == 'Vulkan' && inputs.js-engine == 'JavaScriptCore' }}
         timeout-minutes: 5
         run: |
           cd build/Linux/Apps/Playground
@@ -153,14 +156,14 @@ jobs:
             build/Linux/Apps/UnitTests/vulkan-unit-test-results.xml
 
       - name: Upload Rendered Pictures
-        if: ${{ always() }}
+        if: ${{ always() && inputs.js-engine == 'JavaScriptCore' }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/Linux/Apps/Playground/Results
 
       - name: Upload Error Pictures
-        if: ${{ failure() }}
+        if: ${{ failure() && inputs.js-engine == 'JavaScriptCore' }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
