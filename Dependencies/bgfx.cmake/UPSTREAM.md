@@ -19,7 +19,7 @@ The former gitlinks now correspond to pinned CMake source acquisitions:
 
 | Source | Repository | Revision |
 |---|---|---|
-| bgfx | https://github.com/BabylonJS/bgfx | `f15c1ff18254f3fb85ffc1a669d1870c9714afc9` |
+| bgfx | https://github.com/BabylonJS/bgfx | `64e7324430604ba61a45b51e1cbeb2b67c5d1d15` |
 | bx | https://github.com/bkaradzic/bx | `a9a71f8ef449c11042607feaeae0b8f46d22869a` |
 | bimg | https://github.com/bkaradzic/bimg | `671fe06dd7012a1ab85aa931019ed16112909756` |
 
