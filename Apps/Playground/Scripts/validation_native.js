@@ -200,7 +200,8 @@
         const globalObject = typeof globalThis !== "undefined" ? globalThis : Function("return this")();
         [typeof _native !== "undefined" ? _native : undefined, globalObject].forEach(function (holder) {
             const Original = holder && holder.XMLHttpRequest;
-            if (typeof Original !== "function") {
+            // JavaScriptCore reports native N-API constructors as typeof "object".
+            if (!Original || (typeof Original !== "function" && typeof Original !== "object")) {
                 return;
             }
             const Patched = function XMLHttpRequest() {
@@ -235,12 +236,16 @@
         const original = {
             open: xhr.open,
             send: xhr.send,
+            abort: xhr.abort,
             addEventListener: xhr.addEventListener,
             removeEventListener: xhr.removeEventListener,
         };
         const listeners = { readystatechange: [], load: [], error: [], loadend: [] };
         let openError = null;
+        let failing = false;
         let hooked = false;
+        // Bumped by open() and abort() so a deferred failure never reports into a newer request.
+        let generation = 0;
 
         function define(name, value) {
             Object.defineProperty(xhr, name, { value: value, configurable: true, writable: true });
@@ -271,7 +276,9 @@
             });
         }
         function clearFailure() {
+            generation++;
             openError = null;
+            failing = false;
             delete xhr.readyState;
             delete xhr.status;
         }
@@ -302,7 +309,19 @@
             try {
                 return original.open.apply(xhr, arguments);
             } catch (e) {
+                // Only URL-open failures are deferred; other errors still throw at the call site.
+                if (String((e && e.message) || e).indexOf("Error opening URL") === -1) {
+                    throw e;
+                }
                 openError = e;
+                failing = true;
+            }
+        });
+        define("abort", function () {
+            const pending = failing;
+            clearFailure();
+            if (!pending) {
+                return original.abort.apply(xhr, arguments);
             }
         });
         define("send", function () {
@@ -317,7 +336,12 @@
                 console.log("xhr-events: reporting '" + message + "' as a failed request");
             }
             openError = null;
+            const scheduled = generation;
             setTimeout(function () {
+                if (scheduled !== generation) {
+                    return;
+                }
+                failing = false;
                 define("readyState", 4);
                 define("status", 0);
                 dispatch("readystatechange");
