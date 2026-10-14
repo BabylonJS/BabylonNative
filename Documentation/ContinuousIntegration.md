@@ -82,6 +82,7 @@ The tests are performed in `azure-pipelines.yml` after the build commands.
 ## Win32
 
 By far the simplest CI tests. Runs the feshly built executable in the working directory.
+On Win32, visual validation (`validation_native.js`) runs only in the V8 jobs (`Win32_x64_V8_D3D11` and `Win32_x64_D3D11_Sanitizers`), so results don't depend on engine-specific behavior. The Chakra, JSI, Hermes and QuickJS jobs still build and run UnitTests and ModuleLoadTest.
 ```shell
     cd buildWin32_x64\Apps\ValidationTests
     cd Release
