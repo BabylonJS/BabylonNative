@@ -5,7 +5,7 @@ on:
     branches: [master]
     paths:
       - ".github/workflows/experimental-windows-timing.yml"
-      - "Apps/scripts/windowsTiming/**"
+      - "Apps/scripts/windowsSharedTiming/**"
   workflow_dispatch:
 
 permissions:
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: bghgary/BabylonNative
-          ref: 397d5c09ec01fce62b206ba4b68b2fc189b4f744
+          ref: 8be7cacaca510d8b16bc9c44500516e82abb86ec
           path: Build/TimingSource
           persist-credentials: false
 
@@ -32,19 +32,27 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: bghgary/Babylon.js
-          ref: d09f642c3813c8df178215acadc27f649510675a
+          ref: 345ce53604cb74d27f164a9b3b6604e26fb6adb4
           path: Build/TimingSuite
           persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: Apps/scripts/windowsTiming/package-lock.json
+          node-version: "24"
 
-      - name: Install experimental runner dependencies
-        working-directory: Apps/scripts/windowsTiming
+      - name: Install the shared-suite package manager
+        shell: pwsh
+        run: |
+          npm install --prefix "$env:RUNNER_TEMP\shared-npm" npm@11.18.0 --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'Package-manager setup failed.' }
+          "$env:RUNNER_TEMP\shared-npm\node_modules\npm\bin" >> $env:GITHUB_PATH
+
+      - name: Prepare the real shared suite
+        working-directory: Build/TimingSuite
         run: npm ci --no-audit --no-fund
+
+      - name: Check timing report validation
+        run: node --test Apps/scripts/windowsSharedTiming/run.test.cjs
 
       - name: Configure and build pinned Release V8 D3D11 Playground
         shell: pwsh
@@ -77,7 +85,7 @@ jobs:
           foreach ($name in @('babylonjs', 'babylonjs-addons', 'babylonjs-loaders')) {
             $package = Get-Content "Build\TimingSource\Apps\node_modules\$name\package.json" -Raw | ConvertFrom-Json
             $versions[$name] = $package.version
-            if ($package.version -ne '9.15.0') { throw "Unexpected $name version." }
+            if ($package.version -ne '9.29.0') { throw "Unexpected $name version." }
           }
           $versions | ConvertTo-Json | Set-Content Build\timing-artifacts\packages.json
           $files = @{
@@ -91,14 +99,24 @@ jobs:
             if ($source.Hash -ne $runtime.Hash) { throw "Runtime bundle differs: $name" }
           }
 
-      - name: Run identical 305 scenes with one then two workers
+      - name: Run exact mobile workloads through per-scene Playwright
         timeout-minutes: 120
         shell: pwsh
+        env:
+          TIMING_SUITE_ROOT: ${{ github.workspace }}\Build\TimingSuite
+          BABYLON_NATIVE_PLAYGROUND: ${{ github.workspace }}\Build\WindowsTiming\Apps\Playground\Release\Playground.exe
+          TIMING_ARTIFACTS: ${{ github.workspace }}\Build\timing-artifacts
         run: |
-          & .\Apps\scripts\windowsTiming\run.ps1 `
-            -SuiteRoot .\Build\TimingSuite `
-            -Playground .\Build\WindowsTiming\Apps\Playground\Release\Playground.exe `
-            -Artifacts .\Build\timing-artifacts
+          @{
+            processor = @(Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors)
+            graphics = @(Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, AdapterRAM)
+            os = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
+            runnerImage = $env:ImageVersion
+            configuration = 'Release'
+            engine = 'V8'
+            graphicsApi = 'D3D11'
+          } | ConvertTo-Json -Depth 10 | Set-Content Build\timing-artifacts\machine.json
+          node Apps\scripts\windowsSharedTiming\run.cjs
 
       - name: Summarize actual timing and coverage
         if: ${{ !cancelled() }}
@@ -109,7 +127,7 @@ jobs:
           if (Test-Path $file) {
             $summary = Get-Content $file -Raw | ConvertFrom-Json
             foreach ($phase in $summary.phases) {
-              "$($phase.mode): selected=$($phase.selected), executed=$($phase.executed), passed=$($phase.passed), failed=$($phase.failed), completed=$($phase.completed), runner=$([math]::Round($phase.runnerWallMs / 1000, 3))s, process=$([math]::Round($phase.processWallMs / 1000, 3))s." >> $env:GITHUB_STEP_SUMMARY
+              "$($phase.mode): selected=$($phase.selected), executed=$($phase.executed), passed=$($phase.passed), failed=$($phase.failed), completed=$($phase.completed), process=$([math]::Round($phase.processWallMs / 1000, 3))s." >> $env:GITHUB_STEP_SUMMARY
             }
           } else {
             "No complete timing report. This run establishes no Windows execution timing." >> $env:GITHUB_STEP_SUMMARY
@@ -119,6 +137,6 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
-          name: experimental-windows-305-scenes
+          name: experimental-windows-shared-scenes
           path: Build/timing-artifacts/
           if-no-files-found: warn
