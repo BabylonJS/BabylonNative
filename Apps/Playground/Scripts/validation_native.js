@@ -216,7 +216,11 @@
                     Patched[name] = Original[name];
                 }
             });
-            holder.XMLHttpRequest = Patched;
+            try {
+                holder.XMLHttpRequest = Patched;
+            } catch (e) {
+                // Leave the original in place; the test still runs, without the workaround.
+            }
             if (holder.XMLHttpRequest !== Patched) {
                 console.warn("xhr-events: unable to replace XMLHttpRequest");
                 return;
@@ -233,6 +237,14 @@
         };
     }
 
+    // The native polyfill's open() throws a plain Error with no type or code, so the
+    // URL-open failure can only be told apart by its message ("Unknown error opening URL"
+    // and similar UrlLib messages all contain this text). Keep the match in one place.
+    const URL_OPEN_ERROR_TEXT = "Error opening URL";
+    function isUrlOpenError(e) {
+        return String((e && e.message) || e).toLowerCase().indexOf(URL_OPEN_ERROR_TEXT.toLowerCase()) !== -1;
+    }
+
     function patchXhrInstance(test, xhr, reported) {
         const original = {
             open: xhr.open,
@@ -242,6 +254,8 @@
             removeEventListener: xhr.removeEventListener,
         };
         const listeners = { readystatechange: [], load: [], error: [], loadend: [] };
+        // Handlers assigned through the onload / onerror / onloadend / onreadystatechange properties.
+        const handlers = { readystatechange: null, load: null, error: null, loadend: null };
         let openError = null;
         let failing = false;
         // Bumped by open() and abort() so a deferred failure never reports into a newer request.
@@ -252,13 +266,25 @@
         }
         function dispatch(type) {
             const event = { type: type, target: xhr, currentTarget: xhr };
-            listeners[type].slice().forEach(function (listener) {
+            const targets = listeners[type].slice();
+            if (handlers[type]) {
+                targets.push(handlers[type]);
+            }
+            targets.forEach(function (listener) {
                 try {
-                    listener.call(xhr, event);
+                    // Like the DOM, accept functions and objects with a handleEvent method.
+                    if (typeof listener === "function") {
+                        listener.call(xhr, event);
+                    } else if (listener && typeof listener.handleEvent === "function") {
+                        listener.handleEvent(event);
+                    }
                 } catch (e) {
                     console.error(e);
                 }
             });
+        }
+        function hasListeners(type) {
+            return listeners[type].length > 0 || !!handlers[type];
         }
 
         // All four events are dispatched from JavaScript. The native object clears its handlers
@@ -273,7 +299,7 @@
                 if (xhr.status === 0) {
                     dispatch("error");
                 } else {
-                    if (listeners.load.length > 0) {
+                    if (hasListeners("load")) {
                         noteWorkaround(test, "xhr-events");
                     }
                     dispatch("load");
@@ -300,6 +326,17 @@
             delete xhr.status;
         }
 
+        Object.keys(handlers).forEach(function (type) {
+            Object.defineProperty(xhr, "on" + type, {
+                configurable: true,
+                get: function () {
+                    return handlers[type];
+                },
+                set: function (value) {
+                    handlers[type] = typeof value === "function" ? value : null;
+                },
+            });
+        });
         define("addEventListener", function (type, listener) {
             const list = listeners[type];
             if (!list) {
@@ -325,7 +362,7 @@
                 original.open.apply(xhr, arguments);
             } catch (e) {
                 // Only URL-open failures are deferred; other errors still throw at the call site.
-                if (String((e && e.message) || e).indexOf("Error opening URL") === -1) {
+                if (!isUrlOpenError(e)) {
                     throw e;
                 }
                 openError = e;
@@ -340,7 +377,8 @@
             if (!pending) {
                 return original.abort.apply(xhr, arguments);
             }
-        });        define("send", function () {
+        });
+        define("send", function () {
             if (!openError) {
                 attachBridges();
                 return original.send.apply(xhr, arguments);
