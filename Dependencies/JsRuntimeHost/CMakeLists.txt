@@ -103,6 +103,9 @@ option(JSRUNTIMEHOST_POLYFILL_PERFORMANCE "Include JsRuntimeHost Polyfill Perfor
 option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDecoder." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTENCODER "Include JsRuntimeHost Polyfill TextEncoder." ON)
 
+# Plugins
+option(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER "Include JsRuntimeHost asynchronous resource script loader." ON)
+
 # Compatibility with the previous AbortController option.
 if(DEFINED JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER)
     set(JSRUNTIMEHOST_POLYFILL_ABORTCONTROLLER "${JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER}")
@@ -369,6 +372,7 @@ endif()
 
 add_subdirectory(Core)
 add_subdirectory(Polyfills)
+add_subdirectory(Plugins)
 
 if(JSRUNTIMEHOST_TESTS AND NOT WINDOWS_STORE)
     add_subdirectory(Tests)

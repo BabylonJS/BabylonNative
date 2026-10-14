@@ -29,6 +29,11 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Source/Tests.StandardStreamLogger.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.TimeoutDispatcher.cpp)
 
+if(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER)
+    target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.DynamicScriptLoader.cpp)
+    target_link_libraries(UnitTestsJNI PRIVATE DynamicScriptLoader)
+endif()
+
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.V8ForegroundTaskRunner.cpp)
     target_link_libraries(UnitTestsJNI PRIVATE AppRuntimeInternal)
