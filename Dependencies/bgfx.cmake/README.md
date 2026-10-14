@@ -190,30 +190,8 @@ const bgfx::EmbeddedShader k_vs = BGFX_EMBEDDED_SHADER(vs);
 const bgfx::EmbeddedShader k_fs = BGFX_EMBEDDED_SHADER(fs);
 ```
 
-## Contracts and updates
+## Source updates
 
 Source updates are deliberate pin changes, not implicit upgrades. Reconfigure
 managed sources after changing a pin; explicit external trees remain untouched.
 Keep wrapper updates and source updates separate as described in `UPSTREAM.md`.
-
-Run the independent contracts against already-fetched full Git sources:
-
-```powershell
-cmake -S Dependencies\bgfx.cmake\tests -B build\bgfx-contracts -DBGFX_TEST_SOURCE_ROOT="$PWD\build\win32\_deps\bgfx.cmake-src"
-ctest --test-dir build\bgfx-contracts -C RelWithDebInfo --output-on-failure
-```
-
-The harness covers exact pins, repeat/pin-change configuration, nested projects,
-root and FetchContent overrides, invalid roots, Git-free packages and version
-fallbacks, optional target configuration, bin2c and installed-package linking.
-It does not download test dependencies; local full-history Git sources supply
-the isolated managed-fetch fixtures.
-
-For a full Babylon Native Git-free package roundtrip, first configure a
-source-tree build with `BABYLON_NATIVE_BUILD_SOURCETREE=ON` and
-`BABYLON_NATIVE_BUILD_APPS=OFF`, then set `BGFX_TEST_NATIVE_SOURCE_ROOT` to its
-`_deps` directory when configuring this harness. The additional
-`bgfx.native-package` contract copies the immediate `*-src` directories, strips
-Git metadata and configures the packaged native sources in a fresh disconnected
-binary directory. Run the same configure contracts with CMake 3.21 as well as
-the current CMake release.

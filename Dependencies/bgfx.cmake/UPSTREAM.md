@@ -28,13 +28,7 @@ a separate BabylonNative-only commit. All five files and their histories remain
 in the imported ancestry. This exclusion is not an upstream wrapper change;
 never export it as a deletion of upstream's automation.
 
-## Verification and updates
-
-Run `python Dependencies\bgfx.cmake\tests\verify-import.py <original-repository>
-<BabylonNative-checkout> Dependencies\bgfx.cmake\UPSTREAM_COMMIT_MAP.txt`
-against a full original clone. This verifies every historical tree's blob
-hashes/modes, identities, messages and parent graph, zero historical gitlinks,
-and mapped `git log --follow` results for all 53 original current files.
+## Updates
 
 For a future wrapper update, fetch the original full history into a disposable
 clone, use the same path/gitlink transformation without pruning commits, and
@@ -51,8 +45,7 @@ exclusion commit upstream, and do not export an unrestricted subtree diff from
 the import tip: that would delete upstream's automation.
 
 From the BabylonNative root, the following exports candidate wrapper CMake
-changes without `.github`, BabylonNative integration/staging helpers, provenance,
-or the mixed integration/packaging test harness:
+changes without `.github`, BabylonNative integration/staging helpers, or provenance:
 
 ```powershell
 git -C Dependencies\bgfx.cmake diff --binary --relative `
@@ -65,7 +58,7 @@ git -C Dependencies\bgfx.cmake diff --binary --relative `
 Create `build` first if needed. Review the candidate patch in a standalone
 upstream checkout before sending it; the import deliberately removed gitlinks,
 so upstream submodule removal must be handled separately there. Adapt wrapper
-documentation and tests for standalone use rather than copying this directory's
+documentation for standalone use rather than copying this directory's
 BabylonNative-specific material wholesale. In particular, verify that the
 candidate contains no `.github` deletions and leaves upstream automation intact.
 
