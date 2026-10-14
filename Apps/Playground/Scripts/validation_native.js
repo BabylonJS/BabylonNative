@@ -70,6 +70,8 @@
         // Babylon.js 9.29 scene readiness skips the clustered-light proxy shader, so lit
         // materials can all report not-ready on the first frame and draw nothing.
         "wait-for-clustered-lights": "prepare clustered-light proxies before rendering",
+        // Example relies on XMLHttpRequest events the native polyfill does not raise.
+        "xhr-events": "raise XMLHttpRequest load events, and report URL-open failures as asynchronous error/loadend events",
     };
     let appliedWorkarounds = [];
 
@@ -181,6 +183,148 @@
             return evalWithName(code);
         }
         return eval(code);
+    }
+
+    // xhr-events: the native XMLHttpRequest raises only readystatechange, error and loadend,
+    // and its open() throws for URLs it cannot open. Browsers raise load before loadend on
+    // success and report open failures asynchronously as a DONE request with status 0.
+    // Native methods are read-only, so each new instance is patched with own properties.
+    let restoreXhrEvents = null;
+    function installXhrEvents(test) {
+        if (restoreXhrEvents) {
+            return;
+        }
+        const restores = [];
+        const reported = [];
+        // Babylon.js prefers _native.XMLHttpRequest over the global one when it exists.
+        const globalObject = typeof globalThis !== "undefined" ? globalThis : Function("return this")();
+        [typeof _native !== "undefined" ? _native : undefined, globalObject].forEach(function (holder) {
+            const Original = holder && holder.XMLHttpRequest;
+            if (typeof Original !== "function") {
+                return;
+            }
+            const Patched = function XMLHttpRequest() {
+                const xhr = new Original();
+                patchXhrInstance(test, xhr, reported);
+                return xhr;
+            };
+            Patched.prototype = Original.prototype;
+            ["UNSENT", "OPENED", "HEADERS_RECEIVED", "LOADING", "DONE"].forEach(function (name) {
+                if (name in Original) {
+                    Patched[name] = Original[name];
+                }
+            });
+            holder.XMLHttpRequest = Patched;
+            if (holder.XMLHttpRequest !== Patched) {
+                console.warn("xhr-events: unable to replace XMLHttpRequest");
+                return;
+            }
+            restores.push(function () {
+                holder.XMLHttpRequest = Original;
+            });
+        });
+        restoreXhrEvents = function () {
+            restores.forEach(function (restore) {
+                restore();
+            });
+            restoreXhrEvents = null;
+        };
+    }
+
+    function patchXhrInstance(test, xhr, reported) {
+        const original = {
+            open: xhr.open,
+            send: xhr.send,
+            addEventListener: xhr.addEventListener,
+            removeEventListener: xhr.removeEventListener,
+        };
+        const listeners = { readystatechange: [], load: [], error: [], loadend: [] };
+        let openError = null;
+        let hooked = false;
+
+        function define(name, value) {
+            Object.defineProperty(xhr, name, { value: value, configurable: true, writable: true });
+        }
+        function dispatch(type) {
+            const event = { type: type, target: xhr, currentTarget: xhr };
+            listeners[type].slice().forEach(function (listener) {
+                try {
+                    listener.call(xhr, event);
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+        }
+        // The native object releases its listeners after each request, so hook once per request.
+        function ensureLoadEndHook() {
+            if (hooked || (listeners.load.length === 0 && listeners.loadend.length === 0)) {
+                return;
+            }
+            hooked = true;
+            original.addEventListener.call(xhr, "loadend", function () {
+                hooked = false;
+                if (listeners.load.length > 0 && xhr.status >= 200 && xhr.status < 300) {
+                    noteWorkaround(test, "xhr-events");
+                    dispatch("load");
+                }
+                dispatch("loadend");
+            });
+        }
+        function clearFailure() {
+            openError = null;
+            delete xhr.readyState;
+            delete xhr.status;
+        }
+
+        define("addEventListener", function (type, listener) {
+            const list = listeners[type];
+            if (list && list.indexOf(listener) === -1) {
+                list.push(listener);
+            }
+            if (type === "load" || type === "loadend") {
+                ensureLoadEndHook();
+                return;
+            }
+            return original.addEventListener.apply(xhr, arguments);
+        });
+        define("removeEventListener", function (type, listener) {
+            const list = listeners[type];
+            if (list && list.indexOf(listener) !== -1) {
+                list.splice(list.indexOf(listener), 1);
+            }
+            if (type === "load" || type === "loadend") {
+                return;
+            }
+            return original.removeEventListener.apply(xhr, arguments);
+        });
+        define("open", function () {
+            clearFailure();
+            try {
+                return original.open.apply(xhr, arguments);
+            } catch (e) {
+                openError = e;
+            }
+        });
+        define("send", function () {
+            if (!openError) {
+                ensureLoadEndHook();
+                return original.send.apply(xhr, arguments);
+            }
+            noteWorkaround(test, "xhr-events");
+            const message = String(openError.message || openError);
+            if (reported.indexOf(message) === -1) {
+                reported.push(message);
+                console.log("xhr-events: reporting '" + message + "' as a failed request");
+            }
+            openError = null;
+            setTimeout(function () {
+                define("readyState", 4);
+                define("status", 0);
+                dispatch("readystatechange");
+                dispatch("error");
+                dispatch("loadend");
+            }, 0);
+        });
     }
 
     // wait-for-import: while a tracker is active, loader promises are recorded so the
@@ -303,6 +447,10 @@
 
     // Reset the reused engine between tests.
     function cleanupAfterTest(test) {
+        if (restoreXhrEvents) {
+            restoreXhrEvents();
+        }
+
         if (currentScene) {
             try { currentScene.dispose(); } catch (e) { console.error(e); }
             currentScene = null;
@@ -1141,6 +1289,9 @@
 
                                     importTracker = hasWorkaround(test, "wait-for-import") ? [] : null;
                                     refreshExportMatricesTest = hasWorkaround(test, "refresh-export-matrices") ? test : null;
+                                    if (hasWorkaround(test, "xhr-events")) {
+                                        installXhrEvents(test);
+                                    }
                                     let createdScene = evalExample(test, pgCode);
                                     if (importTracker) {
                                         createdScene = Promise.resolve(createdScene).then(function (scene) {

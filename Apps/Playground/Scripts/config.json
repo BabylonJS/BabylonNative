@@ -1553,8 +1553,9 @@
             "title": "Procedural textures playground",
             "playgroundId": "#24C4KC#67",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "proceduralTexturePlayground.png"
+            "reason": "Pixel comparison fails (~24% pixels differ): the procedural cloud noise hash is GPU-backend dependent",
+            "referenceImage": "proceduralTexturePlayground.png",
+            "workarounds": ["xhr-events"]
         },
         {
             "title": "Instanced Bones",
@@ -3172,9 +3173,8 @@
         {
             "title": "Clustered Light Serialization",
             "playgroundId": "#QRQPNN#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "clustered-light-serialization.png"
+            "referenceImage": "clustered-light-serialization.png",
+            "workarounds": ["xhr-events"]
         },
         {
             "title": "Atmosphere Day",
