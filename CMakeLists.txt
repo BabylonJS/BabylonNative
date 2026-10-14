@@ -33,10 +33,6 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 8fd48e454f624f964ced930af597fa5b4526be18
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
@@ -87,8 +83,10 @@ FetchContent_MakeAvailable(CMakeExtensions)
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
 # which makes all dependencies to be fetched and packaged.
 # At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
-# and FetchContent_MakeAvailable_With_Message will use provided local folder provided to cmake command line
-# like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
+# and FetchContent uses the provided local source overrides.
+# bgfx.cmake itself is tracked locally; source-tree mode stages that wrapper beside
+# its three selected child trees in _deps/bgfx.cmake-src for existing packagers.
+# FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE remains a local wrapper override.
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)

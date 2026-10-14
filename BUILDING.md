@@ -20,6 +20,15 @@ build directory. Build directory location is up to you, but we highly recommend 
 the `build` directory from the repository root. The `.gitignore` file is set up to
 ignore this `build` directory.
 
+The bgfx CMake wrapper is tracked in `Dependencies/bgfx.cmake`; CMake fetches
+only its pinned bgfx, bx and bimg sources. Default child roots remain under
+`<build>/_deps/bgfx.cmake-src/{bgfx,bx,bimg}` and wrapper binaries under
+`<build>/_deps/bgfx.cmake-build`. Explicit `BGFX_DIR`, `BX_DIR`, `BIMG_DIR` or
+standard child `FETCHCONTENT_SOURCE_DIR_*` overrides select local trees.
+`FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE` is supported as a local wrapper override.
+See the [wrapper documentation](Dependencies/bgfx.cmake/README.md) for precedence,
+disconnected builds and Git-free source packaging.
+
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have
 separate build folders. For cross-platform development, we commonly use multiple
@@ -63,6 +72,26 @@ start build\win32\BabylonNative.sln
 
 By default, the `Playground` demo app will be set as the Visual Studio start-up
 project.
+
+For Win32/x64/D3D11 with Windows Chakra (not ChakraCore), use:
+
+```powershell
+cmake -S . -B build\win32 -G "Visual Studio 17 2022" -A x64 -DGRAPHICS_API=D3D11 -DNAPI_JAVASCRIPT_ENGINE=Chakra
+cmake --build build\win32 --config RelWithDebInfo --target UnitTests Playground ModuleLoadTest
+Push-Location build\win32\Apps\UnitTests\RelWithDebInfo
+.\UnitTests.exe
+Pop-Location
+Push-Location build\win32\Apps\Playground\RelWithDebInfo
+.\Playground.exe --headless app:///Scripts/validation_native.js
+Pop-Location
+Push-Location build\win32\Apps\ModuleLoadTest\RelWithDebInfo
+.\ModuleLoadTest.exe
+Pop-Location
+```
+
+Keep the configure-time npm hook enabled: it downlevels the Babylon bundles for
+Chakra. Use short build paths if Windows compiler paths approach 260 characters.
+The full validation command intentionally has no `--once` or test filter.
 
 ## **Building on Windows 10, Targeting Universal Windows Platform (UWP)**
 
