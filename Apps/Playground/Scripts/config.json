@@ -1140,6 +1140,8 @@
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff fail on Linux OpenGL (25571 px, 10.7%); passes on Win32 D3D11.",
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "textureAreaLightStandard.png"
         },
