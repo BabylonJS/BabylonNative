@@ -26,7 +26,7 @@ For pure RenderDoc CLI usage (any app, not BN-specific), see
 | `Apps/Playground/Shared/Diagnostics.{h,cpp}` | Crash handler, `DumpFailure`, finish-line, exit-code tracking. |
 | `Apps/Playground/Win32/App.cpp` (and the other per-host `App.*`) | Wires the `RuntimeOptions::log` callback into `DumpFailure` (`JS CONSOLE ERROR` for `LogLevel::Error`, `UNCAUGHT JS ERROR` for `LogLevel::Fatal`) and injects `_playgroundOptions` into JS via `Runtime::RunOnJsThread`. |
 | `Apps/Playground/Scripts/validation_native.js` | Test runner. Reads `_playgroundOptions`, picks tests, calls `TestUtils.captureNextFrame()`. Reference-image load failures arrive via `BABYLON.Tools.LoadFile`'s `onLoadFileError` and are tagged with `MISSING_REFERENCE_IMAGE:`. |
-| `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`renderCount`/`capture`/`threshold`/`errorRatio`/`workarounds`. |
+| `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`excludedGraphicsApis`/`excludedJavaScriptEngines`/`renderCount`/`capture`/`threshold`/`errorRatio`/`workarounds`. |
 | `Plugins/TestUtils/Source/TestUtils.cpp` | Native side of `TestUtils.captureNextFrame()` -- calls `m_deviceContext.RequestCaptureNextFrame()`. |
 | `Core/Graphics/Source/BgfxCallback.cpp` | bgfx trace/fatal sink. Routes bgfx output to stdout in headless mode and to `OutputDebugString` always. |
 
@@ -129,7 +129,8 @@ per flag** (intentional design -- long-name aliases were removed).
     --generate-references   Save rendered images as new reference PNGs
     --once                  Run only the first matching test, then exit
     --include-excluded      Force-run tests with excludeFromAutomaticTesting /
-                            onlyVisual / excludedGraphicsApis set in config.json
+                            onlyVisual / excludedGraphicsApis /
+                            excludedJavaScriptEngines set in config.json
     --save-results=BOOL     Override saving of result PNGs (default true)
     --debug-trace=BOOL      Enable/disable Babylon::DebugTrace
     --perf-trace=LEVEL      Set Babylon::PerfTrace level (None / Log)
@@ -185,8 +186,8 @@ config.json edits; always re-resolve when the test list changes.
 .\Playground.exe --headless --once --include-excluded --test "Decal Map" `
     app:///Scripts/validation_native.js
 ```
-Bypasses `excludeFromAutomaticTesting`, `onlyVisual`, and
-`excludedGraphicsApis` filters. Use this whenever you need to *debug* a
+Bypasses `excludeFromAutomaticTesting`, `onlyVisual`,
+`excludedGraphicsApis`, and `excludedJavaScriptEngines` filters. Use this whenever you need to *debug* a
 quarantined test -- never edit config.json's exclusion flags as part of
 debugging.
 
@@ -274,6 +275,7 @@ the assert.
 | `excludeFromAutomaticTesting: true` | Skipped unless `--include-excluded` |
 | `onlyVisual: true` | Render but skip pixel comparison (use `--include-excluded` to force pixel compare path; result is still saved) |
 | `excludedGraphicsApis: ["D3D11"]` | Skipped on listed APIs unless `--include-excluded` |
+| `excludedJavaScriptEngines: ["Hermes"]` | Skipped on listed JS engines (`NAPI_JAVASCRIPT_ENGINE`: `Chakra`, `V8`, `JavaScriptCore`, `Hermes`, `QuickJS`, `JSI`) unless `--include-excluded` |
 | `renderCount: N` | Run scene N frames before pixel comparison (default 1) |
 | `capture: true` | Call `TestUtils.captureNextFrame()` once (when `renderCount === 1`) -- triggers bgfx's RenderDoc capture. **Prefer the `--capture=N` CLI flag** for ad-hoc capture; this config knob is kept for legacy tests that hard-pin a per-test capture. |
 | `threshold: N` | Per-channel tolerance for pixel comparison (default 25) |
