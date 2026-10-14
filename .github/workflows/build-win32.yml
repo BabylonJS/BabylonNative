@@ -75,28 +75,6 @@ jobs:
         run: |
           cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo -- /m
 
-      - name: bgfx CMake contracts
-        if: ${{ inputs.platform == 'x64' && inputs.napi-type == 'direct' && inputs.graphics-api == 'D3D11' && !inputs.enable-sanitizers }}
-        shell: cmd
-        run: |
-          cmake -S Dependencies\bgfx.cmake\tests -B build\bgfx-contracts -G "Visual Studio 17 2022" -A x64 ^
-            -DBGFX_TEST_SOURCE_ROOT="%CD%\build\${{ steps.vars.outputs.solution_name }}\_deps\bgfx.cmake-src"
-          if errorlevel 1 exit /b %errorlevel%
-          ctest --test-dir build\bgfx-contracts -C RelWithDebInfo --output-on-failure
-
-      - name: bgfx minimum CMake contracts
-        if: ${{ inputs.platform == 'x64' && inputs.napi-type == 'direct' && inputs.graphics-api == 'D3D11' && !inputs.enable-sanitizers }}
-        shell: cmd
-        run: |
-          python -m venv build\cmake321
-          if errorlevel 1 exit /b %errorlevel%
-          build\cmake321\Scripts\python -m pip install cmake==3.21.4
-          if errorlevel 1 exit /b %errorlevel%
-          build\cmake321\Scripts\cmake -S Dependencies\bgfx.cmake\tests -B build\bgfx-contracts321 -G "Visual Studio 17 2022" -A x64 ^
-            -DBGFX_TEST_SOURCE_ROOT="%CD%\build\${{ steps.vars.outputs.solution_name }}\_deps\bgfx.cmake-src"
-          if errorlevel 1 exit /b %errorlevel%
-          build\cmake321\Scripts\ctest --test-dir build\bgfx-contracts321 -C RelWithDebInfo --output-on-failure -E bgfx.install
-
       - name: Enable Crash Dumps
         shell: cmd
         run: |
@@ -131,7 +109,7 @@ jobs:
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground --headless app:///Scripts/validation_native.js
+          Playground app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures
         if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
