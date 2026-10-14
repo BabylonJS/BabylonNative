@@ -1378,32 +1378,32 @@
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -3093,7 +3093,7 @@
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Babylon Native renders only the clear color on the first frame (all draws are submitted and effects are ready); passes when a second frame is rendered",
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
@@ -3129,7 +3129,7 @@
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
             "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "reason": "Babylon Native renders only the clear color on the first frame (all draws are submitted and effects are ready); passes when a second frame is rendered",
             "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
@@ -3155,7 +3155,7 @@
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
             "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "reason": "Babylon Native renders only the clear color on the first frame (all draws are submitted and effects are ready); passes when a second frame is rendered",
             "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {

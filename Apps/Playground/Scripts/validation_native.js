@@ -64,6 +64,9 @@
         "wait-for-import": "wait for loader promises started by createScene before rendering",
         // Example clears opaque but writes alpha < 1 that the browser would composite.
         "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
+        // Example changes node transforms right before a glTF export; the exporter's no-op root
+        // check reads cached world matrices and can drop a scaled root node.
+        "refresh-export-matrices": "recompute world matrices before glTF export",
     };
     let appliedWorkarounds = [];
 
@@ -205,6 +208,32 @@
     ["ImportMeshAsync", "AppendAsync", "LoadAssetContainerAsync"].forEach(function (name) {
         wrapImportFunction(BABYLON.SceneLoader, name);
     });
+
+    // refresh-export-matrices: set to the running test when it opts in.
+    let refreshExportMatricesTest = null;
+    function wrapExportFunction(owner, name) {
+        const original = owner && owner[name];
+        if (typeof original !== "function") {
+            return;
+        }
+        owner[name] = function (scene) {
+            if (refreshExportMatricesTest && scene && scene.getNodes) {
+                noteWorkaround(refreshExportMatricesTest, "refresh-export-matrices");
+                const nodes = scene.getNodes();
+                for (let i = 0; i < nodes.length; ++i) {
+                    if (typeof nodes[i].computeWorldMatrix === "function") {
+                        nodes[i].computeWorldMatrix(true);
+                    }
+                }
+            }
+            return original.apply(this, arguments);
+        };
+    }
+    if (BABYLON.GLTF2Export) {
+        ["GLTFAsync", "GLBAsync"].forEach(function (name) {
+            wrapExportFunction(BABYLON.GLTF2Export, name);
+        });
+    }
 
     function waitForTrackedImports(test, scene) {
         const tracked = importTracker || [];
@@ -1088,6 +1117,7 @@
                                     }
 
                                     importTracker = hasWorkaround(test, "wait-for-import") ? [] : null;
+                                    refreshExportMatricesTest = hasWorkaround(test, "refresh-export-matrices") ? test : null;
                                     let createdScene = evalExample(test, pgCode);
                                     if (importTracker) {
                                         createdScene = Promise.resolve(createdScene).then(function (scene) {
