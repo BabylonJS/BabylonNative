@@ -876,8 +876,8 @@
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#7RWIUU#29",
             "referenceImage": "nodeGeometryBuildingGenerator.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI). Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): createScene never resolves."
         },
         {
             "title": "GreasedLine - non camera facing",
@@ -1208,16 +1208,16 @@
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#77",
             "referenceImage": "draco.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 0)",
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#78",
             "referenceImage": "draco.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 1)",
@@ -1225,8 +1225,8 @@
             "playgroundId": "#22MFU2#78",
             "replace": "numWorkers = 0, numWorkers = 1",
             "referenceImage": "draco.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Mesh Compression (fallback)",
@@ -1240,15 +1240,15 @@
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#82",
             "referenceImage": "draco.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Decoder/Encoder roundtrip",
             "playgroundId": "#JNW207#4",
             "referenceImage": "dracoRoundtrip.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (left handed, once)",
@@ -1305,8 +1305,8 @@
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
             "referenceImage": "glTFSerializerKhrDracoMeshCompression.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "GLTF Serializer KHR materials clearcoat",
@@ -1378,32 +1378,32 @@
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1418,8 +1418,8 @@
             "title": "GLTF Buggy with Draco Mesh Compression",
             "playgroundId": "#JNW207#1",
             "referenceImage": "gltfBuggyDraco.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "GLTF Box with bad Draco normalized flag",
@@ -2112,8 +2112,6 @@
         {
             "title": "Material Plugin",
             "playgroundId": "#22HT5Z#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "materialPlugin.png"
         },
         {
@@ -2504,8 +2502,6 @@
             "title": "custom-handling-of-materials-for-render-target-pass",
             "playgroundId": "#FIVL25#21",
             "renderCount": 60,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "custom-handling-of-materials-for-render-target-pass.png"
         },
         {
@@ -2556,9 +2552,7 @@
             "title": "screen-space-curvature",
             "playgroundId": "#YF8D42#22",
             "renderCount": 5,
-            "referenceImage": "screen-space-curvature.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Hermes (Win32 CI) fails to import dragon.babylon from models.babylonjs.com; passes on Chakra, V8, QuickJS, JSI and JavaScriptCore."
+            "referenceImage": "screen-space-curvature.png"
         },
         {
             "title": "Render to 3D RT",
@@ -2583,8 +2577,6 @@
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 2;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "computeMaxExtents-BoxAnimated.png"
         },
         {
@@ -2592,8 +2584,6 @@
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 0;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "computeMaxExtents-Fox0.png"
         },
         {
@@ -2601,8 +2591,6 @@
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 1;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "computeMaxExtents-Fox1.png"
         },
         {
@@ -2610,8 +2598,6 @@
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 5;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "computeMaxExtents-MorphStressTest.png"
         },
         {
@@ -2800,8 +2786,6 @@
         {
             "title": "FrameGraph nrge clustered lights (simple)",
             "playgroundId": "#1QCA2M#37",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "FrameGraph-nrge-clustered-lights-simple-.png"
         },
         {
@@ -2990,8 +2974,6 @@
         {
             "title": "Render target texture with clustered lights",
             "playgroundId": "#1QCA2M#11",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Render-target-texture-with-clustered-lights.png"
         },
         {
@@ -3110,8 +3092,7 @@
         {
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
@@ -3136,22 +3117,17 @@
         {
             "title": "Sponza Clustered Lighting (node material pbr)",
             "playgroundId": "#QY98Z3#17",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Sponza-Clustered-Lighting-node-material-pbr-.png"
         },
         {
             "title": "Clustered Lighting (lhs std material)",
             "playgroundId": "#CSCJO2#59",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
@@ -3171,15 +3147,12 @@
         {
             "title": "Clustered Lighting (rhs std material)",
             "playgroundId": "#CSCJO2#69",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {
