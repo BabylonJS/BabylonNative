@@ -2556,9 +2556,7 @@
             "title": "screen-space-curvature",
             "playgroundId": "#YF8D42#22",
             "renderCount": 5,
-            "referenceImage": "screen-space-curvature.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Hermes (Win32 CI) fails to import dragon.babylon from models.babylonjs.com; passes on Chakra, V8, QuickJS, JSI and JavaScriptCore."
+            "referenceImage": "screen-space-curvature.png"
         },
         {
             "title": "Render to 3D RT",
