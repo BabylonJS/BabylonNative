@@ -186,9 +186,10 @@
     }
 
     // xhr-events: the native XMLHttpRequest raises only readystatechange, error and loadend,
-    // and its open() throws for URLs it cannot open. Browsers raise load before loadend on
-    // success and report open failures asynchronously as a DONE request with status 0.
-    // Native methods are read-only, so each new instance is patched with own properties.
+    // raises error for any non-2xx status, and its open() throws for URLs it cannot open.
+    // Browsers raise load before loadend for every completed response, raise error only for
+    // transport failures, and report open failures asynchronously as a DONE request with
+    // status 0. Native methods are read-only, so each new instance is patched with own properties.
     let restoreXhrEvents = null;
     function installXhrEvents(test) {
         if (restoreXhrEvents) {
@@ -243,7 +244,6 @@
         const listeners = { readystatechange: [], load: [], error: [], loadend: [] };
         let openError = null;
         let failing = false;
-        let hooked = false;
         // Bumped by open() and abort() so a deferred failure never reports into a newer request.
         let generation = 0;
 
@@ -260,19 +260,36 @@
                 }
             });
         }
-        // The native object releases its listeners after each request, so hook once per request.
-        function ensureLoadEndHook() {
-            if (hooked || (listeners.load.length === 0 && listeners.loadend.length === 0)) {
-                return;
-            }
-            hooked = true;
-            original.addEventListener.call(xhr, "loadend", function () {
-                hooked = false;
-                if (listeners.load.length > 0 && xhr.status >= 200 && xhr.status < 300) {
-                    noteWorkaround(test, "xhr-events");
+
+        // All four events are dispatched from JavaScript. The native object clears its handlers
+        // after every request, so these bridges are attached again by each send(). Native raises
+        // error for any non-2xx status; browsers raise error only for transport failures
+        // (status 0) and load for every completed response.
+        const bridges = {
+            readystatechange: function () {
+                dispatch("readystatechange");
+            },
+            loadend: function () {
+                if (xhr.status === 0) {
+                    dispatch("error");
+                } else {
+                    if (listeners.load.length > 0) {
+                        noteWorkaround(test, "xhr-events");
+                    }
                     dispatch("load");
                 }
                 dispatch("loadend");
+            },
+        };
+        function detachBridges() {
+            Object.keys(bridges).forEach(function (type) {
+                original.removeEventListener.call(xhr, type, bridges[type]);
+            });
+        }
+        function attachBridges() {
+            detachBridges();
+            Object.keys(bridges).forEach(function (type) {
+                original.addEventListener.call(xhr, type, bridges[type]);
             });
         }
         function clearFailure() {
@@ -285,29 +302,27 @@
 
         define("addEventListener", function (type, listener) {
             const list = listeners[type];
-            if (list && list.indexOf(listener) === -1) {
+            if (!list) {
+                return original.addEventListener.apply(xhr, arguments);
+            }
+            if (list.indexOf(listener) === -1) {
                 list.push(listener);
             }
-            if (type === "load" || type === "loadend") {
-                ensureLoadEndHook();
-                return;
-            }
-            return original.addEventListener.apply(xhr, arguments);
         });
         define("removeEventListener", function (type, listener) {
             const list = listeners[type];
-            if (list && list.indexOf(listener) !== -1) {
+            if (!list) {
+                return original.removeEventListener.apply(xhr, arguments);
+            }
+            if (list.indexOf(listener) !== -1) {
                 list.splice(list.indexOf(listener), 1);
             }
-            if (type === "load" || type === "loadend") {
-                return;
-            }
-            return original.removeEventListener.apply(xhr, arguments);
         });
         define("open", function () {
             clearFailure();
+            detachBridges();
             try {
-                return original.open.apply(xhr, arguments);
+                original.open.apply(xhr, arguments);
             } catch (e) {
                 // Only URL-open failures are deferred; other errors still throw at the call site.
                 if (String((e && e.message) || e).indexOf("Error opening URL") === -1) {
@@ -315,7 +330,9 @@
                 }
                 openError = e;
                 failing = true;
+                return;
             }
+            dispatch("readystatechange");
         });
         define("abort", function () {
             const pending = failing;
@@ -323,10 +340,9 @@
             if (!pending) {
                 return original.abort.apply(xhr, arguments);
             }
-        });
-        define("send", function () {
+        });        define("send", function () {
             if (!openError) {
-                ensureLoadEndHook();
+                attachBridges();
                 return original.send.apply(xhr, arguments);
             }
             noteWorkaround(test, "xhr-events");
