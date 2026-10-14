@@ -164,18 +164,13 @@ namespace Babylon::ShaderCompilerTraversers
     /// Reserve complete matrix, array and block-member ranges. Run after FlattenNarrowVaryingArrays.
     void AssignInterStageVaryingLocations(glslang::TProgram& program, IdGenerator& ids);
 
-    /// Invert dFdy operands similar to bgfx_shader.sh
-    /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
-    /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L62-L65
-    void InvertYDerivativeOperands(glslang::TProgram& program);
-
     /// Flip only texture-coordinate Y on D3D/Metal/Vulkan, including shadow and volume samplers.
     /// For textureGrad, also reflect gradient Y without translation. For texelFetch, capture
     /// coordinates and LOD once and use the selected mip height. Preserve other components and cube directions.
     /// Leave raw array coordinates unchanged. Do not apply on OpenGL.
     void FlipSamplerCoordinates(glslang::TProgram& program, IdGenerator& ids);
 
-    /// Convert fragment coordinates with bnFragCoordTargetSize on D3D/Metal/Vulkan.
-    /// Run before uniform collection; shaders without gl_FragCoord remain unchanged.
+    /// Convert gl_FragCoord.y and dFdy with bnRenderTargetTransform on D3D/Metal/Vulkan; dFdy follows
+    /// bgfx_shader.sh on ordinary targets. Run before uniform collection; shaders using neither are unchanged.
     void FlipFragCoordY(glslang::TProgram& program, IdGenerator& ids);
 }

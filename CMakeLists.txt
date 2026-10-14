@@ -72,7 +72,7 @@ FetchContent_Declare(metal-cpp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 7c8705749fc1e234119c20695f82179b30d90914
+    GIT_TAG 2b078efc3ca2ca3f6ce0069339ac409c643b0136
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
@@ -135,6 +135,11 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin Nativ
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES "Enable image loading in NativeEngine (LoadTexture, image bitmap, bimg)." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS "Include Babylon Native Plugin NativeEngine - Compile Shaders." ON)
+# Disable WebMin in glslang and SPIRV-Cross. WebMin strips those libraries down to the
+# WebGL2 GLSL subset, which excludes compute shaders: referencing any compute built-in
+# (e.g. gl_GlobalInvocationID) crashes the WebMin glslang. Compute support (GPUParticleSystem
+# on the native path) requires the full builds, so this defaults ON here.
+option(BABYLON_NATIVE_DISABLE_WEBMIN "Disable WebMin minimization in glslang and SPIRV-Cross (required for compute shaders)." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT "Include Babylon Native Plugin NativeMeshopt." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)

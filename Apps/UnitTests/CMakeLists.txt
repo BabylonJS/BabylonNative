@@ -48,15 +48,20 @@ set(SOURCES
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
     "Source/Tests.NativeEngine.ImageFormats.cpp"
+    "Source/Tests.NativeEngine.StorageBuffer.cpp"
+    "Source/Tests.NativeEngine.Compute.cpp"
     "Source/Tests.NativeEngine.Mipmaps.cpp"
+    "Source/Tests.NativeEngine.PrimitiveModeExpansion.cpp"
     "Source/Tests.NativeEngine.DepthTextures.cpp"
     "Source/Tests.NativeEngine.CubeRenderTargets.cpp"
     "Source/Tests.NativeEngine.Msaa.cpp"
     "Source/Tests.NativeEngine.Teardown.cpp"
+    "Source/Tests.NativeEngine.TransformFeedback.cpp"
     "Source/Tests.NativeEngine.TextureFormats.cpp"
     "Source/Tests.NativeOptimizations.cpp"
     "Source/Tests.NativeEngine.VertexArray.cpp"
     "Source/Tests.ShaderCache.cpp"
+    "Source/Tests.ShaderCache.TransformFeedback.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
     "Source/Tests.UniformPadding.cpp"
@@ -112,6 +117,7 @@ target_link_libraries(UnitTests
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
+    PRIVATE ShaderCacheInternal
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
@@ -186,9 +192,13 @@ if(GRAPHICS_API STREQUAL "OpenGL")
     # OpenGL the "device" is a context bgfx created, and a bare context carries no display or
     # surface, so Helpers::CreateDevice cannot make one current to allocate against.
     # See https://github.com/BabylonJS/BabylonNative/issues/1810.
+    #
+    # Flipped sampling: the sampler and texture row flips these tests cover only run on
+    # top-left-origin backends; GLSL samples in GL's native bottom-left orientation.
     target_compile_definitions(UnitTests PRIVATE
         SKIP_MULTISAMPLE_TESTS
-        SKIP_DEVICE_LOSS_TESTS)
+        SKIP_DEVICE_LOSS_TESTS
+        SKIP_FLIPPED_SAMPLING_TESTS)
 endif()
 
 add_test(NAME UnitTests COMMAND UnitTests)

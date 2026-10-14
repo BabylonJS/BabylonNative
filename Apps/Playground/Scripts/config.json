@@ -679,8 +679,6 @@
         {
             "title": "PBR in mirror",
             "playgroundId": "#Q7DP2M",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Cubemap load not implemented on Babylon Native",
             "referenceImage": "pbr-mirror.png"
         },
         {
@@ -728,15 +726,11 @@
         {
             "title": "NME Glow Manual",
             "playgroundId": "#7QCYPB#320",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff: ~99% of pixels differ vs reference",
             "referenceImage": "nme-glow-manual.png"
         },
         {
             "title": "NME Glow Automatic",
             "playgroundId": "#7QCYPB#327",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Cubemap load not implemented on Babylon Native",
             "referenceImage": "nme-glow-automatic.png"
         },
         {
@@ -764,8 +758,6 @@
             "title": "Gaussian Splatting NME",
             "playgroundId": "#WXWJKN#4",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gsplat-nme.png"
         },
         {
@@ -810,8 +802,6 @@
             "title": "Decal map PP",
             "playgroundId": "#9BVW2S#101",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "decal-map-pp.png"
         },
         {
@@ -852,8 +842,6 @@
         {
             "title": "NMEGLTF",
             "playgroundId": "#WGZLGJ#10320",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "nmegltf.png"
         },
         {
@@ -885,16 +873,15 @@
         },
         {
             "title": "Node Geometry - Building generator",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#7RWIUU#29",
+            "referenceImage": "nodeGeometryBuildingGenerator.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "nodeGeometryBuildingGenerator.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI). Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "GreasedLine - non camera facing",
             "playgroundId": "#FJRQ8N#150",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "greased-line-non-camera-facing.png"
         },
         {
@@ -948,8 +935,6 @@
             "title": "Particle subemitters",
             "playgroundId": "#1LK70I#40",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "subemitters.png"
         },
         {
@@ -1025,22 +1010,16 @@
         {
             "title": "Weighted animations",
             "playgroundId": "#LL5BIQ#636",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "weighted-animations.png"
         },
         {
             "title": "Anisotropic",
             "playgroundId": "#MAXCNU#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "anisotropic.png"
         },
         {
             "title": "Clear Coat",
             "playgroundId": "#YACNQS#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "clearCoat.png"
         },
         {
@@ -1059,8 +1038,6 @@
             "title": "GUI Slate",
             "playgroundId": "#2YZFA0#277",
             "renderCount": 60,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "guiSlate.png"
         },
         {
@@ -1077,17 +1054,15 @@
         },
         {
             "title": "LineEdgesRenderer",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#T90MQ4#19",
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "LineEdgesRenderer emits extra red lines not present in reference (likely Vector3.Cross precision or duplicate-edge dedup gap)."
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (5.5% px); passes on Win32 D3D11."
         },
         {
             "title": "Simulate pointer",
             "playgroundId": "#8MGKWK#574",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "simulatePointer.png"
         },
         {
@@ -1132,8 +1107,6 @@
             "title": "Yeti",
             "playgroundId": "#QATUCH#32",
             "renderCount": 150,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails: 239982/240000 pixels differ (99.99%) on Babylon Native (renders essentially blank)",
             "referenceImage": "yeti.png"
         },
         {
@@ -1210,24 +1183,18 @@
         {
             "title": "point light shadows",
             "playgroundId": "#XDNVAY#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pointLightShadows.png"
         },
         {
             "title": "Shadow depth wrappers",
             "playgroundId": "#PNQRY1#73",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "shadowDepthWrappers.png"
         },
         {
             "title": "Displacement map",
             "playgroundId": "#WZ8JL4#0",
-            "referenceImage": "displacementMap.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "displacementMap.png"
         },
         {
             "title": "Custom render target",
@@ -1238,25 +1205,28 @@
         },
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#77",
+            "referenceImage": "draco.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "draco.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 0)",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#78",
+            "referenceImage": "draco.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "draco.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 1)",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#78",
             "replace": "numWorkers = 0, numWorkers = 1",
+            "referenceImage": "draco.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "draco.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "Draco Mesh Compression (fallback)",
@@ -1267,17 +1237,18 @@
         },
         {
             "title": "Draco Decoder",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#82",
+            "referenceImage": "draco.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "draco.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "Draco Decoder/Encoder roundtrip",
             "playgroundId": "#JNW207#4",
+            "referenceImage": "dracoRoundtrip.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "dracoRoundtrip.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (left handed, once)",
@@ -1333,16 +1304,16 @@
         {
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
+            "referenceImage": "glTFSerializerKhrDracoMeshCompression.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Draco loader passes 'utf8' label; BN TextDecoder only accepts 'utf-8' (WHATWG label normalization not implemented)",
-            "referenceImage": "glTFSerializerKhrDracoMeshCompression.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "GLTF Serializer KHR materials clearcoat",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#9N6CLU#23",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png"
+            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png",
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.8% px); passes on Win32 D3D11."
         },
         {
             "title": "GLTF Serializer KHR gpu instancing",
@@ -1408,7 +1379,7 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1416,7 +1387,7 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1424,7 +1395,7 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1432,7 +1403,7 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Passes alone, but fails (~19% of pixels differ) after 'GLTF Serializer Rotation conversion, left-handed' in a full run; none of the existing workarounds fix it",
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1446,9 +1417,9 @@
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
             "playgroundId": "#JNW207#1",
+            "referenceImage": "gltfBuggyDraco.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 (heap corruption)",
-            "referenceImage": "gltfBuggyDraco.png"
+            "reason": "createScene never resolves on JavaScriptCore (Linux CI) and JSI (Win32 CI); WebAssembly-based decode does not complete there. Passes on Chakra, V8 and QuickJS."
         },
         {
             "title": "GLTF Box with bad Draco normalized flag",
@@ -1512,22 +1483,16 @@
         {
             "title": "GLTF Mesh Primitive Attribute Test",
             "playgroundId": "#G1FXQ4#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfMeshPrimAttribTest.png"
         },
         {
             "title": "PBR glossy",
             "playgroundId": "#DFQKIR#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbrglossy.png"
         },
         {
             "title": "PBR rough",
             "playgroundId": "#PI9IE8#5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbrrough.png"
         },
         {
@@ -1540,50 +1505,36 @@
         {
             "title": "PBRMetallicRoughnessMaterial",
             "playgroundId": "#2FDQT5#13",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "PBRMetallicRoughnessMaterial.png"
         },
         {
             "title": "PBRSpecularGlossinessMaterial",
             "playgroundId": "#Z1VL3V#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "PBRSpecularGlossinessMaterial.png"
         },
         {
             "title": "PBR",
             "playgroundId": "#LCA0Q4#27",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbr.png"
         },
         {
             "title": "PBR refraction",
             "playgroundId": "#LCA0Q4#26",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbr-refraction.png"
         },
         {
             "title": "PBR shader code coverage 1",
             "playgroundId": "#QI7TL3#63",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbr-codecoverage1.png"
         },
         {
             "title": "PBR shader code coverage 2",
             "playgroundId": "#QI7TL3#64",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbr-codecoverage2.png"
         },
         {
             "title": "PBR shader code coverage 3",
             "playgroundId": "#QI7TL3#65",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbr-codecoverage3.png"
         },
         {
@@ -1607,16 +1558,14 @@
         },
         {
             "title": "Instanced Bones",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#2YLJ1L#2",
             "referenceImage": "instancedBones.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Deterministic sub-pixel animation/edge-AA differences on instanced bone animation (~3.5% px); render is structurally correct."
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.9% px); passes on Win32 D3D11."
         },
         {
             "title": "GlowLayer",
             "playgroundId": "#LRFB2D#262",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails: 237981/240000 pixels differ (99.16%) on Babylon Native",
             "referenceImage": "GlowLayer.png"
         },
         {
@@ -1634,8 +1583,6 @@
         {
             "title": "DDS",
             "playgroundId": "#ZI77S7#3",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "dds.png"
         },
         {
@@ -1655,10 +1602,10 @@
         },
         {
             "title": "MeshSimplification",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#1ED15P#46",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "meshSimplification.png"
+            "referenceImage": "meshSimplification.png",
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (16% px); passes on Win32 D3D11."
         },
         {
             "title": "DepthRenderer",
@@ -1759,8 +1706,6 @@
             "title": "Motion Blur",
             "playgroundId": "#E5YGEL#20",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "motionBlur.png"
         },
         {
@@ -1833,19 +1778,19 @@
         },
         {
             "title": "Prepass + mirror, without postprocess",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#PIZ1GK#1084",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "prepass-mirror-without-pp.png"
+            "referenceImage": "prepass-mirror-without-pp.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass + mirror, with postprocesses",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#PIZ1GK#1085",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "prepass-mirror-with-pp.png"
+            "referenceImage": "prepass-mirror-with-pp.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + sprites",
@@ -1889,11 +1834,11 @@
         },
         {
             "title": "Prepass SSAO + clip planes",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Y6W087#71",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-clip-planes.png"
+            "referenceImage": "prepass-ssao-clip-planes.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + GUI",
@@ -1913,11 +1858,11 @@
         },
         {
             "title": "Prepass SSAO + shadow only",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#1KF7V1#55",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "prepass-ssao-shadow-only.png"
+            "referenceImage": "prepass-ssao-shadow-only.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + highlight layer",
@@ -1930,10 +1875,10 @@
         },
         {
             "title": "Prepass SSAO + point light",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#WW5UB5#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "prepass-ssao-point-light.png"
+            "referenceImage": "prepass-ssao-point-light.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + on/off post-process",
@@ -1984,11 +1929,11 @@
         },
         {
             "title": "Prepass SSAO + MSAA",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#12MKMN#7",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-msaa.png"
+            "referenceImage": "prepass-ssao-msaa.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Scissor test",
@@ -2013,8 +1958,6 @@
             "title": "Refraction local cube map STD",
             "playgroundId": "#RJN64I#7",
             "renderCount": 1,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "refraction-local-std.png"
         },
         {
@@ -2083,8 +2026,6 @@
             "title": "Reverse depth buffer and shadows",
             "playgroundId": "#WL4Q8J#20",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "reverseDepthBufferShadows.png"
         },
         {
@@ -2133,10 +2074,10 @@
         },
         {
             "title": "Baked Vertex Animation",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#14WJWW#13",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel-diff against Babylon.js reference after SPIRV-Cross bump (#1695): animation timing renders one frame off. Cannot re-bake from BN renderer per project policy.",
-            "referenceImage": "bakedVertexAnimation.png"
+            "referenceImage": "bakedVertexAnimation.png",
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.5% px); passes on Win32 D3D11."
         },
         {
             "title": "Baked Vertex Animation with Depth Of Field",
@@ -2334,8 +2275,6 @@
         {
             "title": "Decal Map",
             "playgroundId": "#9BVW2S#67",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Decal-Map.png"
         },
         {
@@ -2355,8 +2294,6 @@
         {
             "title": "Scene Recorder Apply Delta",
             "playgroundId": "#9ZS92P#9",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Scene-Recorder-Apply-Delta.png"
         },
         {
@@ -2473,18 +2410,16 @@
         },
         {
             "title": "show-bounding-box",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#0LN1JD#9",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "show-bounding-box.png"
+            "referenceImage": "show-bounding-box.png",
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (7.6% px); passes on Win32 D3D11."
         },
         {
             "title": "cube-reflection-with-probe-and-mirrors",
             "playgroundId": "#X3V1NN#7",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "cube-reflection-with-probe-and-mirrors.png"
         },
         {
@@ -2621,9 +2556,9 @@
             "title": "screen-space-curvature",
             "playgroundId": "#YF8D42#22",
             "renderCount": 5,
+            "referenceImage": "screen-space-curvature.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "screen-space-curvature.png"
+            "reason": "Hermes (Win32 CI) fails to import dragon.babylon from models.babylonjs.com; passes on Chakra, V8, QuickJS, JSI and JavaScriptCore."
         },
         {
             "title": "Render to 3D RT",
@@ -2686,19 +2621,19 @@
         },
         {
             "title": "glTF Loader Cameras RH",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "glTFLoaderCameras.png"
+            "referenceImage": "glTFLoaderCameras.png",
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
         },
         {
             "title": "glTF Loader Cameras LH",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "glTFLoaderCameras.png"
+            "referenceImage": "glTFLoaderCameras.png",
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
         },
         {
             "title": "IBL Voxel Shadowing",
@@ -2824,10 +2759,10 @@
         },
         {
             "title": "FrameGraph nrge SSR neon",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Z6C5EF#5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "FrameGraph-nrge-SSR-neon.png"
+            "referenceImage": "FrameGraph-nrge-SSR-neon.png",
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge motion blur",
@@ -2871,10 +2806,10 @@
         },
         {
             "title": "FrameGraph nrge multiple post processes",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#SYQW69#1363",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png"
+            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png",
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge SSAO",
@@ -3094,17 +3029,15 @@
         {
             "title": "KHR diffuse transmission",
             "playgroundId": "#RX52XX#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "KHR-diffuse-transmission.png"
         },
         {
             "title": "SubSurface Scattering",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#5H0H89#129",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "SubSurface-Scattering.png"
+            "referenceImage": "SubSurface-Scattering.png",
+            "reason": "OpenGL: bgfx FrameBufferGL::resolve asserts in glDrawBuffers (GL_INVALID_OPERATION) when resolving an attachment past the first (bgfx bug, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "Specular Reflectance with IOR",
@@ -3946,9 +3879,7 @@
         {
             "title": "Background material blur",
             "playgroundId": "#UU7RQ#4458",
-            "referenceImage": "Background-material-blur.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Background material blur produces red splotches in the blurred background (BN background-blur shader regression)."
+            "referenceImage": "Background-material-blur.png"
         },
         {
             "title": "Lighting Volume",
@@ -4273,8 +4204,6 @@
             "title": "Particles - Ramp Blend",
             "playgroundId": "#XPVJMM#4",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "particles-ramp-blend.png"
         },
         {
@@ -4686,8 +4615,6 @@
         {
             "title": "Reflection Probes - debug markers",
             "playgroundId": "#KA93U#1723",
-            "excludeFromAutomaticTesting": true,
-            "reason": "ReflectionProbe: 'TEXTURE_CUBE_MAP' undefined on NativeEngine",
             "referenceImage": "Reflection-Probes---debug-markers.png"
         },
         {

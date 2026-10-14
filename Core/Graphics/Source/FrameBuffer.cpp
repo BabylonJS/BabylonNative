@@ -144,7 +144,7 @@ namespace Babylon::Graphics
         }
     }
 
-    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask)
+    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask, bool ignoreScissor)
     {
         const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
         const std::array<float, 4> color{r, g, b, a};
@@ -182,20 +182,22 @@ namespace Babylon::Graphics
         // the view scissor is set.
         //
         // Note that the view rect and view scissor are reset to the desired dimensions before the encoder is submitted.
-        if (m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f)
+        if (ignoreScissor || (m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f))
         {
             bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
             m_bgfxViewPort = {0, 0, 1, 1};
         }
         else
         {
+            const Rect scissor{ToTargetRect(m_desiredScissor, static_cast<float>(Height()))};
             bgfx::setViewRect(
                 m_viewId.value(),
-                static_cast<uint16_t>(m_desiredScissor.X),
-                static_cast<uint16_t>(m_desiredScissor.Y),
-                static_cast<uint16_t>(m_desiredScissor.Width),
-                static_cast<uint16_t>(m_desiredScissor.Height));
+                static_cast<uint16_t>(scissor.X),
+                static_cast<uint16_t>(scissor.Y),
+                static_cast<uint16_t>(scissor.Width),
+                static_cast<uint16_t>(scissor.Height));
 
+            // Kept in the desired (unmirrored) space it is compared against.
             m_bgfxViewPort = {
                 m_desiredScissor.X / Width(),
                 m_desiredScissor.Y / Height(),
@@ -230,6 +232,17 @@ namespace Babylon::Graphics
     {
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
+    }
+
+    void FrameBuffer::Compute(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint32_t numX, uint32_t numY, uint32_t numZ)
+    {
+        // Each dispatch gets its own view, so views run it after earlier work on this frame buffer, and
+        // bgfx unbinds its storage buffers before the next one binds them the other way round (D3D11
+        // drops a read binding of a buffer that is still bound for writing). Taking a view also moves
+        // the next draw on this frame buffer to a later view (see SetBgfxViewPortAndScissor).
+        const bgfx::ViewId viewId = m_deviceContext.AcquireNewViewId();
+        bgfx::resetView(viewId);
+        encoder.dispatch(viewId, programHandle, numX, numY, numZ);
     }
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
@@ -313,19 +326,31 @@ namespace Babylon::Graphics
         bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         m_bgfxViewPort = viewPort;
+        const Rect targetViewPort{ToTargetRect(viewPort, 1.0f)};
         bgfx::setViewRect(m_viewId.value(),
-            static_cast<uint16_t>(m_bgfxViewPort.X * Width()),
-            static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
-            static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
-            static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
+            static_cast<uint16_t>(targetViewPort.X * Width()),
+            static_cast<uint16_t>(targetViewPort.Y * Height()),
+            static_cast<uint16_t>(targetViewPort.Width * Width()),
+            static_cast<uint16_t>(targetViewPort.Height * Height()));
 
         m_bgfxScissor = scissor;
+        const Rect targetScissor{ToTargetRect(scissor, static_cast<float>(Height()))};
         bgfx::setViewScissor(
             m_viewId.value(),
-            static_cast<uint16_t>(m_bgfxScissor.X),
-            static_cast<uint16_t>(m_bgfxScissor.Y),
-            static_cast<uint16_t>(m_bgfxScissor.Width),
-            static_cast<uint16_t>(m_bgfxScissor.Height));
+            static_cast<uint16_t>(targetScissor.X),
+            static_cast<uint16_t>(targetScissor.Y),
+            static_cast<uint16_t>(targetScissor.Width),
+            static_cast<uint16_t>(targetScissor.Height));
+    }
+
+    Rect FrameBuffer::ToTargetRect(const Rect& rect, float height) const
+    {
+        // Rects are kept top-left; GL-row-order targets store GL's bottom row first.
+        if (!m_glRowOrder || (rect.Width == 0.0f && rect.Height == 0.0f))
+        {
+            return rect;
+        }
+        return Rect{rect.X, height - rect.Y - rect.Height, rect.Width, rect.Height};
     }
 
     bool Rect::Equals(const Rect& other) const
