@@ -388,6 +388,9 @@
         if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
             return "excludedGraphicsApis: " + TestUtils.getGraphicsApiName();
         }
+        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(TestUtils.getJavaScriptEngineName())) {
+            return "excludedJavaScriptEngines: " + TestUtils.getJavaScriptEngineName();
+        }
         return null;
     }
 
