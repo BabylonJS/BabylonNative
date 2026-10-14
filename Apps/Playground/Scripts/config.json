@@ -1140,15 +1140,13 @@
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
+            "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "textureAreaLightStandard.png"
         },
         {
             "title": "Textured - Area Lights - PBR",
             "playgroundId": "#T7FXR8#102",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 5, type 3553. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
+            "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "texturedAreaLightsPBR.png"
         },
         {
@@ -1773,8 +1771,7 @@
             "title": "Prepass SSAO + depth of field",
             "playgroundId": "#8F5HYV#72",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "prepass-ssao-dof.png"
         },
         {
@@ -4160,8 +4157,7 @@
             "title": "Particles - Multiply Blend",
             "playgroundId": "#M1HYFH#6",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "particles-multiply-blend.png"
         },
         {
@@ -4188,16 +4184,14 @@
             "title": "Particles - Helper - Smoke",
             "playgroundId": "#XRRTC0#2",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "particles-helper-smoke.png"
         },
         {
             "title": "Particles - Helper - Fire",
             "playgroundId": "#I2D9MM#18",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "particles-helper-fire.png"
         },
         {
@@ -4221,8 +4215,7 @@
         {
             "title": "Selection outline layer with instances",
             "playgroundId": "#UR9706#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "workarounds": ["prime-effect-layers"],
             "referenceImage": "Selection-outline-layer-with-instances.png"
         },
         {
