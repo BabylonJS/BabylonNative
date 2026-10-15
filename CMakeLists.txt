@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
 
 # Use these vendored copies for every declaration of these names, including those
-# in fetched dependencies such as JsRuntimeHost. Override parent source-package
-# paths because _deps/*-src copies are no longer produced for these dependencies.
+# in fetched dependencies. Override parent source-package paths because
+# _deps/*-src copies are no longer produced for these dependencies.
 set(FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/AndroidExtensions")
 set(FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/CMakeExtensions")
+set(FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/JsRuntimeHost")
+set(FETCHCONTENT_SOURCE_DIR_URLLIB "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/UrlLib")
 
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
@@ -68,8 +70,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.5.0
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 980cfb0197f7fda661d362df4b275cff42d1e7f2)
+    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST}")
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
@@ -77,6 +78,9 @@ FetchContent_Declare(metal-cpp
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 2b078efc3ca2ca3f6ce0069339ac409c643b0136
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(UrlLib
+    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_URLLIB}"
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
@@ -91,8 +95,8 @@ FetchContent_MakeAvailable(CMakeExtensions)
 # bgfx.cmake itself is tracked locally; source-tree mode stages that wrapper beside
 # its three selected child trees in _deps/bgfx.cmake-src for existing packagers.
 # FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE remains a local wrapper override.
-# AndroidExtensions and CMakeExtensions are vendored and always resolve from Dependencies/;
-# no _deps/*-src copies are produced for them.
+# AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are vendored and
+# always resolve from Dependencies/; no _deps/*-src copies are produced for them.
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
