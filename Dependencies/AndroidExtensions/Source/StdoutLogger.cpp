@@ -1,0 +1,120 @@
+#include <AndroidExtensions/StdoutLogger.h>
+#include <android/log.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <mutex>
+
+namespace
+{
+    std::mutex g_stateMutex;
+    bool g_started = false;
+    int fd_stdout[2] = {-1, -1};
+    int fd_stderr[2] = {-1, -1};
+
+    void thread_func(int fd, int prio)
+    {
+        FILE* stream = fdopen(fd, "r");
+
+        while (true)
+        {
+            char* line = nullptr;
+            size_t n = 0;
+            ssize_t nread = getline(&line, &n, stream);
+            if (nread == -1)
+            {
+                break;
+            }
+
+            line[nread - 1] = '\0';
+            __android_log_write(prio, "StdoutLogger", line);
+            free(line);
+        }
+
+        fclose(stream);
+    }
+
+    void* thread_func_stdout(void*)
+    {
+        thread_func(fd_stdout[0], ANDROID_LOG_INFO);
+        return 0;
+    }
+
+    void* thread_func_stderr(void*)
+    {
+        thread_func(fd_stderr[0], ANDROID_LOG_ERROR);
+        return 0;
+    }
+
+    void redirect(int fd[2], int fd_redirect, void*(*thread_func)(void*))
+    {
+        // create the pipe and redirect
+        pipe(fd);
+        dup2(fd[1], fd_redirect);
+
+        // spawn the thread
+        pthread_t thr;
+        if (pthread_create(&thr, 0, thread_func, 0) == -1)
+        {
+            return;
+        }
+
+        pthread_detach(thr);
+    }
+}
+
+namespace android::StdoutLogger
+{
+    void Start()
+    {
+        std::lock_guard<std::mutex> lock(g_stateMutex);
+
+        if (g_started)
+        {
+            return;
+        }
+
+        redirect(fd_stdout, fileno(stdout), thread_func_stdout);
+        redirect(fd_stderr, fileno(stderr), thread_func_stderr);
+
+        g_started = true;
+    }
+
+    void Stop()
+    {
+        std::lock_guard<std::mutex> lock(g_stateMutex);
+
+        if (!g_started)
+        {
+            return;
+        }
+
+        g_started = false;
+
+        // Close the write ends of the pipes. This signals EOF to the reader
+        // threads, which will then call fclose() to close the read ends.
+        // Do NOT close the read ends here: fdopen() transferred ownership of
+        // fd[0] to the FILE* inside the reader thread, and calling close() on
+        // an fd owned by a FILE* is a fdsan violation on Android API 29+.
+        if (fd_stdout[1] != -1)
+        {
+            close(fd_stdout[1]);
+            fd_stdout[1] = -1;
+        }
+        fd_stdout[0] = -1; // owned by reader thread's FILE*; closed via fclose()
+
+        if (fd_stderr[1] != -1)
+        {
+            close(fd_stderr[1]);
+            fd_stderr[1] = -1;
+        }
+        fd_stderr[0] = -1; // owned by reader thread's FILE*; closed via fclose()
+    }
+
+    bool IsStarted()
+    {
+        std::lock_guard<std::mutex> lock(g_stateMutex);
+        return g_started;
+    }
+}

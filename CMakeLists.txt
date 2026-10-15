@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
 
+# Use these vendored copies for every declaration of these names, including those
+# in fetched dependencies such as JsRuntimeHost. Override parent source-package
+# paths because _deps/*-src copies are no longer produced for these dependencies.
+set(FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/AndroidExtensions")
+set(FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/CMakeExtensions")
+
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
@@ -18,8 +24,7 @@ include(FetchContent)
 # targets that are part of the Babylon Native contract.
 
 FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 2e85a8d43b89246c460112c9e5546ad54b6e87b4
+    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS}"
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
@@ -34,8 +39,7 @@ FetchContent_Declare(base-n
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
+    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS}"
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
@@ -87,6 +91,8 @@ FetchContent_MakeAvailable(CMakeExtensions)
 # bgfx.cmake itself is tracked locally; source-tree mode stages that wrapper beside
 # its three selected child trees in _deps/bgfx.cmake-src for existing packagers.
 # FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE remains a local wrapper override.
+# AndroidExtensions and CMakeExtensions are vendored and always resolve from Dependencies/;
+# no _deps/*-src copies are produced for them.
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
