@@ -13,6 +13,15 @@ run manually. These configurations retain their CI build and test settings and
 use the repository's npm dependency versions; the existing `Nightly` job separately tests
 the Babylon.js preview download and publishes packaged binaries.
 
+The nightly pipeline publishes only the existing Win32 x64 `RelWithDebInfo`
+Playground and UnitTests packages, with their existing artifact names and contents.
+The `Nightly` job waits for every Hermes and sanitizer job, including both Win32
+matrix configurations, to complete successfully before starting. It publishes
+packages only after its own build and packaged validation/unit tests succeed.
+Failed, canceled, skipped, or partially successful prerequisite jobs prevent
+publication. Nightly runs do not upload screenshot or crash-dump artifacts;
+failed runs retain their pipeline logs.
+
 CI validation is composed of 3 main parts:
 - The test datas
 - The ValidationTests script

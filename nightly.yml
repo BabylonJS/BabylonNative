@@ -17,6 +17,12 @@ variables:
 jobs:
 - job: Nightly
   displayName: Nightly
+  dependsOn:
+  - Win32
+  - MacOS_Sanitizers
+  - Ubuntu_Clang_Hermes
+  - Android_Ubuntu_Hermes
+  condition: and(succeeded(), not(containsValue(dependencies.*.result, 'SucceededWithIssues')))
   steps:
   - checkout: self
 
@@ -98,38 +104,6 @@ jobs:
       UnitTests.exe
     workingDirectory: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests\RelWithDebInfo'
     displayName: 'Run packaged UnitTests'
-
-  - task: PublishBuildArtifacts@1
-    displayName: Upload Errors images artifact
-    condition: failed()
-    inputs:
-      PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground\Errors'
-      ArtifactName: ErrorImages
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground\RelWithDebInfo'
-      contents: Playground.*
-      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-      cleanTargetFolder: false
-    displayName: "Stage Playground Crash Dump"
-    condition: failed()
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests\RelWithDebInfo'
-      contents: UnitTests.*
-      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-      cleanTargetFolder: false
-    displayName: "Stage UnitTests Crash Dump"
-    condition: failed()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: "Crash Dumps"
-      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
-    displayName: "Publish Crash Dumps"
-    condition: failed()
 
   - task: PublishBuildArtifacts@1
     displayName: Upload Playground
@@ -217,33 +191,6 @@ jobs:
     condition: and(succeeded(), eq(variables['SANITIZERS'], 'OFF'))
     displayName: Module Load Test
 
-  - task: CopyFiles@2
-    condition: and(succeededOrFailed(), eq(variables['JS_ENGINE'], 'V8'))
-    displayName: Stage rendered and error pictures
-    inputs:
-      SourceFolder: '$(Build.SourcesDirectory)'
-      Contents: |
-        build\$(BUILD_NAME)\Apps\Playground\Results\**
-        build\$(BUILD_NAME)\Apps\Playground\Errors\**
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-
-  - task: CopyFiles@2
-    condition: failed()
-    displayName: Stage crash dump binaries
-    inputs:
-      SourceFolder: '$(Build.SourcesDirectory)'
-      Contents: |
-        build\$(BUILD_NAME)\Apps\Playground\RelWithDebInfo\Playground.*
-        build\$(BUILD_NAME)\Apps\UnitTests\RelWithDebInfo\UnitTests.*
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-
-  - task: PublishBuildArtifacts@1
-    condition: and(succeededOrFailed(), or(failed(), eq(variables['JS_ENGINE'], 'V8')))
-    displayName: Upload test artifacts
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: '$(BUILD_NAME)'
-
 - job: MacOS_Sanitizers
   displayName: macOS sanitizers
   timeoutInMinutes: 30
@@ -286,23 +233,6 @@ jobs:
       ./UnitTests
     workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
     displayName: Run UnitTests macOS
-
-  - task: CopyFiles@2
-    condition: failed()
-    displayName: Stage UnitTests core dumps
-    inputs:
-      SourceFolder: '$(Build.SourcesDirectory)'
-      Contents: |
-        build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
-        build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-
-  - task: PublishBuildArtifacts@1
-    condition: failed()
-    displayName: Upload UnitTests core dumps
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: MacOS_Sanitizers-core-dumps
 
 - job: Ubuntu_Clang_Hermes
   displayName: Linux Clang Hermes
@@ -358,27 +288,6 @@ jobs:
       xvfb-run --auto-servernum ./ModuleLoadTest
     workingDirectory: build/Linux/Apps/ModuleLoadTest
     displayName: Module Load Test
-
-  - task: CopyFiles@2
-    condition: failed()
-    displayName: Stage core dumps
-    inputs:
-      SourceFolder: '$(Build.SourcesDirectory)'
-      Contents: |
-        build/Linux/Apps/Playground/Playground
-        build/Linux/Apps/Playground/core.*
-        build/Linux/Apps/UnitTests/UnitTests
-        build/Linux/Apps/UnitTests/core.*
-        build/Linux/Apps/ModuleLoadTest/ModuleLoadTest
-        build/Linux/Apps/ModuleLoadTest/core.*
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-
-  - task: PublishBuildArtifacts@1
-    condition: failed()
-    displayName: Upload core dumps
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: Ubuntu_Clang_Hermes-core-dumps
 
 - job: Android_Ubuntu_Hermes
   displayName: Android Hermes
