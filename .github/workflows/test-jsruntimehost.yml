@@ -1,0 +1,48 @@
+name: Test JsRuntimeHost
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Dependencies/JsRuntimeHost/**'
+      - 'Dependencies/AndroidExtensions/**'
+      - 'Dependencies/CMakeExtensions/**'
+      - 'Dependencies/UrlLib/**'
+      - '.github/workflows/test-jsruntimehost.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'Dependencies/JsRuntimeHost/**'
+      - 'Dependencies/AndroidExtensions/**'
+      - 'Dependencies/CMakeExtensions/**'
+      - 'Dependencies/UrlLib/**'
+      - '.github/workflows/test-jsruntimehost.yml'
+
+jobs:
+  unit-tests:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure standalone JsRuntimeHost tests
+        shell: pwsh
+        run: |
+          $root = (Get-Location).Path
+          cmake -S Dependencies/JsRuntimeHost -B build/jsruntimehost-tests -G "Visual Studio 17 2022" -A x64 `
+            -DNAPI_JAVASCRIPT_ENGINE=Chakra `
+            -DJSRUNTIMEHOST_TESTS=ON `
+            "-DFETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS=$root/Dependencies/AndroidExtensions" `
+            "-DFETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS=$root/Dependencies/CMakeExtensions" `
+            "-DFETCHCONTENT_SOURCE_DIR_URLLIB=$root/Dependencies/UrlLib"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build JsRuntimeHost UnitTests
+        run: cmake --build build/jsruntimehost-tests --config RelWithDebInfo --target UnitTests --parallel
+
+      - name: Run JsRuntimeHost UnitTests
+        shell: pwsh
+        working-directory: build/jsruntimehost-tests/Tests/UnitTests/RelWithDebInfo
+        run: |
+          ./UnitTests.exe
+          exit $LASTEXITCODE

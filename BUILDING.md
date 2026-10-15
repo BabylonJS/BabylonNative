@@ -39,6 +39,11 @@ JsRuntimeHost's transitive UrlLib declaration. Source-tree packaging uses the
 tracked folders; no `_deps/*-src` copies are produced for these four
 dependencies. Build directories under `_deps` remain in use.
 
+The separate `test-jsruntimehost` CI workflow configures JsRuntimeHost as a
+standalone project and runs its unit tests only when one of the four vendored
+dependency trees (or that workflow) changes. Its separate build directory
+avoids a `UnitTests` target collision with Babylon Native's tests.
+
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have
 separate build folders. For cross-platform development, we commonly use multiple
