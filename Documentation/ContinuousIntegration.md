@@ -3,7 +3,7 @@ The CI helps improve the quality of code for all platforms and avoid regression 
 Validation works by running the engine with a JS script that creates a scene. The rendering is captured and compared with a reference image.
 If the rendered and reference images are too different, the test fails, an error will raise in the CI (failed build) and rendered/error images are stored as an download artefact than can help debug.
 This is done for various platforms when a PR is opened, for nightly build and when a PR is merged in master branch.
-To keep PR feedback fast, the slow or runner-scarce jobs (the Win32 and macOS sanitizer builds and the macOS-hosted Android builds) run only in the daily extended workflow (`.github/workflows/extended-ci.yml`, also startable on demand with "Run workflow"). Pushing a new commit to a PR cancels that PR's in-flight CI run.
+To keep PR feedback fast, the slow or runner-scarce jobs (the Win32 and macOS sanitizer builds and the macOS-hosted Android builds) run only in the daily Azure pipeline (`nightly.yml` at the repo root, which can also be queued manually). Pushing a new commit to a PR cancels that PR's in-flight CI run.
 CI will also take care of code quality: Warnings are treated as error and will break the build. A PR can't be merged if the build fails.
 
 CI validation is composed of 3 main parts:
@@ -83,7 +83,7 @@ The tests are performed in `azure-pipelines.yml` after the build commands.
 ## Win32
 
 By far the simplest CI tests. Runs the feshly built executable in the working directory.
-On Win32, visual validation (`validation_native.js`) runs only in the V8 jobs (`Win32_x64_V8_D3D11` on every PR, and `Win32_x64_D3D11_Sanitizers` daily in the extended workflow), so results don't depend on engine-specific behavior. The Chakra, JSI, Hermes and QuickJS jobs still build and run UnitTests and ModuleLoadTest.
+On Win32, visual validation (`validation_native.js`) runs only in the V8 jobs (`Win32_x64_V8_D3D11` on every PR, and `Win32_x64_D3D11_Sanitizers` daily in the Azure pipeline), so results don't depend on engine-specific behavior. The Chakra, JSI, Hermes and QuickJS jobs still build and run UnitTests and ModuleLoadTest.
 ```shell
     cd buildWin32_x64\Apps\ValidationTests
     cd Release

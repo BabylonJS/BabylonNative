@@ -11,7 +11,7 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Sanitizer builds and the macOS-hosted Android builds are slow or scarce and run daily in extended-ci.yml.
+# Sanitizer builds and the macOS-hosted Android builds are slow or scarce and run daily in the Azure pipeline nightly.yml.
 jobs:
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
