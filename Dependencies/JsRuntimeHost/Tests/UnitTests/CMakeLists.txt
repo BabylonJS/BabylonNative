@@ -71,25 +71,31 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
     set(SOURCES ${SOURCES} "Source/Tests.NodeApi.JavaScriptCore.cpp")
 endif()
 
-add_executable(UnitTests ${SOURCES} ${TEST_JAVASCRIPT} ${SCRIPTS} ${ASSETS})
+# BabylonNative also defines UnitTests; standalone builds retain the original name.
+set(_jsruntimehost_unit_tests_target UnitTests)
+if(NOT PROJECT_IS_TOP_LEVEL)
+    set(_jsruntimehost_unit_tests_target JsRuntimeHostUnitTests)
+endif()
+
+add_executable(${_jsruntimehost_unit_tests_target} ${SOURCES} ${TEST_JAVASCRIPT} ${SCRIPTS} ${ASSETS})
 if(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER)
-    target_sources(UnitTests PRIVATE "Source/Tests.DynamicScriptLoader.cpp")
-    target_link_libraries(UnitTests PRIVATE DynamicScriptLoader)
+    target_sources(${_jsruntimehost_unit_tests_target} PRIVATE "Source/Tests.DynamicScriptLoader.cpp")
+    target_link_libraries(${_jsruntimehost_unit_tests_target} PRIVATE DynamicScriptLoader)
 endif()
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    target_sources(UnitTests PRIVATE "Source/Tests.V8ForegroundTaskRunner.cpp")
-    target_link_libraries(UnitTests PRIVATE AppRuntimeInternal)
+    target_sources(${_jsruntimehost_unit_tests_target} PRIVATE "Source/Tests.V8ForegroundTaskRunner.cpp")
+    target_link_libraries(${_jsruntimehost_unit_tests_target} PRIVATE AppRuntimeInternal)
 endif()
-target_compile_definitions(UnitTests PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
-target_compile_definitions(UnitTests PRIVATE NAPI_JAVASCRIPT_ENGINE="${NAPI_JAVASCRIPT_ENGINE}")
+target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
+target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE NAPI_JAVASCRIPT_ENGINE="${NAPI_JAVASCRIPT_ENGINE}")
 
 # The V8JSI Node-API shim does not implement napi_create_dataview, so the
 # CreateDataViewRejectsOverflowingRange test is compiled out on that backend.
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    target_compile_definitions(UnitTests PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+    target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JSI)
 endif()
 
-target_link_libraries(UnitTests
+target_link_libraries(${_jsruntimehost_unit_tests_target}
     PRIVATE AppRuntime
     PRIVATE Console
     PRIVATE AbortController
@@ -111,15 +117,15 @@ target_link_libraries(UnitTests
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
-add_custom_command(TARGET UnitTests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests> COMMAND_EXPAND_LISTS)
+add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:${_jsruntimehost_unit_tests_target}>>,copy,true> $<TARGET_RUNTIME_DLLS:${_jsruntimehost_unit_tests_target}> $<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}> COMMAND_EXPAND_LISTS)
 
 if(APPLE)
-    enable_objc_arc(UnitTests)
+    enable_objc_arc(${_jsruntimehost_unit_tests_target})
 endif()
 
 if(IOS)
-    set_target_properties(UnitTests PROPERTIES
+    set_target_properties(${_jsruntimehost_unit_tests_target} PROPERTIES
         MACOSX_BUNDLE true
         MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
         RESOURCE "${STORYBOARD}"
@@ -127,28 +133,28 @@ if(IOS)
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.jsruntimehost.unittests")
 else()
     # Incremental builds may still have resources from the former Scripts directory.
-    add_custom_command(TARGET UnitTests POST_BUILD
+    add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts")
 
     if(CMAKE_CONFIGURATION_TYPES)
-        add_custom_command(TARGET UnitTests POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E make_directory "$<TARGET_FILE_DIR:UnitTests>/Assets"
-            COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${TEST_BUNDLE}" "$<TARGET_FILE_DIR:UnitTests>/Assets/tests.js")
+        add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "$<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}>/Assets"
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${TEST_BUNDLE}" "$<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}>/Assets/tests.js")
     endif()
 
-    add_custom_command(TARGET UnitTests POST_BUILD
+    add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets/symlink_target.js" "${CMAKE_CFG_INTDIR}/Assets/symlink_1.js")
-    add_custom_command(TARGET UnitTests POST_BUILD
+    add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets/symlink_1.js" "${CMAKE_CFG_INTDIR}/Assets/symlink_2.js")
 
     foreach(ASSET ${ASSETS})
         get_filename_component(ASSET_NAME "${ASSET}" NAME)
-        add_custom_command(TARGET UnitTests POST_BUILD
+        add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
             COMMAND "${CMAKE_COMMAND}" -E copy "${ASSET}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}")
     endforeach()
 endif()
 
-set_property(TARGET UnitTests PROPERTY FOLDER Tests)
+set_property(TARGET ${_jsruntimehost_unit_tests_target} PROPERTY FOLDER Tests)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${TEST_JAVASCRIPT})
 source_group("Assets" FILES ${SCRIPTS} ${ASSETS})

@@ -143,29 +143,12 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo
           UnitTests
 
-      # JsRuntimeHost also names its test target UnitTests, so build it as a
-      # standalone project in a separate tree alongside the default BN test job.
-      - name: Configure JsRuntimeHost UnitTests
-        if: ${{ inputs.platform == 'x64' && inputs.napi-type == 'direct' && inputs.graphics-api == 'D3D11' && !inputs.enable-sanitizers }}
-        shell: cmd
-        run: |
-          cmake -S Dependencies/JsRuntimeHost -B build/JsRuntimeHost_x64 -G "Visual Studio 17 2022" -A x64 ^
-            -D NAPI_JAVASCRIPT_ENGINE=Chakra ^
-            -D JSRUNTIMEHOST_TESTS=ON ^
-            "-D FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS=%GITHUB_WORKSPACE%/Dependencies/AndroidExtensions" ^
-            "-D FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS=%GITHUB_WORKSPACE%/Dependencies/CMakeExtensions" ^
-            "-D FETCHCONTENT_SOURCE_DIR_URLLIB=%GITHUB_WORKSPACE%/Dependencies/UrlLib"
-
-      - name: Build JsRuntimeHost UnitTests
-        if: ${{ inputs.platform == 'x64' && inputs.napi-type == 'direct' && inputs.graphics-api == 'D3D11' && !inputs.enable-sanitizers }}
-        run: cmake --build build/JsRuntimeHost_x64 --config RelWithDebInfo --target UnitTests -- /m
-
       - name: Run JsRuntimeHost UnitTests
-        if: ${{ inputs.platform == 'x64' && inputs.napi-type == 'direct' && inputs.graphics-api == 'D3D11' && !inputs.enable-sanitizers }}
+        if: ${{ inputs.graphics-api != 'D3D12' }}
         shell: cmd
         run: |
-          cd build\JsRuntimeHost_x64\Tests\UnitTests\RelWithDebInfo
-          UnitTests
+          cd build\${{ steps.vars.outputs.solution_name }}\_deps\jsruntimehost-build\Tests\UnitTests\RelWithDebInfo
+          JsRuntimeHostUnitTests
 
       - name: Module Load Test
         if: ${{ !inputs.enable-sanitizers }}
@@ -179,7 +162,7 @@ jobs:
         shell: powershell
         run: |
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
-          Copy-Item -Path "build\JsRuntimeHost_x64\Tests\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+          Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\_deps\jsruntimehost-build\Tests\UnitTests\RelWithDebInfo\JsRuntimeHostUnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Upload Crash Dumps
         if: failure()

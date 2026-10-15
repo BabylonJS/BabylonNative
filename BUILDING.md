@@ -39,10 +39,12 @@ JsRuntimeHost's transitive UrlLib declaration. Source-tree packaging uses the
 tracked folders; no `_deps/*-src` copies are produced for these four
 dependencies. Build directories under `_deps` remain in use.
 
-The existing Win32 x64/D3D11 CI job also builds and runs JsRuntimeHost's
-standalone `UnitTests` alongside Babylon Native's tests on every CI run.
-It configures a separate build directory because both projects have a target
-named `UnitTests`, and points the standalone build at the vendored dependencies.
+When apps are enabled on desktop platforms, the embedded JsRuntimeHost tests
+build as `JsRuntimeHostUnitTests` beside Babylon Native's `UnitTests`; standalone
+JsRuntimeHost builds keep their original `UnitTests` target. Windows, macOS and
+Linux CI jobs that run Babylon Native unit tests also run the runtime suite,
+using their existing JavaScript engine and graphics backend. Neither suite
+is enabled for install-only/no-app builds or mobile/Windows Store targets.
 
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have
