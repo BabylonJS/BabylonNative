@@ -13,11 +13,15 @@ checked against its original for author/committer identity and dates, full
 message, mapped parents, and prefixed tree blob IDs and modes, including empty
 commits; no historical commit contains gitlinks. Path rewriting changes
 commit IDs and invalidates old signatures. Upstream license and notices remain.
+The separate BabylonNative cleanup commit removes the imported `.github/`
+directory from the final tree; it remains available throughout the imported
+history.
 
 To update, clone upstream `main` afresh, check its tip and all reachable
 commits for gitlinks, run the same rewrite, and verify metadata, messages,
 parent topology and trees through the commit map. Merge the rewritten tip
 without squashing and update this provenance. Keep BabylonNative integration
-changes separate from upstream changes.
+changes separate from upstream changes, and remove the imported `.github/`
+directory again in a separate cleanup commit.
 
 **Do not squash when landing: squashing discards the imported history.**
