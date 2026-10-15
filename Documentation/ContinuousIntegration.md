@@ -5,6 +5,14 @@ If the rendered and reference images are too different, the test fails, an error
 This is done for various platforms when a PR is opened, for nightly build and when a PR is merged in master branch.
 CI will also take care of code quality: Warnings are treated as error and will break the build. A PR can't be merged if the build fails.
 
+PR and master-push checks run through `.github/workflows/ci.yml`. Hermes builds
+(Win32 x64 D3D11, Linux Clang, and Android on Ubuntu) and sanitizer builds
+(Win32 x64 V8 D3D11 and macOS) run only in the Azure Pipelines `nightly.yml`
+pipeline, scheduled at 23:00 UTC Monday through Friday, or when that pipeline is
+run manually. These configurations retain their CI build and test settings and
+use the repository's npm dependency versions; the existing `Nightly` job separately tests
+the Babylon.js preview download and publishes packaged binaries.
+
 CI validation is composed of 3 main parts:
 - The test datas
 - The ValidationTests script
@@ -76,13 +84,14 @@ Integration for the various platform can be tricky and is very specific to the p
 It's possible to open a window and have an openGL or Direct3D with a headless server.
 For Apple platforms and Metal, it's was not possible to do the same.
 
-The CI commands to run the validation is almost the same between PR build and nightly.
-The tests are performed in `azure-pipelines.yml` after the build commands.
+The build and test steps for PR checks are defined in the reusable workflows
+under `.github/workflows/`. Nightly build and test steps are defined in
+`nightly.yml`.
 
 ## Win32
 
 By far the simplest CI tests. Runs the feshly built executable in the working directory.
-On Win32, visual validation (`validation_native.js`) runs only in the V8 jobs (`Win32_x64_V8_D3D11` and `Win32_x64_D3D11_Sanitizers`), so results don't depend on engine-specific behavior. The Chakra, JSI, Hermes and QuickJS jobs still build and run UnitTests and ModuleLoadTest.
+On Win32, the engine-variant jobs run visual validation (`validation_native.js`) only with V8 (`Win32_x64_V8_D3D11` in PR CI and `Win32_x64_D3D11_Sanitizers` in nightly), so results don't depend on engine-specific behavior. The existing packaged `Nightly` job also runs visual validation. The Chakra, JSI, Hermes and QuickJS jobs still build and run UnitTests and ModuleLoadTest; sanitizer jobs skip ModuleLoadTest.
 ```shell
     cd buildWin32_x64\Apps\ValidationTests
     cd Release

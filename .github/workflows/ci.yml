@@ -21,13 +21,6 @@ jobs:
       xcode-version: "26.4"
       runs-on: macos-26
 
-  MacOS_Sanitizers:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      enable-sanitizers: true
-      xcode-version: "26.4"
-      runs-on: macos-26
-
   # ── Apple: Xcode 26 ──────────────────────────────────────────
   MacOS_Xcode26:
     uses: ./.github/workflows/build-macos.yml
@@ -67,25 +60,12 @@ jobs:
       platform: x64
       napi-type: V8
 
-  Win32_x64_Hermes_D3D11:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: Hermes
-
   Win32_x64_QuickJS_D3D11:
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
       napi-type: QuickJS
       graphics-api: D3D11
-
-  Win32_x64_D3D11_Sanitizers:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: V8
-      enable-sanitizers: true
 
   Win32_x64_D3D12:
     uses: ./.github/workflows/build-win32.yml
@@ -120,13 +100,6 @@ jobs:
       cc: clang
       cxx: clang++
       js-engine: JavaScriptCore
-
-  Ubuntu_Clang_Hermes:
-    uses: ./.github/workflows/build-linux.yml
-    with:
-      cc: clang
-      cxx: clang++
-      js-engine: Hermes
 
   Ubuntu_GCC_JSC:
     uses: ./.github/workflows/build-linux.yml
@@ -164,12 +137,6 @@ jobs:
     with:
       runs-on: ubuntu-latest
       js-engine: V8
-
-  Android_Ubuntu_Hermes:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: ubuntu-latest
-      js-engine: Hermes
 
   Android_Ubuntu_QuickJS:
     uses: ./.github/workflows/build-android.yml

@@ -144,3 +144,270 @@ jobs:
     inputs:
       PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests'
       ArtifactName: BabylonNativeNightlyUnitTests
+
+- job: Win32
+  displayName: Win32 Hermes and sanitizers
+  timeoutInMinutes: 180
+  pool:
+    vmImage: 'windows-2022'
+  strategy:
+    matrix:
+      Win32_x64_Hermes_D3D11:
+        BUILD_NAME: Win32_x64_Hermes_D3D11
+        JS_ENGINE: Hermes
+        HERMES_FLAGS: '-D HERMES_ALLOW_BOOST_CONTEXT=0'
+        SANITIZERS: 'OFF'
+      Win32_x64_D3D11_Sanitizers:
+        BUILD_NAME: Win32_x64_D3D11_Sanitizers
+        JS_ENGINE: V8
+        HERMES_FLAGS: ''
+        SANITIZERS: 'ON'
+  variables:
+    npm_config_fetch_retries: '5'
+  steps:
+  - checkout: self
+
+  - script: |
+      cmake -G "Visual Studio 17 2022" -B build/$(BUILD_NAME) -A x64 ^
+        -D NAPI_JAVASCRIPT_ENGINE=$(JS_ENGINE) $(HERMES_FLAGS) ^
+        -D BX_CONFIG_DEBUG=ON ^
+        -D GRAPHICS_API=D3D11 ^
+        -D BABYLON_DEBUG_TRACE=ON ^
+        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
+        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
+        -D ENABLE_SANITIZERS=$(SANITIZERS)
+    displayName: Generate solution
+
+  - script: cmake --build build/$(BUILD_NAME) --config RelWithDebInfo -- /m
+    displayName: Build
+
+  - script: |
+      for %%e in (Playground UnitTests) do (
+        reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\%%e.exe" /v DumpType /t REG_DWORD /d 2 /f
+        reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\%%e.exe" /v DumpCount /t REG_DWORD /d 1 /f
+        reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\%%e.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)\Dumps" /f
+      )
+    displayName: Enable crash dumps
+
+  - powershell: |
+      $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+      $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+      Write-Host "##vso[task.prependpath]$($msvc.FullName)\bin\Hostx64\x64"
+    condition: and(succeeded(), eq(variables['SANITIZERS'], 'ON'))
+    displayName: Add ASAN runtime DLLs to PATH
+
+  - powershell: |
+      $instances = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -property instanceId
+      foreach ($instance in $instances) {
+        & reg.exe add "HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\$instance" /f /v Disabled /t REG_DWORD /d 1
+      }
+    displayName: Disable JIT debugger for script
+
+  - script: Playground.exe --headless app:///Scripts/validation_native.js
+    workingDirectory: 'build\$(BUILD_NAME)\Apps\Playground\RelWithDebInfo'
+    condition: and(succeeded(), eq(variables['JS_ENGINE'], 'V8'))
+    displayName: Validation Tests
+
+  - script: UnitTests.exe
+    workingDirectory: 'build\$(BUILD_NAME)\Apps\UnitTests\RelWithDebInfo'
+    displayName: Unit Tests
+
+  - script: ModuleLoadTest.exe
+    workingDirectory: 'build\$(BUILD_NAME)\Apps\ModuleLoadTest\RelWithDebInfo'
+    condition: and(succeeded(), eq(variables['SANITIZERS'], 'OFF'))
+    displayName: Module Load Test
+
+  - task: CopyFiles@2
+    condition: and(succeededOrFailed(), eq(variables['JS_ENGINE'], 'V8'))
+    displayName: Stage rendered and error pictures
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: |
+        build\$(BUILD_NAME)\Apps\Playground\Results\**
+        build\$(BUILD_NAME)\Apps\Playground\Errors\**
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+  - task: CopyFiles@2
+    condition: failed()
+    displayName: Stage crash dump binaries
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: |
+        build\$(BUILD_NAME)\Apps\Playground\RelWithDebInfo\Playground.*
+        build\$(BUILD_NAME)\Apps\UnitTests\RelWithDebInfo\UnitTests.*
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+  - task: PublishBuildArtifacts@1
+    condition: and(succeededOrFailed(), or(failed(), eq(variables['JS_ENGINE'], 'V8')))
+    displayName: Upload test artifacts
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: '$(BUILD_NAME)'
+
+- job: MacOS_Sanitizers
+  displayName: macOS sanitizers
+  timeoutInMinutes: 30
+  pool:
+    vmImage: 'macOS-26'
+  variables:
+    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
+    ASAN_OPTIONS: abort_on_error=1
+    npm_config_fetch_retries: '5'
+  steps:
+  - checkout: self
+
+  - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+    displayName: Select Xcode 26.4
+
+  - script: |
+      cmake -G Xcode -B build/macOS \
+        -D BABYLON_DEBUG_TRACE=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+        -D ENABLE_SANITIZERS=ON \
+        -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
+    displayName: Generate macOS solution
+
+  - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
+    displayName: Build Playground macOS
+
+  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
+    displayName: Build UnitTests macOS
+
+  - script: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
+    displayName: Build ModuleLoadTest macOS
+
+  - script: sudo sysctl -w kern.corefile=%N.core.%P
+    displayName: Enable core dump
+
+  - script: |
+      set -e
+      ulimit -c unlimited
+      ./UnitTests
+    workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
+    displayName: Run UnitTests macOS
+
+  - task: CopyFiles@2
+    condition: failed()
+    displayName: Stage UnitTests core dumps
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: |
+        build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
+        build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+  - task: PublishBuildArtifacts@1
+    condition: failed()
+    displayName: Upload UnitTests core dumps
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: MacOS_Sanitizers-core-dumps
+
+- job: Ubuntu_Clang_Hermes
+  displayName: Linux Clang Hermes
+  timeoutInMinutes: 60
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+    CC: clang
+    CXX: clang++
+    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
+    ASAN_OPTIONS: abort_on_error=1
+    npm_config_fetch_retries: '5'
+  steps:
+  - checkout: self
+
+  - script: |
+      set -e
+      sudo apt-get update
+      sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build xvfb xauth
+    displayName: Install packages
+
+  - script: |
+      set -e
+      cmake -G Ninja -B build/Linux \
+        -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
+        -D NAPI_JAVASCRIPT_ENGINE=Hermes \
+        -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+        -D BX_CONFIG_DEBUG=ON \
+        -D GRAPHICS_API=OpenGL \
+        -D OpenGL_GL_PREFERENCE=GLVND \
+        -D BABYLON_DEBUG_TRACE=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+        -D HERMES_UNICODE_LITE=ON \
+        -D HERMES_ALLOW_BOOST_CONTEXT=0 \
+        -D ENABLE_SANITIZERS=OFF .
+      ninja -C build/Linux
+    displayName: Build X11
+
+  - script: sudo sysctl -w kernel.core_pattern=core.%p
+    displayName: Enable core dump
+
+  - script: |
+      set -e
+      ulimit -c unlimited
+      xvfb-run ./UnitTests
+    workingDirectory: build/Linux/Apps/UnitTests
+    displayName: Unit Tests
+
+  - script: |
+      set -e
+      ulimit -c unlimited
+      xvfb-run --auto-servernum ./ModuleLoadTest
+    workingDirectory: build/Linux/Apps/ModuleLoadTest
+    displayName: Module Load Test
+
+  - task: CopyFiles@2
+    condition: failed()
+    displayName: Stage core dumps
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: |
+        build/Linux/Apps/Playground/Playground
+        build/Linux/Apps/Playground/core.*
+        build/Linux/Apps/UnitTests/UnitTests
+        build/Linux/Apps/UnitTests/core.*
+        build/Linux/Apps/ModuleLoadTest/ModuleLoadTest
+        build/Linux/Apps/ModuleLoadTest/core.*
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+  - task: PublishBuildArtifacts@1
+    condition: failed()
+    displayName: Upload core dumps
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: Ubuntu_Clang_Hermes-core-dumps
+
+- job: Android_Ubuntu_Hermes
+  displayName: Android Hermes
+  timeoutInMinutes: 45
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+    NDK_VERSION: '28.2.13676358'
+    npm_config_fetch_retries: '5'
+  steps:
+  - checkout: self
+
+  - script: |
+      set -e
+      sudo apt-get update
+      sudo apt-get install -y ninja-build
+    displayName: Install Ninja for Hermes host compiler bootstrap
+
+  - script: |
+      set -e
+      chmod +x gradlew
+      ./gradlew assembleRelease \
+        -PjsEngine=Hermes \
+        -PARM64Only \
+        -PNDK_VERSION=$(NDK_VERSION) \
+        -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+        -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+        -PSANITIZERS=OFF
+    workingDirectory: Apps/Playground/Android
+    env:
+      JAVA_HOME: $(JAVA_HOME_17_X64)
+    displayName: Build Playground Hermes
