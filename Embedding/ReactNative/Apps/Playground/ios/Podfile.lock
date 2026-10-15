@@ -2637,7 +2637,7 @@ SPEC CHECKSUMS:
   React-logger: 32be4f50f3c01660f86a98c1326cc7c6bf21980b
   React-Mapbuffer: acfada26d7e3b20fa26e2cfe8ed7e870d985c57d
   React-microtasksnativemodule: 0134c9afbfdf920ac715a328619ab863869b0998
-  react-native-babylon: 34d6bb7a3076426342cc3d4d58818f252778d1b5
+  react-native-babylon: da23f64158c6e0baac44e2fef65c107a58cf7c9e
   react-native-config: 3367df9c1f25bb96197007ec531c7087ed4554c3
   react-native-slider: f69c02eed05225fa4dda1f8c71d34e674fba61aa
   React-NativeModulesApple: ae0596d8a33c90e62b394b08bab780ec767b57f9

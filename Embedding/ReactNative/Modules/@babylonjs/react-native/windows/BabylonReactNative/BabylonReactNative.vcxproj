@@ -189,7 +189,6 @@
         bimg.lib;
         bimg_encode.lib;
         bimg_decode.lib;
-        minz.lib;
         bx.lib;
         Canvas.lib;
         GenericCodeGend.lib;
@@ -246,7 +245,6 @@
         bimg.lib;
         bimg_encode.lib;
         bimg_decode.lib;
-        minz.lib;
         bx.lib;
         Canvas.lib;
         GenericCodeGen.lib;
