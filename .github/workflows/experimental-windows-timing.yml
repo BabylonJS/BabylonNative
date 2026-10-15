@@ -45,7 +45,7 @@ jobs:
         run: |
           npm install --prefix "$env:RUNNER_TEMP\shared-npm" npm@11.18.0 --no-audit --no-fund
           if ($LASTEXITCODE -ne 0) { throw 'Package-manager setup failed.' }
-          "$env:RUNNER_TEMP\shared-npm\node_modules\npm\bin" >> $env:GITHUB_PATH
+          "$env:RUNNER_TEMP\shared-npm\node_modules\.bin" >> $env:GITHUB_PATH
 
       - name: Prepare the real shared suite
         working-directory: Build/TimingSuite
