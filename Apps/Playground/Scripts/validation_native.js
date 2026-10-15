@@ -110,7 +110,8 @@
 
     // wait-for-readiness limits.
     const MAX_CONVERGENCE_TICKS = 240;
-    const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
+    // The Win32 sanitizer job needs ~9.5 min for EXR Loader alone (ASAN-instrumented EXR decode), so keep a wide margin.
+    const INITIAL_READINESS_TIMEOUT_MS = 20 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
     const utilityLayerOwners = new WeakMap();
     const dracoDecoderConfiguration = Object.assign({}, BABYLON.DracoDecoder.DefaultConfiguration);
