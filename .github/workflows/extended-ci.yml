@@ -1,7 +1,8 @@
-name: Nightly
+name: Extended CI
 
 # Slow or runner-scarce jobs that are not worth blocking every PR on. They run against master once a
 # day and can be started on demand from the Actions tab (Run workflow) to check a branch.
+# Not to be confused with the root nightly.yml, the Azure pipeline that validates against Babylon.js nightly.
 on:
   schedule:
     - cron: "0 8 * * *"
