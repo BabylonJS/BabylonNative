@@ -142,7 +142,7 @@ Keep the variables set when running `pod install` and native builds. Disabling p
 
 Windows support is experimental. The 2.0.6 and 2.0.7 integrations use React Native Windows **0.81.35** and its matching NuGet packages. Keep the React Native Windows npm version aligned with its published NuGet version rather than allowing npm to select a newer release independently.
 
-The module's MSBuild project builds the embedded Babylon Native sources using CMake and the React Native Windows project's generated C++/WinRT projections. See the [repository's Windows instructions](https://github.com/BabylonJS/BabylonNative/tree/master/Embedding/ReactNative#universal-windows-platform-uwp) and [packaged-consumer build workflow](https://github.com/BabylonJS/BabylonNative/blob/master/.github/workflows/brn-test-windows.yml) for the current UWP, legacy-renderer, NuGet, and C++20 configuration.
+The module's MSBuild project builds the embedded Babylon Native sources using CMake and the React Native Windows project's generated C++/WinRT projections. See the [repository's Windows instructions](https://github.com/BabylonJS/BabylonNative/tree/master/Embedding/ReactNative#universal-windows-platform-uwp) and [packaged-consumer build workflow](https://github.com/BabylonJS/BabylonNative/blob/master/.github/workflows/reactnative-test-windows.yml) for the current UWP, legacy-renderer, NuGet, and C++20 configuration.
 
 ### `useEngine`
 

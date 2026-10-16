@@ -1,7 +1,7 @@
-name: BRN Test iOS Package
+name: React Native Test Android Package
 on: workflow_call
 jobs:
-  build-test-iOS:
+  build-test-android:
     runs-on: macos-15
     steps:
     - name: Checkout Repo
@@ -10,6 +10,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 22
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
@@ -22,16 +27,10 @@ jobs:
         npm install "$package"
         npm install
       working-directory: Embedding/ReactNative/Apps/Playground
-    - name: Clean and Install Pods
-      run: |
-        cd ios
-        rm -rf Pods Podfile.lock
-        pod install
-      working-directory: Embedding/ReactNative/Apps/Playground
-    - name: Gulp (iOS)
+    - name: Gulp (Android)
       run: |
         npm install
-        npx gulp buildIOS
+        npx gulp buildAndroid
       working-directory: Embedding/ReactNative/Package
     timeout-minutes: 90
 permissions:

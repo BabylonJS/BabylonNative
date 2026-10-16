@@ -1,4 +1,4 @@
-name: BRN Publish Package For Preview
+name: React Native Publish Package For Preview
 on:
   workflow_dispatch:
     inputs:
@@ -14,11 +14,11 @@ on:
         default: preview
 jobs:
   build-typescript:
-    uses: ./.github/workflows/brn-typescript.yml
+    uses: ./.github/workflows/reactnative-typescript.yml
   package:
     needs:
     - build-typescript
-    uses: ./.github/workflows/brn-package.yml
+    uses: ./.github/workflows/reactnative-package.yml
   publish:
     runs-on: macos-15
     needs:

@@ -1,16 +1,16 @@
-name: BRN Publish Package
+name: React Native Publish Package
 on:
   release:
     types:
     - published
 jobs:
   build-typescript:
-    uses: ./.github/workflows/brn-typescript.yml
+    uses: ./.github/workflows/reactnative-typescript.yml
     if: ${{ startsWith(github.event.release.tag_name, 'react-native/v') }}
   package:
     needs:
     - build-typescript
-    uses: ./.github/workflows/brn-package.yml
+    uses: ./.github/workflows/reactnative-package.yml
     if: ${{ startsWith(github.event.release.tag_name, 'react-native/v') }}
   publish:
     runs-on: macos-15

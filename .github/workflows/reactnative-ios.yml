@@ -1,7 +1,7 @@
-name: BRN Build Android
+name: React Native Build iOS
 on: workflow_call
 jobs:
-  build-android:
+  build-iOS:
     runs-on: macos-15
     steps:
     - name: Checkout Repo
@@ -10,19 +10,17 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 22
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: '17'
     - name: Setting up developer environment
       run: node setup_dev.js
       working-directory: Embedding/ReactNative/Package
-    - name: List installed packages
-      run: npm ls
+    - name: Clean and Install Pods
+      run: |
+        cd ios
+        rm -rf Pods Podfile.lock
+        pod install
       working-directory: Embedding/ReactNative/Apps/Playground
-    - name: Gulp (Android)
-      run: npx gulp buildAndroid
+    - name: Gulp (iOS)
+      run: npx gulp buildIOS
       working-directory: Embedding/ReactNative/Package
     timeout-minutes: 90
 permissions:

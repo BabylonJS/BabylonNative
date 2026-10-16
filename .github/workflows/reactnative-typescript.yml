@@ -1,4 +1,4 @@
-name: BRN Assemble
+name: React Native Assemble
 on: workflow_call
 jobs:
   Build:

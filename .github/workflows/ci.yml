@@ -13,9 +13,9 @@ concurrency:
 
 # Sanitizer builds and the macOS-hosted Android builds are slow or scarce and run daily in the Azure pipeline nightly.yml.
 jobs:
-  # TEMPORARY: remove before merge; exercise BRN unconditionally on every PR.
+  # TEMPORARY: remove before merge; exercise React Native unconditionally on every PR.
   ReactNative:
-    uses: ./.github/workflows/brn-pr.yml
+    uses: ./.github/workflows/reactnative-pr.yml
     with:
       force-run: true
 

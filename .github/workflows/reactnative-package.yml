@@ -1,4 +1,4 @@
-name: BRN Package
+name: React Native Package
 on: workflow_call
 jobs:
   package:

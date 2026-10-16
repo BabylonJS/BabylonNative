@@ -1,4 +1,4 @@
-[![](https://github.com/BabylonJS/BabylonNative/actions/workflows/brn-publish.yml/badge.svg)](https://github.com/BabylonJS/BabylonNative/actions/workflows/brn-publish.yml)
+[![](https://github.com/BabylonJS/BabylonNative/actions/workflows/reactnative-publish.yml/badge.svg)](https://github.com/BabylonJS/BabylonNative/actions/workflows/reactnative-publish.yml)
 [![npm version](https://badge.fury.io/js/%40babylonjs%2Freact-native.svg)](https://badge.fury.io/js/%40babylonjs%2Freact-native)
 
 # Babylon React Native
@@ -176,7 +176,7 @@ These copies change tracked files locally; keep the Windows manifests and lockfi
 
 Project generation enables autolinking and NuGet mode. The module's MSBuild project now generates and builds its embedded Babylon Native sources with CMake and reuses the app's C++/WinRT projections; there is no `gulp buildUWP` task.
 
-Use the [Windows source-build workflow](../../.github/workflows/brn-windows.yml) as the reference for the current x64 Release build, including `UseExperimentalNuget=true`, `ReactNativeNuGet.targets`, and the generated test-app C++20 settings. The [packaged-consumer workflow](../../.github/workflows/brn-test-windows.yml) checks the same integration using the npm tarball.
+Use the [Windows source-build workflow](../../.github/workflows/reactnative-windows.yml) as the reference for the current x64 Release build, including `UseExperimentalNuget=true`, `ReactNativeNuGet.targets`, and the generated test-app C++20 settings. The [packaged-consumer workflow](../../.github/workflows/reactnative-test-windows.yml) checks the same integration using the npm tarball.
 
 ### **Testing in the Playground App** ###
 
@@ -198,7 +198,7 @@ When making local changes, the following manual test steps should be performed w
 
 ### **Building the NPM Package**
 
-Pull requests touching `Embedding/ReactNative/**` or the BRN workflows trigger native builds and packaged-consumer builds. The artifact is named `BabylonReactNative` and can be found in the Artifact section of the corresponding GitHub Action. The Azure nightly pipeline also builds and tests the integration.
+Pull requests touching `Embedding/ReactNative/**` or `.github/workflows/reactnative-*.yml` trigger native builds and packaged-consumer builds. The artifact is named `BabylonReactNative` and can be found in the Artifact section of the corresponding GitHub Action. The Azure nightly pipeline also builds and tests the integration.
 
 > :warning: The zip contains a Tarball Gzipped `.tgz` that is automatically decompressed on macOS. When installing that directory ( `npm install /path/to/unzipped/untarred/package` ) npm creates symlinks that are not supported by the build system. Installing the .tgz instead of its decompressed version works correctly.
 
@@ -231,15 +231,15 @@ cd Assembled
 npm pack
 ```
 
-Package content and the resulting `.tgz` are in `Package\Assembled`. The module's source `package.json` uses a development placeholder version; the [publish workflow](../../.github/workflows/brn-publish.yml) sets the package version from the release tag before publishing.
+Package content and the resulting `.tgz` are in `Package\Assembled`. The module's source `package.json` uses a development placeholder version; the [publish workflow](../../.github/workflows/reactnative-publish.yml) sets the package version from the release tag before publishing.
 
 Only the required `Core`, `Plugins`, `Polyfills`, `Dependencies`, and `Embedding` sources and root CMake/license files are packaged. `Embedding/ReactNative` is excluded to avoid recursively packaging this integration. Dependencies are bundled under `shared/BabylonNative/deps`; installed packages build without FetchContent downloads. Developer builds find the enclosing Babylon Native checkout, both from the source module and from Playground's local npm installation.
 
 ### Publishing
 
-Publish a GitHub release tagged `react-native/vX.Y.Z` in BabylonNative to publish npm version `X.Y.Z`. Other release tags do not publish React Native. The repository must have an `NPM_TOKEN` secret with permission to publish `@babylonjs/react-native`. The [preview workflow](../../.github/workflows/brn-publish-preview.yml) accepts an explicit version and npm dist-tag.
+Publish a GitHub release tagged `react-native/vX.Y.Z` in BabylonNative to publish npm version `X.Y.Z`. Other release tags do not publish React Native. The repository must have an `NPM_TOKEN` secret with permission to publish `@babylonjs/react-native`. The [preview workflow](../../.github/workflows/reactnative-publish-preview.yml) accepts an explicit version and npm dist-tag.
 
-The unconditional BRN job in the main CI workflow is temporary for migration validation and must be removed before merge; the path-filtered BRN workflow and nightly pipeline remain. npm trusted publishing, the future of the old BabylonReactNative repository, and migration to `Babylon::Embedding` are separate follow-up decisions.
+The unconditional React Native job in the main CI workflow is temporary for migration validation and must be removed before merge; the path-filtered React Native workflow and nightly pipeline remain. npm trusted publishing, the future of the old BabylonReactNative repository, and migration to `Babylon::Embedding` are separate follow-up decisions.
 
 The npm README is copied from `Modules\@babylonjs\react-native\README.md` by `copyCommonFiles` in `Package\gulpfile.js`. Update that file for package usage changes; npm receives the updated README when a new package version is published.
 

@@ -1,4 +1,4 @@
-name: BRN Build Windows
+name: React Native Test Windows Package
 on:
   workflow_call:
     inputs:
@@ -13,7 +13,7 @@ on:
         default: 10.0.17763.0
         required: false
 jobs:
-  build-windows:
+  build-test-windows:
     runs-on: windows-2022
     steps:
     - name: Support longpaths
@@ -26,17 +26,27 @@ jobs:
         node-version: 22
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
-    - name: Setting up developer environment
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: BabylonReactNative
+        path: Embedding/ReactNative/artifact
+    - name: Install packaged sources
+      shell: pwsh
       run: |
-        Copy-Item -Path "Apps/Playground/package-windows.json" -Destination "Apps/Playground/package.json" -Force
-        Copy-Item -Path "Apps/Playground/package-lock-windows.json" -Destination "Apps/Playground/package-lock.json" -Force
-        cd Package
-        node setup_dev.js
-      working-directory: Embedding/ReactNative
-    - name: NPM Generate Windows Project
+        Copy-Item package-windows.json package.json -Force
+        Copy-Item package-lock-windows.json package-lock.json -Force
+        $package = Get-ChildItem ../../artifact/babylonjs-react-native-*.tgz -File | Select-Object -First 1
+        if (-not $package) {
+          throw "BabylonReactNative package artifact was not found."
+        }
+        npm ci
+        npm install --no-save --package-lock=false $package.FullName
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Generate Windows project
       run: node generate-windows-test-app.mjs
       working-directory: Embedding/ReactNative/Apps/Playground
-    - name: Build Windows consumer
+    - name: Build packaged Windows consumer
       shell: pwsh
       run: |
         $solutionPath = (Resolve-Path Playground.sln).Path

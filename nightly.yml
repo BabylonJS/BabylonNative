@@ -325,6 +325,7 @@ stages:
         displayName: 'Build Playground ${{ engine }}'
 
 - stage: ReactNative
+  # Mirrors the flat .github/workflows/reactnative-*.yml workflows.
   displayName: React Native
   dependsOn: []
   jobs:

@@ -1,11 +1,11 @@
-name: BRN PR Build
+name: React Native PR Build
 on:
   pull_request:
     branches:
     - master
     paths:
     - Embedding/ReactNative/**
-    - .github/workflows/brn-*.yml
+    - .github/workflows/reactnative-*.yml
   workflow_call:
     inputs:
       force-run:
@@ -27,42 +27,42 @@ jobs:
       # TEMPORARY: remove before merge with the unconditional ci.yml call.
       # Path-triggered builds automatically resume as soon as that call is removed.
       run: |
-        if [ "$FORCE_RUN" = "true" ] || ! grep -Eq '^[[:space:]]+uses: \./\.github/workflows/brn-pr\.yml[[:space:]]*$' .github/workflows/ci.yml; then
+        if [ "$FORCE_RUN" = "true" ] || ! grep -Eq '^[[:space:]]+uses: \./\.github/workflows/reactnative-pr\.yml[[:space:]]*$' .github/workflows/ci.yml; then
           echo "run=true" >> "$GITHUB_OUTPUT"
         else
           echo "run=false" >> "$GITHUB_OUTPUT"
         fi
   build-android:
     needs: [entry]
-    uses: ./.github/workflows/brn-android.yml
+    uses: ./.github/workflows/reactnative-android.yml
     if: ${{ needs.entry.outputs.run == 'true' }}
   build-iOS:
     needs: [entry]
-    uses: ./.github/workflows/brn-ios.yml
+    uses: ./.github/workflows/reactnative-ios.yml
     if: ${{ needs.entry.outputs.run == 'true' }}
   build-windows:
     needs: [entry]
-    uses: ./.github/workflows/brn-windows.yml
+    uses: ./.github/workflows/reactnative-windows.yml
     if: ${{ needs.entry.outputs.run == 'true' }}
   build-typescript:
     needs: [entry]
-    uses: ./.github/workflows/brn-typescript.yml
+    uses: ./.github/workflows/reactnative-typescript.yml
     if: ${{ needs.entry.outputs.run == 'true' }}
   package:
     needs:
     - build-typescript
-    uses: ./.github/workflows/brn-package.yml
+    uses: ./.github/workflows/reactnative-package.yml
   test-package-ios:
     needs:
     - package
-    uses: ./.github/workflows/brn-test-ios.yml
+    uses: ./.github/workflows/reactnative-test-ios.yml
   test-package-android:
     needs:
     - package
-    uses: ./.github/workflows/brn-test-android.yml
+    uses: ./.github/workflows/reactnative-test-android.yml
   test-package-windows:
     needs:
     - package
-    uses: ./.github/workflows/brn-test-windows.yml
+    uses: ./.github/workflows/reactnative-test-windows.yml
 permissions:
   contents: read
