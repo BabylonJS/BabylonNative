@@ -45,6 +45,11 @@ JsRuntimeHost builds keep their original `UnitTests` target. Windows, macOS and
 Linux CI jobs that run Babylon Native unit tests also run the runtime suite,
 using their existing JavaScript engine and graphics backend. Neither suite
 is enabled for install-only/no-app builds or mobile/Windows Store targets.
+When either `Dependencies/JsRuntimeHost` or `Dependencies/UrlLib` changes,
+the existing Android and iOS CI builds additionally run the upstream
+JsRuntimeHost test harness on an Android emulator and an iOS simulator,
+respectively, with in-tree sibling dependency source overrides. Mobile
+Babylon Native builds still do not enable the desktop unit-test targets.
 
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have
