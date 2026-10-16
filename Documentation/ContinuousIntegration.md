@@ -25,7 +25,8 @@ binary package publication. Win32 diagnostic artifacts are published independent
 of that gate: the sanitizer job uploads rendered pictures on success or failure
 and error pictures on failure; all Win32 jobs upload crash dumps and associated
 binaries on failure. The packaged nightly job also uploads error pictures on
-failure. Other platforms retain their pipeline logs without artifact uploads.
+failure. The macOS sanitizer job retains its UnitTests core-dump upload on failure.
+Other configurations retain their pipeline logs without artifact uploads.
 
 CI validation is composed of 3 main parts:
 - The test datas

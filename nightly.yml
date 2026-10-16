@@ -449,6 +449,13 @@ jobs:
     workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
     displayName: 'Run UnitTests macOS'
 
+  - task: PublishBuildArtifacts@1
+    displayName: Upload UnitTests Core Dumps
+    condition: failed()
+    inputs:
+      PathtoPublish: 'build/macOS/Apps/UnitTests/RelWithDebInfo'
+      ArtifactName: macos-Xcode-default-sanitizer-core-dumps
+
 # Android builds on macOS hosts, which are slower to get and duplicate the Ubuntu-hosted ones in the GitHub CI.
 - ${{ each engine in parameters.androidEngines }}:
   - job: Android_MacOS_${{ engine }}
