@@ -1,0 +1,152 @@
+name: React Native Test Windows Package
+on:
+  workflow_call:
+    inputs:
+      WindowsTargetPlatformVersion:
+        description: Windows Target Platform Version
+        type: string
+        default: 10.0.22621.0
+        required: false
+      WindowsTargetPlatformMinVersion:
+        description: Windows Minimum Target Platform Version
+        type: string
+        default: 10.0.17763.0
+        required: false
+jobs:
+  build-test-windows:
+    runs-on: windows-2022
+    steps:
+    - name: Support longpaths
+      run: git config --system core.longpaths true
+    - name: Checkout Repo
+      uses: actions/checkout@v4.2.2
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: BabylonReactNative
+        path: Embedding/ReactNative/artifact
+    - name: Install packaged sources
+      shell: pwsh
+      run: |
+        Copy-Item package-windows.json package.json -Force
+        Copy-Item package-lock-windows.json package-lock.json -Force
+        $package = Get-ChildItem ../../artifact/babylonjs-react-native-*.tgz -File | Select-Object -First 1
+        if (-not $package) {
+          throw "BabylonReactNative package artifact was not found."
+        }
+        npm ci
+        npm install --no-save --package-lock=false $package.FullName
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Generate Windows project
+      run: node generate-windows-test-app.mjs
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Build packaged Windows consumer
+      shell: pwsh
+      run: |
+        $solutionPath = (Resolve-Path Playground.sln).Path
+        $solutionDir = "$(Split-Path $solutionPath)\"
+        $solutionFileName = Split-Path $solutionPath -Leaf
+        $projectPath = (Resolve-Path ../node_modules/.generated/windows/UWP/ReactTestApp.vcxproj).Path
+        $reactNativeNuGetTargetsPath = (Resolve-Path ReactNativeNuGet.targets).Path
+        $buildProperties = @(
+          "/p:Platform=x64",
+          "/p:Configuration=Release",
+          "/p:SolutionPath=$solutionPath",
+          "/p:SolutionDir=$solutionDir",
+          "/p:SolutionFileName=$solutionFileName",
+          "/p:WindowsTargetPlatformVersion=${{ inputs.WindowsTargetPlatformVersion }}",
+          "/p:WindowsTargetPlatformMinVersion=${{ inputs.WindowsTargetPlatformMinVersion }}",
+          "/p:ForceImportAfterCppTargets=$reactNativeNuGetTargetsPath",
+          "/p:WindowsAppSDKVerifyTransitiveDependencies=false",
+          "/p:AppxBundle=Never",
+          "/p:AppxPackage=false",
+          "/p:UseBundle=false",
+          "/v:minimal"
+        )
+
+        function Build-Project([string]$path) {
+          [xml]$projectXml = Get-Content $path
+          $sourceItemImports = Select-Xml -Xml $projectXml -XPath "//*[local-name()='Import' and contains(@Project, 'Microsoft.ReactNative.Cxx.vcxitems')]"
+          if ($sourceItemImports) {
+            foreach ($sourceItemImport in $sourceItemImports) {
+              $sourceItemImport.Node.ParentNode.RemoveChild($sourceItemImport.Node) | Out-Null
+            }
+            $projectXml.Save($path)
+          }
+
+          $evaluatedProperties = MSBuild $path /p:UseExperimentalNuget=true /getProperty:UseExperimentalNuget,MSBuildProjectFullPath,LanguageStandard /getItem:ProjectReference,ClCompile @buildProperties | ConvertFrom-Json
+          if ($evaluatedProperties.Properties.UseExperimentalNuget -ne "true") {
+            throw "RNW NuGet mode was not enabled for $path."
+          }
+          $rnwSourceReference = $evaluatedProperties.Items.ProjectReference | Where-Object Identity -Like "*\react-native-windows\Microsoft.ReactNative\Microsoft.ReactNative.vcxproj"
+          if ($rnwSourceReference) {
+            throw "RNW source project reference was enabled for $path."
+          }
+          $rnwSourceCompile = $evaluatedProperties.Items.ClCompile | Where-Object Identity -Like "*\react-native-windows\Microsoft.ReactNative.Cxx\*"
+          if ($rnwSourceCompile) {
+            throw "RNW source compile items were enabled for $path."
+          }
+          if ($path -eq $projectPath -and $evaluatedProperties.Properties.LanguageStandard -ne "stdcpp20") {
+            throw "C++20 was not enabled for the generated Windows app."
+          }
+          $mainPageCompile = $evaluatedProperties.Items.ClCompile | Where-Object Identity -Like "*\react-native-test-app\windows\UWP\MainPage.cpp"
+          if ($path -eq $projectPath -and ($mainPageCompile.LanguageStandard -ne "stdcpp20" -or $mainPageCompile.AdditionalOptions -match "(^|\s)/await(\s|$)")) {
+            throw "The generated Windows app was not configured for standard C++20 coroutines."
+          }
+
+          MSBuild $path /p:UseExperimentalNuget=true /t:Restore /m /p:RestoreRecursive=false @buildProperties
+          if ($LASTEXITCODE -ne 0) {
+            throw "Restore failed for $path."
+          }
+
+          MSBuild $path /p:UseExperimentalNuget=true /m /p:BuildProjectReferences=false @buildProperties
+          if ($LASTEXITCODE -ne 0) {
+            throw "Build failed for $path."
+          }
+        }
+
+        [xml]$autolinkedProjects = Get-Content ../node_modules/.generated/windows/UWP/AutolinkedNativeModules.g.targets
+        $projectDirectory = Split-Path $projectPath
+        $projectReferences = Select-Xml -Xml $autolinkedProjects -XPath "//*[local-name()='ProjectReference']"
+        foreach ($projectReference in $projectReferences) {
+          $relativePath = $projectReference.Node.Include.Replace('$(ProjectDir)', '')
+          Build-Project (Resolve-Path (Join-Path $projectDirectory $relativePath)).Path
+        }
+
+        $mainPagePath = (Resolve-Path ../node_modules/react-native-test-app/windows/UWP/MainPage.cpp).Path
+        $mainPageContent = [System.IO.File]::ReadAllText($mainPagePath)
+        $onNavigatedToPattern = "(?s)IAsyncAction MainPage::OnNavigatedTo\(NavigationEventArgs const &e\)\s*\{.*?\}\s*(?=bool MainPage::LoadJSBundleFrom)"
+        if (-not [System.Text.RegularExpressions.Regex]::IsMatch($mainPageContent, $onNavigatedToPattern)) {
+          throw "The expected react-native-test-app OnNavigatedTo implementation was not found."
+        }
+        $onNavigatedToReplacement = @(
+          "IAsyncAction MainPage::OnNavigatedTo(NavigationEventArgs const &e)",
+          "{",
+          "    Base::OnNavigatedTo(e);",
+          "    LoadFromDevServer({}, {});",
+          "    co_return;",
+          "}",
+          ""
+        ) -join [System.Environment]::NewLine
+        $updatedMainPageContent = [System.Text.RegularExpressions.Regex]::Replace(
+          $mainPageContent,
+          $onNavigatedToPattern,
+          $onNavigatedToReplacement
+        )
+        [System.IO.File]::WriteAllText($mainPagePath, $updatedMainPageContent)
+
+        $buildProperties += @(
+          "/p:LanguageStandard=stdcpp20",
+          "/p:CppWinRTEnableLegacyCoroutines=false"
+        )
+        Build-Project $projectPath
+      working-directory: Embedding/ReactNative/Apps/Playground/windows
+    timeout-minutes: 90
+permissions:
+  contents: read

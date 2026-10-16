@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <CppWinRTSetMidlReferencesDependsOn>
+      $(CppWinRTSetMidlReferencesDependsOn);
+      UseReactNativeNuGetWinMD
+    </CppWinRTSetMidlReferencesDependsOn>
+    <MarkupCompilePass1DependsOn>
+      $(MarkupCompilePass1DependsOn);
+      UseReactNativeNuGetXamlReference
+    </MarkupCompilePass1DependsOn>
+  </PropertyGroup>
+
+  <Target Name="UseReactNativeNuGetWinMD" Condition="'$(UseExperimentalNuget)' == 'true'">
+    <PropertyGroup>
+      <_ReactNativeNuGetArchitecture Condition="'$(RnwNewArch)' != 'true'">-old</_ReactNativeNuGetArchitecture>
+      <_ReactNativeNuGetWinMD>$(NuGetPackageRoot)microsoft.reactnative\$(ReactNativeWindowsVersion)\lib\uap10.0$(_ReactNativeNuGetArchitecture)\Microsoft.ReactNative.winmd</_ReactNativeNuGetWinMD>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_ReactNativeNuGetWinMD)')" Text="Microsoft.ReactNative.winmd was not found in the restored Microsoft.ReactNative $(ReactNativeWindowsVersion) package." />
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)" Condition="'%(ReferencePath.Filename)%(ReferencePath.Extension)' == 'Microsoft.ReactNative.winmd'" />
+      <CppWinRTDirectWinMDReferences Remove="@(CppWinRTDirectWinMDReferences)" Condition="'%(CppWinRTDirectWinMDReferences.Filename)%(CppWinRTDirectWinMDReferences.Extension)' == 'Microsoft.ReactNative.winmd'" />
+      <CppWinRTStaticProjectWinMDReferences Remove="@(CppWinRTStaticProjectWinMDReferences)" Condition="'%(CppWinRTStaticProjectWinMDReferences.Filename)%(CppWinRTStaticProjectWinMDReferences.Extension)' == 'Microsoft.ReactNative.winmd'" />
+      <CppWinRTDynamicProjectWinMDReferences Remove="@(CppWinRTDynamicProjectWinMDReferences)" Condition="'%(CppWinRTDynamicProjectWinMDReferences.Filename)%(CppWinRTDynamicProjectWinMDReferences.Extension)' == 'Microsoft.ReactNative.winmd'" />
+      <CppWinRTDirectWinMDReferences Include="$(_ReactNativeNuGetWinMD)">
+        <IsSystemReference>false</IsSystemReference>
+        <ReferenceSourceTarget>ResolveAssemblyReference</ReferenceSourceTarget>
+        <WinMDPath>$(_ReactNativeNuGetWinMD)</WinMDPath>
+        <WinMDFile>true</WinMDFile>
+      </CppWinRTDirectWinMDReferences>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="UseReactNativeNuGetXamlReference"
+          Condition="'$(UseExperimentalNuget)' == 'true'">
+    <PropertyGroup>
+      <_ReactNativeNuGetArchitecture Condition="'$(RnwNewArch)' != 'true'">-old</_ReactNativeNuGetArchitecture>
+      <_ReactNativeNuGetWinMD>$(NuGetPackageRoot)microsoft.reactnative\$(ReactNativeWindowsVersion)\lib\uap10.0$(_ReactNativeNuGetArchitecture)\Microsoft.ReactNative.winmd</_ReactNativeNuGetWinMD>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_ReactNativeNuGetWinMD)')" Text="Microsoft.ReactNative.winmd was not found in the restored Microsoft.ReactNative $(ReactNativeWindowsVersion) package." />
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)" Condition="'%(ReferencePath.Filename)%(ReferencePath.Extension)' == 'Microsoft.ReactNative.winmd'" />
+      <WinMDReferenceToCompile Remove="@(WinMDReferenceToCompile)" Condition="'%(WinMDReferenceToCompile.Filename)%(WinMDReferenceToCompile.Extension)' == 'Microsoft.ReactNative.winmd'" />
+      <XamlReferencesToCompile Remove="@(XamlReferencesToCompile)" Condition="'%(XamlReferencesToCompile.Filename)%(XamlReferencesToCompile.Extension)' == 'Microsoft.ReactNative.winmd'" />
+      <ReferencePath Include="$(_ReactNativeNuGetWinMD)">
+        <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+        <WinMDFile>true</WinMDFile>
+      </ReferencePath>
+      <WinMDReferenceToCompile Include="$(_ReactNativeNuGetWinMD)">
+        <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+        <WinMDFile>true</WinMDFile>
+      </WinMDReferenceToCompile>
+      <XamlReferencesToCompile Include="$(_ReactNativeNuGetWinMD)" />
+    </ItemGroup>
+  </Target>
+
+</Project>
