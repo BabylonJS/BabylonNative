@@ -2909,6 +2909,12 @@ void main() {
             {
                 continue;
             }
+            // Shared sampler handles can occupy different stages in different programs.
+            const UniformInfo* uniformInfo = m_currentProgram->GetUniformInfo(bound.Handle);
+            if (uniformInfo == nullptr || uniformInfo->Stage != stage)
+            {
+                continue;
+            }
             encoder->setTexture(stage, bound.Handle, bound.Texture,
                 bound.FirstLayer, bound.NumLayers, 0, UINT8_MAX, bound.Flags, 0, bound.MaxLod);
         }

@@ -79,6 +79,7 @@ namespace Babylon
 
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1);
         const UniformInfo* GetUniformInfo(const std::string& name) const;
+        const UniformInfo* GetUniformInfo(bgfx::UniformHandle handle) const;
         bgfx::ProgramHandle Handle() const { return m_handle; }
         const std::map<uint16_t, UniformValue>& Uniforms() const { return m_uniforms; }
         const std::map<std::string, uint32_t>& VertexAttributeLocations() const { return m_vertexAttributeLocations; }

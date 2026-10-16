@@ -244,7 +244,12 @@ namespace Babylon
             return nullptr;
         }
 
-        const auto itUniformInfo = m_uniformInfos.find(itUniformIndex->second);
+        return GetUniformInfo(bgfx::UniformHandle{itUniformIndex->second});
+    }
+
+    const UniformInfo* Program::GetUniformInfo(bgfx::UniformHandle handle) const
+    {
+        const auto itUniformInfo = m_uniformInfos.find(handle.idx);
         if (itUniformInfo == m_uniformInfos.end())
         {
             return nullptr;
