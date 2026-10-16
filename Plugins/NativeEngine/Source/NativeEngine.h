@@ -258,9 +258,7 @@ namespace Babylon
         // WebGL resets the drawing buffer's depth and stencil at the start of every frame.
         PerFrameValue<bool> m_defaultFrameBufferNeedsReset;
 
-        // Last material texture binds on the frame encoder. bgfx drops encoder bindings when work
-        // moves to another view (clears, resolves, blits, compute dispatches); WebGL keeps them,
-        // so they are replayed.
+        // Cache texture changes until submission so each sampler uniform is written only once per draw.
         struct BoundTexture
         {
             bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
@@ -272,7 +270,7 @@ namespace Babylon
             float PointSampleHeight{};
         };
         std::map<uint8_t, BoundTexture> m_boundTextures{};
-        void RestoreBoundTextures(bgfx::Encoder* encoder);
+        void ApplyBoundTextures(bgfx::Encoder* encoder);
 
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};

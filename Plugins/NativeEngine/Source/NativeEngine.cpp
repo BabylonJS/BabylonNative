@@ -1529,7 +1529,6 @@ void main() {
         bgfx::TextureRegion sourceRegion{};
         sourceRegion.init(texture);
         encoder->blit(m_deviceContext.AcquireNewViewId(), destinationRegion, sourceRegion);
-        RestoreBoundTextures(encoder);
 
         // The read may complete after this call if it times out, so the continuation shares ownership of the pixels.
         struct Readback
@@ -2879,8 +2878,6 @@ void main() {
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
-        bgfx::Encoder* encoder = GetEncoder();
-
         BoundTexture bound{};
         bound.Handle = uniformInfo->Handle;
         bound.Texture = texture->Handle();
@@ -2890,33 +2887,22 @@ void main() {
         bound.MaxLod = texture->SamplerMaxLod();
         bound.PointSampleHeight = PointSampleHeight(*texture);
         m_boundTextures[uniformInfo->Stage] = bound;
-
-        encoder->setTexture(uniformInfo->Stage, bound.Handle, bound.Texture,
-            bound.FirstLayer, bound.NumLayers, 0, UINT8_MAX, bound.Flags, 0, bound.MaxLod);
     }
 
     void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)
     {
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
 
-        bgfx::Encoder* encoder = GetEncoder();
         m_boundTextures.erase(uniformInfo->Stage);
-        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, BGFX_INVALID_HANDLE);
     }
 
     void NativeEngine::DiscardAllTextures(NativeDataStream::Reader&)
     {
-        bgfx::Encoder* encoder = GetEncoder();
         m_boundTextures.clear();
-        encoder->discard(BGFX_DISCARD_BINDINGS);
     }
 
-    void NativeEngine::RestoreBoundTextures(bgfx::Encoder* encoder)
+    void NativeEngine::ApplyBoundTextures(bgfx::Encoder* encoder)
     {
-        if (encoder == nullptr)
-        {
-            return;
-        }
         for (const auto& [stage, bound] : m_boundTextures)
         {
             if (!bgfx::isValid(bound.Handle) || !bgfx::isValid(bound.Texture))
@@ -3577,7 +3563,6 @@ void main() {
         if (m_boundVertexArray != nullptr)
         {
             const bgfx::DynamicVertexBufferHandle repacked = RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount);
-            RestoreBoundTextures(encoder);
             if (fillMode == 5 || fillMode == 8)
             {
                 shouldDraw = m_boundVertexArray->SetExpandedIndexBuffer(
@@ -3652,7 +3637,6 @@ void main() {
             // GPU-written instance sources (transform feedback output) are repacked into bgfx i_data
             // slots by a compute dispatch, which clears the encoder's texture bindings.
             const bgfx::DynamicVertexBufferHandle repacked = RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount);
-            RestoreBoundTextures(encoder);
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, instanceDataLayout);
             if (fillMode == 5 || fillMode == 8)
             {
@@ -3718,8 +3702,6 @@ void main() {
         }
 
         GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask);
-        // FrameBuffer::Clear touches its view, discarding bgfx bindings. WebGL clears retain them.
-        RestoreBoundTextures(encoder);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -4092,7 +4074,7 @@ void main() {
         StorageBuffer& outputStorage = output->PromoteToGpuStorage();
 
         bgfx::Encoder* encoder = GetEncoder();
-        RestoreBoundTextures(encoder);
+        ApplyBoundTextures(encoder);
         for (const auto& [handle, value] : m_currentProgram->Uniforms())
         {
             encoder->setUniform({handle}, value.Data.data(), value.ElementLength);
@@ -4130,10 +4112,6 @@ void main() {
 
         const uint32_t groups = (count + Graphics::TRANSFORM_FEEDBACK_WORKGROUP_SIZE - 1) / Graphics::TRANSFORM_FEEDBACK_WORKGROUP_SIZE;
         GetBoundFrameBuffer().Compute(*encoder, m_currentProgram->Handle(), groups, 1, 1);
-
-        // The dispatch clears the encoder's bindings. Later dispatches and draws in this frame are
-        // ordered after it (see FrameBuffer::Compute), so no flush is needed for them to see the writes.
-        RestoreBoundTextures(encoder);
     }
 
     bgfx::DynamicVertexBufferHandle NativeEngine::RepackStorageInstances(VertexArray* vertexArray,
@@ -4285,8 +4263,8 @@ void main() {
 
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
-        // Discard everything except textures since we keep the state of everything else.
-        boundFrameBuffer.Submit(*encoder, programHandle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        ApplyBoundTextures(encoder);
+        boundFrameBuffer.Submit(*encoder, programHandle, BGFX_DISCARD_ALL);
     }
 
     Graphics::FrameBuffer& NativeEngine::GetBoundFrameBuffer()
@@ -4334,7 +4312,6 @@ void main() {
         }
 
         m_defaultFrameBuffer.Clear(*encoder, flags, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0, UINT8_MAX, true);
-        RestoreBoundTextures(encoder);
     }
 
     void NativeEngine::ScheduleRequestAnimationFrameCallbacks()
