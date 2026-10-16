@@ -233,7 +233,7 @@ npm pack
 
 Package content and the resulting `.tgz` are in `Package\Assembled`. The module's source `package.json` uses a development placeholder version; the [publish workflow](../../.github/workflows/brn-publish.yml) sets the package version from the release tag before publishing.
 
-Only the required `Core`, `Plugins`, `Polyfills`, `Dependencies`, and `Embedding` sources and root CMake/license files are packaged. `Embedding/ReactNative` is excluded to avoid recursively packaging this integration. Dependencies are bundled under `shared/BabylonNative/deps`; installed packages build without FetchContent downloads. Developer builds instead reference the monorepo root directly, seven levels above the module's `shared/BabylonNative` wrapper.
+Only the required `Core`, `Plugins`, `Polyfills`, `Dependencies`, and `Embedding` sources and root CMake/license files are packaged. `Embedding/ReactNative` is excluded to avoid recursively packaging this integration. Dependencies are bundled under `shared/BabylonNative/deps`; installed packages build without FetchContent downloads. Developer builds find the enclosing Babylon Native checkout, both from the source module and from Playground's local npm installation.
 
 ### Publishing
 

@@ -19,7 +19,16 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/Repo/CMakeLists.txt")
 
     set(BABYLON_NATIVE_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/Repo")
 else()
-    get_filename_component(BABYLON_NATIVE_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../../../.." ABSOLUTE)
+    set(BABYLON_NATIVE_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}")
+    while(NOT EXISTS "${BABYLON_NATIVE_SOURCE_DIR}/CMakeLists.txt"
+        OR NOT EXISTS "${BABYLON_NATIVE_SOURCE_DIR}/Core/Graphics/CMakeLists.txt"
+        OR NOT EXISTS "${BABYLON_NATIVE_SOURCE_DIR}/Dependencies/CMakeLists.txt")
+        get_filename_component(_parent "${BABYLON_NATIVE_SOURCE_DIR}" DIRECTORY)
+        if(_parent STREQUAL BABYLON_NATIVE_SOURCE_DIR)
+            message(FATAL_ERROR "Cannot locate the Babylon Native checkout. Installed npm packages must include shared/BabylonNative/Repo.")
+        endif()
+        set(BABYLON_NATIVE_SOURCE_DIR "${_parent}")
+    endwhile()
 endif()
 
 # Keep the binary layout identical for the podspec and MSBuild library paths.
