@@ -19,6 +19,9 @@
   "exclude": [
     "node_modules",
     "Build",
+    "**/_deps",
+    "shared/BabylonNative/Repo",
+    "shared/BabylonNative/deps",
     "submodules",
     "babel.config.js",
     "metro.config.js",
