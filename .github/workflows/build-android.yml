@@ -86,13 +86,7 @@ jobs:
           emulator-options: -no-snapshot -no-window -no-boot-anim -no-audio
           script: |
             chmod +x Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew
-            Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew \
-              -p Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android \
-              connectedAndroidTest \
-              -PabiFilters=x86_64 \
-              -PjsEngine=${{ inputs.js-engine }} \
-              -PndkVersion=${{ env.NDK_VERSION }} \
-              -PdependencySourceRoot="$GITHUB_WORKSPACE/Dependencies"
+            Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew -p Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android connectedAndroidTest -PabiFilters=x86_64 -PjsEngine=${{ inputs.js-engine }} -PndkVersion=${{ env.NDK_VERSION }} -PdependencySourceRoot="$GITHUB_WORKSPACE/Dependencies"
 
       - name: Upload JsRuntimeHost Android test results
         if: ${{ inputs.run-jsruntimehost-tests && !cancelled() }}
