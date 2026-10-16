@@ -8,26 +8,39 @@ schedules:
     - master
   always: true
 
+parameters:
+- name: androidEngines
+  type: object
+  default: [JavaScriptCore, V8, QuickJS]
+
 pool:
   vmImage: 'windows-latest'
 
 variables:
   CMAKE_VERSION: 3.30.3
+  # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
+  npm_config_fetch_retries: 5
 
+# Besides validating against the Babylon.js nightly (job Nightly), this pipeline runs the slow or
+# runner-scarce jobs that are not worth blocking every PR on: Hermes, sanitizer, and
+# macOS-hosted Android builds (other Ubuntu-hosted Android builds stay in GitHub PR CI).
 jobs:
 - job: Nightly
   displayName: Nightly
   dependsOn:
-  - Win32
+  - Win32_x64_Hermes_D3D11
+  - Win32_x64_D3D11_Sanitizers
   - MacOS_Sanitizers
   - Ubuntu_Clang_Hermes
   - Android_Ubuntu_Hermes
+  - ${{ each engine in parameters.androidEngines }}:
+    - Android_MacOS_${{ engine }}
   condition: and(succeeded(), not(containsValue(dependencies.*.result, 'SucceededWithIssues')))
   steps:
   - checkout: self
 
   - script: |
-      cmake -G "Visual Studio 17 2022" -B build -A x64 -D BX_CONFIG_DEBUG=ON -D BABYLON_DEBUG_TRACE=ON
+      cmake -G "Visual Studio 17 2022" -B build -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D BABYLON_DEBUG_TRACE=ON
     displayName: 'Generate solution'
 
   - script: |
@@ -119,40 +132,26 @@ jobs:
       PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests'
       ArtifactName: BabylonNativeNightlyUnitTests
 
-- job: Win32
-  displayName: Win32 Hermes and sanitizers
+- job: Win32_x64_Hermes_D3D11
+  displayName: Win32 x64 D3D11 Hermes
   timeoutInMinutes: 180
   pool:
     vmImage: 'windows-2022'
-  strategy:
-    matrix:
-      Win32_x64_Hermes_D3D11:
-        BUILD_NAME: Win32_x64_Hermes_D3D11
-        JS_ENGINE: Hermes
-        HERMES_FLAGS: '-D HERMES_ALLOW_BOOST_CONTEXT=0'
-        SANITIZERS: 'OFF'
-      Win32_x64_D3D11_Sanitizers:
-        BUILD_NAME: Win32_x64_D3D11_Sanitizers
-        JS_ENGINE: V8
-        HERMES_FLAGS: ''
-        SANITIZERS: 'ON'
-  variables:
-    npm_config_fetch_retries: '5'
   steps:
   - checkout: self
 
   - script: |
-      cmake -G "Visual Studio 17 2022" -B build/$(BUILD_NAME) -A x64 ^
-        -D NAPI_JAVASCRIPT_ENGINE=$(JS_ENGINE) $(HERMES_FLAGS) ^
+      cmake -G "Visual Studio 17 2022" -B build/Win32_x64_Hermes -A x64 ^
+        -D NAPI_JAVASCRIPT_ENGINE=Hermes -D HERMES_ALLOW_BOOST_CONTEXT=0 ^
         -D BX_CONFIG_DEBUG=ON ^
         -D GRAPHICS_API=D3D11 ^
         -D BABYLON_DEBUG_TRACE=ON ^
         -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
         -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
-        -D ENABLE_SANITIZERS=$(SANITIZERS)
+        -D ENABLE_SANITIZERS=OFF
     displayName: Generate solution
 
-  - script: cmake --build build/$(BUILD_NAME) --config RelWithDebInfo -- /m
+  - script: cmake --build build/Win32_x64_Hermes --config RelWithDebInfo -- /m
     displayName: Build
 
   - script: |
@@ -164,75 +163,19 @@ jobs:
     displayName: Enable crash dumps
 
   - powershell: |
-      $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-      $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
-      Write-Host "##vso[task.prependpath]$($msvc.FullName)\bin\Hostx64\x64"
-    condition: and(succeeded(), eq(variables['SANITIZERS'], 'ON'))
-    displayName: Add ASAN runtime DLLs to PATH
-
-  - powershell: |
       $instances = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -property instanceId
       foreach ($instance in $instances) {
         & reg.exe add "HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\$instance" /f /v Disabled /t REG_DWORD /d 1
       }
     displayName: Disable JIT debugger for script
 
-  - script: Playground.exe --headless app:///Scripts/validation_native.js
-    workingDirectory: 'build\$(BUILD_NAME)\Apps\Playground\RelWithDebInfo'
-    condition: and(succeeded(), eq(variables['JS_ENGINE'], 'V8'))
-    displayName: Validation Tests
-
   - script: UnitTests.exe
-    workingDirectory: 'build\$(BUILD_NAME)\Apps\UnitTests\RelWithDebInfo'
+    workingDirectory: 'build\Win32_x64_Hermes\Apps\UnitTests\RelWithDebInfo'
     displayName: Unit Tests
 
   - script: ModuleLoadTest.exe
-    workingDirectory: 'build\$(BUILD_NAME)\Apps\ModuleLoadTest\RelWithDebInfo'
-    condition: and(succeeded(), eq(variables['SANITIZERS'], 'OFF'))
+    workingDirectory: 'build\Win32_x64_Hermes\Apps\ModuleLoadTest\RelWithDebInfo'
     displayName: Module Load Test
-
-- job: MacOS_Sanitizers
-  displayName: macOS sanitizers
-  timeoutInMinutes: 30
-  pool:
-    vmImage: 'macOS-26'
-  variables:
-    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
-    ASAN_OPTIONS: abort_on_error=1
-    npm_config_fetch_retries: '5'
-  steps:
-  - checkout: self
-
-  - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
-    displayName: Select Xcode 26.4
-
-  - script: |
-      cmake -G Xcode -B build/macOS \
-        -D BABYLON_DEBUG_TRACE=ON \
-        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
-        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
-        -D ENABLE_SANITIZERS=ON \
-        -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
-    displayName: Generate macOS solution
-
-  - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
-    displayName: Build Playground macOS
-
-  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
-    displayName: Build UnitTests macOS
-
-  - script: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
-    displayName: Build ModuleLoadTest macOS
-
-  - script: sudo sysctl -w kern.corefile=%N.core.%P
-    displayName: Enable core dump
-
-  - script: |
-      set -e
-      ulimit -c unlimited
-      ./UnitTests
-    workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
-    displayName: Run UnitTests macOS
 
 - job: Ubuntu_Clang_Hermes
   displayName: Linux Clang Hermes
@@ -244,7 +187,6 @@ jobs:
     CXX: clang++
     UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
     ASAN_OPTIONS: abort_on_error=1
-    npm_config_fetch_retries: '5'
   steps:
   - checkout: self
 
@@ -296,7 +238,6 @@ jobs:
     vmImage: 'ubuntu-latest'
   variables:
     NDK_VERSION: '28.2.13676358'
-    npm_config_fetch_retries: '5'
   steps:
   - checkout: self
 
@@ -320,3 +261,121 @@ jobs:
     env:
       JAVA_HOME: $(JAVA_HOME_17_X64)
     displayName: Build Playground Hermes
+
+- job: Win32_x64_D3D11_Sanitizers
+  displayName: Win32 x64 D3D11 V8 Sanitizers
+  pool:
+    vmImage: 'windows-2022'
+  timeoutInMinutes: 180
+  steps:
+  - checkout: self
+
+  - script: |
+      cmake -G "Visual Studio 17 2022" -B build/Win32_x64_V8 -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=D3D11 -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON -D ENABLE_SANITIZERS=ON
+    displayName: 'Generate solution'
+
+  - script: |
+      cmake --build build/Win32_x64_V8 --config RelWithDebInfo -- /m
+    displayName: 'Build'
+
+  - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
+    displayName: 'Enable Crash Dump'
+
+  - powershell: |
+      $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+      $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+      $asanPath = "$($msvc.FullName)\bin\Hostx64\x64"
+      Write-Host "Adding ASAN runtime folder to PATH: $asanPath"
+      Write-Host "##vso[task.prependpath]$asanPath"
+    displayName: 'Add ASAN runtime DLLs to PATH'
+
+  - script: |
+      for /f %%i in ('vswhere -property instanceId') do (
+        reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
+      )
+    displayName: 'Disable JIT Debugger for Script'
+
+  - script: |
+      Playground app:///Scripts/validation_native.js
+    workingDirectory: 'build\Win32_x64_V8\Apps\Playground\RelWithDebInfo'
+    displayName: 'Validation Tests'
+
+  - script: |
+      UnitTests
+    workingDirectory: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
+    displayName: 'Unit Tests'
+
+- job: MacOS_Sanitizers
+  displayName: macOS Sanitizers
+  pool:
+    vmImage: 'macOS-26'
+  timeoutInMinutes: 60
+  variables:
+    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
+    ASAN_OPTIONS: abort_on_error=1
+  steps:
+  - checkout: self
+
+  - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+    displayName: 'Select Xcode 26.4'
+
+  - script: |
+      cmake -G Xcode -B build/macOS \
+        -D BABYLON_DEBUG_TRACE=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+        -D ENABLE_SANITIZERS=ON \
+        -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
+    displayName: 'Generate macOS solution'
+
+  - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
+    displayName: 'Build Playground macOS'
+
+  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
+    displayName: 'Build UnitTests macOS'
+
+  - script: sudo sysctl -w kern.corefile=%N.core.%P
+    displayName: 'Enable Core Dump'
+
+  - script: |
+      ulimit -c unlimited
+      ./UnitTests
+    workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
+    displayName: 'Run UnitTests macOS'
+
+# Android builds on macOS hosts, which are slower to get and duplicate the Ubuntu-hosted ones in the GitHub CI.
+- ${{ each engine in parameters.androidEngines }}:
+  - job: Android_MacOS_${{ engine }}
+    displayName: Android macOS ${{ engine }}
+    pool:
+      vmImage: 'macOS-26'
+    timeoutInMinutes: 60
+    variables:
+      NDK_VERSION: '28.2.13676358'
+    steps:
+    - checkout: self
+
+    - ${{ if eq(engine, 'Hermes') }}:
+      - script: command -v ninja >/dev/null 2>&1 || brew install ninja
+        displayName: 'Install Ninja (Hermes host-compiler bootstrap)'
+
+    - script: |
+        export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+        chmod +x gradlew
+        ./gradlew assembleRelease \
+          -PjsEngine=${{ engine }} \
+          -PARM64Only \
+          -PNDK_VERSION=$(NDK_VERSION) \
+          -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+          -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+          -PSANITIZERS=OFF
+      workingDirectory: Apps/Playground/Android
+      displayName: 'Build Playground ${{ engine }}'

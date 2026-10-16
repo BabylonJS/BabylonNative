@@ -29,6 +29,14 @@ standard child `FETCHCONTENT_SOURCE_DIR_*` overrides select local trees.
 See the [wrapper documentation](Dependencies/bgfx.cmake/README.md) for precedence,
 disconnected builds and Git-free source packaging.
 
+AndroidExtensions and CMakeExtensions are vendored with their history in
+`Dependencies/AndroidExtensions` and `Dependencies/CMakeExtensions`. The root
+`CMakeLists.txt` unconditionally sets `FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS`
+and `FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS` to these folders, so every declaration
+uses these copies, including those in fetched dependencies such as JsRuntimeHost.
+Source-tree packaging uses these tracked folders; no `_deps/*-src` copies are
+produced for these two dependencies.
+
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have
 separate build folders. For cross-platform development, we commonly use multiple

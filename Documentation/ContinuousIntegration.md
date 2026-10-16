@@ -3,6 +3,7 @@ The CI helps improve the quality of code for all platforms and avoid regression 
 Validation works by running the engine with a JS script that creates a scene. The rendering is captured and compared with a reference image.
 If the rendered and reference images are too different, the test fails, an error will raise in the CI (failed build) and rendered/error images are stored as an download artefact than can help debug.
 This is done for various platforms when a PR is opened, for nightly build and when a PR is merged in master branch.
+To keep PR feedback fast, the slow or runner-scarce jobs (Hermes builds, the Win32 and macOS sanitizer builds, and the macOS-hosted Android builds) run only in the Azure nightly pipeline (`nightly.yml` at the repo root, which can also be queued manually). Pushing a new commit to a PR cancels that PR's in-flight CI run.
 CI will also take care of code quality: Warnings are treated as error and will break the build. A PR can't be merged if the build fails.
 
 PR and master-push checks run through `.github/workflows/ci.yml`. Hermes builds
@@ -15,9 +16,9 @@ the Babylon.js preview download and publishes packaged binaries.
 
 The nightly pipeline publishes only the existing Win32 x64 `RelWithDebInfo`
 Playground and UnitTests packages, with their existing artifact names and contents.
-The `Nightly` job waits for every Hermes and sanitizer job, including both Win32
-matrix configurations, to complete successfully before starting. It publishes
-packages only after its own build and packaged validation/unit tests succeed.
+The `Nightly` job waits for every Hermes, sanitizer, and macOS-hosted Android job
+to complete successfully before starting. It publishes packages only after its
+own build and packaged validation/unit tests succeed.
 Failed, canceled, skipped, or partially successful prerequisite jobs prevent
 publication. Nightly runs do not upload screenshot or crash-dump artifacts;
 failed runs retain their pipeline logs.
