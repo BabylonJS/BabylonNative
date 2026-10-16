@@ -205,8 +205,7 @@ android {
                         "-DARCORE_LIBPATH=${extractedLibDir}/core-${arcoreVersion}.aar/jni",
                         "-DREACTNATIVE_DIR=${rootDir}/../node_modules/react-native/",
                         "-DBABYLON_NATIVE_PLUGIN_NATIVECAMERA=${BABYLON_NATIVE_PLUGIN_NATIVECAMERA ? '1' : '0'}",
-                        "-DBABYLON_NATIVE_PLUGIN_NATIVEXR=${BABYLON_NATIVE_PLUGIN_NATIVEXR ? '1' : '0'}",
-                        "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
+                        "-DBABYLON_NATIVE_PLUGIN_NATIVEXR=${BABYLON_NATIVE_PLUGIN_NATIVEXR ? '1' : '0'}"
             }
         }
     }
