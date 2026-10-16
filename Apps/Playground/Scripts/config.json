@@ -1188,6 +1188,7 @@
         {
             "title": "Shadow depth wrappers",
             "playgroundId": "#PNQRY1#73",
+            "replace": "engine.webGLVersion >= 2, BABYLON.CascadedShadowGenerator.IsSupported",
             "renderCount": 20,
             "referenceImage": "shadowDepthWrappers.png"
         },
