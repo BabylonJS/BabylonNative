@@ -828,13 +828,11 @@ namespace
             struct GLNVGpath* paths = &gl->paths[call->pathOffset];
             int i, npaths = call->pathCount;
 
-            // set bindpoint for solid loc
-            nvgRenderSetUniforms(gl, call->uniformOffset, 0, 0);
-
             for (i = 0; i < npaths; i++)
             {
                 if (2 < paths[i].fillCount)
                 {
+                    nvgRenderSetUniforms(gl, call->uniformOffset, 0, 0);
                     gl->encoder->setState(0);
                     gl->encoder->setStencil(0
                         | BGFX_STENCIL_TEST_ALWAYS

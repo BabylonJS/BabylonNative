@@ -2879,7 +2879,6 @@ void main() {
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
         BoundTexture bound{};
-        bound.Handle = uniformInfo->Handle;
         bound.Texture = texture->Handle();
         bound.Flags = texture->SamplerFlags();
         bound.FirstLayer = texture->ViewNumLayers() != 0 ? texture->ViewFirstLayer() : 0;
@@ -2903,19 +2902,16 @@ void main() {
 
     void NativeEngine::ApplyBoundTextures(bgfx::Encoder* encoder)
     {
-        for (const auto& [stage, bound] : m_boundTextures)
+        for (const auto& [stage, sampler] : m_currentProgram->SamplerUniforms())
         {
-            if (!bgfx::isValid(bound.Handle) || !bgfx::isValid(bound.Texture))
+            const auto texture = m_boundTextures.find(stage);
+            if (texture == m_boundTextures.end())
             {
+                encoder->setTexture(stage, sampler, BGFX_INVALID_HANDLE);
                 continue;
             }
-            // Shared sampler handles can occupy different stages in different programs.
-            const UniformInfo* uniformInfo = m_currentProgram->GetUniformInfo(bound.Handle);
-            if (uniformInfo == nullptr || uniformInfo->Stage != stage)
-            {
-                continue;
-            }
-            encoder->setTexture(stage, bound.Handle, bound.Texture,
+            const auto& bound = texture->second;
+            encoder->setTexture(stage, sampler, bound.Texture,
                 bound.FirstLayer, bound.NumLayers, 0, UINT8_MAX, bound.Flags, 0, bound.MaxLod);
         }
     }

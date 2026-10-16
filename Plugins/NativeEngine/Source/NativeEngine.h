@@ -261,7 +261,6 @@ namespace Babylon
         // Cache texture changes until submission so each sampler uniform is written only once per draw.
         struct BoundTexture
         {
-            bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
             bgfx::TextureHandle Texture{bgfx::kInvalidHandle};
             uint32_t Flags{};
             uint16_t FirstLayer{};

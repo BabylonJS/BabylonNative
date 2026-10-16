@@ -79,7 +79,6 @@ namespace Babylon
 
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1);
         const UniformInfo* GetUniformInfo(const std::string& name) const;
-        const UniformInfo* GetUniformInfo(bgfx::UniformHandle handle) const;
         bgfx::ProgramHandle Handle() const { return m_handle; }
         const std::map<uint16_t, UniformValue>& Uniforms() const { return m_uniforms; }
         const std::map<std::string, uint32_t>& VertexAttributeLocations() const { return m_vertexAttributeLocations; }
@@ -88,6 +87,7 @@ namespace Babylon
         // Resolved once at initialization because it is consulted on every draw.
         const UniformInfo* RenderTargetTransformUniform() const { return m_renderTargetTransformUniform; }
         const std::map<uint8_t, bgfx::UniformHandle>& SamplerStateUniforms() const { return m_samplerStateUniforms; }
+        const std::map<uint8_t, bgfx::UniformHandle>& SamplerUniforms() const { return m_samplerUniforms; }
 
         // Compiler-assigned i_data slot for each built-in attribute location.
         const std::map<uint32_t, uint32_t>& BuiltInInstanceDataSlots() const { return m_builtInInstanceDataSlots; }
@@ -102,6 +102,7 @@ namespace Babylon
         std::map<std::string, uint32_t> m_vertexAttributeLocations;
         const UniformInfo* m_renderTargetTransformUniform{nullptr};
         std::map<uint8_t, bgfx::UniformHandle> m_samplerStateUniforms;
+        std::map<uint8_t, bgfx::UniformHandle> m_samplerUniforms;
         std::map<uint32_t, uint32_t> m_builtInInstanceDataSlots;
         std::string m_vertexSource;
         std::string m_fragmentSource;
