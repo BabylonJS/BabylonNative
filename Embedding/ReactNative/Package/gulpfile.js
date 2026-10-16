@@ -265,6 +265,7 @@ const validateAssembled = async () => {
     'Repo/Dependencies/bgfx.cmake/cmake/babylon-native.cmake',
     'deps/bgfx.cmake-src/CMakeLists.txt',
     'deps/jsruntimehost-src/CMakeLists.txt',
+    'deps/ios-cmake-src/ios.toolchain.cmake',
   ]) {
     if (!fs.existsSync(path.join(TARGET_DIR, file))) {
       throw new Error(`Assembled Babylon Native sources are missing ${file}`);

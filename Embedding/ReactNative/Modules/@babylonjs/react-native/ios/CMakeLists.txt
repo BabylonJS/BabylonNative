@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.13.2)
 
 include(FetchContent)
 
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../shared/BabylonNative/deps/ios-cmake-src/ios.toolchain.cmake")
+    set(FETCHCONTENT_SOURCE_DIR_IOS-CMAKE "${CMAKE_CURRENT_LIST_DIR}/../shared/BabylonNative/deps/ios-cmake-src")
+endif()
+
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
