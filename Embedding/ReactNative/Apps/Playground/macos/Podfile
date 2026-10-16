@@ -1,0 +1,9 @@
+require_relative '../node_modules/react-native-test-app/macos/test_app'
+require_relative '../node_modules/react-native-permissions/scripts/setup'
+
+workspace 'Playground.xcworkspace'
+
+# react-native-permissions
+setup_permissions(['Camera'])
+
+use_test_app!
