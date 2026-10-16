@@ -119,6 +119,38 @@ jobs:
     displayName: 'Run packaged UnitTests'
 
   - task: PublishBuildArtifacts@1
+    displayName: Upload Errors images artifact
+    condition: failed()
+    inputs:
+      PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground\Errors'
+      ArtifactName: ErrorImages
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyPlayground\RelWithDebInfo'
+      contents: Playground.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage Playground Crash Dump"
+    condition: failed()
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests\RelWithDebInfo'
+      contents: UnitTests.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage UnitTests Crash Dump"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: "Crash Dumps"
+      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: "Publish Crash Dumps"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
     displayName: Upload Playground
     condition: succeeded()
     inputs:
@@ -176,6 +208,31 @@ jobs:
   - script: ModuleLoadTest.exe
     workingDirectory: 'build\Win32_x64_Hermes\Apps\ModuleLoadTest\RelWithDebInfo'
     displayName: Module Load Test
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_Hermes\Apps\Playground\RelWithDebInfo'
+      contents: Playground.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage Playground Crash Dump"
+    condition: failed()
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_Hermes\Apps\UnitTests\RelWithDebInfo'
+      contents: UnitTests.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage UnitTests Crash Dump"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      ArtifactName: Win32_x64_Hermes-D3D11-crash-dumps
+      PathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: "Publish Crash Dumps"
+    condition: failed()
 
 - job: Ubuntu_Clang_Hermes
   displayName: Linux Clang Hermes
@@ -312,6 +369,47 @@ jobs:
       UnitTests
     workingDirectory: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
     displayName: 'Unit Tests'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload Rendered Pictures
+    condition: succeededOrFailed()
+    inputs:
+      PathtoPublish: 'build\Win32_x64_V8\Apps\Playground\Results'
+      ArtifactName: Win32_x64_V8-sanitizer-rendered-pictures
+    continueOnError: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload Error Pictures
+    condition: failed()
+    inputs:
+      PathtoPublish: 'build\Win32_x64_V8\Apps\Playground\Errors'
+      ArtifactName: Win32_x64_V8-sanitizer-error-pictures
+    continueOnError: true
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_V8\Apps\Playground\RelWithDebInfo'
+      contents: Playground.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage Playground Crash Dump"
+    condition: failed()
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
+      contents: UnitTests.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage UnitTests Crash Dump"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: "Win32 Sanitizers Crash Dumps"
+      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: "Publish Crash Dumps"
+    condition: failed()
 
 - job: MacOS_Sanitizers
   displayName: macOS Sanitizers
