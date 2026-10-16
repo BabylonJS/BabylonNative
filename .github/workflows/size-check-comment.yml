@@ -1,0 +1,67 @@
+name: Binary Size Check Comment
+
+# Privileged companion to `Binary Size Check`. Triggered on the completion of
+# that build workflow (which runs in an unprivileged context for safety on
+# fork PRs). This workflow runs from the default branch with write access to
+# the target repo, downloads the size report artifact, and posts the sticky
+# PR comment.
+#
+# Pattern: https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+
+on:
+  workflow_run:
+    workflows: ["Binary Size Check"]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+  actions: read
+  contents: read
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Download size-check report artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: size-check-report
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: report
+
+      - name: Post or update sticky PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR=$(tr -d '[:space:]' < report/pr-number.txt)
+          if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
+            echo "PR number from artifact is not numeric: '$PR'"
+            exit 1
+          fi
+
+          BODY_FILE=report/body.md
+          MARKER='<!-- binary-size-check -->'
+
+          if ! grep -qF "$MARKER" "$BODY_FILE"; then
+            echo "Body file is missing the expected marker; refusing to post."
+            exit 1
+          fi
+
+          EXISTING=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            | jq -r --arg m "$MARKER" '.[] | select(.body | contains($m)) | .id' \
+            | head -n 1)
+
+          if [ -n "$EXISTING" ]; then
+            echo "Updating existing comment $EXISTING on PR #$PR"
+            gh api "repos/${REPO}/issues/comments/${EXISTING}" --method PATCH -F "body=@${BODY_FILE}" > /dev/null
+          else
+            echo "Creating new comment on PR #$PR"
+            gh api "repos/${REPO}/issues/${PR}/comments" --method POST -F "body=@${BODY_FILE}" > /dev/null
+          fi
+          echo "Done."
