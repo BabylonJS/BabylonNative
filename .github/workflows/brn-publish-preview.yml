@@ -1,0 +1,60 @@
+name: BRN Publish Package For Preview
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: NPM Release Version
+        required: true
+        type: string
+        default: 1.0.0
+      NPM_tag:
+        description: NPM Tag
+        required: true
+        type: string
+        default: preview
+jobs:
+  build-typescript:
+    uses: ./.github/workflows/brn-typescript.yml
+  package:
+    needs:
+    - build-typescript
+    uses: ./.github/workflows/brn-package.yml
+  publish:
+    runs-on: macos-15
+    needs:
+    - package
+    steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        registry-url: https://registry.npmjs.org
+    - name: Download Assembled Folder
+      uses: actions/download-artifact@v4
+      with:
+        name: Assembled
+        path: Embedding/ReactNative/Package/Assembled
+    - name: Diagnose NPM Registry Connectivity
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        echo "--- Node & NPM versions ---"
+        node --version
+        npm --version
+        echo "--- NPM config registry ---"
+        npm config get registry
+        echo "--- NPM ping ---"
+        npm ping
+        echo "--- NPM whoami ---"
+        npm whoami
+    - name: Version & Publish Package
+      run: |
+        npm version --no-git-tag-version "$RELEASE_VERSION"
+        npm publish --access public --tag "$NPM_TAG"
+      working-directory: Embedding/ReactNative/Package/Assembled
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        NPM_TAG: ${{ inputs.NPM_tag }}
+permissions:
+  contents: read

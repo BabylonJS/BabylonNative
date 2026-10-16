@@ -1,9 +1,11 @@
-[![](https://github.com/BabylonJS/BabylonReactNative/workflows/Publish%20Package/badge.svg)](https://github.com/BabylonJS/BabylonReactNative/actions?query=workflow%3A%22Publish+Package%22)
+[![](https://github.com/BabylonJS/BabylonNative/actions/workflows/brn-publish.yml/badge.svg)](https://github.com/BabylonJS/BabylonNative/actions/workflows/brn-publish.yml)
 [![npm version](https://badge.fury.io/js/%40babylonjs%2Freact-native.svg)](https://badge.fury.io/js/%40babylonjs%2Freact-native)
 
 # Babylon React Native
 
 Babylon React Native brings the power and flexibility of [Babylon.js](https://github.com/BabylonJS/Babylon.js) into a [React Native](https://github.com/facebook/react-native) environment via [Babylon Native](https://github.com/BabylonJS/BabylonNative).
+
+The React Native integration lives in `Embedding/ReactNative` in the Babylon Native monorepo. Development builds use the Babylon Native sources from the same checkout. Published npm packages include a self-contained, disconnected source tree.
 
 ## Current Status
 
@@ -33,7 +35,7 @@ The latest stable npm release is **[@babylonjs/react-native 2.0.7](https://www.n
 
 | Package version | Babylon.js peer dependency | React Native (Android / iOS) | React Native Windows |
 | --------------- | -------------------------- | ---------------------------- | -------------------- |
-| 2.0.7 / master  | >=9.0.0                    | 0.81.6                       | 0.81.35              |
+| 2.0.7           | >=9.0.0                    | 0.81.6                       | 0.81.35              |
 | 2.0.6           | >=9.0.0                    | 0.81.6                       | 0.81.35              |
 
 The React Native versions above are the resolved Playground lockfile baselines, not a guarantee of compatibility with every newer release. For 2.0.6 and 2.0.7, the Windows Playground locks React Native 0.81.6 with React Native Windows 0.81.35; 0.81.4 is only the lower bound of the manifest's `^0.81.4` React Native range. Windows support remains experimental; its npm version is pinned to match the published React Native Windows NuGet packages.
@@ -52,7 +54,7 @@ Note: Official support for React Native frameworks, like Expo, is not provided b
 
 This quick overview will help you get started developing in the Babylon React Native repository. Android development is possible on Windows, macOS, and Linux; iOS requires macOS, and Windows builds require Windows. The cross-platform commands below use [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) unless otherwise noted.
 
-If you are interested in making contributions, be sure to also review [CONTRIBUTING.md](CONTRIBUTING.md).
+If you are interested in making contributions, be sure to also review [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ## Using BabylonReactNative
 
@@ -65,8 +67,8 @@ The following section will describe how to build locally a package and how to de
 Step 1 for all development environments and targets is to clone the repo. Use a git-enabled terminal to follow the steps below.
 
 ```powershell
-git clone https://github.com/BabylonJS/BabylonReactNative
-cd BabylonReactNative
+git clone https://github.com/BabylonJS/BabylonNative
+cd BabylonNative\Embedding\ReactNative
 ```
 
 From a fresh checkout, run the developer setup script:
@@ -79,7 +81,7 @@ node setup_dev.js
 This will also automatically do the following to prepare your repo for development:
 
 - Install the build tools, Playground dependencies, and module dependencies
-- Download the Babylon Native commit pinned in `Package/gulpfile.js` and use CMake to assemble its dependency sources (no git submodule setup is required)
+- Use the Babylon Native sources in the same checkout, with normal CMake FetchContent dependency resolution (no source download or git submodule setup is required)
 - Compile the TypeScript module and copy the generated files back into the local module
 - [macOS only] Run CMake to generate the iOS Xcode project for Babylon React Native
 
@@ -159,7 +161,7 @@ Adjust `JAVA_HOME` for your distribution and architecture.
 
 #### Universal Windows Platform (UWP)
 
-Windows support is experimental and currently uses a UWP consumer with the legacy renderer, Hermes, and React Native Windows NuGet packages. From the repository root, prepare the Windows-specific Playground manifests **before** running developer setup:
+Windows support is experimental and currently uses a UWP consumer with the legacy renderer, Hermes, and React Native Windows NuGet packages. From `Embedding\ReactNative`, prepare the Windows-specific Playground manifests **before** running developer setup:
 
 ```powershell
 Copy-Item Apps\Playground\package-windows.json Apps\Playground\package.json -Force
@@ -174,7 +176,7 @@ These copies change tracked files locally; keep the Windows manifests and lockfi
 
 Project generation enables autolinking and NuGet mode. The module's MSBuild project now generates and builds its embedded Babylon Native sources with CMake and reuses the app's C++/WinRT projections; there is no `gulp buildUWP` task.
 
-Use the [Windows source-build workflow](.github/workflows/windows.yml) as the reference for the current x64 Release build, including `UseExperimentalNuget=true`, `ReactNativeNuGet.targets`, and the generated test-app C++20 settings. The [packaged-consumer workflow](.github/workflows/test_windows.yml) checks the same integration using the npm tarball.
+Use the [Windows source-build workflow](../../.github/workflows/brn-windows.yml) as the reference for the current x64 Release build, including `UseExperimentalNuget=true`, `ReactNativeNuGet.targets`, and the generated test-app C++20 settings. The [packaged-consumer workflow](../../.github/workflows/brn-test-windows.yml) checks the same integration using the npm tarball.
 
 ### **Testing in the Playground App** ###
 
@@ -196,13 +198,13 @@ When making local changes, the following manual test steps should be performed w
 
 ### **Building the NPM Package**
 
-Every change for a Pull Request will trigger the build of the NPM package. The artifact is named `BabylonReactNative` and can be found in the Artifact section of the corresponding GitHub Action.
+Pull requests touching `Embedding/ReactNative/**` or the BRN workflows trigger native builds and packaged-consumer builds. The artifact is named `BabylonReactNative` and can be found in the Artifact section of the corresponding GitHub Action. The Azure nightly pipeline also builds and tests the integration.
 
 > :warning: The zip contains a Tarball Gzipped `.tgz` that is automatically decompressed on macOS. When installing that directory ( `npm install /path/to/unzipped/untarred/package` ) npm creates symlinks that are not supported by the build system. Installing the .tgz instead of its decompressed version works correctly.
 
 To get a `.tgz` that can be shared or published, follow these steps:
 
-From a fresh checkout, install the packaging tools:
+From `Embedding\ReactNative` in a fresh checkout, install the packaging tools:
 
 ```powershell
 cd Package
@@ -220,7 +222,7 @@ Remove-Item Env:\BABYLON_NO_CMAKE_POSTINSTALL
 
 In a macOS/Linux shell, use `export BABYLON_NO_CMAKE_POSTINSTALL=1` and `unset BABYLON_NO_CMAKE_POSTINSTALL` instead of the PowerShell environment commands.
 
-Download and assemble the Babylon Native source tree, copy the package files, compile TypeScript, and validate the assembled contents:
+Copy the required Babylon Native sources from this checkout, assemble dependency sources with CMake, compile TypeScript, and validate the package contents:
 
 ```powershell
 cd ..\..\..\Package
@@ -229,7 +231,15 @@ cd Assembled
 npm pack
 ```
 
-Package content and the resulting `.tgz` are in `Package\Assembled`. The module's source `package.json` uses a development placeholder version; the [publish workflow](.github/workflows/publish.yml) sets the package version from the release tag before publishing.
+Package content and the resulting `.tgz` are in `Package\Assembled`. The module's source `package.json` uses a development placeholder version; the [publish workflow](../../.github/workflows/brn-publish.yml) sets the package version from the release tag before publishing.
+
+Only the required `Core`, `Plugins`, `Polyfills`, `Dependencies`, and `Embedding` sources and root CMake/license files are packaged. `Embedding/ReactNative` is excluded to avoid recursively packaging this integration. Dependencies are bundled under `shared/BabylonNative/deps`; installed packages build without FetchContent downloads. Developer builds instead reference the monorepo root directly, seven levels above the module's `shared/BabylonNative` wrapper.
+
+### Publishing
+
+Publish a GitHub release tagged `react-native/vX.Y.Z` in BabylonNative to publish npm version `X.Y.Z`. Other release tags do not publish React Native. The repository must have an `NPM_TOKEN` secret with permission to publish `@babylonjs/react-native`. The [preview workflow](../../.github/workflows/brn-publish-preview.yml) accepts an explicit version and npm dist-tag.
+
+The unconditional BRN job in the main CI workflow is temporary for migration validation and must be removed before merge; the path-filtered BRN workflow and nightly pipeline remain. npm trusted publishing, the future of the old BabylonReactNative repository, and migration to `Babylon::Embedding` are separate follow-up decisions.
 
 The npm README is copied from `Modules\@babylonjs\react-native\README.md` by `copyCommonFiles` in `Package\gulpfile.js`. Update that file for package usage changes; npm receives the updated README when a new package version is published.
 

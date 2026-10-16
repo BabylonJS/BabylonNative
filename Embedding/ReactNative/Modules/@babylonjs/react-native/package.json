@@ -10,8 +10,8 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/babylonjs/BabylonReactNative.git",
-        "baseUrl": "https://github.com/babylonjs/BabylonReactNative"
+        "url": "git+https://github.com/BabylonJS/BabylonNative.git",
+        "directory": "Embedding/ReactNative/Modules/@babylonjs/react-native"
     },
     "keywords": [
         "react-native"
@@ -20,9 +20,10 @@
         "name": "Your Name",
         "email": "yourname@email.com"
     },
-    "homepage": "https://github.com/BabylonJS/BabylonReactNative#readme",
+    "homepage": "https://github.com/BabylonJS/BabylonNative/tree/master/Embedding/ReactNative#readme",
+    "bugs": "https://github.com/BabylonJS/BabylonNative/issues",
     "license": "MIT",
-    "licenseFilename": "LICENSE",
+    "licenseFilename": "LICENSE.md",
     "readmeFilename": "README.md",
     "dependencies": {
         "base-64": "^0.1.0",

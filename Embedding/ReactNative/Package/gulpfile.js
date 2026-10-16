@@ -6,8 +6,6 @@ const shelljs = require('shelljs');
 const glob = require('glob');
 const chalk = require('chalk');
 
-const unzipper = require('unzipper');
-
 function exec(command, workingDirectory = '.', logCommand = true) {
   if (logCommand) {
     log(command);
@@ -77,24 +75,31 @@ const buildAndroid = async () => {
 
 const copyCommonFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/README.md')
-    .pipe(gulp.src('../NOTICE.html'))
+    .pipe(gulp.src('../LICENSE'))
+    .pipe(gulp.src('../../../LICENSE.md'))
+    .pipe(gulp.src('../../../NOTICE.md'))
     .pipe(gulp.src(`../Modules/@babylonjs/react-native/react-native-babylon.podspec`))
     .pipe(gulp.src(`../Modules/@babylonjs/react-native/postinstall.js`))
     .pipe(gulp.dest('Assembled'));
 };
 
 const copyAndroidARCoreFiles = () => {
-    return gulp.src('../Modules/@babylonjs/react-native/shared/BabylonNative/Repo/Dependencies/xr/Source/ARCore/Include/*')
+    return gulp.src('../../../Dependencies/xr/Source/ARCore/Include/*')
       .pipe(gulp.dest(`Assembled/android/include`));
 };
 
 const copyiOSARKitFiles = () => {
-    return gulp.src('../Modules/@babylonjs/react-native/shared/BabylonNative/Repo/Dependencies/xr/Source/ARKit/Include/*')
+    return gulp.src('../../../Dependencies/xr/Source/ARKit/Include/*')
       .pipe(gulp.dest(`Assembled/ios/include`));
 };
 
 const copySharedFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/shared/**')
+  return gulp.src([
+    '../Modules/@babylonjs/react-native/shared/**',
+    '!../Modules/@babylonjs/react-native/shared/BabylonNative/Repo{,/**}',
+    '!../Modules/@babylonjs/react-native/shared/BabylonNative/deps{,/**}',
+    '!../Modules/@babylonjs/react-native/shared/BabylonNative/tempBuild{,/**}',
+  ])
     .pipe(gulp.dest('Assembled/shared'));
 };
 
@@ -129,7 +134,7 @@ const copyWindowsFiles = () => {
 };
 
 const copyJSFilesToModule = () => {
-  return gulp.src('Assembled/**')
+  return gulp.src(['Assembled/*.js', 'Assembled/*.js.map', 'Assembled/*.d.ts'])
     .pipe(gulp.dest(`../Modules/@babylonjs/react-native`));
 }
 
@@ -166,7 +171,9 @@ const validateAssembled = async () => {
     'Assembled/ReactNativeEngine.js',
     'Assembled/ReactNativeEngine.js.map',
     'Assembled/README.md',
-    'Assembled/NOTICE.html',
+    'Assembled/LICENSE.md',
+    'Assembled/LICENSE',
+    'Assembled/NOTICE.md',
     'Assembled/shared',
     'Assembled/shared/BabylonNative.h',
     'Assembled/shared/BabylonNative.cpp',
@@ -247,78 +254,49 @@ const validateAssembled = async () => {
     'Assembled/windows/BabylonReactNative/ARM64',
   ]});
   checkDirectory(actual, expected, `Assembled`);
+  for (const file of [
+    'Repo/CMakeLists.txt',
+    'Repo/Core/CMakeLists.txt',
+    'Repo/Plugins/CMakeLists.txt',
+    'Repo/Polyfills/CMakeLists.txt',
+    'Repo/Embedding/CMakeLists.txt',
+    'Repo/Dependencies/CMakeExtensions/CMakeLists.txt',
+    'Repo/Dependencies/AndroidExtensions/CMakeLists.txt',
+    'Repo/Dependencies/bgfx.cmake/cmake/babylon-native.cmake',
+    'deps/bgfx.cmake-src/CMakeLists.txt',
+    'deps/jsruntimehost-src/CMakeLists.txt',
+  ]) {
+    if (!fs.existsSync(path.join(TARGET_DIR, file))) {
+      throw new Error(`Assembled Babylon Native sources are missing ${file}`);
+    }
+  }
+  for (const directory of ['Apps', 'Documentation', 'Install', '.github', 'Embedding/ReactNative']) {
+    if (fs.existsSync(path.join(REPO_OUTPUT_DIR, directory))) {
+      throw new Error(`Unexpected directory in assembled Babylon Native sources: ${directory}`);
+    }
+  }
 }
 
 const createPackage = async () => {
   exec('npm pack', 'Assembled');
 };
 
-const COMMIT_ID = 'f4d9efbeeabcfec24105373b99e54fe147669fc1';
-const ZIP_URL = `https://github.com/BabylonJS/BabylonNative/archive/${COMMIT_ID}.zip`;
-const TARGET_DIR = path.resolve(__dirname, '../Modules/@babylonjs/react-native/shared/BabylonNative');
-const ZIP_PATH = path.join(TARGET_DIR, `${COMMIT_ID}.zip`);
-const UNZIP_FOLDER = path.join(TARGET_DIR, `Repo`);
-const CMAKE_LISTS_PATH = path.join(TARGET_DIR, 'CMakeLists.txt');
-const TEMP_BUILD_DIR = path.join(TARGET_DIR, 'tempBuild');
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+const TARGET_DIR = path.join(__dirname, 'Assembled/shared/BabylonNative');
+const REPO_OUTPUT_DIR = path.join(TARGET_DIR, 'Repo');
+const TEMP_BUILD_DIR = path.join(__dirname, 'tempBuild');
 const DEPS_OUTPUT_DIR = path.join(TARGET_DIR, 'deps');
 
-async function downloadZip(url, dest) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to download zip: ${res.status} ${res.statusText}`);
-  }
-
-  const fileStream = fs.createWriteStream(dest);
-  const reader = res.body.getReader();
-
-  return new Promise((resolve, reject) => {
-    function pump() {
-      reader.read().then(({ done, value }) => {
-        if (done) {
-          fileStream.end();
-          resolve();
-          return;
-        }
-        fileStream.write(Buffer.from(value), pump);
-      }).catch(reject);
-    }
-
-    fileStream.on('error', reject);
-    pump();
-  });
-}
-
-async function unzipFile(zipPath, destDir) {
-  const dir = await unzipper.Open.file(zipPath);
-  await dir.extract({ path: destDir });
-}
-
-function deleteFile(filePath) {
-  return fs.promises.unlink(filePath);
-}
-
-async function renameWithRetries(source, destination) {
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    try {
-      await fs.promises.rename(source, destination);
-      return;
-    } catch (error) {
-      if (error.code !== 'EPERM' || attempt === 5) {
-        throw error;
-      }
-      await new Promise(resolve => setTimeout(resolve, attempt * 250));
-    }
-  }
-}
-
-function runCMake(buildDir) {
-  let cmakeCommand = `cmake -S . -B ../tempBuild -DBABYLON_NATIVE_BUILD_SOURCETREE=ON -DBABYLON_NATIVE_BUILD_APPS=OFF -DBABYLON_NATIVE_PLUGIN_TESTUTILS=OFF -DBABYLON_NATIVE_INSTALL=OFF`;
-
-  exec(cmakeCommand, buildDir);
+function runCMake() {
+  exec(`cmake -S "${REPO_ROOT}" -B "${TEMP_BUILD_DIR}" -DBABYLON_NATIVE_BUILD_SOURCETREE=ON -DBABYLON_NATIVE_BUILD_APPS=OFF -DBABYLON_NATIVE_PLUGIN_TESTUTILS=OFF -DBABYLON_NATIVE_INSTALL=OFF`, REPO_ROOT);
 }
 
 function deleteFolderRecursive(folderPath, excludeSubFolders = []) {
   if (!fs.existsSync(folderPath)) return;
+  if (excludeSubFolders.length === 0) {
+    fs.rmSync(folderPath, { recursive: true });
+    return;
+  }
 
   const entries = fs.readdirSync(folderPath, { withFileTypes: true });
 
@@ -341,19 +319,17 @@ function deleteFolderRecursive(folderPath, excludeSubFolders = []) {
     const remaining = fs.readdirSync(folderPath);
     if (remaining.length === 0) {
       fs.rmdirSync(folderPath);
-      console.log(`Deleted folder: ${folderPath}`);
     }
   }
 }
 
 function copyRecursiveExcludingGit(src, dest) {
-  if (!fs.existsSync(src)) return;
-
   fs.mkdirSync(dest, { recursive: true });
   const entries = fs.readdirSync(src, { withFileTypes: true });
 
   for (const entry of entries) {
-    if (entry.name === '.git') continue;
+    if (entry.name === '.git' || entry.name === 'node_modules') continue;
+    if (path.join(src, entry.name) === path.join(REPO_ROOT, 'Embedding', 'ReactNative')) continue;
 
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
@@ -368,8 +344,6 @@ function copyRecursiveExcludingGit(src, dest) {
 
 function copyDepsFolders() {
   const depsSrc = path.join(TEMP_BUILD_DIR, '_deps');
-  if (!fs.existsSync(depsSrc)) return;
-
   fs.mkdirSync(DEPS_OUTPUT_DIR, { recursive: true });
 
   const entries = fs.readdirSync(depsSrc, { withFileTypes: true });
@@ -386,21 +360,18 @@ function copyDepsFolders() {
 const buildBabylonNativeSourceTree = async () => {
   fs.mkdirSync(TARGET_DIR, { recursive: true });
 
-  console.log(`Downloading BabylonNative commit ${COMMIT_ID}...`);
-  await downloadZip(ZIP_URL, ZIP_PATH);
-
-  console.log('Unzipping...');
-  await unzipFile(ZIP_PATH, TARGET_DIR);
-
-  console.log('Deleting ZIP...');
-  await deleteFile(ZIP_PATH);
-
-  console.log('Renaming BabylonNative-xxx folder ...');
-  await renameWithRetries(`${TARGET_DIR}/BabylonNative-${COMMIT_ID}`, `${TARGET_DIR}/Repo`);
-  console.log('Rename complete!');
-
   console.log('Running CMake...');
-  await runCMake(UNZIP_FOLDER);
+  runCMake();
+
+  fs.rmSync(REPO_OUTPUT_DIR, { recursive: true, force: true });
+  fs.rmSync(DEPS_OUTPUT_DIR, { recursive: true, force: true });
+  fs.mkdirSync(REPO_OUTPUT_DIR, { recursive: true });
+  for (const directory of ['Core', 'Plugins', 'Polyfills', 'Dependencies', 'Embedding']) {
+    copyRecursiveExcludingGit(path.join(REPO_ROOT, directory), path.join(REPO_OUTPUT_DIR, directory));
+  }
+  for (const file of ['CMakeLists.txt', 'LICENSE.md', 'NOTICE.md']) {
+    fs.copyFileSync(path.join(REPO_ROOT, file), path.join(REPO_OUTPUT_DIR, file));
+  }
 
   console.log('Copying *-src folders to deps/ (excluding .git)...');
   copyDepsFolders();
@@ -408,17 +379,11 @@ const buildBabylonNativeSourceTree = async () => {
   console.log('Deleting tempBuild folder...');
   deleteFolderRecursive(TEMP_BUILD_DIR);
 
-  console.log('Remove unnecessary sources');
-  deleteFolderRecursive(`${UNZIP_FOLDER}/.github`);
-  deleteFolderRecursive(`${UNZIP_FOLDER}/Apps`);
-  deleteFolderRecursive(`${UNZIP_FOLDER}/Documentation`);
-  deleteFolderRecursive(`${UNZIP_FOLDER}/Install`);
-
   // dependencies cleanup
   // Keep only the 3rdparty folders that bgfx/src actually includes:
   // renderdoc (debug_renderdoc.cpp), metal-cpp (renderer_mtl.h), h264 (video.h),
-  // plus stb/sdf.
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/3rdparty`, ['renderdoc', 'stb', 'sdf', 'metal-cpp', 'h264']);
+  // plus stb/sdf and the graphics API headers.
+  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/3rdparty`, ['renderdoc', 'stb', 'sdf', 'metal-cpp', 'h264', 'khronos', 'directx-headers']);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/examples`,['common']);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/bindings`);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/docs`);
@@ -439,7 +404,7 @@ const buildBabylonNativeSourceTree = async () => {
 const copyFiles = gulp.series(copyCommonFiles, copySharedFiles, copyAndroidARCoreFiles , copyiOSARKitFiles, copyIOSFiles, copyAndroidFiles, copyWindowsFiles);
 const buildAssembled = gulp.series(buildBabylonNativeSourceTree, copyFiles, buildTypeScript, validateAssembled);
 const buildIOS = gulp.series(buildIphoneOS); // buildIphoneSimulator is optional. Build is slower and it should not make more checks
-const setupDev = gulp.series(buildAssembled, copyJSFilesToModule);
+const setupDev = gulp.series(copyFiles, buildTypeScript, copyJSFilesToModule);
 
 exports.buildAssembled = buildAssembled;
 exports.buildTypeScript = buildTypeScript;

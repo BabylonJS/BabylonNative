@@ -1,0 +1,39 @@
+name: BRN Assemble
+on: workflow_call
+jobs:
+  Build:
+    runs-on: macos-15
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4.2.2
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: NPM Install
+      run: npm install
+      working-directory: Embedding/ReactNative/Package
+    - name: NPM Install (Modules)
+      run: |
+        export BABYLON_NO_CMAKE_POSTINSTALL=1
+        npm install
+      working-directory: Embedding/ReactNative/Modules/@babylonjs/react-native
+    - name: NPM Install (Playground)
+      run: |
+        export BABYLON_NO_CMAKE_POSTINSTALL=1
+        npm install
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Playground unit tests
+      run: npm test -- --runInBand
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Gulp
+      run: npx gulp buildAssembled
+      working-directory: Embedding/ReactNative/Package
+    - name: Upload Assembled Folder
+      uses: actions/upload-artifact@v4
+      with:
+        name: Assembled
+        path: Embedding/ReactNative/Package/Assembled
+    timeout-minutes: 90
+permissions:
+  contents: read
