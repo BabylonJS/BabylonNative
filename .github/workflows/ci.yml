@@ -11,7 +11,7 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Sanitizer builds and the macOS-hosted Android builds are slow or scarce and run daily in the Azure pipeline nightly.yml.
+# Hermes, sanitizer, and macOS-hosted Android builds run in the Azure pipeline nightly.yml.
 jobs:
   runtime-source-changes:
     runs-on: ubuntu-latest
@@ -96,12 +96,6 @@ jobs:
       platform: x64
       napi-type: V8
 
-  Win32_x64_Hermes_D3D11:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: Hermes
-
   Win32_x64_QuickJS_D3D11:
     uses: ./.github/workflows/build-win32.yml
     with:
@@ -142,13 +136,6 @@ jobs:
       cc: clang
       cxx: clang++
       js-engine: JavaScriptCore
-
-  Ubuntu_Clang_Hermes:
-    uses: ./.github/workflows/build-linux.yml
-    with:
-      cc: clang
-      cxx: clang++
-      js-engine: Hermes
 
   Ubuntu_GCC_JSC:
     uses: ./.github/workflows/build-linux.yml
@@ -191,14 +178,6 @@ jobs:
       js-engine: V8
       run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.changed == 'true' }}
 
-  Android_Ubuntu_Hermes:
-    needs: runtime-source-changes
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: ubuntu-latest
-      js-engine: Hermes
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.changed == 'true' }}
-
   Android_Ubuntu_QuickJS:
     needs: runtime-source-changes
     uses: ./.github/workflows/build-android.yml
@@ -235,7 +214,6 @@ jobs:
       - Win32_x64_D3D11
       - Win32_x64_JSI_D3D11
       - Win32_x64_V8_D3D11
-      - Win32_x64_Hermes_D3D11
       - Win32_x64_QuickJS_D3D11
       - Win32_x64_D3D12
       - Win32_x64_D3D11_PrecompiledShaderTest
@@ -243,13 +221,11 @@ jobs:
       - UWP_arm64
       - UWP_arm64_JSI
       - Ubuntu_Clang_JSC
-      - Ubuntu_Clang_Hermes
       - Ubuntu_GCC_JSC
       - Ubuntu_Clang_QuickJS
       - Ubuntu_Clang_Vulkan
       - Android_Ubuntu_JSC
       - Android_Ubuntu_V8
-      - Android_Ubuntu_Hermes
       - Android_Ubuntu_QuickJS
       - iOS_Installation
       - Linux_Installation

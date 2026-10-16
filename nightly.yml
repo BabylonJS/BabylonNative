@@ -22,11 +22,20 @@ variables:
   npm_config_fetch_retries: 5
 
 # Besides validating against the Babylon.js nightly (job Nightly), this pipeline runs the slow or
-# runner-scarce jobs that are not worth blocking every PR on: the sanitizer builds and the
-# macOS-hosted Android builds (the Ubuntu-hosted Android builds stay in the GitHub PR CI).
+# runner-scarce jobs that are not worth blocking every PR on: Hermes, sanitizer, and
+# macOS-hosted Android builds (other Ubuntu-hosted Android builds stay in GitHub PR CI).
 jobs:
 - job: Nightly
   displayName: Nightly
+  dependsOn:
+  - Win32_x64_Hermes_D3D11
+  - Win32_x64_D3D11_Sanitizers
+  - MacOS_Sanitizers
+  - Ubuntu_Clang_Hermes
+  - Android_Ubuntu_Hermes
+  - ${{ each engine in parameters.androidEngines }}:
+    - Android_MacOS_${{ engine }}
+  condition: and(succeeded(), not(containsValue(dependencies.*.result, 'SucceededWithIssues')))
   steps:
   - checkout: self
 
@@ -154,6 +163,161 @@ jobs:
     inputs:
       PathtoPublish: '$(Agent.TempDirectory)\BabylonNativeNightlyUnitTests'
       ArtifactName: BabylonNativeNightlyUnitTests
+
+- job: Win32_x64_Hermes_D3D11
+  displayName: Win32 x64 D3D11 Hermes
+  timeoutInMinutes: 180
+  pool:
+    vmImage: 'windows-2022'
+  steps:
+  - checkout: self
+
+  - script: |
+      cmake -G "Visual Studio 17 2022" -B build/Win32_x64_Hermes -A x64 ^
+        -D NAPI_JAVASCRIPT_ENGINE=Hermes -D HERMES_ALLOW_BOOST_CONTEXT=0 ^
+        -D BX_CONFIG_DEBUG=ON ^
+        -D GRAPHICS_API=D3D11 ^
+        -D BABYLON_DEBUG_TRACE=ON ^
+        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
+        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
+        -D ENABLE_SANITIZERS=OFF
+    displayName: Generate solution
+
+  - script: cmake --build build/Win32_x64_Hermes --config RelWithDebInfo -- /m
+    displayName: Build
+
+  - script: |
+      for %%e in (Playground UnitTests) do (
+        reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\%%e.exe" /v DumpType /t REG_DWORD /d 2 /f
+        reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\%%e.exe" /v DumpCount /t REG_DWORD /d 1 /f
+        reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\%%e.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)\Dumps" /f
+      )
+    displayName: Enable crash dumps
+
+  - powershell: |
+      $instances = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -property instanceId
+      foreach ($instance in $instances) {
+        & reg.exe add "HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\$instance" /f /v Disabled /t REG_DWORD /d 1
+      }
+    displayName: Disable JIT debugger for script
+
+  - script: UnitTests.exe
+    workingDirectory: 'build\Win32_x64_Hermes\Apps\UnitTests\RelWithDebInfo'
+    displayName: Unit Tests
+
+  - script: ModuleLoadTest.exe
+    workingDirectory: 'build\Win32_x64_Hermes\Apps\ModuleLoadTest\RelWithDebInfo'
+    displayName: Module Load Test
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_Hermes\Apps\Playground\RelWithDebInfo'
+      contents: Playground.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage Playground Crash Dump"
+    condition: failed()
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_Hermes\Apps\UnitTests\RelWithDebInfo'
+      contents: UnitTests.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage UnitTests Crash Dump"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      ArtifactName: Win32_x64_Hermes-D3D11-crash-dumps
+      PathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: "Publish Crash Dumps"
+    condition: failed()
+
+- job: Ubuntu_Clang_Hermes
+  displayName: Linux Clang Hermes
+  timeoutInMinutes: 60
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+    CC: clang
+    CXX: clang++
+    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
+    ASAN_OPTIONS: abort_on_error=1
+  steps:
+  - checkout: self
+
+  - script: |
+      set -e
+      sudo apt-get update
+      sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build xvfb xauth
+    displayName: Install packages
+
+  - script: |
+      set -e
+      cmake -G Ninja -B build/Linux \
+        -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
+        -D NAPI_JAVASCRIPT_ENGINE=Hermes \
+        -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+        -D BX_CONFIG_DEBUG=ON \
+        -D GRAPHICS_API=OpenGL \
+        -D OpenGL_GL_PREFERENCE=GLVND \
+        -D BABYLON_DEBUG_TRACE=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+        -D HERMES_UNICODE_LITE=ON \
+        -D HERMES_ALLOW_BOOST_CONTEXT=0 \
+        -D ENABLE_SANITIZERS=OFF .
+      ninja -C build/Linux
+    displayName: Build X11
+
+  - script: sudo sysctl -w kernel.core_pattern=core.%p
+    displayName: Enable core dump
+
+  - script: |
+      set -e
+      ulimit -c unlimited
+      xvfb-run ./UnitTests
+    workingDirectory: build/Linux/Apps/UnitTests
+    displayName: Unit Tests
+
+  - script: |
+      set -e
+      ulimit -c unlimited
+      xvfb-run --auto-servernum ./ModuleLoadTest
+    workingDirectory: build/Linux/Apps/ModuleLoadTest
+    displayName: Module Load Test
+
+- job: Android_Ubuntu_Hermes
+  displayName: Android Hermes
+  timeoutInMinutes: 45
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+    NDK_VERSION: '28.2.13676358'
+  steps:
+  - checkout: self
+
+  - script: |
+      set -e
+      sudo apt-get update
+      sudo apt-get install -y ninja-build
+    displayName: Install Ninja for Hermes host compiler bootstrap
+
+  - script: |
+      set -e
+      chmod +x gradlew
+      ./gradlew assembleRelease \
+        -PjsEngine=Hermes \
+        -PARM64Only \
+        -PNDK_VERSION=$(NDK_VERSION) \
+        -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+        -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+        -PSANITIZERS=OFF
+    workingDirectory: Apps/Playground/Android
+    env:
+      JAVA_HOME: $(JAVA_HOME_17_X64)
+    displayName: Build Playground Hermes
 
 - job: Win32_x64_D3D11_Sanitizers
   displayName: Win32 x64 D3D11 V8 Sanitizers
