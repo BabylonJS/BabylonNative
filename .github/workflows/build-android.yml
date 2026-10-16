@@ -9,6 +9,10 @@ on:
       js-engine:
         required: true
         type: string
+      run-jsruntimehost-tests:
+        required: false
+        type: boolean
+        default: false
 
 env:
   NDK_VERSION: '28.2.13676358'
@@ -19,10 +23,23 @@ env:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ inputs.run-jsruntimehost-tests && 120 || 45 }}
     steps:
       - uses: actions/checkout@v5
 
+      # The additional x86_64 Hermes test build compiles host tools and a
+      # second Android ABI after Playground; free runner space before either.
+      - name: Free disk space for Hermes simulator tests
+        if: inputs.run-jsruntimehost-tests && inputs.js-engine == 'Hermes'
+        uses: jlumbroso/free-disk-space@36e9a5af4eddb91fc11aec4c6f6f79b3cc0cb523
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - uses: actions/setup-java@v5
         with:
@@ -50,3 +67,31 @@ jobs:
             -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
             -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             -PSANITIZERS=OFF
+
+      - name: Install JsRuntimeHost test NDK
+        if: inputs.run-jsruntimehost-tests
+        run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${{ env.NDK_VERSION }}"
+
+      - name: Enable Android emulator acceleration
+        if: inputs.run-jsruntimehost-tests
+        run: sudo chmod 0666 /dev/kvm
+
+      - name: Run JsRuntimeHost Android emulator tests
+        if: inputs.run-jsruntimehost-tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-snapshot -no-window -no-boot-anim -no-audio
+          script: |
+            chmod +x Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew
+            Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew -p Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android connectedAndroidTest -PabiFilters=x86_64 -PjsEngine=${{ inputs.js-engine }} -PndkVersion=${{ env.NDK_VERSION }} -PdependencySourceRoot="$GITHUB_WORKSPACE/Dependencies"
+
+      - name: Upload JsRuntimeHost Android test results
+        if: ${{ inputs.run-jsruntimehost-tests && !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: JsRuntimeHost-Android-${{ inputs.js-engine }}
+          path: Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/app/build/outputs/androidTest-results/connected
+          if-no-files-found: ignore

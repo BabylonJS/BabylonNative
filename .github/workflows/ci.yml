@@ -13,6 +13,40 @@ concurrency:
 
 # Hermes, sanitizer, and macOS-hosted Android builds run in the Azure pipeline nightly.yml.
 jobs:
+  runtime-source-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check JsRuntimeHost and UrlLib changes
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ]; then
+            base=$(git merge-base "$PR_BASE" "$PR_HEAD")
+            head=$PR_HEAD
+          else
+            base=$PUSH_BEFORE
+            head=$PUSH_AFTER
+          fi
+          if git diff --quiet "$base" "$head" -- Dependencies/JsRuntimeHost Dependencies/UrlLib; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            result=$?
+            if [ "$result" -ne 1 ]; then
+              exit "$result"
+            fi
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
     uses: ./.github/workflows/build-macos.yml
@@ -29,11 +63,13 @@ jobs:
 
   # ── Apple: iOS ───────────────────────────────────────────────
   iOS_Xcode26:
+    needs: runtime-source-changes
     uses: ./.github/workflows/build-ios.yml
     with:
       deployment-target: "26.0"
       xcode-version: "26.4"
       runs-on: macos-26
+      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.changed == 'true' }}
 
   MacOS_QuickJS:
     uses: ./.github/workflows/build-macos.yml
@@ -127,22 +163,28 @@ jobs:
 
   # ── Android ───────────────────────────────────────────────────
   Android_Ubuntu_JSC:
+    needs: runtime-source-changes
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: JavaScriptCore
+      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.changed == 'true' }}
 
   Android_Ubuntu_V8:
+    needs: runtime-source-changes
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: V8
+      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.changed == 'true' }}
 
   Android_Ubuntu_QuickJS:
+    needs: runtime-source-changes
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: QuickJS
+      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.changed == 'true' }}
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
@@ -164,6 +206,7 @@ jobs:
     # Run after unsuccessful dependencies too, so they cannot skip the required check.
     if: always()
     needs:
+      - runtime-source-changes
       - MacOS
       - MacOS_Ninja
       - iOS_Xcode26

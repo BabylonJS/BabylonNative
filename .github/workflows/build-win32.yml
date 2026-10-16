@@ -143,6 +143,13 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo
           UnitTests
 
+      - name: Run JsRuntimeHost UnitTests
+        if: ${{ inputs.graphics-api != 'D3D12' }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\_deps\jsruntimehost-build\Tests\UnitTests\RelWithDebInfo
+          JsRuntimeHostUnitTests
+
       - name: Module Load Test
         if: ${{ !inputs.enable-sanitizers }}
         shell: cmd
@@ -155,6 +162,7 @@ jobs:
         shell: powershell
         run: |
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+          Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\_deps\jsruntimehost-build\Tests\UnitTests\RelWithDebInfo\JsRuntimeHostUnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Upload Crash Dumps
         if: failure()

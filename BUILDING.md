@@ -29,13 +29,27 @@ standard child `FETCHCONTENT_SOURCE_DIR_*` overrides select local trees.
 See the [wrapper documentation](Dependencies/bgfx.cmake/README.md) for precedence,
 disconnected builds and Git-free source packaging.
 
-AndroidExtensions and CMakeExtensions are vendored with their history in
-`Dependencies/AndroidExtensions` and `Dependencies/CMakeExtensions`. The root
-`CMakeLists.txt` unconditionally sets `FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS`
-and `FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS` to these folders, so every declaration
-uses these copies, including those in fetched dependencies such as JsRuntimeHost.
-Source-tree packaging uses these tracked folders; no `_deps/*-src` copies are
-produced for these two dependencies.
+AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are vendored with
+their history under `Dependencies/`. The root `CMakeLists.txt` unconditionally
+sets `FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS`,
+`FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS`, `FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST`
+and `FETCHCONTENT_SOURCE_DIR_URLLIB` to these tracked folders. They take
+precedence over stale parent or cache source-package paths, including for
+JsRuntimeHost's transitive UrlLib declaration. Source-tree packaging uses the
+tracked folders; no `_deps/*-src` copies are produced for these four
+dependencies. Build directories under `_deps` remain in use.
+
+When apps are enabled on desktop platforms, the embedded JsRuntimeHost tests
+build as `JsRuntimeHostUnitTests` beside Babylon Native's `UnitTests`; standalone
+JsRuntimeHost builds keep their original `UnitTests` target. Windows, macOS and
+Linux CI jobs that run Babylon Native unit tests also run the runtime suite,
+using their existing JavaScript engine and graphics backend. Neither suite
+is enabled for install-only/no-app builds or mobile/Windows Store targets.
+When either `Dependencies/JsRuntimeHost` or `Dependencies/UrlLib` changes,
+the existing Android and iOS CI builds additionally run the upstream
+JsRuntimeHost test harness on an Android emulator and an iOS simulator,
+respectively, with in-tree sibling dependency source overrides. Mobile
+Babylon Native builds still do not enable the desktop unit-test targets.
 
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have

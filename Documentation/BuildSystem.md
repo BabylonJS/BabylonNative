@@ -4,8 +4,12 @@
 design. Most external sources are now acquired with CMake FetchContent.
 `Dependencies/bgfx.cmake` is tracked wrapper code with imported file history;
 its bgfx, bx and bimg sources remain pinned external FetchContent acquisitions.
-AndroidExtensions and CMakeExtensions are vendored with imported history under
-`Dependencies/`; root source overrides make all FetchContent declarations use them.
+AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are vendored with
+imported history under `Dependencies/`; unconditional root source overrides
+make all FetchContent declarations, including transitive UrlLib declarations,
+use these tracked copies rather than stale parent/cache paths. Source-package
+`_deps/*-src` copies are no longer produced for these four dependencies;
+their `_deps` binary folders may still be used.
 Targets and lateral dependency relationships are unchanged. The legacy
 `_deps/bgfx.cmake-src` source-package and `_deps/bgfx.cmake-build` binary layouts
 remain supported; see [Building](../BUILDING.md) for local/offline overrides.

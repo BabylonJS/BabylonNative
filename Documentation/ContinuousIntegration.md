@@ -13,6 +13,9 @@ pipeline, scheduled at 23:00 UTC Monday through Friday, or when that pipeline is
 run manually. These configurations retain their CI build and test settings and
 use the repository's npm dependency versions; the existing `Nightly` job separately tests
 the Babylon.js preview download and publishes packaged binaries.
+The Windows and Linux Hermes nightly jobs run `JsRuntimeHostUnitTests` alongside
+BabylonNative's `UnitTests`, as the corresponding desktop PR jobs did before
+Hermes moved to nightly.
 
 The nightly pipeline's downloadable binaries remain the existing Win32 x64
 `RelWithDebInfo` Playground and UnitTests packages, with their existing artifact

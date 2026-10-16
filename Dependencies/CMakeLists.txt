@@ -253,6 +253,14 @@ endif()
 # --------------------------------------------------
 # JsRuntimeHost
 # --------------------------------------------------
+if(BABYLON_NATIVE_BUILD_APPS AND
+   ((WIN32 AND NOT WINDOWS_STORE) OR
+    (APPLE AND NOT IOS AND NOT VISIONOS) OR
+    (UNIX AND NOT ANDROID AND NOT APPLE)))
+    set(JSRUNTIMEHOST_TESTS ON)
+else()
+    set(JSRUNTIMEHOST_TESTS OFF)
+endif()
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
 
 # Two JsRuntimeHost targets cannot be built without RTTI:
