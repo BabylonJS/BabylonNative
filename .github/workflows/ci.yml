@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [master]
 
+# Supersede in-flight PR runs when a new commit is pushed. Pushes to master are never cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Sanitizer builds and the macOS-hosted Android builds are slow or scarce and run daily in the Azure pipeline nightly.yml.
 jobs:
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
@@ -21,20 +27,7 @@ jobs:
       xcode-version: "26.4"
       runs-on: macos-26
 
-  MacOS_Sanitizers:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      enable-sanitizers: true
-      xcode-version: "26.4"
-      runs-on: macos-26
-
-  # ── Apple: Xcode 26 ──────────────────────────────────────────
-  MacOS_Xcode26:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      xcode-version: "26.4"
-      runs-on: macos-26
-
+  # ── Apple: iOS ───────────────────────────────────────────────
   iOS_Xcode26:
     uses: ./.github/workflows/build-ios.yml
     with:
@@ -79,13 +72,6 @@ jobs:
       platform: x64
       napi-type: QuickJS
       graphics-api: D3D11
-
-  Win32_x64_D3D11_Sanitizers:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: V8
-      enable-sanitizers: true
 
   Win32_x64_D3D12:
     uses: ./.github/workflows/build-win32.yml
@@ -177,24 +163,6 @@ jobs:
       runs-on: ubuntu-latest
       js-engine: QuickJS
 
-  Android_MacOS_JSC:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: JavaScriptCore
-
-  Android_MacOS_V8:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: V8
-
-  Android_MacOS_QuickJS:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: QuickJS
-
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
     uses: ./.github/workflows/test-install-ios.yml
@@ -209,3 +177,50 @@ jobs:
 
   Win32_Installation:
     uses: ./.github/workflows/test-install-win32.yml
+
+  ci-complete:
+    name: ci-complete
+    # Run after unsuccessful dependencies too, so they cannot skip the required check.
+    if: always()
+    needs:
+      - MacOS
+      - MacOS_Ninja
+      - iOS_Xcode26
+      - MacOS_QuickJS
+      - Win32_x64_D3D11
+      - Win32_x64_JSI_D3D11
+      - Win32_x64_V8_D3D11
+      - Win32_x64_Hermes_D3D11
+      - Win32_x64_QuickJS_D3D11
+      - Win32_x64_D3D12
+      - Win32_x64_D3D11_PrecompiledShaderTest
+      - UWP_x64
+      - UWP_arm64
+      - UWP_arm64_JSI
+      - Ubuntu_Clang_JSC
+      - Ubuntu_Clang_Hermes
+      - Ubuntu_GCC_JSC
+      - Ubuntu_Clang_QuickJS
+      - Ubuntu_Clang_Vulkan
+      - Android_Ubuntu_JSC
+      - Android_Ubuntu_V8
+      - Android_Ubuntu_Hermes
+      - Android_Ubuntu_QuickJS
+      - iOS_Installation
+      - Linux_Installation
+      - MacOS_Installation
+      - Win32_Installation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::CI did not succeed (results: $RESULTS)"
+              exit 1
+            fi
+          done

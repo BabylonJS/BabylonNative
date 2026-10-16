@@ -41,14 +41,32 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build
+          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build ccache
           if [ "${{ inputs.graphics-api }}" = "Vulkan" ]; then
             sudo apt-get install -y libvulkan-dev mesa-vulkan-drivers xvfb xauth
           fi
 
+      # Compiler cache. PRs only restore (they can read the cache saved by master pushes);
+      # only master pushes save, so PR runs don't churn the repository cache quota.
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}-${{ inputs.enable-sanitizers }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}-${{ inputs.enable-sanitizers }}-
+
       - name: Build X11
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_MAXSIZE: 500M
         run: |
+          ccache --zero-stats
           cmake -G Ninja -B build/Linux \
+            -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
             -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -61,6 +79,14 @@ jobs:
             ${{ inputs.js-engine == 'Hermes' && '-D HERMES_UNICODE_LITE=ON -D HERMES_ALLOW_BOOST_CONTEXT=0' || '' }} \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux
+          ccache --show-stats
+
+      - name: Save ccache
+        if: ${{ github.event_name == 'push' && success() }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ steps.ccache.outputs.cache-primary-key }}
 
       - name: Enable Core Dump
         run: sudo sysctl -w kernel.core_pattern=core.%p
