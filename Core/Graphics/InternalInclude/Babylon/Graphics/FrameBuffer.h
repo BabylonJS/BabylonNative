@@ -39,17 +39,25 @@ namespace Babylon::Graphics
 
         // Floating-point colors preserve HDR values through bgfx's clear palette.
         // More than 16 distinct palette colors in a physical frame throws rather than overwriting pending clears.
-        void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX);
+        // ignoreScissor clears the whole framebuffer regardless of the current scissor.
+        void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX, bool ignoreScissor = false);
         void SetViewPort(float x, float y, float width, float height);
         void SetScissor(float x, float y, float width, float height);
         void Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
+        void Compute(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint32_t numX, uint32_t numY, uint32_t numZ);
         void SetStencil(bgfx::Encoder& encoder, uint32_t stencilState);
         void Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX = 0, uint16_t srcY = 0, uint16_t width = UINT16_MAX, uint16_t height = UINT16_MAX);
 
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
 
+        // Rendered upside down so rows are stored in GL order on a top-left-origin backend.
+        // Viewport and scissor rects are mirrored to match (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME).
+        void SetGLRowOrder(bool glRowOrder) { m_glRowOrder = glRowOrder; }
+        bool GLRowOrder() const { return m_glRowOrder; }
+
     private:
+        Rect ToTargetRect(const Rect& rect, float height) const;
         Rect GetBgfxScissor(float x, float y, float width, float height) const;
         void SetBgfxViewPortAndScissor(const Rect& viewPort, const Rect& scissor);
 
@@ -80,6 +88,7 @@ namespace Babylon::Graphics
         Rect m_desiredScissor{};
 
         bool m_disposed{};
+        bool m_glRowOrder{};
         int8_t m_depthStencilAttachmentIndex{-1};
     };
 }

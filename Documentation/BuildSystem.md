@@ -1,5 +1,15 @@
 # The Babylon Native Build System
 
+**Current layout:** the discussion below describes the original submodule-based
+design. Most external sources are now acquired with CMake FetchContent.
+`Dependencies/bgfx.cmake` is tracked wrapper code with imported file history;
+its bgfx, bx and bimg sources remain pinned external FetchContent acquisitions.
+AndroidExtensions and CMakeExtensions are vendored with imported history under
+`Dependencies/`; root source overrides make all FetchContent declarations use them.
+Targets and lateral dependency relationships are unchanged. The legacy
+`_deps/bgfx.cmake-src` source-package and `_deps/bgfx.cmake-build` binary layouts
+remain supported; see [Building](../BUILDING.md) for local/offline overrides.
+
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be
 as extensible and flexible as possible: it should be easy to add new features/extensions,

@@ -1,10 +1,12 @@
 #pragma once
 
+#include "PrimitiveModeExpansion.h"
+
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <gsl/gsl>
 
-#include <optional>
+#include <map>
 
 namespace Babylon
 {
@@ -30,14 +32,33 @@ namespace Babylon
         void Build();
 
         void Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
+        bool SetExpanded(bgfx::Encoder* encoder, PrimitiveModeExpansion::Mode mode, uint32_t firstIndex, uint32_t numIndices);
 
     private:
+        struct ExpansionKey final
+        {
+            PrimitiveModeExpansion::Mode Mode{};
+            uint32_t FirstIndex{};
+            uint32_t IndexCount{};
+
+            bool operator<(const ExpansionKey& other) const;
+        };
+
+        struct ExpandedBuffer final
+        {
+            bgfx::IndexBufferHandle Handle{bgfx::kInvalidHandle};
+            uint32_t IndexCount{};
+        };
+
+        void DestroyExpandedBuffers();
+
         Graphics::DeviceContext& m_deviceContext;
         const uintptr_t m_deviceID{};
 
-        std::vector<uint8_t> m_bytes{};
+        PrimitiveModeExpansion::IndexData m_data;
         const uint16_t m_flags{};
         const bool m_dynamic{};
+        std::map<ExpansionKey, ExpandedBuffer> m_expandedBuffers{};
 
         union
         {

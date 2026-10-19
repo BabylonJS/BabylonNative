@@ -37,24 +37,123 @@ using namespace std::chrono_literals;
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
 #if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11) || defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+#include <Babylon/Graphics/BgfxShaderInfo.h>
+#include <string_view>
+
 namespace
 {
-    gsl::span<const uint8_t> ReadUniformFreeShader(const std::vector<uint8_t>& bytes)
+    gsl::span<const uint8_t> ReadFixtureShaderCode(const std::vector<uint8_t>& bytes)
     {
-        // These fixtures have no uniforms: bgfx v12's code length starts at byte 22.
-        constexpr size_t codeOffset = 26;
-        if (bytes.size() < codeOffset || bytes[3] != 12 || bytes[20] != 0 || bytes[21] != 0)
+        // bgfx v13: 20-byte header, uint16 uniform count, uniform table, then uint32 code length.
+        // The only uniform these fixtures may carry is the injected render target transform.
+        constexpr size_t countOffset = 20;
+        if (bytes.size() < countOffset + 2 || bytes[3] != 13)
         {
-            throw std::runtime_error{"Expected a uniform-free bgfx v12 shader"};
+            throw std::runtime_error{"Expected a bgfx v13 shader"};
+        }
+        uint16_t uniformCount{};
+        std::memcpy(&uniformCount, bytes.data() + countOffset, sizeof(uniformCount));
+        size_t offset = countOffset + sizeof(uniformCount);
+        for (uint16_t uniform = 0; uniform < uniformCount; ++uniform)
+        {
+            if (offset >= bytes.size())
+            {
+                throw std::runtime_error{"Invalid shader uniform table"};
+            }
+            const size_t nameSize = bytes[offset];
+            if (offset + 1 + nameSize > bytes.size() ||
+                std::string_view{reinterpret_cast<const char*>(bytes.data() + offset + 1), nameSize} != Babylon::Graphics::RENDER_TARGET_TRANSFORM_UNIFORM_NAME)
+            {
+                throw std::runtime_error{"Expected only the render target transform uniform"};
+            }
+            // name, type, count, register index, register count, texture component/dimension/format.
+            offset += 1 + nameSize + 1 + 1 + 2 + 2 + 1 + 1 + 2;
+        }
+        const size_t codeOffset = offset + sizeof(uint32_t);
+        if (bytes.size() < codeOffset)
+        {
+            throw std::runtime_error{"Invalid shader byte length"};
         }
         uint32_t codeSize{};
-        std::memcpy(&codeSize, bytes.data() + codeOffset - sizeof(codeSize), sizeof(codeSize));
+        std::memcpy(&codeSize, bytes.data() + offset, sizeof(codeSize));
         if (codeSize > bytes.size() - codeOffset)
         {
             throw std::runtime_error{"Invalid shader byte length"};
         }
         return {bytes.data() + codeOffset, codeSize};
     }
+}
+#endif
+
+#if defined(HAS_SHADER_COMPILER) && (defined(BABYLON_NATIVE_GRAPHICS_API_D3D11) || defined(BABYLON_NATIVE_GRAPHICS_API_D3D12))
+TEST(ShaderCompilation, SamplersReportStageAndDimension)
+{
+    // bgfx keys D3D sampler dimensions by regIndex and binds multisampled depth as
+    // multisampled unless the sampler at that stage reports a non-multisampled dimension.
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto shader = compiler.Compile(
+        "in vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        R"(
+            precision highp float;
+            uniform sampler2D first;
+            uniform samplerCube cube;
+            uniform sampler2D depth;
+            out vec4 color;
+            void main() {
+                color = texture(first, vec2(0.5)) + texture(cube, vec3(1.0)) + texture(depth, vec2(0.5));
+            }
+        )");
+
+    struct Sampler
+    {
+        uint16_t RegIndex;
+        uint8_t TexDimension;
+    };
+    std::map<std::string, Sampler> samplers;
+    const auto& bytes = shader.FragmentBytes;
+    ASSERT_GE(bytes.size(), 22u);
+    EXPECT_EQ(bytes[3], 13);
+    size_t offset = 20;
+    const auto read = [&](auto& value) {
+        ASSERT_LE(offset + sizeof(value), bytes.size());
+        std::memcpy(&value, bytes.data() + offset, sizeof(value));
+        offset += sizeof(value);
+    };
+    uint16_t count{};
+    read(count);
+    for (uint16_t i = 0; i < count; ++i)
+    {
+        uint8_t nameSize{};
+        read(nameSize);
+        ASSERT_LE(offset + nameSize, bytes.size());
+        const std::string name{reinterpret_cast<const char*>(bytes.data() + offset), nameSize};
+        offset += nameSize;
+        uint8_t type{}, num{}, texComponent{}, texDimension{};
+        uint16_t regIndex{}, regCount{}, texFormat{};
+        read(type);
+        read(num);
+        read(regIndex);
+        read(regCount);
+        read(texComponent);
+        read(texDimension);
+        read(texFormat);
+        if ((type & 0x20) != 0) // BGFX_UNIFORM_SAMPLERBIT
+        {
+            samplers[name] = {regIndex, texDimension};
+        }
+    }
+
+    ASSERT_EQ(samplers.size(), 3u);
+    for (const auto& [name, sampler] : samplers)
+    {
+        SCOPED_TRACE(name);
+        ASSERT_TRUE(shader.UniformStages.contains(name));
+        EXPECT_EQ(sampler.RegIndex, shader.UniformStages.at(name));
+    }
+    EXPECT_NE(shader.UniformStages.at("depth"), 0);
+    EXPECT_EQ(samplers.at("first").TexDimension, 0x02);
+    EXPECT_EQ(samplers.at("cube").TexDimension, 0x04);
+    EXPECT_EQ(samplers.at("depth").TexDimension, 0x02);
 }
 #endif
 
@@ -82,7 +181,7 @@ TEST(ShaderCompilation, InterfaceBlocksHaveMatchingD3D11Semantics)
         void main() { color = vec4(fragmentData.tint, 1.0); }
     )");
     const auto readSignature = [](const std::vector<uint8_t>& bytes, bool vertex) {
-        const auto code = ReadUniformFreeShader(bytes);
+        const auto code = ReadFixtureShaderCode(bytes);
         Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
         if (FAILED(D3DReflect(code.data(), code.size(), IID_PPV_ARGS(&reflection))))
         {
@@ -138,6 +237,90 @@ TEST(ShaderCompilation, NativeCompilerAcceptsExistingVec4UniformArray)
 
     EXPECT_FALSE(shader.VertexBytes.empty());
     EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+
+TEST(ShaderCompilation, UniformNamesDoNotCollideWithIntrinsicsOrBgfx)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    const auto shader = compiler.Compile(R"(#version 310 es
+        in vec2 position;
+        uniform mat4 u_view;
+        void main() { gl_Position = u_view * vec4(position, 0.0, 1.0); }
+    )", R"(#version 310 es
+        precision highp float;
+        #define SIZE_NAME textureSize
+        uniform vec2 SIZE_NAME;
+        uniform mat4 u_view;
+        uniform float bnUserUniform_textureSize;
+        uniform highp sampler2D inputSampler;
+        out vec4 color;
+        void main() {
+            color = vec4(SIZE_NAME / vec2(textureSize(inputSampler, 0)),
+                u_view[0][0] + bnUserUniform_textureSize, 1.0);
+        }
+    )");
+    ASSERT_EQ(shader.UniformNames.size(), 2u);
+    EXPECT_EQ(shader.UniformNames.at("bnUserUniform_textureSize1"), "textureSize");
+    EXPECT_EQ(shader.UniformNames.at("bnUserUniform_u_view"), "u_view");
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+
+TEST(ShaderCompilation, UniformNamesDoNotCollideWithRenderTargetTransform)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    const auto shader = compiler.Compile(R"(#version 310 es
+        in vec2 position;
+        uniform vec4 bnRenderTargetTransform;
+        void main() { gl_Position = vec4(position, 0.0, 1.0) * bnRenderTargetTransform; }
+    )", R"(#version 310 es
+        precision highp float;
+        uniform vec4 bnRenderTargetTransform;
+        out vec4 color;
+        void main() { color = vec4(gl_FragCoord.y) * bnRenderTargetTransform; }
+    )");
+    ASSERT_EQ(shader.UniformNames.size(), 1u);
+    EXPECT_EQ(shader.UniformNames.at("bnUserUniform_bnRenderTargetTransform"), "bnRenderTargetTransform");
+    EXPECT_FALSE(shader.VertexBytes.empty());
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
+TEST(ShaderCompilation, UnsupportedSamplerArrayReportsError)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    EXPECT_THROW(compiler.Compile(R"(
+        precision highp float;
+        in vec3 position;
+        void main() { gl_Position = vec4(position, 1.0); }
+    )", R"(
+        precision highp float;
+        uniform sampler2D sources[2];
+        out vec4 color;
+        void main() { color = texture(sources[0], vec2(0.5)) + texture(sources[1], vec2(0.5)); }
+    )"), std::runtime_error);
+}
+#endif
+
+TEST(ShaderCompilation, UnsignedShaderArgumentsAcceptIntegerConstants)
+{
+    Babylon::Plugins::ShaderCompiler compiler{};
+    EXPECT_NO_THROW(compiler.Compile(R"(
+        in vec2 position;
+        void main() { gl_Position = vec4(position, 0.0, 1.0); }
+    )", R"(
+        precision highp float;
+        precision highp int;
+        #define NUM_SAMPLES 4
+        out vec4 color;
+        float sampleValue(uint index, uint count) { return float(index) / float(count); }
+        void main() {
+            float sum = 0.0;
+            for (uint index = 0u; index < NUM_SAMPLES; ++index) {
+                sum += sampleValue(index, NUM_SAMPLES);
+            }
+            color = vec4(sum);
+        }
+    )"));
 }
 
 TEST(ShaderCompilation, SamplerCoordinatesAcceptConditionalExpressions)
@@ -450,7 +633,7 @@ namespace
 {
     spirv_cross::Compiler ReadVulkanShader(const std::vector<uint8_t>& bytes)
     {
-        const auto code = ReadUniformFreeShader(bytes);
+        const auto code = ReadFixtureShaderCode(bytes);
         if (code.size() % sizeof(uint32_t) != 0)
         {
             throw std::runtime_error{"Invalid SPIR-V byte length"};

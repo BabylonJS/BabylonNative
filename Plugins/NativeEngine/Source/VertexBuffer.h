@@ -5,6 +5,7 @@
 #include <gsl/gsl>
 #include <list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -14,6 +15,8 @@ namespace Babylon
     {
         class DeviceContext;
     }
+
+    class StorageBuffer;
 
     class VertexBuffer final
     {
@@ -33,12 +36,27 @@ namespace Babylon
 
         void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout);
 
+        // Moves the contents into a GPU storage buffer so compute work (transform feedback
+        // emulation) can read and write it; later updates, vertex binds and instance repacks use the
+        // storage buffer. Must happen before the buffer is built as a regular vertex stream.
+        StorageBuffer& PromoteToGpuStorage();
+        StorageBuffer* GpuStorage() const { return m_gpuStorage.get(); }
+        uint32_t ByteLength() const;
+
+        // Binds the contents as a read-only raw compute buffer (transform feedback vertex input). A
+        // buffer that was never built is promoted to GPU storage; a built one must be compute readable.
+        void SetComputeRead(bgfx::Encoder* encoder, uint8_t stage);
+
         struct InstanceInfo
         {
             VertexBuffer* Buffer{};
             uint32_t Offset{};
             uint32_t Stride{};
             uint32_t ElementSize{};
+
+            // The GPU storage holding this attribute when Buffer received transform feedback output.
+            // Such instances are repacked on the GPU (see InstanceRepacker) instead of on the CPU.
+            StorageBuffer* ResolveStorage() const;
         };
 
         struct InstanceDataLayout
@@ -65,12 +83,15 @@ namespace Babylon
         std::vector<uint8_t> m_bytes{};
         const bool m_dynamic{};
         uint32_t m_byteStride{};
+        bool m_computeReadable{};
 
         union
         {
             bgfx::VertexBufferHandle m_handle{bgfx::kInvalidHandle};
             bgfx::DynamicVertexBufferHandle m_dynamicHandle;
         };
+
+        std::unique_ptr<StorageBuffer> m_gpuStorage{};
 
         bool m_disposed{};
     };

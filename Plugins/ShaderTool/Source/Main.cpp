@@ -5,7 +5,7 @@
  * the ShaderCompiler component and saves the compiled results using ShaderCache.
  *
  * Usage:
- *   ShaderTool -o <output_file> <vertex1> <fragment1> [<vertex2> <fragment2> ...]
+ *   ShaderTool -o <output_file> [-v <vertex> <varyings>]... [[-i <attributes>] <vertex1> <fragment1> ...]
  */
 
 #include <Babylon/Plugins/ShaderCompiler.h>
@@ -19,6 +19,8 @@
 #include <iostream>
 #include <string>
 #include <filesystem>
+#include <map>
+#include <sstream>
 #include <vector>
 
 namespace
@@ -27,17 +29,85 @@ namespace
     {
         std::filesystem::path vertexPath;
         std::filesystem::path fragmentPath;
+        // Divisor-driven instanced attribute names; when set, the instanced variant is cached too.
+        std::vector<std::string> instancedAttributes;
     };
+
+    struct TransformFeedbackShader
+    {
+        std::filesystem::path vertexPath;
+        std::vector<std::string> varyings;
+    };
+
+    std::vector<std::string> SplitList(std::string_view list)
+    {
+        std::vector<std::string> items;
+        std::stringstream stream{std::string{list}};
+        std::string item;
+        while (std::getline(stream, item, ','))
+        {
+            if (!item.empty())
+            {
+                items.push_back(item);
+            }
+        }
+        return items;
+    }
+
+    // Mirrors the runtime draw path (VertexBuffer::CreateInstanceDataLayout + NativeEngine::DrawInternal):
+    // built-in instance attributes keep their compiler-assigned slots, and the remaining instanced
+    // attributes take the following slots in descending attribute-location order.
+    std::map<std::string, uint32_t> ResolveInstancedAttributes(const Babylon::Graphics::BgfxShaderInfo& baseShader, const std::vector<std::string>& names)
+    {
+        uint32_t builtInCount = static_cast<uint32_t>(baseShader.BuiltInInstanceDataSlots.size());
+        if (builtInCount == 0)
+        {
+            for (const auto& [name, location] : baseShader.VertexAttributeLocations)
+            {
+                builtInCount += Babylon::Graphics::IsBuiltInInstanceAttributeName(name) ? 1 : 0;
+            }
+        }
+
+        std::map<uint32_t, std::string> generic;
+        for (const auto& name : names)
+        {
+            const auto location = baseShader.VertexAttributeLocations.find(name);
+            if (location == baseShader.VertexAttributeLocations.end())
+            {
+                throw std::runtime_error("Instanced attribute is not a vertex shader input: " + name);
+            }
+            if (!Babylon::Graphics::IsBuiltInInstanceAttributeName(name))
+            {
+                generic.emplace(location->second, name);
+            }
+        }
+
+        std::map<std::string, uint32_t> instancedAttributes;
+        uint32_t slot = builtInCount;
+        for (auto attribute = generic.rbegin(); attribute != generic.rend(); ++attribute, ++slot)
+        {
+            if (slot >= Babylon::Graphics::MAX_INSTANCE_DATA_SLOT_COUNT)
+            {
+                throw std::runtime_error("Too many instanced attributes");
+            }
+            instancedAttributes.emplace(attribute->second, Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - slot);
+        }
+        return instancedAttributes;
+    }
 
     void PrintUsage(const char* programName)
     {
         std::cerr << "Babylon Native Shader Tool" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Usage:" << std::endl;
-        std::cerr << "  " << programName << " -o <output_file> <vertex1> <fragment1> [<vertex2> <fragment2> ...]" << std::endl;
+        std::cerr << "  " << programName << " -o <output_file> [-v <vertex> <varyings>]... [[-i <attributes>] <vertex1> <fragment1> ...]" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Options:" << std::endl;
-        std::cerr << "  -o <output_file>   Path to the output compiled shader cache file" << std::endl;
+        std::cerr << "  -o <output_file>         Path to the output compiled shader cache file" << std::endl;
+        std::cerr << "  -v <vertex> <varyings>   Transform feedback vertex shader and its comma-separated captured" << std::endl;
+        std::cerr << "                           varyings (interleaved, in capture order); may be repeated" << std::endl;
+        std::cerr << "  -i <attributes>          Comma-separated attributes the next vertex/fragment pair reads with" << std::endl;
+        std::cerr << "                           a vertex divisor; caches that instanced variant as well" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Arguments:" << std::endl;
         std::cerr << "  <vertex> <fragment>   Pairs of vertex and fragment shader source files (GLSL)" << std::endl;
@@ -45,6 +115,7 @@ namespace
         std::cerr << "Examples:" << std::endl;
         std::cerr << "  " << programName << " -o cache.bin vertex.glsl fragment.glsl" << std::endl;
         std::cerr << "  " << programName << " -o cache.bin v1.glsl f1.glsl v2.glsl f2.glsl" << std::endl;
+        std::cerr << "  " << programName << " -o cache.bin -v update.glsl outPosition,outAge -i position,age v1.glsl f1.glsl" << std::endl;
     }
 
     std::string ReadFileContents(const std::filesystem::path& filePath)
@@ -96,39 +167,67 @@ namespace
         return true;
     }
 
-    bool ParseArguments(int argc, char* argv[], std::filesystem::path& outputPath, std::vector<ShaderPair>& shaderPairs)
+    bool ParseArguments(int argc, char* argv[], std::filesystem::path& outputPath, std::vector<ShaderPair>& shaderPairs,
+        std::vector<TransformFeedbackShader>& transformFeedbackShaders)
     {
-        // Find -o flag
-        int outputIndex = -1;
-        for (int i = 1; i < argc - 1; i++)
-        {
-            if (std::strcmp(argv[i], "-o") == 0)
-            {
-                outputIndex = i;
-                outputPath = argv[i + 1];
-                break;
-            }
-        }
-
-        if (outputIndex == -1)
-        {
-            std::cerr << "Error: Missing required -o <output_file> option" << std::endl;
-            return false;
-        }
-
-        // Collect remaining arguments (excluding -o and its value) directly into shader pairs
+        bool hasOutput = false;
         std::vector<const char*> remaining;
+        std::map<size_t, std::vector<std::string>> instancedAttributes;
         for (int i = 1; i < argc; i++)
         {
-            if (i == outputIndex)
+            if (std::strcmp(argv[i], "-v") == 0)
             {
-                i++; // Skip -o and its value
+                if (i + 2 >= argc)
+                {
+                    std::cerr << "Error: -v requires a vertex shader and a varyings list" << std::endl;
+                    return false;
+                }
+                TransformFeedbackShader shader{argv[i + 1], SplitList(argv[i + 2])};
+                if (shader.varyings.empty())
+                {
+                    std::cerr << "Error: -v requires at least one varying" << std::endl;
+                    return false;
+                }
+                transformFeedbackShaders.push_back(std::move(shader));
+                i += 2;
+                continue;
+            }
+            if (std::strcmp(argv[i], "-i") == 0)
+            {
+                if (i + 1 >= argc || remaining.size() % 2 != 0)
+                {
+                    std::cerr << "Error: -i requires an attribute list and must precede a vertex/fragment pair" << std::endl;
+                    return false;
+                }
+                instancedAttributes[remaining.size() / 2] = SplitList(argv[++i]);
+                continue;
+            }
+            if (std::strcmp(argv[i], "-o") == 0)
+            {
+                if (i + 1 >= argc)
+                {
+                    std::cerr << "Error: Missing value for -o option" << std::endl;
+                    return false;
+                }
+                if (hasOutput)
+                {
+                    std::cerr << "Error: -o may only be specified once" << std::endl;
+                    return false;
+                }
+                hasOutput = true;
+                outputPath = argv[++i];
                 continue;
             }
             remaining.push_back(argv[i]);
         }
 
-        if (remaining.empty())
+        if (!hasOutput)
+        {
+            std::cerr << "Error: Missing required -o <output_file> option" << std::endl;
+            return false;
+        }
+
+        if (remaining.empty() && transformFeedbackShaders.empty())
         {
             std::cerr << "Error: No shader files specified" << std::endl;
             return false;
@@ -143,7 +242,17 @@ namespace
 
         for (size_t i = 0; i < remaining.size(); i += 2)
         {
-            shaderPairs.push_back({std::filesystem::path(remaining[i]), std::filesystem::path(remaining[i + 1])});
+            shaderPairs.push_back({std::filesystem::path(remaining[i]), std::filesystem::path(remaining[i + 1]), {}});
+        }
+
+        for (auto& [pairIndex, names] : instancedAttributes)
+        {
+            if (pairIndex >= shaderPairs.size() || names.empty())
+            {
+                std::cerr << "Error: -i must be followed by a vertex/fragment pair and list at least one attribute" << std::endl;
+                return false;
+            }
+            shaderPairs[pairIndex].instancedAttributes = std::move(names);
         }
 
         return true;
@@ -154,9 +263,10 @@ int main(int argc, char* argv[])
 {
     std::filesystem::path outputPath;
     std::vector<ShaderPair> shaderPairs;
+    std::vector<TransformFeedbackShader> transformFeedbackShaders;
 
     // Parse command line arguments
-    if (!ParseArguments(argc, argv, outputPath, shaderPairs))
+    if (!ParseArguments(argc, argv, outputPath, shaderPairs, transformFeedbackShaders))
     {
         std::cerr << std::endl;
         PrintUsage(argv[0]);
@@ -179,6 +289,14 @@ int main(int argc, char* argv[])
         }
     }
 
+    for (const auto& shader : transformFeedbackShaders)
+    {
+        if (!ValidateFilePath(shader.vertexPath, "Transform feedback vertex shader"))
+        {
+            return EXIT_FAILURE;
+        }
+    }
+
     try
     {
         // Enable the shader cache
@@ -194,7 +312,26 @@ int main(int argc, char* argv[])
 
             std::string vertexSource = ReadFileContents(pair.vertexPath);
             std::string fragmentSource = ReadFileContents(pair.fragmentPath);
-            Babylon::Plugins::ShaderCache::AddShader(vertexSource, fragmentSource, compiler.Compile(vertexSource, fragmentSource));
+            const auto baseShader = Babylon::Plugins::ShaderCache::AddShader(vertexSource, fragmentSource, compiler.Compile(vertexSource, fragmentSource));
+            if (!pair.instancedAttributes.empty())
+            {
+                const auto instancedAttributes = ResolveInstancedAttributes(*baseShader, pair.instancedAttributes);
+                if (!instancedAttributes.empty())
+                {
+                    std::cout << "Compiling instanced variant: " << pair.vertexPath.string() << std::endl;
+                    Babylon::Plugins::ShaderCache::AddShader(vertexSource, fragmentSource,
+                        compiler.Compile(vertexSource, fragmentSource, instancedAttributes), instancedAttributes);
+                }
+            }
+        }
+
+        for (const auto& shader : transformFeedbackShaders)
+        {
+            std::cout << "Compiling transform feedback: " << shader.vertexPath.string() << std::endl;
+
+            std::string vertexSource = ReadFileContents(shader.vertexPath);
+            Babylon::Plugins::ShaderCache::AddTransformFeedbackShader(vertexSource, shader.varyings,
+                compiler.CompileTransformFeedback(vertexSource, shader.varyings));
         }
 
         // Save the shader cache to the output file

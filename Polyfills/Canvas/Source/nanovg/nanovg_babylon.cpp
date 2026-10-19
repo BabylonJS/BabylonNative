@@ -664,22 +664,8 @@ namespace
         return (struct GLNVGfragUniforms*)&gl->uniforms[i];
     }
 
-    static void nvgRenderSetUniforms(struct GLNVGcontext* gl, int uniformOffset, int image, int image2)
+    static void nvgRenderSetClipUniforms(struct GLNVGcontext* gl, struct GLNVGfragUniforms* frag)
     {
-        struct GLNVGfragUniforms* frag = nvg__fragUniformPtr(gl, uniformOffset);
-        float tmp[9]; // Maybe there's a way to get rid of this...
-        glnvg__mat3(tmp, frag->scissorMat);
-        gl->encoder->setUniform(gl->u_scissorMat, tmp);
-        glnvg__mat3(tmp, frag->paintMat);
-        gl->encoder->setUniform(gl->u_paintMat, tmp);
-
-        gl->encoder->setUniform(gl->u_innerCol,        frag->innerCol.rgba);
-        gl->encoder->setUniform(gl->u_outerCol,        frag->outerCol.rgba);
-        gl->encoder->setUniform(gl->u_scissorExtScale, &frag->scissorExt[0]);
-        gl->encoder->setUniform(gl->u_extentRadius,    &frag->extent[0]);
-        gl->encoder->setUniform(gl->u_params,          &frag->feather);
-        gl->encoder->setUniform(gl->u_sdf,             &frag->sdfMin);
-        gl->encoder->setUniform(gl->u_clipBounds,      frag->clipBounds);
         if (gl->deferClip)
         {
             const float zero[9]{};
@@ -688,8 +674,31 @@ namespace
             gl->encoder->setUniform(gl->u_scissorMat, zero);
             gl->encoder->setUniform(gl->u_scissorExtScale, disabledScissor);
         }
+        else
+        {
+            float tmp[9];
+            glnvg__mat3(tmp, frag->scissorMat);
+            gl->encoder->setUniform(gl->u_scissorMat, tmp);
+            gl->encoder->setUniform(gl->u_scissorExtScale, &frag->scissorExt[0]);
+            gl->encoder->setUniform(gl->u_clipBounds, frag->clipBounds);
+        }
         auto* clipTexture = frag->clipImage != 0 ? glnvg__findTexture(gl, frag->clipImage) : nullptr;
         gl->thClip = clipTexture != nullptr ? clipTexture->id : gl->texMissing;
+    }
+
+    static void nvgRenderSetUniforms(struct GLNVGcontext* gl, int uniformOffset, int image, int image2)
+    {
+        struct GLNVGfragUniforms* frag = nvg__fragUniformPtr(gl, uniformOffset);
+        nvgRenderSetClipUniforms(gl, frag);
+        float tmp[9];
+        glnvg__mat3(tmp, frag->paintMat);
+        gl->encoder->setUniform(gl->u_paintMat, tmp);
+
+        gl->encoder->setUniform(gl->u_innerCol,        frag->innerCol.rgba);
+        gl->encoder->setUniform(gl->u_outerCol,        frag->outerCol.rgba);
+        gl->encoder->setUniform(gl->u_extentRadius,    &frag->extent[0]);
+        gl->encoder->setUniform(gl->u_params,          &frag->feather);
+        gl->encoder->setUniform(gl->u_sdf,             &frag->sdfMin);
 
         bgfx::TextureHandle handle = gl->texMissing;
 
@@ -787,7 +796,8 @@ namespace
         const NVGvertex triangle[3]{{0.f, 0.f, 0.5f, 1.f}, {gl->view[0] * 2.f, 0.f, 0.5f, 1.f}, {0.f, gl->view[1] * 2.f, 0.5f, 1.f}};
         bx::memCopy(vertices.data, triangle, sizeof(triangle));
         gl->deferClip = false;
-        nvgRenderSetUniforms(gl, glnvg__paintUniformOffset(gl, call), 0, 0);
+        auto* frag = nvg__fragUniformPtr(gl, glnvg__paintUniformOffset(gl, call));
+        nvgRenderSetClipUniforms(gl, frag);
         const bool bottomUp = bgfx::getCaps()->originBottomLeft;
         const float paint[9]{1.f, 0.f, 0.f, 0.f, bottomUp ? -1.f : 1.f, 0.f, 0.f, bottomUp ? gl->view[1] : 0.f, 1.f};
         const float extent[4]{gl->view[0], gl->view[1], 0.f, 0.f};
@@ -797,9 +807,11 @@ namespace
         gl->encoder->setUniform(gl->u_extentRadius, extent);
         gl->encoder->setUniform(gl->u_innerCol, white);
         gl->encoder->setUniform(gl->u_params, params);
+        gl->encoder->setUniform(gl->u_outerCol, frag->outerCol.rgba);
+        gl->encoder->setUniform(gl->u_sdf, &frag->sdfMin);
         gl->encoder->setState(gl->state);
         gl->encoder->setVertexBuffer(0, &vertices);
-        gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(input->Handle()));
+        gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(input->Handle()), gl->frameBufferPool.samplerFlags());
         gl->encoder->setTexture(1, gl->s_tex2, gl->texMissing);
         gl->encoder->setTexture(2, gl->s_clip, gl->thClip);
         output->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
@@ -816,13 +828,11 @@ namespace
             struct GLNVGpath* paths = &gl->paths[call->pathOffset];
             int i, npaths = call->pathCount;
 
-            // set bindpoint for solid loc
-            nvgRenderSetUniforms(gl, call->uniformOffset, 0, 0);
-
             for (i = 0; i < npaths; i++)
             {
                 if (2 < paths[i].fillCount)
                 {
+                    nvgRenderSetUniforms(gl, call->uniformOffset, 0, 0);
                     gl->encoder->setState(0);
                     gl->encoder->setStencil(0
                         | BGFX_STENCIL_TEST_ALWAYS
@@ -889,7 +899,7 @@ namespace
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
-            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
@@ -903,7 +913,7 @@ namespace
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
-            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
@@ -955,7 +965,7 @@ namespace
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
-            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
@@ -969,7 +979,7 @@ namespace
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
-            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
@@ -1003,7 +1013,7 @@ namespace
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
-            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
@@ -1017,7 +1027,7 @@ namespace
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
-            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
@@ -1046,7 +1056,7 @@ namespace
             };
             std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
                 gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
-                gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+                gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
                 bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
                 screenSpaceQuad(gl->encoder, s_originBottomLeft);
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
@@ -1060,7 +1070,7 @@ namespace
                 gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                     | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                     | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
-                gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+                gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
                 bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
                 screenSpaceQuad(gl->encoder, s_originBottomLeft);
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);

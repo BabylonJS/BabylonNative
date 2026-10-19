@@ -1,6 +1,6 @@
 # NativeDawn validation with fixed UrlLib
 
-**Latest results:** [master refresh with clean repository pins](#master-refresh-clean-repository-pins-2026-10-07).
+**Latest results:** [October 19 master refresh](#master-refresh-2026-10-19).
 The original sections below describe earlier override-based 9.21.2 runs, not
 the current pinned 9.29.0 consumer.
 
@@ -625,3 +625,88 @@ These results are not a controlled single-variable comparison with the
 earlier fixed-UrlLib/capability/font-backport runs: master, Babylon.js and
 dependency source identities changed. They establish the current
 Windows/V8/D3D12 pinned-consumer result, which remains failing.
+
+## Master refresh (2026-10-19)
+
+Integrated master `af8d8aa1c6f3749b1eabd7eca959b47976b9f351` into the same
+NativeDawn branch, starting from `2222ce8390826aa59d7e39bb4fbaaa6e4e9b915a`.
+Resolved the CI, catalog and build-documentation conflicts. The merged CI
+retains master's V8-only Windows and JavaScriptCore-only Linux visualization
+rules without accidentally running NativeEngine validation in plugin-only
+Dawn jobs. The new `ci-complete` aggregate also depends on all five Dawn jobs.
+The reviewed catalog resolutions retain incoming master metadata and
+workarounds, alongside non-conflicting branch-specific WebGPU coverage.
+
+The rebuilt Windows/V8 consumer uses clean fetched JsRuntimeHost
+`980cfb0197f7fda661d362df4b275cff42d1e7f2` and UrlLib
+`0c991337a1160ba7a2d062bf8e342d0a66f48dc9`. No local dependency override,
+font-backport bundle, reference generation or test retry is included.
+Master's host-controlled script-loading update is not the separate
+unmerged URL/capability patch. Existing transport/capability fixes remain
+excluded from publication.
+
+| Local suite | Results | Duration | Exit |
+|---|---|---|---:|
+| Babylon.js 9.29.0 / WebGPU full catalog | 744 executed: 497 passed, 247 failed; 118 skipped; zero missing references | 21m 41.554s application time | -1 |
+| Babylon-Lite original full schedule | 537 executed: 435 passed, 95 failed, 7 timed out; zero skipped | 35m 03.217s invocation wall time | 1 |
+| Dawn Babylon.js host regression | 20/20 checks passed | 1.023s | 0 |
+| Shared BGFX/D3D11 Canvas regressions | 17/17 tests passed | 2.184s | 0 |
+| Picking Visual Test smoke | 1/1 passed | 5.684s | 0 |
+
+The parity-tooling regression tests also pass 8/8. Both complete GPU suites
+ran sequentially. Lite's library and all 262 native scene bundles were rebuilt
+from the same recorded Lite checkout, `206de862a935c4ceace9aaf0107062f1effbd5fa`.
+Its actual Chrome version is 155.0.8059.80, with the locked Babylon.js 9.28.0
+oracle, 1280x720, DPR one and sRGB; its 60-second adapter deadlines are unchanged.
+
+**Neither full suite passes.** The WebGPU catalog has 246 pixel failures,
+including the existing shader/layout binding-dimension error cluster. Its one
+non-pixel failure is the newly enabled **Material Plugin** example
+`#22HT5Z#10`: Babylon.js rejects its `BlackAndWhite` plugin as incompatible with
+the material's shader language. This GLSL-only example is not evidence of a
+new native crash; it remains explicitly failed, not silently skipped or
+rewritten by the host.
+
+The standalone runtime still fails the assertion
+`Empty-valued URL query flags retain presence and search`. It has no 111/111
+passing verdict with the published pins. The known pre-GPU ES5 downlevel
+descriptor-corruption problem, excluded URL/MIME dependency fixes, and
+unsupported native/harness capabilities remain blockers; merging master is
+not represented as solving those pre-existing issues.
+
+Lite completes 537/537 scheduled cases in 537 attempts, but only **261/262**
+catalog scenes reach native navigation: scene 27 times out while creating its
+browser reference before native navigation, so it is an oracle/harness-blocked
+case, not a native failure. Native-reaching scene cases are **172/271 passing**;
+three other scene cases are browser-oracle-only passes. The two non-scene
+adapter route failures remain separate from the 260 passing size checks.
+Scene verdicts are 166 PASS, one BEHAVIOR PASS, four HARNESS LIMIT,
+13 PIXEL MISMATCH, three CRASH, seven FAIL, one ORACLE / HARNESS BLOCKED,
+nine TIMEOUT, 22 ASSET / FETCH FAIL, 34 RUNTIME FAIL and two DIMENSION MISMATCH.
+The crashes are again scenes 12, 186 and 304, with the pinned UrlLib
+response-MIME stack. Diagnostic retries have not replaced any original result.
+
+Retained artifacts:
+
+- [Complete summary and integrity counts](build/master-validation-20261019/summary.json)
+  and [source/dependency provenance](build/master-validation-20261019/provenance.json).
+- [Full WebGPU log](build/master-validation-20261019/standard/validation.log)
+  and [per-scene Lite report](build/master-validation-20261019/lite/report.md).
+- [Lite full-suite log](build/master-validation-20261019/lite/full-suite.log),
+  [runtime failure](build/master-validation-20261019/dawn_runtime_native.log)
+  and [shared Canvas results](build/master-validation-20261019/canvas-tests.log).
+
+The artifact root is
+`C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\master-validation-20261019`.
+WebGPU screenshots and diff overlays are in
+`standard\consumer\Apps\Playground\Results` and
+`standard\consumer\Apps\Playground\Errors`; Lite images are under
+`lite\references\<scene-slug>\`.
+Post-run verification confirms all 934 standard-consumer files,
+1,459 Lite-consumer files, 893 original visualization reference assets and
+108 original Lite reference files match their pre-run hashes, with both
+dependencies still clean at their recorded pins.
+The executable SHA256 is
+`a6b0eef1d3fcb575badcc876824551fa61b0d399de932d395e9454ff7271a953`;
+the tested BabylonNative source fingerprint, excluding Markdown, is
+`f2f70b10b5e4db62f785c37117960ca52b3af1f227f1f6e4e8d037a6c121505d`.

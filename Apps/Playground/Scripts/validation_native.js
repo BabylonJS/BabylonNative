@@ -54,8 +54,8 @@
     // by listing IDs in its config.json "workarounds" array, so that list is also
     // the list of examples to fix.
     const WORKAROUNDS = {
-        // Example renders before its utility scenes, GUI images, or material effects are ready.
-        "wait-for-readiness": "wait for utility scenes, GUI textures, and material effects before rendering",
+        // Example renders before its utility scenes, GUI images, sprites, or material effects are ready.
+        "wait-for-readiness": "wait for utility scenes, GUI textures, sprites, and material effects before rendering",
         // Example reads the browser-only global `name` (window.name).
         "undeclared-name": "declare `name` for the example code",
         // Example captures effect-layer output before its render targets were submitted once.
@@ -66,6 +66,14 @@
         "wait-for-import": "wait for loader promises started by createScene before rendering",
         // Example clears opaque but writes alpha < 1 that the browser would composite.
         "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
+        // Example changes node transforms right before a glTF export; the exporter's no-op root
+        // check reads cached world matrices and can drop a scaled root node.
+        "refresh-export-matrices": "recompute world matrices before glTF export",
+        // Babylon.js 9.29 scene readiness skips the clustered-light proxy shader, so lit
+        // materials can all report not-ready on the first frame and draw nothing.
+        "wait-for-clustered-lights": "prepare clustered-light proxies before rendering",
+        // Example relies on XMLHttpRequest events the native polyfill does not raise.
+        "xhr-events": "raise XMLHttpRequest load events, and report URL-open failures as asynchronous error/loadend events",
     };
     let appliedWorkarounds = [];
 
@@ -104,7 +112,8 @@
 
     // wait-for-readiness limits.
     const MAX_CONVERGENCE_TICKS = 240;
-    const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
+    // The Win32 sanitizer job needs ~9.5 min for EXR Loader alone (ASAN-instrumented EXR decode), so keep a wide margin.
+    const INITIAL_READINESS_TIMEOUT_MS = 20 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
     const utilityLayerOwners = new WeakMap();
     const dracoDecoderConfiguration = Object.assign({}, BABYLON.DracoDecoder.DefaultConfiguration);
@@ -179,6 +188,226 @@
         return eval(code);
     }
 
+    // xhr-events: the native XMLHttpRequest raises only readystatechange, error and loadend,
+    // raises error for any non-2xx status, and its open() throws for URLs it cannot open.
+    // Browsers raise load before loadend for every completed response, raise error only for
+    // transport failures, and report open failures asynchronously as a DONE request with
+    // status 0. Native methods are read-only, so each new instance is patched with own properties.
+    let restoreXhrEvents = null;
+    function installXhrEvents(test) {
+        if (restoreXhrEvents) {
+            return;
+        }
+        const restores = [];
+        const reported = [];
+        // Babylon.js prefers _native.XMLHttpRequest over the global one when it exists.
+        const globalObject = typeof globalThis !== "undefined" ? globalThis : Function("return this")();
+        [typeof _native !== "undefined" ? _native : undefined, globalObject].forEach(function (holder) {
+            const Original = holder && holder.XMLHttpRequest;
+            // JavaScriptCore reports native N-API constructors as typeof "object".
+            if (!Original || (typeof Original !== "function" && typeof Original !== "object")) {
+                return;
+            }
+            const Patched = function XMLHttpRequest() {
+                const xhr = new Original();
+                patchXhrInstance(test, xhr, reported);
+                return xhr;
+            };
+            Patched.prototype = Original.prototype;
+            ["UNSENT", "OPENED", "HEADERS_RECEIVED", "LOADING", "DONE"].forEach(function (name) {
+                if (name in Original) {
+                    Patched[name] = Original[name];
+                }
+            });
+            try {
+                holder.XMLHttpRequest = Patched;
+            } catch (e) {
+                // Leave the original in place; the test still runs, without the workaround.
+            }
+            if (holder.XMLHttpRequest !== Patched) {
+                console.warn("xhr-events: unable to replace XMLHttpRequest");
+                return;
+            }
+            restores.push(function () {
+                holder.XMLHttpRequest = Original;
+            });
+        });
+        restoreXhrEvents = function () {
+            restores.forEach(function (restore) {
+                restore();
+            });
+            restoreXhrEvents = null;
+        };
+    }
+
+    // The native polyfill's open() throws a plain Error with no type or code, so the
+    // URL-open failure can only be told apart by its message ("Unknown error opening URL"
+    // and similar UrlLib messages all contain this text). Keep the match in one place.
+    const URL_OPEN_ERROR_TEXT = "Error opening URL";
+    function isUrlOpenError(e) {
+        return String((e && e.message) || e).toLowerCase().indexOf(URL_OPEN_ERROR_TEXT.toLowerCase()) !== -1;
+    }
+
+    function patchXhrInstance(test, xhr, reported) {
+        const original = {
+            open: xhr.open,
+            send: xhr.send,
+            abort: xhr.abort,
+            addEventListener: xhr.addEventListener,
+            removeEventListener: xhr.removeEventListener,
+        };
+        const listeners = { readystatechange: [], load: [], error: [], loadend: [] };
+        // Handlers assigned through the onload / onerror / onloadend / onreadystatechange properties.
+        const handlers = { readystatechange: null, load: null, error: null, loadend: null };
+        let openError = null;
+        let failing = false;
+        // Bumped by open() and abort() so a deferred failure never reports into a newer request.
+        let generation = 0;
+
+        function define(name, value) {
+            Object.defineProperty(xhr, name, { value: value, configurable: true, writable: true });
+        }
+        function dispatch(type) {
+            const event = { type: type, target: xhr, currentTarget: xhr };
+            const targets = listeners[type].slice();
+            if (handlers[type]) {
+                targets.push(handlers[type]);
+            }
+            targets.forEach(function (listener) {
+                try {
+                    // Like the DOM, accept functions and objects with a handleEvent method.
+                    if (typeof listener === "function") {
+                        listener.call(xhr, event);
+                    } else if (listener && typeof listener.handleEvent === "function") {
+                        listener.handleEvent(event);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+        }
+        function hasListeners(type) {
+            return listeners[type].length > 0 || !!handlers[type];
+        }
+
+        // All four events are dispatched from JavaScript. The native object clears its handlers
+        // after every request, so these bridges are attached again by each send(). Native raises
+        // error for any non-2xx status; browsers raise error only for transport failures
+        // (status 0) and load for every completed response.
+        const bridges = {
+            readystatechange: function () {
+                dispatch("readystatechange");
+            },
+            loadend: function () {
+                if (xhr.status === 0) {
+                    dispatch("error");
+                } else {
+                    if (hasListeners("load")) {
+                        noteWorkaround(test, "xhr-events");
+                    }
+                    dispatch("load");
+                }
+                dispatch("loadend");
+            },
+        };
+        function detachBridges() {
+            Object.keys(bridges).forEach(function (type) {
+                original.removeEventListener.call(xhr, type, bridges[type]);
+            });
+        }
+        function attachBridges() {
+            detachBridges();
+            Object.keys(bridges).forEach(function (type) {
+                original.addEventListener.call(xhr, type, bridges[type]);
+            });
+        }
+        function clearFailure() {
+            generation++;
+            openError = null;
+            failing = false;
+            delete xhr.readyState;
+            delete xhr.status;
+        }
+
+        Object.keys(handlers).forEach(function (type) {
+            Object.defineProperty(xhr, "on" + type, {
+                configurable: true,
+                get: function () {
+                    return handlers[type];
+                },
+                set: function (value) {
+                    handlers[type] = typeof value === "function" ? value : null;
+                },
+            });
+        });
+        define("addEventListener", function (type, listener) {
+            const list = listeners[type];
+            if (!list) {
+                return original.addEventListener.apply(xhr, arguments);
+            }
+            if (list.indexOf(listener) === -1) {
+                list.push(listener);
+            }
+        });
+        define("removeEventListener", function (type, listener) {
+            const list = listeners[type];
+            if (!list) {
+                return original.removeEventListener.apply(xhr, arguments);
+            }
+            if (list.indexOf(listener) !== -1) {
+                list.splice(list.indexOf(listener), 1);
+            }
+        });
+        define("open", function () {
+            clearFailure();
+            detachBridges();
+            try {
+                original.open.apply(xhr, arguments);
+            } catch (e) {
+                // Only URL-open failures are deferred; other errors still throw at the call site.
+                if (!isUrlOpenError(e)) {
+                    throw e;
+                }
+                openError = e;
+                failing = true;
+                return;
+            }
+            dispatch("readystatechange");
+        });
+        define("abort", function () {
+            const pending = failing;
+            clearFailure();
+            if (!pending) {
+                return original.abort.apply(xhr, arguments);
+            }
+        });
+        define("send", function () {
+            if (!openError) {
+                attachBridges();
+                return original.send.apply(xhr, arguments);
+            }
+            noteWorkaround(test, "xhr-events");
+            const message = String(openError.message || openError);
+            if (reported.indexOf(message) === -1) {
+                reported.push(message);
+                console.log("xhr-events: reporting '" + message + "' as a failed request");
+            }
+            openError = null;
+            const scheduled = generation;
+            setTimeout(function () {
+                if (scheduled !== generation) {
+                    return;
+                }
+                failing = false;
+                define("readyState", 4);
+                define("status", 0);
+                dispatch("readystatechange");
+                dispatch("error");
+                dispatch("loadend");
+            }, 0);
+        });
+    }
+
     // wait-for-import: while a tracker is active, loader promises are recorded so the
     // runner can wait for loads the example did not await.
     let importTracker = null;
@@ -207,6 +436,32 @@
     ["ImportMeshAsync", "AppendAsync", "LoadAssetContainerAsync"].forEach(function (name) {
         wrapImportFunction(BABYLON.SceneLoader, name);
     });
+
+    // refresh-export-matrices: set to the running test when it opts in.
+    let refreshExportMatricesTest = null;
+    function wrapExportFunction(owner, name) {
+        const original = owner && owner[name];
+        if (typeof original !== "function") {
+            return;
+        }
+        owner[name] = function (scene) {
+            if (refreshExportMatricesTest && scene && scene.getNodes) {
+                noteWorkaround(refreshExportMatricesTest, "refresh-export-matrices");
+                const nodes = scene.getNodes();
+                for (let i = 0; i < nodes.length; ++i) {
+                    if (typeof nodes[i].computeWorldMatrix === "function") {
+                        nodes[i].computeWorldMatrix(true);
+                    }
+                }
+            }
+            return original.apply(this, arguments);
+        };
+    }
+    if (BABYLON.GLTF2Export) {
+        ["GLTFAsync", "GLBAsync"].forEach(function (name) {
+            wrapExportFunction(BABYLON.GLTF2Export, name);
+        });
+    }
 
     function waitForTrackedImports(test, scene) {
         const tracked = importTracker || [];
@@ -273,6 +528,10 @@
 
     // Reset the reused engine between tests.
     function cleanupAfterTest(test) {
+        if (restoreXhrEvents) {
+            restoreXhrEvents();
+        }
+
         if (currentScene) {
             try { currentScene.dispose(); } catch (e) { console.error(e); }
             currentScene = null;
@@ -360,6 +619,9 @@
         }
         if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
             return "excludedGraphicsApis: " + TestUtils.getGraphicsApiName();
+        }
+        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(TestUtils.getJavaScriptEngineName())) {
+            return "excludedJavaScriptEngines: " + TestUtils.getJavaScriptEngineName();
         }
         return null;
     }
@@ -671,10 +933,14 @@
         });
     }
 
-    function areGuiTexturesReady(scene) {
-        return scene.textures.every(function (texture) {
+    function areSceneResourcesReady(scene) {
+        const guiReady = scene.textures.every(function (texture) {
             return typeof texture.guiIsReady !== "function" || texture.guiIsReady();
         });
+        const spritesReady = !scene.spritesEnabled || !scene.spriteManagers || scene.spriteManagers.every(function (manager) {
+            return manager.isReady();
+        });
+        return guiReady && spritesReady;
     }
 
     function isSceneConverged(scene) {
@@ -684,7 +950,7 @@
             if (!scene.isReady()) {
                 return false;
             }
-            if (!areGuiTexturesReady(scene)) {
+            if (!areSceneResourcesReady(scene)) {
                 return false;
             }
 
@@ -763,6 +1029,7 @@
             ? getConvergenceScenes
             : function (scene) { return [scene]; };
         const primeEffectLayers = hasWorkaround(test, "prime-effect-layers");
+        const waitForClusteredLights = hasWorkaround(test, "wait-for-clustered-lights");
         // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
         let effectLayerPrimed = false;
 
@@ -831,6 +1098,25 @@
                         for (let i = 0; i < convergenceScenes.length; i++) {
                             convergenceScenes[i].incrementRenderId();
                         }
+                        return;
+                    }
+
+                    // _isReady() also starts compiling the proxy shader, so this wait converges.
+                    if (waitForClusteredLights && frameIndex === 0 &&
+                        !currentScene.lights.every(function (light) {
+                            return light.getClassName() !== "ClusteredLightContainer" || !light.isSupported ||
+                                !light.isEnabled() || light._isReady();
+                        })) {
+                        noteWorkaround(test, "wait-for-clustered-lights");
+                        if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
+                            stopped = true;
+                            evaluated = true;
+                            console.error("Scene '" + (test.title || "?") + "' clustered lights did not become ready within " +
+                                MAX_CONVERGENCE_TICKS + " render-loop ticks.");
+                            failTest(done);
+                            return;
+                        }
+                        convergenceTicks++;
                         return;
                     }
 
@@ -960,9 +1246,9 @@
 
                 let allReady = readinessScenes.length > 0;
                 for (let i = 0; i < readinessScenes.length; i++) {
-                    // GUI image loads are not included in Scene.executeWhenReady.
+                    // GUI images and packed sprite metadata are not included in Scene.executeWhenReady.
                     if (readyScenes.indexOf(readinessScenes[i]) === -1 ||
-                        (waitForReadiness && !areGuiTexturesReady(readinessScenes[i]))) {
+                        (waitForReadiness && !areSceneResourcesReady(readinessScenes[i]))) {
                         allReady = false;
                         break;
                     }
@@ -1120,6 +1406,10 @@
                                     }
 
                                     importTracker = hasWorkaround(test, "wait-for-import") ? [] : null;
+                                    refreshExportMatricesTest = hasWorkaround(test, "refresh-export-matrices") ? test : null;
+                                    if (hasWorkaround(test, "xhr-events")) {
+                                        installXhrEvents(test);
+                                    }
                                     let createdScene = evalExample(test, pgCode);
                                     if (importTracker) {
                                         createdScene = Promise.resolve(createdScene).then(function (scene) {

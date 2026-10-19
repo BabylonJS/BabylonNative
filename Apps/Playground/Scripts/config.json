@@ -682,8 +682,7 @@
         {
             "title": "PBR in mirror",
             "playgroundId": "#Q7DP2M",
-            "referenceImage": "pbr-mirror.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbr-mirror.png"
         },
         {
             "title": "OpenPBR Base Weight",
@@ -728,15 +727,11 @@
         {
             "title": "NME Glow Manual",
             "playgroundId": "#7QCYPB#320",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Pixel diff: ~99% of pixels differ vs reference; Dawn/WebGPU renders it correctly, so WebGPU keeps the coverage",
             "referenceImage": "nme-glow-manual.png"
         },
         {
             "title": "NME Glow Automatic",
             "playgroundId": "#7QCYPB#327",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Cubemap load not implemented on Babylon Native; Dawn/WebGPU renders it correctly, so WebGPU keeps the coverage",
             "referenceImage": "nme-glow-automatic.png"
         },
         {
@@ -764,8 +759,7 @@
             "title": "Gaussian Splatting NME",
             "playgroundId": "#WXWJKN#4",
             "renderCount": 15,
-            "referenceImage": "gsplat-nme.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "gsplat-nme.png"
         },
         {
             "title": "Lattice",
@@ -808,8 +802,7 @@
             "title": "Decal map PP",
             "playgroundId": "#9BVW2S#101",
             "renderCount": 50,
-            "referenceImage": "decal-map-pp.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "decal-map-pp.png"
         },
         {
             "title": "Convolution Post Process",
@@ -848,8 +841,7 @@
         {
             "title": "NMEGLTF",
             "playgroundId": "#WGZLGJ#10320",
-            "referenceImage": "nmegltf.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "nmegltf.png"
         },
         {
             "title": "GPUPicker",
@@ -880,16 +872,16 @@
         },
         {
             "title": "Node Geometry - Building generator",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#7RWIUU#29",
             "referenceImage": "nodeGeometryBuildingGenerator.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): createScene never resolves."
         },
         {
             "title": "GreasedLine - non camera facing",
             "playgroundId": "#FJRQ8N#150",
-            "referenceImage": "greased-line-non-camera-facing.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "Renders fine itself, but leaks global GreasedLine state (material-plugin/exporter) that corrupts the glTF serializer round-trip geometry of later tests ('GLTF Serializer Camera' 222-225). Excluded to preserve test isolation on the single-process NativeDawn run."
+            "referenceImage": "greased-line-non-camera-facing.png"
         },
         {
             "title": "GreasedLine - basic",
@@ -942,8 +934,7 @@
             "title": "Particle subemitters",
             "playgroundId": "#1LK70I#40",
             "renderCount": 50,
-            "referenceImage": "subemitters.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "subemitters.png"
         },
         {
             "title": "Node material 0",
@@ -1016,20 +1007,17 @@
         {
             "title": "Weighted animations",
             "playgroundId": "#LL5BIQ#636",
-            "referenceImage": "weighted-animations.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "weighted-animations.png"
         },
         {
             "title": "Anisotropic",
             "playgroundId": "#MAXCNU#1",
-            "referenceImage": "anisotropic.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "anisotropic.png"
         },
         {
             "title": "Clear Coat",
             "playgroundId": "#YACNQS#2",
-            "referenceImage": "clearCoat.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "clearCoat.png"
         },
         {
             "title": "GUI Transform StackPanel",
@@ -1047,8 +1035,7 @@
             "title": "GUI Slate",
             "playgroundId": "#2YZFA0#277",
             "renderCount": 60,
-            "referenceImage": "guiSlate.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "guiSlate.png"
         },
         {
             "title": "GUI Near Menu",
@@ -1064,16 +1051,16 @@
         },
         {
             "title": "LineEdgesRenderer",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#T90MQ4#19",
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (5.5% px); passes on Win32 D3D11."
         },
         {
             "title": "Simulate pointer",
             "playgroundId": "#8MGKWK#574",
-            "referenceImage": "simulatePointer.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "simulatePointer.png"
         },
         {
             "title": "Color Grading",
@@ -1109,16 +1096,15 @@
             "title": "Chibi Rex",
             "playgroundId": "#NZ2RZY#4",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison)",
+            "replace": "engine.setHardwareScalingLevel(0.75);, engine.setHardwareScalingLevel(1);",
+            "note": "The browser reference captures the 600x400 canvas after downsampling its 0.75 hardware-scaled framebuffer; Native captures the physical 800x533 target, so keep validation at the reference dimensions.",
             "referenceImage": "chibi-rex.png"
         },
         {
             "title": "Yeti",
             "playgroundId": "#QATUCH#32",
             "renderCount": 150,
-            "referenceImage": "yeti.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "yeti.png"
         },
         {
             "title": "CSG",
@@ -1150,14 +1136,16 @@
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
-            "referenceImage": "textureAreaLightStandard.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff fail on Linux OpenGL (25571 px, 10.7%); passes on Win32 D3D11.",
+            "workarounds": ["opaque-clear-alpha"],
+            "referenceImage": "textureAreaLightStandard.png"
         },
         {
             "title": "Textured - Area Lights - PBR",
             "playgroundId": "#T7FXR8#102",
-            "referenceImage": "texturedAreaLightsPBR.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["opaque-clear-alpha"],
+            "referenceImage": "texturedAreaLightsPBR.png"
         },
         {
             "title": "Area Lights - PBR",
@@ -1191,21 +1179,18 @@
         {
             "title": "point light shadows",
             "playgroundId": "#XDNVAY#1",
-            "referenceImage": "pointLightShadows.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pointLightShadows.png"
         },
         {
             "title": "Shadow depth wrappers",
             "playgroundId": "#PNQRY1#73",
             "renderCount": 20,
-            "referenceImage": "shadowDepthWrappers.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "shadowDepthWrappers.png"
         },
         {
             "title": "Displacement map",
             "playgroundId": "#WZ8JL4#0",
-            "referenceImage": "displacementMap.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "displacementMap.png"
         },
         {
             "title": "Custom render target",
@@ -1216,25 +1201,28 @@
         },
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#77",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "The WebAssembly decoder imports fail under the NativeDawn V8 runtime; crashes or hangs on legacy NativeEngine",
-            "referenceImage": "draco.png"
+            "referenceImage": "draco.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 0)",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#78",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "The WebAssembly decoder imports fail under the NativeDawn V8 runtime; crashes or hangs on legacy NativeEngine",
-            "referenceImage": "draco.png"
+            "referenceImage": "draco.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 1)",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#78",
             "replace": "numWorkers = 0, numWorkers = 1",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "The WebAssembly decoder imports fail under the NativeDawn V8 runtime; crashes or hangs on legacy NativeEngine",
-            "referenceImage": "draco.png"
+            "referenceImage": "draco.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Mesh Compression (fallback)",
@@ -1245,17 +1233,18 @@
         },
         {
             "title": "Draco Decoder",
+            "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#82",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "The playground's decoder input is rejected by the NativeDawn V8 runtime; crashes or hangs on legacy NativeEngine",
-            "referenceImage": "draco.png"
+            "referenceImage": "draco.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "Draco Decoder/Encoder roundtrip",
             "playgroundId": "#JNW207#4",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn; crashes or hangs on legacy NativeEngine",
-            "referenceImage": "dracoRoundtrip.png"
+            "referenceImage": "dracoRoundtrip.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (left handed, once)",
@@ -1311,15 +1300,16 @@
         {
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn; legacy NativeEngine TextDecoder rejects the Draco loader's 'utf8' label (only 'utf-8' is accepted)",
-            "referenceImage": "glTFSerializerKhrDracoMeshCompression.png"
+            "referenceImage": "glTFSerializerKhrDracoMeshCompression.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "GLTF Serializer KHR materials clearcoat",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#9N6CLU#23",
             "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.8% px); passes on Win32 D3D11."
         },
         {
             "title": "GLTF Serializer KHR gpu instancing",
@@ -1384,29 +1374,33 @@
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;",
-            "referenceImage": "glTFSerializerCameraRotationAnimation.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["refresh-export-matrices"],
+            "errorRatio": 3.5,
+            "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer un/compressed texture roundtrip",
@@ -1418,9 +1412,9 @@
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
             "playgroundId": "#JNW207#1",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn; legacy Win32 NativeEngine crashes with heap corruption",
-            "referenceImage": "gltfBuggyDraco.png"
+            "referenceImage": "gltfBuggyDraco.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
         },
         {
             "title": "GLTF Box with bad Draco normalized flag",
@@ -1482,20 +1476,17 @@
         {
             "title": "GLTF Mesh Primitive Attribute Test",
             "playgroundId": "#G1FXQ4#0",
-            "referenceImage": "gltfMeshPrimAttribTest.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "gltfMeshPrimAttribTest.png"
         },
         {
             "title": "PBR glossy",
             "playgroundId": "#DFQKIR#0",
-            "referenceImage": "pbrglossy.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbrglossy.png"
         },
         {
             "title": "PBR rough",
             "playgroundId": "#PI9IE8#5",
-            "referenceImage": "pbrrough.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbrrough.png"
         },
         {
             "title": "Particles",
@@ -1507,44 +1498,37 @@
         {
             "title": "PBRMetallicRoughnessMaterial",
             "playgroundId": "#2FDQT5#13",
-            "referenceImage": "PBRMetallicRoughnessMaterial.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "PBRMetallicRoughnessMaterial.png"
         },
         {
             "title": "PBRSpecularGlossinessMaterial",
             "playgroundId": "#Z1VL3V#4",
-            "referenceImage": "PBRSpecularGlossinessMaterial.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "PBRSpecularGlossinessMaterial.png"
         },
         {
             "title": "PBR",
             "playgroundId": "#LCA0Q4#27",
-            "referenceImage": "pbr.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbr.png"
         },
         {
             "title": "PBR refraction",
             "playgroundId": "#LCA0Q4#26",
-            "referenceImage": "pbr-refraction.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbr-refraction.png"
         },
         {
             "title": "PBR shader code coverage 1",
             "playgroundId": "#QI7TL3#63",
-            "referenceImage": "pbr-codecoverage1.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbr-codecoverage1.png"
         },
         {
             "title": "PBR shader code coverage 2",
             "playgroundId": "#QI7TL3#64",
-            "referenceImage": "pbr-codecoverage2.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbr-codecoverage2.png"
         },
         {
             "title": "PBR shader code coverage 3",
             "playgroundId": "#QI7TL3#65",
-            "referenceImage": "pbr-codecoverage3.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "pbr-codecoverage3.png"
         },
         {
             "title": "MultiSample render targets",
@@ -1562,20 +1546,21 @@
             "title": "Procedural textures playground",
             "playgroundId": "#24C4KC#67",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "proceduralTexturePlayground.png"
+            "reason": "Pixel comparison fails (~24% pixels differ): the procedural cloud noise hash is GPU-backend dependent",
+            "referenceImage": "proceduralTexturePlayground.png",
+            "workarounds": ["xhr-events"]
         },
         {
             "title": "Instanced Bones",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#2YLJ1L#2",
             "referenceImage": "instancedBones.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.9% px); passes on Win32 D3D11."
         },
         {
             "title": "GlowLayer",
             "playgroundId": "#LRFB2D#262",
-            "referenceImage": "GlowLayer.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "GlowLayer.png"
         },
         {
             "title": "Local cubemaps",
@@ -1592,8 +1577,7 @@
         {
             "title": "DDS",
             "playgroundId": "#ZI77S7#3",
-            "referenceImage": "dds.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "dds.png"
         },
         {
             "title": "DDS2D",
@@ -1612,9 +1596,10 @@
         },
         {
             "title": "MeshSimplification",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#1ED15P#46",
             "referenceImage": "meshSimplification.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (16% px); passes on Win32 D3D11."
         },
         {
             "title": "DepthRenderer",
@@ -1712,8 +1697,7 @@
             "title": "Motion Blur",
             "playgroundId": "#E5YGEL#20",
             "renderCount": 10,
-            "referenceImage": "motionBlur.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "motionBlur.png"
         },
         {
             "title": "Shadows and LODs",
@@ -1777,22 +1761,24 @@
             "title": "Prepass SSAO + depth of field",
             "playgroundId": "#8F5HYV#72",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-dof.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["opaque-clear-alpha"],
+            "referenceImage": "prepass-ssao-dof.png"
         },
         {
             "title": "Prepass + mirror, without postprocess",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#PIZ1GK#1084",
             "renderCount": 10,
             "referenceImage": "prepass-mirror-without-pp.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass + mirror, with postprocesses",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#PIZ1GK#1085",
             "renderCount": 10,
             "referenceImage": "prepass-mirror-with-pp.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + sprites",
@@ -1833,10 +1819,11 @@
         },
         {
             "title": "Prepass SSAO + clip planes",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Y6W087#71",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-clip-planes.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + GUI",
@@ -1855,11 +1842,11 @@
         },
         {
             "title": "Prepass SSAO + shadow only",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#1KF7V1#55",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "prepass-ssao-shadow-only.png"
+            "referenceImage": "prepass-ssao-shadow-only.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + highlight layer",
@@ -1872,10 +1859,10 @@
         },
         {
             "title": "Prepass SSAO + point light",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#WW5UB5#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "prepass-ssao-point-light.png"
+            "referenceImage": "prepass-ssao-point-light.png",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + on/off post-process",
@@ -1924,10 +1911,11 @@
         },
         {
             "title": "Prepass SSAO + MSAA",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#12MKMN#7",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-msaa.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Scissor test",
@@ -1952,8 +1940,7 @@
             "title": "Refraction local cube map STD",
             "playgroundId": "#RJN64I#7",
             "renderCount": 1,
-            "referenceImage": "refraction-local-std.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "refraction-local-std.png"
         },
         {
             "title": "Refraction local cube map PBR",
@@ -2018,8 +2005,7 @@
             "title": "Reverse depth buffer and shadows",
             "playgroundId": "#WL4Q8J#20",
             "renderCount": 10,
-            "referenceImage": "reverseDepthBufferShadows.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "reverseDepthBufferShadows.png"
         },
         {
             "title": "Reverse depth buffer and CSM shadows",
@@ -2063,9 +2049,10 @@
         },
         {
             "title": "Baked Vertex Animation",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#14WJWW#13",
             "referenceImage": "bakedVertexAnimation.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.5% px); passes on Win32 D3D11."
         },
         {
             "title": "Baked Vertex Animation with Depth Of Field",
@@ -2100,8 +2087,6 @@
         {
             "title": "Material Plugin",
             "playgroundId": "#22HT5Z#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "materialPlugin.png"
         },
         {
@@ -2260,8 +2245,7 @@
         {
             "title": "Decal Map",
             "playgroundId": "#9BVW2S#67",
-            "referenceImage": "Decal-Map.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "Decal-Map.png"
         },
         {
             "title": "GUI Text Block with resizeToFit and forceResizeWidth",
@@ -2280,13 +2264,13 @@
         {
             "title": "Scene Recorder Apply Delta",
             "playgroundId": "#9ZS92P#9",
-            "referenceImage": "Scene-Recorder-Apply-Delta.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "Scene-Recorder-Apply-Delta.png"
         },
         {
             "title": "Sprites Pixel Perfect",
             "playgroundId": "#ZX8DJ3#10",
-            "referenceImage": "Sprites-Pixel-Perfect.png"
+            "referenceImage": "Sprites-Pixel-Perfect.png",
+            "workarounds": ["wait-for-readiness"]
         },
         {
             "title": "Rounding values on controls inside StackPanel",
@@ -2395,17 +2379,17 @@
         },
         {
             "title": "show-bounding-box",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#0LN1JD#9",
             "renderCount": 5,
             "referenceImage": "show-bounding-box.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (7.6% px); passes on Win32 D3D11."
         },
         {
             "title": "cube-reflection-with-probe-and-mirrors",
             "playgroundId": "#X3V1NN#7",
             "renderCount": 20,
-            "referenceImage": "cube-reflection-with-probe-and-mirrors.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "cube-reflection-with-probe-and-mirrors.png"
         },
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
@@ -2459,7 +2443,8 @@
             "playgroundId": "#MJ59Y8#18",
             "renderCount": 10,
             "referenceImage": "apply-all-post-processes.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "errorRatio": 3.3,
+            "note": "Enabled with tolerance: Native (bgfx/WebGL1) render is a stable deterministic near-miss (~2.97% pixels differ, constant across 3 runs) vs the reference; errorRatio set just above the measured diff to gain coverage while still catching crashes and large regressions. Batch 56 re-sweep."
         },
         {
             "title": "simple-custom-shader",
@@ -2487,8 +2472,7 @@
             "title": "custom-handling-of-materials-for-render-target-pass",
             "playgroundId": "#FIVL25#21",
             "renderCount": 60,
-            "referenceImage": "custom-handling-of-materials-for-render-target-pass.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "custom-handling-of-materials-for-render-target-pass.png"
         },
         {
             "title": "dissolve-effect-with-node-material-and-glow-layer",
@@ -2537,8 +2521,7 @@
             "title": "screen-space-curvature",
             "playgroundId": "#YF8D42#22",
             "renderCount": 5,
-            "referenceImage": "screen-space-curvature.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "screen-space-curvature.png"
         },
         {
             "title": "Render to 3D RT",
@@ -2562,32 +2545,28 @@
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 2;",
-            "referenceImage": "computeMaxExtents-BoxAnimated.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "computeMaxExtents-BoxAnimated.png"
         },
         {
             "title": "computeMaxExtents (Fox 0)",
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 0;",
-            "referenceImage": "computeMaxExtents-Fox0.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "computeMaxExtents-Fox0.png"
         },
         {
             "title": "computeMaxExtents (Fox 1)",
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 1;",
-            "referenceImage": "computeMaxExtents-Fox1.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "computeMaxExtents-Fox1.png"
         },
         {
             "title": "computeMaxExtents (MorphStressTest)",
             "playgroundId": "#M2H33B",
             "renderCount": 2,
             "replace": "//options//, modelIndex = 5;",
-            "referenceImage": "computeMaxExtents-MorphStressTest.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "computeMaxExtents-MorphStressTest.png"
         },
         {
             "title": "glTF Loader Capabilities",
@@ -2596,17 +2575,19 @@
         },
         {
             "title": "glTF Loader Cameras RH",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = true;",
             "referenceImage": "glTFLoaderCameras.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
         },
         {
             "title": "glTF Loader Cameras LH",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = false;",
             "referenceImage": "glTFLoaderCameras.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
         },
         {
             "title": "IBL Voxel Shadowing",
@@ -2727,9 +2708,10 @@
         },
         {
             "title": "FrameGraph nrge SSR neon",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Z6C5EF#5",
             "referenceImage": "FrameGraph-nrge-SSR-neon.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge motion blur",
@@ -2765,14 +2747,14 @@
         {
             "title": "FrameGraph nrge clustered lights (simple)",
             "playgroundId": "#1QCA2M#37",
-            "referenceImage": "FrameGraph-nrge-clustered-lights-simple-.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "FrameGraph-nrge-clustered-lights-simple-.png"
         },
         {
             "title": "FrameGraph nrge multiple post processes",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#SYQW69#1363",
             "referenceImage": "FrameGraph-nrge-multiple-post-processes.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge SSAO",
@@ -2935,8 +2917,7 @@
         {
             "title": "Render target texture with clustered lights",
             "playgroundId": "#1QCA2M#11",
-            "referenceImage": "Render-target-texture-with-clustered-lights.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "Render-target-texture-with-clustered-lights.png"
         },
         {
             "title": "IBL radiance roughness",
@@ -2972,15 +2953,15 @@
         {
             "title": "KHR diffuse transmission",
             "playgroundId": "#RX52XX#1",
-            "referenceImage": "KHR-diffuse-transmission.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "KHR-diffuse-transmission.png"
         },
         {
             "title": "SubSurface Scattering",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#5H0H89#129",
             "renderCount": 10,
             "referenceImage": "SubSurface-Scattering.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "reason": "OpenGL: bgfx FrameBufferGL::resolve asserts in glDrawBuffers (GL_INVALID_OPERATION) when resolving an attachment past the first (bgfx bug, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "Specular Reflectance with IOR",
@@ -3053,8 +3034,7 @@
         {
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn; pixel comparison fails on legacy NativeEngine",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
@@ -3079,22 +3059,17 @@
         {
             "title": "Sponza Clustered Lighting (node material pbr)",
             "playgroundId": "#QY98Z3#17",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Sponza-Clustered-Lighting-node-material-pbr-.png"
         },
         {
             "title": "Clustered Lighting (lhs std material)",
             "playgroundId": "#CSCJO2#59",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Chakra cannot parse the modern JS syntax; passes on WebGPU/Dawn (the order-dependent pixel diff was a leaked PBRBaseMaterial.ForceGLSL, now reset between tests); Dawn/WebGPU renders it correctly, so WebGPU keeps the coverage",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
@@ -3114,15 +3089,12 @@
         {
             "title": "Clustered Lighting (rhs std material)",
             "playgroundId": "#CSCJO2#69",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "Passes on WebGPU/Dawn with V8; Chakra cannot parse the modern JS syntax",
+            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {
@@ -3142,9 +3114,8 @@
         {
             "title": "Clustered Light Serialization",
             "playgroundId": "#QRQPNN#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "clustered-light-serialization.png"
+            "referenceImage": "clustered-light-serialization.png",
+            "workarounds": ["xhr-events"]
         },
         {
             "title": "Atmosphere Day",
@@ -3318,16 +3289,12 @@
         {
             "title": "OpenPBR Analytic Lights Coat Color vs Coat IOR",
             "playgroundId": "#GRQHVV#52",
-            "referenceImage": "OpenPBR-Analytic-Lights-Coat-Color-vs-Coat-IOR.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "OpenPBR-Analytic-Lights-Coat-Color-vs-Coat-IOR.png"
         },
         {
             "title": "OpenPBR Analytic Lights Coat Color vs Coat Darkening",
             "playgroundId": "#GRQHVV#53",
-            "referenceImage": "OpenPBR-Analytic-Lights-Coat-Color-vs-Coat-Darkening.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "OpenPBR-Analytic-Lights-Coat-Color-vs-Coat-Darkening.png"
         },
         {
             "title": "OpenPBR Analytic Lights Anisotropy",
@@ -3542,8 +3509,7 @@
             "title": "OpenPBR Transmission Color glTF - Analytic Lights",
             "playgroundId": "#GRQHVV#122",
             "referenceImage": "OpenPBR-Transmission-Color-glTF---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "workarounds": ["wait-for-import"]
         },
         {
             "title": "OpenPBR Transmission Roughness glTF - IBL",
@@ -3646,8 +3612,7 @@
             "title": "OpenPBR Transmission Scatter Anisotropy Reflect - Analytic Lights",
             "playgroundId": "#GRQHVV#268",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Reflect---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
+            "workarounds": ["wait-for-import"]
         },
         {
             "title": "OpenPBR Transmission Scatter Roughness - Analytic Lights",
@@ -3674,8 +3639,7 @@
             "title": "OpenPBR Subsurface Radius vs Anisotropy - Analytic Lights",
             "playgroundId": "#GRQHVV#272",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
+            "workarounds": ["wait-for-import"]
         },
         {
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
@@ -3784,8 +3748,7 @@
             "title": "OpenPBR Thin Walled Anisotropic Transmission - Analytic Lights",
             "playgroundId": "#GRQHVV#244",
             "referenceImage": "OpenPBR-Thin-Walled-Anisotropic-Transmission---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "workarounds": ["wait-for-import"]
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Anisotropy - IBL",
@@ -3799,8 +3762,7 @@
             "title": "OpenPBR Thin Walled Subsurface Anisotropy - Analytic Lights",
             "playgroundId": "#GRQHVV#248",
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Anisotropy---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "workarounds": ["wait-for-import"]
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Transmission Blending - IBL",
@@ -3813,8 +3775,7 @@
         {
             "title": "Background material blur",
             "playgroundId": "#UU7RQ#4458",
-            "referenceImage": "Background-material-blur.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "Background-material-blur.png"
         },
         {
             "title": "Lighting Volume",
@@ -4128,15 +4089,14 @@
             "title": "Particles - Multiply Blend",
             "playgroundId": "#M1HYFH#6",
             "renderCount": 120,
-            "referenceImage": "particles-multiply-blend.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["opaque-clear-alpha"],
+            "referenceImage": "particles-multiply-blend.png"
         },
         {
             "title": "Particles - Ramp Blend",
             "playgroundId": "#XPVJMM#4",
             "renderCount": 120,
-            "referenceImage": "particles-ramp-blend.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "particles-ramp-blend.png"
         },
         {
             "title": "Particles - Effects",
@@ -4156,15 +4116,15 @@
             "title": "Particles - Helper - Smoke",
             "playgroundId": "#XRRTC0#2",
             "renderCount": 120,
-            "referenceImage": "particles-helper-smoke.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["opaque-clear-alpha"],
+            "referenceImage": "particles-helper-smoke.png"
         },
         {
             "title": "Particles - Helper - Fire",
             "playgroundId": "#I2D9MM#18",
             "renderCount": 120,
-            "referenceImage": "particles-helper-fire.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["opaque-clear-alpha"],
+            "referenceImage": "particles-helper-fire.png"
         },
         {
             "title": "Particles - Attractors",
@@ -4187,8 +4147,8 @@
         {
             "title": "Selection outline layer with instances",
             "playgroundId": "#UR9706#0",
-            "referenceImage": "Selection-outline-layer-with-instances.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "workarounds": ["prime-effect-layers"],
+            "referenceImage": "Selection-outline-layer-with-instances.png"
         },
         {
             "title": "Selection outline layer with instances and LOD",
@@ -4505,8 +4465,7 @@
         {
             "title": "Reflection Probes - debug markers",
             "playgroundId": "#KA93U#1723",
-            "referenceImage": "Reflection-Probes---debug-markers.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "Reflection-Probes---debug-markers.png"
         },
         {
             "title": "Unbalanced push pop - debug markers",

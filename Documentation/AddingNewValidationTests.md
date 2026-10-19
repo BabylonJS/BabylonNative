@@ -50,12 +50,15 @@ TSV column. When a workaround changes what the runner does for a test, the runne
 
 | ID | Example bug | Runner behavior |
 |---|---|---|
-| `wait-for-readiness` | Renders before utility-layer scenes, GUI images, or material effects are ready | Waits for those as described below |
+| `wait-for-readiness` | Renders before utility-layer scenes, GUI images, sprites, or material effects are ready | Waits for those as described below |
 | `undeclared-name` | Reads the browser-only global `name` (`window.name`) | Declares `var name = ""` for the example code |
 | `prime-effect-layers` | Captures effect-layer (glow/highlight) output on the first frame | Renders one extra frame before counting frames |
 | `leak-cleanup` | Leaves textures or Draco state behind after disposal | Releases leaked textures and resets Draco after the test (stray scenes are disposed after every test) |
 | `wait-for-import` | Starts `ImportMeshAsync`/`AppendSceneAsync`/`LoadAssetContainerAsync` in `createScene` without awaiting it | Waits for loader promises started before the scene is returned |
+| `refresh-export-matrices` | Changes node transforms right before a glTF export; the exporter's no-op root-node check reads stale cached world matrices and drops the node | Recomputes every node's world matrix before `GLTF2Export.GLTFAsync`/`GLBAsync` |
+| `wait-for-clustered-lights` | Uses a `ClusteredLightContainer`; Babylon.js 9.29 scene readiness skips its proxy shader, so lit materials can all report not-ready on the first frame and draw nothing | Calls `_isReady()` on each container (which starts compiling the proxy shader) and waits, without rendering, until all are ready |
 | `opaque-clear-alpha` | Clears opaque but leaves alpha < 1 in the final image | Skips canvas-background compositing unless the test sets `canvasBackgroundColor`, the scene uses a frame graph, or `clearColor.a < 1` |
+| `xhr-events` | Relies on `XMLHttpRequest` behavior the native polyfill lacks: the `load` event, or an asynchronous failure for a URL that cannot be opened | Patches new `XMLHttpRequest` instances to raise `load` before `loadend` for every completed response (`error` only for status 0), and to report `open()` URL-open failures as a DONE request with status 0 (`readystatechange`, `error`, `loadend`); other `open()` errors still throw |
 
 Without `opaque-clear-alpha`, the runner matches the browser screenshot and always composites
 translucent pixels over the canvas background (`canvasBackgroundColor`, or green-yellow by default).
@@ -65,10 +68,14 @@ main scene's `executeWhenReady` (10-minute timeout), then renders `renderCount` 
 
 ## wait-for-readiness
 
-The runner waits for scene readiness, GUI image readiness, and clean material
+The runner waits for scene readiness, GUI image readiness, sprite-manager readiness, and clean material
 defines with ready effects in the active camera's render pass. Utility scenes using
 the main scene's camera participate in the same check. Inspection restores the
 previous render pass, including on errors.
+
+Sprite-manager readiness includes packed-atlas metadata, which `Scene.executeWhenReady`
+does not wait for. When `scene.spritesEnabled` is false, sprite-manager readiness is
+skipped; otherwise, all sprite managers must be ready.
 
 The initial readiness wait and its 10-minute timeout cover both the main scene
 and associated utility scenes. Their pending model/texture loads do not consume

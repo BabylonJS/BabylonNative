@@ -1,6 +1,6 @@
 FetchContent_Declare(DirectXTK
     GIT_REPOSITORY https://github.com/microsoft/DirectXTK.git
-    GIT_TAG e7d9b64ca6bb8977d4e3006727deaf57a7c1de84)
+    GIT_TAG d57b857efbb47af07d725b6c11c3ed8d723490eb)
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
