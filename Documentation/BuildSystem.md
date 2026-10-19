@@ -6,10 +6,11 @@ design. Most external sources are now acquired with CMake FetchContent.
 its bgfx, bx and bimg sources remain pinned external FetchContent acquisitions.
 AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
 in this repository under `Dependencies/` with imported file history. The
-root builds these components with `add_subdirectory` rather than FetchContent;
+root includes CMakeExtensions as a helper module and builds the other three
+with `add_subdirectory` rather than FetchContent;
 their nested projects also use their siblings here instead of fetching the
 former standalone repositories. No `_deps/*-src` copies are produced for
-these components; their `_deps` binary folders remain in use.
+these components; the built components' `_deps` binary folders remain in use.
 Targets and lateral dependency relationships are unchanged. The legacy
 `_deps/bgfx.cmake-src` source-package and `_deps/bgfx.cmake-build` binary layouts
 remain supported; see [Building](../BUILDING.md) for local/offline overrides.

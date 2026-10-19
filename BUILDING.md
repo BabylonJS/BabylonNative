@@ -34,8 +34,9 @@ disconnected builds and Git-free source packaging.
 
 AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained in
 this repository under `Dependencies/` with their imported file histories.
-CMake builds them with `add_subdirectory`, not FetchContent. They do not
-produce `_deps/*-src` copies; their binary directories remain under `_deps`.
+CMake includes the CMakeExtensions helper module and builds the other three
+components with `add_subdirectory`, not FetchContent. They do not
+produce `_deps/*-src` copies; the built components' binary directories remain under `_deps`.
 To work on any of these components, edit its tracked sources here directly.
 The root CMake project loads CMakeExtensions once for its subdirectories;
 standalone component and test projects load it from their own entry point.

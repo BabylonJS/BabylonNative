@@ -69,7 +69,7 @@ FetchContent_Declare(SPIRV-Cross
 
 # --------------------------------------------------
 
-add_subdirectory(Dependencies/CMakeExtensions "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
+include(Dependencies/CMakeExtensions/CMakeLists.txt)
 
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
