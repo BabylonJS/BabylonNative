@@ -1,3 +1,5 @@
+include("${CMAKE_CURRENT_LIST_DIR}/../../Dependencies/CMakeExtensions/CMakeLists.txt")
+
 FetchContent_Declare(DirectXTK
     GIT_REPOSITORY https://github.com/microsoft/DirectXTK.git
     GIT_TAG d57b857efbb47af07d725b6c11c3ed8d723490eb)

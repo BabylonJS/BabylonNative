@@ -13,9 +13,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.4.1)
 # --------------------------------------------------
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
-endif()
+include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)

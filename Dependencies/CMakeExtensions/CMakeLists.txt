@@ -1,3 +1,5 @@
+include_guard(GLOBAL)
+
 function(warnings_as_errors target)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
       # 5205 : delete of an abstract XXX that has a non-virtual destructor results in undefined behavior (coming from WinRT)

@@ -10,9 +10,7 @@ FetchContent_Declare(arcana.cpp
     GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 # --------------------------------------------------
 
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
-endif()
+include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 project(AndroidExtensions)
 
