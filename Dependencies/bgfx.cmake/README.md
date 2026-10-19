@@ -18,8 +18,10 @@ cmake -S Dependencies\bgfx.cmake -B build\bgfx -DBGFX_BUILD_EXAMPLES=OFF
 cmake --build build\bgfx --config Release
 ```
 
-CMake fetches the three full Git repositories at the exact revisions in
-`cmake/dependencies.cmake`, without submodules. Default sources are
+CMake fetches the three full Git repositories at the revisions declared in
+`CMakeLists.txt`, without submodules. The FetchContent resolver follows the
+upstream `bkaradzic/bgfx.cmake` approach, while retaining Babylon Native's
+existing bgfx, bx and bimg revisions for compatibility. Default sources are
 `${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/{bgfx,bx,bimg}`. Babylon Native adds
 the tracked wrapper locally at the legacy binary root
 `${FETCHCONTENT_BASE_DIR}/bgfx.cmake-build`; it never downloads the wrapper.

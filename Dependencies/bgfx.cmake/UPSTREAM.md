@@ -23,6 +23,18 @@ The former gitlinks now correspond to pinned CMake source acquisitions:
 | bx | https://github.com/bkaradzic/bx | `a9a71f8ef449c11042607feaeae0b8f46d22869a` |
 | bimg | https://github.com/bkaradzic/bimg | `671fe06dd7012a1ab85aa931019ed16112909756` |
 
+The wrapper's FetchContent declarations were updated to match the approach
+introduced in https://github.com/bkaradzic/bgfx.cmake at
+`dbc15d21e7744887d543d0c80278fe26fbb0f5f0`. This is a BabylonNative
+integration change, not a new history import: the original import tip and
+commit map above remain unchanged. The three child revisions above remain
+pinned because the newer upstream bgfx revision no longer supplies
+`stb_truetype.h`, which BabylonNative still includes; upgrading the child
+sources needs a separate compatibility change. The declarations and source
+selection live in `CMakeLists.txt`; BabylonNative's source-tree staging remains in
+`cmake/stage-sources.cmake`. The old `cmake/dependencies.cmake` and
+`cmake/babylon-native.cmake` integration files were removed.
+
 The upstream `.github` directory is excluded from the vendored working tree in
 a separate BabylonNative-only commit. All five files and their histories remain
 in the imported ancestry. This exclusion is not an upstream wrapper change;
@@ -34,7 +46,7 @@ For a future wrapper update, fetch the original full history into a disposable
 clone, use the same path/gitlink transformation without pruning commits, and
 reuse the mapped import ancestry before merging new wrapper changes. Keep
 adaptations separate and extend the map and verification for the new tip.
-Update child pins only deliberately in `cmake/dependencies.cmake`; CMake
+Update child pins only deliberately in `CMakeLists.txt`; CMake
 updates managed sources on reconfigure but never checks out explicit roots.
 
 ## Exporting wrapper changes upstream
@@ -52,7 +64,7 @@ git -C Dependencies\bgfx.cmake diff --binary --relative `
   --output=..\..\build\bgfx-wrapper.patch `
   39f003f6ae0b6e92b1c3bd0152f164c0e56000b2 HEAD -- `
   CMakeLists.txt .gitmodules cmake `
-  ':(exclude)cmake/babylon-native.cmake' ':(exclude)cmake/stage-sources.cmake'
+  ':(exclude)cmake/stage-sources.cmake'
 ```
 
 Create `build` first if needed. Review the candidate patch in a standalone

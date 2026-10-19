@@ -57,7 +57,24 @@ if(WIN32 AND NOT DEFINED BIMG_CONFIG_USE_WIC)
     set(BIMG_CONFIG_USE_WIC ON)
 endif()
 
-include(bgfx.cmake/cmake/babylon-native.cmake)
+set(FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}"
+    CACHE PATH "Override source directory for bgfx.cmake")
+set(bgfx.cmake_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake")
+if(NOT "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}" STREQUAL "")
+    get_filename_component(bgfx.cmake_SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}" ABSOLUTE)
+endif()
+if(NOT EXISTS "${bgfx.cmake_SOURCE_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE is not a local wrapper: ${bgfx.cmake_SOURCE_DIR}")
+endif()
+set(bgfx.cmake_BINARY_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-build")
+add_subdirectory("${bgfx.cmake_SOURCE_DIR}" "${bgfx.cmake_BINARY_DIR}" EXCLUDE_FROM_ALL)
+if(BABYLON_NATIVE_BUILD_SOURCETREE)
+    include(bgfx.cmake/cmake/stage-sources.cmake)
+    bgfx_stage_sources("${bgfx.cmake_SOURCE_DIR}" "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src")
+endif()
+foreach(_bgfx_variable BGFX_DIR BX_DIR BIMG_DIR bgfx.cmake_SOURCE_DIR bgfx.cmake_BINARY_DIR BGFX_PROJECT_VERSION)
+    set(${_bgfx_variable} "${${_bgfx_variable}}" PARENT_SCOPE)
+endforeach()
 
 # Turn off debug annotations as it causes an access violation in D3D12.
 # This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.

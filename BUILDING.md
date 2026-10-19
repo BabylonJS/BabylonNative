@@ -20,8 +20,9 @@ build directory. Build directory location is up to you, but we highly recommend 
 the `build` directory from the repository root. The `.gitignore` file is set up to
 ignore this `build` directory.
 
-The bgfx CMake wrapper is tracked in `Dependencies/bgfx.cmake`; CMake fetches
-only its pinned bgfx, bx and bimg sources. Default child roots remain under
+The bgfx CMake wrapper is tracked in `Dependencies/bgfx.cmake`; its upstream-style
+FetchContent declarations acquire only pinned bgfx, bx and bimg sources.
+Default child roots remain under
 `<build>/_deps/bgfx.cmake-src/{bgfx,bx,bimg}` and wrapper binaries under
 `<build>/_deps/bgfx.cmake-build`. Explicit `BGFX_DIR`, `BX_DIR`, `BIMG_DIR` or
 standard child `FETCHCONTENT_SOURCE_DIR_*` overrides select local trees.
@@ -34,6 +35,8 @@ this repository under `Dependencies/` with their imported file histories.
 CMake builds them with `add_subdirectory`, not FetchContent. They do not
 produce `_deps/*-src` copies; their binary directories remain under `_deps`.
 To work on any of these components, edit its tracked sources here directly.
+The root CMake project loads CMakeExtensions once for its subdirectories;
+standalone component and test projects load it from their own entry point.
 
 When apps are enabled on desktop platforms, the embedded JsRuntimeHost tests
 build as `JsRuntimeHostUnitTests` beside Babylon Native's `UnitTests`; standalone

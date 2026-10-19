@@ -109,6 +109,7 @@ bgfx_config_option(BGFX_CONFIG_MAX_RECT_CACHE "Specify maximum scissor rect cach
 bgfx_config_option(BGFX_CONFIG_SORT_KEY_NUM_BITS_PROGRAM "Specify maximum program count as 2^(program bits)")
 bgfx_config_option(BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE "Specify minimum resource command buffer size")
 bgfx_config_option(BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE "Specify minimum uniform buffer size")
+bgfx_config_option(BGFX_CONFIG_MIN_UNIFORM_CACHE_SIZE "Specify minimum view and frame uniform cache size")
 bgfx_config_option(BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE "Specify uniform buffer resize threshold size")
 bgfx_config_option(BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE "Specify uniform buffer resize increment size")
 bgfx_config_option(BGFX_CONFIG_DYNAMIC_VERTEX_BUFFER_SIZE "Specify dynamic vertex buffer block size in bytes")
@@ -130,7 +131,56 @@ if(BGFX_BUILD_TESTS)
 	enable_testing()
 endif()
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
+include(FetchContent)
+
+FetchContent_Declare(bx
+	GIT_REPOSITORY https://github.com/bkaradzic/bx.git
+	GIT_TAG a9a71f8ef449c11042607feaeae0b8f46d22869a
+	GIT_SUBMODULES ""
+	SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bx"
+	SOURCE_SUBDIR "_bgfx_population_only")
+FetchContent_Declare(bimg
+	GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
+	GIT_TAG 671fe06dd7012a1ab85aa931019ed16112909756
+	GIT_SUBMODULES ""
+	SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bimg"
+	SOURCE_SUBDIR "_bgfx_population_only")
+FetchContent_Declare(bgfx
+	GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
+	GIT_TAG 64e7324430604ba61a45b51e1cbeb2b67c5d1d15
+	GIT_SUBMODULES ""
+	SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bgfx"
+	SOURCE_SUBDIR "_bgfx_population_only")
+
+foreach(dep IN ITEMS bx bimg bgfx)
+	string(TOUPPER "${dep}" upper)
+	set(root_variable "${upper}_DIR")
+	set(override_variable "FETCHCONTENT_SOURCE_DIR_${upper}")
+	if(NOT "${${root_variable}}" STREQUAL "")
+		file(REAL_PATH "${${root_variable}}" selected_root BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+	elseif("${${override_variable}}" STREQUAL "" AND
+	       EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dep}/include/${dep}/${dep}.h")
+		set(selected_root "${CMAKE_CURRENT_SOURCE_DIR}/${dep}")
+	else()
+		FetchContent_MakeAvailable(${dep})
+		FetchContent_GetProperties(${dep} SOURCE_DIR selected_root)
+		file(REAL_PATH "${selected_root}" selected_root)
+	endif()
+
+	if(dep STREQUAL "bgfx")
+		set(sentinels include/bgfx/bgfx.h src/bgfx.cpp scripts/bgfx.idl)
+	elseif(dep STREQUAL "bx")
+		set(sentinels include/bx/bx.h src/bx.cpp)
+	else()
+		set(sentinels include/bimg/bimg.h src/image.cpp)
+	endif()
+	foreach(sentinel IN LISTS sentinels)
+		if(NOT EXISTS "${selected_root}/${sentinel}")
+			message(FATAL_ERROR "${root_variable}: '${selected_root}' is not a valid ${dep} source tree (missing ${sentinel}). Supply sources before configuring disconnected builds.")
+		endif()
+	endforeach()
+	set(${root_variable} "${selected_root}")
+endforeach()
 
 # sets project version from api ver / git rev
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
