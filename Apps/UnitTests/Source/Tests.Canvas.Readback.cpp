@@ -194,6 +194,32 @@ TEST(CanvasReadback, GaussianBlurPadsUniformUploads)
     });
 }
 
+TEST(CanvasReadback, EmptyFillDoesNotDuplicateUniformUploads)
+{
+    RunCanvasTest([](Napi::Env env) {
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        auto scope = graphics.AcquireFrameCompletionScope();
+        Napi::Eval(env, R"JS(
+            const canvas = new _native.Canvas();
+            canvas.width = canvas.height = 16;
+            const context = canvas.getContext("2d");
+            try {
+                context.beginPath();
+                context.fill();
+                context.getImageData(0, 0, 16, 16);
+                context.beginPath();
+                context.moveTo(1, 1);
+                context.lineTo(8, 8);
+                context.fill();
+                context.getImageData(0, 0, 16, 16);
+            } finally {
+                context.dispose();
+                canvas.dispose();
+            }
+        )JS", "canvas-empty-fill.js");
+    });
+}
+
 TEST(CanvasReadback, FilterBordersDoNotReuseClearPaletteColors)
 {
 #if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)

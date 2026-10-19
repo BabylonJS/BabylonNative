@@ -86,6 +86,10 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
 
       - name: Add ASAN runtime DLLs to PATH
         if: ${{ inputs.enable-sanitizers }}
@@ -149,6 +153,13 @@ jobs:
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\_deps\jsruntimehost-build\Tests\UnitTests\RelWithDebInfo
           JsRuntimeHostUnitTests
+
+      - name: Run UrlLibTests
+        if: ${{ inputs.graphics-api != 'D3D12' }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\_deps\urllib-build\Tests\RelWithDebInfo
+          UrlLibTests
 
       - name: Module Load Test
         if: ${{ !inputs.enable-sanitizers }}

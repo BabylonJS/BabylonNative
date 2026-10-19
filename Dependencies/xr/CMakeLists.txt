@@ -5,15 +5,14 @@ include(FetchContent)
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
+    add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
+endif()
 
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)

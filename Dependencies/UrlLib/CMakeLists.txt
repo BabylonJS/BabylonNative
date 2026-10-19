@@ -8,18 +8,14 @@ include(FetchContent)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG        7c6be8aaa29effbc8ee1a2217388fb6e399150d2)
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG        2e85a8d43b89246c460112c9e5546ad54b6e87b4)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG dc750e7f69dad76779419df6442f834c57a30a1f)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
+    add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
+endif()
 
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
@@ -33,7 +29,9 @@ project(UrlLib)
 FetchContent_MakeAvailable_With_Message(arcana.cpp)
 
 if(ANDROID)
-    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    if(NOT TARGET AndroidExtensions)
+        add_subdirectory("../AndroidExtensions" "${CMAKE_BINARY_DIR}/_deps/androidextensions-build" EXCLUDE_FROM_ALL)
+    endif()
 endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -102,8 +100,8 @@ endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
-# Unit tests: on by default only when UrlLib is the top-level project being built for a
-# desktop host, so consumers that FetchContent UrlLib are unaffected.
+# Standalone desktop builds enable tests by default; BabylonNative explicitly
+# enables them for its desktop test configurations.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT IOS AND NOT ANDROID)
     option(URLLIB_TESTS "Build the UrlLib unit tests." ON)
 else()

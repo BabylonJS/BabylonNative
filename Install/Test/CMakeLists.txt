@@ -9,14 +9,11 @@ include(FetchContent)
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz")
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+add_subdirectory("../../Dependencies/CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
 
 project(TestInstall)
 

@@ -1,7 +1,7 @@
 # AndroidExtensions
 
 AndroidExtensions is a C++ utility library for Android development. Although it was
-created as a subcomponent of [JsRuntimeHost](https://github.com/BabylonJS/JsRuntimeHost)
+created as a subcomponent of [JsRuntimeHost](../JsRuntimeHost)
 for its polyfills, it may also be used standalone.
 
 ## Contributing

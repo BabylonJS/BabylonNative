@@ -148,6 +148,9 @@ jobs:
           ulimit -c unlimited
           xvfb-run ./JsRuntimeHostUnitTests
 
+      - name: UrlLib Unit Tests
+        run: build/Linux/_deps/urllib-build/Tests/UrlLibTests
+
       - name: Verify Vulkan Unit Test Results
         if: ${{ inputs.graphics-api == 'Vulkan' }}
         run: |

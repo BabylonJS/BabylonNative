@@ -1,13 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
 
-# Use these vendored copies for every declaration of these names, including those
-# in fetched dependencies. Override parent source-package paths because
-# _deps/*-src copies are no longer produced for these dependencies.
-set(FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/AndroidExtensions")
-set(FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/CMakeExtensions")
-set(FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/JsRuntimeHost")
-set(FETCHCONTENT_SOURCE_DIR_URLLIB "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/UrlLib")
-
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
@@ -18,16 +10,9 @@ include(FetchContent)
 # Declarations
 # --------------------------------------------------
 
-# EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
-# targets to the ALL_BUILD target.  We do this for all dependencies except
-# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
-# that are part of the Babylon Native contract. When adding dependencies using
-# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
-# targets that are part of the Babylon Native contract.
+# EXCLUDE_FROM_ALL keeps externally fetched dependencies out of ALL_BUILD;
+# JsRuntimeHost is maintained here and its public targets remain in ALL_BUILD.
 
-FetchContent_Declare(AndroidExtensions
-    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS}"
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
@@ -39,9 +24,6 @@ FetchContent_Declare(arcore-android-sdk
 FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(CMakeExtensions
-    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS}"
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
@@ -69,8 +51,6 @@ FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.5.0
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(JsRuntimeHost
-    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST}")
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
@@ -79,13 +59,10 @@ FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 2b078efc3ca2ca3f6ce0069339ac409c643b0136
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(UrlLib
-    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_URLLIB}"
-    EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+add_subdirectory(Dependencies/CMakeExtensions "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
 
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
@@ -95,8 +72,8 @@ FetchContent_MakeAvailable(CMakeExtensions)
 # bgfx.cmake itself is tracked locally; source-tree mode stages that wrapper beside
 # its three selected child trees in _deps/bgfx.cmake-src for existing packagers.
 # FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE remains a local wrapper override.
-# AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are vendored and
-# always resolve from Dependencies/; no _deps/*-src copies are produced for them.
+# AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
+# in Dependencies/ and added as subdirectories; no _deps/*-src copies are produced.
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)

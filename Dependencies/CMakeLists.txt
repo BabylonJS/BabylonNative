@@ -4,7 +4,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # AndroidExtensions
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    add_subdirectory(AndroidExtensions "${CMAKE_BINARY_DIR}/_deps/androidextensions-build" EXCLUDE_FROM_ALL)
 endif()
 
 # --------------------------------------------------
@@ -32,12 +32,16 @@ target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 # --------------------------------------------------
 set(BGFX_BUILD_EXAMPLES OFF)
 set(BGFX_BUILD_TOOLS OFF)
+set(BGFX_CONFIG_C99_API 0)
+set(BGFX_CONFIG_DEFAULT_MAX_ENCODERS 2)
+set(BGFX_CONFIG_MAX_VERTEX_STREAMS 18)
+set(BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE 16)
 set(BGFX_CONFIG_MULTITHREADED ON)
+set(BGFX_CONFIG_VIDEO OFF)
 set(BGFX_CUSTOM_TARGETS OFF)
 set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
-set(BGFX_CONFIG_VIDEO OFF)
 
 # Canvas workloads can exceed bgfx's default of 128 framebuffer handles.
 if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
@@ -60,22 +64,12 @@ include(bgfx.cmake/cmake/babylon-native.cmake)
 # See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
 
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
-
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
 # bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
 # directory, and Windows has no system copy the way Linux and Android do.
 # Expose the path so the OpenGL backends of our own targets can use it.
 set(BGFX_KHRONOS_INCLUDE_DIR "${BGFX_DIR}/3rdparty/khronos" CACHE INTERNAL "" FORCE)
-
-# Temporary disable uniform debug.
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
-
-# Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_C99_API=0)
 
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
@@ -257,11 +251,25 @@ if(BABYLON_NATIVE_BUILD_APPS AND
    ((WIN32 AND NOT WINDOWS_STORE) OR
     (APPLE AND NOT IOS AND NOT VISIONOS) OR
     (UNIX AND NOT ANDROID AND NOT APPLE)))
+    set(URLLIB_TESTS ON)
+else()
+    set(URLLIB_TESTS OFF)
+endif()
+if(URLLIB_TESTS)
+    add_subdirectory(UrlLib "${CMAKE_BINARY_DIR}/_deps/urllib-build")
+else()
+    add_subdirectory(UrlLib "${CMAKE_BINARY_DIR}/_deps/urllib-build" EXCLUDE_FROM_ALL)
+endif()
+
+if(BABYLON_NATIVE_BUILD_APPS AND
+   ((WIN32 AND NOT WINDOWS_STORE) OR
+    (APPLE AND NOT IOS AND NOT VISIONOS) OR
+    (UNIX AND NOT ANDROID AND NOT APPLE)))
     set(JSRUNTIMEHOST_TESTS ON)
 else()
     set(JSRUNTIMEHOST_TESTS OFF)
 endif()
-FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+add_subdirectory(JsRuntimeHost "${CMAKE_BINARY_DIR}/_deps/jsruntimehost-build")
 
 # Two JsRuntimeHost targets cannot be built without RTTI:
 #   v8inspector - includes asio, whose headers use typeid() unconditionally

@@ -8,12 +8,11 @@ include(FetchContent)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
+    add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
+endif()
 
 project(AndroidExtensions)
 

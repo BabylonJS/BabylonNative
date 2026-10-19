@@ -12,12 +12,6 @@ def cmakeArguments = [
     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
     "-DJSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR=ON"
 ]
-if (project.hasProperty("dependencySourceRoot")) {
-    def dependencies = file(project.property("dependencySourceRoot")).absolutePath
-    ["AndroidExtensions", "CMakeExtensions", "UrlLib"].each { name ->
-        cmakeArguments.add("-DFETCHCONTENT_SOURCE_DIR_${name.toUpperCase()}=${dependencies}/${name}")
-    }
-}
 // Hermes for Android needs HOST hermesc/shermes (they emit bytecode at build
 // time and can't run as NDK-cross-compiled binaries). The JsRuntimeHost CMake
 // bootstraps these host compilers automatically when cross-compiling, so no

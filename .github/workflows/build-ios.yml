@@ -61,10 +61,7 @@ jobs:
             -D IOS=ON \
             -D PLATFORM=SIMULATORARM64 \
             -D DEPLOYMENT_TARGET=${{ inputs.deployment-target }} \
-            -D JSRUNTIMEHOST_TESTS=ON \
-            "-D FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS=$GITHUB_WORKSPACE/Dependencies/AndroidExtensions" \
-            "-D FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS=$GITHUB_WORKSPACE/Dependencies/CMakeExtensions" \
-            "-D FETCHCONTENT_SOURCE_DIR_URLLIB=$GITHUB_WORKSPACE/Dependencies/UrlLib"
+            -D JSRUNTIMEHOST_TESTS=ON
 
       - name: Boot iOS simulator
         if: inputs.run-jsruntimehost-tests

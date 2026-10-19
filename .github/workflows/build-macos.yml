@@ -61,6 +61,9 @@ jobs:
       - name: Build JsRuntimeHost UnitTests macOS
         run: cmake --build build/macOS --target JsRuntimeHostUnitTests --config RelWithDebInfo
 
+      - name: Build UrlLibTests macOS
+        run: cmake --build build/macOS --target UrlLibTests --config RelWithDebInfo
+
       - name: Build ModuleLoadTest macOS
         run: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
 
@@ -78,6 +81,9 @@ jobs:
           cd build/macOS/_deps/jsruntimehost-build/Tests/UnitTests/RelWithDebInfo
           ulimit -c unlimited
           ./JsRuntimeHostUnitTests
+
+      - name: Run UrlLibTests macOS
+        run: build/macOS/_deps/urllib-build/Tests/RelWithDebInfo/UrlLibTests
 
       - name: Run ModuleLoadTest macOS
         if: ${{ !inputs.enable-sanitizers }}
