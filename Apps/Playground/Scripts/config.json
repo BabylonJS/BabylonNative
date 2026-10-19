@@ -1377,7 +1377,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;",
+            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(BABYLON.Vector3.Backward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(BABYLON.Vector3.Backward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
@@ -1385,7 +1385,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;",
+            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(BABYLON.Vector3.Backward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(BABYLON.Vector3.Backward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
@@ -1393,7 +1393,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;",
+            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(BABYLON.Vector3.Backward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(BABYLON.Vector3.Backward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
@@ -1401,7 +1401,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;",
+            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(BABYLON.Vector3.Backward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(BABYLON.Vector3.Backward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
