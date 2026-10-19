@@ -22,6 +22,8 @@ ignore this `build` directory.
 
 The bgfx CMake wrapper is tracked in `Dependencies/bgfx.cmake`; its upstream-style
 FetchContent declarations acquire only pinned bgfx, bx and bimg sources.
+BabylonNative's root declaration selects its BabylonJS/bgfx revision before
+the wrapper's standalone default is considered.
 Default child roots remain under
 `<build>/_deps/bgfx.cmake-src/{bgfx,bx,bimg}` and wrapper binaries under
 `<build>/_deps/bgfx.cmake-build`. Explicit `BGFX_DIR`, `BX_DIR`, `BIMG_DIR` or
