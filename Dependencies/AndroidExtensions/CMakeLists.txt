@@ -10,7 +10,7 @@ FetchContent_Declare(arcana.cpp
     GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 # --------------------------------------------------
 
-if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
+if(NOT TARGET CMakeExtensions)
     add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
 endif()
 

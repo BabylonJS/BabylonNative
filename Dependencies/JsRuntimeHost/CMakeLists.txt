@@ -46,7 +46,7 @@ FetchContent_Declare(quickjs-ng
     
 # --------------------------------------------------
 
-if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
+if(NOT TARGET CMakeExtensions)
     add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build" EXCLUDE_FROM_ALL)
 endif()
 
