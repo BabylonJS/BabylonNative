@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 
 include(FetchContent)
 if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
-    add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build")
+    include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 endif()
 
 # --------------------------------------------------

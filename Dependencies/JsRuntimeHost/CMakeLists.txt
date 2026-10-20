@@ -6,7 +6,7 @@ endif()
 
 include(FetchContent)
 if(NOT COMMAND warnings_as_errors)
-    add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build")
+    include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 endif()
 
 # --------------------------------------------------
