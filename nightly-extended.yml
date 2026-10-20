@@ -14,6 +14,7 @@ parameters:
 - name: win32ValidationShards
   type: number
   default: 4
+  values: [1, 2, 3, 4, 6, 8]
 
 variables:
   # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
@@ -107,7 +108,8 @@ jobs:
   dependsOn: Win32_x64_D3D11_Sanitizers_Build
   pool:
     vmImage: 'windows-2022'
-  timeoutInMinutes: 60
+  # Sized for win32ValidationShards=1 (the whole suite in one job, ~75 minutes).
+  timeoutInMinutes: 120
   strategy:
     parallel: ${{ parameters.win32ValidationShards }}
   variables:
