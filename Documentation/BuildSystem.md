@@ -19,6 +19,10 @@ On pull requests, the desktop JsRuntimeHost and UrlLib unit suites run
 independently when their respective component directories change; the
 Android emulator and iOS simulator JsRuntimeHost suites follow the same
 JsRuntimeHost change gate. Master builds run both desktop suites.
+Component-specific platform build/test steps live in composite actions under
+`.github/actions/{jsruntimehost,urllib}/<platform>/action.yml`; top-level
+workflows configure the shared build and invoke those actions conditionally.
+Changes to a component's actions also enable its PR unit-test checks.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

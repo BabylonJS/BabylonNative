@@ -54,60 +54,8 @@ jobs:
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Configure JsRuntimeHost iOS simulator tests
-        if: inputs.run-jsruntimehost-tests
-        run: |
-          cmake -S Dependencies/JsRuntimeHost -B build/JsRuntimeHost-iOS -G Xcode \
-            -D IOS=ON \
-            -D PLATFORM=SIMULATORARM64 \
-            -D DEPLOYMENT_TARGET=${{ inputs.deployment-target }} \
-            -D JSRUNTIMEHOST_TESTS=ON
-
-      - name: Boot iOS simulator
-        if: inputs.run-jsruntimehost-tests
-        id: simulator
-        run: |
-          simulator=$(xcrun simctl list -j devices available | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          iphones = [
-              (tuple(int(part) for part in runtime.rsplit("iOS-", 1)[1].split("-")), device)
-              for runtime, group in devices.items() if "iOS-" in runtime
-              for device in group if device["name"].startswith("iPhone")
-          ]
-          minimum = tuple(int(part) for part in "${{ inputs.deployment-target }}".split("."))
-          iphones = [(version, device) for version, device in iphones if version >= minimum]
-          if not iphones:
-              raise SystemExit("No iPhone simulator meets the deployment target")
-          print(max(iphones, key=lambda item: item[0])[1]["udid"])
-          ')
-          echo "id=$simulator" >> "$GITHUB_OUTPUT"
-          if ! xcrun simctl list devices booted | grep -Fq "$simulator"; then
-            xcrun simctl boot "$simulator"
-          fi
-          xcrun simctl bootstatus "$simulator" -b
-
-      - name: Build JsRuntimeHost iOS simulator tests
-        if: inputs.run-jsruntimehost-tests
-        run: |
-          xcodebuild \
-            -project build/JsRuntimeHost-iOS/JsRuntimeHost.xcodeproj \
-            -scheme UnitTests \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' \
-            -configuration RelWithDebInfo \
-            CODE_SIGNING_ALLOWED=NO
-
       - name: Run JsRuntimeHost iOS simulator tests
         if: inputs.run-jsruntimehost-tests
-        run: |
-          simulator='${{ steps.simulator.outputs.id }}'
-          xcrun simctl install "$simulator" \
-            build/JsRuntimeHost-iOS/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app
-          xcrun simctl launch --console "$simulator" com.jsruntimehost.unittests 2> "$RUNNER_TEMP/jsruntimehost-exit-code"
-          exit_code=$(tail -n 1 "$RUNNER_TEMP/jsruntimehost-exit-code")
-          if [[ ! "$exit_code" =~ ^[0-9]+$ ]]; then
-            echo "::error::Missing JsRuntimeHost unit-test exit code: $exit_code"
-            exit 1
-          fi
-          exit "$exit_code"
+        uses: ./.github/actions/jsruntimehost/ios
+        with:
+          deployment-target: ${{ inputs.deployment-target }}

@@ -1,0 +1,37 @@
+name: JsRuntimeHost Android unit tests
+description: Build and run JsRuntimeHost instrumentation tests in an Android emulator.
+inputs:
+  js-engine:
+    description: JavaScript engine used by the test harness.
+    required: true
+  ndk-version:
+    description: Android NDK version to install and use.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install Android NDK
+      shell: bash
+      env:
+        NDK_VERSION: ${{ inputs.ndk-version }}
+      run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION"
+    - name: Enable Android emulator acceleration
+      shell: bash
+      run: sudo chmod 0666 /dev/kvm
+    - name: Run JsRuntimeHost Android emulator tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 33
+        target: google_apis
+        arch: x86_64
+        emulator-options: -no-snapshot -no-window -no-boot-anim -no-audio
+        script: |
+          chmod +x Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew
+          Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew -p Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android connectedAndroidTest -PabiFilters=x86_64 -PjsEngine=${{ inputs.js-engine }} -PndkVersion=${{ inputs.ndk-version }}
+    - name: Upload JsRuntimeHost Android test results
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v6
+      with:
+        name: JsRuntimeHost-Android-${{ inputs.js-engine }}
+        path: Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/app/build/outputs/androidTest-results/connected
+        if-no-files-found: ignore

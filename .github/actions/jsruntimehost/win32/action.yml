@@ -1,0 +1,36 @@
+name: JsRuntimeHost Windows unit tests
+description: Build and run JsRuntimeHost unit tests in a configured Windows build.
+inputs:
+  build-directory:
+    description: Configured BabylonNative CMake build directory.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Enable JsRuntimeHost crash dumps
+      shell: cmd
+      run: |
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /f
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+        reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+    - name: Build JsRuntimeHostUnitTests
+      shell: pwsh
+      env:
+        BUILD_DIRECTORY: ${{ inputs.build-directory }}
+      run: cmake --build "$env:BUILD_DIRECTORY" --config RelWithDebInfo --target JsRuntimeHostUnitTests --parallel
+    - name: Run JsRuntimeHostUnitTests
+      shell: pwsh
+      env:
+        BUILD_DIRECTORY: ${{ inputs.build-directory }}
+      run: |
+        Set-Location "$env:BUILD_DIRECTORY\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo"
+        & .\JsRuntimeHostUnitTests.exe
+    - name: Stage JsRuntimeHost crash dump binaries
+      if: failure()
+      shell: pwsh
+      env:
+        BUILD_DIRECTORY: ${{ inputs.build-directory }}
+      run: |
+        New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\Dumps" | Out-Null
+        Copy-Item -Path "$env:BUILD_DIRECTORY\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo\JsRuntimeHostUnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue

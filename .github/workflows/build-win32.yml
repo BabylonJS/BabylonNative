@@ -96,10 +96,6 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /f
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\JsRuntimeHostUnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
 
       - name: Add ASAN runtime DLLs to PATH
         if: ${{ inputs.enable-sanitizers }}
@@ -159,17 +155,15 @@ jobs:
 
       - name: Run JsRuntimeHost UnitTests
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.run-jsruntimehost-tests }}
-        shell: cmd
-        run: |
-          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo
-          JsRuntimeHostUnitTests
+        uses: ./.github/actions/jsruntimehost/win32
+        with:
+          build-directory: build\${{ steps.vars.outputs.solution_name }}
 
       - name: Run UrlLibTests
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.run-urllib-tests }}
-        shell: cmd
-        run: |
-          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\UrlLib\Tests\RelWithDebInfo
-          UrlLibTests
+        uses: ./.github/actions/urllib/win32
+        with:
+          build-directory: build\${{ steps.vars.outputs.solution_name }}
 
       - name: Module Load Test
         if: ${{ !inputs.enable-sanitizers }}
@@ -183,7 +177,6 @@ jobs:
         shell: powershell
         run: |
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
-          Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo\JsRuntimeHostUnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Upload Crash Dumps
         if: failure()

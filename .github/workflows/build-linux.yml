@@ -154,14 +154,15 @@ jobs:
 
       - name: JsRuntimeHost Unit Tests
         if: inputs.run-jsruntimehost-tests
-        run: |
-          cd build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests
-          ulimit -c unlimited
-          xvfb-run ./JsRuntimeHostUnitTests
+        uses: ./.github/actions/jsruntimehost/linux
+        with:
+          build-directory: build/Linux
 
       - name: UrlLib Unit Tests
         if: inputs.run-urllib-tests
-        run: build/Linux/Dependencies/UrlLib/Tests/UrlLibTests
+        uses: ./.github/actions/urllib/linux
+        with:
+          build-directory: build/Linux
 
       - name: Verify Vulkan Unit Test Results
         if: ${{ inputs.graphics-api == 'Vulkan' }}

@@ -39,7 +39,7 @@ jobs:
               JsRuntimeHost) output=jsruntimehost ;;
               UrlLib) output=urllib ;;
             esac
-            if git diff --quiet "$base" "$PR_HEAD" -- "Dependencies/$component"; then
+            if git diff --quiet "$base" "$PR_HEAD" -- "Dependencies/$component" ".github/actions/$output"; then
               echo "$output=false" >> "$GITHUB_OUTPUT"
             else
               result=$?

@@ -1,0 +1,22 @@
+name: JsRuntimeHost Linux unit tests
+description: Build and run JsRuntimeHost unit tests in a configured Linux build.
+inputs:
+  build-directory:
+    description: Configured BabylonNative CMake build directory.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Build JsRuntimeHostUnitTests
+      shell: bash
+      env:
+        BUILD_DIRECTORY: ${{ inputs.build-directory }}
+      run: cmake --build "$BUILD_DIRECTORY" --target JsRuntimeHostUnitTests --parallel
+    - name: Run JsRuntimeHostUnitTests
+      shell: bash
+      env:
+        BUILD_DIRECTORY: ${{ inputs.build-directory }}
+      run: |
+        cd "$BUILD_DIRECTORY/Dependencies/JsRuntimeHost/Tests/UnitTests"
+        ulimit -c unlimited
+        xvfb-run ./JsRuntimeHostUnitTests

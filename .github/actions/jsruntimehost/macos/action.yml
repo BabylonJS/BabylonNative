@@ -1,0 +1,22 @@
+name: JsRuntimeHost macOS unit tests
+description: Build and run JsRuntimeHost unit tests in a configured macOS build.
+inputs:
+  build-directory:
+    description: Configured BabylonNative CMake build directory.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Build JsRuntimeHostUnitTests
+      shell: bash
+      env:
+        BUILD_DIRECTORY: ${{ inputs.build-directory }}
+      run: cmake --build "$BUILD_DIRECTORY" --target JsRuntimeHostUnitTests --config RelWithDebInfo
+    - name: Run JsRuntimeHostUnitTests
+      shell: bash
+      env:
+        BUILD_DIRECTORY: ${{ inputs.build-directory }}
+      run: |
+        cd "$BUILD_DIRECTORY/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo"
+        ulimit -c unlimited
+        ./JsRuntimeHostUnitTests
