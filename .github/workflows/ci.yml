@@ -11,7 +11,8 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Hermes, sanitizer, and macOS-hosted Android builds run in the Azure pipeline nightly.yml.
+# Hermes and macOS-hosted Android builds run in the Azure pipeline nightly.yml; sanitizer builds run
+# in the Azure pipeline nightly-extended.yml.
 jobs:
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:

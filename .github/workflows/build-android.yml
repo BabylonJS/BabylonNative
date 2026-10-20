@@ -39,9 +39,37 @@ jobs:
             brew install ninja
           fi
 
+      - name: Install ccache
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y ccache
+          elif [ "${{ runner.os }}" = "macOS" ] && ! command -v ccache >/dev/null 2>&1; then
+            brew install ccache
+          fi
+
+      # Compiler cache. PRs only restore (they can read the cache saved by master pushes);
+      # only master pushes save, so PR runs don't churn the repository cache quota.
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-android-${{ runner.os }}-${{ inputs.js-engine }}-${{ github.sha }}
+          restore-keys: |
+            ccache-android-${{ runner.os }}-${{ inputs.js-engine }}-
+
       - name: Build Playground ${{ inputs.js-engine }}
         working-directory: Apps/Playground/Android
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_MAXSIZE: 500M
+          # Gradle's CMake picks these up as the default CMAKE_<LANG>_COMPILER_LAUNCHER.
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
+          ccache --zero-stats
           chmod +x gradlew
           ./gradlew assembleRelease \
             -PjsEngine=${{ inputs.js-engine }} \
@@ -50,3 +78,11 @@ jobs:
             -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
             -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             -PSANITIZERS=OFF
+          ccache --show-stats
+
+      - name: Save ccache
+        if: ${{ github.event_name == 'push' && success() }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ steps.ccache.outputs.cache-primary-key }}
