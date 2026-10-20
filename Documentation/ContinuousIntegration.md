@@ -3,12 +3,15 @@ The CI helps improve the quality of code for all platforms and avoid regression 
 Validation works by running the engine with a JS script that creates a scene. The rendering is captured and compared with a reference image.
 If the rendered and reference images are too different, the test fails, an error will raise in the CI (failed build) and rendered/error images are stored as an download artefact than can help debug.
 This is done for various platforms when a PR is opened, for nightly build and when a PR is merged in master branch.
-To keep PR feedback fast, the slow or runner-scarce jobs (Hermes builds, the Win32 and macOS sanitizer builds, and the macOS-hosted Android builds) run only in the Azure nightly pipeline (`nightly.yml` at the repo root, which can also be queued manually). Pushing a new commit to a PR cancels that PR's in-flight CI run.
+To keep PR feedback fast, the slow or runner-scarce jobs run only in Azure nightly pipelines (at the repo root; both can also be queued manually): Hermes builds and the macOS-hosted Android builds run in `nightly.yml`, and the Win32 and macOS sanitizer builds run in `nightly-extended.yml`. Pushing a new commit to a PR cancels that PR's in-flight CI run.
 CI will also take care of code quality: Warnings are treated as error and will break the build. A PR can't be merged if the build fails.
 
-PR and master-push checks run through `.github/workflows/ci.yml`. Hermes builds
-(Win32 x64 D3D11, Linux Clang, and Android on Ubuntu) and sanitizer builds
-(Win32 x64 V8 D3D11 and macOS) run only in the Azure Pipelines `nightly.yml`
+PR and master-push checks run through `.github/workflows/ci.yml`. The Linux and
+Android builds use ccache; PR runs restore the cache saved by the latest master
+push, and only master pushes save it.
+
+Hermes builds (Win32 x64 D3D11, Linux Clang, and Android on Ubuntu) and the
+macOS-hosted Android builds run only in the Azure Pipelines `nightly.yml`
 pipeline, scheduled at 23:00 UTC Monday through Friday, or when that pipeline is
 run manually. These configurations retain their CI build and test settings and
 use the repository's npm dependency versions; the existing `Nightly` job separately tests
@@ -17,16 +20,25 @@ the Babylon.js preview download and publishes packaged binaries.
 The nightly pipeline's downloadable binaries remain the existing Win32 x64
 `RelWithDebInfo` Playground and UnitTests packages, with their existing artifact
 names and contents.
-The `Nightly` job waits for every Hermes, sanitizer, and macOS-hosted Android job
-to complete successfully before starting. It publishes packages only after its
-own build and packaged validation/unit tests succeed.
-Failed, canceled, skipped, or partially successful prerequisite jobs prevent
-binary package publication. Win32 diagnostic artifacts are published independently
-of that gate: the sanitizer job uploads rendered pictures on success or failure
-and error pictures on failure; all Win32 jobs upload crash dumps and associated
-binaries on failure. The packaged nightly job also uploads error pictures on
-failure. The macOS sanitizer job retains its UnitTests core-dump upload on failure.
+The `Nightly` job doesn't wait for the other jobs in the pipeline. It publishes
+packages after its own build and packaged validation/unit tests succeed.
+Babylon.js downloads these packages only from fully succeeded runs, so a failure
+in any job of `nightly.yml` still makes Babylon.js keep using the previous
+successful run's packages. The packaged nightly job uploads error pictures on
+failure; all Win32 jobs upload crash dumps and associated binaries on failure.
 Other configurations retain their pipeline logs without artifact uploads.
+
+Sanitizer builds (Win32 x64 V8 D3D11 and macOS) run only in the Azure Pipelines
+`nightly-extended.yml` pipeline, scheduled at 01:00 UTC Tuesday through Saturday
+(after `nightly.yml`), or when that pipeline is run manually. Nothing consumes its
+artifacts, so sanitizer failures don't block the Babylon.js nightly packages.
+The Win32 sanitizer build job runs UnitTests and publishes the Playground binaries;
+the visual validation tests then run in parallel jobs (4 by default, set by the
+`win32ValidationShards` pipeline parameter); with N jobs, each job takes every Nth
+`config.json` entry through the Playground `--test-index` option. Each validation job uploads
+rendered pictures on success or failure, and error pictures, crash dumps and
+associated binaries on failure, with the job number appended to the artifact name.
+The macOS sanitizer job retains its UnitTests core-dump upload on failure.
 
 CI validation is composed of 3 main parts:
 - The test datas
@@ -101,12 +113,12 @@ For Apple platforms and Metal, it's was not possible to do the same.
 
 The build and test steps for PR checks are defined in the reusable workflows
 under `.github/workflows/`. Nightly build and test steps are defined in
-`nightly.yml`.
+`nightly.yml` and `nightly-extended.yml`.
 
 ## Win32
 
 By far the simplest CI tests. Runs the feshly built executable in the working directory.
-On Win32, the engine-variant jobs run visual validation (`validation_native.js`) only with V8 (`Win32_x64_V8_D3D11` in PR CI and `Win32_x64_D3D11_Sanitizers` in nightly), so results don't depend on engine-specific behavior. The existing packaged `Nightly` job also runs visual validation. The Chakra, JSI, Hermes and QuickJS jobs still build and run UnitTests and ModuleLoadTest; sanitizer jobs skip ModuleLoadTest.
+On Win32, the engine-variant jobs run visual validation (`validation_native.js`) only with V8 (`Win32_x64_V8_D3D11` in PR CI and the Win32 sanitizer validation jobs in `nightly-extended.yml`), so results don't depend on engine-specific behavior. The existing packaged `Nightly` job also runs visual validation. The Chakra, JSI, Hermes and QuickJS jobs still build and run UnitTests and ModuleLoadTest; sanitizer jobs skip ModuleLoadTest.
 ```shell
     cd buildWin32_x64\Apps\ValidationTests
     cd Release
