@@ -15,6 +15,10 @@ Targets and lateral dependency relationships are unchanged. The legacy
 `_deps/bgfx.cmake-src` source packages remain supported; the wrapper's
 build files now live under `Dependencies/bgfx.cmake`. See
 [Building](../BUILDING.md) for local/offline source overrides.
+On pull requests, the desktop JsRuntimeHost and UrlLib unit suites run
+independently when their respective component directories change; the
+Android emulator and iOS simulator JsRuntimeHost suites follow the same
+JsRuntimeHost change gate. Master builds run both desktop suites.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

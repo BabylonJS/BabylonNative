@@ -254,12 +254,14 @@ endif()
 # --------------------------------------------------
 # UrlLib and JsRuntimeHost unit tests use the same desktop app gate as Apps/CMakeLists.txt.
 # --------------------------------------------------
+option(BABYLON_NATIVE_BUILD_URLLIB_TESTS "Build UrlLib desktop unit tests." ON)
+option(BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS "Build JsRuntimeHost desktop unit tests." ON)
 if(BABYLON_NATIVE_BUILD_APPS AND
    ((WIN32 AND NOT WINDOWS_STORE) OR
     (APPLE AND NOT IOS AND NOT VISIONOS) OR
     (UNIX AND NOT ANDROID AND NOT APPLE)))
-    set(URLLIB_TESTS ON)
-    set(JSRUNTIMEHOST_TESTS ON)
+    set(URLLIB_TESTS "${BABYLON_NATIVE_BUILD_URLLIB_TESTS}")
+    set(JSRUNTIMEHOST_TESTS "${BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS}")
 else()
     set(URLLIB_TESTS OFF)
     set(JSRUNTIMEHOST_TESTS OFF)

@@ -18,6 +18,14 @@ on:
         required: false
         type: boolean
         default: false
+      run-jsruntimehost-tests:
+        required: false
+        type: boolean
+        default: true
+      run-urllib-tests:
+        required: false
+        type: boolean
+        default: true
 
 # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
 # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
@@ -68,6 +76,8 @@ jobs:
             -D BABYLON_DEBUG_TRACE=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
+            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=${{ inputs.run-jsruntimehost-tests && 'ON' || 'OFF' }} ^
+            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=${{ inputs.run-urllib-tests && 'ON' || 'OFF' }} ^
             -D ENABLE_SANITIZERS=${{ steps.vars.outputs.sanitizer_flag }}
 
       - name: Build
@@ -148,14 +158,14 @@ jobs:
           UnitTests
 
       - name: Run JsRuntimeHost UnitTests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.run-jsruntimehost-tests }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo
           JsRuntimeHostUnitTests
 
       - name: Run UrlLibTests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.run-urllib-tests }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\UrlLib\Tests\RelWithDebInfo
