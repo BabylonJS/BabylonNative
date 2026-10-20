@@ -1,0 +1,38 @@
+name: React Native Test iOS Package
+on: workflow_call
+jobs:
+  build-test-iOS:
+    runs-on: macos-15
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4.2.2
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: BabylonReactNative
+        path: Embedding/ReactNative/artifact
+    - name: Install build package
+      run: |
+        package=$(find ../../artifact -maxdepth 1 -name 'babylonjs-react-native-*.tgz' -print -quit)
+        test -n "$package"
+        npm install "$package"
+        npm install
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Clean and Install Pods
+      run: |
+        cd ios
+        rm -rf Pods Podfile.lock
+        pod install
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Gulp (iOS)
+      run: |
+        npm install
+        npx gulp buildIOS
+      working-directory: Embedding/ReactNative/Package
+    timeout-minutes: 90
+permissions:
+  contents: read

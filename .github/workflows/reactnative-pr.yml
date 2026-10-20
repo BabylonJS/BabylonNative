@@ -1,0 +1,68 @@
+name: React Native PR Build
+on:
+  pull_request:
+    branches:
+    - master
+    paths:
+    - Embedding/ReactNative/**
+    - .github/workflows/reactnative-*.yml
+  workflow_call:
+    inputs:
+      force-run:
+        description: Run the graph even while ci.yml also calls it
+        type: boolean
+        default: true
+jobs:
+  entry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.select.outputs.run }}
+    steps:
+    - uses: actions/checkout@v4.2.2
+    - name: Avoid duplicate PR builds
+      id: select
+      env:
+        FORCE_RUN: ${{ inputs.force-run }}
+      # TEMPORARY: remove before merge with the unconditional ci.yml call.
+      # Path-triggered builds automatically resume as soon as that call is removed.
+      run: |
+        if [ "$FORCE_RUN" = "true" ] || ! grep -Eq '^[[:space:]]+uses: \./\.github/workflows/reactnative-pr\.yml[[:space:]]*$' .github/workflows/ci.yml; then
+          echo "run=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "run=false" >> "$GITHUB_OUTPUT"
+        fi
+  build-android:
+    needs: [entry]
+    uses: ./.github/workflows/reactnative-android.yml
+    if: ${{ needs.entry.outputs.run == 'true' }}
+  build-iOS:
+    needs: [entry]
+    uses: ./.github/workflows/reactnative-ios.yml
+    if: ${{ needs.entry.outputs.run == 'true' }}
+  build-windows:
+    needs: [entry]
+    uses: ./.github/workflows/reactnative-windows.yml
+    if: ${{ needs.entry.outputs.run == 'true' }}
+  build-typescript:
+    needs: [entry]
+    uses: ./.github/workflows/reactnative-typescript.yml
+    if: ${{ needs.entry.outputs.run == 'true' }}
+  package:
+    needs:
+    - build-typescript
+    uses: ./.github/workflows/reactnative-package.yml
+  test-package-ios:
+    needs:
+    - package
+    uses: ./.github/workflows/reactnative-test-ios.yml
+  test-package-android:
+    needs:
+    - package
+    uses: ./.github/workflows/reactnative-test-android.yml
+  test-package-windows:
+    needs:
+    - package
+    uses: ./.github/workflows/reactnative-test-windows.yml
+permissions:
+  contents: read
