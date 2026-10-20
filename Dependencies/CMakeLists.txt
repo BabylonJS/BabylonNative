@@ -4,7 +4,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # AndroidExtensions
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    add_subdirectory(AndroidExtensions "${CMAKE_BINARY_DIR}/_deps/androidextensions-build" EXCLUDE_FROM_ALL)
+    add_subdirectory(AndroidExtensions)
 endif()
 
 # --------------------------------------------------
@@ -57,19 +57,12 @@ if(WIN32 AND NOT DEFINED BIMG_CONFIG_USE_WIC)
     set(BIMG_CONFIG_USE_WIC ON)
 endif()
 
-set(FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}"
-    CACHE PATH "Override source directory for bgfx.cmake")
-set(bgfx.cmake_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake")
-if(NOT "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}" STREQUAL "")
-    get_filename_component(bgfx.cmake_SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE}" ABSOLUTE)
-endif()
-set(bgfx.cmake_BINARY_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-build")
-add_subdirectory("${bgfx.cmake_SOURCE_DIR}" "${bgfx.cmake_BINARY_DIR}" EXCLUDE_FROM_ALL)
+add_subdirectory(bgfx.cmake)
 if(BABYLON_NATIVE_BUILD_SOURCETREE)
     include(bgfx.cmake/cmake/stage-sources.cmake)
-    bgfx_stage_sources("${bgfx.cmake_SOURCE_DIR}" "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src")
+    bgfx_stage_sources("${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake" "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src")
 endif()
-foreach(_bgfx_variable BGFX_DIR BX_DIR BIMG_DIR bgfx.cmake_SOURCE_DIR bgfx.cmake_BINARY_DIR BGFX_PROJECT_VERSION)
+foreach(_bgfx_variable BGFX_DIR BX_DIR BIMG_DIR BGFX_PROJECT_VERSION)
     set(${_bgfx_variable} "${${_bgfx_variable}}" PARENT_SCOPE)
 endforeach()
 
@@ -259,31 +252,20 @@ if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) 
 endif()
 
 # --------------------------------------------------
-# JsRuntimeHost
+# UrlLib and JsRuntimeHost unit tests use the same desktop app gate as Apps/CMakeLists.txt.
 # --------------------------------------------------
 if(BABYLON_NATIVE_BUILD_APPS AND
    ((WIN32 AND NOT WINDOWS_STORE) OR
     (APPLE AND NOT IOS AND NOT VISIONOS) OR
     (UNIX AND NOT ANDROID AND NOT APPLE)))
     set(URLLIB_TESTS ON)
-else()
-    set(URLLIB_TESTS OFF)
-endif()
-if(URLLIB_TESTS)
-    add_subdirectory(UrlLib "${CMAKE_BINARY_DIR}/_deps/urllib-build")
-else()
-    add_subdirectory(UrlLib "${CMAKE_BINARY_DIR}/_deps/urllib-build" EXCLUDE_FROM_ALL)
-endif()
-
-if(BABYLON_NATIVE_BUILD_APPS AND
-   ((WIN32 AND NOT WINDOWS_STORE) OR
-    (APPLE AND NOT IOS AND NOT VISIONOS) OR
-    (UNIX AND NOT ANDROID AND NOT APPLE)))
     set(JSRUNTIMEHOST_TESTS ON)
 else()
+    set(URLLIB_TESTS OFF)
     set(JSRUNTIMEHOST_TESTS OFF)
 endif()
-add_subdirectory(JsRuntimeHost "${CMAKE_BINARY_DIR}/_deps/jsruntimehost-build")
+add_subdirectory(UrlLib)
+add_subdirectory(JsRuntimeHost)
 
 # Two JsRuntimeHost targets cannot be built without RTTI:
 #   v8inspector - includes asio, whose headers use typeid() unconditionally

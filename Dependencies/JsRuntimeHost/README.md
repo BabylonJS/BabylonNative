@@ -63,7 +63,7 @@ If the `app\cpp` folder on the left navigation pane is empty, select `File` -> `
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and 
+Please read [CONTRIBUTING.md](../../CONTRIBUTING.md) for details on our code of conduct, and
 the process for submitting pull requests.
 
 ## Reporting Security Issues

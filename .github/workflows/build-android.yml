@@ -27,34 +27,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # The additional x86_64 Hermes test build compiles host tools and a
-      # second Android ABI after Playground; free runner space before either.
-      - name: Free disk space for Hermes simulator tests
-        if: inputs.run-jsruntimehost-tests && inputs.js-engine == 'Hermes'
-        uses: jlumbroso/free-disk-space@36e9a5af4eddb91fc11aec4c6f6f79b3cc0cb523
-        with:
-          tool-cache: false
-          android: false
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Install Ninja (Hermes host-compiler bootstrap)
-        if: inputs.js-engine == 'Hermes'
-        run: |
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            sudo apt-get update
-            sudo apt-get install -y ninja-build
-          elif [ "${{ runner.os }}" = "macOS" ] && ! command -v ninja >/dev/null 2>&1; then
-            brew install ninja
-          fi
 
       - name: Build Playground ${{ inputs.js-engine }}
         working-directory: Apps/Playground/Android
@@ -68,7 +44,7 @@ jobs:
             -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             -PSANITIZERS=OFF
 
-      - name: Install JsRuntimeHost test NDK
+      - name: Install Android NDK
         if: inputs.run-jsruntimehost-tests
         run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${{ env.NDK_VERSION }}"
 

@@ -20,11 +20,8 @@ build directory. Build directory location is up to you, but we highly recommend 
 the `build` directory from the repository root. The `.gitignore` file is set up to
 ignore this `build` directory.
 
-The bgfx CMake wrapper is tracked in `Dependencies/bgfx.cmake`; its upstream-style
-FetchContent declarations acquire only pinned bgfx, bx and bimg sources.
-BabylonNative's root declaration selects its BabylonJS/bgfx revision before
-the wrapper's standalone default is considered.
-Default child roots remain under
+The bgfx CMake wrapper is tracked in `Dependencies/bgfx.cmake`; CMake fetches
+only its pinned bgfx, bx and bimg sources. Default child roots remain under
 `<build>/_deps/bgfx.cmake-src/{bgfx,bx,bimg}` and wrapper binaries under
 `<build>/_deps/bgfx.cmake-build`. Explicit `BGFX_DIR`, `BX_DIR`, `BIMG_DIR` or
 standard child `FETCHCONTENT_SOURCE_DIR_*` overrides select local trees.
@@ -32,27 +29,13 @@ standard child `FETCHCONTENT_SOURCE_DIR_*` overrides select local trees.
 See the [wrapper documentation](Dependencies/bgfx.cmake/README.md) for precedence,
 disconnected builds and Git-free source packaging.
 
-AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained in
-this repository under `Dependencies/` with their imported file histories.
-CMake includes the CMakeExtensions helper module and builds the other three
-components with `add_subdirectory`, not FetchContent. They do not
-produce `_deps/*-src` copies; the built components' binary directories remain under `_deps`.
-To work on any of these components, edit its tracked sources here directly.
-The root CMake project loads CMakeExtensions once for its subdirectories;
-standalone component and test projects load it from their own entry point.
-
-When apps are enabled on desktop platforms, the embedded JsRuntimeHost tests
-build as `JsRuntimeHostUnitTests` beside Babylon Native's `UnitTests`; standalone
-JsRuntimeHost builds keep their original `UnitTests` target. Windows, macOS and
-Linux CI jobs that run Babylon Native unit tests also run the runtime suite,
-using their existing JavaScript engine and graphics backend. Neither suite
-is enabled for install-only/no-app builds or mobile/Windows Store targets.
-`UrlLibTests` also runs alongside the desktop unit suites.
-When either `Dependencies/JsRuntimeHost` or `Dependencies/UrlLib` changes,
-the existing Android and iOS CI builds additionally run the upstream
-JsRuntimeHost test harness on an Android emulator and an iOS simulator,
-respectively, using the sibling sources in this repository. Mobile
-Babylon Native builds still do not enable the desktop unit-test targets.
+AndroidExtensions and CMakeExtensions are vendored with their history in
+`Dependencies/AndroidExtensions` and `Dependencies/CMakeExtensions`. The root
+`CMakeLists.txt` unconditionally sets `FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS`
+and `FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS` to these folders, so every declaration
+uses these copies, including those in fetched dependencies such as JsRuntimeHost.
+Source-tree packaging uses these tracked folders; no `_deps/*-src` copies are
+produced for these two dependencies.
 
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have

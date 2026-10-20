@@ -78,12 +78,12 @@ jobs:
 
       - name: Run JsRuntimeHost UnitTests macOS
         run: |
-          cd build/macOS/_deps/jsruntimehost-build/Tests/UnitTests/RelWithDebInfo
+          cd build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo
           ulimit -c unlimited
           ./JsRuntimeHostUnitTests
 
       - name: Run UrlLibTests macOS
-        run: build/macOS/_deps/urllib-build/Tests/RelWithDebInfo/UrlLibTests
+        run: build/macOS/Dependencies/UrlLib/Tests/RelWithDebInfo/UrlLibTests
 
       - name: Run ModuleLoadTest macOS
         if: ${{ !inputs.enable-sanitizers }}
@@ -100,5 +100,5 @@ jobs:
           path: |
             build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
             build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*
-            build/macOS/_deps/jsruntimehost-build/Tests/UnitTests/RelWithDebInfo/JsRuntimeHostUnitTests
-            build/macOS/_deps/jsruntimehost-build/Tests/UnitTests/RelWithDebInfo/*.core.*
+            build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/JsRuntimeHostUnitTests
+            build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/*.core.*

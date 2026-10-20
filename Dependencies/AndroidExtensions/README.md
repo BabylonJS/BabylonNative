@@ -6,7 +6,7 @@ for its polyfills, it may also be used standalone.
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and 
+Please read [CONTRIBUTING.md](../../CONTRIBUTING.md) for details on our code of conduct, and
 the process for submitting pull requests.
 
 ## Reporting Security Issues

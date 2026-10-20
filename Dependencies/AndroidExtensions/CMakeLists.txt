@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.18)
 
 include(FetchContent)
+if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
+    add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build")
+endif()
 
 # --------------------------------------------------
 # Declarations
@@ -9,8 +12,6 @@ FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 # --------------------------------------------------
-
-include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 project(AndroidExtensions)
 

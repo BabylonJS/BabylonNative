@@ -13,8 +13,6 @@ FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz")
 # --------------------------------------------------
 
-include("${CMAKE_CURRENT_LIST_DIR}/../../Dependencies/CMakeExtensions/CMakeLists.txt")
-
 project(TestInstall)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -23,7 +21,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(WIN32 OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID AND NOT APPLE))
-    FetchContent_MakeAvailable_With_Message(googletest)
+    FetchContent_MakeAvailable(googletest)
 endif()
 
 # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly

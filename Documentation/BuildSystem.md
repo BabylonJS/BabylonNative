@@ -10,10 +10,11 @@ root includes CMakeExtensions as a helper module and builds the other three
 with `add_subdirectory` rather than FetchContent;
 their nested projects also use their siblings here instead of fetching the
 former standalone repositories. No `_deps/*-src` copies are produced for
-these components; the built components' `_deps` binary folders remain in use.
+these components; their build files live under `Dependencies/` in the build tree.
 Targets and lateral dependency relationships are unchanged. The legacy
-`_deps/bgfx.cmake-src` source-package and `_deps/bgfx.cmake-build` binary layouts
-remain supported; see [Building](../BUILDING.md) for local/offline overrides.
+`_deps/bgfx.cmake-src` source packages remain supported; the wrapper's
+build files now live under `Dependencies/bgfx.cmake`. See
+[Building](../BUILDING.md) for local/offline source overrides.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

@@ -5,6 +5,9 @@ if(POLICY CMP0135)
 endif()
 
 include(FetchContent)
+if(NOT COMMAND warnings_as_errors)
+    add_subdirectory("../CMakeExtensions" "${CMAKE_BINARY_DIR}/_deps/cmakeextensions-build")
+endif()
 
 # --------------------------------------------------
 # Declarations
@@ -45,8 +48,6 @@ FetchContent_Declare(quickjs-ng
     EXCLUDE_FROM_ALL)
     
 # --------------------------------------------------
-
-include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)

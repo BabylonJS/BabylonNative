@@ -206,11 +206,11 @@ jobs:
     displayName: Unit Tests
 
   - script: JsRuntimeHostUnitTests.exe
-    workingDirectory: 'build\Win32_x64_Hermes\_deps\jsruntimehost-build\Tests\UnitTests\RelWithDebInfo'
+    workingDirectory: 'build\Win32_x64_Hermes\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo'
     displayName: JsRuntimeHost Unit Tests
 
   - script: UrlLibTests.exe
-    workingDirectory: 'build\Win32_x64_Hermes\_deps\urllib-build\Tests\RelWithDebInfo'
+    workingDirectory: 'build\Win32_x64_Hermes\Dependencies\UrlLib\Tests\RelWithDebInfo'
     displayName: UrlLib Unit Tests
 
   - script: ModuleLoadTest.exe
@@ -293,10 +293,10 @@ jobs:
       set -e
       ulimit -c unlimited
       xvfb-run ./JsRuntimeHostUnitTests
-    workingDirectory: build/Linux/_deps/jsruntimehost-build/Tests/UnitTests
+    workingDirectory: build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests
     displayName: JsRuntimeHost Unit Tests
 
-  - script: build/Linux/_deps/urllib-build/Tests/UrlLibTests
+  - script: build/Linux/Dependencies/UrlLib/Tests/UrlLibTests
     displayName: UrlLib Unit Tests
 
   - script: |

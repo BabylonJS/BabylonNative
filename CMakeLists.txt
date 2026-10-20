@@ -10,8 +10,7 @@ include(FetchContent)
 # Declarations
 # --------------------------------------------------
 
-# EXCLUDE_FROM_ALL keeps externally fetched dependencies out of ALL_BUILD;
-# JsRuntimeHost is maintained here and its public targets remain in ALL_BUILD.
+# EXCLUDE_FROM_ALL keeps externally fetched dependencies out of ALL_BUILD.
 
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
@@ -25,9 +24,23 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(bx
+    GIT_REPOSITORY https://github.com/bkaradzic/bx.git
+    GIT_TAG a9a71f8ef449c11042607feaeae0b8f46d22869a
+    GIT_SUBMODULES ""
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bx"
+    SOURCE_SUBDIR "_bgfx_population_only"
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(bimg
+    GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
+    GIT_TAG 671fe06dd7012a1ab85aa931019ed16112909756
+    GIT_SUBMODULES ""
+    SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bimg"
+    SOURCE_SUBDIR "_bgfx_population_only"
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
-    GIT_TAG f15c1ff18254f3fb85ffc1a669d1870c9714afc9
+    GIT_TAG 64e7324430604ba61a45b51e1cbeb2b67c5d1d15
     GIT_SUBMODULES ""
     SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bgfx"
     SOURCE_SUBDIR "_bgfx_population_only"
@@ -78,7 +91,6 @@ include(Dependencies/CMakeExtensions/CMakeLists.txt)
 # and FetchContent uses the provided local source overrides.
 # bgfx.cmake itself is tracked locally; source-tree mode stages that wrapper beside
 # its three selected child trees in _deps/bgfx.cmake-src for existing packagers.
-# FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE remains a local wrapper override.
 # AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
 # in Dependencies/ and added as subdirectories; no _deps/*-src copies are produced.
 

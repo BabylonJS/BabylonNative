@@ -23,11 +23,6 @@ The former gitlinks now correspond to pinned CMake source acquisitions:
 | bx | https://github.com/bkaradzic/bx | `a9a71f8ef449c11042607feaeae0b8f46d22869a` |
 | bimg | https://github.com/bkaradzic/bimg | `671fe06dd7012a1ab85aa931019ed16112909756` |
 
-BabylonNative's root FetchContent declaration selects the BabylonJS/bgfx
-revision `f15c1ff18254f3fb85ffc1a669d1870c9714afc9` before the wrapper
-declares its standalone default above. The wrapper's bx and bimg pins remain
-unchanged; standalone wrapper builds still use its own bgfx default.
-
 The wrapper's FetchContent declarations were updated to match the approach
 introduced in https://github.com/bkaradzic/bgfx.cmake at
 `dbc15d21e7744887d543d0c80278fe26fbb0f5f0`. This is a BabylonNative

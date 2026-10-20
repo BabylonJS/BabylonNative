@@ -10,8 +10,6 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.4.1)
 # --------------------------------------------------
 
-include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
-
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")

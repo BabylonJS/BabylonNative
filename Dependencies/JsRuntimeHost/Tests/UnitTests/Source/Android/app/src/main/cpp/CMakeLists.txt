@@ -9,8 +9,6 @@ get_filename_component(UNIT_TESTS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../../
 get_filename_component(TESTS_DIR "${UNIT_TESTS_DIR}/.." ABSOLUTE)
 get_filename_component(REPO_ROOT_DIR "${TESTS_DIR}/.." ABSOLUTE)
 
-include("${REPO_ROOT_DIR}/../CMakeExtensions/CMakeLists.txt")
-
 set(JSRUNTIMEHOST_TESTS ON CACHE BOOL "" FORCE)
 add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/JsRuntimeHost")
 
