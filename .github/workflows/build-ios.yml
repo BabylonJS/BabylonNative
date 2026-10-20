@@ -14,10 +14,6 @@ on:
         required: false
         type: string
         default: macos-latest
-      run-jsruntimehost-tests:
-        required: false
-        type: boolean
-        default: false
 
 # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
 # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
@@ -27,7 +23,7 @@ env:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: ${{ inputs.run-jsruntimehost-tests && 60 || 30 }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -53,9 +49,3 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO
-
-      - name: Run JsRuntimeHost iOS simulator tests
-        if: inputs.run-jsruntimehost-tests
-        uses: ./.github/actions/jsruntimehost/ios
-        with:
-          deployment-target: ${{ inputs.deployment-target }}

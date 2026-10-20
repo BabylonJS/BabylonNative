@@ -9,10 +9,6 @@ on:
       js-engine:
         required: true
         type: string
-      run-jsruntimehost-tests:
-        required: false
-        type: boolean
-        default: false
 
 env:
   NDK_VERSION: '28.2.13676358'
@@ -23,7 +19,7 @@ env:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: ${{ inputs.run-jsruntimehost-tests && 120 || 45 }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -43,10 +39,3 @@ jobs:
             -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
             -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             -PSANITIZERS=OFF
-
-      - name: Run JsRuntimeHost Android emulator tests
-        if: inputs.run-jsruntimehost-tests
-        uses: ./.github/actions/jsruntimehost/android
-        with:
-          js-engine: ${{ inputs.js-engine }}
-          ndk-version: ${{ env.NDK_VERSION }}

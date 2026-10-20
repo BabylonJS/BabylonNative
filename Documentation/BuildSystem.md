@@ -15,14 +15,18 @@ Targets and lateral dependency relationships are unchanged. The legacy
 `_deps/bgfx.cmake-src` source packages remain supported; the wrapper's
 build files now live under `Dependencies/bgfx.cmake`. See
 [Building](../BUILDING.md) for local/offline source overrides.
-On pull requests, the desktop JsRuntimeHost and UrlLib unit suites run
-independently when their respective component directories change; the
-Android emulator and iOS simulator JsRuntimeHost suites follow the same
-JsRuntimeHost change gate. Master builds run both desktop suites.
-Component-specific platform build/test steps live in composite actions under
-`.github/actions/{jsruntimehost,urllib}/<platform>/action.yml`; top-level
-workflows configure the shared build and invoke those actions conditionally.
-Changes to a component's actions also enable its PR unit-test checks.
+On pull requests, JsRuntimeHost and UrlLib unit suites run independently when
+their respective component directories or reusable test workflows change.
+Master pushes enable both components. Component tests live directly under
+`.github/workflows/` in `jsruntimehost-<platform>.yml` and
+`urllib-<platform>.yml`. `ci.yml` calls these reusable workflows after the
+corresponding platform builds succeed, with separate jobs for each component.
+Each test job checks out and builds its own component on a fresh runner:
+`needs` controls ordering, not build-directory sharing. JsRuntimeHost covers
+desktop Windows/macOS/Linux and Android emulator/iOS simulator harnesses;
+UrlLib has Windows/macOS/Linux suites. The main platform builds disable their
+embedded component tests to avoid duplicate execution. The `ci-complete`
+required check permits skips only for unchanged components.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

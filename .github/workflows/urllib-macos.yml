@@ -1,0 +1,35 @@
+name: UrlLib macOS unit tests
+
+on:
+  workflow_call:
+    inputs:
+      generator:
+        type: string
+        default: Xcode
+      xcode-version:
+        type: string
+        default: '26.4'
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode
+        env:
+          XCODE_VERSION: ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch "/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer"
+
+      - name: Configure UrlLib
+        env:
+          GENERATOR: ${{ inputs.generator }}
+        run: cmake -S Dependencies/UrlLib -B build/UrlLib -G "$GENERATOR" -DURLLIB_TESTS=ON
+
+      - name: Build UrlLibTests
+        run: cmake --build build/UrlLib --target UrlLibTests --config RelWithDebInfo
+
+      - name: Run UrlLibTests
+        working-directory: build/UrlLib/Tests/RelWithDebInfo
+        run: ./UrlLibTests

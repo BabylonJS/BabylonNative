@@ -1,0 +1,60 @@
+name: JsRuntimeHost macOS unit tests
+
+on:
+  workflow_call:
+    inputs:
+      generator:
+        type: string
+        default: Xcode
+      js-engine:
+        type: string
+        default: JavaScriptCore
+      xcode-version:
+        type: string
+        default: '26.4'
+
+env:
+  npm_config_fetch_retries: '5'
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select Xcode
+        env:
+          XCODE_VERSION: ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch "/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer"
+
+      - name: Configure JsRuntimeHost
+        env:
+          GENERATOR: ${{ inputs.generator }}
+          JS_ENGINE: ${{ inputs.js-engine }}
+        run: |
+          cmake -S Dependencies/JsRuntimeHost -B build/JsRuntimeHost -G "$GENERATOR" \
+            -DNAPI_JAVASCRIPT_ENGINE="$JS_ENGINE" \
+            -DJSRUNTIMEHOST_TESTS=ON -DBABYLON_DEBUG_TRACE=ON
+
+      - name: Build UnitTests
+        run: cmake --build build/JsRuntimeHost --target UnitTests --config RelWithDebInfo
+
+      - name: Enable core dumps
+        run: sudo sysctl -w kern.corefile=%N.core.%P
+
+      - name: Run UnitTests
+        working-directory: build/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo
+        run: |
+          ulimit -c unlimited
+          ./UnitTests
+
+      - name: Upload core dumps
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: JsRuntimeHost-macOS-${{ inputs.generator }}-${{ inputs.js-engine }}-core-dumps
+          path: |
+            build/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/UnitTests
+            build/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/*.core.*
+          if-no-files-found: ignore

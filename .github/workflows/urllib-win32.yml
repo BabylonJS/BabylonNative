@@ -1,0 +1,21 @@
+name: UrlLib Windows unit tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure UrlLib
+        run: cmake -S Dependencies/UrlLib -B build/UrlLib -G "Visual Studio 17 2022" -A x64 -DURLLIB_TESTS=ON
+
+      - name: Build UrlLibTests
+        run: cmake --build build/UrlLib --config RelWithDebInfo --target UrlLibTests --parallel
+
+      - name: Run UrlLibTests
+        working-directory: build/UrlLib/Tests/RelWithDebInfo
+        run: .\UrlLibTests.exe

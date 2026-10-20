@@ -39,7 +39,7 @@ jobs:
               JsRuntimeHost) output=jsruntimehost ;;
               UrlLib) output=urllib ;;
             esac
-            if git diff --quiet "$base" "$PR_HEAD" -- "Dependencies/$component" ".github/actions/$output"; then
+            if git diff --quiet "$base" "$PR_HEAD" -- "Dependencies/$component" ":(glob).github/workflows/$output-*.yml"; then
               echo "$output=false" >> "$GITHUB_OUTPUT"
             else
               result=$?
@@ -52,89 +52,63 @@ jobs:
 
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-macos.yml
     with:
       xcode-version: "26.4"
       runs-on: macos-26
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   MacOS_Ninja:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-macos.yml
     with:
       generator: "Ninja Multi-Config"
       xcode-version: "26.4"
       runs-on: macos-26
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   # ── Apple: iOS ───────────────────────────────────────────────
   iOS_Xcode26:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-ios.yml
     with:
       deployment-target: "26.0"
       xcode-version: "26.4"
       runs-on: macos-26
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
 
   MacOS_QuickJS:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-macos.yml
     with:
       xcode-version: "26.4"
       runs-on: macos-26
       js-engine: QuickJS
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   # ── Win32─────────────────────────────────────────────────────
   Win32_x64_D3D11:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   Win32_x64_JSI_D3D11:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
       napi-type: jsi
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   Win32_x64_V8_D3D11:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
       napi-type: V8
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   Win32_x64_QuickJS_D3D11:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
       napi-type: QuickJS
       graphics-api: D3D11
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   Win32_x64_D3D12:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
       graphics-api: D3D12
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   Win32_x64_D3D11_PrecompiledShaderTest:
     uses: ./.github/workflows/build-win32-shader.yml
@@ -158,72 +132,156 @@ jobs:
 
   # ── Ubuntu / Linux ────────────────────────────────────────────
   Ubuntu_Clang_JSC:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-linux.yml
     with:
       cc: clang
       cxx: clang++
       js-engine: JavaScriptCore
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   Ubuntu_GCC_JSC:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-linux.yml
     with:
       cc: gcc
       cxx: g++
       js-engine: JavaScriptCore
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   Ubuntu_Clang_QuickJS:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-linux.yml
     with:
       cc: clang
       cxx: clang++
       js-engine: QuickJS
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   # Exercise Vulkan validation, unit, and module-load coverage using lavapipe
   # under Xvfb.
   Ubuntu_Clang_Vulkan:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-linux.yml
     with:
       cc: clang
       cxx: clang++
       js-engine: JavaScriptCore
       graphics-api: Vulkan
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
-      run-urllib-tests: ${{ needs.runtime-source-changes.outputs.urllib == 'true' }}
 
   # ── Android ───────────────────────────────────────────────────
   Android_Ubuntu_JSC:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: JavaScriptCore
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
 
   Android_Ubuntu_V8:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: V8
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
 
   Android_Ubuntu_QuickJS:
-    needs: runtime-source-changes
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: QuickJS
-      run-jsruntimehost-tests: ${{ needs.runtime-source-changes.outputs.jsruntimehost == 'true' }}
+
+  # Component suites use independent runners after the platform builds succeed.
+  JsRuntimeHost_Win32:
+    needs: [runtime-source-changes, Win32_x64_D3D11, Win32_x64_JSI_D3D11, Win32_x64_V8_D3D11, Win32_x64_QuickJS_D3D11]
+    if: needs.runtime-source-changes.outputs.jsruntimehost == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        js-engine: [Chakra, JSI, V8, QuickJS]
+    uses: ./.github/workflows/jsruntimehost-win32.yml
+    with:
+      js-engine: ${{ matrix.js-engine }}
+
+  UrlLib_Win32:
+    needs: [runtime-source-changes, Win32_x64_D3D11]
+    if: needs.runtime-source-changes.outputs.urllib == 'true'
+    uses: ./.github/workflows/urllib-win32.yml
+
+  JsRuntimeHost_Linux:
+    needs: [runtime-source-changes, Ubuntu_Clang_JSC, Ubuntu_GCC_JSC, Ubuntu_Clang_QuickJS]
+    if: needs.runtime-source-changes.outputs.jsruntimehost == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: clang
+            cxx: clang++
+            js-engine: JavaScriptCore
+          - cc: gcc
+            cxx: g++
+            js-engine: JavaScriptCore
+          - cc: clang
+            cxx: clang++
+            js-engine: QuickJS
+    uses: ./.github/workflows/jsruntimehost-linux.yml
+    with:
+      cc: ${{ matrix.cc }}
+      cxx: ${{ matrix.cxx }}
+      js-engine: ${{ matrix.js-engine }}
+
+  UrlLib_Linux:
+    needs: [runtime-source-changes, Ubuntu_Clang_JSC, Ubuntu_GCC_JSC]
+    if: needs.runtime-source-changes.outputs.urllib == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: clang
+            cxx: clang++
+          - cc: gcc
+            cxx: g++
+    uses: ./.github/workflows/urllib-linux.yml
+    with:
+      cc: ${{ matrix.cc }}
+      cxx: ${{ matrix.cxx }}
+
+  JsRuntimeHost_MacOS:
+    needs: [runtime-source-changes, MacOS, MacOS_Ninja, MacOS_QuickJS]
+    if: needs.runtime-source-changes.outputs.jsruntimehost == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - generator: Xcode
+            js-engine: JavaScriptCore
+          - generator: Ninja Multi-Config
+            js-engine: JavaScriptCore
+          - generator: Xcode
+            js-engine: QuickJS
+    uses: ./.github/workflows/jsruntimehost-macos.yml
+    with:
+      generator: ${{ matrix.generator }}
+      js-engine: ${{ matrix.js-engine }}
+
+  UrlLib_MacOS:
+    needs: [runtime-source-changes, MacOS, MacOS_Ninja]
+    if: needs.runtime-source-changes.outputs.urllib == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        generator: [Xcode, Ninja Multi-Config]
+    uses: ./.github/workflows/urllib-macos.yml
+    with:
+      generator: ${{ matrix.generator }}
+
+  JsRuntimeHost_Android:
+    needs: [runtime-source-changes, Android_Ubuntu_JSC, Android_Ubuntu_V8, Android_Ubuntu_QuickJS]
+    if: needs.runtime-source-changes.outputs.jsruntimehost == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        js-engine: [JavaScriptCore, V8, QuickJS]
+    uses: ./.github/workflows/jsruntimehost-android.yml
+    with:
+      js-engine: ${{ matrix.js-engine }}
+
+  JsRuntimeHost_iOS:
+    needs: [runtime-source-changes, iOS_Xcode26]
+    if: needs.runtime-source-changes.outputs.jsruntimehost == 'true'
+    uses: ./.github/workflows/jsruntimehost-ios.yml
+    with:
+      deployment-target: "26.0"
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
@@ -266,6 +324,14 @@ jobs:
       - Android_Ubuntu_JSC
       - Android_Ubuntu_V8
       - Android_Ubuntu_QuickJS
+      - JsRuntimeHost_Win32
+      - UrlLib_Win32
+      - JsRuntimeHost_Linux
+      - UrlLib_Linux
+      - JsRuntimeHost_MacOS
+      - UrlLib_MacOS
+      - JsRuntimeHost_Android
+      - JsRuntimeHost_iOS
       - iOS_Installation
       - Linux_Installation
       - MacOS_Installation
@@ -275,12 +341,24 @@ jobs:
     steps:
       - name: Verify all jobs succeeded
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "Job results: $RESULTS"
-          for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
-              echo "::error::CI did not succeed (results: $RESULTS)"
-              exit 1
-            fi
-          done
+          python3 - <<'PY'
+          import json, os
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          outputs = needs["runtime-source-changes"]["outputs"]
+          failed = []
+          for name, job in needs.items():
+              component = (
+                  "jsruntimehost" if name.startswith("JsRuntimeHost_") else
+                  "urllib" if name.startswith("UrlLib_") else None
+              )
+              expected = "success"
+              if component and outputs.get(component) == "false":
+                  expected = "skipped"
+              if job["result"] != expected:
+                  failed.append(f"{name}: {job['result']} (expected {expected})")
+          if failed:
+              raise SystemExit("CI did not succeed: " + "; ".join(failed))
+          print("All required jobs passed; only unchanged component suites were skipped.")
+          PY

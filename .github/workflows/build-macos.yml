@@ -23,14 +23,6 @@ on:
         required: false
         type: string
         default: ''
-      run-jsruntimehost-tests:
-        required: false
-        type: boolean
-        default: true
-      run-urllib-tests:
-        required: false
-        type: boolean
-        default: true
 
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
@@ -57,8 +49,8 @@ jobs:
             -D BABYLON_DEBUG_TRACE=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
-            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=${{ inputs.run-jsruntimehost-tests && 'ON' || 'OFF' }} \
-            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=${{ inputs.run-urllib-tests && 'ON' || 'OFF' }} \
+            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=OFF \
+            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=OFF \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
 
@@ -80,18 +72,6 @@ jobs:
           ulimit -c unlimited
           ./UnitTests
 
-      - name: Run JsRuntimeHost UnitTests macOS
-        if: inputs.run-jsruntimehost-tests
-        uses: ./.github/actions/jsruntimehost/macos
-        with:
-          build-directory: build/macOS
-
-      - name: Run UrlLibTests macOS
-        if: inputs.run-urllib-tests
-        uses: ./.github/actions/urllib/macos
-        with:
-          build-directory: build/macOS
-
       - name: Run ModuleLoadTest macOS
         if: ${{ !inputs.enable-sanitizers }}
         run: |
@@ -107,5 +87,3 @@ jobs:
           path: |
             build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
             build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*
-            build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/JsRuntimeHostUnitTests
-            build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/*.core.*

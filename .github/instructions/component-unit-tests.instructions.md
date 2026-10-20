@@ -1,35 +1,39 @@
 ---
-applyTo: ".github/actions/**,.github/workflows/**"
+applyTo: ".github/workflows/**"
 ---
 
 # Component platform unit tests
 
-Put component-specific build and unit-test steps in composite actions:
+Put component-specific platform builds and unit tests in reusable workflows:
 
-- `.github/actions/urllib/{win32,linux,macos}/action.yml`
-- `.github/actions/jsruntimehost/{win32,linux,macos,android,ios}/action.yml`
+- `.github/workflows/urllib-{win32,linux,macos}.yml`
+- `.github/workflows/jsruntimehost-{win32,linux,macos,android,ios}.yml`
 
-Follow `.github/actions/<component>/<platform>/action.yml` for additional
-components or supported platforms. Do not create nested workflows under
-`.github/workflows`: GitHub does not discover or call workflows in subfolders.
-Do not add empty platform actions for components without a test harness.
+Follow `.github/workflows/<component>-<platform>.yml` for additional components
+or supported platforms. Declare `on: workflow_call`. GitHub does not discover
+or call workflows in subfolders, so keep these files directly in
+`.github/workflows`. Do not add empty workflows for unsupported test harnesses.
 
-Keep workflow triggers, runners, shared toolchain setup and root CMake
-configuration in the top-level `.github/workflows/*.yml` files. After checkout,
-invoke the local component action with a step-level `uses` and an `if` using
-that component's source-change output. Do not inline its build/test commands
-back into the platform workflow. Desktop actions consume the configured build
-directory; mobile actions own their separate test-harness configuration.
+Keep triggers, source-change detection and job dependencies in `ci.yml`.
+Invoke each test workflow with a job-level `uses`, `needs` listing the
+corresponding platform build job(s) and source-change detector, and `if`
+checking that component's output. Keep component test code out of the
+`build-<platform>.yml` workflows and do not duplicate it in composite actions.
+
+Reusable workflow jobs run on separate runners. Each test workflow must check
+out the repository, install its own tools, configure its component and build
+its tests; never assume `needs` shares files or environment with the build job.
+Pass values as declared workflow inputs. Standalone JsRuntimeHost's executable
+and target are named `UnitTests`, not the embedded `JsRuntimeHostUnitTests`.
 
 PR checks gate the components independently: JsRuntimeHost changes enable
 JsRuntimeHost tests, and UrlLib changes enable UrlLib tests. Changes to a
-component's actions must also enable that component's tests. Preserve full
-component coverage on master pushes. Keep CMake test-enable flags and action
-conditions consistent so disabled targets are never built or executed.
+component's `<component>-*.yml` workflows also enable its tests. Master pushes
+run both components. Disable embedded component tests in platform build
+workflows to avoid duplication; preserve existing local and nightly coverage.
 
-Declare an explicit shell for each composite `run` step. Preserve test exit
-codes, platform/engine restrictions, working directories, simulator selection,
-and failure artifacts when moving or changing steps. Pass workflow values as
-declared action inputs; composite actions do not inherit the caller's `inputs`
-or `steps` contexts. Keep source-change detection in the calling workflow,
-rather than duplicating it for every platform action.
+Add every component test job to `ci-complete`. Accept a skipped job only when
+its own component-change output is false; a changed component's skipped,
+failed or cancelled test job must fail the required check. Do not accept all
+skipped jobs indiscriminately. Preserve test exit codes, engine/compiler
+coverage, working directories, simulator selection and failure artifacts.
