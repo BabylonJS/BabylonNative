@@ -726,7 +726,8 @@
         {
             "title": "NME Glow Manual",
             "playgroundId": "#7QCYPB#320",
-            "referenceImage": "nme-glow-manual.png"
+            "referenceImage": "nme-glow-manual.png",
+            "workarounds": ["wait-for-import"]
         },
         {
             "title": "NME Glow Automatic",

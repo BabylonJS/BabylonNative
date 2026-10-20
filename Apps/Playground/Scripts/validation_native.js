@@ -60,7 +60,7 @@
         "prime-effect-layers": "render one extra frame before capture when effect layers exist",
         // Example leaves textures or Draco state behind for later tests.
         "leak-cleanup": "release leaked textures and reset Draco after the test",
-        // Example starts an async model load in createScene without awaiting it.
+        // Example starts an async model or node material load in createScene without awaiting it.
         "wait-for-import": "wait for loader promises started by createScene before rendering",
         // Example clears opaque but writes alpha < 1 that the browser would composite.
         "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
@@ -434,6 +434,14 @@
     ["ImportMeshAsync", "AppendAsync", "LoadAssetContainerAsync"].forEach(function (name) {
         wrapImportFunction(BABYLON.SceneLoader, name);
     });
+    // Scene readiness doesn't track node material JSON loads. The instance loadAsync calls an
+    // internal parse function, so it needs its own wrapper besides the static ones.
+    if (BABYLON.NodeMaterial) {
+        wrapImportFunction(BABYLON.NodeMaterial.prototype, "loadAsync");
+        ["ParseFromFileAsync", "ParseFromSnippetAsync"].forEach(function (name) {
+            wrapImportFunction(BABYLON.NodeMaterial, name);
+        });
+    }
 
     // refresh-export-matrices: set to the running test when it opts in.
     let refreshExportMatricesTest = null;
