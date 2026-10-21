@@ -1,0 +1,238 @@
+trigger: none
+pr: none
+schedules:
+# Runs after nightly.yml (23:00 UTC) so the two pipelines don't compete for parallel jobs.
+- cron: "0 1 * * 2-6"
+  displayName: Nightly Extended Build
+  branches:
+    include:
+    - master
+  always: true
+
+parameters:
+# Number of parallel jobs the Win32 sanitizer validation tests are split across.
+- name: win32ValidationShards
+  type: number
+  default: 4
+  values: [1, 2, 3, 4, 6, 8]
+
+variables:
+  # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
+  npm_config_fetch_retries: 5
+
+# Slow, non-blocking nightly jobs. Nothing consumes this pipeline's artifacts, so a failure here
+# doesn't affect the packages that nightly.yml publishes for Babylon.js.
+# Currently: the Win32 and macOS sanitizer builds.
+jobs:
+- job: Win32_x64_D3D11_Sanitizers_Build
+  displayName: Win32 x64 D3D11 V8 Sanitizers Build
+  pool:
+    vmImage: 'windows-2022'
+  timeoutInMinutes: 90
+  steps:
+  - checkout: self
+
+  - script: |
+      cmake -G "Visual Studio 17 2022" -B build/Win32_x64_V8 -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=D3D11 -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON -D ENABLE_SANITIZERS=ON
+    displayName: 'Generate solution'
+
+  - script: |
+      cmake --build build/Win32_x64_V8 --config RelWithDebInfo -- /m
+    displayName: 'Build'
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_V8\Apps\Playground\RelWithDebInfo'
+      contents: |
+        **
+        !**\*.ilk
+        !**\*.lib
+        !**\*.exp
+      targetFolder: '$(Build.ArtifactStagingDirectory)\Playground'
+      cleanTargetFolder: true
+    displayName: 'Stage Playground'
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)\Playground'
+      artifact: Win32_x64_V8-sanitizer-playground
+    displayName: 'Publish Playground for validation shards'
+
+  - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
+    displayName: 'Enable Crash Dump'
+
+  - powershell: |
+      $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+      $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+      $asanPath = "$($msvc.FullName)\bin\Hostx64\x64"
+      Write-Host "Adding ASAN runtime folder to PATH: $asanPath"
+      Write-Host "##vso[task.prependpath]$asanPath"
+    displayName: 'Add ASAN runtime DLLs to PATH'
+
+  - script: |
+      for /f %%i in ('vswhere -property instanceId') do (
+        reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
+      )
+    displayName: 'Disable JIT Debugger for Script'
+
+  - script: |
+      UnitTests
+    workingDirectory: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
+    displayName: 'Unit Tests'
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
+      contents: UnitTests.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage UnitTests Crash Dump"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: "Win32 Sanitizers UnitTests Crash Dumps"
+      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: "Publish Crash Dumps"
+    condition: failed()
+
+# Visual validation is the slowest part of the sanitizer build (~75 minutes in a single job), so
+# run it in parallel jobs. Each job takes every Nth config.json entry (interleaved, so slow tests
+# spread out) via the Playground --test-index option.
+- job: Win32_x64_D3D11_Sanitizers_Validation
+  displayName: Win32 x64 D3D11 V8 Sanitizers Validation
+  dependsOn: Win32_x64_D3D11_Sanitizers_Build
+  pool:
+    vmImage: 'windows-2022'
+  # Sized for win32ValidationShards=1 (the whole suite in one job, ~75 minutes).
+  timeoutInMinutes: 120
+  strategy:
+    parallel: ${{ parameters.win32ValidationShards }}
+  variables:
+    PlaygroundDirectory: '$(Pipeline.Workspace)\Playground'
+  steps:
+  - checkout: none
+
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      buildType: current
+      artifactName: Win32_x64_V8-sanitizer-playground
+      targetPath: '$(PlaygroundDirectory)\RelWithDebInfo'
+    displayName: 'Download Playground'
+
+  - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
+    displayName: 'Enable Crash Dump'
+
+  - powershell: |
+      $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+      $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+      $asanPath = "$($msvc.FullName)\bin\Hostx64\x64"
+      Write-Host "Adding ASAN runtime folder to PATH: $asanPath"
+      Write-Host "##vso[task.prependpath]$asanPath"
+    displayName: 'Add ASAN runtime DLLs to PATH'
+
+  - script: |
+      for /f %%i in ('vswhere -property instanceId') do (
+        reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
+      )
+    displayName: 'Disable JIT Debugger for Script'
+
+  - powershell: |
+      $shard = [int]$env:SYSTEM_JOBPOSITIONINPHASE - 1
+      $shardCount = [int]$env:SYSTEM_TOTALJOBSINPHASE
+      $testCount = (Get-Content -Raw Scripts\config.json | ConvertFrom-Json).tests.Count
+      $indices = @(0..($testCount - 1) | Where-Object { $_ % $shardCount -eq $shard })
+      if ($indices.Count -eq 0) {
+        Write-Host "No tests for shard $($shard + 1) of $shardCount."
+        exit 0
+      }
+      Write-Host "Shard $($shard + 1) of ${shardCount}: $($indices.Count) of $testCount config entries."
+      .\Playground.exe "--test-index=$($indices -join ',')" app:///Scripts/validation_native.js
+      exit $LASTEXITCODE
+    workingDirectory: '$(PlaygroundDirectory)\RelWithDebInfo'
+    displayName: 'Validation Tests'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload Rendered Pictures
+    condition: succeededOrFailed()
+    inputs:
+      PathtoPublish: '$(PlaygroundDirectory)\Results'
+      ArtifactName: Win32_x64_V8-sanitizer-rendered-pictures-$(System.JobPositionInPhase)
+    continueOnError: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload Error Pictures
+    condition: failed()
+    inputs:
+      PathtoPublish: '$(PlaygroundDirectory)\Errors'
+      ArtifactName: Win32_x64_V8-sanitizer-error-pictures-$(System.JobPositionInPhase)
+    continueOnError: true
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: '$(PlaygroundDirectory)\RelWithDebInfo'
+      contents: Playground.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage Playground Crash Dump"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: "Win32 Sanitizers Crash Dumps $(System.JobPositionInPhase)"
+      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: "Publish Crash Dumps"
+    condition: failed()
+
+- job: MacOS_Sanitizers
+  displayName: macOS Sanitizers
+  pool:
+    vmImage: 'macOS-26'
+  timeoutInMinutes: 60
+  variables:
+    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
+    ASAN_OPTIONS: abort_on_error=1
+  steps:
+  - checkout: self
+
+  - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+    displayName: 'Select Xcode 26.4'
+
+  - script: |
+      cmake -G Xcode -B build/macOS \
+        -D BABYLON_DEBUG_TRACE=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+        -D ENABLE_SANITIZERS=ON \
+        -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
+    displayName: 'Generate macOS solution'
+
+  - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
+    displayName: 'Build Playground macOS'
+
+  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
+    displayName: 'Build UnitTests macOS'
+
+  - script: sudo sysctl -w kern.corefile=%N.core.%P
+    displayName: 'Enable Core Dump'
+
+  - script: |
+      ulimit -c unlimited
+      ./UnitTests
+    workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
+    displayName: 'Run UnitTests macOS'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload UnitTests Core Dumps
+    condition: failed()
+    inputs:
+      PathtoPublish: 'build/macOS/Apps/UnitTests/RelWithDebInfo'
+      ArtifactName: macos-Xcode-default-sanitizer-core-dumps

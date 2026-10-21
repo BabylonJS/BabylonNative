@@ -22,20 +22,14 @@ variables:
   npm_config_fetch_retries: 5
 
 # Besides validating against the Babylon.js nightly (job Nightly), this pipeline runs the slow or
-# runner-scarce jobs that are not worth blocking every PR on: Hermes, sanitizer, and
-# macOS-hosted Android builds (other Ubuntu-hosted Android builds stay in GitHub PR CI).
+# runner-scarce jobs that are not worth blocking every PR on: Hermes and macOS-hosted Android
+# builds (other Ubuntu-hosted Android builds stay in GitHub PR CI). Sanitizer builds run in
+# nightly-extended.yml so they don't delay or block the packages Babylon.js consumes.
+# Nightly doesn't wait for the other jobs; it publishes packages as soon as its own build and
+# tests pass. Babylon.js downloads artifacts only from fully succeeded runs of this pipeline.
 jobs:
 - job: Nightly
   displayName: Nightly
-  dependsOn:
-  - Win32_x64_Hermes_D3D11
-  - Win32_x64_D3D11_Sanitizers
-  - MacOS_Sanitizers
-  - Ubuntu_Clang_Hermes
-  - Android_Ubuntu_Hermes
-  - ${{ each engine in parameters.androidEngines }}:
-    - Android_MacOS_${{ engine }}
-  condition: and(succeeded(), not(containsValue(dependencies.*.result, 'SucceededWithIssues')))
   steps:
   - checkout: self
 
@@ -336,143 +330,6 @@ jobs:
     env:
       JAVA_HOME: $(JAVA_HOME_17_X64)
     displayName: Build Playground Hermes
-
-- job: Win32_x64_D3D11_Sanitizers
-  displayName: Win32 x64 D3D11 V8 Sanitizers
-  pool:
-    vmImage: 'windows-2022'
-  timeoutInMinutes: 180
-  steps:
-  - checkout: self
-
-  - script: |
-      cmake -G "Visual Studio 17 2022" -B build/Win32_x64_V8 -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=D3D11 -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON -D ENABLE_SANITIZERS=ON
-    displayName: 'Generate solution'
-
-  - script: |
-      cmake --build build/Win32_x64_V8 --config RelWithDebInfo -- /m
-    displayName: 'Build'
-
-  - script: |
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
-    displayName: 'Enable Crash Dump'
-
-  - powershell: |
-      $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-      $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
-      $asanPath = "$($msvc.FullName)\bin\Hostx64\x64"
-      Write-Host "Adding ASAN runtime folder to PATH: $asanPath"
-      Write-Host "##vso[task.prependpath]$asanPath"
-    displayName: 'Add ASAN runtime DLLs to PATH'
-
-  - script: |
-      for /f %%i in ('vswhere -property instanceId') do (
-        reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
-      )
-    displayName: 'Disable JIT Debugger for Script'
-
-  - script: |
-      Playground app:///Scripts/validation_native.js
-    workingDirectory: 'build\Win32_x64_V8\Apps\Playground\RelWithDebInfo'
-    displayName: 'Validation Tests'
-
-  - script: |
-      UnitTests
-    workingDirectory: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
-    displayName: 'Unit Tests'
-
-  - task: PublishBuildArtifacts@1
-    displayName: Upload Rendered Pictures
-    condition: succeededOrFailed()
-    inputs:
-      PathtoPublish: 'build\Win32_x64_V8\Apps\Playground\Results'
-      ArtifactName: Win32_x64_V8-sanitizer-rendered-pictures
-    continueOnError: true
-
-  - task: PublishBuildArtifacts@1
-    displayName: Upload Error Pictures
-    condition: failed()
-    inputs:
-      PathtoPublish: 'build\Win32_x64_V8\Apps\Playground\Errors'
-      ArtifactName: Win32_x64_V8-sanitizer-error-pictures
-    continueOnError: true
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: 'build\Win32_x64_V8\Apps\Playground\RelWithDebInfo'
-      contents: Playground.*
-      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-      cleanTargetFolder: false
-    displayName: "Stage Playground Crash Dump"
-    condition: failed()
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
-      contents: UnitTests.*
-      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-      cleanTargetFolder: false
-    displayName: "Stage UnitTests Crash Dump"
-    condition: failed()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: "Win32 Sanitizers Crash Dumps"
-      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
-    displayName: "Publish Crash Dumps"
-    condition: failed()
-
-- job: MacOS_Sanitizers
-  displayName: macOS Sanitizers
-  pool:
-    vmImage: 'macOS-26'
-  timeoutInMinutes: 60
-  variables:
-    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
-    ASAN_OPTIONS: abort_on_error=1
-  steps:
-  - checkout: self
-
-  - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
-    displayName: 'Select Xcode 26.4'
-
-  - script: |
-      cmake -G Xcode -B build/macOS \
-        -D BABYLON_DEBUG_TRACE=ON \
-        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
-        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
-        -D ENABLE_SANITIZERS=ON \
-        -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
-    displayName: 'Generate macOS solution'
-
-  - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
-    displayName: 'Build Playground macOS'
-
-  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
-    displayName: 'Build UnitTests macOS'
-
-  - script: sudo sysctl -w kern.corefile=%N.core.%P
-    displayName: 'Enable Core Dump'
-
-  - script: |
-      ulimit -c unlimited
-      ./UnitTests
-    workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
-    displayName: 'Run UnitTests macOS'
-
-  - task: PublishBuildArtifacts@1
-    displayName: Upload UnitTests Core Dumps
-    condition: failed()
-    inputs:
-      PathtoPublish: 'build/macOS/Apps/UnitTests/RelWithDebInfo'
-      ArtifactName: macos-Xcode-default-sanitizer-core-dumps
 
 # Android builds on macOS hosts, which are slower to get and duplicate the Ubuntu-hosted ones in the GitHub CI.
 - ${{ each engine in parameters.androidEngines }}:
