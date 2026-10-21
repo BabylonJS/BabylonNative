@@ -645,29 +645,21 @@
         {
             "title": "MSDF",
             "playgroundId": "#6RLCWP#20",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf.png"
         },
         {
             "title": "MSDF Screen projected",
             "playgroundId": "#6RLCWP#48",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf-projected.png"
         },
         {
             "title": "MSDF Billboard",
             "playgroundId": "#6RLCWP#23",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf-billboard.png"
         },
         {
             "title": "MSDF Stroke",
             "playgroundId": "#6RLCWP#41",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf-stroke.png"
         },
         {
@@ -695,32 +687,24 @@
             "title": "OpenPBR Base Diffuse Roughness Realtime IBL",
             "playgroundId": "#MXACV7#29",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-realtime-ibl.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Prefiltered IBL with CDF",
             "playgroundId": "#MXACV7#28",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl-with-cdf.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Prefiltered IBL",
             "playgroundId": "#MXACV7#27",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness SH IBL",
             "playgroundId": "#MXACV7#32",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-spherical-harmonics.png"
         },
         {
@@ -737,22 +721,16 @@
         {
             "title": "EXT_lights_ies",
             "playgroundId": "#UIAXAU#19",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/EXT_lights_ies/Example.gltf: 'name' is not defined (thrown during glTF load, before pixel comparison)",
             "referenceImage": "ext-lights-ies.png"
         },
         {
             "title": "IES Profile",
             "playgroundId": "#UIAXAU#6",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "iesprofile.png"
         },
         {
             "title": "IES Profile2",
             "playgroundId": "#UIAXAU#31",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "iesprofile2.png"
         },
         {
@@ -769,8 +747,6 @@
         {
             "title": "HAL Lattice",
             "playgroundId": "#HBZD72#7",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "lattice-hal.png"
         },
         {
@@ -1126,8 +1102,6 @@
             "title": "Highlights",
             "playgroundId": "#P7N8YW#1",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "highlights.png"
         },
         {
@@ -1413,8 +1387,6 @@
             "title": "GLTF Serializer un/compressed texture roundtrip",
             "playgroundId": "#8NTR5X#8",
             "replace": "//options//, roundtrip = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerTextureExport.png"
         },
         {
@@ -1621,40 +1593,30 @@
             "title": "Realtime Filtering",
             "playgroundId": "#FEEK7G#118",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "realtimeFiltering.png"
         },
         {
             "title": "Realtime Filtering Irradiance",
             "playgroundId": "#FEEK7G#1089",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "realtimeFilteringIrradiance.png"
         },
         {
             "title": "Realtime Filtering Irradiance with CDF",
             "playgroundId": "#FEEK7G#1087",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "realtimeFilteringIrradianceCDF.png"
         },
         {
             "title": "Prefiltering Irradiance on load",
             "playgroundId": "#FEEK7G#1111",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "prefilteringIrradiance.png"
         },
         {
             "title": "Prefiltering Irradiance on load with CDF",
             "playgroundId": "#FEEK7G#1110",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "prefilteringIrradianceCDF.png"
         },
         {
@@ -1721,8 +1683,6 @@
             "title": "Shadows CSM and LODs",
             "playgroundId": "#24HWT9#20",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "shadowscsmandlod.png"
         },
         {
@@ -1760,8 +1720,6 @@
         {
             "title": "Prepass SSAO + instances",
             "playgroundId": "#YB006J#795",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-instances.png"
         },
         {
@@ -1807,16 +1765,12 @@
             "title": "Prepass SSAO + glow layer",
             "playgroundId": "#LRFB2D#263",
             "renderCount": 30,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails: 236380/240000 pixels differ (98.49%) on Babylon Native",
             "referenceImage": "prepass-ssao-glow-layer.png"
         },
         {
             "title": "Prepass SSAO + bounding box renderer",
             "playgroundId": "#4F33I3#35",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-bbr.png"
         },
         {
@@ -1831,8 +1785,6 @@
             "title": "Prepass SSAO + B&W post process",
             "playgroundId": "#N55Q2M#8",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-b-and-w.png"
         },
         {
@@ -1855,8 +1807,6 @@
             "title": "Prepass SSAO + LOD",
             "playgroundId": "#FFMFW5#29",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-lod.png"
         },
         {
@@ -1912,16 +1862,12 @@
             "title": "Prepass SSAO + visibility",
             "playgroundId": "#PXC9CF#7",
             "renderCount": 30,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-visibility.png"
         },
         {
             "title": "Prepass SSAO + default pipeline",
             "playgroundId": "#NAW8EA#7",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-default-pipeline.png"
         },
         {
@@ -1967,8 +1913,6 @@
             "title": "Refraction local cube map PBR",
             "playgroundId": "#RJN64I#5",
             "renderCount": 1,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "refraction-local-pbr.png"
         },
         {
@@ -1989,12 +1933,14 @@
         },
         {
             "title": "Instances manual update + motion blur",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#HJGC2G#127",
             "renderCount": 10,
             "referenceImage": "instances-mb-manual.png"
         },
         {
             "title": "Thin instances + motion blur",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#HJGC2G#60",
             "renderCount": 30,
             "referenceImage": "thin-instances-mb.png",
@@ -2002,6 +1948,7 @@
         },
         {
             "title": "Thin instances + motion blur + manual",
+            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#HJGC2G#245",
             "renderCount": 30,
             "referenceImage": "thin-instances-mb-manual.png"
@@ -2035,8 +1982,6 @@
             "title": "Reverse depth buffer and CSM shadows",
             "playgroundId": "#IIZ9UU#248",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "reverseDepthBufferCSMShadows.png"
         },
         {
@@ -2049,24 +1994,18 @@
             "title": "Multi cameras and output render target with depth texture (D24)",
             "playgroundId": "#BCYE7J#36",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "Sample depth texture",
             "playgroundId": "#8RU8Q3#158",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "sampleDepthTexture.png"
         },
         {
             "title": "Order independent transparency",
             "playgroundId": "#1PLV5Z#104",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "oit.png"
         },
         {
@@ -2170,16 +2109,12 @@
             "title": "Multi shadow generators per light",
             "playgroundId": "#LMQGSX#2",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "multiSGPerLight.png"
         },
         {
             "title": "Fluid rendering particle system",
             "playgroundId": "#544N0Q#67",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "After #1691 stride fix, hits bgfx 'Invalid texture attachment' frame buffer validation (exit 1); needs separate investigation.",
             "referenceImage": "fluidParticleSystem.png"
         },
         {
@@ -2269,8 +2204,6 @@
         {
             "title": "MultiRenderTarget with different texture types",
             "playgroundId": "#XSNYAU#22",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "MultiRenderTarget-with-different-texture-types.png"
         },
         {
@@ -2384,8 +2317,6 @@
         {
             "title": "Command encoder order in WebGPU 1",
             "playgroundId": "#064AUB#125",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "CommandEncodedWebGPU1.png"
         },
         {
@@ -2451,8 +2382,6 @@
         {
             "title": "soft-transparent-shadows",
             "playgroundId": "#G3DJGA#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine soft shadow filtering produces grainy/aliased shadows instead of smooth filtered output; filter quality regression vs WebGL reference.",
             "referenceImage": "soft-transparent-shadows.png"
         },
         {
@@ -2518,8 +2447,6 @@
             "title": "cascaded-shadow-maps-and-flying-saucers",
             "playgroundId": "#IIZ9UU#63",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "cascaded-shadow-maps-and-flying-saucers.png"
         },
         {
@@ -2561,9 +2488,7 @@
             "title": "Render to 3D RT",
             "playgroundId": "#XSNYAU#83",
             "renderCount": 5,
-            "referenceImage": "Render to 3D RT.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "Render to 3D RT.png"
         },
         {
             "title": "Shadows in RHS mode",
@@ -2628,8 +2553,6 @@
             "title": "IBL Voxel Shadowing",
             "playgroundId": "#8R5SSE#796",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "voxelShadows.png"
         },
         {
@@ -2642,39 +2565,29 @@
             "title": "IBL Voxel Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#797",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "voxelShadowsRightHanded.png"
         },
         {
             "title": "IBL Voxel Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#798",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "voxelShadowsLeftHanded.png"
         },
         {
             "title": "IBL Screen-space Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#799",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "ssShadowsLeftHanded.png"
         },
         {
             "title": "IBL Screen-space Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#800",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "ssShadowsRightHanded.png"
         },
         {
             "title": "Normed 16 bits texture formats",
             "playgroundId": "#SOCPNB#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 33322, type 5. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "Normed-16-bits-texture-formats.png"
         },
         {
@@ -2685,65 +2598,47 @@
         {
             "title": "FrameGraph nrge shadows",
             "playgroundId": "#JWKDME#185",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-shadows.png"
         },
         {
             "title": "FrameGraph nrge csm shadows",
             "playgroundId": "#JWKDME#186",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-csm-shadows.png"
         },
         {
             "title": "FrameGraph nrge csm shadows with autoCalcDepthBounds",
             "playgroundId": "#JWKDME#192",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-csm-shadows-with-autoCalcDepthBounds.png"
         },
         {
             "title": "FrameGraph nrge custom rendering",
             "playgroundId": "#1QCA2M#35",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-custom-rendering.png"
         },
         {
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/PowerPlant/powerplant.obj: Out of stack space (OBJ parser recursion overflow; thrown before pixel comparison)",
             "referenceImage": "FrameGraph-nrge-depth-of-field.png"
         },
         {
             "title": "FrameGraph nrge glow layer",
             "playgroundId": "#IG8NRC#84",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-glow-layer.png"
         },
         {
             "title": "FrameGraph nrge highlight layer",
             "playgroundId": "#QZYNMK#3",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-highlight-layer.png"
         },
         {
             "title": "FrameGraph nrge SSR cube",
             "playgroundId": "#PIZ1GK#2386",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-SSR-cube.png"
         },
         {
             "title": "FrameGraph nrge SSR HillValley",
             "playgroundId": "#PIZ1GK#2387",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-SSR-HillValley.png"
         },
         {
@@ -2757,8 +2652,6 @@
             "title": "FrameGraph nrge motion blur",
             "playgroundId": "#YB006J#793",
             "renderCount": 40,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-motion-blur.png"
         },
         {
@@ -2782,8 +2675,6 @@
         {
             "title": "FrameGraph nrge rig camera",
             "playgroundId": "#ATL1CS#19",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-rig-camera.png"
         },
         {
@@ -2801,15 +2692,11 @@
         {
             "title": "FrameGraph nrge SSAO",
             "playgroundId": "#SYQW69#1368",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-SSAO.png"
         },
         {
             "title": "FrameGraph nrge volumetric lighting",
             "playgroundId": "#3VH0AC#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-volumetric-lighting.png"
         },
         {
@@ -2829,8 +2716,6 @@
         {
             "title": "FrameGraph nrge multi-render targets",
             "playgroundId": "#XSNYAU#160",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-multi-render-targets.png"
         },
         {
@@ -2843,15 +2728,11 @@
         {
             "title": "FrameGraph nrge selection outline layer",
             "playgroundId": "#ADUC74#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-selection-outline-layer.png"
         },
         {
             "title": "FrameGraph nrge multi RTT MSAA",
             "playgroundId": "#JAG54A",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png"
         },
         {
@@ -2862,74 +2743,54 @@
         {
             "title": "FrameGraph glow layer",
             "playgroundId": "#9YU4C5#111",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrg-glow-layer.png"
         },
         {
             "title": "FrameGraph highlight layer",
             "playgroundId": "#PV8OLY#33",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-highlight-layer.png"
         },
         {
             "title": "FrameGraph custom rendering",
             "playgroundId": "#RM56RY#25",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-custom-rendering.png"
         },
         {
             "title": "FrameGraph gui bloom",
             "playgroundId": "#RM56RY#26",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-gui-bloom.png"
         },
         {
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-image-processing.png"
         },
         {
             "title": "FrameGraph motion blur screen based",
             "playgroundId": "#YB006J#787",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-motion-blur-screen-based.png"
         },
         {
             "title": "FrameGraph motion blur object based",
             "playgroundId": "#YB006J#788",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-motion-blur-object-based.png"
         },
         {
             "title": "FrameGraph motion blur skinned",
             "playgroundId": "#YB006J#789",
             "renderCount": 40,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-motion-blur-skinned.png"
         },
         {
             "title": "FrameGraph convolution post process",
             "playgroundId": "#SYQW69#1365",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-convolution-post-process.png"
         },
         {
             "title": "FrameGraph screen space curvature post process",
             "playgroundId": "#SYQW69#1366",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-screen-space-curvature-post-process.png"
         },
         {
@@ -2942,15 +2803,11 @@
         {
             "title": "FrameGraph custom post process",
             "playgroundId": "#R33LVG#5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-custom-post-process.png"
         },
         {
             "title": "FrameGraph volumetric lighting",
             "playgroundId": "#3VH0AC",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-volumetric-lighting.png"
         },
         {
@@ -2963,15 +2820,11 @@
         {
             "title": "FrameGraph multi-render targets",
             "playgroundId": "#XSNYAU#165",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-multi-render-targets.png"
         },
         {
             "title": "FrameGraph selection outline",
             "playgroundId": "#E1F0GP#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-selection-outline.png"
         },
         {
@@ -2982,8 +2835,6 @@
         {
             "title": "IBL radiance roughness",
             "playgroundId": "#RNO672#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "IBL-radiance-roughness.png"
         },
         {
@@ -3001,8 +2852,6 @@
         {
             "title": "Hide Loading Screen",
             "playgroundId": "#EQP888#8",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Hide-Loading-Screen.png"
         },
         {
@@ -3027,50 +2876,36 @@
         {
             "title": "Specular Reflectance with IOR",
             "playgroundId": "#KQYNYS#58",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Specular-Reflectance-with-IOR.png"
         },
         {
             "title": "Conductor Transmission",
             "playgroundId": "#KQYNYS#55",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Conductor-Transmission.png"
         },
         {
             "title": "Furnace Test (Legacy) for Spec-Gloss",
             "playgroundId": "#KQYNYS#20",
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "Furnace-Test-Legacy-for-Spec-Gloss.png"
         },
         {
             "title": "Furnace Test (Legacy) for Metal-Rough",
             "playgroundId": "#KQYNYS#21",
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "Furnace-Test-Legacy-for-Metal-Rough.png"
         },
         {
             "title": "Furnace Test for Spec-Gloss",
             "playgroundId": "#KQYNYS#40",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Furnace-Test-for-Spec-Gloss.png"
         },
         {
             "title": "Furnace Test for Metal-Rough",
             "playgroundId": "#KQYNYS#39",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Furnace-Test-for-Metal-Rough.png"
         },
         {
             "title": "Specular reflectance models for IBL",
             "playgroundId": "#GRQHVV#169",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Specular-reflectance-models-for-IBL.png"
         },
         {
@@ -3081,15 +2916,11 @@
         {
             "title": "F82 Specular Roughness vs Weight",
             "playgroundId": "#GRQHVV#170",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "F82-Specular-Roughness-vs-Weight.png"
         },
         {
             "title": "F82 Specular Metal vs Weight",
             "playgroundId": "#GRQHVV#171",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "F82-Specular-Metal-vs-Weight.png"
         },
         {
@@ -3101,8 +2932,6 @@
         {
             "title": "Sponza Clustered Lighting (2 viewports)",
             "playgroundId": "#CSCJO2#20",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "sponza-clustered-lighting-viewports.png"
         },
         {
@@ -3181,113 +3010,81 @@
         {
             "title": "Atmosphere Day",
             "playgroundId": "#VO1Z0C#39",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Planet Origin)",
             "playgroundId": "#VO1Z0C#40",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Ray Marching)",
             "playgroundId": "#VO1Z0C#41",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-day-ray-marching.png"
         },
         {
             "title": "Atmosphere Sunset",
             "playgroundId": "#VO1Z0C#42",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-sunset.png"
         },
         {
             "title": "Atmosphere Sunset (Planet Origin)",
             "playgroundId": "#VO1Z0C#43",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-sunset.png"
         },
         {
             "title": "Atmosphere Night",
             "playgroundId": "#VO1Z0C#45",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-night.png"
         },
         {
             "title": "Atmosphere Night (Planet Origin)",
             "playgroundId": "#VO1Z0C#46",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-night.png"
         },
         {
             "title": "Atmosphere Space View",
             "playgroundId": "#VO1Z0C#47",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-space-view.png"
         },
         {
             "title": "OpenPBR IBL Reflectance with IOR",
             "playgroundId": "#KQYNYS#56",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Reflectance-with-IOR.png"
         },
         {
             "title": "OpenPBR IBL F82 Specular Metal vs Weight",
             "playgroundId": "#GRQHVV#172",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-F82-Specular-Metal-vs-Weight.png"
         },
         {
             "title": "OpenPBR IBL F82 Specular Roughness vs Weight",
             "playgroundId": "#GRQHVV#173",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-F82-Specular-Roughness-vs-Weight.png"
         },
         {
             "title": "OpenPBR IBL Furnace Test for Metal-Rough",
             "playgroundId": "#KQYNYS#47",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Furnace-Test-for-Metal-Rough.png"
         },
         {
             "title": "OpenPBR IBL Specular IOR vs Coat IOR",
             "playgroundId": "#GRQHVV#39",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-IOR.png"
         },
         {
             "title": "OpenPBR IBL Metalness vs Coat IOR",
             "playgroundId": "#GRQHVV#176",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Metalness-vs-Coat-IOR.png"
         },
         {
             "title": "OpenPBR IBL Specular IOR vs Coat Weight",
             "playgroundId": "#GRQHVV#182",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-Weight.png"
         },
         {
             "title": "OpenPBR IBL Specular Roughness vs Coat Roughness",
             "playgroundId": "#GRQHVV#183",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Specular-Roughness-vs-Coat-Roughness.png"
         },
         {
@@ -3313,22 +3110,16 @@
         {
             "title": "OpenPBR IBL Normal and Coat Normal Mapping",
             "playgroundId": "#GRQHVV#184",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Normal-and-Coat-Normal-Mapping.png"
         },
         {
             "title": "OpenPBR IBL Coat Darkening",
             "playgroundId": "#GRQHVV#185",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Darkening.png"
         },
         {
             "title": "OpenPBR IBL Coat Darkening vs Coat IOR",
             "playgroundId": "#GRQHVV#181",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Darkening-vs-Coat-IOR.png"
         },
         {
@@ -3385,36 +3176,26 @@
         {
             "title": "OpenPBR IBL Anisotropy Dielectric",
             "playgroundId": "#GRQHVV#210",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Anisotropy-Dielectric.png"
         },
         {
             "title": "OpenPBR Anisotropy - glTF style",
             "playgroundId": "#GRQHVV#189",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Anisotropy---glTF-style.png"
         },
         {
             "title": "OpenPBR Anisotropy - Realtime Filtered IBL",
             "playgroundId": "#GRQHVV#190",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Anisotropy---Realtime-Filtered-IBL.png"
         },
         {
             "title": "OpenPBR Coat Anisotropy - IBL",
             "playgroundId": "#GRQHVV#193",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Coat-Anisotropy---IBL.png"
         },
         {
             "title": "OpenPBR Coat Anisotropy - Realtime Filtered IBL",
             "playgroundId": "#GRQHVV#195",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Coat-Anisotropy---Realtime-Filtered-IBL.png"
         },
         {
@@ -3425,8 +3206,6 @@
         {
             "title": "Specular Reflectance with IOR V2 Manifest",
             "playgroundId": "#KQYNYS#57",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Specular-Reflectance-with-IOR-V2-Manifest.png"
         },
         {
@@ -3437,15 +3216,11 @@
         {
             "title": "OpenPBR Coat Roughness vs Coat Ior - IBL",
             "playgroundId": "#GRQHVV#196",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Coat-Roughness-vs-Coat-Ior---IBL.png"
         },
         {
             "title": "OpenPBR Thin Film Weight VS IOR - IBL",
             "playgroundId": "#GRQHVV#197",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Weight-VS-IOR---IBL.png"
         },
         {
@@ -3465,29 +3240,21 @@
         {
             "title": "OpenPBR Thin Film Thickness VS IOR - IBL",
             "playgroundId": "#GRQHVV#198",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR---IBL.png"
         },
         {
             "title": "OpenPBR Thin Film Weight VS IOR - Furnace Test",
             "playgroundId": "#GRQHVV#199",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Weight-VS-IOR---Furnace-Test.png"
         },
         {
             "title": "OpenPBR Thin Film Thickness VS IOR - Furnace Test",
             "playgroundId": "#GRQHVV#200",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR---Furnace-Test.png"
         },
         {
             "title": "OpenPBR Thin Film Thickness VS IOR Metal - Furnace Test",
             "playgroundId": "#GRQHVV#201",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR-Metal---Furnace-Test.png"
         },
         {
@@ -3514,16 +3281,12 @@
         {
             "title": "OpenPBR Thin Film and Specular Weight - IBL",
             "playgroundId": "#GRQHVV#203",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight---IBL.png"
         },
         {
             "title": "OpenPBR Thin Film Textures - IBL",
             "playgroundId": "#GRQHVV#174",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Textures---IBL.png"
         },
         {
@@ -3564,15 +3327,11 @@
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Furnace Test",
             "playgroundId": "#GRQHVV#207",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Furnace-Test.png"
         },
         {
             "title": "OpenPBR Transmission Color glTF - IBL",
             "playgroundId": "#GRQHVV#120",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Color-glTF---IBL.png"
         },
         {
@@ -3584,8 +3343,6 @@
         {
             "title": "OpenPBR Transmission Roughness glTF - IBL",
             "playgroundId": "#GRQHVV#123",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Roughness-glTF---IBL.png"
         },
         {
@@ -3604,15 +3361,11 @@
         {
             "title": "OpenPBR Transmission Anisotropy Roughness vs IOR - IBL",
             "playgroundId": "#GRQHVV#131",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-Roughness-vs-IOR---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Anisotropy Roughness vs IOR - Realtime IBL",
             "playgroundId": "#GRQHVV#132",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-Roughness-vs-IOR---Realtime-IBL.png"
         },
         {
@@ -3628,8 +3381,6 @@
         {
             "title": "OpenPBR Transmission Anisotropy vs Roughness - IBL",
             "playgroundId": "#GRQHVV#138",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-vs-Roughness---IBL.png"
         },
         {
@@ -3647,30 +3398,22 @@
         {
             "title": "OpenPBR Transmission Dispersion VS IOR - IBL",
             "playgroundId": "#GRQHVV#143",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dispersion-VS-IOR---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Forward Scatter and Absorption - IBL",
             "playgroundId": "#GRQHVV#263",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Forward-Scatter-and-Absorption---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Scatter Anisotropy Reflect - IBL",
             "playgroundId": "#GRQHVV#264",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Reflect---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Scatter Anisotropy Refract - IBL",
             "playgroundId": "#GRQHVV#265",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Refract---IBL.png"
         },
         {
@@ -3693,16 +3436,12 @@
             "title": "OpenPBR Subsurface Radius vs Roughness - IBL",
             "playgroundId": "#GRQHVV#270",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Roughness---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Radius vs Anisotropy - IBL",
             "playgroundId": "#GRQHVV#271",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---IBL.png"
         },
         {
@@ -3715,16 +3454,12 @@
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
             "playgroundId": "#GRQHVV#273",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Radius-Scale---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending - IBL",
             "playgroundId": "#GRQHVV#296",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---IBL.png"
         },
         {
@@ -3787,8 +3522,6 @@
             "title": "OpenPBR Subsurface Color Scaling - IBL",
             "playgroundId": "#GRQHVV#302",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png"
         },
         {
@@ -3838,8 +3571,6 @@
             "title": "OpenPBR Thin Walled Subsurface Transmission Blending - IBL",
             "playgroundId": "#GRQHVV#242",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png"
         },
         {
@@ -3850,8 +3581,6 @@
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Lighting-Volume.png"
         },
         {
@@ -4086,8 +3815,6 @@
             "title": "Particles - Emitters - Directed Cylinder",
             "playgroundId": "#WLX2I2#14",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "particles-emitters-directed-cylinder.png"
         },
         {
@@ -4148,8 +3875,6 @@
             "title": "Particles - Billboard Y",
             "playgroundId": "#T3ZCP7#5",
             "renderCount": 180,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "particles-billboard-y.png"
         },
         {
@@ -4257,253 +3982,181 @@
         {
             "title": "GPU Particles - Basic Properties - Size",
             "playgroundId": "#3HLS3D#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-size.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Scale",
             "playgroundId": "#52KBLI#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-scale.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Color",
             "playgroundId": "#30PAK9#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-color.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Speed",
             "playgroundId": "#KU4I4J#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Angular Speed",
             "playgroundId": "#9MOFU4#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-angular-speed.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Rotation",
             "playgroundId": "#DEVC42#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-rotation.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#QC8XA2#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-translation-pivot.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Direction",
             "playgroundId": "#M6QEUB#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-direction.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Gravity",
             "playgroundId": "#9AGK0W#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-gravity.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Emit Rate",
             "playgroundId": "#IBWI36#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-emit-rate.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Lifetime",
             "playgroundId": "#RL6BAK#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-lifetime.png"
         },
         {
             "title": "GPU Particles - Basic Properties - Target Stop Duration",
             "playgroundId": "#4AJC72#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-basic-target-stop.png"
         },
         {
             "title": "GPU Particles - Change - Size",
             "playgroundId": "#KF9X69#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size.png"
         },
         {
             "title": "GPU Particles - Change - Color",
             "playgroundId": "#UWRCY4#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color.png"
         },
         {
             "title": "GPU Particles - Change - Speed",
             "playgroundId": "#KBHNCB#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed.png"
         },
         {
             "title": "GPU Particles - Change - Speed Limit",
             "playgroundId": "#CTNM3R#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-speed-limit.png"
         },
         {
             "title": "GPU Particles - Change - Angular Speed",
             "playgroundId": "#1NLEIC#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-angular-speed.png"
         },
         {
             "title": "GPU Particles - Change - Drag",
             "playgroundId": "#02KAQL#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-drag.png"
         },
         {
             "title": "GPU Particles - Change - Size Range",
             "playgroundId": "#4EWZJ9#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-size-range.png"
         },
         {
             "title": "GPU Particles - Change - Color Range",
             "playgroundId": "#3M1JEJ#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-change-color-range.png"
         },
         {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-point.png"
         },
         {
             "title": "GPU Particles - Emitters - Box",
             "playgroundId": "#2XD9BC#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-box.png"
         },
         {
             "title": "GPU Particles - Emitters - Sphere",
             "playgroundId": "#H7XR87#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Sphere",
             "playgroundId": "#0H1ATM#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-sphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Hemisphere",
             "playgroundId": "#MRQTX7#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-hemisphere.png"
         },
         {
             "title": "GPU Particles - Emitters - Cylinder",
             "playgroundId": "#FGRJM1#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cylinder",
             "playgroundId": "#40T8G0#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cylinder.png"
         },
         {
             "title": "GPU Particles - Emitters - Cone",
             "playgroundId": "#W73H92#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-cone.png"
         },
         {
             "title": "GPU Particles - Emitters - Directed Cone",
             "playgroundId": "#GSYICK#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-emitters-directed-cone.png"
         },
         {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-y.png"
         },
         {
             "title": "GPU Particles - Billboard Stretched",
             "playgroundId": "#0612KX#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-billboard-stretched.png"
         },
         {
             "title": "GPU Particles - Multiply Blend",
             "playgroundId": "#D7LQAZ#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-multiply-blend.png"
         },
         {
             "title": "GPU Particles - Animations",
             "playgroundId": "#B0EJQY#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-animations.png"
         },
         {
             "title": "GPU Particles - Noise",
             "playgroundId": "#P6JQIP#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-noise.png"
         },
         {
             "title": "GPU Particles - Flowmaps",
             "playgroundId": "#SGAEHS#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Native lacks the 'Image' DOM constructor: throws ReferenceError: 'Image' is not defined (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-flowmaps.png"
         },
         {
             "title": "GPU Particles - Local Space",
             "playgroundId": "#NK19TU#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gpu-particles-local-space.png"
         },
         {
@@ -4570,8 +4223,6 @@
         {
             "title": "CSM  FrameGraph - debug markers",
             "playgroundId": "#JWKDME#216",
-            "excludeFromAutomaticTesting": true,
-            "reason": "FrameGraph render pipeline hangs past 120s",
             "referenceImage": "CSM-FrameGraph---debug-markers.png"
         },
         {
