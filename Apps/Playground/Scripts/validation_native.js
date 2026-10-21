@@ -75,6 +75,9 @@
         // Example loads an ES module (e.g. the SPZ decoder) through Tools.LoadScript's module path;
         // the native script host has no ES module loader.
         "es-module-import": "evaluate default imports of single-export ES modules for Tools.LoadScript module loads",
+        // Example reaches code that uses the browser/worker global `self` (e.g. GUI InputText
+        // focus registers clipboard listeners on self); the native host does not define it.
+        "global-self": "define the global self as window while the test runs",
     };
     let appliedWorkarounds = [];
 
@@ -249,6 +252,33 @@
         restoreEsModuleImport = function () {
             BABYLON.Tools.LoadScript = originalLoadScript;
             restoreEsModuleImport = null;
+        };
+    }
+
+    // global-self: browsers and workers define `self`; the native host does not, so code
+    // such as AdvancedDynamicTexture.registerClipboardEvents throws a ReferenceError. Point
+    // self at the polyfilled window (which has add/removeEventListener) for the test only.
+    let restoreGlobalSelf = null;
+    function installGlobalSelf(test) {
+        if (restoreGlobalSelf || typeof globalThis.self !== "undefined") {
+            return;
+        }
+        Object.defineProperty(globalThis, "self", { value: window, configurable: true, writable: true });
+        noteWorkaround(test, "global-self");
+        // GUI disposal does not unregister clipboard listeners (only InputText blur does), so
+        // drop the ones added during the test to avoid retaining its disposed GUI.
+        const clipboardEvents = ["copy", "cut", "paste"];
+        const existing = new Map(clipboardEvents.map((type) => [type, (domListeners.get(type) || []).slice()]));
+        restoreGlobalSelf = function () {
+            for (const type of clipboardEvents) {
+                const list = domListeners.get(type);
+                if (list) {
+                    const keep = existing.get(type);
+                    domListeners.set(type, list.filter((listener) => keep.includes(listener)));
+                }
+            }
+            delete globalThis.self;
+            restoreGlobalSelf = null;
         };
     }
 
@@ -605,6 +635,9 @@
         }
         if (restoreEsModuleImport) {
             restoreEsModuleImport();
+        }
+        if (restoreGlobalSelf) {
+            restoreGlobalSelf();
         }
 
         if (currentScene) {
@@ -1453,6 +1486,9 @@
                                     }
                                     if (hasWorkaround(test, "es-module-import")) {
                                         installEsModuleImport(test);
+                                    }
+                                    if (hasWorkaround(test, "global-self")) {
+                                        installGlobalSelf(test);
                                     }
                                     let createdScene = evalExample(test, pgCode);
                                     if (importTracker) {
