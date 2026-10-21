@@ -72,6 +72,9 @@
         "wait-for-clustered-lights": "prepare clustered-light proxies before rendering",
         // Example relies on XMLHttpRequest events the native polyfill does not raise.
         "xhr-events": "raise XMLHttpRequest load events, and report URL-open failures as asynchronous error/loadend events",
+        // Example loads an ES module (e.g. the SPZ decoder) through Tools.LoadScript's module path;
+        // the native script host has no ES module loader.
+        "es-module-import": "evaluate default imports of single-export ES modules for Tools.LoadScript module loads",
     };
     let appliedWorkarounds = [];
 
@@ -184,6 +187,69 @@
             return evalWithName(code);
         }
         return eval(code);
+    }
+
+    // es-module-import: Babylon.js loads some decoders (SPZ, Manifold, recast) by passing inline
+    // module source such as `import X from 'url'; const returnedValue = await X();` to
+    // Tools.LoadScript with useModule. Browsers run it as <script type="module">; the native
+    // script host has no module loader. Handle only that shape: each import must be a default
+    // import of a module whose sole export is a trailing `export default name` (Emscripten
+    // EXPORT_ES6 output). Anything else is rejected rather than misread.
+    let restoreEsModuleImport = null;
+    function installEsModuleImport(test) {
+        if (restoreEsModuleImport) {
+            return;
+        }
+        const originalLoadScript = BABYLON.Tools.LoadScript;
+        const moduleSyntax = /^[ \t]*(?:import|export)(?=[\s{*'"])/m;
+
+        function loadDefaultExportAsync(url) {
+            return BABYLON.Tools.LoadFileAsync(url, false).then(function (text) {
+                const match = /\bexport[ \t]+default[ \t]+([A-Za-z_$][\w$]*)[ \t]*;?\s*$/.exec(text);
+                const head = match ? text.slice(0, match.index).replace(/\bimport\.meta\.url\b/g, JSON.stringify(url)) : "";
+                if (!match || moduleSyntax.test(head) || /\bimport\s*[.(]/.test(head)) {
+                    throw new Error("es-module-import: '" + url + "' is not a single default-export module");
+                }
+                return Function(head + "\nreturn " + match[1] + ";")();
+            });
+        }
+
+        function evaluateModuleSourceAsync(source) {
+            const names = [];
+            const urls = [];
+            const body = source.replace(/^[ \t]*import[ \t]+([A-Za-z_$][\w$]*)[ \t]+from[ \t]*(['"])([^'"\n]+)\2[ \t]*;?/gm, function (_, name, quote, url) {
+                names.push(name);
+                urls.push(url);
+                return "";
+            });
+            if (moduleSyntax.test(body)) {
+                return Promise.reject(new Error("es-module-import: unsupported module syntax"));
+            }
+            return Promise.all(urls.map(loadDefaultExportAsync)).then(function (values) {
+                const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
+                return new AsyncFunction(...names, body)(...values);
+            });
+        }
+
+        BABYLON.Tools.LoadScript = function (scriptUrl, onSuccess, onError, scriptId, useModule) {
+            if (!useModule) {
+                return originalLoadScript.apply(this, arguments);
+            }
+            noteWorkaround(test, "es-module-import");
+            evaluateModuleSourceAsync(scriptUrl).then(function () {
+                if (onSuccess) {
+                    onSuccess();
+                }
+            }, function (e) {
+                if (onError) {
+                    onError("LoadScript Error", e);
+                }
+            });
+        };
+        restoreEsModuleImport = function () {
+            BABYLON.Tools.LoadScript = originalLoadScript;
+            restoreEsModuleImport = null;
+        };
     }
 
     // xhr-events: the native XMLHttpRequest raises only readystatechange, error and loadend,
@@ -536,6 +602,9 @@
     function cleanupAfterTest(test) {
         if (restoreXhrEvents) {
             restoreXhrEvents();
+        }
+        if (restoreEsModuleImport) {
+            restoreEsModuleImport();
         }
 
         if (currentScene) {
@@ -1381,6 +1450,9 @@
                                     refreshExportMatricesTest = hasWorkaround(test, "refresh-export-matrices") ? test : null;
                                     if (hasWorkaround(test, "xhr-events")) {
                                         installXhrEvents(test);
+                                    }
+                                    if (hasWorkaround(test, "es-module-import")) {
+                                        installEsModuleImport(test);
                                     }
                                     let createdScene = evalExample(test, pgCode);
                                     if (importTracker) {
