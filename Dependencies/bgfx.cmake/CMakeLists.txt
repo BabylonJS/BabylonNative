@@ -132,61 +132,58 @@ if(BGFX_BUILD_TESTS)
 endif()
 
 include(FetchContent)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake)
 
-FetchContent_Declare(bx
+FetchContent_Declare(
+	bx_source
 	GIT_REPOSITORY https://github.com/bkaradzic/bx.git
-	GIT_TAG a9a71f8ef449c11042607feaeae0b8f46d22869a
-	SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bx"
-	SOURCE_SUBDIR "_bgfx_population_only")
-FetchContent_Declare(bimg
+	GIT_TAG ${BX_GIT_TAG}
+	GIT_SHALLOW FALSE
+	SOURCE_SUBDIR bgfx-cmake-no-subproject
+)
+FetchContent_Declare(
+	bimg_source
 	GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
-	GIT_TAG 671fe06dd7012a1ab85aa931019ed16112909756
-	SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bimg"
-	SOURCE_SUBDIR "_bgfx_population_only")
-FetchContent_Declare(bgfx
-	GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
-	GIT_TAG 64e7324430604ba61a45b51e1cbeb2b67c5d1d15
-	SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bgfx"
-	SOURCE_SUBDIR "_bgfx_population_only")
+	GIT_TAG ${BIMG_GIT_TAG}
+	GIT_SHALLOW FALSE
+	SOURCE_SUBDIR bgfx-cmake-no-subproject
+)
+FetchContent_Declare(
+	bgfx_source
+	GIT_REPOSITORY https://github.com/bkaradzic/bgfx.git
+	GIT_TAG ${BGFX_GIT_TAG}
+	GIT_SHALLOW FALSE
+	SOURCE_SUBDIR bgfx-cmake-no-subproject
+)
 
 foreach(dep IN ITEMS bx bimg bgfx)
-	string(TOUPPER "${dep}" upper)
-	set(root_variable "${upper}_DIR")
-	set(override_variable "FETCHCONTENT_SOURCE_DIR_${upper}")
-	if(NOT "${${root_variable}}" STREQUAL "")
-		file(REAL_PATH "${${root_variable}}" selected_root BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-	elseif("${${override_variable}}" STREQUAL "" AND
-	       EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dep}/include/${dep}/${dep}.h")
-		set(selected_root "${CMAKE_CURRENT_SOURCE_DIR}/${dep}")
-	else()
-		FetchContent_MakeAvailable(${dep})
-		FetchContent_GetProperties(${dep} SOURCE_DIR selected_root)
-		file(REAL_PATH "${selected_root}" selected_root)
+	string(TOUPPER "${dep}" DEP)
+	set(${dep}_in_tree "${CMAKE_CURRENT_SOURCE_DIR}/${dep}")
+	set(${dep}_in_tree_usable FALSE)
+	if(EXISTS "${${dep}_in_tree}/.git" AND NOT IS_DIRECTORY "${${dep}_in_tree}/.git")
+		message(WARNING "Ignoring leftover ${dep} submodule checkout at ${${dep}_in_tree}; delete it to silence this warning")
+	elseif(EXISTS "${${dep}_in_tree}/include/${dep}/${dep}.h")
+		set(${dep}_in_tree_usable TRUE)
 	endif()
-
-	if(dep STREQUAL "bgfx")
-		set(sentinels include/bgfx/bgfx.h src/bgfx.cpp scripts/bgfx.idl)
-	elseif(dep STREQUAL "bx")
-		set(sentinels include/bx/bx.h src/bx.cpp)
-	else()
-		set(sentinels include/bimg/bimg.h src/image.cpp)
+	if(DEFINED CACHE{${DEP}_DIR} AND "${${DEP}_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}/${dep}"
+	   AND NOT ${dep}_in_tree_usable
+	)
+		unset(${DEP}_DIR CACHE)
+		unset(${DEP}_DIR)
 	endif()
-	foreach(sentinel IN LISTS sentinels)
-		if(NOT EXISTS "${selected_root}/${sentinel}")
-			message(FATAL_ERROR "${root_variable}: '${selected_root}' is not a valid ${dep} source tree (missing ${sentinel}). Supply sources before configuring disconnected builds.")
-		endif()
-	endforeach()
-	set(${root_variable} "${selected_root}")
+	if(${DEP}_DIR)
+		get_filename_component(${DEP}_DIR "${${DEP}_DIR}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+	elseif(${dep}_in_tree_usable)
+		set(${DEP}_DIR "${${dep}_in_tree}")
+	else()
+		FetchContent_MakeAvailable(${dep}_source)
+		FetchContent_GetProperties(${dep}_source SOURCE_DIR ${DEP}_DIR)
+	endif()
+	file(TO_CMAKE_PATH "${${DEP}_DIR}" ${DEP}_DIR)
 endforeach()
 
 # sets project version from api ver / git rev
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
-if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-	foreach(_root BX_DIR BIMG_DIR BGFX_DIR)
-		set(${_root} "${${_root}}" PARENT_SCOPE)
-	endforeach()
-	set(BGFX_PROJECT_VERSION "${PROJECT_VERSION}" PARENT_SCOPE)
-endif()
 if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
 	add_custom_target(bgfx-tools)
 	set_target_properties(bgfx-tools PROPERTIES FOLDER "bgfx/tools")

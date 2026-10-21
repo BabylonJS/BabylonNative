@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 include(FetchContent)
-if(NOT COMMAND FetchContent_MakeAvailable_With_Message)
-    include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
-endif()
+include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 # --------------------------------------------------
 # Declarations

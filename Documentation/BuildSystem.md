@@ -6,7 +6,7 @@ design. Most external sources are now acquired with CMake FetchContent.
 its bgfx, bx and bimg sources remain pinned external FetchContent acquisitions.
 AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
 in this repository under `Dependencies/` with imported file history. The
-root includes CMakeExtensions as a helper module and builds the other three
+root includes CMakeExtensions as a globally guarded helper module and builds the other three
 with `add_subdirectory` rather than FetchContent;
 their nested projects also use their siblings here instead of fetching the
 former standalone repositories. No `_deps/*-src` copies are produced for
@@ -15,18 +15,32 @@ Targets and lateral dependency relationships are unchanged. The legacy
 `_deps/bgfx.cmake-src` source packages remain supported; the wrapper's
 build files now live under `Dependencies/bgfx.cmake`. See
 [Building](../BUILDING.md) for local/offline source overrides.
-On pull requests, JsRuntimeHost and UrlLib unit suites run independently when
-their respective component directories or reusable test workflows change.
-Master pushes enable both components. Component tests live directly under
-`.github/workflows/` in `jsruntimehost-<platform>.yml` and
-`urllib-<platform>.yml`. `ci.yml` calls these reusable workflows after the
-corresponding platform builds succeed, with separate jobs for each component.
+The bgfx wrapper's `CMakeLists.txt` and `cmake/dependencies.cmake` are copied
+unchanged from upstream. Babylon Native's child-source selection, validation,
+options and target adjustments live in `Dependencies/CMakeLists.txt`; source-tree
+packaging lives in `Dependencies/cmake/StageBgfxSources.cmake`. The root's
+FetchContent declarations retain Babylon Native's compatible child revisions;
+the upstream wrapper's fallback pins are not used by the root build.
+
+CI orchestration is split between `.github/workflows/ci.yml`,
+`jsruntimehost-ci.yml` and `urllib-ci.yml`. The main workflow calls the two
+component orchestrators after their platform builds succeed; each orchestrator
+owns its platform/engine matrices and calls the existing component platform
+test workflows. `jsruntimehost-ci-complete` and `urllib-ci-complete` require
+their respective reusable workflow to succeed. The final `ci-complete` requires
+both component checks and every ordinary build/install check to succeed.
 Each test job checks out and builds its own component on a fresh runner:
 `needs` controls ordering, not build-directory sharing. JsRuntimeHost covers
 desktop Windows/macOS/Linux and Android emulator/iOS simulator harnesses;
 UrlLib has Windows/macOS/Linux suites. The main platform builds disable their
-embedded component tests to avoid duplicate execution. The `ci-complete`
-required check permits skips only for unchanged components.
+embedded component tests to avoid duplicate execution.
+
+Both component suites run on every existing PR/master CI event. GitHub's native
+[`paths` filters](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore)
+apply to event triggers, not `workflow_call`, and `needs` cannot wait for a job
+in an independently triggered workflow. Without custom change detection,
+path-filtered independent workflows cannot also participate in this unified
+required check. The required check rejects failed, cancelled or skipped jobs.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

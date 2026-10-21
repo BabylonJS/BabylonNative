@@ -5,9 +5,7 @@ if(POLICY CMP0135)
 endif()
 
 include(FetchContent)
-if(NOT COMMAND warnings_as_errors)
-    include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
-endif()
+include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 # --------------------------------------------------
 # Declarations

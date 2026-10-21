@@ -22,7 +22,7 @@ function(bgfx_stage_sources wrapper destination)
 				file(COPY "${wrapper}/${directory}" DESTINATION "${destination}" PATTERN ".git" EXCLUDE)
 			endif()
 		endforeach()
-		foreach(obsolete cmake/babylon-native.cmake cmake/dependencies.cmake)
+		foreach(obsolete cmake/babylon-native.cmake cmake/stage-sources.cmake)
 			if(NOT EXISTS "${wrapper}/${obsolete}")
 				file(REMOVE "${destination}/${obsolete}")
 			endif()
@@ -54,7 +54,7 @@ function(bgfx_stage_sources wrapper destination)
 	endforeach()
 
 	# Snapshot the selected source version, never rewrite its src/version.h.
-	include("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/version.cmake")
+	include("${wrapper}/cmake/version.cmake")
 	file(WRITE "${destination}/bgfx/.bgfx-cmake-version"
 		"api=${BGFX_API_VERSION}\nrevision=${BGFX_REV_NUMBER}\nsha=${BGFX_REV}\n")
 endfunction()

@@ -1,0 +1,66 @@
+name: JsRuntimeHost CI
+
+# Called by ci.yml so its required check waits for every component test.
+# Event paths filters do not apply to workflow_call.
+on:
+  workflow_call:
+
+jobs:
+  Win32:
+    strategy:
+      fail-fast: false
+      matrix:
+        js-engine: [Chakra, JSI, V8, QuickJS]
+    uses: ./.github/workflows/jsruntimehost-win32.yml
+    with:
+      js-engine: ${{ matrix.js-engine }}
+
+  Linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: clang
+            cxx: clang++
+            js-engine: JavaScriptCore
+          - cc: gcc
+            cxx: g++
+            js-engine: JavaScriptCore
+          - cc: clang
+            cxx: clang++
+            js-engine: QuickJS
+    uses: ./.github/workflows/jsruntimehost-linux.yml
+    with:
+      cc: ${{ matrix.cc }}
+      cxx: ${{ matrix.cxx }}
+      js-engine: ${{ matrix.js-engine }}
+
+  MacOS:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - generator: Xcode
+            js-engine: JavaScriptCore
+          - generator: Ninja Multi-Config
+            js-engine: JavaScriptCore
+          - generator: Xcode
+            js-engine: QuickJS
+    uses: ./.github/workflows/jsruntimehost-macos.yml
+    with:
+      generator: ${{ matrix.generator }}
+      js-engine: ${{ matrix.js-engine }}
+
+  Android:
+    strategy:
+      fail-fast: false
+      matrix:
+        js-engine: [JavaScriptCore, V8, QuickJS]
+    uses: ./.github/workflows/jsruntimehost-android.yml
+    with:
+      js-engine: ${{ matrix.js-engine }}
+
+  iOS:
+    uses: ./.github/workflows/jsruntimehost-ios.yml
+    with:
+      deployment-target: "26.0"

@@ -1,0 +1,33 @@
+name: UrlLib CI
+
+# Called by ci.yml so its required check waits for every component test.
+# Event paths filters do not apply to workflow_call.
+on:
+  workflow_call:
+
+jobs:
+  Win32:
+    uses: ./.github/workflows/urllib-win32.yml
+
+  Linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cc: clang
+            cxx: clang++
+          - cc: gcc
+            cxx: g++
+    uses: ./.github/workflows/urllib-linux.yml
+    with:
+      cc: ${{ matrix.cc }}
+      cxx: ${{ matrix.cxx }}
+
+  MacOS:
+    strategy:
+      fail-fast: false
+      matrix:
+        generator: [Xcode, Ninja Multi-Config]
+    uses: ./.github/workflows/urllib-macos.yml
+    with:
+      generator: ${{ matrix.generator }}
