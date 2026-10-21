@@ -26,21 +26,29 @@ CI orchestration is split between `.github/workflows/ci.yml`,
 `jsruntimehost-ci.yml` and `urllib-ci.yml`. The main workflow calls the two
 component orchestrators after their platform builds succeed; each orchestrator
 owns its platform/engine matrices and calls the existing component platform
-test workflows. `jsruntimehost-ci-complete` and `urllib-ci-complete` require
-their respective reusable workflow to succeed. The final `ci-complete` requires
-both component checks and every ordinary build/install check to succeed.
+test workflows. A small `component-path-filter` job in `ci.yml` compares PR
+changes against their merge base and publishes an independent boolean for
+each component. Only affected component orchestrators are called.
+`jsruntimehost-ci-complete` and `urllib-ci-complete` require their respective
+reusable workflow to succeed, or to be skipped when its filter explicitly says
+the component is unchanged. The final `ci-complete` requires both component
+checks, the filter and every ordinary build/install check to succeed.
 Each test job checks out and builds its own component on a fresh runner:
 `needs` controls ordering, not build-directory sharing. JsRuntimeHost covers
 desktop Windows/macOS/Linux and Android emulator/iOS simulator harnesses;
 UrlLib has Windows/macOS/Linux suites. The main platform builds disable their
 embedded component tests to avoid duplicate execution.
 
-Both component suites run on every existing PR/master CI event. GitHub's native
+Component-directory or corresponding `<component>-*.yml` changes enable that
+component's suites. Shared CMakeExtensions or root `ci.yml` changes enable both;
+master pushes also run both. Failed filtering, missing outputs, cancellation,
+test failures and unexpected skips fail the completion checks.
+
+GitHub's native
 [`paths` filters](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore)
 apply to event triggers, not `workflow_call`, and `needs` cannot wait for a job
-in an independently triggered workflow. Without custom change detection,
-path-filtered independent workflows cannot also participate in this unified
-required check. The required check rejects failed, cancelled or skipped jobs.
+in an independently triggered workflow. The root filter therefore gates the
+reusable calls directly rather than dispatching independent workflow runs.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

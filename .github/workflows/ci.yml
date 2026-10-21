@@ -14,6 +14,48 @@ concurrency:
 # Hermes and macOS-hosted Android builds run in the Azure pipeline nightly.yml; sanitizer builds run
 # in the Azure pipeline nightly-extended.yml.
 jobs:
+  component-path-filter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      jsruntimehost: ${{ steps.paths.outputs.jsruntimehost }}
+      urllib: ${{ steps.paths.outputs.urllib }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Filter component paths
+        id: paths
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = push ]; then
+            printf 'jsruntimehost=true\nurllib=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base=$(git merge-base "$PR_BASE" "$PR_HEAD")
+          for component in JsRuntimeHost UrlLib; do
+            case "$component" in
+              JsRuntimeHost) output=jsruntimehost ;;
+              UrlLib) output=urllib ;;
+            esac
+            if git diff --quiet "$base" "$PR_HEAD" -- \
+              "Dependencies/$component" \
+              Dependencies/CMakeExtensions \
+              .github/workflows/ci.yml \
+              ":(glob).github/workflows/$output-*.yml"; then
+              echo "$output=false" >> "$GITHUB_OUTPUT"
+            else
+              result=$?
+              if [ "$result" -ne 1 ]; then
+                exit "$result"
+              fi
+              echo "$output=true" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
     uses: ./.github/workflows/build-macos.yml
@@ -146,7 +188,9 @@ jobs:
       js-engine: QuickJS
 
   jsruntimehost:
+    if: needs.component-path-filter.outputs.jsruntimehost == 'true'
     needs:
+      - component-path-filter
       - Win32_x64_D3D11
       - Win32_x64_JSI_D3D11
       - Win32_x64_V8_D3D11
@@ -164,30 +208,53 @@ jobs:
     uses: ./.github/workflows/jsruntimehost-ci.yml
 
   urllib:
-    needs: [Win32_x64_D3D11, Ubuntu_Clang_JSC, Ubuntu_GCC_JSC, MacOS, MacOS_Ninja]
+    if: needs.component-path-filter.outputs.urllib == 'true'
+    needs: [component-path-filter, Win32_x64_D3D11, Ubuntu_Clang_JSC, Ubuntu_GCC_JSC, MacOS, MacOS_Ninja]
     uses: ./.github/workflows/urllib-ci.yml
 
   jsruntimehost-ci-complete:
     if: always()
-    needs: jsruntimehost
+    needs: [component-path-filter, jsruntimehost]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Verify JsRuntimeHost jobs succeeded
         env:
+          FILTER_RESULT: ${{ needs.component-path-filter.result }}
+          CHANGED: ${{ needs.component-path-filter.outputs.jsruntimehost }}
           RESULT: ${{ needs.jsruntimehost.result }}
-        run: test "$RESULT" = success
+        run: |
+          if [ "$FILTER_RESULT" != success ]; then
+            echo "::error::Component path filtering did not succeed."
+            exit 1
+          fi
+          case "$CHANGED:$RESULT" in
+            true:success) echo "JsRuntimeHost tests passed." ;;
+            false:skipped) echo "JsRuntimeHost is unchanged; tests intentionally skipped." ;;
+            *) echo "::error::Unexpected JsRuntimeHost result: changed=$CHANGED, result=$RESULT"; exit 1 ;;
+          esac
 
   urllib-ci-complete:
     if: always()
-    needs: urllib
+    needs: [component-path-filter, urllib]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Verify UrlLib jobs succeeded
         env:
+          FILTER_RESULT: ${{ needs.component-path-filter.result }}
+          CHANGED: ${{ needs.component-path-filter.outputs.urllib }}
           RESULT: ${{ needs.urllib.result }}
-        run: test "$RESULT" = success
+        run: |
+          if [ "$FILTER_RESULT" != success ]; then
+            echo "::error::Component path filtering did not succeed."
+            exit 1
+          fi
+          case "$CHANGED:$RESULT" in
+            true:success) echo "UrlLib tests passed." ;;
+            false:skipped) echo "UrlLib is unchanged; tests intentionally skipped." ;;
+            *) echo "::error::Unexpected UrlLib result: changed=$CHANGED, result=$RESULT"; exit 1 ;;
+          esac
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
@@ -209,6 +276,7 @@ jobs:
     # Run after unsuccessful dependencies too, so they cannot skip the required check.
     if: always()
     needs:
+      - component-path-filter
       - MacOS
       - MacOS_Ninja
       - iOS_Xcode26
@@ -247,12 +315,18 @@ jobs:
           python3 - <<'PY'
           import json, os
           needs = json.loads(os.environ["NEEDS_JSON"])
+          outputs = needs["component-path-filter"]["outputs"]
+          components = ("jsruntimehost", "urllib")
+          if any(outputs.get(name) not in ("true", "false") for name in components):
+              raise SystemExit("Component path filter did not provide valid outputs.")
           failed = [
               f"{name}: {job['result']}"
               for name, job in needs.items()
-              if job["result"] != "success"
+              if job["result"] != (
+                  "skipped" if name in components and outputs[name] == "false" else "success"
+              )
           ]
           if failed:
               raise SystemExit("CI did not succeed: " + "; ".join(failed))
-          print("All required jobs passed, including JsRuntimeHost and UrlLib.")
+          print("All required jobs passed; only unchanged component suites were skipped.")
           PY
