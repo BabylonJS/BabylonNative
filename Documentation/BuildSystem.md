@@ -24,6 +24,12 @@ the upstream wrapper's fallback pins are not used by the root build.
 The root uses the pinned bgfx sources without a local GL patch. Source packages
 and local `FETCHCONTENT_SOURCE_DIR_BGFX` overrides use the same unpatched revision.
 
+Embedded UrlLib and JsRuntimeHost tests follow `BABYLON_NATIVE_BUILD_APPS`
+and the same supported-platform condition as BabylonNative's `UnitTests`;
+there are no separate BabylonNative component-test options. Disabling app
+builds disables all three suites, including when this repository is embedded
+by a consumer. Standalone component builds retain their own test options.
+
 Every non-UWP CI configuration builds UrlLib and JsRuntimeHost unit tests.
 Desktop Windows/macOS/Linux workflows build and run the embedded component
 targets alongside BabylonNative's tests, including the D3D12, Vulkan and

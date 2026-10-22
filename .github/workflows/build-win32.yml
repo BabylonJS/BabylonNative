@@ -68,8 +68,6 @@ jobs:
             -D BABYLON_DEBUG_TRACE=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
-            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=ON ^
-            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=ON ^
             -D ENABLE_SANITIZERS=${{ steps.vars.outputs.sanitizer_flag }}
 
       - name: Build

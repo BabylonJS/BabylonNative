@@ -30,8 +30,6 @@ jobs:
             -D BX_CONFIG_DEBUG=ON ^
             -D GRAPHICS_API=D3D11 ^
             -D BABYLON_DEBUG_TRACE=ON ^
-            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=ON ^
-            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS=OFF
 
       - name: Build PrecompiledShaderTest

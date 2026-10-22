@@ -266,7 +266,12 @@ endif()
 # --------------------------------------------------
 # googletest
 # --------------------------------------------------
-if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT VISIONOS) OR (UNIX AND NOT APPLE)))
+set(URLLIB_TESTS OFF)
+set(JSRUNTIMEHOST_TESTS OFF)
+if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT VISIONOS) OR (UNIX AND NOT APPLE)))
+    set(URLLIB_TESTS ON)
+    set(JSRUNTIMEHOST_TESTS ON)
+
     if(WIN32)
         # For Windows: Prevent overriding the parent project's compiler/linker settings
         # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
@@ -284,24 +289,8 @@ if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT VISIONOS) OR (UNIX AND
 endif()
 
 # --------------------------------------------------
-# Embedded component tests follow the supported app platforms.
+# UrlLib and JsRuntimeHost
 # --------------------------------------------------
-option(BABYLON_NATIVE_BUILD_URLLIB_TESTS "Build UrlLib unit tests." ON)
-option(BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS "Build JsRuntimeHost unit tests." ON)
-if(BABYLON_NATIVE_BUILD_APPS AND
-   ((WIN32 AND NOT WINDOWS_STORE) OR
-    (APPLE AND NOT VISIONOS) OR (UNIX AND NOT APPLE)))
-    set(URLLIB_TESTS "${BABYLON_NATIVE_BUILD_URLLIB_TESTS}")
-    # Android's runtime tests use their existing standalone JNI/Gradle harness.
-    if(NOT ANDROID)
-        set(JSRUNTIMEHOST_TESTS "${BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS}")
-    else()
-        set(JSRUNTIMEHOST_TESTS OFF)
-    endif()
-else()
-    set(URLLIB_TESTS OFF)
-    set(JSRUNTIMEHOST_TESTS OFF)
-endif()
 add_subdirectory(UrlLib)
 add_subdirectory(JsRuntimeHost)
 

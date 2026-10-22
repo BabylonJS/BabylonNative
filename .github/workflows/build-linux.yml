@@ -76,8 +76,6 @@ jobs:
             -D BABYLON_DEBUG_TRACE=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
-            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=ON \
-            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=ON \
             ${{ inputs.js-engine == 'Hermes' && '-D HERMES_UNICODE_LITE=ON -D HERMES_ALLOW_BOOST_CONTEXT=0' || '' }} \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux
