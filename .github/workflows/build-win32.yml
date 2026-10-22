@@ -106,36 +106,12 @@ jobs:
 
       # Visual validation runs only on V8 so results don't depend on engine-specific
       # quirks of Chakra/JSI/Hermes/QuickJS; the other engines still run UnitTests.
-      # Tests leak memory, so one process for the whole suite runs out of resources
-      # (~8 GB) near the end. Run it as interleaved shards, one process each.
-      # A shard that runs past its timeout is treated as hung: dump it (uploaded with
-      # the crash dumps) and kill it, so a hang fails fast instead of burning the job timeout.
       - name: Validation Tests
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' }}
-        shell: pwsh
-        working-directory: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo
+        shell: cmd
         run: |
-          $shardCount = 2
-          $shardTimeoutMinutes = 30
-          $testCount = (Get-Content -Raw Scripts\config.json | ConvertFrom-Json).tests.Count
-          $dumpDir = Join-Path $env:RUNNER_TEMP 'Dumps'
-          $failed = 0
-          foreach ($shard in 0..($shardCount - 1)) {
-            $indices = @(0..($testCount - 1) | Where-Object { $_ % $shardCount -eq $shard })
-            Write-Host "Shard $($shard + 1) of ${shardCount}: $($indices.Count) of $testCount config entries."
-            $p = Start-Process -FilePath .\Playground.exe -ArgumentList "--test-index=$($indices -join ',')", 'app:///Scripts/validation_native.js' -NoNewWindow -PassThru
-            $null = $p.Handle # keep a handle so ExitCode is available after exit
-            if (-not $p.WaitForExit($shardTimeoutMinutes * 60 * 1000)) {
-              Write-Host "::error::Validation shard $($shard + 1) hung (no exit after $shardTimeoutMinutes min); dumping and killing pid $($p.Id)."
-              New-Item -ItemType Directory -Force -Path $dumpDir | Out-Null
-              Start-Process -FilePath rundll32.exe -ArgumentList "C:\Windows\System32\comsvcs.dll,MiniDump $($p.Id) $(Join-Path $dumpDir "Playground-hang-shard$($shard + 1).dmp") full" -Wait
-              Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-              $failed++
-              continue
-            }
-            if ($p.ExitCode -ne 0) { Write-Host "::error::Validation shard $($shard + 1) exited with $($p.ExitCode)"; $failed++ }
-          }
-          exit $failed
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !cancelled() }}
