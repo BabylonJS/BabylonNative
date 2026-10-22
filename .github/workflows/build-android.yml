@@ -17,15 +17,9 @@ env:
   npm_config_fetch_retries: '5'
 
 jobs:
-  unit-test-artifact:
-    uses: ./.github/workflows/build-mobile-tests.yml
-    with:
-      component: BabylonNative
-      platform: Android
-      js-engine: ${{ inputs.js-engine }}
   build:
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: 45
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
 
@@ -84,6 +78,12 @@ jobs:
             -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
             -PSANITIZERS=OFF
           ccache --show-stats
+
+      - name: Build unit-test artifacts
+        uses: ./.github/actions/build-mobile-tests
+        with:
+          platform: Android
+          js-engine: ${{ inputs.js-engine }}
 
       - name: Save ccache
         if: ${{ github.event_name == 'push' && success() }}

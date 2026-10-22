@@ -21,6 +21,17 @@ options and target adjustments live in `Dependencies/CMakeLists.txt`; source-tre
 packaging lives in `Dependencies/cmake/StageBgfxSources.cmake`. The root's
 FetchContent declarations retain Babylon Native's compatible child revisions;
 the upstream wrapper's fallback pins are not used by the root build.
+The root applies `Dependencies/patches/bgfx-gl-context.patch` to the pinned
+bgfx acquisition: vertex array objects must be created and deleted in their
+owning GL context, and headless EGL config selection can retry without
+native depth/stencil attachments when the requested config is unavailable
+(the window swap-chain FBO owns its own attachments).
+No dependency revision is changed. Patch application is
+idempotent and fails configuration on a mismatch. The patch also uses
+depth/stencil attachments and framebuffer blits for the GLES copy-image
+fallback, instead of attaching depth textures as color. Staged source packages
+include the patched sources; raw `FETCHCONTENT_SOURCE_DIR_BGFX` overrides
+bypass FetchContent's patch step and must include the equivalent fixes.
 
 Every non-UWP CI configuration builds UrlLib and JsRuntimeHost unit tests.
 Desktop Windows/macOS/Linux workflows build and run the embedded component
@@ -29,10 +40,12 @@ precompiled-shader configurations. UWP remains excluded. There is no path filter
 all PR and master CI events exercise the configured suites.
 
 Mobile builds publish installable test artifacts without booting a simulator.
-`jsruntimehost-ci.yml` and `urllib-ci.yml` own the component mobile build
-matrices; `build-android.yml` and `build-ios.yml` also build BabylonNative's
-test applications. `build-mobile-tests.yml` packages each application with
-its component, platform, engine and application ID in a manifest. Artifact
+Each classic `build-android.yml` and `build-ios.yml` build job also builds
+all three test applications using `.github/actions/build-mobile-tests`.
+There are no separate component build matrices or artifact-producer jobs.
+The action uses separate CMake build directories for each iOS application and
+packages each Android application's APKs before building the next component.
+Each package records its component, platform, engine and application ID in a manifest. Artifact
 names are `UnitTests-Android-<component>-<engine>` and
 `UnitTests-iOS-<component>-JavaScriptCore`. iOS apps are archived to retain
 executable permissions. Android artifacts include both application and test APKs.
@@ -46,20 +59,24 @@ features report explicit GoogleTest skips, not a replacement empty suite.
 The Android producer installs SDK CMake 3.30.3, matching the Gradle harness.
 Apps installs its npm workspace before configuring child applications, so
 mobile test bundles can run webpack during a clean CMake configuration.
+The iOS harness disables the toolchain's global ARC default before its first
+`project()` call, preserving bgfx's manual Objective-C ownership.
 
 The root `AndroidTests` and `iOSTests` jobs depend on the corresponding mobile
-builds and component artifact producers. Each downloads all artifacts for its
+classic builds only. Each downloads all artifacts for its
 platform, boots one emulator/simulator, and installs and runs applications
 sequentially. Android covers JavaScriptCore, V8 and QuickJS for all three
 components; iOS uses JavaScriptCore. The runner checks the complete expected
 artifact matrix before running, rejects missing artifacts and missing test
 completion signals, and continues through remaining artifacts after a failure
-before failing the job. Each suite has a bounded execution timeout, and logs
+before failing the job. Installed Android packages are removed even after a
+crash or timeout, preventing debug-signing conflicts between engine builds.
+Each suite has a bounded execution timeout, and logs
 are uploaded per platform. No source rebuild occurs in the test runner jobs.
 
 `needs` controls ordering, not build-directory sharing: only named artifacts
-cross runners. `ci-complete` requires `AndroidTests`, `iOSTests`, both component
-build workflows, and all ordinary build/install checks to succeed.
+cross runners. `ci-complete` requires `AndroidTests`, `iOSTests`,
+and all ordinary build/install checks to succeed.
 Failures, cancellations and unexpected skips cannot pass the final gate.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 

@@ -1,0 +1,104 @@
+name: Build mobile unit-test artifacts
+description: Build and package all three test applications within a platform build job.
+
+inputs:
+  platform:
+    required: true
+    description: Android or iOS
+  js-engine:
+    default: JavaScriptCore
+    description: JavaScript engine used by this platform configuration
+  deployment-target:
+    default: '26.0'
+    description: Minimum iOS simulator version
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Check mobile CI helpers
+      shell: bash
+      run: python3 -m unittest discover -s .github/scripts/tests -v
+    - name: Install Android unit-test toolchain
+      if: inputs.platform == 'Android'
+      shell: bash
+      run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.2.12479018" "cmake;3.30.3"
+    - name: Build Android unit-test applications
+      if: inputs.platform == 'Android'
+      shell: bash
+      env:
+        JS_ENGINE: ${{ inputs.js-engine }}
+      run: |
+        args=(-PabiFilters=x86_64 "-PjsEngine=$JS_ENGINE" -PndkVersion=27.2.12479018
+              assembleDebug assembleDebugAndroidTest)
+        for component in BabylonNative JsRuntimeHost UrlLib; do
+          if [ "$component" = JsRuntimeHost ]; then
+            project=Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android
+            bash "$project/gradlew" -p "$project" "${args[@]}"
+          else
+            project=Apps/UnitTests/Mobile/Android
+            bash "$project/gradlew" "-Pcomponent=$component" "${args[@]}"
+          fi
+          python3 .github/scripts/mobile_test_artifacts.py package \
+            --platform Android --component "$component" --engine "$JS_ENGINE" \
+            --app "$project/app/build/outputs/apk/debug/app-debug.apk" \
+            --test-apk "$project/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" \
+            --output "test-artifacts/$component"
+        done
+    - name: Build iOS simulator unit-test applications
+      if: inputs.platform == 'iOS'
+      shell: bash
+      env:
+        JS_ENGINE: ${{ inputs.js-engine }}
+        DEPLOYMENT_TARGET: ${{ inputs.deployment-target }}
+      run: |
+        for component in BabylonNative JsRuntimeHost UrlLib; do
+          build="build/mobile-tests-$component"
+          case "$component" in
+            JsRuntimeHost)
+              source=Dependencies/JsRuntimeHost
+              target=UnitTests
+              app="$build/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
+              args=(-DJSRUNTIMEHOST_TESTS=ON)
+              ;;
+            BabylonNative)
+              source=Apps/UnitTests/Mobile
+              target=UnitTests
+              app="$build/BabylonNative/Apps/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
+              args=(-DUNIT_TEST_COMPONENT=BabylonNative)
+              ;;
+            UrlLib)
+              source=Apps/UnitTests/Mobile
+              target=UrlLibTests
+              app="$build/UrlLib/Tests/RelWithDebInfo-iphonesimulator/UrlLibTests.app"
+              args=(-DUNIT_TEST_COMPONENT=UrlLib)
+              ;;
+          esac
+          cmake -S "$source" -B "$build" -G Xcode \
+            -DIOS=ON -DPLATFORM=SIMULATORARM64 \
+            "-DDEPLOYMENT_TARGET=$DEPLOYMENT_TARGET" \
+            "-DNAPI_JAVASCRIPT_ENGINE=$JS_ENGINE" "${args[@]}"
+          cmake --build "$build" --config RelWithDebInfo --target "$target" -- \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+          python3 .github/scripts/mobile_test_artifacts.py package \
+            --platform iOS --component "$component" --engine "$JS_ENGINE" \
+            --app "$app" --output "test-artifacts/$component"
+        done
+    - uses: actions/upload-artifact@v6
+      with:
+        name: UnitTests-${{ inputs.platform }}-BabylonNative-${{ inputs.js-engine }}
+        path: test-artifacts/BabylonNative
+        if-no-files-found: error
+    - uses: actions/upload-artifact@v6
+      with:
+        name: UnitTests-${{ inputs.platform }}-JsRuntimeHost-${{ inputs.js-engine }}
+        path: test-artifacts/JsRuntimeHost
+        if-no-files-found: error
+    - uses: actions/upload-artifact@v6
+      with:
+        name: UnitTests-${{ inputs.platform }}-UrlLib-${{ inputs.js-engine }}
+        path: test-artifacts/UrlLib
+        if-no-files-found: error

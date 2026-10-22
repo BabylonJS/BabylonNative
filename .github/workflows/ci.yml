@@ -145,18 +145,12 @@ jobs:
       runs-on: ubuntu-latest
       js-engine: QuickJS
 
-  jsruntimehost:
-    uses: ./.github/workflows/jsruntimehost-ci.yml
-
-  urllib:
-    uses: ./.github/workflows/urllib-ci.yml
-
   AndroidTests:
-    needs: [Android_Ubuntu_JSC, Android_Ubuntu_V8, Android_Ubuntu_QuickJS, jsruntimehost, urllib]
+    needs: [Android_Ubuntu_JSC, Android_Ubuntu_V8, Android_Ubuntu_QuickJS]
     uses: ./.github/workflows/test-android.yml
 
   iOSTests:
-    needs: [iOS_Xcode26, jsruntimehost, urllib]
+    needs: [iOS_Xcode26]
     uses: ./.github/workflows/test-ios.yml
 
   # ── Installation Tests ────────────────────────────────────────
@@ -199,8 +193,6 @@ jobs:
       - Android_Ubuntu_JSC
       - Android_Ubuntu_V8
       - Android_Ubuntu_QuickJS
-      - jsruntimehost
-      - urllib
       - AndroidTests
       - iOSTests
       - iOS_Installation
