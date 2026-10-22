@@ -36,6 +36,9 @@
 #if defined(_WIN32)
 #define SKIP_WITHOUT_TRANSPORT_ERROR_DETAIL() \
     GTEST_SKIP() << "the Windows backend does not populate transport-error detail yet"
+#elif defined(__ANDROID__)
+#define SKIP_WITHOUT_TRANSPORT_ERROR_DETAIL() \
+    GTEST_SKIP() << "the Android backend does not populate transport-error detail yet"
 #else
 #define SKIP_WITHOUT_TRANSPORT_ERROR_DETAIL() (void)0
 #endif

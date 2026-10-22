@@ -11,7 +11,11 @@ FetchContent_MakeAvailable(googletest)
 set_property(TARGET gtest PROPERTY FOLDER Dependencies)
 set_property(TARGET gtest_main PROPERTY FOLDER Dependencies)
 
-add_executable(UrlLibTests UrlRequestErrorReporting.cpp SchemeResolver.cpp)
+if(ANDROID)
+    add_library(UrlLibTests SHARED UrlRequestErrorReporting.cpp SchemeResolver.cpp)
+else()
+    add_executable(UrlLibTests UrlRequestErrorReporting.cpp SchemeResolver.cpp)
+endif()
 
 target_link_libraries(UrlLibTests
     PRIVATE UrlLib
@@ -27,4 +31,9 @@ endif()
 
 set_property(TARGET UrlLibTests PROPERTY FOLDER Tests)
 
-add_test(NAME UrlLibTests COMMAND UrlLibTests)
+if(ANDROID OR IOS)
+    include("${CMAKE_CURRENT_LIST_DIR}/../../../Apps/UnitTests/Mobile/Packaging.cmake")
+    package_mobile_unit_tests(UrlLibTests com.urllib.unittests)
+else()
+    add_test(NAME UrlLibTests COMMAND UrlLibTests)
+endif()

@@ -1,0 +1,59 @@
+name: iOS unit tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check artifact runner
+        run: python3 -m unittest discover -s .github/scripts/tests -v
+      - name: Select Xcode
+        run: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: UnitTests-iOS-*
+          path: test-artifacts
+      - name: Boot iOS simulator
+        id: simulator
+        run: |
+          simulator=$(xcrun simctl list -j devices available | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          iphones = [
+              (tuple(int(part) for part in runtime.rsplit("iOS-", 1)[1].split("-")), device)
+              for runtime, group in devices.items() if "iOS-" in runtime
+              for device in group if device["name"].startswith("iPhone")
+          ]
+          iphones = [(version, device) for version, device in iphones if version >= (26, 0)]
+          if not iphones:
+              raise SystemExit("No iPhone simulator meets deployment target 26.0")
+          print(max(iphones, key=lambda item: item[0])[1]["udid"])
+          ')
+          echo "id=$simulator" >> "$GITHUB_OUTPUT"
+          if ! xcrun simctl list devices booted | grep -Fq "$simulator"; then
+            xcrun simctl boot "$simulator"
+          fi
+          xcrun simctl bootstatus "$simulator" -b
+      - name: Install and run all iOS test artifacts sequentially
+        env:
+          SIMULATOR: ${{ steps.simulator.outputs.id }}
+        run: python3 .github/scripts/mobile_test_artifacts.py run --platform iOS --artifacts test-artifacts --logs test-results --simulator "$SIMULATOR"
+      - name: Shut down simulator
+        if: ${{ always() && steps.simulator.outputs.id != '' }}
+        env:
+          SIMULATOR: ${{ steps.simulator.outputs.id }}
+        run: xcrun simctl shutdown "$SIMULATOR"
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: iOS-unit-test-results
+          path: test-results
+          if-no-files-found: error

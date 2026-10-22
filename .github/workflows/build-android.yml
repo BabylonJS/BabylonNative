@@ -17,6 +17,12 @@ env:
   npm_config_fetch_retries: '5'
 
 jobs:
+  unit-test-artifact:
+    uses: ./.github/workflows/build-mobile-tests.yml
+    with:
+      component: BabylonNative
+      platform: Android
+      js-engine: ${{ inputs.js-engine }}
   build:
     runs-on: ${{ inputs.runs-on }}
     timeout-minutes: 45

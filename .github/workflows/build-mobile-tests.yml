@@ -1,0 +1,131 @@
+name: Build mobile unit-test artifacts
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+      platform:
+        required: true
+        type: string
+      js-engine:
+        type: string
+        default: JavaScriptCore
+      deployment-target:
+        type: string
+        default: '26.0'
+      xcode-version:
+        type: string
+        default: '26.4'
+
+env:
+  NDK_VERSION: '27.2.12479018'
+  npm_config_fetch_retries: '5'
+
+jobs:
+  Android:
+    if: inputs.platform == 'Android'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android NDK
+        run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION"
+      - name: Build and package application and instrumentation APKs
+        env:
+          COMPONENT: ${{ inputs.component }}
+          JS_ENGINE: ${{ inputs.js-engine }}
+        run: |
+          args=(-PabiFilters=x86_64 "-PjsEngine=$JS_ENGINE" "-PndkVersion=$NDK_VERSION"
+                assembleDebug assembleDebugAndroidTest)
+          case "$COMPONENT" in
+            JsRuntimeHost)
+              project=Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android
+              bash "$project/gradlew" -p "$project" "${args[@]}"
+              ;;
+            BabylonNative|UrlLib)
+              project=Apps/UnitTests/Mobile/Android
+              bash "$project/gradlew" "-Pcomponent=$COMPONENT" "${args[@]}"
+              ;;
+            *)
+              echo "::error::Unknown test component: $COMPONENT"
+              exit 1
+              ;;
+          esac
+          python3 .github/scripts/mobile_test_artifacts.py package \
+            --platform Android --component "$COMPONENT" --engine "$JS_ENGINE" \
+            --app "$project/app/build/outputs/apk/debug/app-debug.apk" \
+            --test-apk "$project/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" \
+            --output test-artifact
+      - uses: actions/upload-artifact@v6
+        with:
+          name: UnitTests-Android-${{ inputs.component }}-${{ inputs.js-engine }}
+          path: test-artifact
+          if-no-files-found: error
+
+  iOS:
+    if: inputs.platform == 'iOS'
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Select Xcode
+        env:
+          XCODE_VERSION: ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch "/Applications/Xcode_$XCODE_VERSION.app/Contents/Developer"
+      - name: Build and package simulator application
+        env:
+          COMPONENT: ${{ inputs.component }}
+          JS_ENGINE: ${{ inputs.js-engine }}
+          DEPLOYMENT_TARGET: ${{ inputs.deployment-target }}
+        run: |
+          case "$COMPONENT" in
+            JsRuntimeHost)
+              source=Dependencies/JsRuntimeHost
+              target=UnitTests
+              app=build/mobile-tests/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app
+              args=(-DJSRUNTIMEHOST_TESTS=ON)
+              ;;
+            BabylonNative)
+              source=Apps/UnitTests/Mobile
+              target=UnitTests
+              app=build/mobile-tests/BabylonNative/Apps/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app
+              args=(-DUNIT_TEST_COMPONENT=BabylonNative)
+              ;;
+            UrlLib)
+              source=Apps/UnitTests/Mobile
+              target=UrlLibTests
+              app=build/mobile-tests/UrlLib/Tests/RelWithDebInfo-iphonesimulator/UrlLibTests.app
+              args=(-DUNIT_TEST_COMPONENT=UrlLib)
+              ;;
+            *)
+              echo "::error::Unknown test component: $COMPONENT"
+              exit 1
+              ;;
+          esac
+          cmake -S "$source" -B build/mobile-tests -G Xcode \
+            -DIOS=ON -DPLATFORM=SIMULATORARM64 \
+            "-DDEPLOYMENT_TARGET=$DEPLOYMENT_TARGET" \
+            "-DNAPI_JAVASCRIPT_ENGINE=$JS_ENGINE" "${args[@]}"
+          cmake --build build/mobile-tests --config RelWithDebInfo --target "$target" -- \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+          python3 .github/scripts/mobile_test_artifacts.py package \
+            --platform iOS --component "$COMPONENT" --engine "$JS_ENGINE" \
+            --app "$app" --output test-artifact
+      - uses: actions/upload-artifact@v6
+        with:
+          name: UnitTests-iOS-${{ inputs.component }}-${{ inputs.js-engine }}
+          path: test-artifact
+          if-no-files-found: error

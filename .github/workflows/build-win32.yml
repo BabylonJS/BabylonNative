@@ -68,8 +68,8 @@ jobs:
             -D BABYLON_DEBUG_TRACE=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON ^
-            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=OFF ^
-            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=OFF ^
+            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=ON ^
+            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=ON ^
             -D ENABLE_SANITIZERS=${{ steps.vars.outputs.sanitizer_flag }}
 
       - name: Build
@@ -151,6 +151,18 @@ jobs:
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo
           ModuleLoadTest
+
+      - name: JsRuntimeHost Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo
+          JsRuntimeHostUnitTests
+
+      - name: UrlLib Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\UrlLib\Tests\RelWithDebInfo
+          UrlLibTests
 
       - name: Stage UnitTests Crash Dump
         if: failure()

@@ -1,0 +1,39 @@
+name: Android unit tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check artifact runner
+        run: python3 -m unittest discover -s .github/scripts/tests -v
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: UnitTests-Android-*
+          path: test-artifacts
+      - name: Enable emulator acceleration
+        run: sudo chmod 0666 /dev/kvm
+      - name: Install and run all Android test artifacts sequentially
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-snapshot -no-window -no-boot-anim -no-audio
+          script: |
+            mkdir -p test-results
+            python3 .github/scripts/mobile_test_artifacts.py run --platform Android --artifacts test-artifacts --logs test-results || { status=$?; adb logcat -d > test-results/logcat.txt; exit "$status"; }
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: Android-unit-test-results
+          path: test-results
+          if-no-files-found: error

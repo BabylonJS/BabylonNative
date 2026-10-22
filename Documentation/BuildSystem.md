@@ -22,33 +22,42 @@ packaging lives in `Dependencies/cmake/StageBgfxSources.cmake`. The root's
 FetchContent declarations retain Babylon Native's compatible child revisions;
 the upstream wrapper's fallback pins are not used by the root build.
 
-CI orchestration is split between `.github/workflows/ci.yml`,
-`jsruntimehost-ci.yml` and `urllib-ci.yml`. The main workflow calls the two
-component orchestrators after their platform builds succeed; each orchestrator
-owns its platform/engine matrices and calls the existing component platform
-test workflows. A small `component-path-filter` job in `ci.yml` compares PR
-changes against their merge base and publishes an independent boolean for
-each component. Only affected component orchestrators are called.
-`jsruntimehost-ci-complete` and `urllib-ci-complete` require their respective
-reusable workflow to succeed, or to be skipped when its filter explicitly says
-the component is unchanged. The final `ci-complete` requires both component
-checks, the filter and every ordinary build/install check to succeed.
-Each test job checks out and builds its own component on a fresh runner:
-`needs` controls ordering, not build-directory sharing. JsRuntimeHost covers
-desktop Windows/macOS/Linux and Android emulator/iOS simulator harnesses;
-UrlLib has Windows/macOS/Linux suites. The main platform builds disable their
-embedded component tests to avoid duplicate execution.
+Every non-UWP CI configuration builds UrlLib and JsRuntimeHost unit tests.
+Desktop Windows/macOS/Linux workflows build and run the embedded component
+targets alongside BabylonNative's tests, including the D3D12, Vulkan and
+precompiled-shader configurations. UWP remains excluded. There is no path filter:
+all PR and master CI events exercise the configured suites.
 
-Component-directory or corresponding `<component>-*.yml` changes enable that
-component's suites. Shared CMakeExtensions or root `ci.yml` changes enable both;
-master pushes also run both. Failed filtering, missing outputs, cancellation,
-test failures and unexpected skips fail the completion checks.
+Mobile builds publish installable test artifacts without booting a simulator.
+`jsruntimehost-ci.yml` and `urllib-ci.yml` own the component mobile build
+matrices; `build-android.yml` and `build-ios.yml` also build BabylonNative's
+test applications. `build-mobile-tests.yml` packages each application with
+its component, platform, engine and application ID in a manifest. Artifact
+names are `UnitTests-Android-<component>-<engine>` and
+`UnitTests-iOS-<component>-JavaScriptCore`. iOS apps are archived to retain
+executable permissions. Android artifacts include both application and test APKs.
 
-GitHub's native
-[`paths` filters](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore)
-apply to event triggers, not `workflow_call`, and `needs` cannot wait for a job
-in an independently triggered workflow. The root filter therefore gates the
-reusable calls directly rather than dispatching independent workflow runs.
+The shared native harness in `Apps/UnitTests/Mobile` packages the real
+BabylonNative and UrlLib suites; JsRuntimeHost retains its existing mobile
+harnesses. Select the shared suite with Android's `-Pcomponent` or CMake's
+`UNIT_TEST_COMPONENT`. Android artifacts target API 33/x86_64 using NDK
+27.2.12479018; iOS artifacts target the arm64 simulator. Unsupported backend
+features report explicit GoogleTest skips, not a replacement empty suite.
+
+The root `AndroidTests` and `iOSTests` jobs depend on the corresponding mobile
+builds and component artifact producers. Each downloads all artifacts for its
+platform, boots one emulator/simulator, and installs and runs applications
+sequentially. Android covers JavaScriptCore, V8 and QuickJS for all three
+components; iOS uses JavaScriptCore. The runner checks the complete expected
+artifact matrix before running, rejects missing artifacts and missing test
+completion signals, and continues through remaining artifacts after a failure
+before failing the job. Each suite has a bounded execution timeout, and logs
+are uploaded per platform. No source rebuild occurs in the test runner jobs.
+
+`needs` controls ordering, not build-directory sharing: only named artifacts
+cross runners. `ci-complete` requires `AndroidTests`, `iOSTests`, both component
+build completion checks, and all ordinary build/install checks to succeed.
+Failures, cancellations and unexpected skips cannot pass the final gate.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

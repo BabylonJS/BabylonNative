@@ -1,8 +1,12 @@
-if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT VISIONOS) OR (UNIX AND NOT APPLE)))
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 option(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE "Use a noop Metal device for Apple platforms." OFF)
+
+if(ANDROID OR IOS)
+    npm(run build WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/JavaScript")
+endif()
 
 set(BABYLONJS_ASSETS
     "../node_modules/babylonjs/babylon.max.js")
@@ -98,7 +102,19 @@ elseif(WIN32)
     set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
-add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+if(ANDROID)
+    add_library(UnitTests SHARED ${SOURCES})
+else()
+    add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+endif()
+if(ANDROID OR IOS)
+    include("${CMAKE_CURRENT_LIST_DIR}/Mobile/Packaging.cmake")
+    package_mobile_unit_tests(UnitTests com.babylonnative.unittests)
+    if(ANDROID)
+        target_compile_definitions(UnitTests PRIVATE BABYLON_NATIVE_MOBILE_TESTS)
+        target_link_libraries(UnitTests PRIVATE EGL GLESv3)
+    endif()
+endif()
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_IMAGE_LOADING)
     target_link_libraries(UnitTests PRIVATE UrlLib)
@@ -201,7 +217,9 @@ if(GRAPHICS_API STREQUAL "OpenGL")
         SKIP_FLIPPED_SAMPLING_TESTS)
 endif()
 
-add_test(NAME UnitTests COMMAND UnitTests)
+if(NOT ANDROID AND NOT IOS)
+    add_test(NAME UnitTests COMMAND UnitTests)
+endif()
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
@@ -218,6 +236,9 @@ endif()
 
 foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS})
     get_filename_component(ASSET_NAME "${ASSET}" NAME)
+    if(IOS)
+        set_source_files_properties("${ASSET}" PROPERTIES MACOSX_PACKAGE_LOCATION "Assets")
+    endif()
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${ASSET}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"

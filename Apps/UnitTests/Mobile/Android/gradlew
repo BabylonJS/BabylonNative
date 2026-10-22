@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec sh "$HERE/../../../../Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/gradlew" -p "$HERE" "$@"

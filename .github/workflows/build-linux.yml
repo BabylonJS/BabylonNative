@@ -76,8 +76,8 @@ jobs:
             -D BABYLON_DEBUG_TRACE=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
-            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=OFF \
-            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=OFF \
+            -D BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS=ON \
+            -D BABYLON_NATIVE_BUILD_URLLIB_TESTS=ON \
             ${{ inputs.js-engine == 'Hermes' && '-D HERMES_UNICODE_LITE=ON -D HERMES_ALLOW_BOOST_CONTEXT=0' || '' }} \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux
@@ -174,6 +174,16 @@ jobs:
           ulimit -c unlimited
           xvfb-run --auto-servernum ./ModuleLoadTest
 
+      - name: JsRuntimeHost Unit Tests
+        working-directory: build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests
+        run: |
+          ulimit -c unlimited
+          xvfb-run --auto-servernum ./JsRuntimeHostUnitTests
+
+      - name: UrlLib Unit Tests
+        working-directory: build/Linux/Dependencies/UrlLib/Tests
+        run: ./UrlLibTests
+
       - name: Upload Vulkan Test Results
         if: ${{ always() && inputs.graphics-api == 'Vulkan' }}
         uses: actions/upload-artifact@v6
@@ -209,3 +219,7 @@ jobs:
             build/Linux/Apps/UnitTests/core.*
             build/Linux/Apps/ModuleLoadTest/ModuleLoadTest
             build/Linux/Apps/ModuleLoadTest/core.*
+            build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests/JsRuntimeHostUnitTests
+            build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests/core.*
+            build/Linux/Dependencies/UrlLib/Tests/UrlLibTests
+            build/Linux/Dependencies/UrlLib/Tests/core.*

@@ -1,0 +1,37 @@
+cmake_minimum_required(VERSION 3.22)
+
+include(FetchContent)
+get_filename_component(BABYLON_NATIVE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+include("${BABYLON_NATIVE_ROOT}/Dependencies/CMakeExtensions/CMakeLists.txt")
+if(IOS)
+    FetchContent_Declare(ios-cmake
+        GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+        GIT_TAG 4.5.0)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM SIMULATOR64 CACHE STRING "")
+    set(DEPLOYMENT_TARGET 13 CACHE STRING "")
+endif()
+
+project(MobileUnitTests LANGUAGES C CXX)
+set(UNIT_TEST_COMPONENT BabylonNative CACHE STRING "UrlLib or BabylonNative")
+set_property(CACHE UNIT_TEST_COMPONENT PROPERTY STRINGS UrlLib BabylonNative)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+enable_testing()
+
+if(NOT ANDROID AND NOT IOS)
+    message(FATAL_ERROR "This harness requires Android or iOS")
+endif()
+
+if(UNIT_TEST_COMPONENT STREQUAL "UrlLib")
+    set(URLLIB_TESTS ON CACHE BOOL "" FORCE)
+    add_subdirectory("${BABYLON_NATIVE_ROOT}/Dependencies/UrlLib" UrlLib)
+elseif(UNIT_TEST_COMPONENT STREQUAL "BabylonNative")
+    set(BABYLON_NATIVE_BUILD_APPS ON CACHE BOOL "" FORCE)
+    set(BABYLON_NATIVE_BUILD_URLLIB_TESTS OFF CACHE BOOL "" FORCE)
+    set(BABYLON_NATIVE_BUILD_JSRUNTIMEHOST_TESTS OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${BABYLON_NATIVE_ROOT}" BabylonNative)
+else()
+    message(FATAL_ERROR "Unknown UNIT_TEST_COMPONENT: ${UNIT_TEST_COMPONENT}")
+endif()
