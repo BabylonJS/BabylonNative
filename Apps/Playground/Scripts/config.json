@@ -2576,7 +2576,9 @@
             "title": "IBL Voxel Shadowing",
             "playgroundId": "#8R5SSE#796",
             "renderCount": 15,
-            "referenceImage": "voxelShadows.png"
+            "referenceImage": "voxelShadows.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "Glow layer with vertex alpha",
@@ -2588,13 +2590,17 @@
             "title": "IBL Voxel Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#797",
             "renderCount": 15,
-            "referenceImage": "voxelShadowsRightHanded.png"
+            "referenceImage": "voxelShadowsRightHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "IBL Voxel Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#798",
             "renderCount": 15,
-            "referenceImage": "voxelShadowsLeftHanded.png"
+            "referenceImage": "voxelShadowsLeftHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "IBL Screen-space Shadowing Left-Handed",

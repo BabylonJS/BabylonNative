@@ -621,6 +621,9 @@
     let skippedCount = 0;
     let missingRefCount = 0;
     const failedTitles = [];
+    // Native cancels framebuffer readbacks once the graphics device is lost. Later tests
+    // cannot render or validate, and some wait forever, so the run stops instead.
+    let readbackCanceled = false;
 
     function getExclusionReason(t) {
         if (t.onlyVisual) {
@@ -1140,6 +1143,9 @@
                             evaluated = true;
                             stopped = true;
                             pendingScreenshot = null;
+                            if (/cancel/i.test(String(error && error.message))) {
+                                readbackCanceled = true;
+                            }
                             console.error(error);
                             failTest(done);
                         });
@@ -1748,6 +1754,13 @@
                         }
                     } else {
                         passedCount++;
+                    }
+                    if (readbackCanceled) {
+                        console.error("Framebuffer readback was canceled (graphics device lost) during '" + currentTitle +
+                            "'; aborting the remaining tests.");
+                        logRunSummary();
+                        TestUtils.exit(-1);
+                        return;
                     }
                     i++;
                     if (justOnce || i >= config.tests.length) {
