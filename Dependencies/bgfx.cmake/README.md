@@ -18,13 +18,20 @@ cmake -S Dependencies\bgfx.cmake -B build\bgfx -DBGFX_BUILD_EXAMPLES=OFF
 cmake --build build\bgfx --config Release
 ```
 
-CMake fetches the three full Git repositories at the exact revisions in
-`cmake/dependencies.cmake`, without submodules. Default sources are
-`${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/{bgfx,bx,bimg}`. Babylon Native adds
-the tracked wrapper locally at the legacy binary root
-`${FETCHCONTENT_BASE_DIR}/bgfx.cmake-build`; it never downloads the wrapper.
+The entrypoint `CMakeLists.txt` and `cmake/dependencies.cmake` are unchanged
+copies from `bkaradzic/bgfx.cmake@dbc15d21e7744887d543d0c80278fe26fbb0f5f0`.
+Standalone configuration uses that upstream resolver and its fallback revisions,
+with default sources in `${FETCHCONTENT_BASE_DIR}/{bgfx,bx,bimg}_source-src`.
+Pass `BGFX_DIR`, `BX_DIR` and `BIMG_DIR` to build other selected source trees.
 
-Source precedence is nonempty `BGFX_DIR`/`BX_DIR`/`BIMG_DIR`, standard
+Babylon Native's root does not use those fallback revisions. Its integration in
+[`../CMakeLists.txt`](../CMakeLists.txt) resolves and validates the three children
+at the root's compatible pins before adding this wrapper with `add_subdirectory`;
+it never downloads the wrapper. Default child sources remain under
+`${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/{bgfx,bx,bimg}`.
+
+For the Babylon Native build, source precedence is nonempty
+`BGFX_DIR`/`BX_DIR`/`BIMG_DIR`, standard
 `FETCHCONTENT_SOURCE_DIR_BGFX`/`_BX`/`_BIMG` overrides, valid adjacent bundled
 directories, then pinned FetchContent acquisition. Explicit relative roots
 are relative to this wrapper, not the outer project. Invalid explicit roots
@@ -40,13 +47,13 @@ overrides in advance; there is no remote-wrapper fallback.
 
 Babylon Native's `BABYLON_NATIVE_BUILD_SOURCETREE=ON` stages the current
 wrapper beside the selected children in `_deps/bgfx.cmake-src`. Existing
-packagers can copy this directory, strip Git metadata and configure a fresh
-offline build with `FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE` pointing at it.
-This legacy wrapper override selects a local `add_subdirectory`, not a fetch.
-Untyped relative command-line overrides are normalized against the configure
-process's working directory, matching FetchContent.
+packagers can copy this directory, strip Git metadata and configure it
+directly as a standalone CMake project for an offline build.
 Custom selected child roots are copied into the package without modifying
 the originals.
+The staging implementation belongs to Babylon Native in
+[`../cmake/StageBgfxSources.cmake`](../cmake/StageBgfxSources.cmake), not to the
+upstream wrapper.
 
 Versions use the selected bgfx API and its own Git commit count, never an
 ancestor repository's history. Source packages snapshot that version in

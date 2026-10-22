@@ -84,6 +84,14 @@ jobs:
     workingDirectory: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
     displayName: 'Unit Tests'
 
+  - script: JsRuntimeHostUnitTests.exe
+    workingDirectory: 'build\Win32_x64_V8\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo'
+    displayName: 'JsRuntimeHost Unit Tests'
+
+  - script: UrlLibTests.exe
+    workingDirectory: 'build\Win32_x64_V8\Dependencies\UrlLib\Tests\RelWithDebInfo'
+    displayName: 'UrlLib Unit Tests'
+
   - task: CopyFiles@2
     inputs:
       sourceFolder: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
@@ -218,8 +226,8 @@ jobs:
   - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
     displayName: 'Build Playground macOS'
 
-  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
-    displayName: 'Build UnitTests macOS'
+  - script: cmake --build build/macOS --target UnitTests JsRuntimeHostUnitTests UrlLibTests --config RelWithDebInfo
+    displayName: 'Build UnitTests and component tests macOS'
 
   - script: sudo sysctl -w kern.corefile=%N.core.%P
     displayName: 'Enable Core Dump'
@@ -229,6 +237,18 @@ jobs:
       ./UnitTests
     workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
     displayName: 'Run UnitTests macOS'
+
+  - script: |
+      ulimit -c unlimited
+      ./JsRuntimeHostUnitTests
+    workingDirectory: build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo
+    displayName: 'JsRuntimeHost Unit Tests macOS'
+
+  - script: |
+      ulimit -c unlimited
+      ./UrlLibTests
+    workingDirectory: build/macOS/Dependencies/UrlLib/Tests/RelWithDebInfo
+    displayName: 'UrlLib Unit Tests macOS'
 
   - task: PublishBuildArtifacts@1
     displayName: Upload UnitTests Core Dumps

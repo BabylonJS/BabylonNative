@@ -109,6 +109,7 @@ bgfx_config_option(BGFX_CONFIG_MAX_RECT_CACHE "Specify maximum scissor rect cach
 bgfx_config_option(BGFX_CONFIG_SORT_KEY_NUM_BITS_PROGRAM "Specify maximum program count as 2^(program bits)")
 bgfx_config_option(BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE "Specify minimum resource command buffer size")
 bgfx_config_option(BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE "Specify minimum uniform buffer size")
+bgfx_config_option(BGFX_CONFIG_MIN_UNIFORM_CACHE_SIZE "Specify minimum view and frame uniform cache size")
 bgfx_config_option(BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE "Specify uniform buffer resize threshold size")
 bgfx_config_option(BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE "Specify uniform buffer resize increment size")
 bgfx_config_option(BGFX_CONFIG_DYNAMIC_VERTEX_BUFFER_SIZE "Specify dynamic vertex buffer block size in bytes")
@@ -130,16 +131,59 @@ if(BGFX_BUILD_TESTS)
 	enable_testing()
 endif()
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
+include(FetchContent)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake)
+
+FetchContent_Declare(
+	bx_source
+	GIT_REPOSITORY https://github.com/bkaradzic/bx.git
+	GIT_TAG ${BX_GIT_TAG}
+	GIT_SHALLOW FALSE
+	SOURCE_SUBDIR bgfx-cmake-no-subproject
+)
+FetchContent_Declare(
+	bimg_source
+	GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
+	GIT_TAG ${BIMG_GIT_TAG}
+	GIT_SHALLOW FALSE
+	SOURCE_SUBDIR bgfx-cmake-no-subproject
+)
+FetchContent_Declare(
+	bgfx_source
+	GIT_REPOSITORY https://github.com/bkaradzic/bgfx.git
+	GIT_TAG ${BGFX_GIT_TAG}
+	GIT_SHALLOW FALSE
+	SOURCE_SUBDIR bgfx-cmake-no-subproject
+)
+
+foreach(dep IN ITEMS bx bimg bgfx)
+	string(TOUPPER "${dep}" DEP)
+	set(${dep}_in_tree "${CMAKE_CURRENT_SOURCE_DIR}/${dep}")
+	set(${dep}_in_tree_usable FALSE)
+	if(EXISTS "${${dep}_in_tree}/.git" AND NOT IS_DIRECTORY "${${dep}_in_tree}/.git")
+		message(WARNING "Ignoring leftover ${dep} submodule checkout at ${${dep}_in_tree}; delete it to silence this warning")
+	elseif(EXISTS "${${dep}_in_tree}/include/${dep}/${dep}.h")
+		set(${dep}_in_tree_usable TRUE)
+	endif()
+	if(DEFINED CACHE{${DEP}_DIR} AND "${${DEP}_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}/${dep}"
+	   AND NOT ${dep}_in_tree_usable
+	)
+		unset(${DEP}_DIR CACHE)
+		unset(${DEP}_DIR)
+	endif()
+	if(${DEP}_DIR)
+		get_filename_component(${DEP}_DIR "${${DEP}_DIR}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+	elseif(${dep}_in_tree_usable)
+		set(${DEP}_DIR "${${dep}_in_tree}")
+	else()
+		FetchContent_MakeAvailable(${dep}_source)
+		FetchContent_GetProperties(${dep}_source SOURCE_DIR ${DEP}_DIR)
+	endif()
+	file(TO_CMAKE_PATH "${${DEP}_DIR}" ${DEP}_DIR)
+endforeach()
 
 # sets project version from api ver / git rev
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
-if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-	foreach(_root BX_DIR BIMG_DIR BGFX_DIR)
-		set(${_root} "${${_root}}" PARENT_SCOPE)
-	endforeach()
-	set(BGFX_PROJECT_VERSION "${PROJECT_VERSION}" PARENT_SCOPE)
-endif()
 if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
 	add_custom_target(bgfx-tools)
 	set_target_properties(bgfx-tools PROPERTIES FOLDER "bgfx/tools")

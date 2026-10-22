@@ -81,8 +81,12 @@ TEST(BgfxCallback, FailedScreenshotsAreNotReplayedAfterDeviceLoss)
 
 TEST(BgfxCallback, OtherFatalErrorsStillAbort)
 {
+#if GTEST_HAS_DEATH_TEST
     TestBgfxCallback callback{[](const auto&) {}};
     EXPECT_DEATH(callback.fatal(__FILE__, __LINE__, bgfx::Fatal::UnableToInitialize, "simulated init failure"), "FATAL");
+#else
+    GTEST_SKIP() << "This platform does not support subprocess death tests";
+#endif
 }
 
 TEST(BgfxCallback, CoalescesScreenshotsAndCapture)

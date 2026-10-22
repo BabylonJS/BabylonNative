@@ -4,11 +4,98 @@
 design. Most external sources are now acquired with CMake FetchContent.
 `Dependencies/bgfx.cmake` is tracked wrapper code with imported file history;
 its bgfx, bx and bimg sources remain pinned external FetchContent acquisitions.
-AndroidExtensions and CMakeExtensions are vendored with imported history under
-`Dependencies/`; root source overrides make all FetchContent declarations use them.
+AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
+in this repository under `Dependencies/` with imported file history. The
+root includes CMakeExtensions as a globally guarded helper module and builds the other three
+with `add_subdirectory` rather than FetchContent;
+their nested projects also use their siblings here instead of fetching the
+former standalone repositories. No `_deps/*-src` copies are produced for
+these components; their build files live under `Dependencies/` in the build tree.
 Targets and lateral dependency relationships are unchanged. The legacy
-`_deps/bgfx.cmake-src` source-package and `_deps/bgfx.cmake-build` binary layouts
-remain supported; see [Building](../BUILDING.md) for local/offline overrides.
+`_deps/bgfx.cmake-src` source packages remain supported; the wrapper's
+build files now live under `Dependencies/bgfx.cmake`. See
+[Building](../BUILDING.md) for local/offline source overrides.
+The bgfx wrapper's `CMakeLists.txt` and `cmake/dependencies.cmake` are copied
+unchanged from upstream. Babylon Native's child-source selection, validation,
+options and target adjustments live in `Dependencies/CMakeLists.txt`; source-tree
+packaging lives in `Dependencies/cmake/StageBgfxSources.cmake`. The root's
+FetchContent declarations retain Babylon Native's compatible child revisions;
+the upstream wrapper's fallback pins are not used by the root build.
+The root uses the pinned bgfx sources without a local GL patch. Source packages
+and local `FETCHCONTENT_SOURCE_DIR_BGFX` overrides use the same unpatched revision.
+
+Embedded UrlLib and JsRuntimeHost tests follow `BABYLON_NATIVE_BUILD_APPS`
+and the same supported-platform condition as BabylonNative's `UnitTests`;
+there are no separate BabylonNative component-test options. Disabling app
+builds disables all three suites, including when this repository is embedded
+by a consumer. Standalone component builds retain their own test options.
+
+Every non-UWP CI configuration builds UrlLib and JsRuntimeHost unit tests.
+Desktop Windows/macOS/Linux workflows build and run the embedded component
+targets alongside BabylonNative's tests, including the D3D12, Vulkan and
+precompiled-shader configurations. UWP remains excluded. There is no path filter:
+all PR and master CI events exercise the configured suites.
+
+Mobile builds publish installable test artifacts without booting a simulator.
+Each classic `build-android.yml` and `build-ios.yml` build job also builds
+the JsRuntimeHost and UrlLib test applications using `.github/actions/build-mobile-tests`.
+There are no separate component build matrices or artifact-producer jobs.
+The action uses separate CMake build directories for each iOS application and
+packages each Android application's APKs before building the next component.
+Artifact names identify the platform, component and engine:
+`UnitTests-Android-<component>-<engine>` and
+`UnitTests-iOS-<component>-JavaScriptCore`. iOS apps are archived to retain
+executable permissions. Android artifacts include both application and test APKs.
+
+The shared native harness in `Apps/UnitTests/Mobile` packages the real
+BabylonNative and UrlLib suites; JsRuntimeHost retains its existing mobile
+harnesses. BabylonNative's shared harness remains available for local development,
+but CI does not build, upload, or execute its mobile unit-test artifacts.
+Select the shared suite with Android's `-Pcomponent` or CMake's
+`UNIT_TEST_COMPONENT`. Android artifacts target API 33/x86_64 using NDK
+27.2.12479018; iOS artifacts target the arm64 simulator. Unsupported backend
+features report explicit GoogleTest skips, not a replacement empty suite.
+The Android producer installs SDK CMake 3.30.3, matching the Gradle harness.
+Apps installs its npm workspace before configuring child applications, so
+mobile test bundles can run webpack during a clean CMake configuration.
+The iOS harness disables the toolchain's global ARC default before its first
+`project()` call, preserving bgfx's manual Objective-C ownership.
+
+The root `AndroidTests` and `iOSTests` jobs depend on the corresponding mobile
+classic builds only. Each downloads all artifacts for its
+platform, boots one emulator/simulator, and installs and runs applications
+sequentially. Android covers JavaScriptCore, V8 and QuickJS for JsRuntimeHost
+and UrlLib (six artifacts); iOS uses JavaScriptCore (two artifacts).
+The YAML runner steps check the complete expected
+artifact matrix before running, rejects missing artifacts and missing test
+completion signals, and continues through remaining artifacts after a failure
+before failing the job. Installed Android packages are removed even after a
+crash or timeout, preventing debug-signing conflicts between engine builds.
+Each suite has a bounded execution timeout, and logs
+are uploaded per platform. No source rebuild occurs in the test runner jobs.
+
+Android CI caches a clean, booted AVD before installing any test applications.
+The cache key includes the runner OS/architecture, installed emulator and system-image
+revisions, and the workflow/readiness configuration. Exact-key restores avoid
+incompatible snapshots. Test runs load the snapshot without saving their state;
+the existing package cleanup still isolates components and JavaScript engines.
+The Android emulator action waits for boot completion, and the test step also waits
+for a validated active default network with a bounded readiness timeout. A cache miss incurs a
+cold boot and upload; a hit still incurs download/extraction and SDK setup.
+
+Mobile packaging and execution are defined directly in YAML, using `cp`, `tar`,
+`adb` and `xcrun`, rather than Python helpers or manifests. Android boot and shutdown
+use `reactivecircus/android-emulator-runner`; iOS device selection, boot and post-job
+shutdown use the Marketplace [Launch iOS Simulator](https://github.com/marketplace/actions/launch-ios-simulator)
+action (`futureware-tech/simulator-action`). Standard artifact and cache actions handle
+transfers. Shell checks still require real test completion, and per-suite timeouts
+and cleanup prevent one failed application from blocking the remaining suites.
+
+`needs` controls ordering, not build-directory sharing: only named artifacts
+cross runners. `ci-complete` requires `AndroidTests`, `iOSTests`,
+and the ordinary build/install checks to succeed. It depends on `iOSTests`
+instead of redundantly depending on `iOS_Xcode26`, which is already required by `iOSTests`.
+Failures, cancellations and unexpected skips cannot pass the final gate.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

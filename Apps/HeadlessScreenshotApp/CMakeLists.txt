@@ -2,8 +2,6 @@ FetchContent_Declare(DirectXTK
     GIT_REPOSITORY https://github.com/microsoft/DirectXTK.git
     GIT_TAG d57b857efbb47af07d725b6c11c3ed8d723490eb)
 
-FetchContent_MakeAvailable(CMakeExtensions)
-
 set(BUILD_TESTING OFF)
 set(BUILD_TOOLS OFF)
 set(BUILD_XAUDIO_WIN8 OFF)

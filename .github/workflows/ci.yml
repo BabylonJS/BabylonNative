@@ -145,6 +145,14 @@ jobs:
       runs-on: ubuntu-latest
       js-engine: QuickJS
 
+  AndroidTests:
+    needs: [Android_Ubuntu_JSC, Android_Ubuntu_V8, Android_Ubuntu_QuickJS]
+    uses: ./.github/workflows/test-android.yml
+
+  iOSTests:
+    needs: [iOS_Xcode26]
+    uses: ./.github/workflows/test-ios.yml
+
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
     uses: ./.github/workflows/test-install-ios.yml
@@ -167,7 +175,6 @@ jobs:
     needs:
       - MacOS
       - MacOS_Ninja
-      - iOS_Xcode26
       - MacOS_QuickJS
       - Win32_x64_D3D11
       - Win32_x64_JSI_D3D11
@@ -185,6 +192,8 @@ jobs:
       - Android_Ubuntu_JSC
       - Android_Ubuntu_V8
       - Android_Ubuntu_QuickJS
+      - AndroidTests
+      - iOSTests
       - iOS_Installation
       - Linux_Installation
       - MacOS_Installation
@@ -194,12 +203,7 @@ jobs:
     steps:
       - name: Verify all jobs succeeded
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "Job results: $RESULTS"
-          for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
-              echo "::error::CI did not succeed (results: $RESULTS)"
-              exit 1
-            fi
-          done
+          echo "$NEEDS_JSON" | jq -e 'to_entries | map(select(.value.result != "success")) |
+            if length == 0 then true else error("CI did not succeed: \(.)") end'

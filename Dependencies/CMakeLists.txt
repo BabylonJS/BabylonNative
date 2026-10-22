@@ -4,7 +4,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # AndroidExtensions
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    add_subdirectory(AndroidExtensions)
 endif()
 
 # --------------------------------------------------
@@ -57,7 +57,46 @@ if(WIN32 AND NOT DEFINED BIMG_CONFIG_USE_WIC)
     set(BIMG_CONFIG_USE_WIC ON)
 endif()
 
-include(bgfx.cmake/cmake/babylon-native.cmake)
+# Supply Babylon Native's selected sources before entering the upstream wrapper.
+foreach(_bgfx_dependency IN ITEMS bx bimg bgfx)
+    string(TOUPPER "${_bgfx_dependency}" _bgfx_upper)
+    set(_bgfx_root "${_bgfx_upper}_DIR")
+    set(_bgfx_override "FETCHCONTENT_SOURCE_DIR_${_bgfx_upper}")
+    if(NOT "${${_bgfx_root}}" STREQUAL "")
+        file(REAL_PATH "${${_bgfx_root}}" _bgfx_selected BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake")
+    elseif("${${_bgfx_override}}" STREQUAL "" AND
+           EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/${_bgfx_dependency}/include/${_bgfx_dependency}/${_bgfx_dependency}.h")
+        set(_bgfx_selected "${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake/${_bgfx_dependency}")
+    else()
+        FetchContent_MakeAvailable(${_bgfx_dependency})
+        FetchContent_GetProperties(${_bgfx_dependency} SOURCE_DIR _bgfx_selected)
+        file(REAL_PATH "${_bgfx_selected}" _bgfx_selected)
+    endif()
+
+    if(_bgfx_dependency STREQUAL "bgfx")
+        set(_bgfx_sentinels include/bgfx/bgfx.h src/bgfx.cpp scripts/bgfx.idl)
+    elseif(_bgfx_dependency STREQUAL "bx")
+        set(_bgfx_sentinels include/bx/bx.h src/bx.cpp)
+    else()
+        set(_bgfx_sentinels include/bimg/bimg.h src/image.cpp)
+    endif()
+    foreach(_bgfx_sentinel IN LISTS _bgfx_sentinels)
+        if(NOT EXISTS "${_bgfx_selected}/${_bgfx_sentinel}")
+            message(FATAL_ERROR "${_bgfx_root}: '${_bgfx_selected}' is not a valid ${_bgfx_dependency} source tree (missing ${_bgfx_sentinel}). Supply sources before configuring disconnected builds.")
+        endif()
+    endforeach()
+    set(${_bgfx_root} "${_bgfx_selected}")
+endforeach()
+
+add_subdirectory(bgfx.cmake)
+get_directory_property(BGFX_PROJECT_VERSION DIRECTORY bgfx.cmake DEFINITION PROJECT_VERSION)
+if(BABYLON_NATIVE_BUILD_SOURCETREE)
+    include(cmake/StageBgfxSources.cmake)
+    bgfx_stage_sources("${CMAKE_CURRENT_SOURCE_DIR}/bgfx.cmake" "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src")
+endif()
+foreach(_bgfx_variable BGFX_DIR BX_DIR BIMG_DIR BGFX_PROJECT_VERSION)
+    set(${_bgfx_variable} "${${_bgfx_variable}}" PARENT_SCOPE)
+endforeach()
 
 # Turn off debug annotations as it causes an access violation in D3D12.
 # This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
@@ -227,7 +266,12 @@ endif()
 # --------------------------------------------------
 # googletest
 # --------------------------------------------------
-if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))
+set(URLLIB_TESTS OFF)
+set(JSRUNTIMEHOST_TESTS OFF)
+if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT VISIONOS) OR (UNIX AND NOT APPLE)))
+    set(URLLIB_TESTS ON)
+    set(JSRUNTIMEHOST_TESTS ON)
+
     if(WIN32)
         # For Windows: Prevent overriding the parent project's compiler/linker settings
         # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
@@ -245,9 +289,10 @@ if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) 
 endif()
 
 # --------------------------------------------------
-# JsRuntimeHost
+# UrlLib and JsRuntimeHost
 # --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+add_subdirectory(UrlLib)
+add_subdirectory(JsRuntimeHost)
 
 # Two JsRuntimeHost targets cannot be built without RTTI:
 #   v8inspector - includes asio, whose headers use typeid() unconditionally

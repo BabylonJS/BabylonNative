@@ -150,6 +150,18 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo
           ModuleLoadTest
 
+      - name: JsRuntimeHost Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo
+          JsRuntimeHostUnitTests
+
+      - name: UrlLib Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\UrlLib\Tests\RelWithDebInfo
+          UrlLibTests
+
       - name: Stage UnitTests Crash Dump
         if: failure()
         shell: powershell

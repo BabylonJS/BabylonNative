@@ -1,0 +1,78 @@
+plugins {
+    id 'com.android.application'
+}
+
+def component = providers.gradleProperty('component').getOrElse('BabylonNative')
+if (!(component in ['UrlLib', 'BabylonNative'])) {
+    throw new GradleException("Unknown component: ${component}")
+}
+def nativeTarget = component == 'UrlLib' ? 'UrlLibTests' : 'UnitTests'
+def repoRoot = file('../../../../..')
+
+android {
+    namespace 'com.babylonnative.mobiletests'
+    compileSdk 33
+    ndkVersion providers.gradleProperty('ndkVersion').getOrElse('27.2.12479018')
+    defaultConfig {
+        applicationId component == 'UrlLib' ? 'com.urllib.unittests' : 'com.babylonnative.unittests'
+        minSdk 26
+        targetSdk 33
+        versionCode 1
+        versionName '1.0'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        buildConfigField 'String', 'NATIVE_TEST_LIBRARY', "\"${nativeTarget}\""
+        ndk {
+            abiFilters(*providers.gradleProperty('abiFilters').getOrElse('x86_64').split(','))
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared',
+                    '-DCMAKE_POLICY_DEFAULT_CMP0168=NEW',
+                    "-DUNIT_TEST_COMPONENT=${component}",
+                    "-DNAPI_JAVASCRIPT_ENGINE=${providers.gradleProperty('jsEngine').getOrElse('V8')}"
+                targets nativeTarget
+            }
+        }
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    externalNativeBuild {
+        cmake {
+            path file('../../CMakeLists.txt')
+            version '3.30.3'
+            buildStagingDirectory new File(repoRoot, "build/mobile/${component}")
+        }
+    }
+}
+
+dependencies {
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+}
+
+if (component == 'BabylonNative') {
+    ['Debug', 'Release'].each { variant ->
+        def copyAssets = tasks.register("copy${variant}TestAssets", Sync) {
+            dependsOn "merge${variant}NativeLibs"
+            into layout.buildDirectory.dir("generated/testAssets/${variant}")
+            into('Assets') {
+                from(new File(repoRoot, 'Apps/node_modules/babylonjs/babylon.max.js'))
+                from(new File(repoRoot, 'Apps/node_modules/babylonjs-materials/babylonjs.materials.js'))
+                from(new File(repoRoot, 'Apps/UnitTests/JavaScript/dist'))
+                from(new File(repoRoot, 'Apps/UnitTests/Assets'))
+                from(new File(repoRoot, 'Apps/Dependencies')) {
+                    include 'Arimo-Regular.ttf', 'Arimo-OFL.txt', 'Arimo-PROVENANCE.txt'
+                }
+            }
+        }
+        android.sourceSets.getByName(variant.toLowerCase()).assets.srcDir(copyAssets)
+        tasks.configureEach { task ->
+            if (task.name == "merge${variant}Assets" ||
+                task.name == "lintVitalAnalyze${variant}" ||
+                task.name == "generate${variant}LintVitalReportModel") {
+                task.dependsOn(copyAssets)
+            }
+        }
+    }
+}

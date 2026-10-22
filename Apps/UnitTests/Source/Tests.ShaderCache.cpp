@@ -17,6 +17,9 @@
 #include <future>
 #include <iostream>
 #include <fstream>
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
 
 using namespace std::chrono_literals;
 
@@ -75,7 +78,11 @@ TEST(ShaderCache, SaveAndLoad)
         device.StartRenderingCurrentFrame();
     }
 
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+    const auto shaderCachePath = std::filesystem::path{std::getenv("HOME")} / "Library" / "Caches" / "shaderCache.bin";
+#else
     const auto shaderCachePath = GetExecutableDirectory() / "shaderCache.bin";
+#endif
 
     uint32_t shaderCount{};
     {
