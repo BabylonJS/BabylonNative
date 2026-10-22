@@ -560,7 +560,16 @@
 
         engine.setHardwareScalingLevel(1);
 
+        // Restore the StencilState defaults; tests that set the stencil function, mask, or
+        // operations directly on the engine would otherwise leak them into later tests.
         engine.setStencilBuffer(false);
+        engine.setStencilMask(0xFF);
+        engine.setStencilFunction(BABYLON.Constants.ALWAYS);
+        engine.setStencilFunctionReference(1);
+        engine.setStencilFunctionMask(0xFF);
+        engine.setStencilOperationFail(BABYLON.Constants.KEEP);
+        engine.setStencilOperationDepthFail(BABYLON.Constants.KEEP);
+        engine.setStencilOperationPass(BABYLON.Constants.REPLACE);
         engine.disableScissor();
         engine.useReverseDepthBuffer = false;
         engine.setDepthFunctionToLessOrEqual();

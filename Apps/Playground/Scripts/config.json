@@ -2027,7 +2027,7 @@
             "renderCount": 5,
             "referenceImage": "oit.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (12.9% px) when run after other tests in the same process (state leaks from earlier tests)"
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (12.9% px) when run after \"Reverse depth buffer and CSM shadows\" in the same process"
         },
         {
             "title": "Custom material with depth renderer",
@@ -2340,7 +2340,7 @@
             "playgroundId": "#064AUB#125",
             "referenceImage": "CommandEncodedWebGPU1.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (45.6% px) when run after other tests in the same process (state leaks from earlier tests)"
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (45.6% px) when run after other tests in the same process"
         },
         {
             "title": "Command encoder order in WebGPU 2",
@@ -2661,8 +2661,8 @@
             "title": "FrameGraph nrge highlight layer",
             "playgroundId": "#QZYNMK#3",
             "referenceImage": "FrameGraph-nrge-highlight-layer.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.8% px) when run after other tests in the same process (state leaks from earlier tests); on OpenGL, Linux llvmpipe also rejects its 4x MSAA render target format"
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge SSR cube",
@@ -2798,8 +2798,8 @@
             "title": "FrameGraph highlight layer",
             "playgroundId": "#PV8OLY#33",
             "referenceImage": "FrameGraph-highlight-layer.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.6% px) when run after other tests in the same process (state leaks from earlier tests); on OpenGL, Linux llvmpipe also rejects its 4x MSAA render target format"
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph custom rendering",
@@ -3646,7 +3646,7 @@
             "renderCount": 5,
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.8% px) when run after other tests in the same process (state leaks from earlier tests)"
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.8% px) when run after other tests in the same process"
         },
         {
             "title": "Background material blur",
