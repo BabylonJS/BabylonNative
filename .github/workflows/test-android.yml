@@ -23,6 +23,7 @@ jobs:
       - name: Identify emulator image
         id: emulator-image
         run: |
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
           sdkmanager --install emulator 'system-images;android-33;google_apis;x86_64'
           revision=$(cat "$ANDROID_HOME/emulator/source.properties" \
             "$ANDROID_HOME/system-images/android-33/google_apis/x86_64/source.properties" \
