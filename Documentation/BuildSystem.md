@@ -77,6 +77,15 @@ crash or timeout, preventing debug-signing conflicts between engine builds.
 Each suite has a bounded execution timeout, and logs
 are uploaded per platform. No source rebuild occurs in the test runner jobs.
 
+Android CI caches a clean, booted AVD before installing any test applications.
+The cache key includes the runner OS/architecture, installed emulator and system-image
+revisions, and the workflow/readiness configuration. Exact-key restores avoid
+incompatible snapshots. Test runs load the snapshot without saving their state;
+the existing package cleanup still isolates components and JavaScript engines.
+Both snapshot creation and test execution wait for boot completion and a validated
+active default network, with a bounded readiness timeout. A cache miss incurs a
+cold boot and upload; a hit still incurs download/extraction and SDK setup.
+
 `needs` controls ordering, not build-directory sharing: only named artifacts
 cross runners. `ci-complete` requires `AndroidTests`, `iOSTests`,
 and all ordinary build/install checks to succeed.
