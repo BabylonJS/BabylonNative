@@ -591,9 +591,10 @@
             "title": "Gaussian Splatting SPZ SH",
             "playgroundId": "#XSNFXP#2",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "gsplat-spz-sh.png"
+            "referenceImage": "gsplat-spz-sh.png",
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out after 600s (passes on V8)."
         },
         {
             "title": "Gaussian Splatting viewports",
@@ -615,9 +616,10 @@
         {
             "title": "SPZ v3 - Splat",
             "playgroundId": "#V7CV8W#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/splats/combined_SPZv3.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "gsplat-spz-v3.png"
+            "referenceImage": "gsplat-spz-v3.png",
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out after 600s (passes on V8)."
         },
         {
             "title": "SOGS with SH",
@@ -2092,9 +2094,8 @@
             "title": "GUI Input Test",
             "playgroundId": "#UB4F3B#8",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "guiInputTest.png"
+            "referenceImage": "guiInputTest.png",
+            "workarounds": ["global-self"]
         },
         {
             "title": "Serialize and Load Hierarchy",
