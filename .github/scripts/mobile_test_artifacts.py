@@ -8,10 +8,9 @@ import sys
 import tarfile
 
 
-COMPONENTS = ("BabylonNative", "JsRuntimeHost", "UrlLib")
+COMPONENTS = ("JsRuntimeHost", "UrlLib")
 ENGINES = ("JavaScriptCore", "V8", "QuickJS")
 APPLICATION_IDS = {
-    "BabylonNative": "com.babylonnative.unittests",
     "JsRuntimeHost": "com.jsruntimehost.unittests",
     "UrlLib": "com.urllib.unittests",
 }

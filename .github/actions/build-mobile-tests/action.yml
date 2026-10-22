@@ -1,5 +1,5 @@
 name: Build mobile unit-test artifacts
-description: Build and package all three test applications within a platform build job.
+description: Build and package JsRuntimeHost and UrlLib tests within a platform build job.
 
 inputs:
   platform:
@@ -33,7 +33,7 @@ runs:
       run: |
         args=(-PabiFilters=x86_64 "-PjsEngine=$JS_ENGINE" -PndkVersion=27.2.12479018
               assembleDebug assembleDebugAndroidTest)
-        for component in BabylonNative JsRuntimeHost UrlLib; do
+        for component in JsRuntimeHost UrlLib; do
           if [ "$component" = JsRuntimeHost ]; then
             project=Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android
             bash "$project/gradlew" -p "$project" "${args[@]}"
@@ -54,7 +54,7 @@ runs:
         JS_ENGINE: ${{ inputs.js-engine }}
         DEPLOYMENT_TARGET: ${{ inputs.deployment-target }}
       run: |
-        for component in BabylonNative JsRuntimeHost UrlLib; do
+        for component in JsRuntimeHost UrlLib; do
           build="build/mobile-tests-$component"
           case "$component" in
             JsRuntimeHost)
@@ -62,12 +62,6 @@ runs:
               target=UnitTests
               app="$build/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
               args=(-DJSRUNTIMEHOST_TESTS=ON)
-              ;;
-            BabylonNative)
-              source=Apps/UnitTests/Mobile
-              target=UnitTests
-              app="$build/BabylonNative/Apps/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
-              args=(-DUNIT_TEST_COMPONENT=BabylonNative)
               ;;
             UrlLib)
               source=Apps/UnitTests/Mobile
@@ -87,11 +81,6 @@ runs:
             --platform iOS --component "$component" --engine "$JS_ENGINE" \
             --app "$app" --output "test-artifacts/$component"
         done
-    - uses: actions/upload-artifact@v6
-      with:
-        name: UnitTests-${{ inputs.platform }}-BabylonNative-${{ inputs.js-engine }}
-        path: test-artifacts/BabylonNative
-        if-no-files-found: error
     - uses: actions/upload-artifact@v6
       with:
         name: UnitTests-${{ inputs.platform }}-JsRuntimeHost-${{ inputs.js-engine }}

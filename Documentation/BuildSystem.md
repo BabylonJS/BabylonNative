@@ -41,7 +41,7 @@ all PR and master CI events exercise the configured suites.
 
 Mobile builds publish installable test artifacts without booting a simulator.
 Each classic `build-android.yml` and `build-ios.yml` build job also builds
-all three test applications using `.github/actions/build-mobile-tests`.
+the JsRuntimeHost and UrlLib test applications using `.github/actions/build-mobile-tests`.
 There are no separate component build matrices or artifact-producer jobs.
 The action uses separate CMake build directories for each iOS application and
 packages each Android application's APKs before building the next component.
@@ -52,7 +52,9 @@ executable permissions. Android artifacts include both application and test APKs
 
 The shared native harness in `Apps/UnitTests/Mobile` packages the real
 BabylonNative and UrlLib suites; JsRuntimeHost retains its existing mobile
-harnesses. Select the shared suite with Android's `-Pcomponent` or CMake's
+harnesses. BabylonNative's shared harness remains available for local development,
+but CI does not build, upload, or execute its mobile unit-test artifacts.
+Select the shared suite with Android's `-Pcomponent` or CMake's
 `UNIT_TEST_COMPONENT`. Android artifacts target API 33/x86_64 using NDK
 27.2.12479018; iOS artifacts target the arm64 simulator. Unsupported backend
 features report explicit GoogleTest skips, not a replacement empty suite.
@@ -65,8 +67,9 @@ The iOS harness disables the toolchain's global ARC default before its first
 The root `AndroidTests` and `iOSTests` jobs depend on the corresponding mobile
 classic builds only. Each downloads all artifacts for its
 platform, boots one emulator/simulator, and installs and runs applications
-sequentially. Android covers JavaScriptCore, V8 and QuickJS for all three
-components; iOS uses JavaScriptCore. The runner checks the complete expected
+sequentially. Android covers JavaScriptCore, V8 and QuickJS for JsRuntimeHost
+and UrlLib (six artifacts); iOS uses JavaScriptCore (two artifacts).
+The runner checks the complete expected
 artifact matrix before running, rejects missing artifacts and missing test
 completion signals, and continues through remaining artifacts after a failure
 before failing the job. Installed Android packages are removed even after a
