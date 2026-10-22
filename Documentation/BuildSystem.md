@@ -59,7 +59,7 @@ are uploaded per platform. No source rebuild occurs in the test runner jobs.
 
 `needs` controls ordering, not build-directory sharing: only named artifacts
 cross runners. `ci-complete` requires `AndroidTests`, `iOSTests`, both component
-build completion checks, and all ordinary build/install checks to succeed.
+build workflows, and all ordinary build/install checks to succeed.
 Failures, cancellations and unexpected skips cannot pass the final gate.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
