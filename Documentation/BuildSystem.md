@@ -43,6 +43,9 @@ harnesses. Select the shared suite with Android's `-Pcomponent` or CMake's
 `UNIT_TEST_COMPONENT`. Android artifacts target API 33/x86_64 using NDK
 27.2.12479018; iOS artifacts target the arm64 simulator. Unsupported backend
 features report explicit GoogleTest skips, not a replacement empty suite.
+The Android producer installs SDK CMake 3.30.3, matching the Gradle harness.
+Apps installs its npm workspace before configuring child applications, so
+mobile test bundles can run webpack during a clean CMake configuration.
 
 The root `AndroidTests` and `iOSTests` jobs depend on the corresponding mobile
 builds and component artifact producers. Each downloads all artifacts for its

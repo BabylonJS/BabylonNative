@@ -37,8 +37,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Android NDK
-        run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION"
+      - name: Install Android NDK and CMake
+        run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "cmake;3.30.3"
       - name: Build and package application and instrumentation APKs
         env:
           COMPONENT: ${{ inputs.component }}
