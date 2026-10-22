@@ -44,11 +44,23 @@ class MobileArtifactsTests(unittest.TestCase):
         return root
 
     def test_exact_artifact_matrices(self):
-        for platform, count in (("Android", 9), ("iOS", 3)):
+        for platform, count in (("Android", 6), ("iOS", 2)):
             root = self.create_artifacts(platform)
             self.assertEqual(len(mobile.discover(root, platform)), count)
+            self.assertEqual(
+                {manifest["component"] for _, manifest in mobile.discover(root, platform)},
+                {"JsRuntimeHost", "UrlLib"},
+            )
             (root / "unexpected").mkdir()
             with self.assertRaisesRegex(RuntimeError, "unexpected"):
+                mobile.discover(root, platform)
+
+    def test_babylonnative_artifacts_are_rejected(self):
+        for platform in ("Android", "iOS"):
+            root = self.create_artifacts(platform)
+            name = mobile.artifact_name(platform, "BabylonNative", "JavaScriptCore")
+            (root / name).mkdir(exist_ok=True)
+            with self.assertRaisesRegex(RuntimeError, "unexpected=.*BabylonNative"):
                 mobile.discover(root, platform)
 
     def test_missing_artifact_and_payload_fail(self):
@@ -162,7 +174,7 @@ class MobileArtifactsTests(unittest.TestCase):
                     platform="Android", artifacts=root, logs=self.logs, simulator="booted"
                 ))
         self.assertEqual(visited, sorted(path.name for path in root.iterdir()))
-        self.assertEqual(len(visited), 9)
+        self.assertEqual(len(visited), 6)
         self.assertTrue((self.logs / f"{visited[0]}.error.log").is_file())
 
 

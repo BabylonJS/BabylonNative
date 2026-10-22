@@ -14,9 +14,10 @@ class MobileCiConfigurationTests(unittest.TestCase):
             self.assertEqual(re.findall(r"^  ([\w-]+):$", jobs, re.MULTILINE), ["build"])
             self.assertIn("uses: ./.github/actions/build-mobile-tests", workflow)
         action = (ROOT / ".github/actions/build-mobile-tests/action.yml").read_text()
-        self.assertEqual(action.count("for component in BabylonNative JsRuntimeHost UrlLib; do"), 2)
-        for component in ("BabylonNative", "JsRuntimeHost", "UrlLib"):
+        self.assertEqual(action.count("for component in JsRuntimeHost UrlLib; do"), 2)
+        for component in ("JsRuntimeHost", "UrlLib"):
             self.assertIn(f"UnitTests-${{{{ inputs.platform }}}}-{component}-", action)
+        self.assertNotIn("UnitTests-${{ inputs.platform }}-BabylonNative-", action)
 
     def test_mobile_runners_only_depend_on_classic_builds(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text()
