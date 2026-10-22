@@ -2606,13 +2606,17 @@
             "title": "IBL Screen-space Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#799",
             "renderCount": 15,
-            "referenceImage": "ssShadowsLeftHanded.png"
+            "referenceImage": "ssShadowsLeftHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "IBL Screen-space Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#800",
             "renderCount": 15,
-            "referenceImage": "ssShadowsRightHanded.png"
+            "referenceImage": "ssShadowsRightHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "Normed 16 bits texture formats",
