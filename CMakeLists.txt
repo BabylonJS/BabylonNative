@@ -39,6 +39,10 @@ FetchContent_Declare(bimg
 FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
     GIT_TAG 64e7324430604ba61a45b51e1cbeb2b67c5d1d15
+    PATCH_COMMAND "${CMAKE_COMMAND}"
+        "-DSOURCE_DIR=<SOURCE_DIR>"
+        "-DPATCH_FILE=${CMAKE_CURRENT_LIST_DIR}/Dependencies/patches/bgfx-gl-context.patch"
+        -P "${CMAKE_CURRENT_LIST_DIR}/Dependencies/cmake/PatchBgfx.cmake"
     SOURCE_DIR "${FETCHCONTENT_BASE_DIR}/bgfx.cmake-src/bgfx"
     SOURCE_SUBDIR "_bgfx_population_only"
     EXCLUDE_FROM_ALL)

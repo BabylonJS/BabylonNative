@@ -11,6 +11,7 @@ if(IOS)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM SIMULATOR64 CACHE STRING "")
     set(DEPLOYMENT_TARGET 13 CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
 
 project(MobileUnitTests LANGUAGES C CXX)

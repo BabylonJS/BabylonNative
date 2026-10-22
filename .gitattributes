@@ -2,4 +2,4 @@
 *.h diff
 *.java diff
 *.txt diff
-
+*.patch text eol=lf -whitespace

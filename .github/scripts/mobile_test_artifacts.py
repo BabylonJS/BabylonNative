@@ -75,26 +75,30 @@ def discover(root, platform):
 
 def run_android(directory, manifest, logs):
     application = manifest["application_id"]
-    subprocess.run(["adb", "install", "-r", str(directory / "app.apk")], check=True, timeout=120)
-    subprocess.run(["adb", "install", "-r", str(directory / "tests.apk")], check=True, timeout=120)
-    subprocess.run(["adb", "shell", "pm", "clear", application], check=True, timeout=120)
-    result = subprocess.run(
-        ["adb", "shell", "am", "instrument", "-w", "-r",
-         f"{application}.test/androidx.test.runner.AndroidJUnitRunner"],
-        text=True, capture_output=True, timeout=1200,
-    )
-    text = result.stdout + result.stderr
-    (logs / f"{directory.name}.log").write_text(text)
-    print(text, flush=True)
-    # adb can exit zero even when instrumentation crashes or reports test failures.
-    if (
-        result.returncode
-        or not re.search(r"^INSTRUMENTATION_CODE: -1\s*$", text, re.MULTILINE)
-        or not re.search(r"^OK \([1-9][0-9]* tests?\)\s*$", text, re.MULTILINE)
-    ):
-        raise RuntimeError(f"Android tests failed or did not complete: {directory.name}")
-    for package_id in (application + ".test", application):
-        subprocess.run(["adb", "uninstall", package_id], check=True, timeout=120)
+    installed = []
+    try:
+        for payload, package_id in (("app.apk", application), ("tests.apk", application + ".test")):
+            subprocess.run(["adb", "install", "-r", str(directory / payload)], check=True, timeout=120)
+            installed.append(package_id)
+        subprocess.run(["adb", "shell", "pm", "clear", application], check=True, timeout=120)
+        result = subprocess.run(
+            ["adb", "shell", "am", "instrument", "-w", "-r",
+             f"{application}.test/androidx.test.runner.AndroidJUnitRunner"],
+            text=True, capture_output=True, timeout=1200,
+        )
+        text = result.stdout + result.stderr
+        (logs / f"{directory.name}.log").write_text(text)
+        print(text, flush=True)
+        # adb can exit zero even when instrumentation crashes or reports test failures.
+        if (
+            result.returncode
+            or not re.search(r"^INSTRUMENTATION_CODE: -1\s*$", text, re.MULTILINE)
+            or not re.search(r"^OK \([1-9][0-9]* tests?\)\s*$", text, re.MULTILINE)
+        ):
+            raise RuntimeError(f"Android tests failed or did not complete: {directory.name}")
+    finally:
+        for package_id in reversed(installed):
+            subprocess.run(["adb", "uninstall", package_id], check=True, timeout=120)
 
 
 def run_ios(directory, manifest, logs, simulator):

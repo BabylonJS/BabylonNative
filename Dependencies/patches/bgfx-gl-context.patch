@@ -1,0 +1,120 @@
+diff --git a/src/glcontext_egl.cpp b/src/glcontext_egl.cpp
+index 857ae4294..b38f64c07 100644
+--- a/src/glcontext_egl.cpp
++++ b/src/glcontext_egl.cpp
+@@ -517,10 +517,10 @@ WL_EGL_IMPORT
+ 				attrs[numAttrs++] = colorBlockInfo.aBits;
+ 
+ 				attrs[numAttrs++] = EGL_DEPTH_SIZE;
+-				attrs[numAttrs++] = depthStecilBlockInfo.depthBits;
++				attrs[numAttrs++] = headless && 0 != retry ? 0 : depthStecilBlockInfo.depthBits;
+ 
+ 				attrs[numAttrs++] = EGL_STENCIL_SIZE;
+-				attrs[numAttrs++] = depthStecilBlockInfo.stencilBits;
++				attrs[numAttrs++] = headless && 0 != retry ? 0 : depthStecilBlockInfo.stencilBits;
+ 
+ 				attrs[numAttrs++] = EGL_SAMPLES;
+ 				attrs[numAttrs++] = (EGLint)bx::min(msaaSamples, maxSamples);
+@@ -543,6 +543,10 @@ WL_EGL_IMPORT
+ 				if (!success
+ 				||  0 == numConfigs)
+ 				{
++					if (headless && 0 == retry)
++					{
++						BX_TRACE("Retrying headless EGL config without surface depth/stencil attachments.");
++					}
+ 					msaaSamples = 0;
+ 					continue;
+ 				}
+diff --git a/src/renderer_gl.cpp b/src/renderer_gl.cpp
+index aba538a09..01ea863b1 100644
+--- a/src/renderer_gl.cpp
++++ b/src/renderer_gl.cpp
+@@ -4147,6 +4147,13 @@ namespace bgfx { namespace gl
+ 
+ 		uint32_t setFrameBuffer(FrameBufferHandle _fbh, uint32_t _height, uint16_t _discard = BGFX_CLEAR_NONE, bool _msaa = true)
+ 		{
++			// A VAO belongs to its current context, not the context being selected.
++			if (0 != m_vao)
++			{
++				GL_CHECK(glDeleteVertexArrays(1, &m_vao) );
++				m_vao = 0;
++			}
++
+ 			resolveFrameBuffer(_fbh);
+ 
+ 			if (isValid(m_fbh)
+@@ -4188,9 +4195,8 @@ namespace bgfx { namespace gl
+ 				}
+ 			}
+ 
+-			if (0 != m_vao)
++			if (m_vaoSupport)
+ 			{
+-				GL_CHECK(glDeleteVertexArrays(1, &m_vao) );
+ 				GL_CHECK(glGenVertexArrays(1, &m_vao) );
+ 				GL_CHECK(glBindVertexArray(m_vao) );
+ 			}
+@@ -8878,6 +8884,38 @@ namespace bgfx { namespace gl
+ 					resolveMsaaRbo(src, m_currentFbo);
+ 				}
+ 
++				if (bimg::isDepth(bimg::TextureFormat::Enum(src.m_textureFormat) ) )
++				{
++					// Depth/stencil copies cannot use a color attachment or glCopyTexSubImage.
++					GLuint fbos[2];
++					GL_CHECK(glGenFramebuffers(2, fbos) );
++					const GLenum attachment = attachmentFor(TextureFormat::Enum(src.m_textureFormat) );
++					const bimg::ImageBlockInfo& info = bimg::getBlockInfo(bimg::TextureFormat::Enum(src.m_textureFormat) );
++					const GLbitfield mask = (0 != info.depthBits ? GL_DEPTH_BUFFER_BIT : 0)
++						| (0 != info.stencilBits ? GL_STENCIL_BUFFER_BIT : 0);
++					const GLenum none = GL_NONE;
++					const uint32_t numSlices = bx::max<uint32_t>(bi.m_depth, 1);
++					for (uint32_t ii = 0; ii < numSlices; ++ii)
++					{
++						GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, fbos[0]) );
++						framebufferAttachSlice(attachment, src, bi.m_srcMip, uint16_t(bi.m_srcZ + ii) );
++						GL_CHECK(glReadBuffer(GL_NONE) );
++						GL_CHECK(glDrawBuffers(1, &none) );
++						GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, fbos[1]) );
++						framebufferAttachSlice(attachment, dst, bi.m_dstMip, uint16_t(bi.m_dstZ + ii) );
++						GL_CHECK(glReadBuffer(GL_NONE) );
++						GL_CHECK(glDrawBuffers(1, &none) );
++						GL_CHECK(glBindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]) );
++						GL_CHECK(glBlitFramebuffer(
++							  bi.m_srcX, bi.m_srcY, bi.m_srcX + bi.m_width, bi.m_srcY + bi.m_height
++							, bi.m_dstX, bi.m_dstY, bi.m_dstX + bi.m_width, bi.m_dstY + bi.m_height
++							, mask, GL_NEAREST) );
++					}
++					GL_CHECK(glDeleteFramebuffers(2, fbos) );
++					GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, m_currentFbo) );
++					continue;
++				}
++
+ 				GLuint fbo;
+ 				GL_CHECK(glGenFramebuffers(1, &fbo) );
+ 
+@@ -8977,8 +9015,13 @@ namespace bgfx { namespace gl
+ 
+ 		BGFX_GL_PROFILER_BEGIN_LITERAL("rendererSubmit", kColorView);
+ 
+-		if (0 != m_vao)
++		if (m_vaoSupport)
+ 		{
++			if (0 != m_vao)
++			{
++				GL_CHECK(glDeleteVertexArrays(1, &m_vao) );
++			}
++			GL_CHECK(glGenVertexArrays(1, &m_vao) );
+ 			GL_CHECK(glBindVertexArray(m_vao) );
+ 		}
+ 
+@@ -10529,6 +10572,8 @@ namespace bgfx { namespace gl
+ 		if (0 != m_vao)
+ 		{
+ 			GL_CHECK(glBindVertexArray(0) );
++			GL_CHECK(glDeleteVertexArrays(1, &m_vao) );
++			m_vao = 0;
+ 		}
+ 	}
+ } } // namespace bgfx
