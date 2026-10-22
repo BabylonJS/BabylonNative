@@ -26,6 +26,12 @@ class MobileCiConfigurationTests(unittest.TestCase):
             "Apps must install workspace dependencies before child configuration runs webpack",
         )
 
+    def test_ios_harness_disables_toolchain_arc_before_project(self):
+        cmake = (ROOT / "Apps/UnitTests/Mobile/CMakeLists.txt").read_text()
+        setting = re.search(r"set\(ENABLE_ARC OFF CACHE [^)]+\)", cmake)
+        self.assertIsNotNone(setting, "ios-cmake must not enable ARC for bgfx's manual ownership")
+        self.assertLess(setting.start(), cmake.index("project("))
+
 
 if __name__ == "__main__":
     unittest.main()

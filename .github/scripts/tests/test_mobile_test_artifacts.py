@@ -109,6 +109,33 @@ class MobileArtifactsTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "report exit zero"):
                         mobile.run_ios(directory, manifest, self.logs, "test-simulator")
 
+    def test_android_uninstalls_both_packages_after_crash_or_timeout(self):
+        root = self.create_artifacts("Android")
+        directory, manifest = mobile.discover(root, "Android")[0]
+        for timeout in (False, True):
+            calls = []
+
+            def execute(command, **kwargs):
+                calls.append(command)
+                if "instrument" in command:
+                    if timeout:
+                        raise subprocess.TimeoutExpired(command, 1200)
+                    return SimpleNamespace(
+                        returncode=0, stdout="INSTRUMENTATION_RESULT: shortMsg=Process crashed.\n",
+                        stderr="",
+                    )
+                return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+            with self.subTest(timeout=timeout), patch.object(
+                mobile.subprocess, "run", side_effect=execute
+            ), contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises((RuntimeError, subprocess.TimeoutExpired)):
+                    mobile.run_android(directory, manifest, self.logs)
+                self.assertEqual(calls[-2:], [
+                    ["adb", "uninstall", manifest["application_id"] + ".test"],
+                    ["adb", "uninstall", manifest["application_id"]],
+                ])
+
     def test_unsafe_archive_fails_before_install(self):
         root = self.create_artifacts("iOS")
         directory, manifest = mobile.discover(root, "iOS")[0]
