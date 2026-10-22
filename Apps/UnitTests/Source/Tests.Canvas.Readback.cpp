@@ -85,6 +85,68 @@ TEST(CanvasReadback, HostOwnerMayOutliveRuntime)
     canvas.reset();
 }
 
+TEST(CanvasReadback, FlushAcquiresItsOwnFrameScope)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    const auto finishFrame = gsl::finally([&] { device.FinishRenderingCurrentFrame(); });
+    std::optional<Babylon::Polyfills::Canvas> canvas;
+    Babylon::AppRuntime runtime{};
+    std::promise<std::string> initialized;
+    runtime.Dispatch([&](Napi::Env env) {
+        std::string error;
+        try
+        {
+            device.AddToJavaScript(env);
+            canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+            auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+            auto wrapper = constructor.New({});
+            auto context = wrapper.Get("getContext").As<Napi::Function>()
+                               .Call(wrapper, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+            context.Get("fillRect").As<Napi::Function>().Call(context, {
+                Napi::Number::New(env, 0), Napi::Number::New(env, 0),
+                Napi::Number::New(env, 8), Napi::Number::New(env, 8)});
+            env.Global().Set("testFlushCanvas", wrapper);
+            env.Global().Set("testFlushContext", context);
+        }
+        catch (const std::exception& ex)
+        {
+            error = ex.what();
+        }
+        initialized.set_value(std::move(error));
+    });
+    ASSERT_EQ(initialized.get_future().get(), "");
+
+    std::promise<std::string> completed;
+    auto future = completed.get_future();
+    runtime.Dispatch([&](Napi::Env env) {
+        std::string error;
+        try
+        {
+            auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+            const auto generation = graphics.ViewIdGeneration();
+            while (graphics.PeekNextViewId() + 1u < bgfx::getCaps()->limits.maxViews)
+            {
+                graphics.AcquireNewViewId();
+            }
+            auto context = env.Global().Get("testFlushContext").As<Napi::Object>();
+            context.Get("flush").As<Napi::Function>().Call(context, {});
+            EXPECT_GT(graphics.ViewIdGeneration(), generation);
+        }
+        catch (const std::exception& ex)
+        {
+            error = ex.what();
+        }
+        completed.set_value(std::move(error));
+    });
+    while (future.wait_for(std::chrono::milliseconds{100}) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        device.StartRenderingCurrentFrame();
+    }
+    EXPECT_EQ(future.get(), "");
+}
+
 TEST(CanvasReadback, NativeBrandsRequireTheOriginalReceiver)
 {
     RunCanvasTest([](Napi::Env env) {
