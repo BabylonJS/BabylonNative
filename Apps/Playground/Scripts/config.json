@@ -1387,7 +1387,9 @@
             "title": "GLTF Serializer un/compressed texture roundtrip",
             "playgroundId": "#8NTR5X#8",
             "replace": "//options//, roundtrip = true;",
-            "referenceImage": "glTFSerializerTextureExport.png"
+            "referenceImage": "glTFSerializerTextureExport.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: never completes on Linux CI (JavaScriptCore), times out; passes on Win32 D3D11."
         },
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
@@ -1720,7 +1722,9 @@
         {
             "title": "Prepass SSAO + instances",
             "playgroundId": "#YB006J#795",
-            "referenceImage": "prepass-ssao-instances.png"
+            "referenceImage": "prepass-ssao-instances.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + instanced bones",
@@ -1765,13 +1769,17 @@
             "title": "Prepass SSAO + glow layer",
             "playgroundId": "#LRFB2D#263",
             "renderCount": 30,
-            "referenceImage": "prepass-ssao-glow-layer.png"
+            "referenceImage": "prepass-ssao-glow-layer.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + bounding box renderer",
             "playgroundId": "#4F33I3#35",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-bbr.png"
+            "referenceImage": "prepass-ssao-bbr.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + line edges renderer",
@@ -1785,7 +1793,9 @@
             "title": "Prepass SSAO + B&W post process",
             "playgroundId": "#N55Q2M#8",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-b-and-w.png"
+            "referenceImage": "prepass-ssao-b-and-w.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + clip planes",
@@ -1807,7 +1817,9 @@
             "title": "Prepass SSAO + LOD",
             "playgroundId": "#FFMFW5#29",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-lod.png"
+            "referenceImage": "prepass-ssao-lod.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + shadow only",
@@ -1862,13 +1874,17 @@
             "title": "Prepass SSAO + visibility",
             "playgroundId": "#PXC9CF#7",
             "renderCount": 30,
-            "referenceImage": "prepass-ssao-visibility.png"
+            "referenceImage": "prepass-ssao-visibility.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + default pipeline",
             "playgroundId": "#NAW8EA#7",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-default-pipeline.png"
+            "referenceImage": "prepass-ssao-default-pipeline.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass MBlur + Lens",
@@ -1933,25 +1949,28 @@
         },
         {
             "title": "Instances manual update + motion blur",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#HJGC2G#127",
             "renderCount": 10,
-            "referenceImage": "instances-mb-manual.png"
+            "referenceImage": "instances-mb-manual.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.7% px); passes on Win32 D3D11."
         },
         {
             "title": "Thin instances + motion blur",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#HJGC2G#60",
             "renderCount": 30,
             "referenceImage": "thin-instances-mb.png",
-            "workarounds": ["wait-for-readiness"]
+            "workarounds": ["wait-for-readiness"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (10.7% px); passes on Win32 D3D11."
         },
         {
             "title": "Thin instances + motion blur + manual",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#HJGC2G#245",
             "renderCount": 30,
-            "referenceImage": "thin-instances-mb-manual.png"
+            "referenceImage": "thin-instances-mb-manual.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (10.7% px); passes on Win32 D3D11."
         },
         {
             "title": "Thin instances + dynamic buffer resize",
@@ -2006,7 +2025,9 @@
             "title": "Order independent transparency",
             "playgroundId": "#1PLV5Z#104",
             "renderCount": 5,
-            "referenceImage": "oit.png"
+            "referenceImage": "oit.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (12.9% px) when run after other tests in the same process (state leaks from earlier tests)"
         },
         {
             "title": "Custom material with depth renderer",
@@ -2317,7 +2338,9 @@
         {
             "title": "Command encoder order in WebGPU 1",
             "playgroundId": "#064AUB#125",
-            "referenceImage": "CommandEncodedWebGPU1.png"
+            "referenceImage": "CommandEncodedWebGPU1.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (45.6% px) when run after other tests in the same process (state leaks from earlier tests)"
         },
         {
             "title": "Command encoder order in WebGPU 2",
@@ -2598,12 +2621,16 @@
         {
             "title": "FrameGraph nrge shadows",
             "playgroundId": "#JWKDME#185",
-            "referenceImage": "FrameGraph-nrge-shadows.png"
+            "referenceImage": "FrameGraph-nrge-shadows.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge csm shadows",
             "playgroundId": "#JWKDME#186",
-            "referenceImage": "FrameGraph-nrge-csm-shadows.png"
+            "referenceImage": "FrameGraph-nrge-csm-shadows.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge csm shadows with autoCalcDepthBounds",
@@ -2619,17 +2646,23 @@
         {
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
-            "referenceImage": "FrameGraph-nrge-depth-of-field.png"
+            "referenceImage": "FrameGraph-nrge-depth-of-field.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge glow layer",
             "playgroundId": "#IG8NRC#84",
-            "referenceImage": "FrameGraph-nrge-glow-layer.png"
+            "referenceImage": "FrameGraph-nrge-glow-layer.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge highlight layer",
             "playgroundId": "#QZYNMK#3",
-            "referenceImage": "FrameGraph-nrge-highlight-layer.png"
+            "referenceImage": "FrameGraph-nrge-highlight-layer.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.8% px) when run after other tests in the same process (state leaks from earlier tests); on OpenGL, Linux llvmpipe also rejects its 4x MSAA render target format"
         },
         {
             "title": "FrameGraph nrge SSR cube",
@@ -2639,7 +2672,9 @@
         {
             "title": "FrameGraph nrge SSR HillValley",
             "playgroundId": "#PIZ1GK#2387",
-            "referenceImage": "FrameGraph-nrge-SSR-HillValley.png"
+            "referenceImage": "FrameGraph-nrge-SSR-HillValley.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge SSR neon",
@@ -2652,7 +2687,9 @@
             "title": "FrameGraph nrge motion blur",
             "playgroundId": "#YB006J#793",
             "renderCount": 40,
-            "referenceImage": "FrameGraph-nrge-motion-blur.png"
+            "referenceImage": "FrameGraph-nrge-motion-blur.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge bounding boxes",
@@ -2675,7 +2712,9 @@
         {
             "title": "FrameGraph nrge rig camera",
             "playgroundId": "#ATL1CS#19",
-            "referenceImage": "FrameGraph-nrge-rig-camera.png"
+            "referenceImage": "FrameGraph-nrge-rig-camera.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge clustered lights (simple)",
@@ -2692,12 +2731,16 @@
         {
             "title": "FrameGraph nrge SSAO",
             "playgroundId": "#SYQW69#1368",
-            "referenceImage": "FrameGraph-nrge-SSAO.png"
+            "referenceImage": "FrameGraph-nrge-SSAO.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge volumetric lighting",
             "playgroundId": "#3VH0AC#2",
-            "referenceImage": "FrameGraph-nrge-volumetric-lighting.png"
+            "referenceImage": "FrameGraph-nrge-volumetric-lighting.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge OIT",
@@ -2728,12 +2771,16 @@
         {
             "title": "FrameGraph nrge selection outline layer",
             "playgroundId": "#ADUC74#1",
-            "referenceImage": "FrameGraph-nrge-selection-outline-layer.png"
+            "referenceImage": "FrameGraph-nrge-selection-outline-layer.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge multi RTT MSAA",
             "playgroundId": "#JAG54A",
-            "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png"
+            "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrg gui bloom",
@@ -2743,27 +2790,37 @@
         {
             "title": "FrameGraph glow layer",
             "playgroundId": "#9YU4C5#111",
-            "referenceImage": "FrameGraph-nrg-glow-layer.png"
+            "referenceImage": "FrameGraph-nrg-glow-layer.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph highlight layer",
             "playgroundId": "#PV8OLY#33",
-            "referenceImage": "FrameGraph-highlight-layer.png"
+            "referenceImage": "FrameGraph-highlight-layer.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.6% px) when run after other tests in the same process (state leaks from earlier tests); on OpenGL, Linux llvmpipe also rejects its 4x MSAA render target format"
         },
         {
             "title": "FrameGraph custom rendering",
             "playgroundId": "#RM56RY#25",
-            "referenceImage": "FrameGraph-custom-rendering.png"
+            "referenceImage": "FrameGraph-custom-rendering.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe has no supported depth/stencil texture format for the frame buffer (thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph gui bloom",
             "playgroundId": "#RM56RY#26",
-            "referenceImage": "FrameGraph-gui-bloom.png"
+            "referenceImage": "FrameGraph-gui-bloom.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe has no supported depth/stencil texture format for the frame buffer (thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
-            "referenceImage": "FrameGraph-image-processing.png"
+            "referenceImage": "FrameGraph-image-processing.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph motion blur screen based",
@@ -2786,12 +2843,16 @@
         {
             "title": "FrameGraph convolution post process",
             "playgroundId": "#SYQW69#1365",
-            "referenceImage": "FrameGraph-convolution-post-process.png"
+            "referenceImage": "FrameGraph-convolution-post-process.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph screen space curvature post process",
             "playgroundId": "#SYQW69#1366",
-            "referenceImage": "FrameGraph-screen-space-curvature-post-process.png"
+            "referenceImage": "FrameGraph-screen-space-curvature-post-process.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph sharpen post process",
@@ -2803,12 +2864,16 @@
         {
             "title": "FrameGraph custom post process",
             "playgroundId": "#R33LVG#5",
-            "referenceImage": "FrameGraph-custom-post-process.png"
+            "referenceImage": "FrameGraph-custom-post-process.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph volumetric lighting",
             "playgroundId": "#3VH0AC",
-            "referenceImage": "FrameGraph-volumetric-lighting.png"
+            "referenceImage": "FrameGraph-volumetric-lighting.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph OIT",
@@ -2825,7 +2890,9 @@
         {
             "title": "FrameGraph selection outline",
             "playgroundId": "#E1F0GP#4",
-            "referenceImage": "FrameGraph-selection-outline.png"
+            "referenceImage": "FrameGraph-selection-outline.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "Render target texture with clustered lights",
@@ -3343,7 +3410,9 @@
         {
             "title": "OpenPBR Transmission Roughness glTF - IBL",
             "playgroundId": "#GRQHVV#123",
-            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---IBL.png"
+            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---IBL.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (3.4% px); passes on Win32 D3D11."
         },
         {
             "title": "OpenPBR Transmission Roughness glTF - Analytic Lights",
@@ -3460,7 +3529,9 @@
             "title": "OpenPBR Subsurface Transmission Blending - IBL",
             "playgroundId": "#GRQHVV#296",
             "renderCount": 5,
-            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---IBL.png"
+            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---IBL.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (3.7% px); passes on Win32 D3D11."
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending - Analytic Lights",
@@ -3522,7 +3593,9 @@
             "title": "OpenPBR Subsurface Color Scaling - IBL",
             "playgroundId": "#GRQHVV#302",
             "renderCount": 5,
-            "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png"
+            "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (3.7% px); passes on Win32 D3D11."
         },
         {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - IBL",
@@ -3571,7 +3644,9 @@
             "title": "OpenPBR Thin Walled Subsurface Transmission Blending - IBL",
             "playgroundId": "#GRQHVV#242",
             "renderCount": 5,
-            "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png"
+            "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.8% px) when run after other tests in the same process (state leaks from earlier tests)"
         },
         {
             "title": "Background material blur",
@@ -3581,7 +3656,9 @@
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
-            "referenceImage": "Lighting-Volume.png"
+            "referenceImage": "Lighting-Volume.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.4% px); passes on Win32 D3D11."
         },
         {
             "title": "Havok FloatingOrigin Multi-Region",
@@ -3815,7 +3892,9 @@
             "title": "Particles - Emitters - Directed Cylinder",
             "playgroundId": "#WLX2I2#14",
             "renderCount": 120,
-            "referenceImage": "particles-emitters-directed-cylinder.png"
+            "referenceImage": "particles-emitters-directed-cylinder.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "Particles - Emitters - Cone",
@@ -3875,7 +3954,9 @@
             "title": "Particles - Billboard Y",
             "playgroundId": "#T3ZCP7#5",
             "renderCount": 180,
-            "referenceImage": "particles-billboard-y.png"
+            "referenceImage": "particles-billboard-y.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "Particles - Billboard False",
@@ -3982,182 +4063,254 @@
         {
             "title": "GPU Particles - Basic Properties - Size",
             "playgroundId": "#3HLS3D#2",
-            "referenceImage": "gpu-particles-basic-size.png"
+            "referenceImage": "gpu-particles-basic-size.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Scale",
             "playgroundId": "#52KBLI#0",
-            "referenceImage": "gpu-particles-basic-scale.png"
+            "referenceImage": "gpu-particles-basic-scale.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Color",
             "playgroundId": "#30PAK9#0",
-            "referenceImage": "gpu-particles-basic-color.png"
+            "referenceImage": "gpu-particles-basic-color.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Speed",
             "playgroundId": "#KU4I4J#0",
-            "referenceImage": "gpu-particles-basic-speed.png"
+            "referenceImage": "gpu-particles-basic-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Angular Speed",
             "playgroundId": "#9MOFU4#0",
-            "referenceImage": "gpu-particles-basic-angular-speed.png"
+            "referenceImage": "gpu-particles-basic-angular-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Rotation",
             "playgroundId": "#DEVC42#0",
-            "referenceImage": "gpu-particles-basic-rotation.png"
+            "referenceImage": "gpu-particles-basic-rotation.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#QC8XA2#0",
-            "referenceImage": "gpu-particles-basic-translation-pivot.png"
+            "referenceImage": "gpu-particles-basic-translation-pivot.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Direction",
             "playgroundId": "#M6QEUB#0",
-            "referenceImage": "gpu-particles-basic-direction.png"
+            "referenceImage": "gpu-particles-basic-direction.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Gravity",
             "playgroundId": "#9AGK0W#0",
-            "referenceImage": "gpu-particles-basic-gravity.png"
+            "referenceImage": "gpu-particles-basic-gravity.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Emit Rate",
             "playgroundId": "#IBWI36#0",
-            "referenceImage": "gpu-particles-basic-emit-rate.png"
+            "referenceImage": "gpu-particles-basic-emit-rate.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Lifetime",
             "playgroundId": "#RL6BAK#0",
-            "referenceImage": "gpu-particles-basic-lifetime.png"
+            "referenceImage": "gpu-particles-basic-lifetime.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Target Stop Duration",
             "playgroundId": "#4AJC72#0",
-            "referenceImage": "gpu-particles-basic-target-stop.png"
+            "referenceImage": "gpu-particles-basic-target-stop.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Size",
             "playgroundId": "#KF9X69#0",
-            "referenceImage": "gpu-particles-change-size.png"
+            "referenceImage": "gpu-particles-change-size.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Color",
             "playgroundId": "#UWRCY4#0",
-            "referenceImage": "gpu-particles-change-color.png"
+            "referenceImage": "gpu-particles-change-color.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Speed",
             "playgroundId": "#KBHNCB#0",
-            "referenceImage": "gpu-particles-change-speed.png"
+            "referenceImage": "gpu-particles-change-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Speed Limit",
             "playgroundId": "#CTNM3R#0",
-            "referenceImage": "gpu-particles-change-speed-limit.png"
+            "referenceImage": "gpu-particles-change-speed-limit.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Angular Speed",
             "playgroundId": "#1NLEIC#0",
-            "referenceImage": "gpu-particles-change-angular-speed.png"
+            "referenceImage": "gpu-particles-change-angular-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Drag",
             "playgroundId": "#02KAQL#0",
-            "referenceImage": "gpu-particles-change-drag.png"
+            "referenceImage": "gpu-particles-change-drag.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Size Range",
             "playgroundId": "#4EWZJ9#0",
-            "referenceImage": "gpu-particles-change-size-range.png"
+            "referenceImage": "gpu-particles-change-size-range.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Color Range",
             "playgroundId": "#3M1JEJ#0",
-            "referenceImage": "gpu-particles-change-color-range.png"
+            "referenceImage": "gpu-particles-change-color-range.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
-            "referenceImage": "gpu-particles-emitters-point.png"
+            "referenceImage": "gpu-particles-emitters-point.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Box",
             "playgroundId": "#2XD9BC#0",
-            "referenceImage": "gpu-particles-emitters-box.png"
+            "referenceImage": "gpu-particles-emitters-box.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Sphere",
             "playgroundId": "#H7XR87#0",
-            "referenceImage": "gpu-particles-emitters-sphere.png"
+            "referenceImage": "gpu-particles-emitters-sphere.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Directed Sphere",
             "playgroundId": "#0H1ATM#0",
-            "referenceImage": "gpu-particles-emitters-directed-sphere.png"
+            "referenceImage": "gpu-particles-emitters-directed-sphere.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Hemisphere",
             "playgroundId": "#MRQTX7#0",
-            "referenceImage": "gpu-particles-emitters-hemisphere.png"
+            "referenceImage": "gpu-particles-emitters-hemisphere.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Cylinder",
             "playgroundId": "#FGRJM1#0",
-            "referenceImage": "gpu-particles-emitters-cylinder.png"
+            "referenceImage": "gpu-particles-emitters-cylinder.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Directed Cylinder",
             "playgroundId": "#40T8G0#0",
-            "referenceImage": "gpu-particles-emitters-directed-cylinder.png"
+            "referenceImage": "gpu-particles-emitters-directed-cylinder.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Cone",
             "playgroundId": "#W73H92#0",
-            "referenceImage": "gpu-particles-emitters-cone.png"
+            "referenceImage": "gpu-particles-emitters-cone.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Directed Cone",
             "playgroundId": "#GSYICK#0",
-            "referenceImage": "gpu-particles-emitters-directed-cone.png"
+            "referenceImage": "gpu-particles-emitters-directed-cone.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
-            "referenceImage": "gpu-particles-billboard-y.png"
+            "referenceImage": "gpu-particles-billboard-y.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Billboard Stretched",
             "playgroundId": "#0612KX#0",
-            "referenceImage": "gpu-particles-billboard-stretched.png"
+            "referenceImage": "gpu-particles-billboard-stretched.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Multiply Blend",
             "playgroundId": "#D7LQAZ#0",
-            "referenceImage": "gpu-particles-multiply-blend.png"
+            "referenceImage": "gpu-particles-multiply-blend.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Animations",
             "playgroundId": "#B0EJQY#0",
-            "referenceImage": "gpu-particles-animations.png"
+            "referenceImage": "gpu-particles-animations.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Noise",
             "playgroundId": "#P6JQIP#0",
-            "referenceImage": "gpu-particles-noise.png"
+            "referenceImage": "gpu-particles-noise.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Flowmaps",
             "playgroundId": "#SGAEHS#0",
-            "referenceImage": "gpu-particles-flowmaps.png"
+            "referenceImage": "gpu-particles-flowmaps.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Local Space",
             "playgroundId": "#NK19TU#0",
-            "referenceImage": "gpu-particles-local-space.png"
+            "referenceImage": "gpu-particles-local-space.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "Node material PBR Pure WebGPU",
@@ -4223,7 +4376,9 @@
         {
             "title": "CSM  FrameGraph - debug markers",
             "playgroundId": "#JWKDME#216",
-            "referenceImage": "CSM-FrameGraph---debug-markers.png"
+            "referenceImage": "CSM-FrameGraph---debug-markers.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
         },
         {
             "title": "Reflection Probes - debug markers",
