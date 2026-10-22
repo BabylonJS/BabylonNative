@@ -89,6 +89,13 @@ class MobileCiConfigurationTests(unittest.TestCase):
         self.assertIn("'.github/scripts/android_emulator_ready.py')", workflow)
         self.assertNotIn("restore-keys:", workflow)
 
+    def test_android_sdk_tools_are_available_before_identifying_the_image(self):
+        workflow = (ROOT / ".github/workflows/test-android.yml").read_text()
+        prepare = workflow.index("- name: Identify emulator image")
+        bootstrap = workflow.index('export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"', prepare)
+        install = workflow.index("sdkmanager --install", prepare)
+        self.assertLess(bootstrap, install)
+
 
 if __name__ == "__main__":
     unittest.main()
