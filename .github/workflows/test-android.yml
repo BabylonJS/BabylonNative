@@ -9,11 +9,6 @@ jobs:
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Check artifact runner
-        run: python3 -m unittest discover -s .github/scripts/tests -v
       - uses: actions/download-artifact@v7
         with:
           pattern: UnitTests-Android-*
@@ -37,7 +32,7 @@ jobs:
           path: |
             ~/.android/avd/babylon-native-tests.avd
             ~/.android/avd/babylon-native-tests.ini
-          key: android-avd-${{ runner.os }}-${{ runner.arch }}-${{ steps.emulator-image.outputs.image-os }}-33-google_apis-x86_64-${{ steps.emulator-image.outputs.revision }}-${{ hashFiles('.github/workflows/test-android.yml', '.github/scripts/android_emulator_ready.py') }}
+          key: android-avd-${{ runner.os }}-${{ runner.arch }}-${{ steps.emulator-image.outputs.image-os }}-33-google_apis-x86_64-${{ steps.emulator-image.outputs.revision }}-${{ hashFiles('.github/workflows/test-android.yml') }}
       - name: Generate clean emulator snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
@@ -48,7 +43,7 @@ jobs:
           avd-name: babylon-native-tests
           force-avd-creation: false
           emulator-options: -no-snapshot-load -no-window -no-boot-anim -no-audio -gpu swiftshader_indirect
-          script: python3 .github/scripts/android_emulator_ready.py
+          script: adb shell getprop sys.boot_completed
       - name: Wait for snapshot shutdown
         run: timeout 60s bash -c 'while pgrep -f "[q]emu-system.*-avd babylon-native-tests" > /dev/null; do sleep 1; done'
       - name: Save clean emulator snapshot
@@ -61,6 +56,74 @@ jobs:
           key: ${{ steps.avd-cache.outputs.cache-primary-key }}
       - name: Install and run all Android test artifacts sequentially
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          TEST_SCRIPT: |
+            mkdir -p test-results
+            trap 'adb logcat -d > test-results/logcat.txt' EXIT
+            ready=false
+            for ((attempt = 0; attempt < 60; attempt++)); do
+              connectivity=$(timeout 10s adb shell dumpsys connectivity)
+              active=$(sed -n 's/^Active default network: \([0-9][0-9]*\).*$/\1/p' <<< "$connectivity")
+              if [[ -n "$active" ]] && grep -F 'NetworkAgentInfo{' <<< "$connectivity" |
+                  grep -F "network{$active}" | grep -w VALIDATED > /dev/null; then
+                ready=true
+                break
+              fi
+              sleep 2
+            done
+            if [[ "$ready" != true ]]; then
+              echo "::error::Emulator network did not become ready"
+              printf '%s\n' "$connectivity"
+              exit 1
+            fi
+            shopt -s nullglob
+            artifacts=(test-artifacts/*)
+            [[ ${#artifacts[@]} -eq 6 ]] || { echo "::error::Expected exactly six Android artifacts"; exit 1; }
+            for engine in JavaScriptCore V8 QuickJS; do
+              for component in JsRuntimeHost UrlLib; do
+                directory="test-artifacts/UnitTests-Android-$component-$engine"
+                test -f "$directory/app.apk"
+                test -f "$directory/tests.apk"
+              done
+            done
+            failed=()
+            for engine in JavaScriptCore V8 QuickJS; do
+              for component in JsRuntimeHost UrlLib; do
+                name="UnitTests-Android-$component-$engine"
+                directory="test-artifacts/$name"
+                case "$component" in
+                  JsRuntimeHost) application=com.jsruntimehost.unittests ;;
+                  UrlLib) application=com.urllib.unittests ;;
+                esac
+                echo "::group::Running $name"
+                set +e
+                (
+                  set -euo pipefail
+                  installed=()
+                  trap 'code=$?; for package in "${installed[@]}"; do timeout 120s adb uninstall "$package" || code=1; done; exit "$code"' EXIT
+                  timeout 120s adb install -r "$directory/app.apk"
+                  installed+=("$application")
+                  timeout 120s adb install -r "$directory/tests.apk"
+                  installed=("$application.test" "$application")
+                  timeout 120s adb shell pm clear "$application"
+                  timeout 20m adb shell am instrument -w -r \
+                    "$application.test/androidx.test.runner.AndroidJUnitRunner" 2>&1 | tee "test-results/$name.log"
+                  grep -Eq '^OK \([1-9][0-9]* tests?\)[[:space:]]*$' "test-results/$name.log"
+                  grep -Eq '^INSTRUMENTATION_CODE: -1[[:space:]]*$' "test-results/$name.log"
+                )
+                result=$?
+                set -e
+                if [[ $result -ne 0 ]]; then
+                  echo "::error::$name failed (exit $result)"
+                  failed+=("$name")
+                fi
+                echo "::endgroup::"
+              done
+            done
+            if [[ ${#failed[@]} -ne 0 ]]; then
+              printf 'Failed: %s\n' "${failed[@]}"
+              exit 1
+            fi
         with:
           api-level: 33
           target: google_apis
@@ -68,12 +131,9 @@ jobs:
           avd-name: babylon-native-tests
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -no-boot-anim -no-audio -gpu swiftshader_indirect
-          script: |
-            mkdir -p test-results
-            python3 .github/scripts/android_emulator_ready.py
-            python3 .github/scripts/mobile_test_artifacts.py run --platform Android --artifacts test-artifacts --logs test-results || { status=$?; adb logcat -d > test-results/logcat.txt; exit "$status"; }
+          script: bash -euo pipefail -c "$TEST_SCRIPT"
       - name: Upload test results
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && hashFiles('test-results/**') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: Android-unit-test-results

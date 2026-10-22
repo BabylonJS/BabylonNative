@@ -15,12 +15,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
-    - name: Check mobile CI helpers
-      shell: bash
-      run: python3 -m unittest discover -s .github/scripts/tests -v
     - name: Install Android unit-test toolchain
       if: inputs.platform == 'Android'
       shell: bash
@@ -41,11 +35,9 @@ runs:
             project=Apps/UnitTests/Mobile/Android
             bash "$project/gradlew" "-Pcomponent=$component" "${args[@]}"
           fi
-          python3 .github/scripts/mobile_test_artifacts.py package \
-            --platform Android --component "$component" --engine "$JS_ENGINE" \
-            --app "$project/app/build/outputs/apk/debug/app-debug.apk" \
-            --test-apk "$project/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" \
-            --output "test-artifacts/$component"
+          mkdir -p "test-artifacts/$component"
+          cp "$project/app/build/outputs/apk/debug/app-debug.apk" "test-artifacts/$component/app.apk"
+          cp "$project/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" "test-artifacts/$component/tests.apk"
         done
     - name: Build iOS simulator unit-test applications
       if: inputs.platform == 'iOS'
@@ -77,9 +69,8 @@ runs:
           cmake --build "$build" --config RelWithDebInfo --target "$target" -- \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
-          python3 .github/scripts/mobile_test_artifacts.py package \
-            --platform iOS --component "$component" --engine "$JS_ENGINE" \
-            --app "$app" --output "test-artifacts/$component"
+          mkdir -p "test-artifacts/$component"
+          tar -czf "test-artifacts/$component/app.tar.gz" -C "$(dirname "$app")" "$(basename "$app")"
         done
     - uses: actions/upload-artifact@v6
       with:

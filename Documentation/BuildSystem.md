@@ -21,17 +21,8 @@ options and target adjustments live in `Dependencies/CMakeLists.txt`; source-tre
 packaging lives in `Dependencies/cmake/StageBgfxSources.cmake`. The root's
 FetchContent declarations retain Babylon Native's compatible child revisions;
 the upstream wrapper's fallback pins are not used by the root build.
-The root applies `Dependencies/patches/bgfx-gl-context.patch` to the pinned
-bgfx acquisition: vertex array objects must be created and deleted in their
-owning GL context, and headless EGL config selection can retry without
-native depth/stencil attachments when the requested config is unavailable
-(the window swap-chain FBO owns its own attachments).
-No dependency revision is changed. Patch application is
-idempotent and fails configuration on a mismatch. The patch also uses
-depth/stencil attachments and framebuffer blits for the GLES copy-image
-fallback, instead of attaching depth textures as color. Staged source packages
-include the patched sources; raw `FETCHCONTENT_SOURCE_DIR_BGFX` overrides
-bypass FetchContent's patch step and must include the equivalent fixes.
+The root uses the pinned bgfx sources without a local GL patch. Source packages
+and local `FETCHCONTENT_SOURCE_DIR_BGFX` overrides use the same unpatched revision.
 
 Every non-UWP CI configuration builds UrlLib and JsRuntimeHost unit tests.
 Desktop Windows/macOS/Linux workflows build and run the embedded component
@@ -45,8 +36,8 @@ the JsRuntimeHost and UrlLib test applications using `.github/actions/build-mobi
 There are no separate component build matrices or artifact-producer jobs.
 The action uses separate CMake build directories for each iOS application and
 packages each Android application's APKs before building the next component.
-Each package records its component, platform, engine and application ID in a manifest. Artifact
-names are `UnitTests-Android-<component>-<engine>` and
+Artifact names identify the platform, component and engine:
+`UnitTests-Android-<component>-<engine>` and
 `UnitTests-iOS-<component>-JavaScriptCore`. iOS apps are archived to retain
 executable permissions. Android artifacts include both application and test APKs.
 
@@ -69,7 +60,7 @@ classic builds only. Each downloads all artifacts for its
 platform, boots one emulator/simulator, and installs and runs applications
 sequentially. Android covers JavaScriptCore, V8 and QuickJS for JsRuntimeHost
 and UrlLib (six artifacts); iOS uses JavaScriptCore (two artifacts).
-The runner checks the complete expected
+The YAML runner steps check the complete expected
 artifact matrix before running, rejects missing artifacts and missing test
 completion signals, and continues through remaining artifacts after a failure
 before failing the job. Installed Android packages are removed even after a
@@ -82,13 +73,22 @@ The cache key includes the runner OS/architecture, installed emulator and system
 revisions, and the workflow/readiness configuration. Exact-key restores avoid
 incompatible snapshots. Test runs load the snapshot without saving their state;
 the existing package cleanup still isolates components and JavaScript engines.
-Both snapshot creation and test execution wait for boot completion and a validated
-active default network, with a bounded readiness timeout. A cache miss incurs a
+The Android emulator action waits for boot completion, and the test step also waits
+for a validated active default network with a bounded readiness timeout. A cache miss incurs a
 cold boot and upload; a hit still incurs download/extraction and SDK setup.
+
+Mobile packaging and execution are defined directly in YAML, using `cp`, `tar`,
+`adb` and `xcrun`, rather than Python helpers or manifests. Android boot and shutdown
+use `reactivecircus/android-emulator-runner`; iOS device selection, boot and post-job
+shutdown use the Marketplace [Launch iOS Simulator](https://github.com/marketplace/actions/launch-ios-simulator)
+action (`futureware-tech/simulator-action`). Standard artifact and cache actions handle
+transfers. Shell checks still require real test completion, and per-suite timeouts
+and cleanup prevent one failed application from blocking the remaining suites.
 
 `needs` controls ordering, not build-directory sharing: only named artifacts
 cross runners. `ci-complete` requires `AndroidTests`, `iOSTests`,
-and all ordinary build/install checks to succeed.
+and the ordinary build/install checks to succeed. It depends on `iOSTests`
+instead of redundantly depending on `iOS_Xcode26`, which is already required by `iOSTests`.
 Failures, cancellations and unexpected skips cannot pass the final gate.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 

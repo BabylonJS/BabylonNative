@@ -9,11 +9,6 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Check artifact runner
-        run: python3 -m unittest discover -s .github/scripts/tests -v
       - name: Select Xcode
         run: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
       - uses: actions/download-artifact@v7
@@ -22,36 +17,60 @@ jobs:
           path: test-artifacts
       - name: Boot iOS simulator
         id: simulator
-        run: |
-          simulator=$(xcrun simctl list -j devices available | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          iphones = [
-              (tuple(int(part) for part in runtime.rsplit("iOS-", 1)[1].split("-")), device)
-              for runtime, group in devices.items() if "iOS-" in runtime
-              for device in group if device["name"].startswith("iPhone")
-          ]
-          iphones = [(version, device) for version, device in iphones if version >= (26, 0)]
-          if not iphones:
-              raise SystemExit("No iPhone simulator meets deployment target 26.0")
-          print(max(iphones, key=lambda item: item[0])[1]["udid"])
-          ')
-          echo "id=$simulator" >> "$GITHUB_OUTPUT"
-          if ! xcrun simctl list devices booted | grep -Fq "$simulator"; then
-            xcrun simctl boot "$simulator"
-          fi
-          xcrun simctl bootstatus "$simulator" -b
+        uses: futureware-tech/simulator-action@v5
+        with:
+          model: 'iPhone 17'
+          os_version: '>=26.0'
+          wait_for_boot: true
+      - name: Ensure per-suite timeout tool
+        run: command -v gtimeout || brew install coreutils
       - name: Install and run all iOS test artifacts sequentially
         env:
-          SIMULATOR: ${{ steps.simulator.outputs.id }}
-        run: python3 .github/scripts/mobile_test_artifacts.py run --platform iOS --artifacts test-artifacts --logs test-results --simulator "$SIMULATOR"
-      - name: Shut down simulator
-        if: ${{ always() && steps.simulator.outputs.id != '' }}
-        env:
-          SIMULATOR: ${{ steps.simulator.outputs.id }}
-        run: xcrun simctl shutdown "$SIMULATOR"
+          SIMULATOR: ${{ steps.simulator.outputs.udid }}
+        run: |
+          mkdir -p test-results
+          shopt -s nullglob
+          artifacts=(test-artifacts/*)
+          [[ ${#artifacts[@]} -eq 2 ]] || { echo "::error::Expected exactly two iOS artifacts"; exit 1; }
+          for component in JsRuntimeHost UrlLib; do
+            test -f "test-artifacts/UnitTests-iOS-$component-JavaScriptCore/app.tar.gz"
+          done
+          failed=()
+          for component in JsRuntimeHost UrlLib; do
+            name="UnitTests-iOS-$component-JavaScriptCore"
+            directory="test-artifacts/$name"
+            case "$component" in
+              JsRuntimeHost) application=com.jsruntimehost.unittests; app=UnitTests.app ;;
+              UrlLib) application=com.urllib.unittests; app=UrlLibTests.app ;;
+            esac
+            echo "::group::Running $name"
+            set +e
+            (
+              set -euo pipefail
+              tar -xzf "$directory/app.tar.gz" -C "$directory"
+              test -d "$directory/$app"
+              gtimeout 120s xcrun simctl install "$SIMULATOR" "$directory/$app"
+              trap 'code=$?; gtimeout 120s xcrun simctl uninstall "$SIMULATOR" "$application" || code=1; exit "$code"' EXIT
+              gtimeout 20m xcrun simctl launch --console "$SIMULATOR" "$application" \
+                > "test-results/$name.stdout.log" 2> "test-results/$name.stderr.log"
+              cat "test-results/$name.stdout.log"
+              cat "test-results/$name.stderr.log" >&2
+              tail -n 1 "test-results/$name.stderr.log" | tr -d '\r ' | grep -x 0
+            )
+            result=$?
+            set -e
+            if [[ $result -ne 0 ]]; then
+              echo "::error::$name failed (exit $result)"
+              failed+=("$name")
+            fi
+            echo "::endgroup::"
+          done
+          if [[ ${#failed[@]} -ne 0 ]]; then
+            printf 'Failed: %s\n' "${failed[@]}"
+            exit 1
+          fi
       - name: Upload test results
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && hashFiles('test-results/**') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: iOS-unit-test-results

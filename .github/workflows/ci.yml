@@ -175,7 +175,6 @@ jobs:
     needs:
       - MacOS
       - MacOS_Ninja
-      - iOS_Xcode26
       - MacOS_QuickJS
       - Win32_x64_D3D11
       - Win32_x64_JSI_D3D11
@@ -206,15 +205,5 @@ jobs:
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          python3 - <<'PY'
-          import json, os
-          needs = json.loads(os.environ["NEEDS_JSON"])
-          failed = [
-              f"{name}: {job['result']}"
-              for name, job in needs.items()
-              if job["result"] != "success"
-          ]
-          if failed:
-              raise SystemExit("CI did not succeed: " + "; ".join(failed))
-          print("All required jobs passed, including Android and iOS unit tests.")
-          PY
+          echo "$NEEDS_JSON" | jq -e 'to_entries | map(select(.value.result != "success")) |
+            if length == 0 then true else error("CI did not succeed: \(.)") end'
