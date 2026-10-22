@@ -148,7 +148,7 @@
         },
         {
             "title": "GUI3D SpherePanel",
-            "playgroundId": "#HB4C01#9",
+            "playgroundId": "#AMM2WB#0",
             "renderCount": 50,
             "referenceImage": "spherepanel.png",
             "workarounds": ["wait-for-readiness"]
@@ -167,7 +167,7 @@
         {
             "title": "GLTF Mesh Primitive Vertex Color",
             "renderCount": 5,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Mesh_PrimitiveVertexColor, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveVertexColor.png"
         },
@@ -205,7 +205,7 @@
             "referenceImage": "LightProjectionTexture.png"
         },
         {
-            "title": "Point light shadows",
+            "title": "Spotlight shadows",
             "playgroundId": "#U2F7P9#4",
             "referenceImage": "point-light-shadows.png"
         },
@@ -227,7 +227,7 @@
         },
         {
             "title": "Ribbon morphing",
-            "playgroundId": "#ACKC2#1",
+            "playgroundId": "#XUKAYC#0",
             "renderCount": 50,
             "referenceImage": "ribbon morphing.png",
             "workarounds": ["opaque-clear-alpha"]
@@ -356,28 +356,28 @@
         {
             "title": "GLTF Animation Node",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_Node, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfAnimationNode.png"
         },
         {
             "title": "GLTF Animation Node Misc",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_NodeMisc, __page__, 0, __disableSRGBBuffers__, 1",
             "referenceImage": "gltfAnimationNodeMisc.png"
         },
         {
             "title": "GLTF Animation Skin (0)",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_Skin, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfAnimationSkin0.png"
         },
         {
             "title": "GLTF Animation Skin (1)",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_Skin, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfAnimationSkin1.png"
         },
@@ -534,7 +534,7 @@
         },
         {
             "title": "Interleaved buffers test (updateUVs = true, updateAfterRender = true)",
-            "playgroundId": "#AVFNTW#5",
+            "playgroundId": "#VF9GO4#0",
             "replace": "//options//, updateUVs = true; updateAfterRender = true;",
             "referenceImage": "interleaved-buffers-4.png",
             "renderCount": 2
@@ -556,7 +556,7 @@
         },
         {
             "title": "Gaussian Splatting modify",
-            "playgroundId": "#RKKCHG#15",
+            "playgroundId": "#O53CPP#0",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
             "reason": "GaussianSplatting throws Uncaught Error: Invalid argument on Babylon Native (thrown before pixel comparison, not a pixel-diff)",
@@ -598,13 +598,13 @@
         },
         {
             "title": "Gaussian Splatting viewports",
-            "playgroundId": "#CG8GO3#1",
+            "playgroundId": "#IMVJUY#0",
             "renderCount": 15,
             "referenceImage": "gsplat-viewports.png"
         },
         {
             "title": "Gaussian Splatting Shadows",
-            "playgroundId": "#OE54M5#16",
+            "playgroundId": "#R6MGUZ#0",
             "renderCount": 15,
             "referenceImage": "gsplat-shadows.png"
         },
@@ -687,7 +687,7 @@
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Realtime IBL",
-            "playgroundId": "#MXACV7#29",
+            "playgroundId": "#76D28X#0",
             "renderCount": 15,
             "referenceImage": "openpbr-base-diffuse-roughness-realtime-ibl.png"
         },
@@ -812,11 +812,11 @@
         },
         {
             "title": "BoundingInfo Helper",
-            "playgroundId": "#BCNJD4#61",
+            "playgroundId": "#UNQ5CK#0",
             "renderCount": 2,
+            "referenceImage": "bbhelper.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "bbhelper.png"
+            "reason": "bgfx debug assert on D3D11: vertex layout override stride (12) must match dynamic vertex buffer layout stride (4); on OpenGL the helper needs compute shaders or transform feedback."
         },
         {
             "title": "NMEGLTF",
@@ -1015,13 +1015,13 @@
         },
         {
             "title": "GUI Slate",
-            "playgroundId": "#2YZFA0#277",
+            "playgroundId": "#UDLHJ3#0",
             "renderCount": 60,
             "referenceImage": "guiSlate.png"
         },
         {
             "title": "GUI Near Menu",
-            "playgroundId": "#2YZFA0#302",
+            "playgroundId": "#DZPGOB#0",
             "renderCount": 60,
             "referenceImage": "guiNearMenu.png",
             "workarounds": ["wait-for-readiness"]
@@ -1034,7 +1034,7 @@
         {
             "title": "LineEdgesRenderer",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#T90MQ4#19",
+            "playgroundId": "#FF1HHK#0",
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
             "reason": "OpenGL: pixel diff out of tolerance on Linux CI (5.5% px); passes on Win32 D3D11."
@@ -1062,7 +1062,7 @@
         },
         {
             "title": "Gizmos",
-            "playgroundId": "#8GY6J8#196",
+            "playgroundId": "#SWSUXS#0",
             "renderCount": 50,
             "referenceImage": "Gizmos.png",
             "workarounds": ["wait-for-readiness"]
@@ -1076,7 +1076,7 @@
         },
         {
             "title": "Chibi Rex",
-            "playgroundId": "#NZ2RZY#4",
+            "playgroundId": "#SYM1EP#0",
             "renderCount": 50,
             "replace": "engine.setHardwareScalingLevel(0.75);, engine.setHardwareScalingLevel(1);",
             "note": "The browser reference captures the 600x400 canvas after downsampling its 0.75 hardware-scaled framebuffer; Native captures the physical 800x533 target, so keep validation at the reference dimensions.",
@@ -1084,7 +1084,7 @@
         },
         {
             "title": "Yeti",
-            "playgroundId": "#QATUCH#32",
+            "playgroundId": "#8ZNZFY#0",
             "renderCount": 150,
             "referenceImage": "yeti.png"
         },
@@ -1164,7 +1164,7 @@
         },
         {
             "title": "Shadow depth wrappers",
-            "playgroundId": "#PNQRY1#73",
+            "playgroundId": "#7JTUT9#0",
             "replace": "engine.webGLVersion >= 2, BABYLON.CascadedShadowGenerator.IsSupported",
             "note": "Temporary mitigation: the source Playground (#PNQRY1#73) selects CascadedShadowGenerator by WebGL version instead of capability. Once the Playground is fixed to check BABYLON.CascadedShadowGenerator.IsSupported, update playgroundId to the corrected revision and remove this replacement.",
             "renderCount": 20,
@@ -1455,7 +1455,7 @@
         },
         {
             "title": "Default pipeline",
-            "playgroundId": "#NAW8EA#6",
+            "playgroundId": "#3054SF#0",
             "renderCount": 20,
             "referenceImage": "defaultPipeline.png"
         },
@@ -1607,7 +1607,7 @@
         },
         {
             "title": "Realtime Filtering Irradiance with CDF",
-            "playgroundId": "#FEEK7G#1087",
+            "playgroundId": "#F6JODO#0",
             "renderCount": 5,
             "referenceImage": "realtimeFilteringIrradianceCDF.png"
         },
@@ -1714,7 +1714,7 @@
         },
         {
             "title": "Prepass SSAO + particles",
-            "playgroundId": "#65MUMZ#47",
+            "playgroundId": "#65MUMZ#59",
             "renderCount": 50,
             "referenceImage": "prepass-ssao-particles.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -1746,7 +1746,7 @@
         {
             "title": "Prepass + mirror, without postprocess",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#PIZ1GK#1084",
+            "playgroundId": "#9A4QF8#0",
             "renderCount": 10,
             "referenceImage": "prepass-mirror-without-pp.png",
             "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
@@ -1754,7 +1754,7 @@
         {
             "title": "Prepass + mirror, with postprocesses",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#PIZ1GK#1085",
+            "playgroundId": "#E4QF68#0",
             "renderCount": 10,
             "referenceImage": "prepass-mirror-with-pp.png",
             "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
@@ -1769,7 +1769,7 @@
         },
         {
             "title": "Prepass SSAO + glow layer",
-            "playgroundId": "#LRFB2D#263",
+            "playgroundId": "#7HMTCH#0",
             "renderCount": 30,
             "referenceImage": "prepass-ssao-glow-layer.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -1833,7 +1833,7 @@
         },
         {
             "title": "Prepass SSAO + highlight layer",
-            "playgroundId": "#1KUJ0A#416",
+            "playgroundId": "#79439I#0",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-highlight-layer.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -1882,7 +1882,7 @@
         },
         {
             "title": "Prepass SSAO + default pipeline",
-            "playgroundId": "#NAW8EA#7",
+            "playgroundId": "#IIMFWT#0",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-default-pipeline.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -1897,7 +1897,7 @@
         {
             "title": "Prepass SSAO + MSAA",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#12MKMN#7",
+            "playgroundId": "#LSTDFU#0",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-msaa.png",
             "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
@@ -1976,7 +1976,7 @@
         },
         {
             "title": "Thin instances + dynamic buffer resize",
-            "playgroundId": "#217750#217",
+            "playgroundId": "#10G61O#0",
             "renderCount": 10,
             "referenceImage": "thin-instances-buffer-resize.png"
         },
@@ -2007,13 +2007,13 @@
         },
         {
             "title": "Multi cameras and output render target",
-            "playgroundId": "#BCYE7J#46",
+            "playgroundId": "#3VPD1J#0",
             "renderCount": 2,
             "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "Multi cameras and output render target with depth texture (D24)",
-            "playgroundId": "#BCYE7J#36",
+            "playgroundId": "#XASY5D#0",
             "renderCount": 2,
             "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
@@ -2033,7 +2033,7 @@
         },
         {
             "title": "Custom material with depth renderer",
-            "playgroundId": "#6GFJNR#152",
+            "playgroundId": "#9LECW0#0",
             "renderCount": 5,
             "referenceImage": "customMatDepthRenderer.png"
         },
@@ -2046,13 +2046,13 @@
         },
         {
             "title": "Baked Vertex Animation with Depth Of Field",
-            "playgroundId": "#JWO4R0#8",
+            "playgroundId": "#B50RGD#0",
             "renderCount": 20,
             "referenceImage": "bakedVertexAnimationDOF.png"
         },
         {
             "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
-            "playgroundId": "#1LF9GK#3",
+            "playgroundId": "#0PIQHX#0",
             "renderCount": 20,
             "referenceImage": "bakedVertexAnimationVLS.png"
         },
@@ -2367,14 +2367,14 @@
         {
             "title": "show-bounding-box",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#0LN1JD#9",
+            "playgroundId": "#Y2TD10#0",
             "renderCount": 5,
             "referenceImage": "show-bounding-box.png",
             "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (7.6% px); passes on Win32 D3D11."
         },
         {
             "title": "cube-reflection-with-probe-and-mirrors",
-            "playgroundId": "#X3V1NN#7",
+            "playgroundId": "#3DJPE6#0",
             "renderCount": 20,
             "referenceImage": "cube-reflection-with-probe-and-mirrors.png"
         },
@@ -2426,7 +2426,7 @@
         },
         {
             "title": "apply-all-post-processes",
-            "playgroundId": "#MJ59Y8#18",
+            "playgroundId": "#QEILPW#0",
             "renderCount": 10,
             "referenceImage": "apply-all-post-processes.png",
             "errorRatio": 3.3,
@@ -2462,7 +2462,7 @@
         },
         {
             "title": "dissolve-effect-with-node-material-and-glow-layer",
-            "playgroundId": "#F6PGMC#12",
+            "playgroundId": "#84JLNC#0",
             "renderCount": 2,
             "referenceImage": "dissolve-effect-with-node-material-and-glow-layer.png",
             "workarounds": ["prime-effect-layers"]
@@ -2475,7 +2475,7 @@
         },
         {
             "title": "halo-particle-system",
-            "playgroundId": "#2441BU#1",
+            "playgroundId": "#2441BU#5",
             "renderCount": 20,
             "referenceImage": "halo-particle-system.png"
         },
@@ -2498,7 +2498,7 @@
         },
         {
             "title": "change-texture-of-material",
-            "playgroundId": "#7PN9PH#2",
+            "playgroundId": "#91XVF7#0",
             "renderCount": 10,
             "referenceImage": "change-texture-of-material.png"
         },
@@ -2645,7 +2645,7 @@
         },
         {
             "title": "FrameGraph nrge csm shadows with autoCalcDepthBounds",
-            "playgroundId": "#JWKDME#192",
+            "playgroundId": "#DOFUT1#0",
             "renderCount": 10,
             "referenceImage": "FrameGraph-nrge-csm-shadows-with-autoCalcDepthBounds.png"
         },
@@ -2756,8 +2756,6 @@
         {
             "title": "FrameGraph nrge OIT",
             "playgroundId": "#MIACY4#13",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-OIT.png"
         },
         {
@@ -2775,9 +2773,9 @@
         {
             "title": "FrameGraph nrge transmission",
             "playgroundId": "#ZNTBN2#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "FrameGraph-nrge-transmission.png"
+            "referenceImage": "FrameGraph-nrge-transmission.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL ES: MSAA depth texture (format 98) is unsupported; passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph nrge selection outline layer",
@@ -2889,8 +2887,6 @@
         {
             "title": "FrameGraph OIT",
             "playgroundId": "#MIACY4#11",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-OIT.png"
         },
         {
@@ -2946,7 +2942,7 @@
         {
             "title": "SubSurface Scattering",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#5H0H89#129",
+            "playgroundId": "#FR639I#0",
             "renderCount": 10,
             "referenceImage": "SubSurface-Scattering.png",
             "reason": "OpenGL: bgfx FrameBufferGL::resolve asserts in glDrawBuffers (GL_INVALID_OPERATION) when resolving an attachment past the first (bgfx bug, thrown before pixel comparison); passes on Win32 D3D11."
@@ -3213,15 +3209,11 @@
         {
             "title": "OpenPBR IBL Coat Color vs Coat Darkening",
             "playgroundId": "#GRQHVV#186",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Color-vs-Coat-Darkening.png"
         },
         {
             "title": "OpenPBR IBL Coat Color vs Coat IOR",
             "playgroundId": "#GRQHVV#187",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Color-vs-Coat-IOR.png"
         },
         {
@@ -3352,8 +3344,6 @@
         {
             "title": "OpenPBR Thin Film and Specular Weight Metals - IBL",
             "playgroundId": "#GRQHVV#202",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight-Metals---IBL.png"
         },
         {
@@ -3370,8 +3360,6 @@
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - IBL",
             "playgroundId": "#GRQHVV#204",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---IBL.png"
         },
         {
@@ -3391,15 +3379,11 @@
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - IBL",
             "playgroundId": "#GRQHVV#205",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---IBL.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Realtime IBL",
             "playgroundId": "#GRQHVV#206",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Realtime-IBL.png"
         },
         {
@@ -3428,9 +3412,7 @@
         {
             "title": "OpenPBR Transmission Roughness glTF - Analytic Lights",
             "playgroundId": "#GRQHVV#124",
-            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI grid labels render red instead of green/black (BN GUI color regression); OpenPBR transmission spheres minor anisotropy diff."
+            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
@@ -3466,8 +3448,6 @@
         {
             "title": "OpenPBR Transmission Dispersion glTF - IBL",
             "playgroundId": "#GRQHVV#140",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dispersion-glTF---IBL.png"
         },
         {
@@ -3492,7 +3472,7 @@
         },
         {
             "title": "OpenPBR Transmission Scatter Anisotropy Refract - IBL",
-            "playgroundId": "#GRQHVV#265",
+            "playgroundId": "#5OBC5W#0",
             "renderCount": 5,
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Refract---IBL.png"
         },
@@ -3514,13 +3494,13 @@
         },
         {
             "title": "OpenPBR Subsurface Radius vs Roughness - IBL",
-            "playgroundId": "#GRQHVV#270",
+            "playgroundId": "#54A9FQ#0",
             "renderCount": 5,
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Roughness---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Radius vs Anisotropy - IBL",
-            "playgroundId": "#GRQHVV#271",
+            "playgroundId": "#7I1LAC#0",
             "renderCount": 2,
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---IBL.png"
         },
@@ -3532,13 +3512,13 @@
         },
         {
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
-            "playgroundId": "#GRQHVV#273",
+            "playgroundId": "#SD5EQ1#0",
             "renderCount": 5,
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Radius-Scale---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending - IBL",
-            "playgroundId": "#GRQHVV#296",
+            "playgroundId": "#SXXR4T#0",
             "renderCount": 5,
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---IBL.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -3546,63 +3526,51 @@
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending - Analytic Lights",
-            "playgroundId": "#GRQHVV#299",
+            "playgroundId": "#T69TFO#0",
             "renderCount": 2,
-            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "OpenPBR subsurface transmission shows red bands on label backgrounds (BN GUI color + minor SSS BSDF differences)."
+            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending Zero Depth - IBL",
-            "playgroundId": "#GRQHVV#235",
+            "playgroundId": "#UZ7KW4#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending-Zero-Depth---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Dense Scattering - IBL",
-            "playgroundId": "#GRQHVV#294",
+            "playgroundId": "#Q3QF1V#0",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dense-Scattering---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Dense Scattering - SH",
             "playgroundId": "#GRQHVV#293",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dense-Scattering---SH.png"
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - IBL",
-            "playgroundId": "#GRQHVV#295",
+            "playgroundId": "#Z8RCM0#0",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Analytic Lights",
-            "playgroundId": "#GRQHVV#300",
+            "playgroundId": "#GRQHVV#306",
             "renderCount": 10,
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "OpenPBR analytic-lights left column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR SSS BSDF)."
+            "reason": "Passes in isolation on Win32 D3D11 with the Babylon.js master reference, but fails pixel comparison when run after other tests in the same process"
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Realtime IBL",
-            "playgroundId": "#GRQHVV#301",
+            "playgroundId": "#5A4TWS#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Realtime-IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Color Scaling - IBL",
-            "playgroundId": "#GRQHVV#302",
+            "playgroundId": "#YWXM7Z#0",
             "renderCount": 5,
             "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -3610,7 +3578,7 @@
         },
         {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - IBL",
-            "playgroundId": "#GRQHVV#240",
+            "playgroundId": "#BY1IOY#0",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
             "reason": "Pixel comparison fails (more than 20% pixels differ)",
@@ -3618,17 +3586,13 @@
         },
         {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - Analytic Lights",
-            "playgroundId": "#GRQHVV#243",
-            "referenceImage": "OpenPBR-Thin-Walled-Transmission-IOR-vs-Roughness---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "playgroundId": "#GRQHVV#312",
+            "referenceImage": "OpenPBR-Thin-Walled-Transmission-IOR-vs-Roughness---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Walled Anisotropic Transmission - IBL",
-            "playgroundId": "#GRQHVV#247",
+            "playgroundId": "#GRQHVV#315",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Walled-Anisotropic-Transmission---IBL.png"
         },
         {
@@ -3639,10 +3603,8 @@
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Anisotropy - IBL",
-            "playgroundId": "#GRQHVV#241",
+            "playgroundId": "#GT3JYS#1",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Anisotropy---IBL.png"
         },
         {
@@ -3653,7 +3615,7 @@
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Transmission Blending - IBL",
-            "playgroundId": "#GRQHVV#242",
+            "playgroundId": "#URIA5X#0",
             "renderCount": 5,
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png",
             "excludeFromAutomaticTesting": true,
@@ -3673,7 +3635,7 @@
         },
         {
             "title": "Havok FloatingOrigin Multi-Region",
-            "playgroundId": "#BEDCVY",
+            "playgroundId": "#ND10JJ#0",
             "renderCount": 180,
             "useLargeWorldRendering": true,
             "excludeFromAutomaticTesting": true,
@@ -3688,13 +3650,13 @@
         },
         {
             "title": "Particles - Basic Properties - Size",
-            "playgroundId": "#0K3AQ2#3780",
+            "playgroundId": "#MP4MLC#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-size.png"
         },
         {
             "title": "Particles - Basic Properties - Scale",
-            "playgroundId": "#0K3AQ2#3782",
+            "playgroundId": "#D4J35U#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-scale.png"
         },
@@ -3724,7 +3686,7 @@
         },
         {
             "title": "Particles - Basic Properties - Translation Pivot",
-            "playgroundId": "#0K3AQ2#3808",
+            "playgroundId": "#SGRK8U#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-translation-pivot.png"
         },
@@ -3736,37 +3698,37 @@
         },
         {
             "title": "Particles - Basic Properties - Direction - Gravity",
-            "playgroundId": "#0K3AQ2#3816",
+            "playgroundId": "#7R44LG#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-direction-gravity.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Slow",
-            "playgroundId": "#0K3AQ2#3821",
+            "playgroundId": "#Z1YF6Y#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-slow.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Fast",
-            "playgroundId": "#0K3AQ2#3823",
+            "playgroundId": "#0FU68O#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-fast.png"
         },
         {
             "title": "Particles - Basic Properties - Emission Limits",
-            "playgroundId": "#0K3AQ2#3825",
+            "playgroundId": "#T9YQQX#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-emission-limits.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Short",
-            "playgroundId": "#0K3AQ2#3829",
+            "playgroundId": "#HH34PQ#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-short.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Long",
-            "playgroundId": "#0K3AQ2#3834",
+            "playgroundId": "#WAABDN#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-long.png"
         },
@@ -3778,7 +3740,7 @@
         },
         {
             "title": "Particles - Change - Size 2",
-            "playgroundId": "#0K3AQ2#3844",
+            "playgroundId": "#H4K2HM#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size-2.png"
         },
@@ -3796,19 +3758,19 @@
         },
         {
             "title": "Particles - Change - Speed",
-            "playgroundId": "#0K3AQ2#3853",
+            "playgroundId": "#WJPDMN#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed.png"
         },
         {
             "title": "Particles - Change - Speed 2",
-            "playgroundId": "#0K3AQ2#3855",
+            "playgroundId": "#Z0P403#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-2.png"
         },
         {
             "title": "Particles - Change - Speed Limit",
-            "playgroundId": "#0K3AQ2#3859",
+            "playgroundId": "#ZAE8XN#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-limit.png"
         },
@@ -3826,25 +3788,25 @@
         },
         {
             "title": "Particles - Change - Drag",
-            "playgroundId": "#0K3AQ2#3868",
+            "playgroundId": "#H5J2I5#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag.png"
         },
         {
             "title": "Particles - Change - Drag 2",
-            "playgroundId": "#0K3AQ2#3872",
+            "playgroundId": "#C4ISYX#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag-2.png"
         },
         {
             "title": "Particles - Change - Emit Rate",
-            "playgroundId": "#0K3AQ2#3875",
+            "playgroundId": "#28UTI5#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate.png"
         },
         {
             "title": "Particles - Change - Emit Rate 2",
-            "playgroundId": "#0K3AQ2#3879",
+            "playgroundId": "#JW6JI4#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate-2.png"
         },
@@ -3856,13 +3818,13 @@
         },
         {
             "title": "Particles - Change - Lifetime 2",
-            "playgroundId": "#0K3AQ2#3890",
+            "playgroundId": "#24X4MW#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime-2.png"
         },
         {
             "title": "Particles - Change - Start Size",
-            "playgroundId": "#0K3AQ2#3897",
+            "playgroundId": "#OYHJGJ#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-start-size.png"
         },
@@ -3921,49 +3883,49 @@
         },
         {
             "title": "Particles - Emitters - Mesh",
-            "playgroundId": "#WLX2I2#20",
+            "playgroundId": "#5IZ478#0",
             "renderCount": 120,
             "referenceImage": "particles-emitters-mesh.png"
         },
         {
             "title": "Particles - Emitters - Custom",
-            "playgroundId": "#WLX2I2#22",
+            "playgroundId": "#13APF0#0",
             "renderCount": 120,
             "referenceImage": "particles-emitters-custom.png"
         },
         {
             "title": "Particles - Animations",
-            "playgroundId": "#2MI0A1#7",
+            "playgroundId": "#K9LJUG#0",
             "renderCount": 120,
             "referenceImage": "particles-animations.png"
         },
         {
             "title": "Particles - Animations 2",
-            "playgroundId": "#2MI0A1#8",
+            "playgroundId": "#CBXIIX#0",
             "renderCount": 120,
             "referenceImage": "particles-animations-2.png"
         },
         {
             "title": "Particles - Ramp Gradient",
-            "playgroundId": "#I2D9MM#15",
+            "playgroundId": "#P14652#0",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap",
-            "playgroundId": "#E3VU3R",
+            "playgroundId": "#1U4LNR#0",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap Alpha",
-            "playgroundId": "#I2D9MM#16",
+            "playgroundId": "#T4VZD9#0",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap-alpha.png"
         },
         {
             "title": "Particles - Billboard Y",
-            "playgroundId": "#T3ZCP7#5",
+            "playgroundId": "#6JLSVW#0",
             "renderCount": 180,
             "referenceImage": "particles-billboard-y.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -3977,7 +3939,7 @@
         },
         {
             "title": "Particles - Multiply Blend",
-            "playgroundId": "#M1HYFH#6",
+            "playgroundId": "#LWYGNM#0",
             "renderCount": 120,
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "particles-multiply-blend.png"
@@ -3990,13 +3952,13 @@
         },
         {
             "title": "Particles - Effects",
-            "playgroundId": "#1ASENS#424",
+            "playgroundId": "#KH7B0A#0",
             "renderCount": 120,
             "referenceImage": "particles-effects.png"
         },
         {
             "title": "Particles - Helper - Sun",
-            "playgroundId": "#A97UQ6#5",
+            "playgroundId": "#U78ZGE#0",
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
             "errorRatio": 8,
@@ -4004,7 +3966,7 @@
         },
         {
             "title": "Particles - Helper - Smoke",
-            "playgroundId": "#XRRTC0#2",
+            "playgroundId": "#XRRTC0#6",
             "renderCount": 120,
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "particles-helper-smoke.png"
@@ -4024,7 +3986,7 @@
         },
         {
             "title": "Particles - Flowmaps",
-            "playgroundId": "#M58G3X#4",
+            "playgroundId": "#39BW3H#0",
             "renderCount": 240,
             "referenceImage": "particles-flowmaps.png"
         },
@@ -4199,7 +4161,7 @@
         },
         {
             "title": "GPU Particles - Change - Size Range",
-            "playgroundId": "#4EWZJ9#0",
+            "playgroundId": "#HWD2PR#0",
             "referenceImage": "gpu-particles-change-size-range.png",
             "excludedGraphicsApis": ["OpenGL"],
             "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
