@@ -3569,6 +3569,11 @@ void main() {
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
         }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
+        }
     }
 
     void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
@@ -3609,6 +3614,11 @@ void main() {
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
         }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
+        }
     }
 
     // Note: For legacy reasons JS might call this function for instance drawing.
@@ -3640,6 +3650,11 @@ void main() {
         if (shouldDraw)
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
         }
     }
 
@@ -3678,6 +3693,11 @@ void main() {
         if (shouldDraw)
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
         }
     }
 
