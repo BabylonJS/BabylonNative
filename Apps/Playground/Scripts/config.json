@@ -919,6 +919,8 @@
         {
             "title": "Node material 0",
             "playgroundId": "#M5VQE9#41",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: bgfx asserts when CreateInputLayout fails with E_INVALIDARG (0x80070057) in the full CI suite.",
             "referenceImage": "node-material0.png"
         },
         {
