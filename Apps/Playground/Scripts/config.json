@@ -2656,6 +2656,8 @@
         {
             "title": "FrameGraph nrge SSR neon",
             "playgroundId": "#Z6C5EF#5",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (4.1%); passes on ANGLE GLES and D3D11.",
             "referenceImage": "FrameGraph-nrge-SSR-neon.png"
         },
         {
