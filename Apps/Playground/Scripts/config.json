@@ -2164,6 +2164,8 @@
         {
             "title": "GUI Gradient Linear with transparency",
             "playgroundId": "#PFK1Z5",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Temporarily excluded until Babylon.js #19041 ships: straight-RGBA gradient interpolation only matches the browser when the engine requests unpremultiplied canvas textures via getCanvasTexture(premulAlpha). Re-enable after the Babylon.js npm update.",
             "referenceImage": "GUI-Gradient-Linear-with-transparency.png"
         },
         {
