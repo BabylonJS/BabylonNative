@@ -1110,7 +1110,7 @@
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11.",
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%, renders black); passes on ANGLE GLES and D3D11.",
             "referenceImage": "areaLightsStandardMaterial.png",
             "workarounds": ["opaque-clear-alpha"]
         },
@@ -1118,7 +1118,7 @@
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff fail on Linux OpenGL (25571 px, 10.7%); passes on Win32 D3D11.",
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%); passes on ANGLE GLES and D3D11.",
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "textureAreaLightStandard.png"
         },
@@ -1131,8 +1131,6 @@
         {
             "title": "Area Lights - PBR",
             "playgroundId": "#T7FXR8#12",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11.",
             "referenceImage": "areaLightsPBRMaterial.png",
             "workarounds": ["opaque-clear-alpha"]
         },
@@ -1178,9 +1176,7 @@
         {
             "title": "Custom render target",
             "playgroundId": "#TQCEBF#5",
-            "referenceImage": "customRTT.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "GL cube skybox face-boundary seam (~12% pixel diff in upper sky); passes on D3D11/D3D12. Per-face vertical flip is required (disabling it worsens diff to 43%); residual seam is a bgfx-level GL cubemap face-boundary/seamless-filtering issue. Tracked for OpenGL backend follow-up."
+            "referenceImage": "customRTT.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
@@ -1298,7 +1294,7 @@
             "title": "GLTF Serializer KHR gpu instancing",
             "playgroundId": "#1Q2BWN#10",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff 3.4% on OpenGL backend (Linux JSC); passes on D3D11.",
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (3.4%); passes on ANGLE GLES and D3D11.",
             "referenceImage": "glTFSerializerKhrGpuInstancing.png",
             "workarounds": ["leak-cleanup"]
         },
@@ -1319,32 +1315,24 @@
         {
             "title": "GLTF Serializer Camera, left-handed",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend (Linux JSC), 21% pixel diff; passes on D3D11.",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = false;",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = true;",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
         {
             "title": "GLTF Serializer Camera, left-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = false;",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = true;",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
@@ -1763,7 +1751,7 @@
             "title": "Prepass SSAO + sprites",
             "playgroundId": "#9RI8CG#187",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-sprites.png"
         },
@@ -1787,7 +1775,7 @@
             "title": "Prepass SSAO + line edges renderer",
             "playgroundId": "#T90MQ4#3",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-line-edges.png"
         },
@@ -1953,26 +1941,20 @@
             "title": "Instances manual update + motion blur",
             "playgroundId": "#HJGC2G#127",
             "renderCount": 10,
-            "referenceImage": "instances-mb-manual.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.7% px); passes on Win32 D3D11."
+            "referenceImage": "instances-mb-manual.png"
         },
         {
             "title": "Thin instances + motion blur",
             "playgroundId": "#HJGC2G#60",
             "renderCount": 30,
             "referenceImage": "thin-instances-mb.png",
-            "workarounds": ["wait-for-readiness"],
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (10.7% px); passes on Win32 D3D11."
+            "workarounds": ["wait-for-readiness"]
         },
         {
             "title": "Thin instances + motion blur + manual",
             "playgroundId": "#HJGC2G#245",
             "renderCount": 30,
-            "referenceImage": "thin-instances-mb-manual.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (10.7% px); passes on Win32 D3D11."
+            "referenceImage": "thin-instances-mb-manual.png"
         },
         {
             "title": "Thin instances + dynamic buffer resize",
@@ -2219,9 +2201,7 @@
             "title": "Screen Space Reflections 2",
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
-            "referenceImage": "Screen-Space-Reflections-2.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL ES: bgfx FrameBufferGL::resolve calls glDrawBuffers(1, &GL_COLOR_ATTACHMENT0 + colorIdx), but GLES requires bufs[i] to be GL_NONE or GL_COLOR_ATTACHMENT0 + i, so resolving any attachment past the first raises GL_INVALID_OPERATION and asserts (bgfx bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11"
+            "referenceImage": "Screen-Space-Reflections-2.png"
         },
         {
             "title": "MultiRenderTarget with different texture types",
@@ -2381,8 +2361,6 @@
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
             "playgroundId": "#Y05E2C#6",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance (90900 px) -- likely glow-layer + custom-shader interaction differs from D3D11. Tracked for OpenGL backend follow-up.",
             "renderCount": 5,
             "referenceImage": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer.png",
             "workarounds": ["prime-effect-layers"]
@@ -2632,16 +2610,12 @@
         {
             "title": "FrameGraph nrge shadows",
             "playgroundId": "#JWKDME#185",
-            "referenceImage": "FrameGraph-nrge-shadows.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-shadows.png"
         },
         {
             "title": "FrameGraph nrge csm shadows",
             "playgroundId": "#JWKDME#186",
-            "referenceImage": "FrameGraph-nrge-csm-shadows.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-csm-shadows.png"
         },
         {
             "title": "FrameGraph nrge csm shadows with autoCalcDepthBounds",
@@ -2657,23 +2631,17 @@
         {
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
-            "referenceImage": "FrameGraph-nrge-depth-of-field.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-depth-of-field.png"
         },
         {
             "title": "FrameGraph nrge glow layer",
             "playgroundId": "#IG8NRC#84",
-            "referenceImage": "FrameGraph-nrge-glow-layer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-glow-layer.png"
         },
         {
             "title": "FrameGraph nrge highlight layer",
             "playgroundId": "#QZYNMK#3",
-            "referenceImage": "FrameGraph-nrge-highlight-layer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-highlight-layer.png"
         },
         {
             "title": "FrameGraph nrge SSR cube",
@@ -2683,24 +2651,20 @@
         {
             "title": "FrameGraph nrge SSR HillValley",
             "playgroundId": "#PIZ1GK#2387",
-            "referenceImage": "FrameGraph-nrge-SSR-HillValley.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-SSR-HillValley.png"
         },
         {
             "title": "FrameGraph nrge SSR neon",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Z6C5EF#5",
-            "referenceImage": "FrameGraph-nrge-SSR-neon.png",
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (4.1%); passes on ANGLE GLES and D3D11.",
+            "referenceImage": "FrameGraph-nrge-SSR-neon.png"
         },
         {
             "title": "FrameGraph nrge motion blur",
             "playgroundId": "#YB006J#793",
             "renderCount": 40,
-            "referenceImage": "FrameGraph-nrge-motion-blur.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-motion-blur.png"
         },
         {
             "title": "FrameGraph nrge bounding boxes",
@@ -2723,9 +2687,7 @@
         {
             "title": "FrameGraph nrge rig camera",
             "playgroundId": "#ATL1CS#19",
-            "referenceImage": "FrameGraph-nrge-rig-camera.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-rig-camera.png"
         },
         {
             "title": "FrameGraph nrge clustered lights (simple)",
@@ -2734,24 +2696,20 @@
         },
         {
             "title": "FrameGraph nrge multiple post processes",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#SYQW69#1363",
-            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png",
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png"
         },
         {
             "title": "FrameGraph nrge SSAO",
             "playgroundId": "#SYQW69#1368",
-            "referenceImage": "FrameGraph-nrge-SSAO.png",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
+            "referenceImage": "FrameGraph-nrge-SSAO.png"
         },
         {
             "title": "FrameGraph nrge volumetric lighting",
             "playgroundId": "#3VH0AC#2",
-            "referenceImage": "FrameGraph-nrge-volumetric-lighting.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-volumetric-lighting.png"
         },
         {
             "title": "FrameGraph nrge OIT",
@@ -2773,23 +2731,17 @@
         {
             "title": "FrameGraph nrge transmission",
             "playgroundId": "#ZNTBN2#10",
-            "referenceImage": "FrameGraph-nrge-transmission.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL ES: MSAA depth texture (format 98) is unsupported; passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-transmission.png"
         },
         {
             "title": "FrameGraph nrge selection outline layer",
             "playgroundId": "#ADUC74#1",
-            "referenceImage": "FrameGraph-nrge-selection-outline-layer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-selection-outline-layer.png"
         },
         {
             "title": "FrameGraph nrge multi RTT MSAA",
             "playgroundId": "#JAG54A",
-            "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png"
         },
         {
             "title": "FrameGraph nrg gui bloom",
@@ -2799,37 +2751,27 @@
         {
             "title": "FrameGraph glow layer",
             "playgroundId": "#9YU4C5#111",
-            "referenceImage": "FrameGraph-nrg-glow-layer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrg-glow-layer.png"
         },
         {
             "title": "FrameGraph highlight layer",
             "playgroundId": "#PV8OLY#33",
-            "referenceImage": "FrameGraph-highlight-layer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-highlight-layer.png"
         },
         {
             "title": "FrameGraph custom rendering",
             "playgroundId": "#RM56RY#25",
-            "referenceImage": "FrameGraph-custom-rendering.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe has no supported depth/stencil texture format for the frame buffer (thrown before pixel comparison); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-custom-rendering.png"
         },
         {
             "title": "FrameGraph gui bloom",
             "playgroundId": "#RM56RY#26",
-            "referenceImage": "FrameGraph-gui-bloom.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe has no supported depth/stencil texture format for the frame buffer (thrown before pixel comparison); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-gui-bloom.png"
         },
         {
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
-            "referenceImage": "FrameGraph-image-processing.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-image-processing.png"
         },
         {
             "title": "FrameGraph motion blur screen based",
@@ -2852,16 +2794,12 @@
         {
             "title": "FrameGraph convolution post process",
             "playgroundId": "#SYQW69#1365",
-            "referenceImage": "FrameGraph-convolution-post-process.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-convolution-post-process.png"
         },
         {
             "title": "FrameGraph screen space curvature post process",
             "playgroundId": "#SYQW69#1366",
-            "referenceImage": "FrameGraph-screen-space-curvature-post-process.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-screen-space-curvature-post-process.png"
         },
         {
             "title": "FrameGraph sharpen post process",
@@ -2873,16 +2811,12 @@
         {
             "title": "FrameGraph custom post process",
             "playgroundId": "#R33LVG#5",
-            "referenceImage": "FrameGraph-custom-post-process.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-custom-post-process.png"
         },
         {
             "title": "FrameGraph volumetric lighting",
             "playgroundId": "#3VH0AC",
-            "referenceImage": "FrameGraph-volumetric-lighting.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-volumetric-lighting.png"
         },
         {
             "title": "FrameGraph OIT",
@@ -2897,9 +2831,7 @@
         {
             "title": "FrameGraph selection outline",
             "playgroundId": "#E1F0GP#4",
-            "referenceImage": "FrameGraph-selection-outline.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-selection-outline.png"
         },
         {
             "title": "Render target texture with clustered lights",
@@ -2941,11 +2873,9 @@
         },
         {
             "title": "SubSurface Scattering",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#FR639I#0",
             "renderCount": 10,
-            "referenceImage": "SubSurface-Scattering.png",
-            "reason": "OpenGL: bgfx FrameBufferGL::resolve asserts in glDrawBuffers (GL_INVALID_OPERATION) when resolving an attachment past the first (bgfx bug, thrown before pixel comparison); passes on Win32 D3D11."
+            "referenceImage": "SubSurface-Scattering.png"
         },
         {
             "title": "Specular Reflectance with IOR",
@@ -3405,9 +3335,7 @@
         {
             "title": "OpenPBR Transmission Roughness glTF - IBL",
             "playgroundId": "#GRQHVV#123",
-            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---IBL.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (3.4% px); passes on Win32 D3D11."
+            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Roughness glTF - Analytic Lights",
@@ -3520,9 +3448,7 @@
             "title": "OpenPBR Subsurface Transmission Blending - IBL",
             "playgroundId": "#SXXR4T#0",
             "renderCount": 5,
-            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---IBL.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (3.7% px); passes on Win32 D3D11."
+            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending - Analytic Lights",
@@ -3572,9 +3498,7 @@
             "title": "OpenPBR Subsurface Color Scaling - IBL",
             "playgroundId": "#YWXM7Z#0",
             "renderCount": 5,
-            "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (3.7% px); passes on Win32 D3D11."
+            "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png"
         },
         {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - IBL",
@@ -3629,9 +3553,9 @@
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
-            "referenceImage": "Lighting-Volume.png",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.4% px); passes on Win32 D3D11."
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.4% px); passes on Win32 D3D11.",
+            "referenceImage": "Lighting-Volume.png"
         },
         {
             "title": "Havok FloatingOrigin Multi-Region",
@@ -3927,9 +3851,7 @@
             "title": "Particles - Billboard Y",
             "playgroundId": "#6JLSVW#0",
             "renderCount": 180,
-            "referenceImage": "particles-billboard-y.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
+            "referenceImage": "particles-billboard-y.png"
         },
         {
             "title": "Particles - Billboard False",
@@ -4349,9 +4271,7 @@
         {
             "title": "CSM  FrameGraph - debug markers",
             "playgroundId": "#JWKDME#216",
-            "referenceImage": "CSM-FrameGraph---debug-markers.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "CSM-FrameGraph---debug-markers.png"
         },
         {
             "title": "Reflection Probes - debug markers",
