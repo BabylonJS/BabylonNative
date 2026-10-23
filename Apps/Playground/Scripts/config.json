@@ -1750,6 +1750,8 @@
         {
             "title": "Prepass SSAO + sprites",
             "playgroundId": "#9RI8CG#187",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-sprites.png"
         },
@@ -1772,6 +1774,8 @@
         {
             "title": "Prepass SSAO + line edges renderer",
             "playgroundId": "#T90MQ4#3",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-line-edges.png"
         },
