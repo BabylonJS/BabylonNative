@@ -20,6 +20,12 @@ variables:
   CMAKE_VERSION: 3.30.3
   # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
   npm_config_fetch_retries: 5
+  # Compiler cache for the from-source JS engine and Android jobs. Each job restores the newest
+  # cache saved by a previous run of the same job (Cache@2 only saves when the key misses, i.e.
+  # once per commit).
+  CCACHE_DIR: $(Pipeline.Workspace)/.ccache
+  CCACHE_BASEDIR: $(Build.SourcesDirectory)
+  CCACHE_MAXSIZE: 2G
 
 # Besides validating against the Babylon.js nightly (job Nightly), this pipeline runs the slow or
 # runner-scarce jobs that are not worth blocking every PR on: Hermes and macOS-hosted Android
@@ -166,8 +172,33 @@ jobs:
   steps:
   - checkout: self
 
+  # ccache through MSBuild, as in .github/workflows/build-win32.yml: a copy of ccache.exe named
+  # cl.exe (CLToolPath), one source per cl.exe call (UseMultiToolTask), /Z7 debug info, no PCH.
+  - powershell: |
+      $version = '4.14.2'
+      $zip = "$(Agent.TempDirectory)\ccache.zip"
+      Invoke-WebRequest "https://github.com/ccache/ccache/releases/download/v$version/ccache-$version-windows-x86_64.zip" -OutFile $zip
+      Expand-Archive $zip "$(Agent.TempDirectory)\ccache"
+      $dir = "$(Agent.TempDirectory)\ccache\ccache-$version-windows-x86_64"
+      New-Item -ItemType Directory "$(Agent.TempDirectory)\ccache-cl" | Out-Null
+      Copy-Item "$dir\ccache.exe" "$(Agent.TempDirectory)\ccache-cl\cl.exe"
+      Write-Host "##vso[task.prependpath]$dir"
+    displayName: Install ccache
+
+  - task: Cache@2
+    inputs:
+      key: 'ccache | "$(Agent.OS)" | "Win32_x64_Hermes_D3D11" | "$(Build.SourceVersion)"'
+      restoreKeys: |
+        ccache | "$(Agent.OS)" | "Win32_x64_Hermes_D3D11"
+      path: $(CCACHE_DIR)
+    displayName: Cache ccache
+
   - script: |
       cmake -G "Visual Studio 17 2022" -B build/Win32_x64_Hermes -A x64 ^
+        -D "CMAKE_VS_GLOBALS=CLToolExe=cl.exe;CLToolPath=$(Agent.TempDirectory)\ccache-cl;UseMultiToolTask=true" ^
+        -D CMAKE_POLICY_DEFAULT_CMP0141=NEW ^
+        -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded ^
+        -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON ^
         -D NAPI_JAVASCRIPT_ENGINE=Hermes -D HERMES_ALLOW_BOOST_CONTEXT=0 ^
         -D BX_CONFIG_DEBUG=ON ^
         -D GRAPHICS_API=D3D11 ^
@@ -177,7 +208,10 @@ jobs:
         -D ENABLE_SANITIZERS=OFF
     displayName: Generate solution
 
-  - script: cmake --build build/Win32_x64_Hermes --config RelWithDebInfo -- /m
+  - script: |
+      ccache --zero-stats
+      cmake --build build/Win32_x64_Hermes --config RelWithDebInfo -- /m || exit /b 1
+      ccache --show-stats
     displayName: Build
 
   - script: |
@@ -244,12 +278,22 @@ jobs:
   - script: |
       set -e
       sudo apt-get update
-      sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build xvfb xauth
+      sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build xvfb xauth ccache
     displayName: Install packages
+
+  - task: Cache@2
+    inputs:
+      key: 'ccache | "$(Agent.OS)" | "Ubuntu_Clang_Hermes" | "$(Build.SourceVersion)"'
+      restoreKeys: |
+        ccache | "$(Agent.OS)" | "Ubuntu_Clang_Hermes"
+      path: $(CCACHE_DIR)
+    displayName: Cache ccache
 
   - script: |
       set -e
       cmake -G Ninja -B build/Linux \
+        -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+        -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
         -D NAPI_JAVASCRIPT_ENGINE=Hermes \
         -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -262,7 +306,9 @@ jobs:
         -D HERMES_UNICODE_LITE=ON \
         -D HERMES_ALLOW_BOOST_CONTEXT=0 \
         -D ENABLE_SANITIZERS=OFF .
+      ccache --zero-stats
       ninja -C build/Linux
+      ccache --show-stats
     displayName: Build X11
 
   - script: sudo sysctl -w kernel.core_pattern=core.%p
@@ -295,11 +341,20 @@ jobs:
   - script: |
       set -e
       sudo apt-get update
-      sudo apt-get install -y ninja-build
-    displayName: Install Ninja for Hermes host compiler bootstrap
+      sudo apt-get install -y ninja-build ccache
+    displayName: Install Ninja (Hermes host compiler bootstrap) and ccache
+
+  - task: Cache@2
+    inputs:
+      key: 'ccache | "$(Agent.OS)" | "Android_Ubuntu_Hermes" | "$(Build.SourceVersion)"'
+      restoreKeys: |
+        ccache | "$(Agent.OS)" | "Android_Ubuntu_Hermes"
+      path: $(CCACHE_DIR)
+    displayName: Cache ccache
 
   - script: |
       set -e
+      ccache --zero-stats
       chmod +x gradlew
       ./gradlew assembleRelease \
         -PjsEngine=Hermes \
@@ -308,9 +363,13 @@ jobs:
         -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
         -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
         -PSANITIZERS=OFF
+      ccache --show-stats
     workingDirectory: Apps/Playground/Android
     env:
       JAVA_HOME: $(JAVA_HOME_17_X64)
+      # Gradle's CMake picks these up as the default CMAKE_<LANG>_COMPILER_LAUNCHER.
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
     displayName: Build Playground Hermes
 
 # Android builds on macOS hosts, which are slower to get and duplicate the Ubuntu-hosted ones in the GitHub CI.
@@ -329,8 +388,21 @@ jobs:
       - script: command -v ninja >/dev/null 2>&1 || brew install ninja
         displayName: 'Install Ninja (Hermes host-compiler bootstrap)'
 
+    - script: command -v ccache >/dev/null 2>&1 || brew install ccache
+      displayName: Install ccache
+
+    - task: Cache@2
+      inputs:
+        key: 'ccache | "$(Agent.OS)" | "Android_MacOS_${{ engine }}" | "$(Build.SourceVersion)"'
+        restoreKeys: |
+          ccache | "$(Agent.OS)" | "Android_MacOS_${{ engine }}"
+        path: $(CCACHE_DIR)
+      displayName: Cache ccache
+
     - script: |
+        set -e
         export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+        ccache --zero-stats
         chmod +x gradlew
         ./gradlew assembleRelease \
           -PjsEngine=${{ engine }} \
@@ -339,5 +411,9 @@ jobs:
           -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
           -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
           -PSANITIZERS=OFF
+        ccache --show-stats
       workingDirectory: Apps/Playground/Android
+      env:
+        CMAKE_C_COMPILER_LAUNCHER: ccache
+        CMAKE_CXX_COMPILER_LAUNCHER: ccache
       displayName: 'Build Playground ${{ engine }}'

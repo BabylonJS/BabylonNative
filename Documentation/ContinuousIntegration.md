@@ -6,9 +6,16 @@ This is done for various platforms when a PR is opened, for nightly build and wh
 To keep PR feedback fast, the slow or runner-scarce jobs run only in Azure nightly pipelines (at the repo root; both can also be queued manually): Hermes builds and the macOS-hosted Android builds run in `nightly.yml`, and the Win32 and macOS sanitizer builds run in `nightly-extended.yml`. Pushing a new commit to a PR cancels that PR's in-flight CI run.
 CI will also take care of code quality: Warnings are treated as error and will break the build. A PR can't be merged if the build fails.
 
-PR and master-push checks run through `.github/workflows/ci.yml`. The Linux and
-Android builds use ccache; PR runs restore the cache saved by the latest master
-push, and only master pushes save it.
+PR and master-push checks run through `.github/workflows/ci.yml`. The Linux,
+Android and Win32 builds use ccache; PR runs restore the cache saved by the latest
+master push, and only master pushes save it. Win32 builds keep the Visual Studio
+generator and MSBuild. Following
+[ccache's MSVC guide](https://github.com/ccache/ccache/wiki/MS-Visual-Studio), MSBuild
+runs a copy of `ccache.exe` named `cl.exe` (`CLToolPath`, set through `CMAKE_VS_GLOBALS`)
+with `UseMultiToolTask=true`. Debug info uses `/Z7` (embedded in each object file),
+and precompiled headers are disabled, because ccache can't cache `/Zi` or PCH compiles.
+The Hermes and Android jobs in `nightly.yml` also use ccache, kept with the Azure
+`Cache@2` task and restored from the job's previous run.
 
 Hermes builds (Win32 x64 D3D11, Linux Clang, and Android on Ubuntu) and the
 macOS-hosted Android builds run only in the Azure Pipelines `nightly.yml`

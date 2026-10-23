@@ -23,6 +23,10 @@ on:
 # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
 env:
   npm_config_fetch_retries: '5'
+  CCACHE_VERSION: '4.14.2'
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_MAXSIZE: 2G
 
 jobs:
   build:
@@ -56,12 +60,49 @@ jobs:
           echo "solution_name=Win32_${{ inputs.platform }}${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "sanitizer_flag=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}" >> "$GITHUB_OUTPUT"
 
+      # MSBuild uses ccache through a copy of ccache.exe named cl.exe (see Generate solution). Invoked
+      # under that name, ccache runs the real cl.exe from the PATH that MSBuild sets up.
+      - name: Install ccache
+        shell: pwsh
+        run: |
+          $version = '${{ env.CCACHE_VERSION }}'
+          $zip = "$env:RUNNER_TEMP\ccache.zip"
+          Invoke-WebRequest "https://github.com/ccache/ccache/releases/download/v$version/ccache-$version-windows-x86_64.zip" -OutFile $zip
+          Expand-Archive $zip "$env:RUNNER_TEMP\ccache"
+          $dir = "$env:RUNNER_TEMP\ccache\ccache-$version-windows-x86_64"
+          New-Item -ItemType Directory "$env:RUNNER_TEMP\ccache-cl" | Out-Null
+          Copy-Item "$dir\ccache.exe" "$env:RUNNER_TEMP\ccache-cl\cl.exe"
+          $dir >> $env:GITHUB_PATH
+
+      # Compiler cache. PRs only restore (they can read the cache saved by master pushes);
+      # only master pushes save, so PR runs don't churn the repository cache quota.
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-win32-${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-${{ github.sha }}
+          restore-keys: |
+            ccache-win32-${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-
+
+      # ccache with the Visual Studio generator (CMAKE_<LANG>_COMPILER_LAUNCHER only applies to
+      # Ninja/Makefiles). Per https://github.com/ccache/ccache/wiki/MS-Visual-Studio:
+      # - CLToolPath points MSBuild at the ccache copy named cl.exe.
+      # - UseMultiToolTask compiles one source per cl.exe call; ccache can't cache multi-source calls.
+      # - /Z7 embeds debug info in each object. ccache can't cache /Zi, where objects share one PDB.
+      #   The linker still produces PDBs.
+      # - Precompiled headers (only used by the DirectXTK and glslang dependencies) are disabled;
+      #   ccache can't cache them, and they don't speed up these single-config builds.
       - name: Generate solution
         shell: cmd
         run: |
           cmake -G "Visual Studio 17 2022" ^
             -B build/${{ steps.vars.outputs.solution_name }} ^
             -A ${{ inputs.platform }} ^
+            -D "CMAKE_VS_GLOBALS=CLToolExe=cl.exe;CLToolPath=%RUNNER_TEMP%\ccache-cl;UseMultiToolTask=true" ^
+            -D CMAKE_POLICY_DEFAULT_CMP0141=NEW ^
+            -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded ^
+            -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON ^
             ${{ steps.vars.outputs.js_define }} ^
             -D BX_CONFIG_DEBUG=ON ^
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
@@ -73,7 +114,16 @@ jobs:
       - name: Build
         shell: cmd
         run: |
-          cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo -- /m
+          ccache --zero-stats
+          cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo -- /m || exit /b 1
+          ccache --show-stats
+
+      - name: Save ccache
+        if: ${{ github.event_name == 'push' && success() }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ${{ steps.ccache.outputs.cache-primary-key }}
 
       - name: Enable Crash Dumps
         shell: cmd
