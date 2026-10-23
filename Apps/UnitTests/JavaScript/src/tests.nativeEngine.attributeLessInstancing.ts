@@ -78,5 +78,63 @@ export function registerAttributeLessInstancingTests(
                 engine.dispose();
             }
         });
+
+        // Node materials declare world0-3 unconditionally but read them only under INSTANCES.
+        (enabled ? it : it.skip)("draws without instances when the shader declares unused instance inputs", async function () {
+            this.timeout(15000);
+            const engine = new NativeEngine();
+            const scene = new Scene(engine);
+            try {
+                scene.clearColor = new Color4(0, 0, 0, 1);
+                const camera = new FreeCamera("camera", new Vector3(0, 0, -5), scene);
+                camera.setTarget(Vector3.Zero());
+                const material = new ShaderMaterial("unusedInstanceInputs", scene, {
+                    vertexSource: `
+            precision highp float;
+            attribute vec3 position;
+            attribute vec4 color;
+            attribute vec4 matricesIndices;
+            attribute vec4 matricesWeights;
+            attribute vec4 world0;
+            attribute vec4 world1;
+            attribute vec4 world2;
+            attribute vec4 world3;
+            void main() {
+            #ifdef INSTANCES
+              gl_Position = mat4(world0, world1, world2, world3) * vec4(position, 1.0) + color + matricesIndices + matricesWeights;
+            #else
+              gl_Position = vec4(position.xy * 0.5, 0.5, 1.0);
+            #endif
+            }`,
+                    fragmentSource: `
+            precision highp float;
+            void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }`
+                }, { attributes: ["position", "color", "matricesIndices", "matricesWeights", "world0", "world1", "world2", "world3"], uniforms: [] });
+                material.backFaceCulling = false;
+                const target = new RenderTargetTexture("unusedInstanceInputs", 64, scene, false);
+                const mesh = MeshBuilder.CreatePlane("plane", { size: 2 }, scene);
+                mesh.material = material;
+                target.renderList = [mesh];
+                await material.forceCompilationAsync(mesh);
+                await scene.whenReadyAsync();
+                const readinessDeadline = Date.now() + 10000;
+                while (!target.isReadyForRendering()) {
+                    if (Date.now() >= readinessDeadline) {
+                        throw new Error("Render target did not become ready");
+                    }
+                    await new Promise<void>(resolve => setTimeout(resolve, 10));
+                }
+                target.render();
+                const pixels = await target.readPixels();
+                if (!(pixels instanceof Uint8Array)) {
+                    throw new Error("Expected RGBA8 readback");
+                }
+                const offset = (32 * 64 + 32) * 4;
+                expect(Array.from(pixels.subarray(offset, offset + 4))).to.deep.equal([255, 0, 0, 255]);
+            } finally {
+                scene.dispose();
+                engine.dispose();
+            }
+        });
     });
 }
