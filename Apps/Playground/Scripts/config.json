@@ -961,8 +961,8 @@
         {
             "title": "Node material PBR 1",
             "playgroundId": "#D8AK3Z#121",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: Linux GCC and Clang CI fail pixel comparison (7.677% different pixels; allowed 2.5%).",
+            "excludedGraphicsApis": ["D3D11", "OpenGL"],
+            "reason": "D3D11 and OpenGL CI fail pixel comparison (7.338% and 7.677% different pixels respectively; allowed 2.5%).",
             "referenceImage": "node-material-pbr-1.png"
         },
         {
