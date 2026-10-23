@@ -103,9 +103,7 @@ The full validation command intentionally has no `--once` or test filter.
 
 Building `UnitTests` generates its JavaScript test bundles in the executable's
 `Assets` directory, including after changes to the TypeScript tests or bundler
-configuration. The generated bundles are not tracked in Git. Manual
-`npm run build` from `Apps/UnitTests/JavaScript` still writes to its ignored
-`dist` directory unless `--output-path` is supplied.
+configuration. The generated bundles are not tracked in Git.
 
 ## **Building on Windows 10, Targeting Universal Windows Platform (UWP)**
 
