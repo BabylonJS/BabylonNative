@@ -814,7 +814,9 @@
             "title": "BoundingInfo Helper",
             "playgroundId": "#UNQ5CK#0",
             "renderCount": 2,
-            "referenceImage": "bbhelper.png"
+            "referenceImage": "bbhelper.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: bgfx asserts because vertex layout override stride (12) differs from dynamic vertex buffer stride (4)."
         },
         {
             "title": "NMEGLTF",
