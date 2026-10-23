@@ -1109,12 +1109,16 @@
         {
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%, renders black); passes on ANGLE GLES and D3D11.",
             "referenceImage": "areaLightsStandardMaterial.png",
             "workarounds": ["opaque-clear-alpha"]
         },
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%); passes on ANGLE GLES and D3D11.",
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "textureAreaLightStandard.png"
         },
@@ -1289,6 +1293,8 @@
         {
             "title": "GLTF Serializer KHR gpu instancing",
             "playgroundId": "#1Q2BWN#10",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (3.4%); passes on ANGLE GLES and D3D11.",
             "referenceImage": "glTFSerializerKhrGpuInstancing.png",
             "workarounds": ["leak-cleanup"]
         },
