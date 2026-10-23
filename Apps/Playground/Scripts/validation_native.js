@@ -78,6 +78,9 @@
         // Example reaches code that uses the browser/worker global `self` (e.g. GUI InputText
         // focus registers clipboard listeners on self); the native host does not define it.
         "global-self": "define the global self as window while the test runs",
+        // Example loads Basis textures; the Basis transcoder runs in a Web Worker created from a
+        // Blob URL, and the native host has no Worker.
+        "basis-worker": "run Blob URL worker scripts (the Basis transcoder) in-process while the test runs",
     };
     let appliedWorkarounds = [];
 
@@ -279,6 +282,166 @@
             }
             delete globalThis.self;
             restoreGlobalSelf = null;
+        };
+    }
+
+    // basis-worker: Babylon.js creates the Basis transcoder worker from a Blob URL holding its
+    // worker script, then sends an init message naming the transcoder script to importScripts.
+    // The native host has no Worker. Record the text of string-only Blobs, and give Worker an
+    // in-process stand-in that loads the transcoder itself and evaluates it in the same function
+    // scope as the worker script. The init message is then delivered without its URL, so the
+    // worker script never calls importScripts. Messages are delivered asynchronously in both
+    // directions. Transfer lists are ignored, because sender and receiver share one heap.
+    // Babylon.js caches the worker at module level, so an instance created here outlives the test.
+    let restoreBasisWorker = null;
+    function installBasisWorker(test) {
+        if (restoreBasisWorker || typeof globalThis.Worker !== "undefined") {
+            return;
+        }
+        const OriginalBlob = globalThis.Blob;
+        const OriginalURL = globalThis.URL;
+        const blobSources = new WeakMap();
+        const urlSources = new Map();
+
+        globalThis.Blob = new Proxy(OriginalBlob, {
+            construct: function (target, args) {
+                const blob = Reflect.construct(target, args);
+                const parts = args[0];
+                if (Array.isArray(parts) && parts.every((part) => typeof part === "string")) {
+                    blobSources.set(blob, parts.join(""));
+                }
+                return blob;
+            },
+        });
+        // The native URL.createObjectURL is read-only and non-configurable, so shadow it in a subclass.
+        globalThis.URL = class extends OriginalURL {
+            static createObjectURL(blob) {
+                const url = OriginalURL.createObjectURL(blob);
+                if (blobSources.has(blob)) {
+                    urlSources.set(url, blobSources.get(blob));
+                }
+                return url;
+            }
+        };
+
+        // The asynchronous WebAssembly.compile and WebAssembly.instantiate never settle on the
+        // JavaScriptCore host (the synchronous constructors work), so the transcoder module would
+        // never initialize. Give the worker scope a WebAssembly whose async entry points compile
+        // synchronously and return settled promises.
+        const NativeWebAssembly = globalThis.WebAssembly;
+        const syncWebAssembly = NativeWebAssembly && Object.create(NativeWebAssembly, {
+            compile: {
+                value: function (bytes) {
+                    return new Promise(function (resolve) {
+                        resolve(new NativeWebAssembly.Module(bytes));
+                    });
+                },
+            },
+            instantiate: {
+                value: function (source, imports) {
+                    return new Promise(function (resolve) {
+                        if (source instanceof NativeWebAssembly.Module) {
+                            resolve(new NativeWebAssembly.Instance(source, imports));
+                        } else {
+                            const module = new NativeWebAssembly.Module(source);
+                            resolve({ module: module, instance: new NativeWebAssembly.Instance(module, imports) });
+                        }
+                    });
+                },
+            },
+            compileStreaming: { value: undefined },
+            instantiateStreaming: { value: undefined },
+        });
+
+        class InProcessWorker {
+            constructor(url) {
+                const source = urlSources.get(String(url));
+                if (source === undefined) {
+                    throw new Error("basis-worker: '" + url + "' is not a recorded Blob URL worker script");
+                }
+                noteWorkaround(test, "basis-worker");
+                this._source = source;
+                this._listeners = [];
+                this._handler = null;
+                this._terminated = false;
+                this.onmessage = null;
+            }
+
+            addEventListener(type, listener) {
+                if (type === "message" && this._listeners.indexOf(listener) === -1) {
+                    this._listeners.push(listener);
+                }
+            }
+
+            removeEventListener(type, listener) {
+                const index = this._listeners.indexOf(listener);
+                if (type === "message" && index !== -1) {
+                    this._listeners.splice(index, 1);
+                }
+            }
+
+            terminate() {
+                this._terminated = true;
+                this._listeners = [];
+            }
+
+            postMessage(data) {
+                if (!this._handler) {
+                    this._handler = this._startAsync(data);
+                }
+                const worker = this;
+                this._handler.then(function (handler) {
+                    if (worker._terminated) {
+                        return;
+                    }
+                    if (data && data.action === "init") {
+                        data = Object.assign({}, data, { url: undefined });
+                    }
+                    handler({ data: data });
+                }).catch(function (e) {
+                    worker._dispatch({ action: "error", error: e });
+                });
+            }
+
+            _dispatch(data) {
+                const worker = this;
+                setTimeout(function () {
+                    if (worker._terminated) {
+                        return;
+                    }
+                    const event = { data: data, target: worker };
+                    for (const listener of worker._listeners.slice()) {
+                        listener.call(worker, event);
+                    }
+                    if (typeof worker.onmessage === "function") {
+                        worker.onmessage(event);
+                    }
+                }, 0);
+            }
+
+            _startAsync(firstMessage) {
+                const worker = this;
+                const scriptUrl = firstMessage && firstMessage.action === "init" ? firstMessage.url : undefined;
+                const scriptText = scriptUrl ? BABYLON.Tools.LoadFileAsync(scriptUrl, false) : Promise.resolve("");
+                return scriptText.then(function (text) {
+                    const run = Function("postMessage", "WebAssembly", text + "\nvar onmessage;\n" + worker._source + "\nreturn onmessage;");
+                    const handler = run(function (message) {
+                        worker._dispatch(message);
+                    }, syncWebAssembly);
+                    if (typeof handler !== "function") {
+                        throw new Error("basis-worker: the worker script did not set onmessage");
+                    }
+                    return handler;
+                });
+            }
+        }
+
+        Object.defineProperty(globalThis, "Worker", { value: InProcessWorker, configurable: true, writable: true });
+        restoreBasisWorker = function () {
+            globalThis.Blob = OriginalBlob;
+            globalThis.URL = OriginalURL;
+            delete globalThis.Worker;
+            restoreBasisWorker = null;
         };
     }
 
@@ -638,6 +801,9 @@
         }
         if (restoreGlobalSelf) {
             restoreGlobalSelf();
+        }
+        if (restoreBasisWorker) {
+            restoreBasisWorker();
         }
 
         if (currentScene) {
@@ -1504,6 +1670,9 @@
                                     }
                                     if (hasWorkaround(test, "global-self")) {
                                         installGlobalSelf(test);
+                                    }
+                                    if (hasWorkaround(test, "basis-worker")) {
+                                        installBasisWorker(test);
                                     }
                                     let createdScene = evalExample(test, pgCode);
                                     if (importTracker) {
