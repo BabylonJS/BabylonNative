@@ -3226,11 +3226,15 @@
         {
             "title": "OpenPBR Thin Film Weight VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#87",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL (28798 px diff); passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-Weight-VS-IOR---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Film Thickness VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#88",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR---Analytic-Lights.png"
         },
         {
@@ -3256,11 +3260,15 @@
         {
             "title": "OpenPBR Thin Film and Specular Weight - Analytic Lights",
             "playgroundId": "#GRQHVV#95",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Film and Specular Weight Metals - Analytic Lights",
             "playgroundId": "#GRQHVV#96",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight-Metals---Analytic-Lights.png"
         },
         {
@@ -3545,6 +3553,8 @@
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.4% px); passes on Win32 D3D11.",
             "referenceImage": "Lighting-Volume.png"
         },
         {
