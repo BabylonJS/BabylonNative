@@ -5,6 +5,8 @@
 #include <Babylon/Embedding/Runtime.h>
 #include <Babylon/PerfTrace.h>
 
+#include <napi/napi.h>
+
 #include <cstdlib>
 #include <string>
 #include <utility>
@@ -28,6 +30,43 @@ namespace Playground
             }
         }
         Babylon::PerfTrace::SetLevel(perfLevel);
+    }
+
+    void QueueOptions(Babylon::Embedding::Runtime& runtime, const PlaygroundOptions& options)
+    {
+        runtime.RunOnJsThread([options](Napi::Env env) {
+            auto js = Napi::Object::New(env);
+            js.Set("listTests", Napi::Boolean::New(env, options.ListTests));
+            js.Set("headless", Napi::Boolean::New(env, options.Headless));
+            js.Set("breakOnFail", Napi::Boolean::New(env, options.BreakOnFail));
+            js.Set("stopOnFirstFailure", Napi::Boolean::New(env, options.StopOnFirstFailure));
+            js.Set("generateReferences", Napi::Boolean::New(env, options.GenerateReferences));
+            js.Set("runOnce", Napi::Boolean::New(env, options.RunOnce));
+            js.Set("includeExcluded", Napi::Boolean::New(env, options.IncludeExcluded));
+            if (options.SaveResults.has_value())
+            {
+                js.Set("saveResults", Napi::Boolean::New(env, *options.SaveResults));
+            }
+            if (options.CaptureFrame.has_value())
+            {
+                js.Set("captureFrame", Napi::Number::New(env, *options.CaptureFrame));
+            }
+
+            auto filters = Napi::Array::New(env, options.TestFilters.size());
+            for (uint32_t index = 0; index < options.TestFilters.size(); ++index)
+            {
+                filters[index] = Napi::String::New(env, options.TestFilters[index]);
+            }
+            js.Set("testFilters", filters);
+
+            auto indices = Napi::Array::New(env, options.TestIndices.size());
+            for (uint32_t index = 0; index < options.TestIndices.size(); ++index)
+            {
+                indices[index] = Napi::Number::New(env, options.TestIndices[index]);
+            }
+            js.Set("testIndices", indices);
+            env.Global().Set("_playgroundOptions", js);
+        });
     }
 
     void LoadBootstrapScripts(Babylon::Embedding::Runtime& runtime)
