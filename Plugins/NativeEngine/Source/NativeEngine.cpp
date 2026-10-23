@@ -2029,11 +2029,12 @@ void main() {
         auto createFlags = (!isCube && !is3D) || (is3D && textureDepth == 1 && renderTarget)
             ? flags | BGFX_TEXTURE_BLIT_DST : flags;
         const uint16_t physicalDepth = is3D ? std::max<uint16_t>(2, textureDepth) : 0;
-        if ((createFlags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 &&
+        if ((createFlags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 && textureLayers == 1 &&
             !bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags) &&
             bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags & ~BGFX_TEXTURE_MSAA_SAMPLE))
         {
             // GLES 3.0 has no multisampled textures; bgfx resolves MSAA depth into single-sample storage there.
+            // Arrays are excluded because bgfx GL has no multisampled renderbuffer path for them.
             flags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
             createFlags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
         }
@@ -3412,9 +3413,10 @@ void main() {
                 return bgfx::isTextureValid(0, false, depthStencilNumLayers, depthStencilFormat, flags);
             };
             bool depthStencilFormatValid = selectDepthStencilFormat();
-            if (!depthStencilFormatValid && (flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0)
+            if (!depthStencilFormatValid && (flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 && depthStencilNumLayers == 1)
             {
                 // GLES 3.0 has no multisampled textures; bgfx resolves MSAA depth into single-sample storage there.
+                // bgfx GL has no multisampled renderbuffer path for arrays, so layered targets keep failing.
                 flags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
                 depthStencilFormatValid = selectDepthStencilFormat();
             }
