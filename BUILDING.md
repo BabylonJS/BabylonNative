@@ -101,6 +101,12 @@ Keep the configure-time npm hook enabled: it downlevels the Babylon bundles for
 Chakra. Use short build paths if Windows compiler paths approach 260 characters.
 The full validation command intentionally has no `--once` or test filter.
 
+Building `UnitTests` generates its JavaScript test bundles in the executable's
+`Assets` directory, including after changes to the TypeScript tests or bundler
+configuration. The generated bundles are not tracked in Git. Manual
+`npm run build` from `Apps/UnitTests/JavaScript` still writes to its ignored
+`dist` directory unless `--output-path` is supplied.
+
 ## **Building on Windows 10, Targeting Universal Windows Platform (UWP)**
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
