@@ -324,6 +324,35 @@
             }
         };
 
+        // The asynchronous WebAssembly.compile and WebAssembly.instantiate never settle on the
+        // JavaScriptCore host (the synchronous constructors work), so the transcoder module would
+        // never initialize. Give the worker scope a WebAssembly whose async entry points compile
+        // synchronously and return settled promises.
+        const NativeWebAssembly = globalThis.WebAssembly;
+        const syncWebAssembly = NativeWebAssembly && Object.create(NativeWebAssembly, {
+            compile: {
+                value: function (bytes) {
+                    return new Promise(function (resolve) {
+                        resolve(new NativeWebAssembly.Module(bytes));
+                    });
+                },
+            },
+            instantiate: {
+                value: function (source, imports) {
+                    return new Promise(function (resolve) {
+                        if (source instanceof NativeWebAssembly.Module) {
+                            resolve(new NativeWebAssembly.Instance(source, imports));
+                        } else {
+                            const module = new NativeWebAssembly.Module(source);
+                            resolve({ module: module, instance: new NativeWebAssembly.Instance(module, imports) });
+                        }
+                    });
+                },
+            },
+            compileStreaming: { value: undefined },
+            instantiateStreaming: { value: undefined },
+        });
+
         class InProcessWorker {
             constructor(url) {
                 const source = urlSources.get(String(url));
@@ -395,10 +424,10 @@
                 const scriptUrl = firstMessage && firstMessage.action === "init" ? firstMessage.url : undefined;
                 const scriptText = scriptUrl ? BABYLON.Tools.LoadFileAsync(scriptUrl, false) : Promise.resolve("");
                 return scriptText.then(function (text) {
-                    const run = Function("postMessage", text + "\nvar onmessage;\n" + worker._source + "\nreturn onmessage;");
+                    const run = Function("postMessage", "WebAssembly", text + "\nvar onmessage;\n" + worker._source + "\nreturn onmessage;");
                     const handler = run(function (message) {
                         worker._dispatch(message);
-                    });
+                    }, syncWebAssembly);
                     if (typeof handler !== "function") {
                         throw new Error("basis-worker: the worker script did not set onmessage");
                     }
