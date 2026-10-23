@@ -2700,6 +2700,8 @@
         {
             "title": "FrameGraph nrge SSAO",
             "playgroundId": "#SYQW69#1368",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "referenceImage": "FrameGraph-nrge-SSAO.png"
         },
         {
