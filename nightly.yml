@@ -36,6 +36,9 @@ variables:
 jobs:
 - job: Nightly
   displayName: Nightly
+  # Packaged VisualizationTests alone take ~40 min and grow as tests are enabled; the default
+  # 60 min job limit cancels the run before the packages Babylon.js consumes are uploaded.
+  timeoutInMinutes: 90
   steps:
   - checkout: self
 
