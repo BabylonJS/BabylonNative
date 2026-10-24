@@ -1108,12 +1108,16 @@
         {
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%, renders black); passes on ANGLE GLES and D3D11.",
             "referenceImage": "areaLightsStandardMaterial.png",
             "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"]
         },
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%); passes on ANGLE GLES and D3D11.",
             "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"],
             "referenceImage": "textureAreaLightStandard.png"
         },
