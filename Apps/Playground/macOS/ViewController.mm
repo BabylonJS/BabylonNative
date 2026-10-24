@@ -1,9 +1,14 @@
 #import "ViewController.h"
 
 #import <Babylon/Embedding/Apple/BabylonNativeEmbedding.h>
-#import "AppleShared/PlaygroundBootstrap.h"
+#import <Babylon/Embedding/Apple/BNRuntimeNative.h>
 
 #import <MetalKit/MTKView.h>
+
+#include <Shared/CommandLine.h>
+#include <Shared/PlaygroundScripts.h>
+
+#include <stdexcept>
 
 @implementation ViewController
 {
@@ -38,23 +43,37 @@
 - (void)refreshBabylon {
     [self uninitialize];
 
-    BNRuntimeOptions* options = [[BNRuntimeOptions alloc] init];
-    options.enableDebugger = YES;
-    options.enableDebugTrace = YES;
-    _runtime = [[BNRuntime alloc] initWithOptions:options];
-
-    [PlaygroundBootstrap loadScripts:_runtime];
-
     NSArray* arguments = [[NSProcessInfo processInfo] arguments];
-    if (arguments.count == 1)
+    std::vector<const char*> argv;
+    for (NSString* argument in arguments)
+    {
+        argv.push_back(argument.UTF8String);
+    }
+    const auto options = CommandLine::Parse(static_cast<int>(argv.size()), argv.data());
+    BNRuntimeOptions* runtimeOptions = [[BNRuntimeOptions alloc] init];
+    runtimeOptions.enableDebugger = YES;
+    runtimeOptions.enableDebugTrace = options.DebugTrace.value_or(true);
+    _runtime = [[BNRuntime alloc] initWithOptions:runtimeOptions];
+
+    auto* nativeRuntime = Babylon::Embedding::Apple::RuntimeFromBNRuntime(_runtime);
+    if (nativeRuntime == nullptr)
+    {
+        throw std::runtime_error{"Failed to create the Playground runtime"};
+    }
+    auto& runtime = *nativeRuntime;
+    Playground::Initialize(options);
+    Playground::QueueOptions(runtime, options);
+    Playground::LoadBootstrapScripts(runtime);
+
+    if (options.Scripts.empty())
     {
         [_runtime loadScript:@"app:///Scripts/experience.js"];
     }
     else
     {
-        for (NSUInteger i = 1; i < arguments.count; i++)
+        for (const auto& script : options.Scripts)
         {
-            [_runtime loadScript:arguments[i]];
+            [_runtime loadScript:@(script.c_str())];
         }
         [_runtime loadScript:@"app:///Scripts/playground_runner.js"];
     }
