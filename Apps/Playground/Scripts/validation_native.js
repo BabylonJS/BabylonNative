@@ -70,6 +70,10 @@
         // Babylon.js 9.29 scene readiness skips the clustered-light proxy shader, so lit
         // materials can all report not-ready on the first frame and draw nothing.
         "wait-for-clustered-lights": "prepare clustered-light proxies before rendering",
+        // Babylon.js material readiness checks area-light LTC data only once AREALIGHTUSED is in
+        // the defines; a cached effect can make the first check pass, so whenReadyAsync resolves
+        // before the LTC download and area-lit surfaces render black.
+        "wait-for-area-light-ltc": "wait for area-light LTC textures before rendering",
         // Example relies on XMLHttpRequest events the native polyfill does not raise.
         "xhr-events": "raise XMLHttpRequest load events, and report URL-open failures as asynchronous error/loadend events",
         // Example loads an ES module (e.g. the SPZ decoder) through Tools.LoadScript's module path;
@@ -122,6 +126,8 @@
     // The Win32 sanitizer job needs ~9.5 min for EXR Loader alone (ASAN-instrumented EXR decode), so keep a wide margin.
     const INITIAL_READINESS_TIMEOUT_MS = 20 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
+    // The LTC data is a network download, so bound the wait in time rather than render-loop ticks.
+    const AREA_LIGHT_LTC_TIMEOUT_MS = 60 * 1000;
     const utilityLayerOwners = new WeakMap();
     const dracoDecoderConfiguration = Object.assign({}, BABYLON.DracoDecoder.DefaultConfiguration);
     const dracoEncoderConfiguration = Object.assign({}, BABYLON.DracoEncoder.DefaultConfiguration);
@@ -1292,6 +1298,8 @@
             : function (scene) { return [scene]; };
         const primeEffectLayers = hasWorkaround(test, "prime-effect-layers");
         const waitForClusteredLights = hasWorkaround(test, "wait-for-clustered-lights");
+        const waitForAreaLightLtc = hasWorkaround(test, "wait-for-area-light-ltc");
+        let areaLightLtcWaitStart = 0;
         // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
         let effectLayerPrimed = false;
 
@@ -1379,6 +1387,24 @@
                             return;
                         }
                         convergenceTicks++;
+                        return;
+                    }
+
+                    const ltcTextures = currentScene._ltcTextures;
+                    if (waitForAreaLightLtc && frameIndex === 0 && ltcTextures &&
+                        !(ltcTextures.LTC1.isReady() && ltcTextures.LTC2.isReady())) {
+                        if (!areaLightLtcWaitStart) {
+                            areaLightLtcWaitStart = Date.now();
+                            noteWorkaround(test, "wait-for-area-light-ltc");
+                        }
+                        if (Date.now() - areaLightLtcWaitStart >= AREA_LIGHT_LTC_TIMEOUT_MS) {
+                            stopped = true;
+                            evaluated = true;
+                            console.error("Scene '" + (test.title || "?") + "' area-light LTC textures did not become ready within " +
+                                AREA_LIGHT_LTC_TIMEOUT_MS + " ms.");
+                            failTest(done);
+                            return;
+                        }
                         return;
                     }
 
