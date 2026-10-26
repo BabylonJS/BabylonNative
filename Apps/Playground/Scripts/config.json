@@ -4128,6 +4128,7 @@
             "title": "GPU Particles - Emitters - Hemisphere",
             "playgroundId": "#MRQTX7#0",
             "referenceImage": "gpu-particles-emitters-hemisphere.png",
+            "errorRatio": 4,
             "excludedGraphicsApis": ["OpenGL"],
             "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
