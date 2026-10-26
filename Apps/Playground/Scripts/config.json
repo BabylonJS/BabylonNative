@@ -2320,7 +2320,8 @@
             "playgroundId": "#064AUB#125",
             "excludedGraphicsApis": ["OpenGL"],
             "reason": "OpenGL: intermittent full-suite pixel comparison failure on Linux Clang CI (45.535% different pixels; allowed 2.5%), despite passing other runs.",
-            "referenceImage": "CommandEncodedWebGPU1.png"
+            "referenceImage": "CommandEncodedWebGPU1.png",
+            "workarounds": ["wait-for-readiness"]
         },
         {
             "title": "Command encoder order in WebGPU 2",
