@@ -31,6 +31,7 @@ env:
 jobs:
   build:
     # Pinned: ubuntu-latest (ubuntu-26.04, Clang 21) fails to build glslang (SpvBuilder.h lacks <cstdint>).
+    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.js-engine == 'Hermes' && 60 || 30 }}
     env:
