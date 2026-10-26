@@ -28,6 +28,16 @@ In order to add a new test scene, first thing to do is to add a few lines in `Ap
 `playgroundId` : the snippet id of the playground you want to test
 `referenceImage` : the reference image name you want to compare to. You don't have a reference yet, so choose a self-explanatory name with .png extension.
 
+# Re-enabling excluded tests
+
+Verify excluded tests against the existing reference images, then run them together
+without `--include-excluded` to check automatic selection and inter-test state.
+When enabling a passing test globally, monitor the platform CI runs and add only
+the backend or JavaScript-engine exclusions supported by actual failures.
+Record the failure in `reason`; avoid a global exclusion for a platform-specific
+problem. Do not change pixel tolerances or regenerate references just to make an
+excluded test pass.
+
 # Example workarounds
 
 Some examples have bugs that only show up in the Native runner, for example rendering

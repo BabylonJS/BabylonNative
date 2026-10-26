@@ -815,8 +815,8 @@
             "playgroundId": "#UNQ5CK#0",
             "renderCount": 2,
             "referenceImage": "bbhelper.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "bgfx debug assert on D3D11: vertex layout override stride (12) must match dynamic vertex buffer layout stride (4); on OpenGL the helper needs compute shaders or transform feedback."
+            "excludedGraphicsApis": ["D3D11", "OpenGL"],
+            "reason": "D3D11: bgfx asserts because vertex layout override stride (12) differs from dynamic vertex buffer stride (4). OpenGL: the helper requires compute shaders or transform feedback."
         },
         {
             "title": "NMEGLTF",
@@ -919,8 +919,6 @@
         {
             "title": "Node material 0",
             "playgroundId": "#M5VQE9#41",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails on Linux (large diff)",
             "referenceImage": "node-material0.png"
         },
         {
@@ -963,8 +961,8 @@
         {
             "title": "Node material PBR 1",
             "playgroundId": "#D8AK3Z#121",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "excludedGraphicsApis": ["D3D11", "OpenGL"],
+            "reason": "D3D11 and OpenGL CI fail pixel comparison (7.338% and 7.677% different pixels respectively; allowed 2.5%).",
             "referenceImage": "node-material-pbr-1.png"
         },
         {
@@ -2320,9 +2318,10 @@
         {
             "title": "Command encoder order in WebGPU 1",
             "playgroundId": "#064AUB#125",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: intermittent full-suite pixel comparison failure on Linux Clang CI (45.535% different pixels; allowed 2.5%), despite passing other runs.",
             "referenceImage": "CommandEncodedWebGPU1.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (45.6% px) when run after other tests in the same process"
+            "workarounds": ["wait-for-readiness"]
         },
         {
             "title": "Command encoder order in WebGPU 2",
@@ -2947,8 +2946,6 @@
         {
             "title": "Sponza Clustered Lighting (node material std)",
             "playgroundId": "#QY98Z3#16",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Sponza-Clustered-Lighting-node-material-std-.png"
         },
         {
@@ -2970,15 +2967,11 @@
         {
             "title": "Clustered Lighting (lhs std nodematerial)",
             "playgroundId": "#CSCJO2#64",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#62",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-pbr-nodematerial-.png"
         },
         {
@@ -2995,15 +2988,11 @@
         {
             "title": "Clustered Lighting (rhs std nodematerial)",
             "playgroundId": "#CSCJO2#71",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#72",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-pbr-nodematerial-.png"
         },
         {
@@ -3485,9 +3474,7 @@
             "title": "OpenPBR Subsurface Dense Scattering - Analytic Lights",
             "playgroundId": "#GRQHVV#306",
             "renderCount": 10,
-            "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with the Babylon.js master reference, but fails pixel comparison when run after other tests in the same process"
+            "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Realtime IBL",
