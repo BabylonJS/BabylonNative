@@ -8,10 +8,10 @@ This quick overview will help you understand the constructs provided by Babylon 
 
 ### Installation
 
-The latest stable release is **2.0.7**. In an existing React Native application using the [versions below](#supported-versions), install the package and its peer dependencies:
+The latest stable release is **2.0.8**. In an existing React Native application using the [versions below](#supported-versions), install the package and its peer dependencies:
 
 ```sh
-npm install @babylonjs/react-native@2.0.7 @babylonjs/core@^9.0.0 react-native-permissions@^5.4.1
+npm install @babylonjs/react-native@2.0.8 @babylonjs/core@^9.0.0 react-native-permissions@^5.4.1
 ```
 
 Use the React version required by your React Native application. React Native 0.81 requires **Node.js 20.19.4 or later**. Follow the platform configuration below before building the app.
@@ -32,18 +32,20 @@ These are the resolved React Native versions in the committed Playground lockfil
 
 | Babylon React Native version | React Native (iOS / Android) | React Native Windows |
 | ---------------------------- | --------------------------- | -------------------- |
-| 2.0.7 / master               | 0.81.6                      | 0.81.35              |
+| 2.0.8 / master               | 0.81.6                      | 0.81.35              |
+| 2.0.7                        | 0.81.6                      | 0.81.35              |
 | 2.0.6                        | 0.81.6                      | 0.81.35              |
 | 2.0.5                        | 0.81.6                      | 0.81.21              |
 | 2.0.0 - 2.0.4                | 0.79.4                      | 0.79.1               |
 
-For 2.0.6 and 2.0.7, the Windows Playground locks React Native 0.81.6 with **React Native Windows pinned to 0.81.35** to match the published NuGet packages; 0.81.4 is only the lower bound of the manifest's `^0.81.4` React Native range. Windows project generation uses the legacy renderer and Hermes.
+For 2.0.6 through 2.0.8, the Windows Playground locks React Native 0.81.6 with **React Native Windows pinned to 0.81.35** to match the published NuGet packages; 0.81.4 is only the lower bound of the manifest's `^0.81.4` React Native range. Windows project generation uses the legacy renderer and Hermes.
 
 The Babylon.js column below records the package's `@babylonjs/core` peer dependency. The Babylon Native commits are the source pins in `Package/gulpfile.js` at the corresponding release tags.
 
 | Babylon React Native version | Babylon.js peer dependency | Babylon Native commit |
 | ---------------------------- | -------------------------- | --------------------- |
-| 2.0.7 / master               | >=9.0.0                    | [f4d9efbeeabcfec24105373b99e54fe147669fc1](https://github.com/BabylonJS/BabylonNative/commit/f4d9efbeeabcfec24105373b99e54fe147669fc1) |
+| 2.0.8 / master               | >=9.0.0                    | [37d30f54649543290ad25c6c3626c247c1372773](https://github.com/BabylonJS/BabylonNative/commit/37d30f54649543290ad25c6c3626c247c1372773) |
+| 2.0.7                        | >=9.0.0                    | [f4d9efbeeabcfec24105373b99e54fe147669fc1](https://github.com/BabylonJS/BabylonNative/commit/f4d9efbeeabcfec24105373b99e54fe147669fc1) |
 | 2.0.6                        | >=9.0.0                    | [feb0227be8890ec5dcd28c6bfc18275a98bf8d45](https://github.com/BabylonJS/BabylonNative/commit/feb0227be8890ec5dcd28c6bfc18275a98bf8d45) |
 | 2.0.5                        | >=9.0.0                    | [ce2edf0851e0c8483559832a4f8eb9d39c6b2f53](https://github.com/BabylonJS/BabylonNative/commit/ce2edf0851e0c8483559832a4f8eb9d39c6b2f53) |
 | 2.0.4                        | >=9.0.0                    | [ce2edf0851e0c8483559832a4f8eb9d39c6b2f53](https://github.com/BabylonJS/BabylonNative/commit/ce2edf0851e0c8483559832a4f8eb9d39c6b2f53) |
@@ -138,7 +140,7 @@ Keep the variables set when running `pod install` and native builds. Disabling p
 
 ### Windows Configuration
 
-Windows support is experimental. The 2.0.6 and 2.0.7 integrations use React Native Windows **0.81.35** and its matching NuGet packages. Keep the React Native Windows npm version aligned with its published NuGet version rather than allowing npm to select a newer release independently.
+Windows support is experimental. The 2.0.6 through 2.0.8 integrations use React Native Windows **0.81.35** and its matching NuGet packages. Keep the React Native Windows npm version aligned with its published NuGet version rather than allowing npm to select a newer release independently.
 
 The module's MSBuild project builds the embedded Babylon Native sources using CMake and the React Native Windows project's generated C++/WinRT projections. See the [repository's Windows instructions](https://github.com/BabylonJS/BabylonReactNative#universal-windows-platform-uwp) and [packaged-consumer build workflow](https://github.com/BabylonJS/BabylonReactNative/blob/master/.github/workflows/test_windows.yml) for the current UWP, legacy-renderer, NuGet, and C++20 configuration.
 

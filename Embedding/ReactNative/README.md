@@ -27,16 +27,17 @@ Babylon React Native uses JSI for direct synchronous communication between nativ
 
 ## Supported Versions
 
-The latest stable npm release is **[@babylonjs/react-native 2.0.7](https://www.npmjs.com/package/@babylonjs/react-native/v/2.0.7)**. Since 2.0.0, a single package contains the sources for Android, iOS, and Windows; separate platform packages are no longer needed.
+The latest stable npm release is **[@babylonjs/react-native 2.0.8](https://www.npmjs.com/package/@babylonjs/react-native/v/2.0.8)**. Since 2.0.0, a single package contains the sources for Android, iOS, and Windows; separate platform packages are no longer needed.
 
 2.0.7 updates Babylon Native to [f4d9efbeeabcfec24105373b99e54fe147669fc1](https://github.com/BabylonJS/BabylonNative/commit/f4d9efbeeabcfec24105373b99e54fe147669fc1), including its JsRuntimeHost dependency update, and removes obsolete `minz` library links from the iOS and Windows builds. The Babylon.js and React Native baselines are unchanged from 2.0.6.
 
 | Package version | Babylon.js peer dependency | React Native (Android / iOS) | React Native Windows |
 | --------------- | -------------------------- | ---------------------------- | -------------------- |
-| 2.0.7 / master  | >=9.0.0                    | 0.81.6                       | 0.81.35              |
+| 2.0.8 / master  | >=9.0.0                    | 0.81.6                       | 0.81.35              |
+| 2.0.7           | >=9.0.0                    | 0.81.6                       | 0.81.35              |
 | 2.0.6           | >=9.0.0                    | 0.81.6                       | 0.81.35              |
 
-The React Native versions above are the resolved Playground lockfile baselines, not a guarantee of compatibility with every newer release. For 2.0.6 and 2.0.7, the Windows Playground locks React Native 0.81.6 with React Native Windows 0.81.35; 0.81.4 is only the lower bound of the manifest's `^0.81.4` React Native range. Windows support remains experimental; its npm version is pinned to match the published React Native Windows NuGet packages.
+The React Native versions above are the resolved Playground lockfile baselines, not a guarantee of compatibility with every newer release. For 2.0.6 through 2.0.8, the Windows Playground locks React Native 0.81.6 with React Native Windows 0.81.35; 0.81.4 is only the lower bound of the manifest's `^0.81.4` React Native range. Windows support remains experimental; its npm version is pinned to match the published React Native Windows NuGet packages.
 
 See the [package README](Modules/@babylonjs/react-native/README.md#supported-versions) for earlier releases and the Babylon Native commit used by each release, and the [release notes](https://github.com/BabylonJS/BabylonReactNative/releases) for changes.
 
