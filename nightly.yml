@@ -269,7 +269,8 @@ jobs:
   displayName: Linux Clang Hermes
   timeoutInMinutes: 60
   pool:
-    vmImage: 'ubuntu-latest'
+    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
+    vmImage: 'ubuntu-24.04'
   variables:
     CC: clang
     CXX: clang++
@@ -335,7 +336,8 @@ jobs:
   displayName: Android Hermes
   timeoutInMinutes: 45
   pool:
-    vmImage: 'ubuntu-latest'
+    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
+    vmImage: 'ubuntu-24.04'
   variables:
     NDK_VERSION: '28.2.13676358'
   steps:
