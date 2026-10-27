@@ -1107,6 +1107,8 @@ namespace Babylon
                 StaticValue("COMMAND_COPYTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::CopyTexture)),
 
                 InstanceValue("supportsPrimitiveModeExpansion", Napi::Boolean::From(env, true)),
+                // bgfx resolves multisampled render targets into mipmapped storage before generating mips.
+                InstanceValue("supportsMultisampledMipmaps", Napi::Boolean::From(env, true)),
                 InstanceValue("supportsDynamicTextureMipMaps", Napi::Boolean::From(env,
                     0 != (bgfx::getCaps()->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN))),
                 InstanceMethod("dispose", &NativeEngine::Dispose),
