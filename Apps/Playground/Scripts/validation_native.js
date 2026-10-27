@@ -206,7 +206,9 @@
     // Tools.LoadScript with useModule. Browsers run it as <script type="module">; the native
     // script host has no module loader. Handle only that shape: each import must be a default
     // import of a module whose sole export is a trailing `export default name` (Emscripten
-    // EXPORT_ES6 output). Anything else is rejected rather than misread.
+    // EXPORT_ES6 output). Anything else is rejected rather than misread. Dynamic import()
+    // calls (e.g. Emscripten's Node-only `await import('module')` branch) are evaluated as a
+    // rejected promise so they only fail if actually reached.
     let restoreEsModuleImport = null;
     function installEsModuleImport(test) {
         if (restoreEsModuleImport) {
@@ -218,11 +220,18 @@
         function loadDefaultExportAsync(url) {
             return BABYLON.Tools.LoadFileAsync(url, false).then(function (text) {
                 const match = /\bexport[ \t]+default[ \t]+([A-Za-z_$][\w$]*)[ \t]*;?\s*$/.exec(text);
-                const head = match ? text.slice(0, match.index).replace(/\bimport\.meta\.url\b/g, JSON.stringify(url)) : "";
-                if (!match || moduleSyntax.test(head) || /\bimport\s*[.(]/.test(head)) {
+                const head = match
+                    ? text
+                          .slice(0, match.index)
+                          .replace(/\bimport\.meta\.url\b/g, JSON.stringify(url))
+                          .replace(/\bimport\s*\(/g, "__esModuleDynamicImport(")
+                    : "";
+                if (!match || moduleSyntax.test(head) || /\bimport\s*\./.test(head)) {
                     throw new Error("es-module-import: '" + url + "' is not a single default-export module");
                 }
-                return Function(head + "\nreturn " + match[1] + ";")();
+                return Function("__esModuleDynamicImport", head + "\nreturn " + match[1] + ";")(function (specifier) {
+                    return Promise.reject(new Error("es-module-import: dynamic import('" + specifier + "') is not supported"));
+                });
             });
         }
 
