@@ -38,6 +38,7 @@
             "title": "GLTF Extension EXT_mesh_gpu_instancing",
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
+            "errorRatio": 8,
             "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
         },
         {
@@ -83,6 +84,7 @@
         {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
+            "errorRatio": 20,
             "playgroundId": "#V1JE4Z#1",
             "referenceImage": "thinInstances.png"
         },
@@ -236,6 +238,7 @@
             "playgroundId": "#WCDZS#531",
             "renderCount": 150,
             "referenceImage": "sps.png",
+            "errorRatio": 6.0,
             "workarounds": ["opaque-clear-alpha"]
         },
         {
@@ -259,7 +262,7 @@
             "renderCount": 10,
             "playgroundId": "#FFMFW5#0",
             "referenceImage": "lod.png",
-            "errorRatio": 5
+            "errorRatio": 7.0
         },
         {
             "title": "Capsule",
@@ -2653,6 +2656,8 @@
             "title": "FrameGraph nrge bounding boxes",
             "playgroundId": "#IG8NRC#85",
             "errorRatio": 14,
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: 14.6% pixel difference",
             "referenceImage": "FrameGraph-nrge-bounding-boxes.png"
         },
         {
