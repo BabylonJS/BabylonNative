@@ -175,14 +175,12 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_s
     set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
     set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
 
-    # Keep the glTF bitstream subset. NativeDraco is intended to produce and consume
-    # glTF-compatible Draco data (Babylon.js defaults to the glTF-only decoder). The
-    # subset still supports mesh encoding, normals, and standard Edgebreaker; it
-    # constrains the output rather than disabling encoding, and avoids emitting
-    # features outside the glTF profile (e.g. predictive valence at slower speeds)
-    # that the default decoder may reject. Attribute deduplication may be compiled
-    # out; Encode guards those passes on the feature macros Draco publishes.
-    set(DRACO_GLTF_BITSTREAM ON CACHE BOOL "" FORCE)
+    # Build the full Draco bitstream rather than the glTF subset. Babylon.js routes every
+    # DracoDecoder/DracoEncoder through NativeDraco when it is present, including callers
+    # that explicitly configure the full draco_decoder.wasm to read non-glTF streams (e.g.
+    # older .drc files, which the subset rejects with "Unsupported major version"). The
+    # full build matches the full draco_encoder.wasm Babylon.js uses by default for encoding.
+    set(DRACO_GLTF_BITSTREAM OFF CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable_With_Message(draco)
 
