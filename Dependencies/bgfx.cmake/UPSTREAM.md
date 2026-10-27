@@ -19,9 +19,9 @@ The former gitlinks now correspond to pinned CMake source acquisitions:
 
 | Source | Repository | Revision |
 |---|---|---|
-| bgfx | https://github.com/BabylonJS/bgfx | `64e7324430604ba61a45b51e1cbeb2b67c5d1d15` |
-| bx | https://github.com/bkaradzic/bx | `a9a71f8ef449c11042607feaeae0b8f46d22869a` |
-| bimg | https://github.com/bkaradzic/bimg | `671fe06dd7012a1ab85aa931019ed16112909756` |
+| bgfx | https://github.com/BabylonJS/bgfx | `ed962cc39c5211863b6aa92e38dc8f780b03084d` |
+| bx | https://github.com/bkaradzic/bx | `0e5bbca6878000f6371c65c53fe06f6f0ae87ca9` |
+| bimg | https://github.com/bkaradzic/bimg | `9bfbd6493b48a15238f2d1374a718ec026524515` |
 
 The upstream `.github` directory is excluded from the vendored working tree in
 a separate BabylonNative-only commit. All five files and their histories remain

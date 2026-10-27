@@ -1107,6 +1107,8 @@ namespace Babylon
                 StaticValue("COMMAND_COPYTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::CopyTexture)),
 
                 InstanceValue("supportsPrimitiveModeExpansion", Napi::Boolean::From(env, true)),
+                // bgfx resolves multisampled render targets into mipmapped storage before generating mips.
+                InstanceValue("supportsMultisampledMipmaps", Napi::Boolean::From(env, true)),
                 InstanceValue("supportsDynamicTextureMipMaps", Napi::Boolean::From(env,
                     0 != (bgfx::getCaps()->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN))),
                 InstanceMethod("dispose", &NativeEngine::Dispose),
@@ -1529,7 +1531,6 @@ void main() {
         bgfx::TextureRegion sourceRegion{};
         sourceRegion.init(texture);
         encoder->blit(m_deviceContext.AcquireNewViewId(), destinationRegion, sourceRegion);
-        RestoreBoundTextures(encoder);
 
         // The read may complete after this call if it times out, so the continuation shares ownership of the pixels.
         struct Readback
@@ -2027,9 +2028,18 @@ void main() {
         // Match Create3D's depth padding and Create2D's additional allocation flag.
         const uint16_t textureDepth = is3D ? (numLayers > 0 ? numLayers : 1) : 0;
         const uint16_t textureLayers = (isCube || is3D) ? 1 : (numLayers > 0 ? numLayers : 1);
-        const auto createFlags = (!isCube && !is3D) || (is3D && textureDepth == 1 && renderTarget)
+        auto createFlags = (!isCube && !is3D) || (is3D && textureDepth == 1 && renderTarget)
             ? flags | BGFX_TEXTURE_BLIT_DST : flags;
         const uint16_t physicalDepth = is3D ? std::max<uint16_t>(2, textureDepth) : 0;
+        if ((createFlags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 && textureLayers == 1 &&
+            !bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags) &&
+            bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags & ~BGFX_TEXTURE_MSAA_SAMPLE))
+        {
+            // GLES 3.0 has no multisampled textures; bgfx resolves MSAA depth into single-sample storage there.
+            // Arrays are excluded because bgfx GL has no multisampled renderbuffer path for them.
+            flags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
+            createFlags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
+        }
         if (!bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags))
         {
             // Some backends support 24-bit depth only with packed stencil storage.
@@ -2879,10 +2889,7 @@ void main() {
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
-        bgfx::Encoder* encoder = GetEncoder();
-
         BoundTexture bound{};
-        bound.Handle = uniformInfo->Handle;
         bound.Texture = texture->Handle();
         bound.Flags = texture->SamplerFlags();
         bound.FirstLayer = texture->ViewNumLayers() != 0 ? texture->ViewFirstLayer() : 0;
@@ -2890,40 +2897,32 @@ void main() {
         bound.MaxLod = texture->SamplerMaxLod();
         bound.PointSampleHeight = PointSampleHeight(*texture);
         m_boundTextures[uniformInfo->Stage] = bound;
-
-        encoder->setTexture(uniformInfo->Stage, bound.Handle, bound.Texture,
-            bound.FirstLayer, bound.NumLayers, 0, UINT8_MAX, bound.Flags, 0, bound.MaxLod);
     }
 
     void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)
     {
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
 
-        bgfx::Encoder* encoder = GetEncoder();
         m_boundTextures.erase(uniformInfo->Stage);
-        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, BGFX_INVALID_HANDLE);
     }
 
     void NativeEngine::DiscardAllTextures(NativeDataStream::Reader&)
     {
-        bgfx::Encoder* encoder = GetEncoder();
         m_boundTextures.clear();
-        encoder->discard(BGFX_DISCARD_BINDINGS);
     }
 
-    void NativeEngine::RestoreBoundTextures(bgfx::Encoder* encoder)
+    void NativeEngine::ApplyBoundTextures(bgfx::Encoder* encoder)
     {
-        if (encoder == nullptr)
+        for (const auto& [stage, sampler] : m_currentProgram->SamplerUniforms())
         {
-            return;
-        }
-        for (const auto& [stage, bound] : m_boundTextures)
-        {
-            if (!bgfx::isValid(bound.Handle) || !bgfx::isValid(bound.Texture))
+            const auto texture = m_boundTextures.find(stage);
+            if (texture == m_boundTextures.end())
             {
+                encoder->setTexture(stage, sampler, BGFX_INVALID_HANDLE);
                 continue;
             }
-            encoder->setTexture(stage, bound.Handle, bound.Texture,
+            const auto& bound = texture->second;
+            encoder->setTexture(stage, sampler, bound.Texture,
                 bound.FirstLayer, bound.NumLayers, 0, UINT8_MAX, bound.Flags, 0, bound.MaxLod);
         }
     }
@@ -3398,20 +3397,32 @@ void main() {
             // Prefer a supported depth RT format. Android retains D24S8 for Mali compatibility:
             // https://forum.babylonjs.com/t/post-processing-graphics-glitch/49523
             bgfx::TextureFormat::Enum depthStencilFormat{bgfx::TextureFormat::D24S8};
+            const auto selectDepthStencilFormat = [&]() {
+                depthStencilFormat = bgfx::TextureFormat::D24S8;
 #ifndef ANDROID
-            if (!generateStencilBuffer)
-            {
-                if (bgfx::isTextureValid(0, false, depthStencilNumLayers, bgfx::TextureFormat::D32F, flags))
+                if (!generateStencilBuffer)
                 {
-                    depthStencilFormat = bgfx::TextureFormat::D32F;
+                    if (bgfx::isTextureValid(0, false, depthStencilNumLayers, bgfx::TextureFormat::D32F, flags))
+                    {
+                        depthStencilFormat = bgfx::TextureFormat::D32F;
+                    }
+                    else if (bgfx::isTextureValid(0, false, depthStencilNumLayers, bgfx::TextureFormat::D24, flags))
+                    {
+                        depthStencilFormat = bgfx::TextureFormat::D24;
+                    }
                 }
-                else if (bgfx::isTextureValid(0, false, depthStencilNumLayers, bgfx::TextureFormat::D24, flags))
-                {
-                    depthStencilFormat = bgfx::TextureFormat::D24;
-                }
-            }
 #endif
-            if (!bgfx::isTextureValid(0, false, depthStencilNumLayers, depthStencilFormat, flags))
+                return bgfx::isTextureValid(0, false, depthStencilNumLayers, depthStencilFormat, flags);
+            };
+            bool depthStencilFormatValid = selectDepthStencilFormat();
+            if (!depthStencilFormatValid && (flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 && depthStencilNumLayers == 1)
+            {
+                // GLES 3.0 has no multisampled textures; bgfx resolves MSAA depth into single-sample storage there.
+                // bgfx GL has no multisampled renderbuffer path for arrays, so layered targets keep failing.
+                flags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
+                depthStencilFormatValid = selectDepthStencilFormat();
+            }
+            if (!depthStencilFormatValid)
             {
                 throw Napi::Error::New(env, "No supported depth/stencil texture format for frame buffer");
             }
@@ -3560,6 +3571,11 @@ void main() {
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
         }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
+        }
     }
 
     void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
@@ -3577,7 +3593,6 @@ void main() {
         if (m_boundVertexArray != nullptr)
         {
             const bgfx::DynamicVertexBufferHandle repacked = RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount);
-            RestoreBoundTextures(encoder);
             if (fillMode == 5 || fillMode == 8)
             {
                 shouldDraw = m_boundVertexArray->SetExpandedIndexBuffer(
@@ -3600,6 +3615,11 @@ void main() {
         if (shouldDraw)
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
         }
     }
 
@@ -3633,6 +3653,11 @@ void main() {
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
         }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
+        }
     }
 
     void NativeEngine::DrawInstanced(NativeDataStream::Reader& data)
@@ -3652,7 +3677,6 @@ void main() {
             // GPU-written instance sources (transform feedback output) are repacked into bgfx i_data
             // slots by a compute dispatch, which clears the encoder's texture bindings.
             const bgfx::DynamicVertexBufferHandle repacked = RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount);
-            RestoreBoundTextures(encoder);
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, instanceDataLayout);
             if (fillMode == 5 || fillMode == 8)
             {
@@ -3671,6 +3695,11 @@ void main() {
         if (shouldDraw)
         {
             DrawInternal(encoder, fillMode, instanceDataLayout);
+        }
+        else
+        {
+            // Drop the bindings made for the skipped draw, as Submit would, so they cannot leak into the next draw.
+            encoder->discard(BGFX_DISCARD_ALL);
         }
     }
 
@@ -3718,8 +3747,6 @@ void main() {
         }
 
         GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask);
-        // FrameBuffer::Clear touches its view, discarding bgfx bindings. WebGL clears retain them.
-        RestoreBoundTextures(encoder);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -4092,7 +4119,7 @@ void main() {
         StorageBuffer& outputStorage = output->PromoteToGpuStorage();
 
         bgfx::Encoder* encoder = GetEncoder();
-        RestoreBoundTextures(encoder);
+        ApplyBoundTextures(encoder);
         for (const auto& [handle, value] : m_currentProgram->Uniforms())
         {
             encoder->setUniform({handle}, value.Data.data(), value.ElementLength);
@@ -4130,10 +4157,6 @@ void main() {
 
         const uint32_t groups = (count + Graphics::TRANSFORM_FEEDBACK_WORKGROUP_SIZE - 1) / Graphics::TRANSFORM_FEEDBACK_WORKGROUP_SIZE;
         GetBoundFrameBuffer().Compute(*encoder, m_currentProgram->Handle(), groups, 1, 1);
-
-        // The dispatch clears the encoder's bindings. Later dispatches and draws in this frame are
-        // ordered after it (see FrameBuffer::Compute), so no flush is needed for them to see the writes.
-        RestoreBoundTextures(encoder);
     }
 
     bgfx::DynamicVertexBufferHandle NativeEngine::RepackStorageInstances(VertexArray* vertexArray,
@@ -4285,8 +4308,8 @@ void main() {
 
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
-        // Discard everything except textures since we keep the state of everything else.
-        boundFrameBuffer.Submit(*encoder, programHandle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        ApplyBoundTextures(encoder);
+        boundFrameBuffer.Submit(*encoder, programHandle, BGFX_DISCARD_ALL);
     }
 
     Graphics::FrameBuffer& NativeEngine::GetBoundFrameBuffer()
@@ -4334,7 +4357,6 @@ void main() {
         }
 
         m_defaultFrameBuffer.Clear(*encoder, flags, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0, UINT8_MAX, true);
-        RestoreBoundTextures(encoder);
     }
 
     void NativeEngine::ScheduleRequestAnimationFrameCallbacks()

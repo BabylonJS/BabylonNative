@@ -13,7 +13,8 @@ namespace
         const std::map<std::string, std::string>& uniformNames,
         std::map<uint16_t, Babylon::UniformInfo>& uniformInfos,
         std::map<std::string, uint16_t>& uniformNameToIndex,
-        std::map<uint8_t, bgfx::UniformHandle>& samplerStates)
+        std::map<uint8_t, bgfx::UniformHandle>& samplerStates,
+        std::map<uint8_t, bgfx::UniformHandle>& samplers)
     {
         uint16_t numUniforms = bgfx::getShaderUniforms(shader);
         std::vector<bgfx::UniformHandle> uniforms{numUniforms};
@@ -27,6 +28,10 @@ namespace
             auto itStage = uniformStages.find(info.name);
             auto& handle = uniforms[index];
             uniformInfos.emplace(std::make_pair(handle.idx, Babylon::UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.type, info.num}));
+            if (info.type == bgfx::UniformType::Sampler)
+            {
+                samplers.emplace(itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle);
+            }
             const auto originalName = uniformNames.find(info.name);
             const std::string_view compiledName{info.name};
             const std::string_view statePrefix{Babylon::Graphics::SAMPLER_STATE_UNIFORM_PREFIX};
@@ -74,10 +79,10 @@ namespace Babylon
         arcana::trace_region region{"Program::Initialize"};
 
         auto vertexShader = CreateShader(shaderInfo, shaderInfo->VertexBytes);
-        InitUniformInfos(vertexShader, shaderInfo->UniformStages, shaderInfo->UniformNames, m_uniformInfos, m_uniformNameToIndex, m_samplerStateUniforms);
+        InitUniformInfos(vertexShader, shaderInfo->UniformStages, shaderInfo->UniformNames, m_uniformInfos, m_uniformNameToIndex, m_samplerStateUniforms, m_samplerUniforms);
 
         auto fragmentShader = CreateShader(shaderInfo, shaderInfo->FragmentBytes);
-        InitUniformInfos(fragmentShader, shaderInfo->UniformStages, shaderInfo->UniformNames, m_uniformInfos, m_uniformNameToIndex, m_samplerStateUniforms);
+        InitUniformInfos(fragmentShader, shaderInfo->UniformStages, shaderInfo->UniformNames, m_uniformInfos, m_uniformNameToIndex, m_samplerStateUniforms, m_samplerUniforms);
 
         m_handle = bgfx::createProgram(vertexShader, fragmentShader, true);
         m_vertexAttributeLocations = shaderInfo->VertexAttributeLocations;
@@ -128,7 +133,7 @@ namespace Babylon
         arcana::trace_region region{"Program::InitializeCompute"};
 
         auto computeShader = CreateShader(shaderInfo, shaderInfo->ComputeBytes);
-        InitUniformInfos(computeShader, shaderInfo->UniformStages, shaderInfo->UniformNames, m_uniformInfos, m_uniformNameToIndex, m_samplerStateUniforms);
+        InitUniformInfos(computeShader, shaderInfo->UniformStages, shaderInfo->UniformNames, m_uniformInfos, m_uniformNameToIndex, m_samplerStateUniforms, m_samplerUniforms);
 
         m_handle = bgfx::createProgram(computeShader, true);
     }
@@ -201,6 +206,7 @@ namespace Babylon
         m_uniforms.clear();
         m_uniformNameToIndex.clear();
         m_uniformInfos.clear();
+        m_samplerUniforms.clear();
         m_samplerStateUniforms.clear();
         m_vertexAttributeLocations.clear();
         m_builtInInstanceDataSlots.clear();

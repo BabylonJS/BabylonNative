@@ -28,6 +28,16 @@ In order to add a new test scene, first thing to do is to add a few lines in `Ap
 `playgroundId` : the snippet id of the playground you want to test
 `referenceImage` : the reference image name you want to compare to. You don't have a reference yet, so choose a self-explanatory name with .png extension.
 
+# Re-enabling excluded tests
+
+Verify excluded tests against the existing reference images, then run them together
+without `--include-excluded` to check automatic selection and inter-test state.
+When enabling a passing test globally, monitor the platform CI runs and add only
+the backend or JavaScript-engine exclusions supported by actual failures.
+Record the failure in `reason`; avoid a global exclusion for a platform-specific
+problem. Do not change pixel tolerances or regenerate references just to make an
+excluded test pass.
+
 # Example workarounds
 
 Some examples have bugs that only show up in the Native runner, for example rendering
@@ -54,11 +64,14 @@ TSV column. When a workaround changes what the runner does for a test, the runne
 | `undeclared-name` | Reads the browser-only global `name` (`window.name`) | Declares `var name = ""` for the example code |
 | `prime-effect-layers` | Captures effect-layer (glow/highlight) output on the first frame | Renders one extra frame before counting frames |
 | `leak-cleanup` | Leaves textures or Draco state behind after disposal | Releases leaked textures and resets Draco after the test (stray scenes are disposed after every test) |
-| `wait-for-import` | Starts `ImportMeshAsync`/`AppendSceneAsync`/`LoadAssetContainerAsync` in `createScene` without awaiting it | Waits for loader promises started before the scene is returned |
+| `wait-for-import` | Starts `ImportMeshAsync`/`AppendSceneAsync`/`LoadAssetContainerAsync` (or `SceneLoader` equivalents), or a `NodeMaterial` load (`loadAsync`/`ParseFromFileAsync`/`ParseFromSnippetAsync`), in `createScene` without awaiting it | Waits for loader promises started before the scene is returned |
 | `refresh-export-matrices` | Changes node transforms right before a glTF export; the exporter's no-op root-node check reads stale cached world matrices and drops the node | Recomputes every node's world matrix before `GLTF2Export.GLTFAsync`/`GLBAsync` |
 | `wait-for-clustered-lights` | Uses a `ClusteredLightContainer`; Babylon.js 9.29 scene readiness skips its proxy shader, so lit materials can all report not-ready on the first frame and draw nothing | Calls `_isReady()` on each container (which starts compiling the proxy shader) and waits, without rendering, until all are ready |
+| `wait-for-area-light-ltc` | Uses area lights; Babylon.js material readiness only checks the asynchronously downloaded LTC textures once `AREALIGHTUSED` is already in the defines, so an effect reused from the engine cache (e.g. compiled by the previous area-light test) reports ready before the LTC data arrives and area-lit surfaces render black | Waits, without rendering, until the scene's LTC1/LTC2 textures are ready |
 | `opaque-clear-alpha` | Clears opaque but leaves alpha < 1 in the final image | Skips canvas-background compositing unless the test sets `canvasBackgroundColor`, the scene uses a frame graph, or `clearColor.a < 1` |
 | `xhr-events` | Relies on `XMLHttpRequest` behavior the native polyfill lacks: the `load` event, or an asynchronous failure for a URL that cannot be opened | Patches new `XMLHttpRequest` instances to raise `load` before `loadend` for every completed response (`error` only for status 0), and to report `open()` URL-open failures as a DONE request with status 0 (`readystatechange`, `error`, `loadend`); other `open()` errors still throw |
+| `es-module-import` | Loads an ES module through `Tools.LoadScript`'s module path (for example the SPZ decoder); the native script host has no ES module loader | Wraps `Tools.LoadScript` for module loads only: fetches each default-imported module, requires its sole export to be a trailing `export default name` (Emscripten `EXPORT_ES6` output), binds `import.meta.url`, and runs the inline source as an async function. Other module syntax is rejected |
+| `global-self` | Reaches code that uses the browser/worker global `self` (for example GUI `InputText` focus registering clipboard listeners); the native host does not define it | Defines `self` as the polyfilled `window` while the test runs, then removes it |
 
 Without `opaque-clear-alpha`, the runner matches the browser screenshot and always composites
 translucent pixels over the canvas background (`canvasBackgroundColor`, or green-yellow by default).

@@ -32,12 +32,16 @@ target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 # --------------------------------------------------
 set(BGFX_BUILD_EXAMPLES OFF)
 set(BGFX_BUILD_TOOLS OFF)
+set(BGFX_CONFIG_C99_API 0)
+set(BGFX_CONFIG_DEFAULT_MAX_ENCODERS 2)
+set(BGFX_CONFIG_MAX_VERTEX_STREAMS 18)
+set(BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE 16)
 set(BGFX_CONFIG_MULTITHREADED ON)
+set(BGFX_CONFIG_VIDEO OFF)
 set(BGFX_CUSTOM_TARGETS OFF)
 set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
-set(BGFX_CONFIG_VIDEO OFF)
 
 # Canvas workloads can exceed bgfx's default of 128 framebuffer handles.
 if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS)
@@ -60,22 +64,12 @@ include(bgfx.cmake/cmake/babylon-native.cmake)
 # See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
 
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
-
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
 # bgfx bundles the Khronos GLES headers but adds them as a PRIVATE include
 # directory, and Windows has no system copy the way Linux and Android do.
 # Expose the path so the OpenGL backends of our own targets can use it.
 set(BGFX_KHRONOS_INCLUDE_DIR "${BGFX_DIR}/3rdparty/khronos" CACHE INTERNAL "" FORCE)
-
-# Temporary disable uniform debug.
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
-
-# Disable the C99 API (Babylon Native uses the C++ API only); saves binary size.
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_C99_API=0)
 
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
@@ -181,14 +175,12 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO AND NOT TARGET draco AND NOT TARGET draco_s
     set(DRACO_BUILD_EXECUTABLES OFF CACHE BOOL "" FORCE)
     set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
 
-    # Keep the glTF bitstream subset. NativeDraco is intended to produce and consume
-    # glTF-compatible Draco data (Babylon.js defaults to the glTF-only decoder). The
-    # subset still supports mesh encoding, normals, and standard Edgebreaker; it
-    # constrains the output rather than disabling encoding, and avoids emitting
-    # features outside the glTF profile (e.g. predictive valence at slower speeds)
-    # that the default decoder may reject. Attribute deduplication may be compiled
-    # out; Encode guards those passes on the feature macros Draco publishes.
-    set(DRACO_GLTF_BITSTREAM ON CACHE BOOL "" FORCE)
+    # Build the full Draco bitstream rather than the glTF subset. Babylon.js routes every
+    # DracoDecoder/DracoEncoder through NativeDraco when it is present, including callers
+    # that explicitly configure the full draco_decoder.wasm to read non-glTF streams (e.g.
+    # older .drc files, which the subset rejects with "Unsupported major version"). The
+    # full build matches the full draco_encoder.wasm Babylon.js uses by default for encoding.
+    set(DRACO_GLTF_BITSTREAM OFF CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable_With_Message(draco)
 
