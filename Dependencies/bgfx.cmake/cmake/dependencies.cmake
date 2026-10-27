@@ -48,6 +48,6 @@ function(bgfx_resolve_source name repository revision)
 	set(${root_variable} "${source_root}" PARENT_SCOPE)
 endfunction()
 
-bgfx_resolve_source(bgfx https://github.com/BabylonJS/bgfx.git 5068996b4161522bc7d8cd1c7fb6b95e11771006)
-bgfx_resolve_source(bx https://github.com/bkaradzic/bx.git f3a9adb603c5677731e7cf10622fa16e1dfe9ea5)
+bgfx_resolve_source(bgfx https://github.com/BabylonJS/bgfx.git ed962cc39c5211863b6aa92e38dc8f780b03084d)
+bgfx_resolve_source(bx https://github.com/bkaradzic/bx.git 0e5bbca6878000f6371c65c53fe06f6f0ae87ca9)
 bgfx_resolve_source(bimg https://github.com/bkaradzic/bimg.git 9bfbd6493b48a15238f2d1374a718ec026524515)

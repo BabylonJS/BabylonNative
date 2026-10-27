@@ -19,8 +19,8 @@ The former gitlinks now correspond to pinned CMake source acquisitions:
 
 | Source | Repository | Revision |
 |---|---|---|
-| bgfx | https://github.com/BabylonJS/bgfx | `5068996b4161522bc7d8cd1c7fb6b95e11771006` |
-| bx | https://github.com/bkaradzic/bx | `f3a9adb603c5677731e7cf10622fa16e1dfe9ea5` |
+| bgfx | https://github.com/BabylonJS/bgfx | `ed962cc39c5211863b6aa92e38dc8f780b03084d` |
+| bx | https://github.com/bkaradzic/bx | `0e5bbca6878000f6371c65c53fe06f6f0ae87ca9` |
 | bimg | https://github.com/bkaradzic/bimg | `9bfbd6493b48a15238f2d1374a718ec026524515` |
 
 The upstream `.github` directory is excluded from the vendored working tree in
