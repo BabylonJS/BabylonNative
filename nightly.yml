@@ -236,6 +236,14 @@ jobs:
     workingDirectory: 'build\Win32_x64_Hermes\Apps\UnitTests\RelWithDebInfo'
     displayName: Unit Tests
 
+  - script: JsRuntimeHostUnitTests.exe
+    workingDirectory: 'build\Win32_x64_Hermes\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo'
+    displayName: JsRuntimeHost Unit Tests
+
+  - script: UrlLibTests.exe
+    workingDirectory: 'build\Win32_x64_Hermes\Dependencies\UrlLib\Tests\RelWithDebInfo'
+    displayName: UrlLib Unit Tests
+
   - script: ModuleLoadTest.exe
     workingDirectory: 'build\Win32_x64_Hermes\Apps\ModuleLoadTest\RelWithDebInfo'
     displayName: Module Load Test
@@ -328,13 +336,23 @@ jobs:
   - script: |
       set -e
       ulimit -c unlimited
+      xvfb-run ./JsRuntimeHostUnitTests
+    workingDirectory: build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests
+    displayName: JsRuntimeHost Unit Tests
+
+  - script: build/Linux/Dependencies/UrlLib/Tests/UrlLibTests
+    displayName: UrlLib Unit Tests
+
+  - script: |
+      set -e
+      ulimit -c unlimited
       xvfb-run --auto-servernum ./ModuleLoadTest
     workingDirectory: build/Linux/Apps/ModuleLoadTest
     displayName: Module Load Test
 
 - job: Android_Ubuntu_Hermes
   displayName: Android Hermes
-  timeoutInMinutes: 45
+  timeoutInMinutes: 120
   pool:
     # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
     vmImage: 'ubuntu-24.04'
@@ -376,6 +394,41 @@ jobs:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
     displayName: Build Playground Hermes
+
+  - script: |
+      bash .github/scripts/build-android-tests.sh \
+        Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android Hermes \
+        test-artifacts/UnitTests-Android-JsRuntimeHost-Hermes
+    env:
+      JAVA_HOME: $(JAVA_HOME_17_X64)
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+    displayName: Build Hermes runtime test artifacts
+
+  - script: |
+      set -euo pipefail
+      mkdir -p test-results
+      echo "##vso[task.setvariable variable=RuntimeTestsStarted]true"
+      sudo chmod 0666 /dev/kvm
+      export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+      sdkmanager --install emulator 'system-images;android-33;google_apis;x86_64'
+      echo "no" | avdmanager create avd --force --name runtime-tests \
+        --package 'system-images;android-33;google_apis;x86_64'
+      export ANDROID_SERIAL=emulator-5554
+      emulator -avd runtime-tests -port 5554 -no-window -no-snapshot -no-boot-anim \
+        -no-audio -gpu swiftshader_indirect > test-results/emulator.log 2>&1 &
+      trap 'result=$?; timeout 30s adb emu kill || result=1; exit "$result"' EXIT
+      timeout 180s adb wait-for-device
+      timeout 180s bash -c 'until [[ "$(adb shell getprop sys.boot_completed | tr -d "\r")" == 1 ]]; do sleep 2; done'
+      bash .github/scripts/run-android-runtime-tests.sh test-artifacts Hermes
+    displayName: Run Hermes runtime tests in Android emulator
+
+  - task: PublishBuildArtifacts@1
+    condition: and(succeededOrFailed(), eq(variables['RuntimeTestsStarted'], 'true'))
+    inputs:
+      PathtoPublish: test-results
+      ArtifactName: Android-Hermes-unit-test-results
+    displayName: Publish Hermes runtime test results
 
 # Android builds on macOS hosts, which are slower to get and duplicate the Ubuntu-hosted ones in the GitHub CI.
 - ${{ each engine in parameters.androidEngines }}:

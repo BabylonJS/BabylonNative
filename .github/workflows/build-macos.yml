@@ -61,6 +61,9 @@ jobs:
       - name: Build ModuleLoadTest macOS
         run: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
 
+      - name: Build component unit tests
+        run: cmake --build build/macOS --target JsRuntimeHostUnitTests UrlLibTests --config RelWithDebInfo
+
       - name: Enable Core Dump
         run: sudo sysctl -w kern.corefile=%N.core.%P
 
@@ -77,6 +80,16 @@ jobs:
           ulimit -c unlimited
           ./ModuleLoadTest
 
+      - name: Run JsRuntimeHost Unit Tests
+        working-directory: build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo
+        run: |
+          ulimit -c unlimited
+          ./JsRuntimeHostUnitTests
+
+      - name: Run UrlLib Unit Tests
+        working-directory: build/macOS/Dependencies/UrlLib/Tests/RelWithDebInfo
+        run: ./UrlLibTests
+
       - name: Upload UnitTests Core Dumps
         if: failure()
         uses: actions/upload-artifact@v6
@@ -85,3 +98,7 @@ jobs:
           path: |
             build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
             build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*
+            build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/JsRuntimeHostUnitTests
+            build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/*.core.*
+            build/macOS/Dependencies/UrlLib/Tests/RelWithDebInfo/UrlLibTests
+            build/macOS/Dependencies/UrlLib/Tests/RelWithDebInfo/*.core.*
