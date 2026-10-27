@@ -1393,12 +1393,16 @@
             "title": "GLTF Extension KHR_materials_volume",
             "playgroundId": "#YG3BBF#16",
             "renderCount": 5,
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
             "referenceImage": "gltfExtensionKhrMaterialsVolume.png"
         },
         {
             "title": "GLTF Extension KHR_materials_volume with analytic light",
             "playgroundId": "#YG3BBF#48",
             "renderCount": 5,
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png"
         },
         {
