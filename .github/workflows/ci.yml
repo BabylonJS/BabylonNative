@@ -162,8 +162,8 @@ jobs:
 
   ci-complete:
     name: ci-complete
-    # Run after unsuccessful dependencies too, so they cannot skip the required check.
-    if: always()
+    # Run after unsuccessful dependencies too, but allow superseded runs to cancel.
+    if: ${{ !cancelled() }}
     needs:
       - MacOS
       - MacOS_Ninja
