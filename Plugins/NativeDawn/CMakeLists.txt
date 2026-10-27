@@ -15,6 +15,9 @@ set(SOURCES
 
 add_library(NativeDawn ${SOURCES})
 
+target_compile_definitions(NativeDawn PRIVATE
+    NATIVEDAWN_JAVASCRIPT_ENGINE="${NAPI_JAVASCRIPT_ENGINE}")
+
 target_include_directories(NativeDawn
     PUBLIC "Include")
 

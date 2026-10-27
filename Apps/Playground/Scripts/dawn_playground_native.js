@@ -16,6 +16,8 @@
 
     try {
         assert(TestUtils.getGraphicsApiName() === "WebGPU", "Explicit WebGPU backend identity");
+        assert(["Chakra", "V8", "JavaScriptCore", "Hermes", "QuickJS", "JSI"].includes(TestUtils.getJavaScriptEngineName()),
+            "JavaScript engine identity for validation exclusions");
         assert(typeof frame === "undefined" && typeof __dawnResize === "undefined" &&
             typeof _nativeDawnClear === "undefined", "No plugin lifecycle or milestone globals");
         const descriptor = Object.getOwnPropertyDescriptor(globalThis, "BABYLON");

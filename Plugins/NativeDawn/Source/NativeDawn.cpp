@@ -4744,6 +4744,9 @@ namespace Babylon::Plugins::NativeDawn
             SetMethod(tu, "getGraphicsApiName", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return Napi::String::New(info.Env(), "WebGPU");
             });
+            SetMethod(tu, "getJavaScriptEngineName", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::String::New(info.Env(), NATIVEDAWN_JAVASCRIPT_ENGINE);
+            });
             SetMethod(tu, "getOutputDirectory", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return Napi::String::New(info.Env(), ExeDir().string());
             });

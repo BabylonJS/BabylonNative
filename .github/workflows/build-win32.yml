@@ -221,13 +221,6 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground --headless app:///Scripts/lite_native.js
 
-      - name: NativeDawn Runtime Regression Tests
-        if: ${{ inputs.nativedawn }}
-        shell: cmd
-        run: |
-          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground --headless app:///Scripts/dawn_runtime_native.js && Playground --headless app:///Scripts/dawn_playground_native.js
-
       # NativeDawn (WebGPU) validation. CI uses the Microsoft software adapter,
       # whose raster output differs substantially from the hardware-generated
       # references. Generate result images instead of comparing across adapters;

@@ -1,8 +1,8 @@
 # NativeDawn validation with fixed UrlLib
 
-**Latest results:** [October 19 master refresh](#master-refresh-2026-10-19).
+**Latest results:** [October 27 CI change and full validation](#ci-runtime-step-disabled-and-full-validation-2026-10-27).
 The original sections below describe earlier override-based 9.21.2 runs, not
-the current pinned 9.29.0 consumer.
+the current pinned 9.31.3 consumer.
 
 **Run date: 2026-10-07.** Both complete Babylon.js WebGPU visualization catalogs
 and the complete Babylon-Lite parity schedule were rerun locally on Windows.
@@ -710,3 +710,100 @@ The executable SHA256 is
 `a6b0eef1d3fcb575badcc876824551fa61b0d399de932d395e9454ff7271a953`;
 the tested BabylonNative source fingerprint, excluding Markdown, is
 `f2f70b10b5e4db62f785c37117960ca52b3af1f227f1f6e4e8d037a6c121505d`.
+
+## CI runtime step disabled and full validation (2026-10-27)
+
+Fetched master again: `a224a31700f673f3cbb22d48741c00be2739104f`
+was already integrated, so there were no additional merge conflicts.
+Removed the Windows `NativeDawn Runtime Regression Tests` CI step as requested.
+The standalone and Babylon.js host scripts remain available locally; the
+Lite smoke test and full Dawn visualization CI step remain enabled.
+The latter generates images on CI's software adapter rather than claiming
+pixel parity with hardware references.
+
+The local full-catalog run exposed a merge-integration regression:
+master's validation runner now queries `TestUtils.getJavaScriptEngineName()`
+when applying engine-specific exclusions, but Dawn's replacement TestUtils
+did not expose that method. Unfiltered execution stopped during initial
+catalog filtering, at Gaussian Splatting SPZ SH, before any scene ran.
+The method now returns the configured engine name, and a host regression
+assertion covers it. The complete authoritative run below was made with
+fresh consumers after rebuilding this fix. Aborted startup investigations
+are not included in its totals; transient instrumentation was removed.
+
+All configured Windows targets were rebuilt with V8, RelWithDebInfo and no
+JsRuntimeHost/UrlLib source overrides. The fetched dependency trees remain
+clean at JsRuntimeHost `980cfb0197f7fda661d362df4b275cff42d1e7f2`
+and UrlLib `0c991337a1160ba7a2d062bf8e342d0a66f48dc9`.
+No separate dependency fix or canonical font backport was imported.
+
+| Local suite | Results | Duration | Exit |
+|---|---|---|---:|
+| Babylon.js 9.31.3 / WebGPU full catalog | 769 executed: 509 passed, 260 failed; 93 skipped; zero missing references | 24m 43.397s application time | -1 |
+| Babylon-Lite original full schedule | 537 executed: 432 passed, 98 failed, 7 timed out; zero skipped | 37m 29.776s invocation wall time | 1 |
+| All native unit tests, including shared Canvas | 174/174 passed | 110.115s test time | 0 |
+| Parity tooling regressions | 8/8 passed | 98ms | 0 |
+| Dawn Babylon.js host regression | 21/21 checks passed | 1.104s | 0 |
+| Freshly rebuilt Lite scene1 smoke | Passed; 1.623% differing pixels against the unchanged 5% ceiling | 1.603s | 0 |
+| Standalone runtime regression | Failed at empty-valued URL query presence/search | 695ms | -1 |
+| ModuleLoadTest | Failed: unexpected `bcrypt.dll`, `ole32.dll`, `shlwapi.dll` | See log | 1 |
+
+**Neither full visualization/parity suite passes.** The WebGPU failures are
+259 pixel mismatches and the existing Material Plugin shader-language
+incompatibility. The unchanged postinstall/downlevel pipeline still corrupts
+texture binding descriptors before NativeDawn receives them. A CPU-only
+reproduction against the exact tested 9.31.3 bundle shows that `texture_2d`,
+`texture_cube` and `texture_depth_2d` all pass a
+`{groupIndex: 1, bindingIndex: 0}` object as the view dimension, instead of
+`"2d"`/`"cube"`: TypeScript 5.9.3 ES5 output reuses `_41` for both the
+dimension and a loop-local binding. This is not corrected by guessing
+dimensions in the native API. It remains a packaging/compiler blocker;
+this reproduction does not establish that it causes every pixel failure.
+
+Lite's library and all 262 native bundles were rebuilt from
+`206de862a935c4ceace9aaf0107062f1effbd5fa`. The unchanged 537-case schedule
+ran once, with one worker, no retries and 60-second deadlines, after WebGPU
+completed. Chrome was 155.0.8059.86; Node was 22.22.0; the locked Babylon.js
+oracle was 9.28.0, at 1280x720, DPR one and sRGB.
+There were 271 native-reaching scene cases, of which 169 passed.
+Only 261/262 scenes reached native navigation: scene 27 timed out while
+producing its browser oracle. Browser-only passes are not native passes.
+Scene verdicts were 163 PASS, one BEHAVIOR PASS, four HARNESS LIMIT,
+11 PIXEL MISMATCH, three CRASH, eight FAIL, one ORACLE / HARNESS BLOCKED,
+eight TIMEOUT, 39 RUNTIME FAIL, 22 ASSET / FETCH FAIL and two
+DIMENSION MISMATCH. These scene-level verdicts are distinct from the
+537 case outcomes. The crashes in scenes 12, 186 and 304 still identify
+the pinned UrlLib response-MIME path. No thresholds, references, assertions
+or exclusions were weakened to change these results.
+
+The runtime URL assertion remains an explicitly recorded failure, not a
+pass obtained by disabling its CI step. ModuleLoadTest exercises the shared
+BGFX/NativeEngine boot, not Dawn initialization; its three unexpected
+Windows modules remain unresolved, and its allowlist was not expanded
+without attribution. The already excluded dependency fixes, remaining
+native/adapter limitations and packaging problem are not resolved by the
+new engine-identity method.
+
+Artifacts are retained locally under
+`C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\full-validation-20261027-fixed`:
+
+- [Full summary](build/full-validation-20261027-fixed/summary.json),
+  [source/dependency provenance](build/full-validation-20261027-fixed/provenance.json)
+  and [descriptor reproduction](build/full-validation-20261027-fixed/binding-reproduction.json).
+- [Full WebGPU log](build/full-validation-20261027-fixed/validation.log)
+  and [262-scene Lite report](build/full-validation-20261027-fixed/lite/report.md).
+- [Lite full-suite log](build/full-validation-20261027-fixed/lite/full-suite.log),
+  [runtime failure](build/full-validation-20261027-fixed/runtime.log)
+  and [module-load failure](build/full-validation-20261027-fixed/module.log).
+
+WebGPU screenshots and diff overlays are in
+`standard\consumer\Apps\Playground\Results` and
+`standard\consumer\Apps\Playground\Errors`; Lite images are under
+`lite\references\<scene-slug>\`. Post-run verification matched all
+934 standard-consumer files, 1,459 Lite-consumer files, 893 original
+visualization reference assets and 108 original Lite reference files to
+their pre-run hashes. The owned Lite server was stopped after testing.
+The tested executable SHA256 is
+`b20dad00d6eb4ea7fa86be71e4381210a96caeadbe3c6d7cb9c4f10b5dd281b1`;
+the BabylonNative source fingerprint, excluding Markdown, is
+`af2bffe5ed160476ec0b35e979c1c3fc4f74458670b081ef553593dde34e4331`.
