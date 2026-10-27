@@ -11,13 +11,15 @@ set(BABYLONJS_MATERIALS_ASSETS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(TEST_ASSETS
-    "JavaScript/dist/tests.externalTexture.deviceLoss.js"
-    "JavaScript/dist/tests.externalTexture.layerCount.js"
-    "JavaScript/dist/tests.externalTexture.msaa.js"
-    "JavaScript/dist/tests.externalTexture.render.js"
-    "JavaScript/dist/tests.javaScript.all.js"
-    "JavaScript/dist/tests.shaderCache.basicScene.js"
-    "JavaScript/dist/tests.shaderCompilation.comprehensiveGLSL.js")
+    "tests.externalTexture.deviceLoss.js"
+    "tests.externalTexture.layerCount.js"
+    "tests.externalTexture.msaa.js"
+    "tests.externalTexture.render.js"
+    "tests.javaScript.all.js"
+    "tests.shaderCache.basicScene.js"
+    "tests.shaderCompilation.comprehensiveGLSL.js")
+set(TEST_ASSET_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets")
+list(TRANSFORM TEST_ASSETS PREPEND "${TEST_ASSET_DIRECTORY}/")
 
 set(TEST_FONT_ASSETS
     "../Dependencies/Arimo-Regular.ttf"
@@ -28,8 +30,23 @@ set(PACKAGED_TEST_ASSETS
     "Assets/droidsans.ttf"
     "Assets/droidsans.LICENSE.txt")
 
-file(GLOB TEST_SCRIPTS "JavaScript/src/*.ts")
+file(GLOB TEST_SCRIPTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src/*.ts")
 set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
+
+find_program(NPM_EXECUTABLE NAMES npm.cmd npm REQUIRED)
+add_custom_command(
+    OUTPUT ${TEST_ASSETS}
+    COMMAND "${NPM_EXECUTABLE}" run build -- --output-path "${TEST_ASSET_DIRECTORY}" --no-output-compare-before-emit
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript"
+    MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src/tests.javaScript.all.ts"
+    DEPENDS ${TEST_SCRIPTS}
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/webpack.config.js"
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/.babelrc"
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/babel-plugin-replace-bigint.js"
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/package.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../package.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../package-lock.json"
+    VERBATIM)
 
 set(SOURCES
     "Source/App.h"
@@ -216,7 +233,7 @@ if(ANGLE_LIBEGL)
     )
 endif()
 
-foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS})
+foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS})
     get_filename_component(ASSET_NAME "${ASSET}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
@@ -229,7 +246,7 @@ set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
+source_group("Assets" FILES ${TEST_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Assets FILES ${TEST_FONT_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Assets PREFIX Assets FILES ${PACKAGED_TEST_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src PREFIX TypeScript FILES ${TEST_SCRIPTS})

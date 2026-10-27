@@ -34,8 +34,11 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.js-engine == 'Hermes' && 60 || 30 }}
+    # Pinned: ubuntu-latest (ubuntu-26.04, Clang 21) fails to build glslang (SpvBuilder.h lacks <cstdint>).
+    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
+    runs-on: ubuntu-24.04
+    # Ubuntu_Clang_JSC (build + full validation run) takes ~28-29 minutes, so 30 caused spurious cancellations.
+    timeout-minutes: 180
     env:
       CC: ${{ inputs.cc }}
       CXX: ${{ inputs.cxx }}

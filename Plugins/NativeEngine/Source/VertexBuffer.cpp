@@ -221,14 +221,18 @@ namespace Babylon
         const std::map<uint32_t, uint32_t>& builtInSlots,
         uint32_t maxSlotCount)
     {
-        if (instances.empty())
-        {
-            return {};
-        }
-
         if (builtInSlots.size() > maxSlotCount)
         {
             throw std::runtime_error{"Shader declares more built-in instance-data slots than the device supports."};
+        }
+
+        if (instances.empty())
+        {
+            // No recorded instance attributes, but the shader may still declare built-in per-instance
+            // inputs (see VertexArray::SetVertexBuffers), which then need zeroed slots.
+            InstanceDataLayout layout{};
+            layout.SlotCount = static_cast<uint32_t>(builtInSlots.size());
+            return layout;
         }
 
         std::vector<bool> usedBuiltInSlots(builtInSlots.size());

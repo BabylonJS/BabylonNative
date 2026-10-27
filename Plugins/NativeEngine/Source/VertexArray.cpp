@@ -1,5 +1,7 @@
 #include "VertexArray.h"
+#include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <string>
 #include <tuple>
 #include "Babylon/Graphics/BgfxShaderInfo.h"
@@ -256,6 +258,23 @@ namespace Babylon
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
             VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
+            encoder->setInstanceDataBuffer(&instanceDataBuffer);
+        }
+        else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
+        {
+            // The shader declares built-in per-instance inputs this draw does not supply, e.g. the node
+            // material InstancesBlock declares world0-3 but reads them only under #ifdef INSTANCES.
+            // D3D input layouts must cover every declared input, so bind zeroed instance data.
+            static constexpr uint16_t kSlotSize = 16;
+            const uint32_t count = std::max(instanceCount, 1u);
+            const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * kSlotSize);
+            if (bgfx::getAvailInstanceDataBuffer(count, stride) < count)
+            {
+                throw std::runtime_error{"Transient instance data buffer exhausted"};
+            }
+            bgfx::InstanceDataBuffer instanceDataBuffer{};
+            bgfx::allocInstanceDataBuffer(&instanceDataBuffer, count, stride);
+            std::memset(instanceDataBuffer.data, 0, static_cast<size_t>(stride) * count);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
         else if (instanceCount > 0 && !HasStorageInstances())

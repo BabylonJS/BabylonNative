@@ -20,22 +20,25 @@ variables:
   CMAKE_VERSION: 3.30.3
   # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
   npm_config_fetch_retries: 5
+  # Compiler cache for the from-source JS engine and Android jobs. Each job restores the newest
+  # cache saved by a previous run of the same job (Cache@2 only saves when the key misses, i.e.
+  # once per commit).
+  CCACHE_DIR: $(Pipeline.Workspace)/.ccache
+  CCACHE_BASEDIR: $(Build.SourcesDirectory)
+  CCACHE_MAXSIZE: 2G
 
 # Besides validating against the Babylon.js nightly (job Nightly), this pipeline runs the slow or
-# runner-scarce jobs that are not worth blocking every PR on: Hermes, sanitizer, and
-# macOS-hosted Android builds (other Ubuntu-hosted Android builds stay in GitHub PR CI).
+# runner-scarce jobs that are not worth blocking every PR on: Hermes and macOS-hosted Android
+# builds (other Ubuntu-hosted Android builds stay in GitHub PR CI). Sanitizer builds run in
+# nightly-extended.yml so they don't delay or block the packages Babylon.js consumes.
+# Nightly doesn't wait for the other jobs; it publishes packages as soon as its own build and
+# tests pass. Babylon.js downloads artifacts only from fully succeeded runs of this pipeline.
 jobs:
 - job: Nightly
   displayName: Nightly
-  dependsOn:
-  - Win32_x64_Hermes_D3D11
-  - Win32_x64_D3D11_Sanitizers
-  - MacOS_Sanitizers
-  - Ubuntu_Clang_Hermes
-  - Android_Ubuntu_Hermes
-  - ${{ each engine in parameters.androidEngines }}:
-    - Android_MacOS_${{ engine }}
-  condition: and(succeeded(), not(containsValue(dependencies.*.result, 'SucceededWithIssues')))
+  # Packaged VisualizationTests alone take ~40 min and grow as tests are enabled; the default
+  # 60 min job limit cancels the run before the packages Babylon.js consumes are uploaded.
+  timeoutInMinutes: 180
   steps:
   - checkout: self
 
@@ -172,8 +175,33 @@ jobs:
   steps:
   - checkout: self
 
+  # ccache through MSBuild, as in .github/workflows/build-win32.yml: a copy of ccache.exe named
+  # cl.exe (CLToolPath), one source per cl.exe call (UseMultiToolTask), /Z7 debug info, no PCH.
+  - powershell: |
+      $version = '4.14.2'
+      $zip = "$(Agent.TempDirectory)\ccache.zip"
+      Invoke-WebRequest "https://github.com/ccache/ccache/releases/download/v$version/ccache-$version-windows-x86_64.zip" -OutFile $zip
+      Expand-Archive $zip "$(Agent.TempDirectory)\ccache"
+      $dir = "$(Agent.TempDirectory)\ccache\ccache-$version-windows-x86_64"
+      New-Item -ItemType Directory "$(Agent.TempDirectory)\ccache-cl" | Out-Null
+      Copy-Item "$dir\ccache.exe" "$(Agent.TempDirectory)\ccache-cl\cl.exe"
+      Write-Host "##vso[task.prependpath]$dir"
+    displayName: Install ccache
+
+  - task: Cache@2
+    inputs:
+      key: 'ccache | "$(Agent.OS)" | "Win32_x64_Hermes_D3D11" | "$(Build.SourceVersion)"'
+      restoreKeys: |
+        ccache | "$(Agent.OS)" | "Win32_x64_Hermes_D3D11"
+      path: $(CCACHE_DIR)
+    displayName: Cache ccache
+
   - script: |
       cmake -G "Visual Studio 17 2022" -B build/Win32_x64_Hermes -A x64 ^
+        -D "CMAKE_VS_GLOBALS=CLToolExe=cl.exe;CLToolPath=$(Agent.TempDirectory)\ccache-cl;UseMultiToolTask=true" ^
+        -D CMAKE_POLICY_DEFAULT_CMP0141=NEW ^
+        -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded ^
+        -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON ^
         -D NAPI_JAVASCRIPT_ENGINE=Hermes -D HERMES_ALLOW_BOOST_CONTEXT=0 ^
         -D BX_CONFIG_DEBUG=ON ^
         -D GRAPHICS_API=D3D11 ^
@@ -183,7 +211,10 @@ jobs:
         -D ENABLE_SANITIZERS=OFF
     displayName: Generate solution
 
-  - script: cmake --build build/Win32_x64_Hermes --config RelWithDebInfo -- /m
+  - script: |
+      ccache --zero-stats
+      cmake --build build/Win32_x64_Hermes --config RelWithDebInfo -- /m || exit /b 1
+      ccache --show-stats
     displayName: Build
 
   - script: |
@@ -238,7 +269,8 @@ jobs:
   displayName: Linux Clang Hermes
   timeoutInMinutes: 60
   pool:
-    vmImage: 'ubuntu-latest'
+    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
+    vmImage: 'ubuntu-24.04'
   variables:
     CC: clang
     CXX: clang++
@@ -250,12 +282,22 @@ jobs:
   - script: |
       set -e
       sudo apt-get update
-      sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build xvfb xauth
+      sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build xvfb xauth ccache
     displayName: Install packages
+
+  - task: Cache@2
+    inputs:
+      key: 'ccache | "$(Agent.OS)" | "Ubuntu_Clang_Hermes" | "$(Build.SourceVersion)"'
+      restoreKeys: |
+        ccache | "$(Agent.OS)" | "Ubuntu_Clang_Hermes"
+      path: $(CCACHE_DIR)
+    displayName: Cache ccache
 
   - script: |
       set -e
       cmake -G Ninja -B build/Linux \
+        -D CMAKE_C_COMPILER_LAUNCHER=ccache \
+        -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
         -D NAPI_JAVASCRIPT_ENGINE=Hermes \
         -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -268,7 +310,9 @@ jobs:
         -D HERMES_UNICODE_LITE=ON \
         -D HERMES_ALLOW_BOOST_CONTEXT=0 \
         -D ENABLE_SANITIZERS=OFF .
+      ccache --zero-stats
       ninja -C build/Linux
+      ccache --show-stats
     displayName: Build X11
 
   - script: sudo sysctl -w kernel.core_pattern=core.%p
@@ -292,7 +336,8 @@ jobs:
   displayName: Android Hermes
   timeoutInMinutes: 45
   pool:
-    vmImage: 'ubuntu-latest'
+    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
+    vmImage: 'ubuntu-24.04'
   variables:
     NDK_VERSION: '28.2.13676358'
   steps:
@@ -301,11 +346,20 @@ jobs:
   - script: |
       set -e
       sudo apt-get update
-      sudo apt-get install -y ninja-build
-    displayName: Install Ninja for Hermes host compiler bootstrap
+      sudo apt-get install -y ninja-build ccache
+    displayName: Install Ninja (Hermes host compiler bootstrap) and ccache
+
+  - task: Cache@2
+    inputs:
+      key: 'ccache | "$(Agent.OS)" | "Android_Ubuntu_Hermes" | "$(Build.SourceVersion)"'
+      restoreKeys: |
+        ccache | "$(Agent.OS)" | "Android_Ubuntu_Hermes"
+      path: $(CCACHE_DIR)
+    displayName: Cache ccache
 
   - script: |
       set -e
+      ccache --zero-stats
       chmod +x gradlew
       ./gradlew assembleRelease \
         -PjsEngine=Hermes \
@@ -314,147 +368,14 @@ jobs:
         -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
         -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
         -PSANITIZERS=OFF
+      ccache --show-stats
     workingDirectory: Apps/Playground/Android
     env:
       JAVA_HOME: $(JAVA_HOME_17_X64)
+      # Gradle's CMake picks these up as the default CMAKE_<LANG>_COMPILER_LAUNCHER.
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
     displayName: Build Playground Hermes
-
-- job: Win32_x64_D3D11_Sanitizers
-  displayName: Win32 x64 D3D11 V8 Sanitizers
-  pool:
-    vmImage: 'windows-2022'
-  timeoutInMinutes: 180
-  steps:
-  - checkout: self
-
-  - script: |
-      cmake -G "Visual Studio 17 2022" -B build/Win32_x64_V8 -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=D3D11 -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON -D ENABLE_SANITIZERS=ON
-    displayName: 'Generate solution'
-
-  - script: |
-      cmake --build build/Win32_x64_V8 --config RelWithDebInfo -- /m
-    displayName: 'Build'
-
-  - script: |
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
-      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
-    displayName: 'Enable Crash Dump'
-
-  - powershell: |
-      $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-      $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
-      $asanPath = "$($msvc.FullName)\bin\Hostx64\x64"
-      Write-Host "Adding ASAN runtime folder to PATH: $asanPath"
-      Write-Host "##vso[task.prependpath]$asanPath"
-    displayName: 'Add ASAN runtime DLLs to PATH'
-
-  - script: |
-      for /f %%i in ('vswhere -property instanceId') do (
-        reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
-      )
-    displayName: 'Disable JIT Debugger for Script'
-
-  - script: |
-      Playground app:///Scripts/validation_native.js
-    workingDirectory: 'build\Win32_x64_V8\Apps\Playground\RelWithDebInfo'
-    displayName: 'Validation Tests'
-
-  - script: |
-      UnitTests
-    workingDirectory: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
-    displayName: 'Unit Tests'
-
-  - task: PublishBuildArtifacts@1
-    displayName: Upload Rendered Pictures
-    condition: succeededOrFailed()
-    inputs:
-      PathtoPublish: 'build\Win32_x64_V8\Apps\Playground\Results'
-      ArtifactName: Win32_x64_V8-sanitizer-rendered-pictures
-    continueOnError: true
-
-  - task: PublishBuildArtifacts@1
-    displayName: Upload Error Pictures
-    condition: failed()
-    inputs:
-      PathtoPublish: 'build\Win32_x64_V8\Apps\Playground\Errors'
-      ArtifactName: Win32_x64_V8-sanitizer-error-pictures
-    continueOnError: true
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: 'build\Win32_x64_V8\Apps\Playground\RelWithDebInfo'
-      contents: Playground.*
-      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-      cleanTargetFolder: false
-    displayName: "Stage Playground Crash Dump"
-    condition: failed()
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
-      contents: UnitTests.*
-      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-      cleanTargetFolder: false
-    displayName: "Stage UnitTests Crash Dump"
-    condition: failed()
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      artifactName: "Win32 Sanitizers Crash Dumps"
-      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
-    displayName: "Publish Crash Dumps"
-    condition: failed()
-
-- job: MacOS_Sanitizers
-  displayName: macOS Sanitizers
-  pool:
-    vmImage: 'macOS-26'
-  timeoutInMinutes: 60
-  variables:
-    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
-    ASAN_OPTIONS: abort_on_error=1
-  steps:
-  - checkout: self
-
-  - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
-    displayName: 'Select Xcode 26.4'
-
-  - script: |
-      cmake -G Xcode -B build/macOS \
-        -D BABYLON_DEBUG_TRACE=ON \
-        -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
-        -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
-        -D ENABLE_SANITIZERS=ON \
-        -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
-    displayName: 'Generate macOS solution'
-
-  - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
-    displayName: 'Build Playground macOS'
-
-  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
-    displayName: 'Build UnitTests macOS'
-
-  - script: sudo sysctl -w kern.corefile=%N.core.%P
-    displayName: 'Enable Core Dump'
-
-  - script: |
-      ulimit -c unlimited
-      ./UnitTests
-    workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
-    displayName: 'Run UnitTests macOS'
-
-  - task: PublishBuildArtifacts@1
-    displayName: Upload UnitTests Core Dumps
-    condition: failed()
-    inputs:
-      PathtoPublish: 'build/macOS/Apps/UnitTests/RelWithDebInfo'
-      ArtifactName: macos-Xcode-default-sanitizer-core-dumps
 
 # Android builds on macOS hosts, which are slower to get and duplicate the Ubuntu-hosted ones in the GitHub CI.
 - ${{ each engine in parameters.androidEngines }}:
@@ -472,8 +393,21 @@ jobs:
       - script: command -v ninja >/dev/null 2>&1 || brew install ninja
         displayName: 'Install Ninja (Hermes host-compiler bootstrap)'
 
+    - script: command -v ccache >/dev/null 2>&1 || brew install ccache
+      displayName: Install ccache
+
+    - task: Cache@2
+      inputs:
+        key: 'ccache | "$(Agent.OS)" | "Android_MacOS_${{ engine }}" | "$(Build.SourceVersion)"'
+        restoreKeys: |
+          ccache | "$(Agent.OS)" | "Android_MacOS_${{ engine }}"
+        path: $(CCACHE_DIR)
+      displayName: Cache ccache
+
     - script: |
+        set -e
         export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+        ccache --zero-stats
         chmod +x gradlew
         ./gradlew assembleRelease \
           -PjsEngine=${{ engine }} \
@@ -482,5 +416,9 @@ jobs:
           -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
           -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
           -PSANITIZERS=OFF
+        ccache --show-stats
       workingDirectory: Apps/Playground/Android
+      env:
+        CMAKE_C_COMPILER_LAUNCHER: ccache
+        CMAKE_CXX_COMPILER_LAUNCHER: ccache
       displayName: 'Build Playground ${{ engine }}'

@@ -62,7 +62,7 @@
         "prime-effect-layers": "render one extra frame before capture when effect layers exist",
         // Example leaves textures or Draco state behind for later tests.
         "leak-cleanup": "release leaked textures and reset Draco after the test",
-        // Example starts an async model load in createScene without awaiting it.
+        // Example starts an async model or node material load in createScene without awaiting it.
         "wait-for-import": "wait for loader promises started by createScene before rendering",
         // Example clears opaque but writes alpha < 1 that the browser would composite.
         "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
@@ -72,8 +72,21 @@
         // Babylon.js 9.29 scene readiness skips the clustered-light proxy shader, so lit
         // materials can all report not-ready on the first frame and draw nothing.
         "wait-for-clustered-lights": "prepare clustered-light proxies before rendering",
+        // Babylon.js material readiness checks area-light LTC data only once AREALIGHTUSED is in
+        // the defines; a cached effect can make the first check pass, so whenReadyAsync resolves
+        // before the LTC download and area-lit surfaces render black.
+        "wait-for-area-light-ltc": "wait for area-light LTC textures before rendering",
         // Example relies on XMLHttpRequest events the native polyfill does not raise.
         "xhr-events": "raise XMLHttpRequest load events, and report URL-open failures as asynchronous error/loadend events",
+        // Example loads an ES module (e.g. the SPZ decoder) through Tools.LoadScript's module path;
+        // the native script host has no ES module loader.
+        "es-module-import": "evaluate default imports of single-export ES modules for Tools.LoadScript module loads",
+        // Example reaches code that uses the browser/worker global `self` (e.g. GUI InputText
+        // focus registers clipboard listeners on self); the native host does not define it.
+        "global-self": "define the global self as window while the test runs",
+        // Example loads Basis textures; the Basis transcoder runs in a Web Worker created from a
+        // Blob URL, and the native host has no Worker.
+        "basis-worker": "run Blob URL worker scripts (the Basis transcoder) in-process while the test runs",
     };
     let appliedWorkarounds = [];
 
@@ -115,6 +128,8 @@
     // The Win32 sanitizer job needs ~9.5 min for EXR Loader alone (ASAN-instrumented EXR decode), so keep a wide margin.
     const INITIAL_READINESS_TIMEOUT_MS = 20 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
+    // The LTC data is a network download, so bound the wait in time rather than render-loop ticks.
+    const AREA_LIGHT_LTC_TIMEOUT_MS = 60 * 1000;
     const utilityLayerOwners = new WeakMap();
     const dracoDecoderConfiguration = Object.assign({}, BABYLON.DracoDecoder.DefaultConfiguration);
     const dracoEncoderConfiguration = Object.assign({}, BABYLON.DracoEncoder.DefaultConfiguration);
@@ -186,6 +201,256 @@
             return evalWithName(code);
         }
         return eval(code);
+    }
+
+    // es-module-import: Babylon.js loads some decoders (SPZ, Manifold, recast) by passing inline
+    // module source such as `import X from 'url'; const returnedValue = await X();` to
+    // Tools.LoadScript with useModule. Browsers run it as <script type="module">; the native
+    // script host has no module loader. Handle only that shape: each import must be a default
+    // import of a module whose sole export is a trailing `export default name` (Emscripten
+    // EXPORT_ES6 output). Anything else is rejected rather than misread.
+    let restoreEsModuleImport = null;
+    function installEsModuleImport(test) {
+        if (restoreEsModuleImport) {
+            return;
+        }
+        const originalLoadScript = BABYLON.Tools.LoadScript;
+        const moduleSyntax = /^[ \t]*(?:import|export)(?=[\s{*'"])/m;
+
+        function loadDefaultExportAsync(url) {
+            return BABYLON.Tools.LoadFileAsync(url, false).then(function (text) {
+                const match = /\bexport[ \t]+default[ \t]+([A-Za-z_$][\w$]*)[ \t]*;?\s*$/.exec(text);
+                const head = match ? text.slice(0, match.index).replace(/\bimport\.meta\.url\b/g, JSON.stringify(url)) : "";
+                if (!match || moduleSyntax.test(head) || /\bimport\s*[.(]/.test(head)) {
+                    throw new Error("es-module-import: '" + url + "' is not a single default-export module");
+                }
+                return Function(head + "\nreturn " + match[1] + ";")();
+            });
+        }
+
+        function evaluateModuleSourceAsync(source) {
+            const names = [];
+            const urls = [];
+            const body = source.replace(/^[ \t]*import[ \t]+([A-Za-z_$][\w$]*)[ \t]+from[ \t]*(['"])([^'"\n]+)\2[ \t]*;?/gm, function (_, name, quote, url) {
+                names.push(name);
+                urls.push(url);
+                return "";
+            });
+            if (moduleSyntax.test(body)) {
+                return Promise.reject(new Error("es-module-import: unsupported module syntax"));
+            }
+            return Promise.all(urls.map(loadDefaultExportAsync)).then(function (values) {
+                const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
+                return new AsyncFunction(...names, body)(...values);
+            });
+        }
+
+        BABYLON.Tools.LoadScript = function (scriptUrl, onSuccess, onError, scriptId, useModule) {
+            if (!useModule) {
+                return originalLoadScript.apply(this, arguments);
+            }
+            noteWorkaround(test, "es-module-import");
+            evaluateModuleSourceAsync(scriptUrl).then(function () {
+                if (onSuccess) {
+                    onSuccess();
+                }
+            }, function (e) {
+                if (onError) {
+                    onError("LoadScript Error", e);
+                }
+            });
+        };
+        restoreEsModuleImport = function () {
+            BABYLON.Tools.LoadScript = originalLoadScript;
+            restoreEsModuleImport = null;
+        };
+    }
+
+    // global-self: browsers and workers define `self`; the native host does not, so code
+    // such as AdvancedDynamicTexture.registerClipboardEvents throws a ReferenceError. Point
+    // self at the polyfilled window (which has add/removeEventListener) for the test only.
+    let restoreGlobalSelf = null;
+    function installGlobalSelf(test) {
+        if (restoreGlobalSelf || typeof globalThis.self !== "undefined") {
+            return;
+        }
+        Object.defineProperty(globalThis, "self", { value: window, configurable: true, writable: true });
+        noteWorkaround(test, "global-self");
+        // GUI disposal does not unregister clipboard listeners (only InputText blur does), so
+        // drop the ones added during the test to avoid retaining its disposed GUI.
+        const clipboardEvents = ["copy", "cut", "paste"];
+        const existing = new Map(clipboardEvents.map((type) => [type, (domListeners.get(type) || []).slice()]));
+        restoreGlobalSelf = function () {
+            for (const type of clipboardEvents) {
+                const list = domListeners.get(type);
+                if (list) {
+                    const keep = existing.get(type);
+                    domListeners.set(type, list.filter((listener) => keep.includes(listener)));
+                }
+            }
+            delete globalThis.self;
+            restoreGlobalSelf = null;
+        };
+    }
+
+    // basis-worker: Babylon.js creates the Basis transcoder worker from a Blob URL holding its
+    // worker script, then sends an init message naming the transcoder script to importScripts.
+    // The native host has no Worker. Record the text of string-only Blobs, and give Worker an
+    // in-process stand-in that loads the transcoder itself and evaluates it in the same function
+    // scope as the worker script. The init message is then delivered without its URL, so the
+    // worker script never calls importScripts. Messages are delivered asynchronously in both
+    // directions. Transfer lists are ignored, because sender and receiver share one heap.
+    // Babylon.js caches the worker at module level, so an instance created here outlives the test.
+    let restoreBasisWorker = null;
+    function installBasisWorker(test) {
+        if (restoreBasisWorker || typeof globalThis.Worker !== "undefined") {
+            return;
+        }
+        const OriginalBlob = globalThis.Blob;
+        const OriginalURL = globalThis.URL;
+        const blobSources = new WeakMap();
+        const urlSources = new Map();
+
+        globalThis.Blob = new Proxy(OriginalBlob, {
+            construct: function (target, args) {
+                const blob = Reflect.construct(target, args);
+                const parts = args[0];
+                if (Array.isArray(parts) && parts.every((part) => typeof part === "string")) {
+                    blobSources.set(blob, parts.join(""));
+                }
+                return blob;
+            },
+        });
+        // The native URL.createObjectURL is read-only and non-configurable, so shadow it in a subclass.
+        globalThis.URL = class extends OriginalURL {
+            static createObjectURL(blob) {
+                const url = OriginalURL.createObjectURL(blob);
+                if (blobSources.has(blob)) {
+                    urlSources.set(url, blobSources.get(blob));
+                }
+                return url;
+            }
+        };
+
+        // The asynchronous WebAssembly.compile and WebAssembly.instantiate never settle on the
+        // JavaScriptCore host (the synchronous constructors work), so the transcoder module would
+        // never initialize. Give the worker scope a WebAssembly whose async entry points compile
+        // synchronously and return settled promises.
+        const NativeWebAssembly = globalThis.WebAssembly;
+        const syncWebAssembly = NativeWebAssembly && Object.create(NativeWebAssembly, {
+            compile: {
+                value: function (bytes) {
+                    return new Promise(function (resolve) {
+                        resolve(new NativeWebAssembly.Module(bytes));
+                    });
+                },
+            },
+            instantiate: {
+                value: function (source, imports) {
+                    return new Promise(function (resolve) {
+                        if (source instanceof NativeWebAssembly.Module) {
+                            resolve(new NativeWebAssembly.Instance(source, imports));
+                        } else {
+                            const module = new NativeWebAssembly.Module(source);
+                            resolve({ module: module, instance: new NativeWebAssembly.Instance(module, imports) });
+                        }
+                    });
+                },
+            },
+            compileStreaming: { value: undefined },
+            instantiateStreaming: { value: undefined },
+        });
+
+        class InProcessWorker {
+            constructor(url) {
+                const source = urlSources.get(String(url));
+                if (source === undefined) {
+                    throw new Error("basis-worker: '" + url + "' is not a recorded Blob URL worker script");
+                }
+                noteWorkaround(test, "basis-worker");
+                this._source = source;
+                this._listeners = [];
+                this._handler = null;
+                this._terminated = false;
+                this.onmessage = null;
+            }
+
+            addEventListener(type, listener) {
+                if (type === "message" && this._listeners.indexOf(listener) === -1) {
+                    this._listeners.push(listener);
+                }
+            }
+
+            removeEventListener(type, listener) {
+                const index = this._listeners.indexOf(listener);
+                if (type === "message" && index !== -1) {
+                    this._listeners.splice(index, 1);
+                }
+            }
+
+            terminate() {
+                this._terminated = true;
+                this._listeners = [];
+            }
+
+            postMessage(data) {
+                if (!this._handler) {
+                    this._handler = this._startAsync(data);
+                }
+                const worker = this;
+                this._handler.then(function (handler) {
+                    if (worker._terminated) {
+                        return;
+                    }
+                    if (data && data.action === "init") {
+                        data = Object.assign({}, data, { url: undefined });
+                    }
+                    handler({ data: data });
+                }).catch(function (e) {
+                    worker._dispatch({ action: "error", error: e });
+                });
+            }
+
+            _dispatch(data) {
+                const worker = this;
+                setTimeout(function () {
+                    if (worker._terminated) {
+                        return;
+                    }
+                    const event = { data: data, target: worker };
+                    for (const listener of worker._listeners.slice()) {
+                        listener.call(worker, event);
+                    }
+                    if (typeof worker.onmessage === "function") {
+                        worker.onmessage(event);
+                    }
+                }, 0);
+            }
+
+            _startAsync(firstMessage) {
+                const worker = this;
+                const scriptUrl = firstMessage && firstMessage.action === "init" ? firstMessage.url : undefined;
+                const scriptText = scriptUrl ? BABYLON.Tools.LoadFileAsync(scriptUrl, false) : Promise.resolve("");
+                return scriptText.then(function (text) {
+                    const run = Function("postMessage", "WebAssembly", text + "\nvar onmessage;\n" + worker._source + "\nreturn onmessage;");
+                    const handler = run(function (message) {
+                        worker._dispatch(message);
+                    }, syncWebAssembly);
+                    if (typeof handler !== "function") {
+                        throw new Error("basis-worker: the worker script did not set onmessage");
+                    }
+                    return handler;
+                });
+            }
+        }
+
+        Object.defineProperty(globalThis, "Worker", { value: InProcessWorker, configurable: true, writable: true });
+        restoreBasisWorker = function () {
+            globalThis.Blob = OriginalBlob;
+            globalThis.URL = OriginalURL;
+            delete globalThis.Worker;
+            restoreBasisWorker = null;
+        };
     }
 
     // xhr-events: the native XMLHttpRequest raises only readystatechange, error and loadend,
@@ -436,6 +701,14 @@
     ["ImportMeshAsync", "AppendAsync", "LoadAssetContainerAsync"].forEach(function (name) {
         wrapImportFunction(BABYLON.SceneLoader, name);
     });
+    // Scene readiness doesn't track node material JSON loads. The instance loadAsync calls an
+    // internal parse function, so it needs its own wrapper besides the static ones.
+    if (BABYLON.NodeMaterial) {
+        wrapImportFunction(BABYLON.NodeMaterial.prototype, "loadAsync");
+        ["ParseFromFileAsync", "ParseFromSnippetAsync"].forEach(function (name) {
+            wrapImportFunction(BABYLON.NodeMaterial, name);
+        });
+    }
 
     // refresh-export-matrices: set to the running test when it opts in.
     let refreshExportMatricesTest = null;
@@ -531,6 +804,15 @@
         if (restoreXhrEvents) {
             restoreXhrEvents();
         }
+        if (restoreEsModuleImport) {
+            restoreEsModuleImport();
+        }
+        if (restoreGlobalSelf) {
+            restoreGlobalSelf();
+        }
+        if (restoreBasisWorker) {
+            restoreBasisWorker();
+        }
 
         if (currentScene) {
             try { currentScene.dispose(); } catch (e) { console.error(e); }
@@ -554,7 +836,16 @@
 
         engine.setHardwareScalingLevel(1);
 
+        // Restore the StencilState defaults; tests that set the stencil function, mask, or
+        // operations directly on the engine would otherwise leak them into later tests.
         engine.setStencilBuffer(false);
+        engine.setStencilMask(0xFF);
+        engine.setStencilFunction(BABYLON.Constants.ALWAYS);
+        engine.setStencilFunctionReference(1);
+        engine.setStencilFunctionMask(0xFF);
+        engine.setStencilOperationFail(BABYLON.Constants.KEEP);
+        engine.setStencilOperationDepthFail(BABYLON.Constants.KEEP);
+        engine.setStencilOperationPass(BABYLON.Constants.REPLACE);
         engine.disableScissor();
         engine.useReverseDepthBuffer = false;
         engine.setDepthFunctionToLessOrEqual();
@@ -606,6 +897,9 @@
     let skippedCount = 0;
     let missingRefCount = 0;
     const failedTitles = [];
+    // Native cancels framebuffer readbacks once the graphics device is lost. Later tests
+    // cannot render or validate, and some wait forever, so the run stops instead.
+    let readbackCanceled = false;
 
     // BABYLON classes exposing a static ForceGLSL, discovered lazily once.
     let forceGlslOwners;
@@ -1030,6 +1324,8 @@
             : function (scene) { return [scene]; };
         const primeEffectLayers = hasWorkaround(test, "prime-effect-layers");
         const waitForClusteredLights = hasWorkaround(test, "wait-for-clustered-lights");
+        const waitForAreaLightLtc = hasWorkaround(test, "wait-for-area-light-ltc");
+        let areaLightLtcWaitStart = 0;
         // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
         let effectLayerPrimed = false;
 
@@ -1120,6 +1416,24 @@
                         return;
                     }
 
+                    const ltcTextures = currentScene._ltcTextures;
+                    if (waitForAreaLightLtc && frameIndex === 0 && ltcTextures &&
+                        !(ltcTextures.LTC1.isReady() && ltcTextures.LTC2.isReady())) {
+                        if (!areaLightLtcWaitStart) {
+                            areaLightLtcWaitStart = Date.now();
+                            noteWorkaround(test, "wait-for-area-light-ltc");
+                        }
+                        if (Date.now() - areaLightLtcWaitStart >= AREA_LIGHT_LTC_TIMEOUT_MS) {
+                            stopped = true;
+                            evaluated = true;
+                            console.error("Scene '" + (test.title || "?") + "' area-light LTC textures did not become ready within " +
+                                AREA_LIGHT_LTC_TIMEOUT_MS + " ms.");
+                            failTest(done);
+                            return;
+                        }
+                        return;
+                    }
+
                     if (primeEffectLayers && !effectLayerPrimed && currentScene.effectLayers && currentScene.effectLayers.length > 0) {
                         effectLayerPrimed = true;
                         noteWorkaround(test, "prime-effect-layers");
@@ -1149,6 +1463,9 @@
                             evaluated = true;
                             stopped = true;
                             pendingScreenshot = null;
+                            if (/cancel/i.test(String(error && error.message))) {
+                                readbackCanceled = true;
+                            }
                             console.error(error);
                             failTest(done);
                         });
@@ -1409,6 +1726,15 @@
                                     refreshExportMatricesTest = hasWorkaround(test, "refresh-export-matrices") ? test : null;
                                     if (hasWorkaround(test, "xhr-events")) {
                                         installXhrEvents(test);
+                                    }
+                                    if (hasWorkaround(test, "es-module-import")) {
+                                        installEsModuleImport(test);
+                                    }
+                                    if (hasWorkaround(test, "global-self")) {
+                                        installGlobalSelf(test);
+                                    }
+                                    if (hasWorkaround(test, "basis-worker")) {
+                                        installBasisWorker(test);
                                     }
                                     let createdScene = evalExample(test, pgCode);
                                     if (importTracker) {
@@ -1858,6 +2184,13 @@
                         }
                     } else {
                         passedCount++;
+                    }
+                    if (readbackCanceled) {
+                        console.error("Framebuffer readback was canceled (graphics device lost) during '" + currentTitle +
+                            "'; aborting the remaining tests.");
+                        logRunSummary();
+                        TestUtils.exit(-1);
+                        return;
                     }
                     i++;
                     if (justOnce || i >= config.tests.length) {
