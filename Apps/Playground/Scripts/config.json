@@ -558,8 +558,6 @@
             "title": "Gaussian Splatting modify",
             "playgroundId": "#O53CPP#0",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "GaussianSplatting throws Uncaught Error: Invalid argument on Babylon Native (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gsplat-splat-modify.png"
         },
         {
@@ -571,8 +569,6 @@
             "title": "Gaussian Splatting Bake Transforms",
             "playgroundId": "#GU7A98#0",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gsplat-splat-bake-transforms.png"
         },
         {
@@ -1001,9 +997,7 @@
         {
             "title": "GUI Transform StackPanel",
             "playgroundId": "#BS60AB#0",
-            "referenceImage": "TransformStackPanel.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI Transform StackPanel buttons render orange/red instead of green (BN GUI color regression)."
+            "referenceImage": "TransformStackPanel.png"
         },
         {
             "title": "GUI StackPanel",
@@ -1388,15 +1382,11 @@
         {
             "title": "GLTF Box with bad Draco normalized flag",
             "playgroundId": "#8KJJH9",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "gltfBadDraco.png"
         },
         {
             "title": "GLTF Buggy with Meshopt Compression",
             "playgroundId": "#CIYTF6#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/Buggy/glTF-MeshOpt/Buggy.gltf: Object doesn't support property or method 'createObjectURL' (missing DOM API; thrown before pixel comparison)",
             "referenceImage": "gltfBuggyMeshopt.png"
         },
         {
@@ -2006,9 +1996,7 @@
             "title": "Order independent transparency",
             "playgroundId": "#1PLV5Z#104",
             "renderCount": 5,
-            "referenceImage": "oit.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (12.9% px) when run after \"Reverse depth buffer and CSM shadows\" in the same process"
+            "referenceImage": "oit.png"
         },
         {
             "title": "Custom material with depth renderer",
@@ -2145,8 +2133,6 @@
         {
             "title": "GUI Force Resize Width",
             "playgroundId": "#XCPP9Y#17259",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "GUI-Force-Resize-Width.png"
         },
         {
@@ -2162,8 +2148,6 @@
         {
             "title": "GUI Gradient Linear with transparency",
             "playgroundId": "#PFK1Z5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Temporarily excluded until Babylon.js #19041 ships: straight-RGBA gradient interpolation only matches the browser when the engine requests unpremultiplied canvas textures via getCanvasTexture(premulAlpha). Re-enable after the Babylon.js npm update.",
             "referenceImage": "GUI-Gradient-Linear-with-transparency.png"
         },
         {
@@ -2285,8 +2269,6 @@
         {
             "title": "Vertex buffers with non aligned strides",
             "playgroundId": "#U1CZV3#32",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "VertexBuffer-non-aligned-strides.png"
         },
         {
@@ -2299,8 +2281,6 @@
         {
             "title": "Font size inheritance",
             "playgroundId": "#QFK9K4#24",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Fontsizeinheritance.png"
         },
         {
@@ -2428,9 +2408,7 @@
             "title": "skybox-with-boombox",
             "playgroundId": "#I2TR8G#0",
             "renderCount": 20,
-            "referenceImage": "skybox-with-boombox.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI text 'Hello world WebGPU!' renders pink/red instead of white (BN GUI color regression); boombox also has minor edge differences."
+            "referenceImage": "skybox-with-boombox.png"
         },
         {
             "title": "custom-handling-of-materials-for-render-target-pass",
@@ -3529,9 +3507,7 @@
             "title": "OpenPBR Thin Walled Subsurface Transmission Blending - IBL",
             "playgroundId": "#URIA5X#0",
             "renderCount": 5,
-            "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Passes in isolation on Win32 D3D11 with Babylon.js 9.31.3, but fails pixel comparison (99.8% px) when run after other tests in the same process"
+            "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png"
         },
         {
             "title": "Background material blur",
@@ -4241,8 +4217,6 @@
         {
             "title": "FrameGraph nrge clustered lights",
             "playgroundId": "#1QCA2M#36",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "FrameGraph-nrge-clustered-lights.png"
         },
         {
@@ -4253,8 +4227,6 @@
         {
             "title": "Clustered lights - debug markers",
             "playgroundId": "#1QCA2M#47",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-lights---debug-markers.png"
         },
         {
