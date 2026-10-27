@@ -38,6 +38,18 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(bx
+    GIT_REPOSITORY https://github.com/bkaradzic/bx.git
+    GIT_TAG 0e5bbca6878000f6371c65c53fe06f6f0ae87ca9
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(bimg
+    GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
+    GIT_TAG 9bfbd6493b48a15238f2d1374a718ec026524515
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(bgfx
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
+    GIT_TAG ed962cc39c5211863b6aa92e38dc8f780b03084d
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS}"
     EXCLUDE_FROM_ALL)
@@ -88,9 +100,6 @@ FetchContent_MakeAvailable(CMakeExtensions)
 # which makes all dependencies to be fetched and packaged.
 # At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
 # and FetchContent uses the provided local source overrides.
-# bgfx.cmake itself is tracked locally; source-tree mode stages that wrapper beside
-# its three selected child trees in _deps/bgfx.cmake-src for existing packagers.
-# FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE remains a local wrapper override.
 # AndroidExtensions and CMakeExtensions are vendored and always resolve from Dependencies/;
 # no _deps/*-src copies are produced for them.
 

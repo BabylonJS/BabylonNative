@@ -6,9 +6,19 @@ design. Most external sources are now acquired with CMake FetchContent.
 its bgfx, bx and bimg sources remain pinned external FetchContent acquisitions.
 AndroidExtensions and CMakeExtensions are vendored with imported history under
 `Dependencies/`; root source overrides make all FetchContent declarations use them.
-Targets and lateral dependency relationships are unchanged. The legacy
-`_deps/bgfx.cmake-src` source-package and `_deps/bgfx.cmake-build` binary layouts
-remain supported; see [Building](../BUILDING.md) for local/offline overrides.
+Targets and lateral dependency relationships are unchanged. The bgfx wrapper's
+build files live under `Dependencies/bgfx.cmake`. See
+[Building](../BUILDING.md) for local/offline source overrides.
+The bgfx wrapper matches upstream. Babylon Native's options and
+target adjustments live in `Dependencies/CMakeLists.txt`. Source packages include
+the tracked wrapper and selected child source trees separately. The root's
+`bx`, `bimg` and `bgfx` FetchContent declarations retain
+Babylon Native's compatible child revisions. The upstream wrapper selects the
+sources using those earlier declarations rather than its fallback pins.
+`FETCHCONTENT_SOURCE_DIR_BX`, `_BIMG` and `_BGFX` overrides select those sources
+directly, without override-name forwarding.
+The root uses the pinned bgfx sources without a local GL patch. Source packages
+and local `FETCHCONTENT_SOURCE_DIR_BGFX` overrides use the same unpatched revision.
 
 The Babylon Native build system is founded on a lateral dependency management strategy 
 implemented using Git Submodules and CMake build targets. This system is designed to be

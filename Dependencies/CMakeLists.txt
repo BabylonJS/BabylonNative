@@ -30,6 +30,46 @@ target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 # --------------------------------------------------
 # bgfx.cmake
 # --------------------------------------------------
+#[[
+Imported from https://github.com/BabylonJS/bgfx.cmake at
+8fd48e454f624f964ced930af597fa5b4526be18. The initial 53 files retained their
+original contents, modes, CC0 license and attribution headers.
+
+All 706 commits were relocated under Dependencies/bgfx.cmake without squashing,
+preserving authors, dates, messages, renames, empty commits and merge topology.
+The rewritten import tip is 39f003f6ae0b6e92b1c3bd0152f164c0e56000b2.
+Historical gitlinks were removed; no bx, bimg or bgfx implementation or history
+was imported. Path rewriting changes commit IDs and invalidates signatures;
+BabylonNative's existing history was not rewritten.
+
+The wrapper matches https://github.com/bkaradzic/bgfx.cmake at
+5ae5fa5b121974b9de084539bb784d97fa4cd8a6 plus proposed upstream changes:
+bx/bimg/bgfx FetchContent names, inline fallback pins, removal of nonexistent
+source subdirectories and redundant GIT_SHALLOW FALSE settings, and corresponding
+README and release-helper updates.
+Its fallback pins match that baseline; BabylonNative's root CMakeLists.txt
+declares the native pins first and selects _deps/{bgfx,bx,bimg}-src.
+Source overrides and precedence are documented in bgfx.cmake/README.md.
+Offline packages must include the tracked wrapper and selected child sources
+separately. Native options and target adjustments belong here, not in the wrapper.
+
+Upstream's .github directory is excluded in a native-only commit; its five files
+and their history remain in the imported ancestry. Never export that exclusion
+as a deletion of upstream automation.
+
+For future history updates, reuse the imported ancestry and the same path/gitlink
+transformation without pruning commits. Keep adaptations separate and change
+native child pins deliberately in the root CMakeLists.txt. Managed sources update
+on reconfigure; explicit source overrides are never checked out.
+
+Export wrapper changes from a standalone checkout of the current upstream
+baseline, not the original import tip. Preserve upstream automation and update
+its release workflow's fetched-source paths for the dependency-name changes.
+Keep native pins, options and packaging out of that patch.
+
+Do not squash this import when landing. Upstream currently permits only squash
+merges; landing requires a maintainer-approved history-preserving mechanism.
+]]
 set(BGFX_BUILD_EXAMPLES OFF)
 set(BGFX_BUILD_TOOLS OFF)
 set(BGFX_CONFIG_C99_API 0)
@@ -57,7 +97,14 @@ if(WIN32 AND NOT DEFINED BIMG_CONFIG_USE_WIC)
     set(BIMG_CONFIG_USE_WIC ON)
 endif()
 
-include(bgfx.cmake/cmake/babylon-native.cmake)
+add_subdirectory(bgfx.cmake EXCLUDE_FROM_ALL)
+
+# Plugins and apps currently need these paths from the wrapper's directory scope.
+# TODO: Review those consumers and remove the source-path exports if possible.
+get_directory_property(BGFX_DIR DIRECTORY bgfx.cmake DEFINITION BGFX_DIR)
+get_directory_property(BIMG_DIR DIRECTORY bgfx.cmake DEFINITION BIMG_DIR)
+set(BGFX_DIR "${BGFX_DIR}" PARENT_SCOPE)
+set(BIMG_DIR "${BIMG_DIR}" PARENT_SCOPE)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
 # This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.

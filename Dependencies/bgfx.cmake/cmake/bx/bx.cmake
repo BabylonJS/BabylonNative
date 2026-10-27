@@ -28,6 +28,7 @@ file(
 
 if(BX_AMALGAMATED)
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/allocator.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/bitarray.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/bounds.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/bx.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/commandline.cpp")
