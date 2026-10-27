@@ -902,9 +902,10 @@
         {
             "title": "CSGVertColor",
             "playgroundId": "#R0H1IX#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "csgVertColor.png"
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
+            "referenceImage": "csgVertColor.png",
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Particle subemitters",
@@ -1082,9 +1083,10 @@
         {
             "title": "CSG",
             "playgroundId": "#R0H1IX#8",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "csg.png"
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
+            "referenceImage": "csg.png",
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Fresnel",
