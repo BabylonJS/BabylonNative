@@ -2699,8 +2699,7 @@
         {
             "title": "FrameGraph nrge OIT (Geometry renderer)",
             "playgroundId": "#MIACY4#14",
-            "excludeFromAutomaticTesting": true,
-            "reason": "FrameGraph render pipeline hangs past 120s",
+            "canvasBackgroundColor": "white",
             "referenceImage": "FrameGraph-nrge-OIT-Geometry-renderer-.png"
         },
         {
