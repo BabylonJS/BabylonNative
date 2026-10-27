@@ -1,0 +1,9 @@
+# JavaScriptCore GTK race reports can be attributed to libc interceptors instead
+# of the library, so function-name suppressions are needed alongside library matching.
+called_from_lib:libjavascriptcoregtk
+race:free
+race:close
+race:memcpy
+
+# Suppress JavaScriptCore GTK signal handlers that do not preserve errno.
+signal:libjavascriptcoregtk

@@ -2,7 +2,7 @@
 
 UrlLib is a cross-platform C++ library that utilizes platform-specific implementations
 for URL-related functionality. Although it was created as a subcomponent of
-[JsRuntimeHost](https://github.com/BabylonJS/JsRuntimeHost) for its polyfills, it may also be used standalone.
+[JsRuntimeHost](../JsRuntimeHost) for its polyfills, it may also be used standalone.
 
 ## Error reporting
 
@@ -48,7 +48,7 @@ empty/zero (contributions welcome — the plumbing in `UrlRequest_Base.h` is sha
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and 
+Please read [CONTRIBUTING.md](../../CONTRIBUTING.md) for details on our code of conduct, and
 the process for submitting pull requests.
 
 ## Reporting Security Issues

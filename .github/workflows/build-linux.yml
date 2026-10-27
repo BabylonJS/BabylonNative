@@ -175,6 +175,16 @@ jobs:
           ulimit -c unlimited
           xvfb-run --auto-servernum ./ModuleLoadTest
 
+      - name: JsRuntimeHost Unit Tests
+        working-directory: build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests
+        run: |
+          ulimit -c unlimited
+          xvfb-run --auto-servernum ./JsRuntimeHostUnitTests
+
+      - name: UrlLib Unit Tests
+        working-directory: build/Linux/Dependencies/UrlLib/Tests
+        run: ./UrlLibTests
+
       - name: Upload Vulkan Test Results
         if: ${{ always() && inputs.graphics-api == 'Vulkan' }}
         uses: actions/upload-artifact@v6
@@ -210,3 +220,7 @@ jobs:
             build/Linux/Apps/UnitTests/core.*
             build/Linux/Apps/ModuleLoadTest/ModuleLoadTest
             build/Linux/Apps/ModuleLoadTest/core.*
+            build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests/JsRuntimeHostUnitTests
+            build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests/core.*
+            build/Linux/Dependencies/UrlLib/Tests/UrlLibTests
+            build/Linux/Dependencies/UrlLib/Tests/core.*

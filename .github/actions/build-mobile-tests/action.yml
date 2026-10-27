@@ -1,0 +1,93 @@
+name: Build mobile unit-test artifacts
+description: Build a component's platform test project and publish its artifacts.
+
+inputs:
+  component:
+    required: true
+    description: Component whose test project is built (JsRuntimeHost)
+  platform:
+    required: true
+    description: Android or iOS
+  js-engine:
+    default: JavaScriptCore
+    description: JavaScript engine used by this platform configuration
+  deployment-target:
+    default: '26.0'
+    description: Minimum iOS simulator version
+
+runs:
+  using: composite
+  steps:
+    # Each component/platform pair names its existing Gradle or CMake test project
+    # and outputs; the shared steps below configure, build, package and upload them.
+    - name: Select ${{ inputs.component }} ${{ inputs.platform }} test project
+      id: project
+      shell: bash
+      env:
+        COMPONENT: ${{ inputs.component }}
+        PLATFORM: ${{ inputs.platform }}
+        JS_ENGINE: ${{ inputs.js-engine }}
+      run: |
+        case "$COMPONENT/$PLATFORM" in
+          JsRuntimeHost/Android)
+            project=Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android
+            echo "gradle-project=$project" >> "$GITHUB_OUTPUT"
+            ;;
+          JsRuntimeHost/iOS)
+            build=build/mobile-tests-JsRuntimeHost
+            echo "cmake-source=Dependencies/JsRuntimeHost" >> "$GITHUB_OUTPUT"
+            echo "cmake-build=$build" >> "$GITHUB_OUTPUT"
+            echo "cmake-args=-DNAPI_JAVASCRIPT_ENGINE=$JS_ENGINE -DJSRUNTIMEHOST_TESTS=ON" >> "$GITHUB_OUTPUT"
+            echo "cmake-target=UnitTests" >> "$GITHUB_OUTPUT"
+            echo "app=$build/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app" >> "$GITHUB_OUTPUT"
+            ;;
+          *)
+            echo "::error::No $PLATFORM test project is defined for $COMPONENT"
+            exit 1
+            ;;
+        esac
+    - name: Build and package Android ${{ inputs.component }} unit tests
+      if: inputs.platform == 'Android'
+      shell: bash
+      env:
+        PROJECT: ${{ steps.project.outputs.gradle-project }}
+        JS_ENGINE: ${{ inputs.js-engine }}
+        DESTINATION: test-artifacts/${{ inputs.component }}
+      run: |
+        bash .github/scripts/build-android-tests.sh "$PROJECT" "$JS_ENGINE" "$DESTINATION"
+    - name: Configure iOS simulator ${{ inputs.component }} unit tests
+      if: inputs.platform == 'iOS'
+      shell: bash
+      env:
+        SOURCE: ${{ steps.project.outputs.cmake-source }}
+        BUILD: ${{ steps.project.outputs.cmake-build }}
+        PROJECT_ARGS: ${{ steps.project.outputs.cmake-args }}
+        DEPLOYMENT_TARGET: ${{ inputs.deployment-target }}
+      run: |
+        cmake -S "$SOURCE" -B "$BUILD" -G Xcode \
+          -DIOS=ON -DPLATFORM=SIMULATORARM64 \
+          "-DDEPLOYMENT_TARGET=$DEPLOYMENT_TARGET" $PROJECT_ARGS
+    - name: Build iOS simulator ${{ inputs.component }} unit tests
+      if: inputs.platform == 'iOS'
+      shell: bash
+      env:
+        BUILD: ${{ steps.project.outputs.cmake-build }}
+        TARGET: ${{ steps.project.outputs.cmake-target }}
+      run: |
+        cmake --build "$BUILD" --config RelWithDebInfo --target "$TARGET" -- \
+          -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+          CODE_SIGNING_ALLOWED=NO
+    - name: Package iOS unit-test artifacts
+      if: inputs.platform == 'iOS'
+      shell: bash
+      env:
+        DESTINATION: test-artifacts/${{ inputs.component }}
+        APP: ${{ steps.project.outputs.app }}
+      run: |
+        mkdir -p "$DESTINATION"
+        tar -czf "$DESTINATION/app.tar.gz" -C "$(dirname "$APP")" "$(basename "$APP")"
+    - uses: actions/upload-artifact@v6
+      with:
+        name: UnitTests-${{ inputs.platform }}-${{ inputs.component }}-${{ inputs.js-engine }}
+        path: test-artifacts/${{ inputs.component }}
+        if-no-files-found: error

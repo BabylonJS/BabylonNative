@@ -200,10 +200,23 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo
           ModuleLoadTest
 
+      - name: JsRuntimeHost Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo
+          JsRuntimeHostUnitTests
+
+      - name: UrlLib Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\UrlLib\Tests\RelWithDebInfo
+          UrlLibTests
+
       - name: Stage UnitTests Crash Dump
         if: failure()
         shell: powershell
         run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\Dumps" | Out-Null
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Upload Crash Dumps

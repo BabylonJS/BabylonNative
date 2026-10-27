@@ -33,10 +33,10 @@ set(PACKAGED_TEST_ASSETS
 file(GLOB TEST_SCRIPTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src/*.ts")
 set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 
-find_program(NPM_EXECUTABLE NAMES npm.cmd npm REQUIRED)
+find_program(BABYLON_NATIVE_TESTS_NPM_EXECUTABLE NAMES npm.cmd npm REQUIRED)
 add_custom_command(
     OUTPUT ${TEST_ASSETS}
-    COMMAND "${NPM_EXECUTABLE}" run build -- --output-path "${TEST_ASSET_DIRECTORY}" --no-output-compare-before-emit
+    COMMAND "${BABYLON_NATIVE_TESTS_NPM_EXECUTABLE}" run build -- --output-path "${TEST_ASSET_DIRECTORY}" --no-output-compare-before-emit
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript"
     MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src/tests.javaScript.all.ts"
     DEPENDS ${TEST_SCRIPTS}

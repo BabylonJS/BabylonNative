@@ -1,10 +1,16 @@
+if(ANDROID OR IOS)
+    message(FATAL_ERROR "UrlLib unit tests are supported only on desktop platforms.")
+endif()
+
 FetchContent_Declare(googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG v1.14.0)
 
-set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+endif()
 FetchContent_MakeAvailable(googletest)
 set_property(TARGET gtest PROPERTY FOLDER Dependencies)
 set_property(TARGET gtest_main PROPERTY FOLDER Dependencies)

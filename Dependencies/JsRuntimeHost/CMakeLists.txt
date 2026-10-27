@@ -5,14 +5,11 @@ if(POLICY CMP0135)
 endif()
 
 include(FetchContent)
+include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 5fe60c8634dd9a5df76888e73e69202875e894f0
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
@@ -24,10 +21,6 @@ FetchContent_Declare(asio
 FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG dc750e7f69dad76779419df6442f834c57a30a1f
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
@@ -47,18 +40,12 @@ FetchContent_Declare(ios-cmake
 FetchContent_Declare(llhttp
     URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz"
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(UrlLib
-    GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-    GIT_TAG 0c991337a1160ba7a2d062bf8e342d0a66f48dc9
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(quickjs-ng
     GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
     GIT_TAG 93d3f7df465027f487ed37e175a0bc3012fee79e
     EXCLUDE_FROM_ALL)
     
 # --------------------------------------------------
-
-FetchContent_MakeAvailable(CMakeExtensions)
 
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
@@ -163,7 +150,9 @@ FetchContent_MakeAvailable_With_Message(arcana.cpp)
 set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 
 if(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST OR JSRUNTIMEHOST_POLYFILL_FETCH)
-    FetchContent_MakeAvailable_With_Message(UrlLib)
+    if(NOT TARGET UrlLib)
+        add_subdirectory("../UrlLib" "${CMAKE_BINARY_DIR}/_deps/urllib-build" EXCLUDE_FROM_ALL)
+    endif()
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 endif()
 

@@ -4,7 +4,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # AndroidExtensions
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    add_subdirectory(AndroidExtensions EXCLUDE_FROM_ALL)
 endif()
 
 # --------------------------------------------------
@@ -272,7 +272,7 @@ endif()
 # --------------------------------------------------
 # googletest
 # --------------------------------------------------
-if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))
+if(BABYLON_NATIVE_BUILD_APPS AND NOT ANDROID AND NOT IOS AND NOT VISIONOS)
     if(WIN32)
         # For Windows: Prevent overriding the parent project's compiler/linker settings
         # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
@@ -290,9 +290,19 @@ if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) 
 endif()
 
 # --------------------------------------------------
-# JsRuntimeHost
+# UrlLib and JsRuntimeHost
 # --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+set(URLLIB_TESTS OFF)
+set(JSRUNTIMEHOST_TESTS OFF)
+if(BABYLON_NATIVE_BUILD_APPS AND NOT WINDOWS_STORE AND NOT VISIONOS)
+    if(NOT ANDROID AND NOT IOS)
+        set(URLLIB_TESTS ON)
+    endif()
+    set(JSRUNTIMEHOST_TESTS ON)
+endif()
+
+add_subdirectory(UrlLib)
+add_subdirectory(JsRuntimeHost)
 
 # Two JsRuntimeHost targets cannot be built without RTTI:
 #   v8inspector - includes asio, whose headers use typeid() unconditionally

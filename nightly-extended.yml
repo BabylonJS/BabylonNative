@@ -22,7 +22,7 @@ variables:
 
 # Slow, non-blocking nightly jobs. Nothing consumes this pipeline's artifacts, so a failure here
 # doesn't affect the packages that nightly.yml publishes for Babylon.js.
-# Currently: the Win32 and macOS sanitizer builds.
+# Includes native Win32/macOS sanitizer builds and standalone runtime sanitizer coverage.
 jobs:
 - job: Win32_x64_D3D11_Sanitizers_Build
   displayName: Win32 x64 D3D11 V8 Sanitizers Build
@@ -83,6 +83,14 @@ jobs:
       UnitTests
     workingDirectory: 'build\Win32_x64_V8\Apps\UnitTests\RelWithDebInfo'
     displayName: 'Unit Tests'
+
+  - script: JsRuntimeHostUnitTests.exe
+    workingDirectory: 'build\Win32_x64_V8\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo'
+    displayName: 'JsRuntimeHost Unit Tests'
+
+  - script: UrlLibTests.exe
+    workingDirectory: 'build\Win32_x64_V8\Dependencies\UrlLib\Tests\RelWithDebInfo'
+    displayName: 'UrlLib Unit Tests'
 
   - task: CopyFiles@2
     inputs:
@@ -218,8 +226,8 @@ jobs:
   - script: cmake --build build/macOS --target Playground --config RelWithDebInfo
     displayName: 'Build Playground macOS'
 
-  - script: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
-    displayName: 'Build UnitTests macOS'
+  - script: cmake --build build/macOS --target UnitTests JsRuntimeHostUnitTests UrlLibTests --config RelWithDebInfo
+    displayName: 'Build UnitTests and component tests macOS'
 
   - script: sudo sysctl -w kern.corefile=%N.core.%P
     displayName: 'Enable Core Dump'
@@ -230,9 +238,96 @@ jobs:
     workingDirectory: build/macOS/Apps/UnitTests/RelWithDebInfo
     displayName: 'Run UnitTests macOS'
 
+  - script: |
+      ulimit -c unlimited
+      ./JsRuntimeHostUnitTests
+    workingDirectory: build/macOS/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo
+    displayName: 'JsRuntimeHost Unit Tests macOS'
+
+  - script: |
+      ulimit -c unlimited
+      ./UrlLibTests
+    workingDirectory: build/macOS/Dependencies/UrlLib/Tests/RelWithDebInfo
+    displayName: 'UrlLib Unit Tests macOS'
+
   - task: PublishBuildArtifacts@1
     displayName: Upload UnitTests Core Dumps
     condition: failed()
     inputs:
       PathtoPublish: 'build/macOS/Apps/UnitTests/RelWithDebInfo'
       ArtifactName: macos-Xcode-default-sanitizer-core-dumps
+
+- job: Linux_Runtime_Sanitizers
+  displayName: Linux runtime sanitizers
+  pool:
+    vmImage: 'ubuntu-24.04'
+  timeoutInMinutes: 60
+  strategy:
+    matrix:
+      AddressUndefined:
+        EnableSanitizers: 'ON'
+        EnableThreadSanitizer: 'OFF'
+      Thread:
+        EnableSanitizers: 'OFF'
+        EnableThreadSanitizer: 'ON'
+  variables:
+    UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
+    ASAN_OPTIONS: abort_on_error=1
+  steps:
+  - checkout: self
+
+  - script: |
+      set -euo pipefail
+      sudo apt-get update
+      sudo apt-get install -y libjavascriptcoregtk-4.1-dev libcurl4-openssl-dev ninja-build clang
+    displayName: Install runtime dependencies
+
+  - script: |
+      set -euo pipefail
+      cmake -S Dependencies/JsRuntimeHost -B Build/Runtime -G Ninja \
+        -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+        -D CMAKE_C_COMPILER=clang \
+        -D CMAKE_CXX_COMPILER=clang++ \
+        -D ENABLE_SANITIZERS=$(EnableSanitizers) \
+        -D ENABLE_THREAD_SANITIZER=$(EnableThreadSanitizer)
+      cmake --build Build/Runtime --target UnitTests --parallel
+    displayName: Build runtime tests
+
+  - script: |
+      set -euo pipefail
+      ulimit -c unlimited
+      if [ "$(EnableThreadSanitizer)" = "ON" ]; then
+        export TSAN_OPTIONS="suppressions=$(Build.SourcesDirectory)/.github/tsan_suppressions.txt"
+        # JSC's Linux concurrent collector deadlocks under TSan's signal interception.
+        export JSC_useConcurrentGC=0
+      fi
+      ./UnitTests
+    workingDirectory: Build/Runtime/Tests/UnitTests
+    displayName: Run runtime tests
+
+- job: MacOS_Runtime_ThreadSanitizer
+  displayName: macOS runtime thread sanitizer
+  pool:
+    vmImage: 'macOS-26'
+  timeoutInMinutes: 60
+  steps:
+  - checkout: self
+
+  - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+    displayName: Select Xcode 26.4
+
+  - script: |
+      set -euo pipefail
+      cmake -S Dependencies/JsRuntimeHost -B Build/Runtime -G Xcode \
+        -D ENABLE_THREAD_SANITIZER=ON
+      cmake --build Build/Runtime --target UnitTests --config RelWithDebInfo
+    displayName: Build runtime tests
+
+  - script: |
+      set -euo pipefail
+      ulimit -c unlimited
+      ./UnitTests
+    workingDirectory: Build/Runtime/Tests/UnitTests/RelWithDebInfo
+    env:
+      TSAN_OPTIONS: suppressions=$(Build.SourcesDirectory)/.github/tsan_suppressions.txt
+    displayName: Run runtime tests

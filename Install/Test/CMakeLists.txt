@@ -5,18 +5,14 @@ if(POLICY CMP0135)
 endif()
 
 include(FetchContent)
+include("${CMAKE_CURRENT_LIST_DIR}/../../Dependencies/CMakeExtensions/CMakeLists.txt")
 
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz")
 # --------------------------------------------------
-
-FetchContent_MakeAvailable(CMakeExtensions)
 
 project(TestInstall)
 
