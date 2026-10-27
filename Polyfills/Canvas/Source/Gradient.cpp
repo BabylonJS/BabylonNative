@@ -42,6 +42,15 @@ namespace Babylon::Polyfills::Internal
 
     float clampf(float a, float mn, float mx) { return a < mn ? mn : (a > mx ? mx : a); }
 
+    uint32_t packColor(NVGcolor color)
+    {
+        const auto channel = [](float value) {
+            return static_cast<uint32_t>(std::lround(clampf(value, 0.f, 1.f) * 255.f));
+        };
+        return (channel(color.a) << 24) | (channel(color.b) << 16) |
+            (channel(color.g) << 8) | channel(color.r);
+    }
+
     void gradientSpan(uint32_t* dst, NVGcolor color0, NVGcolor color1, float offset0, float offset1)
     {
         float s0o = clampf(offset0, 0.0f, 1.0f);
@@ -66,8 +75,7 @@ namespace Babylon::Polyfills::Internal
         float da = (color1.a - a) / (e - s);
         for (unsigned i = s; i < e; i++)
         {
-            unsigned ur = (unsigned)(r * 255); unsigned ug = (unsigned)(g * 255); unsigned ub = (unsigned)(b * 255); unsigned ua = (unsigned)(a * 255);
-            dst[i] = (ua << 24) | (ub << 16) | (ug << 8) | ur;
+            dst[i] = packColor(nvgRGBAf(r, g, b, a));
             r += dr; g += dg; b += db; a += da;
         }
     }
@@ -370,8 +378,7 @@ namespace Babylon::Polyfills::Internal
                 }
 
                 image[(static_cast<size_t>(y) * static_cast<size_t>(width)) + static_cast<size_t>(x)] =
-                    ((uint32_t)(finalcolor.a * 255) << 24) | ((uint32_t)(finalcolor.b * 255) << 16) |
-                    ((uint32_t)(finalcolor.g * 255) << 8) | (uint32_t)(finalcolor.r * 255);
+                    packColor(finalcolor);
             }
         }
 

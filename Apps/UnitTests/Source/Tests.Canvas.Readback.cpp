@@ -166,7 +166,7 @@ TEST(CanvasGradients, InterpolatesStraightColorAndAlpha)
     std::array<uint32_t, 256> ramp{};
     gradientSpan(ramp.data(), red, transparentBlue, 0, 1);
     EXPECT_EQ(ramp[0], 0xff0000ffu);
-    EXPECT_EQ(ramp[128], 0x7f7f007fu);
+    EXPECT_EQ(ramp[128], 0x80800080u);
     const auto midpoint = lerpColor(red, transparentBlue, 0, 1, 0.5f);
     EXPECT_FLOAT_EQ(midpoint.r, 0.5f);
     EXPECT_FLOAT_EQ(midpoint.g, 0.0f);
@@ -174,9 +174,9 @@ TEST(CanvasGradients, InterpolatesStraightColorAndAlpha)
     EXPECT_FLOAT_EQ(midpoint.a, 0.5f);
 
     gradientSpan(ramp.data(), nvgRGBAf(1, 0, 0, 0), transparentBlue, 0, 1);
-    EXPECT_EQ(ramp[128], 0x007f007fu);
+    EXPECT_EQ(ramp[128], 0x00800080u);
     gradientSpan(ramp.data(), nvgRGBAf(0, 1, 0, 1), nvgRGBAf(0, 0, 1, 1), 0, 1);
-    EXPECT_EQ(ramp[128], 0xff7f7f00u);
+    EXPECT_EQ(ramp[128], 0xff808000u);
     const auto previous = ramp;
     gradientSpan(ramp.data(), red, transparentBlue, 0.5f, 0.5f);
     EXPECT_EQ(ramp, previous);
