@@ -72,10 +72,6 @@ namespace Babylon
         constexpr double kNoCubeFace = -1;
         constexpr size_t kRgbComponentCount = 3;
         constexpr size_t kRgbaComponentCount = 4;
-        constexpr size_t kSphericalHarmonicCoefficientCount = 9;
-        constexpr size_t kSphericalPolynomialCoefficientCount = 9;
-        constexpr size_t kSphericalPolynomialValueCount = kSphericalPolynomialCoefficientCount * kRgbComponentCount;
-        constexpr uint32_t kBitsPerByte = 8;
         constexpr uint16_t kMinimum3DTextureLayerCount = 2;
         constexpr uint16_t kHalfFloatOneBits = 0x3C00;
         constexpr uint32_t kFloatOneBits = 0x3F800000;
@@ -278,6 +274,11 @@ namespace Babylon
         }
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        constexpr size_t kSphericalHarmonicCoefficientCount = 9;
+        constexpr size_t kSphericalPolynomialCoefficientCount = 9;
+        constexpr size_t kSphericalPolynomialValueCount = kSphericalPolynomialCoefficientCount * kRgbComponentCount;
+        constexpr uint32_t kBitsPerByte = 8;
+
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGB8) == bgfx::TextureFormat::RGB8);

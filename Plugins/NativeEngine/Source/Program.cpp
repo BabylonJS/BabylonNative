@@ -61,13 +61,6 @@ namespace
 
 namespace Babylon
 {
-    namespace
-    {
-        constexpr size_t kVectorComponentCount = 4;
-        constexpr size_t kMatrix3Dimension = 3;
-        constexpr size_t kMatrix4Dimension = 4;
-    }
-
     Program::Program(Graphics::DeviceContext& deviceContext)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
@@ -236,6 +229,9 @@ namespace Babylon
 
         // bgfx reads a type-dependent number of floats per array element from uniform data.
         assert((itUniformInfo == m_uniformInfos.end() || [&]() {
+            constexpr size_t kVectorComponentCount = 4;
+            constexpr size_t kMatrix3Dimension = 3;
+            constexpr size_t kMatrix4Dimension = 4;
             size_t floatsPerElement{};
             switch (itUniformInfo->second.Type)
             {
