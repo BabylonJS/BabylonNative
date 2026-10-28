@@ -29,7 +29,7 @@ namespace Babylon
 
         void Dispose();
 
-        // Writes bytes into the CPU shadow and the GPU buffer at byteOffset, which must be a multiple of the stride.
+        // Writes bytes into the CPU shadow and the GPU buffer at byteOffset, which must be a multiple of 4.
         void Update(gsl::span<const uint8_t> bytes, uint32_t byteOffset);
 
         // Binds the buffer as a compute resource on the given stage.

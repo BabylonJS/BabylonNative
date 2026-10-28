@@ -38,14 +38,16 @@ namespace Babylon
 
         // Moves the contents into a GPU storage buffer so compute work (transform feedback
         // emulation) can read and write it; later updates, vertex binds and instance repacks use the
-        // storage buffer. Must happen before the buffer is built as a regular vertex stream.
-        StorageBuffer& PromoteToGpuStorage();
+        // storage buffer. Must happen before the buffer is built as a regular vertex stream. A word
+        // aligned vertexByteStride becomes the storage element stride, so vertex binds with that
+        // stride match it.
+        StorageBuffer& PromoteToGpuStorage(uint32_t vertexByteStride = 0);
         StorageBuffer* GpuStorage() const { return m_gpuStorage.get(); }
         uint32_t ByteLength() const;
 
         // Binds the contents as a read-only raw compute buffer (transform feedback vertex input). A
         // buffer that was never built is promoted to GPU storage; a built one must be compute readable.
-        void SetComputeRead(bgfx::Encoder* encoder, uint8_t stage);
+        void SetComputeRead(bgfx::Encoder* encoder, uint8_t stage, uint32_t vertexByteStride);
 
         struct InstanceInfo
         {
