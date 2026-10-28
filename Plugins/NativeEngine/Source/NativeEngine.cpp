@@ -838,7 +838,8 @@ namespace Babylon
 
         constexpr bool RequiresPrimitiveExpansion(uint32_t fillMode)
         {
-            return fillMode == 5 || fillMode == 8;
+            return fillMode == static_cast<uint32_t>(PrimitiveModeExpansion::Mode::LineLoop)
+                || fillMode == static_cast<uint32_t>(PrimitiveModeExpansion::Mode::TriangleFan);
         }
 
         using CommandFunctionPointerT = void (NativeEngine::*)(NativeDataStream::Reader&);
