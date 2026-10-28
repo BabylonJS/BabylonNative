@@ -51,6 +51,10 @@ namespace Playground
             {
                 js.Set("captureFrame", Napi::Number::New(env, *options.CaptureFrame));
             }
+            if (options.ReadinessTimeoutSeconds.has_value())
+            {
+                js.Set("readinessTimeoutSeconds", Napi::Number::New(env, *options.ReadinessTimeoutSeconds));
+            }
 
             auto filters = Napi::Array::New(env, options.TestFilters.size());
             for (uint32_t index = 0; index < options.TestFilters.size(); ++index)

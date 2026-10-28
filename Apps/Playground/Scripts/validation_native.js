@@ -126,7 +126,9 @@
     // wait-for-readiness limits.
     const MAX_CONVERGENCE_TICKS = 240;
     // The Win32 sanitizer job needs ~9.5 min for EXR Loader alone (ASAN-instrumented EXR decode), so keep a wide margin.
-    const INITIAL_READINESS_TIMEOUT_MS = 20 * 60 * 1000;
+    const INITIAL_READINESS_TIMEOUT_MS = (typeof opts.readinessTimeoutSeconds === "number" && opts.readinessTimeoutSeconds > 0)
+        ? opts.readinessTimeoutSeconds * 1000
+        : 20 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
     // The LTC data is a network download, so bound the wait in time rather than render-loop ticks.
     const AREA_LIGHT_LTC_TIMEOUT_MS = 60 * 1000;

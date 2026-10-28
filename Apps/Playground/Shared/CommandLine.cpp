@@ -228,6 +228,19 @@ namespace
                 o.CaptureFrame = n;
             }},
 
+        FlagSpec{"--readiness-timeout", "", FlagKind::ValueRequired, "SECONDS",
+            "Fail a test whose scene is not ready",
+            "                              within SECONDS (default 1200).\n",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                int n = 0;
+                if (!ParseIntStrict(value, n) || n < 1 || n > 86400)
+                {
+                    err = "invalid --readiness-timeout value (expected positive integer): '" + std::string{value} + "'";
+                    return;
+                }
+                o.ReadinessTimeoutSeconds = n;
+            }},
+
         FlagSpec{"--test", "-t", FlagKind::ValueRequired, "PATTERN",
             "Run tests whose title contains PATTERN.",
             "                              May be specified multiple times (OR).\n",

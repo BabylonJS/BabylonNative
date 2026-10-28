@@ -227,12 +227,14 @@ jobs:
       # this still gates scene loading/rendering failures for the full WebGPU
       # subset. The preceding Babylon-Lite test retains WARP-specific pixel
       # validation. --headless routes all logs to stdout for CI diagnostics.
+      # The default 20-minute readiness wait is sized for the ASAN job; scenes
+      # that never become ready on WARP would otherwise exhaust the job timeout.
       - name: Validation Tests
         if: ${{ inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground --headless --generate-references app:///Scripts/validation_native.js
+          Playground --headless --generate-references --readiness-timeout=300 app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures (NativeDawn)
         if: ${{ inputs.nativedawn && !cancelled() }}
