@@ -12,7 +12,8 @@ namespace
     auto STYLE_REGEX = std::regex(R"(^\s*(normal|italic)\s)");
     auto WEIGHT_REGEX = std::regex(R"(^\s*(normal|bold|\d+)\s)");
     auto SIZE_REGEX = std::regex(R"(^\s*((?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)px\s)");
-    auto FAMILY_IDENT_REGEX = std::regex(R"(^\s*((?:[\w-]|\\.)+))");
+    auto FAMILY_IDENT_REGEX = std::regex(R"(^\s*((?:[\w-]|\\.)+(?:\s+(?:[\w-]|\\.)+)*))");
+    auto WHITESPACE_REGEX = std::regex(R"(\s+)");
     auto FAMILY_STRING_REGEX = std::regex(R"(^\s*(["'])((?:[^\\]|\\.)*?)\1)");
 
     std::string DescribeValue(const Napi::Value& value)
@@ -173,7 +174,8 @@ namespace Babylon::Polyfills::Internal
 
         if (std::regex_search(begin, end, match, FAMILY_IDENT_REGEX))
         {
-            font.m_family = match[1];
+            // An unquoted family name is a sequence of identifiers joined by single spaces.
+            font.m_family = std::regex_replace(match[1].str(), WHITESPACE_REGEX, " ");
         }
         else if (std::regex_search(begin, end, match, FAMILY_STRING_REGEX))
         {

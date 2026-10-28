@@ -1,0 +1,11 @@
+Tinos-Regular.ttf
+
+Source repository: https://github.com/googlefonts/tinos
+Source commit: 3b4482a99b80ea5fc75f187b1be3120a3f5905b3
+Source file: fonts/ttf/Tinos-Regular.ttf
+Immutable URL: https://raw.githubusercontent.com/googlefonts/tinos/3b4482a99b80ea5fc75f187b1be3120a3f5905b3/fonts/ttf/Tinos-Regular.ttf
+Git blob: 893a1b525962984481aee5ce275516d384eb4865
+SHA-256: 60A0E8EF0C04DD5DD69FFE91025FA2AE5836CBD35600A82BA031977557E2CB61
+
+Copyright 2026 The Tinos Project Authors (https://github.com/googlefonts/tinos)
+Licensed under the SIL Open Font License, Version 1.1. See Tinos-OFL.txt.
