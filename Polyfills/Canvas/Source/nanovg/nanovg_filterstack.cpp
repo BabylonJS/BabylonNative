@@ -6,8 +6,8 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/embedded_shader.h>
 
-std::regex blurRegex(R"(blur\((\d*\.?\d+)(px|rem)?\)|blur\(\))");
-std::regex noneRegex(R"(^\s*none\s*$)");
+const std::regex blurRegex(R"(blur\((\d*\.?\d+)(px|rem)?\)|blur\(\))");
+const std::regex noneRegex(R"(^\s*none\s*$)");
 
 #include "Shaders/dxbc/vs_fspass.h"
 #include "Shaders/dxil/vs_fspass.h"
@@ -30,9 +30,23 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 #include "Shaders/essl/fs_boxblur.h"
 #include "Shaders/spirv/fs_boxblur.h"
 
-#define BLUR_MAX_PX 1000
-#define BLUR_TAPS 13
-#define BLUR_UNIFORM_SIZE 5 // Matches u_weights[5] in fs_gaussblur.sc.
+namespace
+{
+    constexpr float BLUR_MAX_PX = 1000.f;
+    constexpr int BLUR_TAPS = 13;
+    constexpr int BLUR_UNIFORM_SIZE = 5; // Matches u_weights[5] in fs_gaussblur.sc.
+    constexpr size_t UNIFORM_VECTOR_COMPONENT_COUNT = 4;
+    constexpr size_t BLUR_DIRECTION_COUNT = 2;
+    constexpr size_t BOX_BLUR_PASS_COUNT = 3;
+    constexpr float GAUSSIAN_BLUR_SIGMA_THRESHOLD = 2.f;
+    constexpr float BOX_KERNEL_SCALE = 1.879971f;
+
+    enum class BoxKernelComponent : size_t
+    {
+        Size,
+        Radius,
+    };
+}
 
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
@@ -111,8 +125,7 @@ void nanovg_filterstack::DisposeBgfx()
 
 bool nanovg_filterstack::ValidString(const std::string& string)
 {
-    std::smatch match;
-    return std::regex_match(string, match, noneRegex) || std::regex_match(string, match, blurRegex);
+    return std::regex_match(string, noneRegex) || std::regex_match(string, blurRegex);
 }
 
 void nanovg_filterstack::ParseString(const std::string& string)
@@ -125,25 +138,11 @@ void nanovg_filterstack::ParseString(const std::string& string)
         if (match.size() > 1 && match[1].matched)
         {
             float radius = std::stof(match[1].str());
-            std::string unit = match[2].matched ? match[2].str() : "px";
-            std::transform(unit.begin(), unit.end(), unit.begin(), ::tolower);
-
-            if (unit != "px")
-            {
-                // TODO: convert non-px radius
-            }
-
             assert(stackElementCount < MAX_STACK_SIZE);
             if (radius > 0 && stackElementCount < MAX_STACK_SIZE)
             {
-                StackElement& element = stackElements[stackElementCount++];
-                element.type = SE_BLUR;
-                element.blurElement = {radius, radius};
+                stackElements[stackElementCount++] = {radius, radius};
             }
-        }
-        else
-        {
-            // defaults to blur(0), which is no blur
         }
     }
 }
@@ -172,18 +171,13 @@ std::vector<float> nanovg_filterstack::CalculateGaussianKernel(float sigma, int 
     return kernel;
 }
 
-std::array<float, 2> nanovg_filterstack::CalculateBoxKernel(float sigma)
+std::array<float, nanovg_filterstack::BOX_KERNEL_COMPONENT_COUNT> nanovg_filterstack::CalculateBoxKernel(float sigma)
 {
     if (sigma > BLUR_MAX_PX)
         sigma = BLUR_MAX_PX;
-    float d = std::floor(1.879971f * sigma + 0.5f); // d = floor(s * (3 * sqrt(2 * pi) / 4) + 0.5)
-    std::array<float, 2> kernel = {d, std::floor(d / 2.0f)}; // kernel size, kernel radius
+    float d = std::floor(BOX_KERNEL_SCALE * sigma + 0.5f);
+    std::array<float, BOX_KERNEL_COMPONENT_COUNT> kernel = {d, std::floor(d / 2.0f)};
     return kernel;
-}
-
-void nanovg_filterstack::Render(std::function<void()> element)
-{
-    element();
 }
 
 void nanovg_filterstack::Render(
@@ -200,108 +194,91 @@ void nanovg_filterstack::Render(
 {
     if (!stackElementCount)
     {
-        // no filter, render straight into final framebuffer
         firstPass(firstProg, finalFrameBuffer);
+        return;
     }
-    else
+
+    Babylon::Graphics::FrameBuffer* prevBuf = acquire();
+    Babylon::Graphics::FrameBuffer* nextBuf = nullptr;
+    bgfx::ProgramHandle lastProg = firstProg;
+    firstPass(firstProg, prevBuf);
+
+    static const std::array<std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>, BLUR_DIRECTION_COUNT> directions = {
+        std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{1.f, 0.f, 0.f, 0.f},
+        std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{0.f, 1.f, 0.f, 0.f}
+    };
+
+    for (int elementIndex = 0; elementIndex < stackElementCount; ++elementIndex)
     {
-        Babylon::Graphics::FrameBuffer* prevBuf = nullptr;
-        Babylon::Graphics::FrameBuffer* nextBuf = acquire();
-        bgfx::ProgramHandle lastProg = firstProg;
-
-        // first pass
-        firstPass(firstProg, nextBuf);
-        prevBuf = nextBuf;
-        nextBuf = nullptr;
-
-        int i = 0;
-        for (int iStackElement = 0; iStackElement < stackElementCount; iStackElement++)
-        {
-            auto& element = stackElements[iStackElement];
-            assert(prevBuf != nullptr);
-            assert(nextBuf == nullptr);
-
-            const bool lastElement = (i == stackElementCount - 1);
-
-            if (element.type == SE_BLUR)
-            {
-                static const std::array<std::array<float, 4>, 2> directions = {
-                    std::array<float, 4>{1.f, 0.f, 0.f, 0.f}, // horizontal
-                    std::array<float, 4>{0.f, 1.f, 0.f, 0.f}  // vertical
-                };
-
-                for (int i = 0; i < 2; i++)
-                {
-                    const std::array<float, 4>& direction = directions[i];
-                    bool last = lastElement && i == 1 && !separateComposite;
-                    float sigma = i == 0 ? element.blurElement.horizontal : element.blurElement.vertical;
-
-                    // use gaussian blur for sigma < 2, box blur for sigma >= 2
-                    if (sigma < 2)
-                    {
-                        std::vector<float> kernel = CalculateGaussianKernel(sigma, BLUR_TAPS);
-                        kernel.resize(BLUR_UNIFORM_SIZE * 4, 0.0f);
-                        setUniform(m_uniforms.u_direction, &direction, 1);
-                        setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
-
-                        if (last)
-                        {
-                            lastProg = s_gaussBlurProg;
-                            break; // last pass will write to finalFrameBuffer
-                        }
-                        nextBuf = acquire();
-                        filterPass(s_gaussBlurProg, prevBuf, nextBuf);
-                        release(prevBuf);
-                        prevBuf = nextBuf;
-                        nextBuf = nullptr;
-                    }
-                    else
-                    {
-                        std::array<float, 2> kernel = CalculateBoxKernel(sigma);
-                        bool isOdd = static_cast<int>(kernel[0]) % 2 == 1;
-
-                        std::array<std::array<float, 4>, 3> kernelsOdd = {
-                            std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                            std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                            std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                        };
-                        float xOffsetL = direction[0] > 0 ? -0.5f : 0.f;
-                        float xOffsetR = direction[0] > 0 ? 0.5f : 0.f;
-                        float yOffsetL = direction[1] > 0 ? -0.5f : 0.f;
-                        float yOffsetR = direction[1] > 0 ? 0.5f : 0.f;
-                        std::array<std::array<float, 4>, 3> kernelsEven = {
-                            std::array<float, 4>{kernel[0], kernel[1], xOffsetL, yOffsetL},
-                            std::array<float, 4>{kernel[0], kernel[1], xOffsetR, yOffsetR},
-                            std::array<float, 4>{kernel[0] + 1, kernel[1], 0.f, 0.f},
-                        };
-
-                        // 3 pass box blur for s >= 2
-                        for (int i = 0; i < 3; i++)
-                        {
-                            setUniform(m_uniforms.u_direction, &direction, 1);
-                            setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
-
-                            if (last && i == 2)
-                            {
-                                lastProg = s_boxBlurProg;
-                                break; // last pass will write to finalFrameBuffer
-                            }
-                            nextBuf = acquire();
-                            filterPass(s_boxBlurProg, prevBuf, nextBuf);
-                            release(prevBuf);
-                            prevBuf = nextBuf;
-                            nextBuf = nullptr;
-                        }
-                    }
-                }
-            }
-            i++;
-        }
-
+        const auto& blur = stackElements[elementIndex];
+        const bool lastElement = elementIndex == stackElementCount - 1;
         assert(prevBuf != nullptr);
         assert(nextBuf == nullptr);
 
-        finalPass(lastProg, prevBuf, finalFrameBuffer);
-        release(prevBuf);
+        for (size_t directionIndex = 0; directionIndex < BLUR_DIRECTION_COUNT; ++directionIndex)
+        {
+            const auto& direction = directions[directionIndex];
+            const bool last = lastElement && directionIndex == BLUR_DIRECTION_COUNT - 1 && !separateComposite;
+            const float sigma = directionIndex == 0 ? blur.horizontal : blur.vertical;
+
+            if (sigma < GAUSSIAN_BLUR_SIGMA_THRESHOLD)
+            {
+                std::vector<float> kernel = CalculateGaussianKernel(sigma, BLUR_TAPS);
+                kernel.resize(BLUR_UNIFORM_SIZE * UNIFORM_VECTOR_COMPONENT_COUNT, 0.0f);
+                setUniform(m_uniforms.u_direction, &direction, 1);
+                setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
+
+                if (last)
+                {
+                    lastProg = s_gaussBlurProg;
+                    break;
+                }
+                nextBuf = acquire();
+                filterPass(s_gaussBlurProg, prevBuf, nextBuf);
+                release(prevBuf);
+                prevBuf = nextBuf;
+                nextBuf = nullptr;
+                continue;
+            }
+
+            const std::array<float, BOX_KERNEL_COMPONENT_COUNT> kernel = CalculateBoxKernel(sigma);
+            const auto kernelSize = kernel[static_cast<size_t>(BoxKernelComponent::Size)];
+            const auto kernelRadius = kernel[static_cast<size_t>(BoxKernelComponent::Radius)];
+            const bool isOdd = static_cast<int>(kernelSize) % 2 == 1;
+            const float xOffset = direction[0] > 0 ? 0.5f : 0.f;
+            const float yOffset = direction[1] > 0 ? 0.5f : 0.f;
+            const std::array<std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>, BOX_BLUR_PASS_COUNT> kernelsOdd = {
+                std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{kernelSize, kernelRadius, 0.f, 0.f},
+                std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{kernelSize, kernelRadius, 0.f, 0.f},
+                std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{kernelSize, kernelRadius, 0.f, 0.f},
+            };
+            const std::array<std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>, BOX_BLUR_PASS_COUNT> kernelsEven = {
+                std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{kernelSize, kernelRadius, -xOffset, -yOffset},
+                std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{kernelSize, kernelRadius, xOffset, yOffset},
+                std::array<float, UNIFORM_VECTOR_COMPONENT_COUNT>{kernelSize + 1, kernelRadius, 0.f, 0.f},
+            };
+
+            for (size_t pass = 0; pass < BOX_BLUR_PASS_COUNT; ++pass)
+            {
+                setUniform(m_uniforms.u_direction, &direction, 1);
+                setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[pass].data() : kernelsEven[pass].data(), 1);
+
+                if (last && pass == BOX_BLUR_PASS_COUNT - 1)
+                {
+                    lastProg = s_boxBlurProg;
+                    break;
+                }
+                nextBuf = acquire();
+                filterPass(s_boxBlurProg, prevBuf, nextBuf);
+                release(prevBuf);
+                prevBuf = nextBuf;
+                nextBuf = nullptr;
+            }
+        }
     }
+
+    assert(prevBuf != nullptr);
+    assert(nextBuf == nullptr);
+    finalPass(lastProg, prevBuf, finalFrameBuffer);
+    release(prevBuf);
 }

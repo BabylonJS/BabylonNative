@@ -7,6 +7,7 @@
 #include <Babylon/Graphics/Texture.h>
 
 #include "FrameBufferPool.h"
+#include "CanvasConstants.h"
 #include <array>
 
 namespace Babylon::Polyfills
@@ -43,7 +44,7 @@ namespace Babylon::Polyfills
             virtual void FlushGraphicResources() = 0;
 
         private:
-            // context is a monitoredResource managed by the GC while Canvas::Impl is managed by the app. Make sure the canvas impl is destroyed after all monitoredResources are.
+            // Keep the app-owned implementation alive until its GC-owned resources are gone.
             std::shared_ptr<Canvas::Impl> m_impl;
         };
 
@@ -106,24 +107,31 @@ namespace Babylon::Polyfills::Internal
         }
 
     private:
+        enum class ConvertedTextureKind : size_t
+        {
+            NoMipMaps,
+            StraightAlphaMipMaps,
+            PremultipliedAlphaMipMaps,
+            Count,
+        };
+
         Napi::Value GetContext(const Napi::CallbackInfo&);
         Napi::Value GetWidth(const Napi::CallbackInfo&);
         void SetWidth(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetHeight(const Napi::CallbackInfo&);
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
+        void SetDimension(uint16_t& dimension, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         Graphics::Texture& GetConvertedTexture(bool premulAlpha, bool generateMipMaps);
         Napi::Value ToDataURL(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
-        // Share validation while naming the entry point the caller used.
         static void LoadTTFCore(const Napi::CallbackInfo& info, const char* methodName);
         static Napi::Value ParseColor(const Napi::CallbackInfo& info);
         void Remove(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
 
-        Napi::ObjectReference m_contextObject{};
         Context* m_context{nullptr};
 
         uint16_t m_width{1};
@@ -138,7 +146,7 @@ namespace Babylon::Polyfills::Internal
             std::unique_ptr<Graphics::FrameBuffer> FrameBuffer{};
             std::unique_ptr<Graphics::Texture> Texture{};
         };
-        std::array<ConvertedTexture, 3> m_convertedTextures{};
+        std::array<ConvertedTexture, static_cast<size_t>(ConvertedTextureKind::Count)> m_convertedTextures{};
         bgfx::ProgramHandle m_unpremultiplyProgram{BGFX_INVALID_HANDLE};
         bgfx::UniformHandle m_copySampler{BGFX_INVALID_HANDLE};
         bgfx::UniformHandle m_copyParams{BGFX_INVALID_HANDLE};

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <vector>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -22,17 +23,25 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    static const int GRADIENT_SAMPLES_L = 256;
-    // The radial field is baked over the bounding box of both circles, which can be much larger
-    // than the shape being filled, so it needs more samples than the 1D linear ramp to stay
-    // smooth after nanovg's bilinear stretch.
-    static const int GRADIENT_SAMPLES_R = 512;
-
-    typedef struct LVGColorTransform
+    namespace
     {
-        float mul[4];
-        float add[4];
-    } LVGColorTransform;
+        constexpr int LINEAR_GRADIENT_SAMPLE_COUNT = 256;
+        // Radial ramps need more samples because their baked area can be much larger.
+        constexpr int RADIAL_GRADIENT_SAMPLE_COUNT = 512;
+        constexpr float MIN_STOP_DISTANCE = 0.00001f;
+        constexpr size_t LINEAR_GRADIENT_ARGUMENT_COUNT = 4;
+
+        uint32_t PackColor(NVGcolor color)
+        {
+            const auto channel = [](float value) {
+                return static_cast<uint32_t>(value * CanvasConstants::COLOR_CHANNEL_MAX);
+            };
+            return (channel(color.a) << CanvasConstants::ALPHA_CHANNEL_SHIFT) |
+                (channel(color.b) << CanvasConstants::BLUE_CHANNEL_SHIFT) |
+                (channel(color.g) << CanvasConstants::GREEN_CHANNEL_SHIFT) |
+                channel(color.r);
+        }
+    }
 
     struct ColorStop
     {
@@ -46,16 +55,14 @@ namespace Babylon::Polyfills::Internal
     {
         float s0o = clampf(offset0, 0.0f, 1.0f);
         float s1o = clampf(offset1, 0.0f, 1.0f);
-        unsigned s = static_cast<unsigned>(s0o * static_cast<float>(GRADIENT_SAMPLES_L));
-        unsigned e = static_cast<unsigned>(s1o * static_cast<float>(GRADIENT_SAMPLES_L));
-        // Coincident stops produce an empty span; the per-sample deltas below would divide
-        // by zero and write NaNs into the ramp.
+        unsigned s = static_cast<unsigned>(s0o * static_cast<float>(LINEAR_GRADIENT_SAMPLE_COUNT));
+        unsigned e = static_cast<unsigned>(s1o * static_cast<float>(LINEAR_GRADIENT_SAMPLE_COUNT));
+        // Coincident stops produce an empty span.
         if (e <= s)
         {
             return;
         }
-        // Canvas interpolates straight color and alpha independently; NanoVG premultiplies
-        // the sampled ramp when drawing it into the Canvas render target.
+        // Canvas interpolates straight RGBA; NanoVG premultiplies during rendering.
         float r = color0.r;
         float g = color0.g;
         float b = color0.b;
@@ -66,20 +73,9 @@ namespace Babylon::Polyfills::Internal
         float da = (color1.a - a) / (e - s);
         for (unsigned i = s; i < e; i++)
         {
-            unsigned ur = (unsigned)(r * 255); unsigned ug = (unsigned)(g * 255); unsigned ub = (unsigned)(b * 255); unsigned ua = (unsigned)(a * 255);
-            dst[i] = (ua << 24) | (ub << 16) | (ug << 8) | ur;
+            dst[i] = PackColor({r, g, b, a});
             r += dr; g += dg; b += db; a += da;
         }
-    }
-
-    NVGcolor transformColor(NVGcolor color, LVGColorTransform* x)
-    {
-        if (!x)
-            return color;
-        color = nvgRGBAf(color.r * x->mul[0], color.g * x->mul[1], color.b * x->mul[2], color.a * x->mul[3]);
-        color = nvgRGBAf(color.r + x->add[0], color.g + x->add[1], color.b + x->add[2], color.a + x->add[3]);
-        color = nvgRGBAf(std::max(0.0f, std::min(color.r, 1.0f)), std::max(0.0f, std::min(color.g, 1.0f)), std::max(0.0f, std::min(color.b, 1.0f)), std::max(0.0f, std::min(color.a, 1.0f)));
-        return color;
     }
 
     static constexpr auto JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME = "CanvasGradient";
@@ -110,10 +106,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Object CanvasGradient::CreateLinear(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float x1, float y1)
     {
-        // NOTE: Do not open a Napi::HandleScope here. The gradient object created below is
-        // returned to the caller, and a plain (non-escapable) HandleScope would release the
-        // handle on close. Under the reference-counted QuickJS Node-API port that frees the
-        // object's only reference, yielding a dangling value (typeof "unknown", no prototype).
+        // A non-escapable HandleScope would release the returned QuickJS handle.
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME).As<Napi::Function>();
         auto gradientValue = func.New({ Napi::Value::From(env, x0), Napi::Value::From(env, y0), Napi::Value::From(env, x1), Napi::Value::From(env, y1) });
         CanvasGradient::Unwrap(gradientValue)->context = context;
@@ -122,7 +115,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Object CanvasGradient::CreateRadial(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float r0, float x1, float y1, float r1)
     {
-        // See CreateLinear: no HandleScope here so the returned gradient handle is not freed on scope close.
+        // See CreateLinear: the returned handle must escape this function.
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME).As<Napi::Function>();
         auto gradientValue = func.New({ Napi::Value::From(env, x0), Napi::Value::From(env, y0), Napi::Value::From(env, x1), Napi::Value::From(env, y1), Napi::Value::From(env, r0), Napi::Value::From(env, r1) });
         CanvasGradient::Unwrap(gradientValue)->context = context;
@@ -136,7 +129,7 @@ namespace Babylon::Polyfills::Internal
         , x1{ info[2].As<Napi::Number>().FloatValue() }
         , y1{ info[3].As<Napi::Number>().FloatValue() }
     {
-        gradientType = (info.Length() == 4) ? GradientType::Linear : GradientType::Radial;
+        gradientType = info.Length() == LINEAR_GRADIENT_ARGUMENT_COUNT ? GradientType::Linear : GradientType::Radial;
         if (gradientType == GradientType::Radial)
         {
             r0 = info[4].As<Napi::Number>().FloatValue();
@@ -155,15 +148,14 @@ namespace Babylon::Polyfills::Internal
 
     void CanvasGradient::Dispose()
     {
-        if (cachedImage >= 0)
+        if (cachedImage >= CanvasConstants::MIN_NANOVG_RESOURCE_INDEX)
         {
-            // Lock once and keep the result: calling context.lock() a second time could observe
-            // an expired context and dereference an empty shared_ptr.
+            // Keep one lock result so the context cannot expire between checks.
             if (auto nvg = context.lock(); nvg && *nvg != nullptr)
             {
                 nvgDeleteImage(*nvg, cachedImage);
             }
-            cachedImage = -1;
+            cachedImage = CanvasConstants::INVALID_NANOVG_IMAGE;
         }
     }
 
@@ -177,16 +169,15 @@ namespace Babylon::Polyfills::Internal
         dirty = true;
     }
 
-    int CanvasGradient::LinearGradientStops(NVGcontext& nvg, LVGColorTransform* x)
+    int CanvasGradient::LinearGradientStops(NVGcontext& nvg)
     {
         size_t nstops = colors.size();
         if (!nstops)
         {
             return 0;
         }
-        // Zero-initialize: the spans below only cover the range the stops span, so any
-        // sample left untouched would otherwise be read from uninitialized stack memory.
-        uint32_t data[GRADIENT_SAMPLES_L]{};
+        // Stops may not cover the entire ramp.
+        uint32_t data[LINEAR_GRADIENT_SAMPLE_COUNT]{};
         int stopIndex{};
         std::vector<ColorStop> colorStops(nstops);
         for (auto& stop : colors)
@@ -195,34 +186,34 @@ namespace Babylon::Polyfills::Internal
         }
         if (colorStops[0].offset > 0.0f)
         {
-            NVGcolor s0 = transformColor(colorStops[0].color, x);
+            const NVGcolor s0 = colorStops[0].color;
             gradientSpan(data, s0, s0, 0.0f, colorStops[0].offset);
         }
         for (unsigned i = 0; i < (nstops - 1); i++)
         {
-            gradientSpan(data, transformColor(colorStops[i].color, x),
-                transformColor(colorStops[i + 1].color, x),
+            gradientSpan(data, colorStops[i].color,
+                colorStops[i + 1].color,
                 colorStops[i].offset,
                 colorStops[i + 1].offset);
         }
         if (colorStops[nstops - 1].offset < 1.0f)
         {
-            NVGcolor s0 = transformColor(colorStops[nstops - 1].color, x);
+            const NVGcolor s0 = colorStops[nstops - 1].color;
             gradientSpan(data, s0, s0, colorStops[nstops - 1].offset, 1.0f);
         }
-        return nvgCreateImageRGBA(&nvg, GRADIENT_SAMPLES_L, 1, 0, (unsigned char*)data);
+        return nvgCreateImageRGBA(&nvg, LINEAR_GRADIENT_SAMPLE_COUNT, 1, 0, (unsigned char*)data);
     }
 
     NVGcolor lerpColor(NVGcolor color0, NVGcolor color1, float offset0, float offset1, float g)
     {
         NVGcolor dst;
-        float den = std::max(0.00001f, offset1 - offset0);
-        for (int i = 0; i < 4; i++)
+        float den = std::max(MIN_STOP_DISTANCE, offset1 - offset0);
+        for (size_t i = 0; i < CanvasConstants::RGBA_CHANNEL_COUNT; i++)
             dst.rgba[i] = color0.rgba[i] + (color1.rgba[i] - color0.rgba[i]) * (g - offset0) / den;
         return dst;
     }
 
-    void calcStops(const std::vector<ColorStop>& gradient, LVGColorTransform* x, NVGcolor* color0, NVGcolor* color1, float* stop0, float* stop1, float g)
+    void calcStops(const std::vector<ColorStop>& gradient, NVGcolor* color0, NVGcolor* color1, float* stop0, float* stop1, float g)
     {
         const float* s0{};
         const float* s1{};
@@ -232,32 +223,29 @@ namespace Babylon::Polyfills::Internal
             if (g >= curr[0])
             {
                 s0 = curr;
-                *color0 = transformColor(gradient[i].color, x);
+                *color0 = gradient[i].color;
             }
             else if (s0 && g <= curr[0])
             {
                 s1 = curr;
-                *color1 = transformColor(gradient[i].color, x);
+                *color1 = gradient[i].color;
             }
         }
         if (!s0)
         {
             s0 = &gradient[0].offset;
-            *color0 = transformColor(gradient[0].color, x);
+            *color0 = gradient[0].color;
         }
         if (!s1)
         {
             s1 = &gradient[gradient.size() - 1].offset;
-            *color1 = transformColor(gradient[gradient.size() - 1].color, x);
+            *color1 = gradient[gradient.size() - 1].color;
         }
         *stop0 = s0[0];
         *stop1 = s1[0];
     }
 
-    // Solves the Canvas2D radial gradient equation at a point: finds the largest offset w for
-    // which the point lies on the circle interpolated between (x0,y0,r0) and (x1,y1,r1), i.e.
-    // |p - (c0 + w*cd)| == r0 + w*dr with a non-negative radius. Returns false when no such
-    // circle exists, in which case the spec leaves the point unpainted.
+    // Finds the largest valid offset on the interpolated circle; unmatched points are unpainted.
     static bool solveRadialOffset(float px, float py, float x0, float y0, float r0, float x1, float y1, float r1, float& offset)
     {
         const float cdx = x1 - x0;
@@ -270,15 +258,11 @@ namespace Babylon::Polyfills::Internal
         const float b = pdx * cdx + pdy * cdy + r0 * dr;
         const float c = pdx * pdx + pdy * pdy - r0 * r0;
 
-        // 'a' is a difference of squared lengths, so it has to be tested relative to their
-        // magnitude: an absolute epsilon would miss the degenerate case entirely once the
-        // coordinates are in the hundreds.
+        // Use a relative epsilon because a is a difference of squared lengths.
         const float scale = cdx * cdx + cdy * cdy + dr * dr;
-        if (std::fabs(a) <= 1e-6f * std::max(scale, 1.0f))
+        if (std::fabs(a) <= GradientConstants::QUADRATIC_RELATIVE_EPSILON * std::max(scale, 1.0f))
         {
-            // The two circles are tangent, so the quadratic collapses to a linear equation.
-            // This is not an exotic edge case: createRadialGradient(100,100,150, 250,100,300)
-            // lands here.
+            // Tangent circles collapse the quadratic to a linear equation.
             if (b == 0.0f)
             {
                 return false;
@@ -295,8 +279,7 @@ namespace Babylon::Polyfills::Internal
         const float root = std::sqrt(discriminant);
         const float larger = std::max((b + root) / a, (b - root) / a);
         const float smaller = std::min((b + root) / a, (b - root) / a);
-        // The spec paints the circles in increasing offset order, so the largest solution with
-        // a non-negative radius is the one visible at this point.
+        // The visible solution is the largest one with a non-negative radius.
         if ((r0 + larger * dr) >= 0.0f)
         {
             offset = larger;
@@ -310,7 +293,7 @@ namespace Babylon::Polyfills::Internal
         return false;
     }
 
-    int CanvasGradient::RadialGradientStops(NVGcontext& nvg, LVGColorTransform* cxform)
+    int CanvasGradient::RadialGradientStops(NVGcontext& nvg)
     {
         const size_t nstops = colors.size();
         if (!nstops)
@@ -325,19 +308,14 @@ namespace Babylon::Polyfills::Internal
             colorStops[stopIndex++] = { stop.first, stop.second };
         }
 
-        // A radial gradient is defined by two independently positioned circles, so the field
-        // cannot be baked as a centered disc: bake it over the bounding box that encloses both
-        // circles and evaluate the real two-circle equation per texel. Every point on that box's
-        // border lies outside both circles, so the ramp has already padded out to an end stop
-        // there and nanovg's clamp-to-edge sampling extends that same color across the rest of
-        // whatever shape is being filled -- exactly the "pad" behavior the spec requires.
+        // Bake the two-circle field over its bounding box; edge clamping supplies spec padding.
         imageX = std::min(x0 - r0, x1 - r1);
         imageY = std::min(y0 - r0, y1 - r1);
-        imageW = std::max(std::max(x0 + r0, x1 + r1) - imageX, 1e-4f);
-        imageH = std::max(std::max(y0 + r0, y1 + r1) - imageY, 1e-4f);
+        imageW = std::max(std::max(x0 + r0, x1 + r1) - imageX, GradientConstants::MIN_IMAGE_EXTENT);
+        imageH = std::max(std::max(y0 + r0, y1 + r1) - imageY, GradientConstants::MIN_IMAGE_EXTENT);
 
-        const int width = GRADIENT_SAMPLES_R;
-        const int height = GRADIENT_SAMPLES_R;
+        const int width = RADIAL_GRADIENT_SAMPLE_COUNT;
+        const int height = RADIAL_GRADIENT_SAMPLE_COUNT;
         std::vector<uint32_t> image(static_cast<size_t>(width) * static_cast<size_t>(height));
 
         for (int y = 0; y < height; y++)
@@ -355,23 +333,21 @@ namespace Babylon::Polyfills::Internal
                 }
                 else if (g <= 0.0f)
                 {
-                    finalcolor = transformColor(colorStops[0].color, cxform);
+                    finalcolor = colorStops[0].color;
                 }
                 else if (g >= 1.0f)
                 {
-                    finalcolor = transformColor(colorStops[nstops - 1].color, cxform);
+                    finalcolor = colorStops[nstops - 1].color;
                 }
                 else
                 {
                     float stop0, stop1;
                     NVGcolor color0, color1;
-                    calcStops(colorStops, cxform, &color0, &color1, &stop0, &stop1, g);
+                    calcStops(colorStops, &color0, &color1, &stop0, &stop1, g);
                     finalcolor = lerpColor(color0, color1, stop0, stop1, g);
                 }
 
-                image[(static_cast<size_t>(y) * static_cast<size_t>(width)) + static_cast<size_t>(x)] =
-                    ((uint32_t)(finalcolor.a * 255) << 24) | ((uint32_t)(finalcolor.b * 255) << 16) |
-                    ((uint32_t)(finalcolor.g * 255) << 8) | (uint32_t)(finalcolor.r * 255);
+                image[(static_cast<size_t>(y) * static_cast<size_t>(width)) + static_cast<size_t>(x)] = PackColor(finalcolor);
             }
         }
 
@@ -383,38 +359,30 @@ namespace Babylon::Polyfills::Internal
         UpdateCache();
 
         auto nvg = context.lock();
-        if (!nvg || *nvg == nullptr || cachedImage < 0)
+        if (!nvg || *nvg == nullptr || cachedImage < CanvasConstants::MIN_NANOVG_RESOURCE_INDEX)
         {
-            // The owning context is gone, or the ramp could not be baked; there is nothing
-            // sensible to paint with.
             return NVGpaint{};
         }
 
         if (gradientType == GradientType::Linear)
         {
-            // The linear ramp is baked into a GRADIENT_SAMPLES_L x 1 image, so orient the
-            // pattern along (x0,y0)->(x1,y1) and let it span exactly that distance. The
-            // vertical extent is irrelevant (the image is one texel tall and clamps), but it
-            // must be non-zero, and matching it to the length keeps u and v on the same scale
-            // -- nanovg divides the fragment position by the extent, so a small fixed height
-            // against a long gradient would cost float precision. Sampling outside the extent
-            // clamps to the edge texel, which is precisely the "pad" behavior the spec
-            // requires beyond the end stops.
+            // Orient the 1D ramp along the gradient line; edge clamping provides padding.
             const float dx = x1 - x0;
             const float dy = y1 - y0;
             float length = std::sqrt(dx * dx + dy * dy);
-            if (length < 1e-4f)
+            if (length < GradientConstants::MIN_IMAGE_EXTENT)
             {
-                // A zero-length gradient would divide by zero in the shader; keep it finite so
-                // the whole shape clamps to a single stop instead of rendering garbage.
-                length = 1e-4f;
+                // Avoid shader division by zero for a zero-length gradient.
+                length = GradientConstants::MIN_IMAGE_EXTENT;
             }
             return nvgImagePattern(*nvg, x0, y0, length, length, std::atan2(dy, dx), cachedImage, 1.f);
         }
 
-        // The radial ramp is baked over the bounding box of both circles (see
-        // RadialGradientStops), so map the image straight back onto that box in user space.
-        return nvgImagePattern(*nvg, imageX, imageY, std::max(imageW, 1e-4f), std::max(imageH, 1e-4f), 0.f, cachedImage, 1.f);
+        // Map the radial ramp back onto its user-space bounding box.
+        return nvgImagePattern(*nvg, imageX, imageY,
+            std::max(imageW, GradientConstants::MIN_IMAGE_EXTENT),
+            std::max(imageH, GradientConstants::MIN_IMAGE_EXTENT),
+            0.f, cachedImage, 1.f);
     }
 
     void CanvasGradient::UpdateCache()
@@ -424,24 +392,19 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // Lock the context once and hold it for the whole update. Baking a ramp deletes the old
-        // nanovg image and creates a new one, so re-locking inside each step would let the
-        // context expire between them and leave a dangling dereference behind.
+        // Hold one context lock while replacing the cached NanoVG image.
         auto nvg = context.lock();
         if (!nvg || *nvg == nullptr)
         {
-            // The owning context is gone. Stay dirty and leave cachedImage alone: Dispose()
-            // already skips deleting images whose context has expired, and Paint() returns an
-            // empty paint in this state.
             return;
         }
 
-        if (cachedImage >= 0)
+        if (cachedImage >= CanvasConstants::MIN_NANOVG_RESOURCE_INDEX)
         {
             nvgDeleteImage(*nvg, cachedImage);
-            cachedImage = -1;
+            cachedImage = CanvasConstants::INVALID_NANOVG_IMAGE;
         }
-        cachedImage = gradientType == GradientType::Linear ? LinearGradientStops(**nvg, nullptr) : RadialGradientStops(**nvg, nullptr);
+        cachedImage = gradientType == GradientType::Linear ? LinearGradientStops(**nvg) : RadialGradientStops(**nvg);
         dirty = false;
     }
 }

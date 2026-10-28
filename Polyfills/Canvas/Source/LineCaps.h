@@ -4,7 +4,7 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    static NVGlineCap StringToLineCap(Napi::Env env, const std::string& lineCapString)
+    static NVGlineCap StringToLineCap(Napi::Env, const std::string& lineCapString)
     {
         std::string str = lineCapString;
         std::transform(str.begin(), str.end(), str.begin(),
@@ -15,18 +15,11 @@ namespace Babylon::Polyfills::Internal
             {"round", NVG_ROUND},
             {"square", NVG_SQUARE}};
 
-		auto iter = lineCaps.find(str);
-		if (iter != lineCaps.end())
-		{
-			auto lineCap = iter->second;
-			return lineCap;
-		}
-
-        // fallback default 'butt'
-        return NVG_BUTT;
+        const auto iter = lineCaps.find(str);
+        return iter != lineCaps.end() ? iter->second : NVG_BUTT;
     }
 
-    static NVGlineCap StringToLineJoin(Napi::Env env, const std::string& lineJoinString)
+    static NVGlineCap StringToLineJoin(Napi::Env, const std::string& lineJoinString)
     {
         std::string str = lineJoinString;
         std::transform(str.begin(), str.end(), str.begin(),
@@ -37,14 +30,7 @@ namespace Babylon::Polyfills::Internal
             {"round", NVG_ROUND},
             {"miter", NVG_MITER}};
 
-		auto iter = lineJoins.find(str);
-		if (iter != lineJoins.end())
-		{
-			auto lineJoin = iter->second;
-			return lineJoin;
-		}
-
-        // fallback default 'miter'
-        return NVG_MITER;
+        const auto iter = lineJoins.find(str);
+        return iter != lineJoins.end() ? iter->second : NVG_MITER;
     }
 }
