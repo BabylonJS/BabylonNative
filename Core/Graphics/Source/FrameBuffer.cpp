@@ -27,13 +27,15 @@ namespace
         return packed;
     }
 
-    // Only D3D11/12 treat UINT8_MAX as an attachment skip; other backends clamp it into the palette.
+    // Backends without bgfx clear-skip support would clamp UINT8_MAX into the palette.
     bool SupportsClearAttachmentMasking()
     {
         switch (bgfx::getRendererType())
         {
             case bgfx::RendererType::Direct3D11:
             case bgfx::RendererType::Direct3D12:
+            case bgfx::RendererType::OpenGL:
+            case bgfx::RendererType::OpenGLES:
                 return true;
             default:
                 return false;

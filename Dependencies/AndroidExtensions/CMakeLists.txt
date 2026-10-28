@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 include(FetchContent)
+include("${CMAKE_CURRENT_LIST_DIR}/../CMakeExtensions/CMakeLists.txt")
 
 # --------------------------------------------------
 # Declarations
@@ -8,12 +9,7 @@ include(FetchContent)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 # --------------------------------------------------
-
-FetchContent_MakeAvailable(CMakeExtensions)
 
 project(AndroidExtensions)
 

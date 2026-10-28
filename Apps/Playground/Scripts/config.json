@@ -148,7 +148,7 @@
         },
         {
             "title": "GUI3D SpherePanel",
-            "playgroundId": "#HB4C01#9",
+            "playgroundId": "#AMM2WB#0",
             "renderCount": 50,
             "referenceImage": "spherepanel.png",
             "workarounds": ["wait-for-readiness"]
@@ -167,7 +167,7 @@
         {
             "title": "GLTF Mesh Primitive Vertex Color",
             "renderCount": 5,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Mesh_PrimitiveVertexColor, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveVertexColor.png"
         },
@@ -205,7 +205,7 @@
             "referenceImage": "LightProjectionTexture.png"
         },
         {
-            "title": "Point light shadows",
+            "title": "Spotlight shadows",
             "playgroundId": "#U2F7P9#4",
             "referenceImage": "point-light-shadows.png"
         },
@@ -227,7 +227,7 @@
         },
         {
             "title": "Ribbon morphing",
-            "playgroundId": "#ACKC2#1",
+            "playgroundId": "#XUKAYC#0",
             "renderCount": 50,
             "referenceImage": "ribbon morphing.png",
             "workarounds": ["opaque-clear-alpha"]
@@ -356,28 +356,28 @@
         {
             "title": "GLTF Animation Node",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_Node, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfAnimationNode.png"
         },
         {
             "title": "GLTF Animation Node Misc",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_NodeMisc, __page__, 0, __disableSRGBBuffers__, 1",
             "referenceImage": "gltfAnimationNodeMisc.png"
         },
         {
             "title": "GLTF Animation Skin (0)",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_Skin, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfAnimationSkin0.png"
         },
         {
             "title": "GLTF Animation Skin (1)",
             "renderCount": 2,
-            "playgroundId": "#DS8AA7#27",
+            "playgroundId": "#0GGYCY#0",
             "replace": "__folder__, Animation_Skin, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfAnimationSkin1.png"
         },
@@ -534,7 +534,7 @@
         },
         {
             "title": "Interleaved buffers test (updateUVs = true, updateAfterRender = true)",
-            "playgroundId": "#AVFNTW#5",
+            "playgroundId": "#VF9GO4#0",
             "replace": "//options//, updateUVs = true; updateAfterRender = true;",
             "referenceImage": "interleaved-buffers-4.png",
             "renderCount": 2
@@ -556,10 +556,8 @@
         },
         {
             "title": "Gaussian Splatting modify",
-            "playgroundId": "#RKKCHG#15",
+            "playgroundId": "#O53CPP#0",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "GaussianSplatting throws Uncaught Error: Invalid argument on Babylon Native (thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "gsplat-splat-modify.png"
         },
         {
@@ -571,8 +569,6 @@
             "title": "Gaussian Splatting Bake Transforms",
             "playgroundId": "#GU7A98#0",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gsplat-splat-bake-transforms.png"
         },
         {
@@ -591,19 +587,20 @@
             "title": "Gaussian Splatting SPZ SH",
             "playgroundId": "#XSNFXP#2",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "gsplat-spz-sh.png"
+            "referenceImage": "gsplat-spz-sh.png",
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out after 600s (passes on V8)."
         },
         {
             "title": "Gaussian Splatting viewports",
-            "playgroundId": "#CG8GO3#1",
+            "playgroundId": "#IMVJUY#0",
             "renderCount": 15,
             "referenceImage": "gsplat-viewports.png"
         },
         {
             "title": "Gaussian Splatting Shadows",
-            "playgroundId": "#OE54M5#16",
+            "playgroundId": "#R6MGUZ#0",
             "renderCount": 15,
             "referenceImage": "gsplat-shadows.png"
         },
@@ -615,9 +612,10 @@
         {
             "title": "SPZ v3 - Splat",
             "playgroundId": "#V7CV8W#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/splats/combined_SPZv3.spz: Unknown error opening URL (asset returns HTTP 200 via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "gsplat-spz-v3.png"
+            "referenceImage": "gsplat-spz-v3.png",
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out after 600s (passes on V8)."
         },
         {
             "title": "SOGS with SH",
@@ -645,29 +643,21 @@
         {
             "title": "MSDF",
             "playgroundId": "#6RLCWP#20",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf.png"
         },
         {
             "title": "MSDF Screen projected",
             "playgroundId": "#6RLCWP#48",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf-projected.png"
         },
         {
             "title": "MSDF Billboard",
             "playgroundId": "#6RLCWP#23",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf-billboard.png"
         },
         {
             "title": "MSDF Stroke",
             "playgroundId": "#6RLCWP#41",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "msdf-stroke.png"
         },
         {
@@ -693,40 +683,33 @@
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Realtime IBL",
-            "playgroundId": "#MXACV7#29",
+            "playgroundId": "#76D28X#0",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-realtime-ibl.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Prefiltered IBL with CDF",
             "playgroundId": "#MXACV7#28",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl-with-cdf.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Prefiltered IBL",
             "playgroundId": "#MXACV7#27",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness SH IBL",
             "playgroundId": "#MXACV7#32",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "openpbr-base-diffuse-roughness-spherical-harmonics.png"
         },
         {
             "title": "NME Glow Manual",
             "playgroundId": "#7QCYPB#320",
-            "referenceImage": "nme-glow-manual.png"
+            "referenceImage": "nme-glow-manual.png",
+            "workarounds": ["wait-for-import"]
         },
         {
             "title": "NME Glow Automatic",
@@ -736,22 +719,16 @@
         {
             "title": "EXT_lights_ies",
             "playgroundId": "#UIAXAU#19",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/EXT_lights_ies/Example.gltf: 'name' is not defined (thrown during glTF load, before pixel comparison)",
             "referenceImage": "ext-lights-ies.png"
         },
         {
             "title": "IES Profile",
             "playgroundId": "#UIAXAU#6",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "iesprofile.png"
         },
         {
             "title": "IES Profile2",
             "playgroundId": "#UIAXAU#31",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "iesprofile2.png"
         },
         {
@@ -768,8 +745,6 @@
         {
             "title": "HAL Lattice",
             "playgroundId": "#HBZD72#7",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "lattice-hal.png"
         },
         {
@@ -833,11 +808,11 @@
         },
         {
             "title": "BoundingInfo Helper",
-            "playgroundId": "#BCNJD4#61",
+            "playgroundId": "#UNQ5CK#0",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "bbhelper.png"
+            "referenceImage": "bbhelper.png",
+            "excludedGraphicsApis": ["D3D11", "OpenGL"],
+            "reason": "D3D11: bgfx asserts because vertex layout override stride (12) differs from dynamic vertex buffer stride (4). OpenGL: the helper requires compute shaders or transform feedback."
         },
         {
             "title": "NMEGLTF",
@@ -927,9 +902,10 @@
         {
             "title": "CSGVertColor",
             "playgroundId": "#R0H1IX#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "csgVertColor.png"
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
+            "referenceImage": "csgVertColor.png",
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Particle subemitters",
@@ -940,8 +916,6 @@
         {
             "title": "Node material 0",
             "playgroundId": "#M5VQE9#41",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails on Linux (large diff)",
             "referenceImage": "node-material0.png"
         },
         {
@@ -984,16 +958,15 @@
         {
             "title": "Node material PBR 1",
             "playgroundId": "#D8AK3Z#121",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "excludedGraphicsApis": ["D3D11", "OpenGL"],
+            "reason": "D3D11 and OpenGL CI fail pixel comparison (7.338% and 7.677% different pixels respectively; allowed 2.5%).",
             "referenceImage": "node-material-pbr-1.png"
         },
         {
             "title": "Basis loader",
             "playgroundId": "#4RN0VF#102",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "basis.png"
+            "referenceImage": "basis.png",
+            "workarounds": ["basis-worker"]
         },
         {
             "title": "LOD + Billboards + Instances",
@@ -1025,9 +998,7 @@
         {
             "title": "GUI Transform StackPanel",
             "playgroundId": "#BS60AB#0",
-            "referenceImage": "TransformStackPanel.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI Transform StackPanel buttons render orange/red instead of green (BN GUI color regression)."
+            "referenceImage": "TransformStackPanel.png"
         },
         {
             "title": "GUI StackPanel",
@@ -1036,13 +1007,13 @@
         },
         {
             "title": "GUI Slate",
-            "playgroundId": "#2YZFA0#277",
+            "playgroundId": "#UDLHJ3#0",
             "renderCount": 60,
             "referenceImage": "guiSlate.png"
         },
         {
             "title": "GUI Near Menu",
-            "playgroundId": "#2YZFA0#302",
+            "playgroundId": "#DZPGOB#0",
             "renderCount": 60,
             "referenceImage": "guiNearMenu.png",
             "workarounds": ["wait-for-readiness"]
@@ -1055,7 +1026,7 @@
         {
             "title": "LineEdgesRenderer",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#T90MQ4#19",
+            "playgroundId": "#FF1HHK#0",
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
             "reason": "OpenGL: pixel diff out of tolerance on Linux CI (5.5% px); passes on Win32 D3D11."
@@ -1083,7 +1054,7 @@
         },
         {
             "title": "Gizmos",
-            "playgroundId": "#8GY6J8#196",
+            "playgroundId": "#SWSUXS#0",
             "renderCount": 50,
             "referenceImage": "Gizmos.png",
             "workarounds": ["wait-for-readiness"]
@@ -1097,7 +1068,7 @@
         },
         {
             "title": "Chibi Rex",
-            "playgroundId": "#NZ2RZY#4",
+            "playgroundId": "#SYM1EP#0",
             "renderCount": 50,
             "replace": "engine.setHardwareScalingLevel(0.75);, engine.setHardwareScalingLevel(1);",
             "note": "The browser reference captures the 600x400 canvas after downsampling its 0.75 hardware-scaled framebuffer; Native captures the physical 800x533 target, so keep validation at the reference dimensions.",
@@ -1105,16 +1076,17 @@
         },
         {
             "title": "Yeti",
-            "playgroundId": "#QATUCH#32",
+            "playgroundId": "#8ZNZFY#0",
             "renderCount": 150,
             "referenceImage": "yeti.png"
         },
         {
             "title": "CSG",
             "playgroundId": "#R0H1IX#8",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws Error: Unknown error opening URL loading a remote https:// asset (asset reachable via curl; BN HTTPS layer cannot open it; thrown before pixel comparison)",
-            "referenceImage": "csg.png"
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
+            "referenceImage": "csg.png",
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Fresnel",
@@ -1125,39 +1097,35 @@
             "title": "Highlights",
             "playgroundId": "#P7N8YW#1",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "highlights.png"
         },
         {
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11.",
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%, renders black); passes on ANGLE GLES and D3D11.",
             "referenceImage": "areaLightsStandardMaterial.png",
-            "workarounds": ["opaque-clear-alpha"]
+            "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"]
         },
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff fail on Linux OpenGL (25571 px, 10.7%); passes on Win32 D3D11.",
-            "workarounds": ["opaque-clear-alpha"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%); passes on ANGLE GLES and D3D11.",
+            "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"],
             "referenceImage": "textureAreaLightStandard.png"
         },
         {
             "title": "Textured - Area Lights - PBR",
             "playgroundId": "#T7FXR8#102",
-            "workarounds": ["opaque-clear-alpha"],
+            "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"],
             "referenceImage": "texturedAreaLightsPBR.png"
         },
         {
             "title": "Area Lights - PBR",
             "playgroundId": "#T7FXR8#12",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11.",
             "referenceImage": "areaLightsPBRMaterial.png",
-            "workarounds": ["opaque-clear-alpha"]
+            "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"]
         },
         {
             "title": "Bones",
@@ -1187,7 +1155,9 @@
         },
         {
             "title": "Shadow depth wrappers",
-            "playgroundId": "#PNQRY1#73",
+            "playgroundId": "#7JTUT9#0",
+            "replace": "engine.webGLVersion >= 2, BABYLON.CascadedShadowGenerator.IsSupported",
+            "note": "Temporary mitigation: the source Playground (#PNQRY1#73) selects CascadedShadowGenerator by WebGL version instead of capability. Once the Playground is fixed to check BABYLON.CascadedShadowGenerator.IsSupported, update playgroundId to the corrected revision and remove this replacement.",
             "renderCount": 20,
             "referenceImage": "shadowDepthWrappers.png"
         },
@@ -1199,9 +1169,7 @@
         {
             "title": "Custom render target",
             "playgroundId": "#TQCEBF#5",
-            "referenceImage": "customRTT.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "GL cube skybox face-boundary seam (~12% pixel diff in upper sky); passes on D3D11/D3D12. Per-face vertical flip is required (disabling it worsens diff to 43%); residual seam is a bgfx-level GL cubemap face-boundary/seamless-filtering issue. Tracked for OpenGL backend follow-up."
+            "referenceImage": "customRTT.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
@@ -1319,7 +1287,7 @@
             "title": "GLTF Serializer KHR gpu instancing",
             "playgroundId": "#1Q2BWN#10",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff 3.4% on OpenGL backend (Linux JSC); passes on D3D11.",
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (3.4%); passes on ANGLE GLES and D3D11.",
             "referenceImage": "glTFSerializerKhrGpuInstancing.png",
             "workarounds": ["leak-cleanup"]
         },
@@ -1340,32 +1308,24 @@
         {
             "title": "GLTF Serializer Camera, left-handed",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend (Linux JSC), 21% pixel diff; passes on D3D11.",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = false;",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = true;",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
         {
             "title": "GLTF Serializer Camera, left-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = false;",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = true;",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
@@ -1377,7 +1337,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false;",
+            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
@@ -1385,7 +1345,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true;",
+            "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
@@ -1393,7 +1353,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true;",
+            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
@@ -1401,7 +1361,7 @@
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
-            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false;",
+            "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
             "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
@@ -1410,9 +1370,9 @@
             "title": "GLTF Serializer un/compressed texture roundtrip",
             "playgroundId": "#8NTR5X#8",
             "replace": "//options//, roundtrip = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "glTFSerializerTextureExport.png"
+            "referenceImage": "glTFSerializerTextureExport.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: never completes on Linux CI (JavaScriptCore), times out; passes on Win32 D3D11."
         },
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
@@ -1424,31 +1384,27 @@
         {
             "title": "GLTF Box with bad Draco normalized flag",
             "playgroundId": "#8KJJH9",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "gltfBadDraco.png"
         },
         {
             "title": "GLTF Buggy with Meshopt Compression",
             "playgroundId": "#CIYTF6#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/Buggy/glTF-MeshOpt/Buggy.gltf: Object doesn't support property or method 'createObjectURL' (missing DOM API; thrown before pixel comparison)",
             "referenceImage": "gltfBuggyMeshopt.png"
         },
         {
             "title": "GLTF Extension KHR_materials_volume",
             "playgroundId": "#YG3BBF#16",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
             "referenceImage": "gltfExtensionKhrMaterialsVolume.png"
         },
         {
             "title": "GLTF Extension KHR_materials_volume with analytic light",
             "playgroundId": "#YG3BBF#48",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png"
         },
         {
@@ -1476,7 +1432,7 @@
         },
         {
             "title": "Default pipeline",
-            "playgroundId": "#NAW8EA#6",
+            "playgroundId": "#3054SF#0",
             "renderCount": 20,
             "referenceImage": "defaultPipeline.png"
         },
@@ -1618,40 +1574,30 @@
             "title": "Realtime Filtering",
             "playgroundId": "#FEEK7G#118",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "realtimeFiltering.png"
         },
         {
             "title": "Realtime Filtering Irradiance",
             "playgroundId": "#FEEK7G#1089",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "realtimeFilteringIrradiance.png"
         },
         {
             "title": "Realtime Filtering Irradiance with CDF",
-            "playgroundId": "#FEEK7G#1087",
+            "playgroundId": "#F6JODO#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "realtimeFilteringIrradianceCDF.png"
         },
         {
             "title": "Prefiltering Irradiance on load",
             "playgroundId": "#FEEK7G#1111",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "prefilteringIrradiance.png"
         },
         {
             "title": "Prefiltering Irradiance on load with CDF",
             "playgroundId": "#FEEK7G#1110",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "prefilteringIrradianceCDF.png"
         },
         {
@@ -1718,8 +1664,6 @@
             "title": "Shadows CSM and LODs",
             "playgroundId": "#24HWT9#20",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "shadowscsmandlod.png"
         },
         {
@@ -1747,7 +1691,7 @@
         },
         {
             "title": "Prepass SSAO + particles",
-            "playgroundId": "#65MUMZ#47",
+            "playgroundId": "#65MUMZ#59",
             "renderCount": 50,
             "referenceImage": "prepass-ssao-particles.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -1757,9 +1701,9 @@
         {
             "title": "Prepass SSAO + instances",
             "playgroundId": "#YB006J#795",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-instances.png"
+            "referenceImage": "prepass-ssao-instances.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + instanced bones",
@@ -1779,7 +1723,7 @@
         {
             "title": "Prepass + mirror, without postprocess",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#PIZ1GK#1084",
+            "playgroundId": "#9A4QF8#0",
             "renderCount": 10,
             "referenceImage": "prepass-mirror-without-pp.png",
             "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
@@ -1787,7 +1731,7 @@
         {
             "title": "Prepass + mirror, with postprocesses",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#PIZ1GK#1085",
+            "playgroundId": "#E4QF68#0",
             "renderCount": 10,
             "referenceImage": "prepass-mirror-with-pp.png",
             "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
@@ -1796,31 +1740,31 @@
             "title": "Prepass SSAO + sprites",
             "playgroundId": "#9RI8CG#187",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-sprites.png"
         },
         {
             "title": "Prepass SSAO + glow layer",
-            "playgroundId": "#LRFB2D#263",
+            "playgroundId": "#7HMTCH#0",
             "renderCount": 30,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails: 236380/240000 pixels differ (98.49%) on Babylon Native",
-            "referenceImage": "prepass-ssao-glow-layer.png"
+            "referenceImage": "prepass-ssao-glow-layer.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + bounding box renderer",
             "playgroundId": "#4F33I3#35",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-bbr.png"
+            "referenceImage": "prepass-ssao-bbr.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + line edges renderer",
             "playgroundId": "#T90MQ4#3",
             "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-line-edges.png"
         },
@@ -1828,9 +1772,9 @@
             "title": "Prepass SSAO + B&W post process",
             "playgroundId": "#N55Q2M#8",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-b-and-w.png"
+            "referenceImage": "prepass-ssao-b-and-w.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + clip planes",
@@ -1852,9 +1796,9 @@
             "title": "Prepass SSAO + LOD",
             "playgroundId": "#FFMFW5#29",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-lod.png"
+            "referenceImage": "prepass-ssao-lod.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + shadow only",
@@ -1866,7 +1810,7 @@
         },
         {
             "title": "Prepass SSAO + highlight layer",
-            "playgroundId": "#1KUJ0A#416",
+            "playgroundId": "#79439I#0",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-highlight-layer.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -1909,17 +1853,17 @@
             "title": "Prepass SSAO + visibility",
             "playgroundId": "#PXC9CF#7",
             "renderCount": 30,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-visibility.png"
+            "referenceImage": "prepass-ssao-visibility.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass SSAO + default pipeline",
-            "playgroundId": "#NAW8EA#7",
+            "playgroundId": "#IIMFWT#0",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "prepass-ssao-default-pipeline.png"
+            "referenceImage": "prepass-ssao-default-pipeline.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
         },
         {
             "title": "Prepass MBlur + Lens",
@@ -1930,7 +1874,7 @@
         {
             "title": "Prepass SSAO + MSAA",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#12MKMN#7",
+            "playgroundId": "#LSTDFU#0",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-msaa.png",
             "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
@@ -1964,8 +1908,6 @@
             "title": "Refraction local cube map PBR",
             "playgroundId": "#RJN64I#5",
             "renderCount": 1,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "refraction-local-pbr.png"
         },
         {
@@ -2005,7 +1947,7 @@
         },
         {
             "title": "Thin instances + dynamic buffer resize",
-            "playgroundId": "#217750#217",
+            "playgroundId": "#10G61O#0",
             "renderCount": 10,
             "referenceImage": "thin-instances-buffer-resize.png"
         },
@@ -2032,43 +1974,35 @@
             "title": "Reverse depth buffer and CSM shadows",
             "playgroundId": "#IIZ9UU#248",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "reverseDepthBufferCSMShadows.png"
         },
         {
             "title": "Multi cameras and output render target",
-            "playgroundId": "#BCYE7J#46",
+            "playgroundId": "#3VPD1J#0",
             "renderCount": 2,
             "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "Multi cameras and output render target with depth texture (D24)",
-            "playgroundId": "#BCYE7J#36",
+            "playgroundId": "#XASY5D#0",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "Sample depth texture",
             "playgroundId": "#8RU8Q3#158",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "sampleDepthTexture.png"
         },
         {
             "title": "Order independent transparency",
             "playgroundId": "#1PLV5Z#104",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "oit.png"
         },
         {
             "title": "Custom material with depth renderer",
-            "playgroundId": "#6GFJNR#152",
+            "playgroundId": "#9LECW0#0",
             "renderCount": 5,
             "referenceImage": "customMatDepthRenderer.png"
         },
@@ -2081,13 +2015,13 @@
         },
         {
             "title": "Baked Vertex Animation with Depth Of Field",
-            "playgroundId": "#JWO4R0#8",
+            "playgroundId": "#B50RGD#0",
             "renderCount": 20,
             "referenceImage": "bakedVertexAnimationDOF.png"
         },
         {
             "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
-            "playgroundId": "#1LF9GK#3",
+            "playgroundId": "#0PIQHX#0",
             "renderCount": 20,
             "referenceImage": "bakedVertexAnimationVLS.png"
         },
@@ -2129,9 +2063,8 @@
             "title": "GUI Input Test",
             "playgroundId": "#UB4F3B#8",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "guiInputTest.png"
+            "referenceImage": "guiInputTest.png",
+            "workarounds": ["global-self"]
         },
         {
             "title": "Serialize and Load Hierarchy",
@@ -2167,16 +2100,12 @@
             "title": "Multi shadow generators per light",
             "playgroundId": "#LMQGSX#2",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "multiSGPerLight.png"
         },
         {
             "title": "Fluid rendering particle system",
             "playgroundId": "#544N0Q#67",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "After #1691 stride fix, hits bgfx 'Invalid texture attachment' frame buffer validation (exit 1); needs separate investigation.",
             "referenceImage": "fluidParticleSystem.png"
         },
         {
@@ -2206,8 +2135,6 @@
         {
             "title": "GUI Force Resize Width",
             "playgroundId": "#XCPP9Y#17259",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "GUI-Force-Resize-Width.png"
         },
         {
@@ -2259,15 +2186,11 @@
             "title": "Screen Space Reflections 2",
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
-            "referenceImage": "Screen-Space-Reflections-2.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL ES: bgfx FrameBufferGL::resolve calls glDrawBuffers(1, &GL_COLOR_ATTACHMENT0 + colorIdx), but GLES requires bufs[i] to be GL_NONE or GL_COLOR_ATTACHMENT0 + i, so resolving any attachment past the first raises GL_INVALID_OPERATION and asserts (bgfx bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11"
+            "referenceImage": "Screen-Space-Reflections-2.png"
         },
         {
             "title": "MultiRenderTarget with different texture types",
             "playgroundId": "#XSNYAU#22",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "MultiRenderTarget-with-different-texture-types.png"
         },
         {
@@ -2348,8 +2271,6 @@
         {
             "title": "Vertex buffers with non aligned strides",
             "playgroundId": "#U1CZV3#32",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "VertexBuffer-non-aligned-strides.png"
         },
         {
@@ -2362,8 +2283,6 @@
         {
             "title": "Font size inheritance",
             "playgroundId": "#QFK9K4#24",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Fontsizeinheritance.png"
         },
         {
@@ -2381,9 +2300,10 @@
         {
             "title": "Command encoder order in WebGPU 1",
             "playgroundId": "#064AUB#125",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "CommandEncodedWebGPU1.png"
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: intermittent full-suite pixel comparison failure on Linux Clang CI (45.535% different pixels; allowed 2.5%), despite passing other runs.",
+            "referenceImage": "CommandEncodedWebGPU1.png",
+            "workarounds": ["wait-for-readiness"]
         },
         {
             "title": "Command encoder order in WebGPU 2",
@@ -2409,22 +2329,20 @@
         {
             "title": "show-bounding-box",
             "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#0LN1JD#9",
+            "playgroundId": "#Y2TD10#0",
             "renderCount": 5,
             "referenceImage": "show-bounding-box.png",
             "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (7.6% px); passes on Win32 D3D11."
         },
         {
             "title": "cube-reflection-with-probe-and-mirrors",
-            "playgroundId": "#X3V1NN#7",
+            "playgroundId": "#3DJPE6#0",
             "renderCount": 20,
             "referenceImage": "cube-reflection-with-probe-and-mirrors.png"
         },
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
             "playgroundId": "#Y05E2C#6",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance (90900 px) -- likely glow-layer + custom-shader interaction differs from D3D11. Tracked for OpenGL backend follow-up.",
             "renderCount": 5,
             "referenceImage": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer.png",
             "workarounds": ["prime-effect-layers"]
@@ -2448,8 +2366,6 @@
         {
             "title": "soft-transparent-shadows",
             "playgroundId": "#G3DJGA#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine soft shadow filtering produces grainy/aliased shadows instead of smooth filtered output; filter quality regression vs WebGL reference.",
             "referenceImage": "soft-transparent-shadows.png"
         },
         {
@@ -2470,7 +2386,7 @@
         },
         {
             "title": "apply-all-post-processes",
-            "playgroundId": "#MJ59Y8#18",
+            "playgroundId": "#QEILPW#0",
             "renderCount": 10,
             "referenceImage": "apply-all-post-processes.png",
             "errorRatio": 3.3,
@@ -2494,9 +2410,7 @@
             "title": "skybox-with-boombox",
             "playgroundId": "#I2TR8G#0",
             "renderCount": 20,
-            "referenceImage": "skybox-with-boombox.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI text 'Hello world WebGPU!' renders pink/red instead of white (BN GUI color regression); boombox also has minor edge differences."
+            "referenceImage": "skybox-with-boombox.png"
         },
         {
             "title": "custom-handling-of-materials-for-render-target-pass",
@@ -2506,7 +2420,7 @@
         },
         {
             "title": "dissolve-effect-with-node-material-and-glow-layer",
-            "playgroundId": "#F6PGMC#12",
+            "playgroundId": "#84JLNC#0",
             "renderCount": 2,
             "referenceImage": "dissolve-effect-with-node-material-and-glow-layer.png",
             "workarounds": ["prime-effect-layers"]
@@ -2515,13 +2429,11 @@
             "title": "cascaded-shadow-maps-and-flying-saucers",
             "playgroundId": "#IIZ9UU#63",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "cascaded-shadow-maps-and-flying-saucers.png"
         },
         {
             "title": "halo-particle-system",
-            "playgroundId": "#2441BU#1",
+            "playgroundId": "#2441BU#5",
             "renderCount": 20,
             "referenceImage": "halo-particle-system.png"
         },
@@ -2544,7 +2456,7 @@
         },
         {
             "title": "change-texture-of-material",
-            "playgroundId": "#7PN9PH#2",
+            "playgroundId": "#91XVF7#0",
             "renderCount": 10,
             "referenceImage": "change-texture-of-material.png"
         },
@@ -2558,9 +2470,7 @@
             "title": "Render to 3D RT",
             "playgroundId": "#XSNYAU#83",
             "renderCount": 5,
-            "referenceImage": "Render to 3D RT.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "Render to 3D RT.png"
         },
         {
             "title": "Shadows in RHS mode",
@@ -2625,9 +2535,9 @@
             "title": "IBL Voxel Shadowing",
             "playgroundId": "#8R5SSE#796",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "voxelShadows.png"
+            "referenceImage": "voxelShadows.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "Glow layer with vertex alpha",
@@ -2639,39 +2549,37 @@
             "title": "IBL Voxel Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#797",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "voxelShadowsRightHanded.png"
+            "referenceImage": "voxelShadowsRightHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "IBL Voxel Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#798",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "voxelShadowsLeftHanded.png"
+            "referenceImage": "voxelShadowsLeftHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "IBL Screen-space Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#799",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "ssShadowsLeftHanded.png"
+            "referenceImage": "ssShadowsLeftHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "IBL Screen-space Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#800",
             "renderCount": 15,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "ssShadowsRightHanded.png"
+            "referenceImage": "ssShadowsRightHanded.png",
+            "excludedGraphicsApis": ["D3D11"],
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
         },
         {
             "title": "Normed 16 bits texture formats",
             "playgroundId": "#SOCPNB#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unsupported texture format or type: format 33322, type 5. (missing format-converter entry; thrown before pixel comparison, not a pixel-diff)",
             "referenceImage": "Normed-16-bits-texture-formats.png"
         },
         {
@@ -2682,80 +2590,60 @@
         {
             "title": "FrameGraph nrge shadows",
             "playgroundId": "#JWKDME#185",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-shadows.png"
         },
         {
             "title": "FrameGraph nrge csm shadows",
             "playgroundId": "#JWKDME#186",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-csm-shadows.png"
         },
         {
             "title": "FrameGraph nrge csm shadows with autoCalcDepthBounds",
-            "playgroundId": "#JWKDME#192",
+            "playgroundId": "#DOFUT1#0",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-csm-shadows-with-autoCalcDepthBounds.png"
         },
         {
             "title": "FrameGraph nrge custom rendering",
             "playgroundId": "#1QCA2M#35",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-custom-rendering.png"
         },
         {
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
-            "excludeFromAutomaticTesting": true,
-            "reason": "NativeEngine throws RuntimeError: Unable to load from https://assets.babylonjs.com/meshes/PowerPlant/powerplant.obj: Out of stack space (OBJ parser recursion overflow; thrown before pixel comparison)",
             "referenceImage": "FrameGraph-nrge-depth-of-field.png"
         },
         {
             "title": "FrameGraph nrge glow layer",
             "playgroundId": "#IG8NRC#84",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-glow-layer.png"
         },
         {
             "title": "FrameGraph nrge highlight layer",
             "playgroundId": "#QZYNMK#3",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-highlight-layer.png"
         },
         {
             "title": "FrameGraph nrge SSR cube",
             "playgroundId": "#PIZ1GK#2386",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-SSR-cube.png"
         },
         {
             "title": "FrameGraph nrge SSR HillValley",
             "playgroundId": "#PIZ1GK#2387",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-SSR-HillValley.png"
         },
         {
             "title": "FrameGraph nrge SSR neon",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Z6C5EF#5",
-            "referenceImage": "FrameGraph-nrge-SSR-neon.png",
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 102, samples=4); passes on Win32 D3D11."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (4.1%); passes on ANGLE GLES and D3D11.",
+            "referenceImage": "FrameGraph-nrge-SSR-neon.png"
         },
         {
             "title": "FrameGraph nrge motion blur",
             "playgroundId": "#YB006J#793",
             "renderCount": 40,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-motion-blur.png"
         },
         {
@@ -2779,8 +2667,6 @@
         {
             "title": "FrameGraph nrge rig camera",
             "playgroundId": "#ATL1CS#19",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-rig-camera.png"
         },
         {
@@ -2790,65 +2676,50 @@
         },
         {
             "title": "FrameGraph nrge multiple post processes",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#SYQW69#1363",
-            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png",
-            "reason": "OpenGL: Linux llvmpipe rejects the 4x MSAA render target format (Unsupported texture format 98, samples=4); passes on Win32 D3D11."
+            "referenceImage": "FrameGraph-nrge-multiple-post-processes.png"
         },
         {
             "title": "FrameGraph nrge SSAO",
             "playgroundId": "#SYQW69#1368",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "referenceImage": "FrameGraph-nrge-SSAO.png"
         },
         {
             "title": "FrameGraph nrge volumetric lighting",
             "playgroundId": "#3VH0AC#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-volumetric-lighting.png"
         },
         {
             "title": "FrameGraph nrge OIT",
             "playgroundId": "#MIACY4#13",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-OIT.png"
         },
         {
             "title": "FrameGraph nrge OIT (Geometry renderer)",
             "playgroundId": "#MIACY4#14",
-            "excludeFromAutomaticTesting": true,
-            "reason": "FrameGraph render pipeline hangs past 120s",
+            "canvasBackgroundColor": "white",
             "referenceImage": "FrameGraph-nrge-OIT-Geometry-renderer-.png"
         },
         {
             "title": "FrameGraph nrge multi-render targets",
             "playgroundId": "#XSNYAU#160",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-multi-render-targets.png"
         },
         {
             "title": "FrameGraph nrge transmission",
             "playgroundId": "#ZNTBN2#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-transmission.png"
         },
         {
             "title": "FrameGraph nrge selection outline layer",
             "playgroundId": "#ADUC74#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrge-selection-outline-layer.png"
         },
         {
             "title": "FrameGraph nrge multi RTT MSAA",
             "playgroundId": "#JAG54A",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-nrge-multi-RTT-MSAA.png"
         },
         {
@@ -2859,74 +2730,54 @@
         {
             "title": "FrameGraph glow layer",
             "playgroundId": "#9YU4C5#111",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-nrg-glow-layer.png"
         },
         {
             "title": "FrameGraph highlight layer",
             "playgroundId": "#PV8OLY#33",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-highlight-layer.png"
         },
         {
             "title": "FrameGraph custom rendering",
             "playgroundId": "#RM56RY#25",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-custom-rendering.png"
         },
         {
             "title": "FrameGraph gui bloom",
             "playgroundId": "#RM56RY#26",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-gui-bloom.png"
         },
         {
             "title": "FrameGraph image processing",
             "playgroundId": "#PV8OLY#34",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-image-processing.png"
         },
         {
             "title": "FrameGraph motion blur screen based",
             "playgroundId": "#YB006J#787",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-motion-blur-screen-based.png"
         },
         {
             "title": "FrameGraph motion blur object based",
             "playgroundId": "#YB006J#788",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-motion-blur-object-based.png"
         },
         {
             "title": "FrameGraph motion blur skinned",
             "playgroundId": "#YB006J#789",
             "renderCount": 40,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-motion-blur-skinned.png"
         },
         {
             "title": "FrameGraph convolution post process",
             "playgroundId": "#SYQW69#1365",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-convolution-post-process.png"
         },
         {
             "title": "FrameGraph screen space curvature post process",
             "playgroundId": "#SYQW69#1366",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-screen-space-curvature-post-process.png"
         },
         {
@@ -2939,36 +2790,26 @@
         {
             "title": "FrameGraph custom post process",
             "playgroundId": "#R33LVG#5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-custom-post-process.png"
         },
         {
             "title": "FrameGraph volumetric lighting",
             "playgroundId": "#3VH0AC",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "FrameGraph-volumetric-lighting.png"
         },
         {
             "title": "FrameGraph OIT",
             "playgroundId": "#MIACY4#11",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-OIT.png"
         },
         {
             "title": "FrameGraph multi-render targets",
             "playgroundId": "#XSNYAU#165",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-multi-render-targets.png"
         },
         {
             "title": "FrameGraph selection outline",
             "playgroundId": "#E1F0GP#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "FrameGraph-selection-outline.png"
         },
         {
@@ -2979,8 +2820,6 @@
         {
             "title": "IBL radiance roughness",
             "playgroundId": "#RNO672#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "IBL-radiance-roughness.png"
         },
         {
@@ -2998,8 +2837,6 @@
         {
             "title": "Hide Loading Screen",
             "playgroundId": "#EQP888#8",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Hide-Loading-Screen.png"
         },
         {
@@ -3015,59 +2852,43 @@
         },
         {
             "title": "SubSurface Scattering",
-            "excludedGraphicsApis": ["OpenGL"],
-            "playgroundId": "#5H0H89#129",
+            "playgroundId": "#FR639I#0",
             "renderCount": 10,
-            "referenceImage": "SubSurface-Scattering.png",
-            "reason": "OpenGL: bgfx FrameBufferGL::resolve asserts in glDrawBuffers (GL_INVALID_OPERATION) when resolving an attachment past the first (bgfx bug, thrown before pixel comparison); passes on Win32 D3D11."
+            "referenceImage": "SubSurface-Scattering.png"
         },
         {
             "title": "Specular Reflectance with IOR",
             "playgroundId": "#KQYNYS#58",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Specular-Reflectance-with-IOR.png"
         },
         {
             "title": "Conductor Transmission",
             "playgroundId": "#KQYNYS#55",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Conductor-Transmission.png"
         },
         {
             "title": "Furnace Test (Legacy) for Spec-Gloss",
             "playgroundId": "#KQYNYS#20",
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "Furnace-Test-Legacy-for-Spec-Gloss.png"
         },
         {
             "title": "Furnace Test (Legacy) for Metal-Rough",
             "playgroundId": "#KQYNYS#21",
-            "excludeFromAutomaticTesting": true,
-            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
             "referenceImage": "Furnace-Test-Legacy-for-Metal-Rough.png"
         },
         {
             "title": "Furnace Test for Spec-Gloss",
             "playgroundId": "#KQYNYS#40",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Furnace-Test-for-Spec-Gloss.png"
         },
         {
             "title": "Furnace Test for Metal-Rough",
             "playgroundId": "#KQYNYS#39",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Furnace-Test-for-Metal-Rough.png"
         },
         {
             "title": "Specular reflectance models for IBL",
             "playgroundId": "#GRQHVV#169",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Specular-reflectance-models-for-IBL.png"
         },
         {
@@ -3078,15 +2899,11 @@
         {
             "title": "F82 Specular Roughness vs Weight",
             "playgroundId": "#GRQHVV#170",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "F82-Specular-Roughness-vs-Weight.png"
         },
         {
             "title": "F82 Specular Metal vs Weight",
             "playgroundId": "#GRQHVV#171",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "F82-Specular-Metal-vs-Weight.png"
         },
         {
@@ -3098,8 +2915,6 @@
         {
             "title": "Sponza Clustered Lighting (2 viewports)",
             "playgroundId": "#CSCJO2#20",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "sponza-clustered-lighting-viewports.png"
         },
         {
@@ -3110,8 +2925,6 @@
         {
             "title": "Sponza Clustered Lighting (node material std)",
             "playgroundId": "#QY98Z3#16",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Sponza-Clustered-Lighting-node-material-std-.png"
         },
         {
@@ -3133,15 +2946,11 @@
         {
             "title": "Clustered Lighting (lhs std nodematerial)",
             "playgroundId": "#CSCJO2#64",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#62",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-lhs-pbr-nodematerial-.png"
         },
         {
@@ -3158,15 +2967,11 @@
         {
             "title": "Clustered Lighting (rhs std nodematerial)",
             "playgroundId": "#CSCJO2#71",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#72",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-Lighting-rhs-pbr-nodematerial-.png"
         },
         {
@@ -3178,113 +2983,81 @@
         {
             "title": "Atmosphere Day",
             "playgroundId": "#VO1Z0C#39",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Planet Origin)",
             "playgroundId": "#VO1Z0C#40",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Ray Marching)",
             "playgroundId": "#VO1Z0C#41",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-day-ray-marching.png"
         },
         {
             "title": "Atmosphere Sunset",
             "playgroundId": "#VO1Z0C#42",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-sunset.png"
         },
         {
             "title": "Atmosphere Sunset (Planet Origin)",
             "playgroundId": "#VO1Z0C#43",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-sunset.png"
         },
         {
             "title": "Atmosphere Night",
             "playgroundId": "#VO1Z0C#45",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-night.png"
         },
         {
             "title": "Atmosphere Night (Planet Origin)",
             "playgroundId": "#VO1Z0C#46",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-night.png"
         },
         {
             "title": "Atmosphere Space View",
             "playgroundId": "#VO1Z0C#47",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "atmosphere-space-view.png"
         },
         {
             "title": "OpenPBR IBL Reflectance with IOR",
             "playgroundId": "#KQYNYS#56",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Reflectance-with-IOR.png"
         },
         {
             "title": "OpenPBR IBL F82 Specular Metal vs Weight",
             "playgroundId": "#GRQHVV#172",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-F82-Specular-Metal-vs-Weight.png"
         },
         {
             "title": "OpenPBR IBL F82 Specular Roughness vs Weight",
             "playgroundId": "#GRQHVV#173",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-F82-Specular-Roughness-vs-Weight.png"
         },
         {
             "title": "OpenPBR IBL Furnace Test for Metal-Rough",
             "playgroundId": "#KQYNYS#47",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Furnace-Test-for-Metal-Rough.png"
         },
         {
             "title": "OpenPBR IBL Specular IOR vs Coat IOR",
             "playgroundId": "#GRQHVV#39",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-IOR.png"
         },
         {
             "title": "OpenPBR IBL Metalness vs Coat IOR",
             "playgroundId": "#GRQHVV#176",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Metalness-vs-Coat-IOR.png"
         },
         {
             "title": "OpenPBR IBL Specular IOR vs Coat Weight",
             "playgroundId": "#GRQHVV#182",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-Weight.png"
         },
         {
             "title": "OpenPBR IBL Specular Roughness vs Coat Roughness",
             "playgroundId": "#GRQHVV#183",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Specular-Roughness-vs-Coat-Roughness.png"
         },
         {
@@ -3310,22 +3083,16 @@
         {
             "title": "OpenPBR IBL Normal and Coat Normal Mapping",
             "playgroundId": "#GRQHVV#184",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Normal-and-Coat-Normal-Mapping.png"
         },
         {
             "title": "OpenPBR IBL Coat Darkening",
             "playgroundId": "#GRQHVV#185",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Darkening.png"
         },
         {
             "title": "OpenPBR IBL Coat Darkening vs Coat IOR",
             "playgroundId": "#GRQHVV#181",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Darkening-vs-Coat-IOR.png"
         },
         {
@@ -3341,15 +3108,11 @@
         {
             "title": "OpenPBR IBL Coat Color vs Coat Darkening",
             "playgroundId": "#GRQHVV#186",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Color-vs-Coat-Darkening.png"
         },
         {
             "title": "OpenPBR IBL Coat Color vs Coat IOR",
             "playgroundId": "#GRQHVV#187",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Coat-Color-vs-Coat-IOR.png"
         },
         {
@@ -3382,36 +3145,26 @@
         {
             "title": "OpenPBR IBL Anisotropy Dielectric",
             "playgroundId": "#GRQHVV#210",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Anisotropy-Dielectric.png"
         },
         {
             "title": "OpenPBR Anisotropy - glTF style",
             "playgroundId": "#GRQHVV#189",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Anisotropy---glTF-style.png"
         },
         {
             "title": "OpenPBR Anisotropy - Realtime Filtered IBL",
             "playgroundId": "#GRQHVV#190",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Anisotropy---Realtime-Filtered-IBL.png"
         },
         {
             "title": "OpenPBR Coat Anisotropy - IBL",
             "playgroundId": "#GRQHVV#193",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Coat-Anisotropy---IBL.png"
         },
         {
             "title": "OpenPBR Coat Anisotropy - Realtime Filtered IBL",
             "playgroundId": "#GRQHVV#195",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Coat-Anisotropy---Realtime-Filtered-IBL.png"
         },
         {
@@ -3422,8 +3175,6 @@
         {
             "title": "Specular Reflectance with IOR V2 Manifest",
             "playgroundId": "#KQYNYS#57",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Specular-Reflectance-with-IOR-V2-Manifest.png"
         },
         {
@@ -3434,15 +3185,11 @@
         {
             "title": "OpenPBR Coat Roughness vs Coat Ior - IBL",
             "playgroundId": "#GRQHVV#196",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Coat-Roughness-vs-Coat-Ior---IBL.png"
         },
         {
             "title": "OpenPBR Thin Film Weight VS IOR - IBL",
             "playgroundId": "#GRQHVV#197",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Weight-VS-IOR---IBL.png"
         },
         {
@@ -3462,29 +3209,21 @@
         {
             "title": "OpenPBR Thin Film Thickness VS IOR - IBL",
             "playgroundId": "#GRQHVV#198",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR---IBL.png"
         },
         {
             "title": "OpenPBR Thin Film Weight VS IOR - Furnace Test",
             "playgroundId": "#GRQHVV#199",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Weight-VS-IOR---Furnace-Test.png"
         },
         {
             "title": "OpenPBR Thin Film Thickness VS IOR - Furnace Test",
             "playgroundId": "#GRQHVV#200",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR---Furnace-Test.png"
         },
         {
             "title": "OpenPBR Thin Film Thickness VS IOR Metal - Furnace Test",
             "playgroundId": "#GRQHVV#201",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR-Metal---Furnace-Test.png"
         },
         {
@@ -3504,30 +3243,22 @@
         {
             "title": "OpenPBR Thin Film and Specular Weight Metals - IBL",
             "playgroundId": "#GRQHVV#202",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight-Metals---IBL.png"
         },
         {
             "title": "OpenPBR Thin Film and Specular Weight - IBL",
             "playgroundId": "#GRQHVV#203",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight---IBL.png"
         },
         {
             "title": "OpenPBR Thin Film Textures - IBL",
             "playgroundId": "#GRQHVV#174",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Film-Textures---IBL.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - IBL",
             "playgroundId": "#GRQHVV#204",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---IBL.png"
         },
         {
@@ -3547,29 +3278,21 @@
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - IBL",
             "playgroundId": "#GRQHVV#205",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---IBL.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Realtime IBL",
             "playgroundId": "#GRQHVV#206",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Realtime-IBL.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Furnace Test",
             "playgroundId": "#GRQHVV#207",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Furnace-Test.png"
         },
         {
             "title": "OpenPBR Transmission Color glTF - IBL",
             "playgroundId": "#GRQHVV#120",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Color-glTF---IBL.png"
         },
         {
@@ -3581,16 +3304,12 @@
         {
             "title": "OpenPBR Transmission Roughness glTF - IBL",
             "playgroundId": "#GRQHVV#123",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Roughness-glTF---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Roughness glTF - Analytic Lights",
             "playgroundId": "#GRQHVV#124",
-            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI grid labels render red instead of green/black (BN GUI color regression); OpenPBR transmission spheres minor anisotropy diff."
+            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
@@ -3601,15 +3320,11 @@
         {
             "title": "OpenPBR Transmission Anisotropy Roughness vs IOR - IBL",
             "playgroundId": "#GRQHVV#131",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-Roughness-vs-IOR---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Anisotropy Roughness vs IOR - Realtime IBL",
             "playgroundId": "#GRQHVV#132",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-Roughness-vs-IOR---Realtime-IBL.png"
         },
         {
@@ -3625,15 +3340,11 @@
         {
             "title": "OpenPBR Transmission Anisotropy vs Roughness - IBL",
             "playgroundId": "#GRQHVV#138",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-vs-Roughness---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Dispersion glTF - IBL",
             "playgroundId": "#GRQHVV#140",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dispersion-glTF---IBL.png"
         },
         {
@@ -3644,30 +3355,22 @@
         {
             "title": "OpenPBR Transmission Dispersion VS IOR - IBL",
             "playgroundId": "#GRQHVV#143",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dispersion-VS-IOR---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Forward Scatter and Absorption - IBL",
             "playgroundId": "#GRQHVV#263",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Forward-Scatter-and-Absorption---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Scatter Anisotropy Reflect - IBL",
             "playgroundId": "#GRQHVV#264",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Reflect---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Scatter Anisotropy Refract - IBL",
-            "playgroundId": "#GRQHVV#265",
+            "playgroundId": "#5OBC5W#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Refract---IBL.png"
         },
         {
@@ -3688,18 +3391,14 @@
         },
         {
             "title": "OpenPBR Subsurface Radius vs Roughness - IBL",
-            "playgroundId": "#GRQHVV#270",
+            "playgroundId": "#54A9FQ#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Roughness---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Radius vs Anisotropy - IBL",
-            "playgroundId": "#GRQHVV#271",
+            "playgroundId": "#7I1LAC#0",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---IBL.png"
         },
         {
@@ -3710,105 +3409,79 @@
         },
         {
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
-            "playgroundId": "#GRQHVV#273",
+            "playgroundId": "#SD5EQ1#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Radius-Scale---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending - IBL",
-            "playgroundId": "#GRQHVV#296",
+            "playgroundId": "#SXXR4T#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending - Analytic Lights",
-            "playgroundId": "#GRQHVV#299",
+            "playgroundId": "#T69TFO#0",
             "renderCount": 2,
-            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "OpenPBR subsurface transmission shows red bands on label backgrounds (BN GUI color + minor SSS BSDF differences)."
+            "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending Zero Depth - IBL",
-            "playgroundId": "#GRQHVV#235",
+            "playgroundId": "#UZ7KW4#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending-Zero-Depth---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Dense Scattering - IBL",
-            "playgroundId": "#GRQHVV#294",
+            "playgroundId": "#Q3QF1V#0",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dense-Scattering---IBL.png"
         },
         {
             "title": "OpenPBR Transmission Dense Scattering - SH",
             "playgroundId": "#GRQHVV#293",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Transmission-Dense-Scattering---SH.png"
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - IBL",
-            "playgroundId": "#GRQHVV#295",
+            "playgroundId": "#Z8RCM0#0",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Analytic Lights",
-            "playgroundId": "#GRQHVV#300",
+            "playgroundId": "#GRQHVV#306",
             "renderCount": 10,
-            "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "OpenPBR analytic-lights left column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR SSS BSDF)."
+            "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Realtime IBL",
-            "playgroundId": "#GRQHVV#301",
+            "playgroundId": "#5A4TWS#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Realtime-IBL.png"
         },
         {
             "title": "OpenPBR Subsurface Color Scaling - IBL",
-            "playgroundId": "#GRQHVV#302",
+            "playgroundId": "#YWXM7Z#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png"
         },
         {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - IBL",
-            "playgroundId": "#GRQHVV#240",
+            "playgroundId": "#BY1IOY#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Walled-Transmission-IOR-vs-Roughness---IBL.png"
         },
         {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - Analytic Lights",
-            "playgroundId": "#GRQHVV#243",
-            "referenceImage": "OpenPBR-Thin-Walled-Transmission-IOR-vs-Roughness---Analytic-Lights.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "playgroundId": "#GRQHVV#312",
+            "referenceImage": "OpenPBR-Thin-Walled-Transmission-IOR-vs-Roughness---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Walled Anisotropic Transmission - IBL",
-            "playgroundId": "#GRQHVV#247",
+            "playgroundId": "#GRQHVV#315",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Walled-Anisotropic-Transmission---IBL.png"
         },
         {
@@ -3819,10 +3492,8 @@
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Anisotropy - IBL",
-            "playgroundId": "#GRQHVV#241",
+            "playgroundId": "#GT3JYS#1",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Anisotropy---IBL.png"
         },
         {
@@ -3833,10 +3504,8 @@
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Transmission Blending - IBL",
-            "playgroundId": "#GRQHVV#242",
+            "playgroundId": "#URIA5X#0",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png"
         },
         {
@@ -3847,13 +3516,13 @@
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.4% px); passes on Win32 D3D11.",
             "referenceImage": "Lighting-Volume.png"
         },
         {
             "title": "Havok FloatingOrigin Multi-Region",
-            "playgroundId": "#BEDCVY",
+            "playgroundId": "#ND10JJ#0",
             "renderCount": 180,
             "useLargeWorldRendering": true,
             "excludeFromAutomaticTesting": true,
@@ -3868,13 +3537,13 @@
         },
         {
             "title": "Particles - Basic Properties - Size",
-            "playgroundId": "#0K3AQ2#3780",
+            "playgroundId": "#MP4MLC#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-size.png"
         },
         {
             "title": "Particles - Basic Properties - Scale",
-            "playgroundId": "#0K3AQ2#3782",
+            "playgroundId": "#D4J35U#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-scale.png"
         },
@@ -3904,7 +3573,7 @@
         },
         {
             "title": "Particles - Basic Properties - Translation Pivot",
-            "playgroundId": "#0K3AQ2#3808",
+            "playgroundId": "#SGRK8U#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-translation-pivot.png"
         },
@@ -3916,37 +3585,37 @@
         },
         {
             "title": "Particles - Basic Properties - Direction - Gravity",
-            "playgroundId": "#0K3AQ2#3816",
+            "playgroundId": "#7R44LG#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-direction-gravity.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Slow",
-            "playgroundId": "#0K3AQ2#3821",
+            "playgroundId": "#Z1YF6Y#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-slow.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Fast",
-            "playgroundId": "#0K3AQ2#3823",
+            "playgroundId": "#0FU68O#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-fast.png"
         },
         {
             "title": "Particles - Basic Properties - Emission Limits",
-            "playgroundId": "#0K3AQ2#3825",
+            "playgroundId": "#T9YQQX#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-emission-limits.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Short",
-            "playgroundId": "#0K3AQ2#3829",
+            "playgroundId": "#HH34PQ#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-short.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Long",
-            "playgroundId": "#0K3AQ2#3834",
+            "playgroundId": "#WAABDN#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-long.png"
         },
@@ -3958,7 +3627,7 @@
         },
         {
             "title": "Particles - Change - Size 2",
-            "playgroundId": "#0K3AQ2#3844",
+            "playgroundId": "#H4K2HM#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size-2.png"
         },
@@ -3976,19 +3645,19 @@
         },
         {
             "title": "Particles - Change - Speed",
-            "playgroundId": "#0K3AQ2#3853",
+            "playgroundId": "#WJPDMN#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed.png"
         },
         {
             "title": "Particles - Change - Speed 2",
-            "playgroundId": "#0K3AQ2#3855",
+            "playgroundId": "#Z0P403#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-2.png"
         },
         {
             "title": "Particles - Change - Speed Limit",
-            "playgroundId": "#0K3AQ2#3859",
+            "playgroundId": "#ZAE8XN#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-limit.png"
         },
@@ -4006,25 +3675,25 @@
         },
         {
             "title": "Particles - Change - Drag",
-            "playgroundId": "#0K3AQ2#3868",
+            "playgroundId": "#H5J2I5#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag.png"
         },
         {
             "title": "Particles - Change - Drag 2",
-            "playgroundId": "#0K3AQ2#3872",
+            "playgroundId": "#C4ISYX#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag-2.png"
         },
         {
             "title": "Particles - Change - Emit Rate",
-            "playgroundId": "#0K3AQ2#3875",
+            "playgroundId": "#28UTI5#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate.png"
         },
         {
             "title": "Particles - Change - Emit Rate 2",
-            "playgroundId": "#0K3AQ2#3879",
+            "playgroundId": "#JW6JI4#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate-2.png"
         },
@@ -4036,13 +3705,13 @@
         },
         {
             "title": "Particles - Change - Lifetime 2",
-            "playgroundId": "#0K3AQ2#3890",
+            "playgroundId": "#24X4MW#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime-2.png"
         },
         {
             "title": "Particles - Change - Start Size",
-            "playgroundId": "#0K3AQ2#3897",
+            "playgroundId": "#OYHJGJ#0",
             "renderCount": 120,
             "referenceImage": "particles-basic-change-start-size.png"
         },
@@ -4083,9 +3752,9 @@
             "title": "Particles - Emitters - Directed Cylinder",
             "playgroundId": "#WLX2I2#14",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
-            "referenceImage": "particles-emitters-directed-cylinder.png"
+            "referenceImage": "particles-emitters-directed-cylinder.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "Particles - Emitters - Cone",
@@ -4101,52 +3770,50 @@
         },
         {
             "title": "Particles - Emitters - Mesh",
-            "playgroundId": "#WLX2I2#20",
+            "playgroundId": "#5IZ478#0",
             "renderCount": 120,
             "referenceImage": "particles-emitters-mesh.png"
         },
         {
             "title": "Particles - Emitters - Custom",
-            "playgroundId": "#WLX2I2#22",
+            "playgroundId": "#13APF0#0",
             "renderCount": 120,
             "referenceImage": "particles-emitters-custom.png"
         },
         {
             "title": "Particles - Animations",
-            "playgroundId": "#2MI0A1#7",
+            "playgroundId": "#K9LJUG#0",
             "renderCount": 120,
             "referenceImage": "particles-animations.png"
         },
         {
             "title": "Particles - Animations 2",
-            "playgroundId": "#2MI0A1#8",
+            "playgroundId": "#CBXIIX#0",
             "renderCount": 120,
             "referenceImage": "particles-animations-2.png"
         },
         {
             "title": "Particles - Ramp Gradient",
-            "playgroundId": "#I2D9MM#15",
+            "playgroundId": "#P14652#0",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap",
-            "playgroundId": "#E3VU3R",
+            "playgroundId": "#1U4LNR#0",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap Alpha",
-            "playgroundId": "#I2D9MM#16",
+            "playgroundId": "#T4VZD9#0",
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap-alpha.png"
         },
         {
             "title": "Particles - Billboard Y",
-            "playgroundId": "#T3ZCP7#5",
+            "playgroundId": "#6JLSVW#0",
             "renderCount": 180,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "particles-billboard-y.png"
         },
         {
@@ -4157,7 +3824,7 @@
         },
         {
             "title": "Particles - Multiply Blend",
-            "playgroundId": "#M1HYFH#6",
+            "playgroundId": "#LWYGNM#0",
             "renderCount": 120,
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "particles-multiply-blend.png"
@@ -4170,13 +3837,13 @@
         },
         {
             "title": "Particles - Effects",
-            "playgroundId": "#1ASENS#424",
+            "playgroundId": "#KH7B0A#0",
             "renderCount": 120,
             "referenceImage": "particles-effects.png"
         },
         {
             "title": "Particles - Helper - Sun",
-            "playgroundId": "#A97UQ6#5",
+            "playgroundId": "#U78ZGE#0",
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
             "errorRatio": 8,
@@ -4184,7 +3851,7 @@
         },
         {
             "title": "Particles - Helper - Smoke",
-            "playgroundId": "#XRRTC0#2",
+            "playgroundId": "#XRRTC0#6",
             "renderCount": 120,
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "particles-helper-smoke.png"
@@ -4204,7 +3871,7 @@
         },
         {
             "title": "Particles - Flowmaps",
-            "playgroundId": "#M58G3X#4",
+            "playgroundId": "#39BW3H#0",
             "renderCount": 240,
             "referenceImage": "particles-flowmaps.png"
         },
@@ -4254,254 +3921,255 @@
         {
             "title": "GPU Particles - Basic Properties - Size",
             "playgroundId": "#3HLS3D#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-size.png"
+            "referenceImage": "gpu-particles-basic-size.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Scale",
             "playgroundId": "#52KBLI#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-scale.png"
+            "referenceImage": "gpu-particles-basic-scale.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Color",
             "playgroundId": "#30PAK9#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-color.png"
+            "referenceImage": "gpu-particles-basic-color.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Speed",
             "playgroundId": "#KU4I4J#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-speed.png"
+            "referenceImage": "gpu-particles-basic-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Angular Speed",
             "playgroundId": "#9MOFU4#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-angular-speed.png"
+            "referenceImage": "gpu-particles-basic-angular-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Rotation",
             "playgroundId": "#DEVC42#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-rotation.png"
+            "referenceImage": "gpu-particles-basic-rotation.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#QC8XA2#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-translation-pivot.png"
+            "referenceImage": "gpu-particles-basic-translation-pivot.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Direction",
             "playgroundId": "#M6QEUB#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-direction.png"
+            "referenceImage": "gpu-particles-basic-direction.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Gravity",
             "playgroundId": "#9AGK0W#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-gravity.png"
+            "referenceImage": "gpu-particles-basic-gravity.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Emit Rate",
             "playgroundId": "#IBWI36#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-emit-rate.png"
+            "referenceImage": "gpu-particles-basic-emit-rate.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Lifetime",
             "playgroundId": "#RL6BAK#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-lifetime.png"
+            "referenceImage": "gpu-particles-basic-lifetime.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Basic Properties - Target Stop Duration",
             "playgroundId": "#4AJC72#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-basic-target-stop.png"
+            "referenceImage": "gpu-particles-basic-target-stop.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Size",
             "playgroundId": "#KF9X69#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-size.png"
+            "referenceImage": "gpu-particles-change-size.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Color",
             "playgroundId": "#UWRCY4#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-color.png"
+            "referenceImage": "gpu-particles-change-color.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Speed",
             "playgroundId": "#KBHNCB#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-speed.png"
+            "referenceImage": "gpu-particles-change-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Speed Limit",
             "playgroundId": "#CTNM3R#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-speed-limit.png"
+            "referenceImage": "gpu-particles-change-speed-limit.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Angular Speed",
             "playgroundId": "#1NLEIC#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-angular-speed.png"
+            "referenceImage": "gpu-particles-change-angular-speed.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Drag",
             "playgroundId": "#02KAQL#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-drag.png"
+            "referenceImage": "gpu-particles-change-drag.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Size Range",
-            "playgroundId": "#4EWZJ9#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-size-range.png"
+            "playgroundId": "#HWD2PR#0",
+            "referenceImage": "gpu-particles-change-size-range.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Change - Color Range",
             "playgroundId": "#3M1JEJ#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-change-color-range.png"
+            "referenceImage": "gpu-particles-change-color-range.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-point.png"
+            "referenceImage": "gpu-particles-emitters-point.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Box",
             "playgroundId": "#2XD9BC#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-box.png"
+            "referenceImage": "gpu-particles-emitters-box.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Sphere",
             "playgroundId": "#H7XR87#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-sphere.png"
+            "referenceImage": "gpu-particles-emitters-sphere.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Directed Sphere",
             "playgroundId": "#0H1ATM#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-directed-sphere.png"
+            "referenceImage": "gpu-particles-emitters-directed-sphere.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Hemisphere",
             "playgroundId": "#MRQTX7#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-hemisphere.png"
+            "referenceImage": "gpu-particles-emitters-hemisphere.png",
+            "errorRatio": 4,
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Cylinder",
             "playgroundId": "#FGRJM1#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-cylinder.png"
+            "referenceImage": "gpu-particles-emitters-cylinder.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Directed Cylinder",
             "playgroundId": "#40T8G0#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-directed-cylinder.png"
+            "referenceImage": "gpu-particles-emitters-directed-cylinder.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Cone",
             "playgroundId": "#W73H92#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-cone.png"
+            "referenceImage": "gpu-particles-emitters-cone.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Emitters - Directed Cone",
             "playgroundId": "#GSYICK#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-emitters-directed-cone.png"
+            "referenceImage": "gpu-particles-emitters-directed-cone.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-billboard-y.png"
+            "referenceImage": "gpu-particles-billboard-y.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Billboard Stretched",
             "playgroundId": "#0612KX#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-billboard-stretched.png"
+            "referenceImage": "gpu-particles-billboard-stretched.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Multiply Blend",
             "playgroundId": "#D7LQAZ#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Cubemap load not implemented on Babylon Native: throws Error: Cannot load cubemap because 6 files were not defined (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-multiply-blend.png"
+            "referenceImage": "gpu-particles-multiply-blend.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Animations",
             "playgroundId": "#B0EJQY#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-animations.png"
+            "referenceImage": "gpu-particles-animations.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Noise",
             "playgroundId": "#P6JQIP#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-noise.png"
+            "referenceImage": "gpu-particles-noise.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Flowmaps",
             "playgroundId": "#SGAEHS#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Native lacks the 'Image' DOM constructor: throws ReferenceError: 'Image' is not defined (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-flowmaps.png"
+            "referenceImage": "gpu-particles-flowmaps.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "GPU Particles - Local Space",
             "playgroundId": "#NK19TU#0",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GPUParticleSystem throws TypeError: Unable to get property 'ARRAY_BUFFER' of undefined or null reference (thrown before pixel comparison, not a pixel-diff)",
-            "referenceImage": "gpu-particles-local-space.png"
+            "referenceImage": "gpu-particles-local-space.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
             "title": "Node material PBR Pure WebGPU",
@@ -4548,8 +4216,6 @@
         {
             "title": "FrameGraph nrge clustered lights",
             "playgroundId": "#1QCA2M#36",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "FrameGraph-nrge-clustered-lights.png"
         },
         {
@@ -4560,15 +4226,11 @@
         {
             "title": "Clustered lights - debug markers",
             "playgroundId": "#1QCA2M#47",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
             "referenceImage": "Clustered-lights---debug-markers.png"
         },
         {
             "title": "CSM  FrameGraph - debug markers",
             "playgroundId": "#JWKDME#216",
-            "excludeFromAutomaticTesting": true,
-            "reason": "FrameGraph render pipeline hangs past 120s",
             "referenceImage": "CSM-FrameGraph---debug-markers.png"
         },
         {

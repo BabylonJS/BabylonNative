@@ -30,8 +30,11 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.js-engine == 'Hermes' && 60 || 30 }}
+    # Pinned: ubuntu-latest (ubuntu-26.04, Clang 21) fails to build glslang (SpvBuilder.h lacks <cstdint>).
+    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
+    runs-on: ubuntu-24.04
+    # Ubuntu_Clang_JSC (build + full validation run) takes ~28-29 minutes, so 30 caused spurious cancellations.
+    timeout-minutes: 180
     env:
       CC: ${{ inputs.cc }}
       CXX: ${{ inputs.cxx }}
@@ -172,6 +175,16 @@ jobs:
           ulimit -c unlimited
           xvfb-run --auto-servernum ./ModuleLoadTest
 
+      - name: JsRuntimeHost Unit Tests
+        working-directory: build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests
+        run: |
+          ulimit -c unlimited
+          xvfb-run --auto-servernum ./JsRuntimeHostUnitTests
+
+      - name: UrlLib Unit Tests
+        working-directory: build/Linux/Dependencies/UrlLib/Tests
+        run: ./UrlLibTests
+
       - name: Upload Vulkan Test Results
         if: ${{ always() && inputs.graphics-api == 'Vulkan' }}
         uses: actions/upload-artifact@v6
@@ -207,3 +220,7 @@ jobs:
             build/Linux/Apps/UnitTests/core.*
             build/Linux/Apps/ModuleLoadTest/ModuleLoadTest
             build/Linux/Apps/ModuleLoadTest/core.*
+            build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests/JsRuntimeHostUnitTests
+            build/Linux/Dependencies/JsRuntimeHost/Tests/UnitTests/core.*
+            build/Linux/Dependencies/UrlLib/Tests/UrlLibTests
+            build/Linux/Dependencies/UrlLib/Tests/core.*

@@ -31,6 +31,9 @@ jobs:
           if [ "${{ inputs.napi-type }}" = "jsi" ]; then
             echo "suffix=_JSI" >> "$GITHUB_OUTPUT"
             echo "define=-DNAPI_JAVASCRIPT_ENGINE=JSI" >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.napi-type }}" = "V8" ]; then
+            echo "suffix=_V8" >> "$GITHUB_OUTPUT"
+            echo "define=-DNAPI_JAVASCRIPT_ENGINE=V8" >> "$GITHUB_OUTPUT"
           else
             echo "suffix=" >> "$GITHUB_OUTPUT"
             echo "define=" >> "$GITHUB_OUTPUT"

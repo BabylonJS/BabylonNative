@@ -32,8 +32,8 @@ Babylon Native uses the
 technologies internally as a graphics abstraction for cross-platform native
 rendering. Babylon Native consumes these dependencies through the tracked
 [wrapper](../Dependencies/bgfx.cmake), imported with full history from the
-[BabylonJS fork](https://github.com/BabylonJS/bgfx.cmake) of the
-[bgfx.cmake](https://github.com/widberg/bgfx.cmake) project, which provides
+[archived BabylonJS fork](https://github.com/BabylonJS/bgfx.cmake) of the
+[bgfx.cmake](https://github.com/bkaradzic/bgfx.cmake) project, which provides
 an easy integration layer by which bgfx can be brought into Babylon 
 Native's CMake-based build system. The wrapper fetches pinned bgfx, bx and bimg
 sources with CMake instead of Git submodules; their implementations remain

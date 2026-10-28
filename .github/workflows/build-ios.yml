@@ -23,7 +23,7 @@ env:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: 30
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
 
@@ -49,3 +49,10 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Build unit-test artifacts
+        uses: ./.github/actions/build-mobile-tests
+        with:
+          component: JsRuntimeHost
+          platform: iOS
+          deployment-target: ${{ inputs.deployment-target }}

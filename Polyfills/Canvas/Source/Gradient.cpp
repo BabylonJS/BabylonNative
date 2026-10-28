@@ -42,21 +42,6 @@ namespace Babylon::Polyfills::Internal
 
     float clampf(float a, float mn, float mx) { return a < mn ? mn : (a > mx ? mx : a); }
 
-    NVGcolor premultiply(NVGcolor c)
-    {
-        return nvgRGBAf(c.r * c.a, c.g * c.a, c.b * c.a, c.a);
-    }
-
-    NVGcolor unpremultiply(NVGcolor c)
-    {
-        if (c.a <= 0.0f)
-        {
-            return nvgRGBAf(0.f, 0.f, 0.f, 0.f);
-        }
-        const float inv = 1.0f / c.a;
-        return nvgRGBAf(clampf(c.r * inv, 0.f, 1.f), clampf(c.g * inv, 0.f, 1.f), clampf(c.b * inv, 0.f, 1.f), clampf(c.a, 0.f, 1.f));
-    }
-
     void gradientSpan(uint32_t* dst, NVGcolor color0, NVGcolor color1, float offset0, float offset1)
     {
         float s0o = clampf(offset0, 0.0f, 1.0f);
@@ -69,25 +54,19 @@ namespace Babylon::Polyfills::Internal
         {
             return;
         }
-        // Canvas2D interpolates gradient stops in premultiplied sRGBA space. Interpolating the
-        // straight (unpremultiplied) components instead bleeds a transparent stop's RGB into the
-        // ramp: "#ff0000ff" -> "#00000000" darkens through maroon to black rather than staying red
-        // and only losing alpha.
-        const NVGcolor p0 = premultiply(color0);
-        const NVGcolor p1 = premultiply(color1);
-        float r = p0.rgba[0];
-        float g = p0.rgba[1];
-        float b = p0.rgba[2];
-        float a = p0.rgba[3];
-        float dr = (p1.rgba[0] - r) / (e - s);
-        float dg = (p1.rgba[1] - g) / (e - s);
-        float db = (p1.rgba[2] - b) / (e - s);
-        float da = (p1.rgba[3] - a) / (e - s);
+        // Canvas interpolates straight color and alpha independently; NanoVG premultiplies
+        // the sampled ramp when drawing it into the Canvas render target.
+        float r = color0.r;
+        float g = color0.g;
+        float b = color0.b;
+        float a = color0.a;
+        float dr = (color1.r - r) / (e - s);
+        float dg = (color1.g - g) / (e - s);
+        float db = (color1.b - b) / (e - s);
+        float da = (color1.a - a) / (e - s);
         for (unsigned i = s; i < e; i++)
         {
-            // The baked image is sampled as straight alpha, so undo the premultiplication here.
-            const NVGcolor straight = unpremultiply(nvgRGBAf(r, g, b, a));
-            unsigned ur = (unsigned)(straight.r * 255); unsigned ug = (unsigned)(straight.g * 255); unsigned ub = (unsigned)(straight.b * 255); unsigned ua = (unsigned)(straight.a * 255);
+            unsigned ur = (unsigned)(r * 255); unsigned ug = (unsigned)(g * 255); unsigned ub = (unsigned)(b * 255); unsigned ua = (unsigned)(a * 255);
             dst[i] = (ua << 24) | (ub << 16) | (ug << 8) | ur;
             r += dr; g += dg; b += db; a += da;
         }
@@ -236,15 +215,11 @@ namespace Babylon::Polyfills::Internal
 
     NVGcolor lerpColor(NVGcolor color0, NVGcolor color1, float offset0, float offset1, float g)
     {
-        // See gradientSpan: stops are interpolated premultiplied, then converted back to the
-        // straight alpha the baked image is sampled with.
-        const NVGcolor p0 = premultiply(color0);
-        const NVGcolor p1 = premultiply(color1);
         NVGcolor dst;
         float den = std::max(0.00001f, offset1 - offset0);
         for (int i = 0; i < 4; i++)
-            dst.rgba[i] = p0.rgba[i] + (p1.rgba[i] - p0.rgba[i]) * (g - offset0) / den;
-        return unpremultiply(dst);
+            dst.rgba[i] = color0.rgba[i] + (color1.rgba[i] - color0.rgba[i]) * (g - offset0) / den;
+        return dst;
     }
 
     void calcStops(const std::vector<ColorStop>& gradient, LVGColorTransform* x, NVGcolor* color0, NVGcolor* color1, float* stop0, float* stop1, float g)
