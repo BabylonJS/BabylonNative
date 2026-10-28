@@ -16,17 +16,16 @@ namespace
         std::map<uint8_t, bgfx::UniformHandle>& samplerStates,
         std::map<uint8_t, bgfx::UniformHandle>& samplers)
     {
-        uint16_t numUniforms = bgfx::getShaderUniforms(shader);
+        const uint16_t numUniforms = bgfx::getShaderUniforms(shader);
         std::vector<bgfx::UniformHandle> uniforms{numUniforms};
         bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
 
         for (uint16_t index = 0; index < numUniforms; index++)
         {
             bgfx::UniformInfo info{};
-            uint16_t handleIndex = uniforms[index].idx;
-            bgfx::getUniformInfo(uniforms[index], info);
-            auto itStage = uniformStages.find(info.name);
-            auto& handle = uniforms[index];
+            const bgfx::UniformHandle handle = uniforms[index];
+            bgfx::getUniformInfo(handle, info);
+            const auto itStage = uniformStages.find(info.name);
             uniformInfos.emplace(std::make_pair(handle.idx, Babylon::UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.type, info.num}));
             if (info.type == bgfx::UniformType::Sampler)
             {
@@ -44,7 +43,7 @@ namespace
                     continue;
                 }
             }
-            uniformNameToIndex[originalName == uniformNames.end() ? info.name : originalName->second] = handleIndex;
+            uniformNameToIndex[originalName == uniformNames.end() ? info.name : originalName->second] = handle.idx;
         }
     }
 

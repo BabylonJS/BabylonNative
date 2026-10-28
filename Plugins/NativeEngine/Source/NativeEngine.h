@@ -56,8 +56,6 @@ namespace Babylon
 
         void Dispose(const Napi::CallbackInfo& info);
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
-        // Test-only: schedules a tracked threadpool task that signals start, sleeps, then signals
-        // finish, so unit tests can verify Dispose drains in-flight async work. See NativeEngine.cpp.
         void DisposeDrainTestSchedule(const Napi::CallbackInfo& info);
 #endif
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
@@ -137,8 +135,10 @@ namespace Babylon
         VertexBuffer::InstanceDataLayout GetInstanceDataLayout() const;
         void DrawIndexed(NativeDataStream::Reader& data);
         void DrawIndexedInstanced(NativeDataStream::Reader& data);
+        void DrawIndexedImpl(NativeDataStream::Reader& data, bool instanced);
         void Draw(NativeDataStream::Reader& data);
         void DrawInstanced(NativeDataStream::Reader& data);
+        void DrawImpl(NativeDataStream::Reader& data, bool instanced);
         void DrawTransformFeedback(NativeDataStream::Reader& data);
         void Clear(NativeDataStream::Reader& data);
         void Clear2(NativeDataStream::Reader& data);
@@ -163,10 +163,7 @@ namespace Babylon
         void EndFrame(const Napi::CallbackInfo&);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout);
 
-        // Dispatches the GPU instance-data repack for a vertex array whose per-instance sources are
-        // GPU storage buffers, returning the dynamic vertex buffer to bind as instance data (or an
-        // invalid handle when there is nothing to repack). Must be called before the draw bindings
-        // are set, since dispatch resets the encoder's pending draw state.
+        // Repack before setting draw bindings because the compute dispatch resets pending state.
         bgfx::DynamicVertexBufferHandle RepackStorageInstances(VertexArray* vertexArray,
             const VertexBuffer::InstanceDataLayout& instanceDataLayout, uint32_t instanceCount);
 
@@ -242,7 +239,7 @@ namespace Babylon
         template<int size>
         void SetMatrixN(NativeDataStream::Reader& data);
 
-        // Scratch vector used for data alignment.
+        // Scratch storage preserves alignment when reading matrix data.
         std::vector<float> m_scratch{};
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
@@ -274,7 +271,7 @@ namespace Babylon
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
 
-        // Information from the JS side used for backwards compatibility.
+        // JavaScript feature information used for backwards compatibility.
         struct
         {
             bool NonFloatVertexBuffers{};

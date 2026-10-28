@@ -141,13 +141,11 @@ namespace Babylon
             state.Stride = instanceStride;
         }
 
-        // Build params blob: header + one uvec4 per attribute, written into the shader's layout slot.
         const uint32_t paramsU = kParamsHeaderU + attributeCount * 4;
         std::vector<uint32_t> params(paramsU, 0);
         params[0] = instanceCount;
         params[1] = attributeCount;
         params[2] = instanceStride / sizeof(float);
-        params[3] = 0;
 
         uint32_t attr = 0;
         for (const auto& [location, element] : instances)

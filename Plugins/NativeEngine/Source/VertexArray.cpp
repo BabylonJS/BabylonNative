@@ -128,13 +128,8 @@ namespace Babylon
 
             const bgfx::Caps* caps = bgfx::getCaps();
 
-            // Use the runtime cap, not MAX_INSTANCE_DATA_SLOT_COUNT: backends clamp maxInstanceData
-            // to the device's maxVertexAttributes during init, so the compile-time value is a
-            // ceiling a device need not honour. The constant stays for the shader compiler's
-            // static_asserts, which need a compile-time bound.
-            //
-            // Only a new attribute can overflow -- re-recording an existing one overwrites its
-            // entry -- and the check runs before the insert, so `size() >= max` is the overflow.
+            // Backends may clamp maxInstanceData below the shader compiler's compile-time ceiling.
+            // Only new attributes can overflow because existing entries are overwritten.
             const uint32_t maxInstanceData = caps->limits.maxInstanceData;
             if (m_vertexBufferInstances.find(location) == m_vertexBufferInstances.end() &&
                 m_vertexBufferInstances.size() >= maxInstanceData)
@@ -262,9 +257,7 @@ namespace Babylon
         }
         else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
         {
-            // The shader declares built-in per-instance inputs this draw does not supply, e.g. the node
-            // material InstancesBlock declares world0-3 but reads them only under #ifdef INSTANCES.
-            // D3D input layouts must cover every declared input, so bind zeroed instance data.
+            // D3D input layouts must cover declared built-in instance inputs even when unused.
             static constexpr uint16_t kSlotSize = 16;
             const uint32_t count = std::max(instanceCount, 1u);
             const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * kSlotSize);
@@ -279,12 +272,7 @@ namespace Babylon
         }
         else if (instanceCount > 0 && !HasStorageInstances())
         {
-            // Attribute-less instancing: the draw requests multiple instances but has no per-instance
-            // vertex data (e.g. the clustered-light tile-mask proxies, which derive the light index,
-            // vertical batch offset and bit mask purely from gl_InstanceID). Without an instance data
-            // buffer bgfx would fall back to drawing a single instance, leaving the tile mask empty and
-            // breaking clustered lighting. Tell bgfx the instance count explicitly so gl_InstanceID
-            // iterates 0..instanceCount-1.
+            // Without per-instance data, bgfx needs an explicit count for gl_InstanceID-based draws.
             encoder->setInstanceCount(instanceCount);
         }
 

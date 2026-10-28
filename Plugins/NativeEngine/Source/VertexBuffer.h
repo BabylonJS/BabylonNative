@@ -3,10 +3,8 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <gsl/gsl>
-#include <list>
 #include <map>
 #include <memory>
-#include <optional>
 #include <vector>
 
 namespace Babylon
@@ -24,7 +22,6 @@ namespace Babylon
         VertexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, bool dynamic);
         ~VertexBuffer();
 
-        // No copy or move semantics
         VertexBuffer(const VertexBuffer&) = delete;
         VertexBuffer(VertexBuffer&&) = delete;
 

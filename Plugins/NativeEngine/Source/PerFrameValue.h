@@ -8,8 +8,7 @@
 
 namespace Babylon
 {
-    // This type contains a per-frame value which automatically resets to
-    // a provided default at the end of each frame.
+    // Resets to its default value after each frame.
     template<typename T>
     class PerFrameValue
     {

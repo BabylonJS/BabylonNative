@@ -90,9 +90,7 @@ namespace Babylon
 
             template<typename T>
 #ifndef _MSC_VER
-            // Clang reports UndefinedBehaviorSanitizer : undefined - behavior
-            // load of misaligned address  which requires 8 byte alignment
-            // pointed data are fine so it looks like a false positive
+            // The stream is 32-bit aligned; Clang UBSan otherwise flags wider native values.
             __attribute__((no_sanitize("undefined")))
 #endif
             T ReadNativeData()
@@ -138,7 +136,6 @@ namespace Babylon
             {
                 static_assert(sizeof(T) % 4 == 0);
 
-                // The first 32 bit number is a length
                 uint32_t length = Read<uint32_t>();
 
                 auto span = gsl::make_span<T>(reinterpret_cast<T*>(m_buffer.data() + m_position), length * (sizeof(T) / 4));
@@ -191,7 +188,7 @@ namespace Babylon
 
         void WriteBuffer(const Napi::CallbackInfo& info)
         {
-            assert(!m_locked); // Cannot write bytes while the stream is locked for reading.
+            assert(!m_locked);
 
             const auto& buffer = info[0].As<Napi::ArrayBuffer>();
             const auto& length = info[1].ToNumber().Uint32Value();

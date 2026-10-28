@@ -75,18 +75,16 @@ namespace Babylon
                 // bgfx only supports vertex start index and not arbitrary byte offsets.
                 throw std::runtime_error{"Cannot update dynamic vertex buffer with a byte offset not divisible by its byte stride"};
             }
-
             bgfx::update(m_dynamicHandle, startVertex, bgfx::copy(bytes.data(), static_cast<uint32_t>(bytes.size())));
+            return;
         }
-        else
-        {
-            if (byteOffset + bytes.size() > m_bytes.size())
-            {
-                throw std::runtime_error{"Cannot update vertex buffer due to buffer overflow"};
-            }
 
-            std::memcpy(m_bytes.data() + byteOffset, bytes.data(), bytes.size());
+        if (byteOffset + bytes.size() > m_bytes.size())
+        {
+            throw std::runtime_error{"Cannot update vertex buffer due to buffer overflow"};
         }
+
+        std::memcpy(m_bytes.data() + byteOffset, bytes.data(), bytes.size());
     }
 
     void VertexBuffer::Build(uint32_t byteStride)
@@ -305,7 +303,6 @@ namespace Babylon
 
         const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
 
-        // Create instance datas. Instance Data Buffer is transient.
         bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
 
         uint8_t* data{instanceDataBuffer.data};
