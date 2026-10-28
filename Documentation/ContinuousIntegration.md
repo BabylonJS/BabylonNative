@@ -18,7 +18,7 @@ The Hermes and Android jobs in `nightly.yml` also use ccache, kept with the Azur
 `Cache@2` task and restored from the job's previous run.
 
 Hermes jobs free disk space before building by removing unused hosted-runner
-toolchains through `.github/scripts/free-hermes-disk-space.ps1`. This applies to
+toolchains through `.github/scripts/free-disk-space.ps1`. This applies to
 the nightly jobs and reusable GitHub workflows, including macOS-hosted Android
 when Hermes is selected. Native compilers, required Android tools, and build
 caches are preserved; other JavaScript engine jobs are unchanged.
