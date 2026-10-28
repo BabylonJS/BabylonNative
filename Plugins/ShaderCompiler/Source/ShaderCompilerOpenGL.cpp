@@ -118,7 +118,7 @@ namespace Babylon::Plugins
             {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size()), std::move(vertexAttributeRenaming)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size()), {}},
             std::move(builtInInstanceDataSlots));
-        result.UniformNames = std::move(uniformNames);
+        MergeUniformNames(result, std::move(uniformNames));
         return result;
     }
 
@@ -149,7 +149,7 @@ namespace Babylon::Plugins
 
         auto result = CreateBgfxComputeShader(
             {std::move(computeParser), std::move(computeCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(computeGLSL.data()), computeGLSL.size()), {}});
-        result.UniformNames = std::move(uniformNames);
+        MergeUniformNames(result, std::move(uniformNames));
         return result;
     }
 }

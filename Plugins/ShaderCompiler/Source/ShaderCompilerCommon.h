@@ -69,6 +69,8 @@ namespace Babylon::ShaderCompilerCommon
             };
 
             std::string Name{};
+            // The GLSL name, when the target compiler renamed the uniform (e.g. a keyword).
+            std::string OriginalName{};
             uint8_t ElementLength{};
             uint32_t Offset{};
             uint16_t RegisterSize{};
@@ -85,6 +87,11 @@ namespace Babylon::ShaderCompilerCommon
         void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment);
         void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::ParsedIR& originalIr, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages);
     NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler);
+
+    /// Combines the aliases produced by RenameShaderUniforms with those recorded in the shader
+    /// info for uniforms renamed by the target compiler, mapping every bgfx uniform name back to
+    /// the name Babylon.js uses.
+    void MergeUniformNames(Graphics::BgfxShaderInfo& shaderInfo, std::map<std::string, std::string> renamedUniforms);
 
         // Which SPIR-V resource list is packaged as bgfx sampler uniforms.
         enum class SamplerResourceSet

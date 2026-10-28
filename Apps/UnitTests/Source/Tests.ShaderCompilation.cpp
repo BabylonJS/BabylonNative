@@ -11,6 +11,7 @@
 #endif
 #include <Babylon/ScriptLoader.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <cstdlib>
@@ -263,6 +264,42 @@ TEST(ShaderCompilation, UniformNamesDoNotCollideWithIntrinsicsOrBgfx)
     EXPECT_EQ(shader.UniformNames.at("bnUserUniform_textureSize1"), "textureSize");
     EXPECT_EQ(shader.UniformNames.at("bnUserUniform_u_view"), "u_view");
     EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+
+TEST(ShaderCompilation, UniformRenamedForTargetKeywordMapsToOriginalName)
+{
+    // "kernel" is a Metal keyword, so SPIRV-Cross emits the member as "kernel0". Babylon.js still
+    // sets it as "kernel" (ConvolutionPostProcess), so UniformNames must map the table name back.
+    Babylon::Plugins::ShaderCompiler compiler{};
+    const auto shader = compiler.Compile(R"(
+        in vec2 position;
+        void main() { gl_Position = vec4(position, 0.0, 1.0); }
+    )", R"(
+        precision highp float;
+        uniform float kernel[9];
+        out vec4 color;
+        void main() { color = vec4(kernel[0] + kernel[8]); }
+    )");
+
+    const auto& bytes = shader.FragmentBytes;
+    ASSERT_GE(bytes.size(), 22u);
+    size_t offset = 20;
+    uint16_t count{};
+    std::memcpy(&count, bytes.data() + offset, sizeof(count));
+    offset += sizeof(count);
+    std::vector<std::string> names;
+    for (uint16_t i = 0; i < count; ++i)
+    {
+        ASSERT_LT(offset, bytes.size());
+        const size_t nameSize = bytes[offset];
+        ASSERT_LE(offset + 1 + nameSize, bytes.size());
+        std::string name{reinterpret_cast<const char*>(bytes.data() + offset + 1), nameSize};
+        const auto alias = shader.UniformNames.find(name);
+        names.push_back(alias == shader.UniformNames.end() ? name : alias->second);
+        // name, type, count, register index, register count, texture component/dimension/format.
+        offset += 1 + nameSize + 1 + 1 + 2 + 2 + 1 + 1 + 2;
+    }
+    EXPECT_NE(std::find(names.begin(), names.end(), "kernel"), names.end());
 }
 
 TEST(ShaderCompilation, UniformNamesDoNotCollideWithRenderTargetTransform)

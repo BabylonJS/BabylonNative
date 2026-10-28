@@ -485,7 +485,7 @@ namespace Babylon::Plugins
             std::move(builtInInstanceDataSlots),
             SamplerResourceSet::SeparateImages,
             AppendSamplersVulkan);
-        result.UniformNames = std::move(uniformNames);
+        MergeUniformNames(result, std::move(uniformNames));
         return result;
     }
 
@@ -524,7 +524,7 @@ namespace Babylon::Plugins
             {std::move(computeParser), std::move(computeCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(spirvCS.data()), spirvCS.size() * sizeof(uint32_t)), {}},
             SamplerResourceSet::SeparateImages,
             AppendSamplersVulkan);
-        result.UniformNames = std::move(uniformNames);
+        MergeUniformNames(result, std::move(uniformNames));
         return result;
     }
 }
