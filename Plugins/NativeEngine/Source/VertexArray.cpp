@@ -9,6 +9,11 @@
 
 namespace Babylon
 {
+    namespace
+    {
+        constexpr uint32_t kMaximumVertexAttributeComponents = 4;
+    }
+
     VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
         : m_deviceContext{deviceContext}
         , m_deviceId{m_deviceContext.GetDeviceId()}
@@ -85,23 +90,23 @@ namespace Babylon
             {
                 case bgfx::AttribType::Float:
                     inputType = Graphics::TransformFeedbackInputType::Float;
-                    componentSize = 4;
+                    componentSize = sizeof(float);
                     break;
                 case bgfx::AttribType::Int8:
                     inputType = Graphics::TransformFeedbackInputType::Int8;
-                    componentSize = 1;
+                    componentSize = sizeof(int8_t);
                     break;
                 case bgfx::AttribType::Uint8:
                     inputType = Graphics::TransformFeedbackInputType::Uint8;
-                    componentSize = 1;
+                    componentSize = sizeof(uint8_t);
                     break;
                 case bgfx::AttribType::Int16:
                     inputType = Graphics::TransformFeedbackInputType::Int16;
-                    componentSize = 2;
+                    componentSize = sizeof(int16_t);
                     break;
                 case bgfx::AttribType::Uint16:
                     inputType = Graphics::TransformFeedbackInputType::Uint16;
-                    componentSize = 2;
+                    componentSize = sizeof(uint16_t);
                     break;
                 default:
                     throw std::runtime_error{"Unsupported transform feedback vertex input type"};
@@ -110,7 +115,7 @@ namespace Babylon
             {
                 throw std::runtime_error{"Transform feedback vertex inputs cannot be instanced"};
             }
-            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > 4)
+            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > kMaximumVertexAttributeComponents)
             {
                 throw std::runtime_error{"Transform feedback vertex inputs must be aligned to their component size"};
             }

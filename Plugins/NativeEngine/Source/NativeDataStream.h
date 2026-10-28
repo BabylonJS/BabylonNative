@@ -96,9 +96,9 @@ namespace Babylon
             T ReadNativeData()
             {
                 Validate<ValidationType::NativeData>(*this);
-                static_assert(sizeof(T) % 4 == 0);
-                auto span = gsl::make_span(reinterpret_cast<uint32_t*>(m_buffer.data() + m_position), sizeof(T) / 4);
-                m_position += sizeof(T) / 4;
+                static_assert(sizeof(T) % sizeof(uint32_t) == 0);
+                auto span = gsl::make_span(reinterpret_cast<uint32_t*>(m_buffer.data() + m_position), sizeof(T) / sizeof(uint32_t));
+                m_position += sizeof(T) / sizeof(uint32_t);
                 return *reinterpret_cast<T*>(span.data());
             }
 
@@ -125,20 +125,20 @@ namespace Babylon
             template<typename T>
             T Read()
             {
-                static_assert(sizeof(T) % 4 == 0);
+                static_assert(sizeof(T) % sizeof(uint32_t) == 0);
                 T t{*reinterpret_cast<T*>(m_buffer.data() + m_position)};
-                m_position += sizeof(T) / 4;
+                m_position += sizeof(T) / sizeof(uint32_t);
                 return t;
             }
 
             template<typename T>
             gsl::span<T> ReadArray()
             {
-                static_assert(sizeof(T) % 4 == 0);
+                static_assert(sizeof(T) % sizeof(uint32_t) == 0);
 
                 uint32_t length = Read<uint32_t>();
 
-                auto span = gsl::make_span<T>(reinterpret_cast<T*>(m_buffer.data() + m_position), length * (sizeof(T) / 4));
+                auto span = gsl::make_span<T>(reinterpret_cast<T*>(m_buffer.data() + m_position), length * (sizeof(T) / sizeof(uint32_t)));
                 m_position += length;
                 return span;
             }

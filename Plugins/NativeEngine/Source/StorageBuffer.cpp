@@ -9,6 +9,8 @@ namespace Babylon
 {
     namespace
     {
+        constexpr uint32_t kDefaultByteStride = 16;
+
         uint32_t RoundUp(uint32_t value, uint32_t multiple)
         {
             if (value == 0 || multiple == 0 || multiple > std::numeric_limits<uint16_t>::max())
@@ -30,7 +32,7 @@ namespace Babylon
         , m_deviceId{m_deviceContext.GetDeviceId()}
         , m_byteLength{byteLength}
         , m_computeWrite{computeWrite}
-        , m_byteStride{byteStride == 0 ? 16u : byteStride}
+        , m_byteStride{byteStride == 0 ? kDefaultByteStride : byteStride}
         , m_shadow(RoundUp(byteLength, m_byteStride), 0)
     {
     }

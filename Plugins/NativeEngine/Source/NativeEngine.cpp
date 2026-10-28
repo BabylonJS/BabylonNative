@@ -57,6 +57,50 @@ namespace Babylon
 {
     namespace
     {
+        constexpr uint32_t kNativeEngineProtocolVersion = 9;
+        constexpr uint8_t kCubeFaceCount = 6;
+        constexpr uint8_t kLastCubeFace = kCubeFaceCount - 1;
+        constexpr uint32_t kBufferReadbackTextureWidth = 256;
+        constexpr uint32_t kBufferReadbackWorkgroupSize = 64;
+        constexpr size_t kMaximumColorAttachments = 8;
+        constexpr size_t kMaximumFrameBufferAttachments = kMaximumColorAttachments + 1;
+        constexpr uint32_t kStencilMask = UINT8_MAX;
+        constexpr size_t kFrameBufferValidationMessageLength = 512;
+        constexpr size_t kTransformFeedbackLayoutComponentCount = 4;
+        constexpr uint32_t kTransformFeedbackBufferEncodingScale = 16;
+        constexpr uint32_t kTransformFeedbackTypeEncodingScale = 2;
+        constexpr double kNoCubeFace = -1;
+        constexpr size_t kRgbComponentCount = 3;
+        constexpr size_t kRgbaComponentCount = 4;
+        constexpr size_t kSphericalHarmonicCoefficientCount = 9;
+        constexpr size_t kSphericalPolynomialCoefficientCount = 9;
+        constexpr size_t kSphericalPolynomialValueCount = kSphericalPolynomialCoefficientCount * kRgbComponentCount;
+        constexpr uint32_t kBitsPerByte = 8;
+        constexpr uint16_t kMinimum3DTextureLayerCount = 2;
+        constexpr uint16_t kHalfFloatOneBits = 0x3C00;
+        constexpr uint32_t kFloatOneBits = 0x3F800000;
+
+        enum class TextureComparisonFunction : uint32_t
+        {
+            Disabled = 0,
+            Never = 0x0200,
+            Less = 0x0201,
+            Equal = 0x0202,
+            LessOrEqual = 0x0203,
+            Greater = 0x0204,
+            NotEqual = 0x0205,
+            GreaterOrEqual = 0x0206,
+            Always = 0x0207,
+        };
+
+        enum class RenderTargetSampleCount : uint32_t
+        {
+            X2 = 2,
+            X4 = 4,
+            X8 = 8,
+            X16 = 16,
+        };
+
         float PointSampleHeight(const Graphics::Texture& texture)
         {
             const auto filters = texture.SamplerFlags() & (BGFX_SAMPLER_MIN_MASK | BGFX_SAMPLER_MAG_MASK);
@@ -202,31 +246,31 @@ namespace Babylon
             uint32_t alpha{0};
             switch (format)
             {
-                case bgfx::TextureFormat::RGBA8: componentBytes = 1; alpha = 0xFF; break;
-                case bgfx::TextureFormat::RGBA8S: componentBytes = 1; alpha = 0x7F; break;
+                case bgfx::TextureFormat::RGBA8: componentBytes = sizeof(uint8_t); alpha = UINT8_MAX; break;
+                case bgfx::TextureFormat::RGBA8S: componentBytes = sizeof(int8_t); alpha = INT8_MAX; break;
                 case bgfx::TextureFormat::RGBA8I:
-                case bgfx::TextureFormat::RGBA8U: componentBytes = 1; alpha = 1; break;
-                case bgfx::TextureFormat::RGBA16: componentBytes = 2; alpha = 0xFFFF; break;
-                case bgfx::TextureFormat::RGBA16S: componentBytes = 2; alpha = 0x7FFF; break;
-                case bgfx::TextureFormat::RGBA16F: componentBytes = 2; alpha = 0x3C00; break;
+                case bgfx::TextureFormat::RGBA8U: componentBytes = sizeof(uint8_t); alpha = 1; break;
+                case bgfx::TextureFormat::RGBA16: componentBytes = sizeof(uint16_t); alpha = UINT16_MAX; break;
+                case bgfx::TextureFormat::RGBA16S: componentBytes = sizeof(int16_t); alpha = INT16_MAX; break;
+                case bgfx::TextureFormat::RGBA16F: componentBytes = sizeof(uint16_t); alpha = kHalfFloatOneBits; break;
                 case bgfx::TextureFormat::RGBA16I:
-                case bgfx::TextureFormat::RGBA16U: componentBytes = 2; alpha = 1; break;
-                case bgfx::TextureFormat::RGBA32F: componentBytes = 4; alpha = 0x3F800000; break;
+                case bgfx::TextureFormat::RGBA16U: componentBytes = sizeof(uint16_t); alpha = 1; break;
+                case bgfx::TextureFormat::RGBA32F: componentBytes = sizeof(float); alpha = kFloatOneBits; break;
                 case bgfx::TextureFormat::RGBA32I:
-                case bgfx::TextureFormat::RGBA32U: componentBytes = 4; alpha = 1; break;
+                case bgfx::TextureFormat::RGBA32U: componentBytes = sizeof(uint32_t); alpha = 1; break;
                 default: return {};
             }
 
-            if (texelCount == 0 || data.size() != texelCount * 3 * componentBytes || texelCount * 4 * componentBytes != requiredSize)
+            if (texelCount == 0 || data.size() != texelCount * kRgbComponentCount * componentBytes || texelCount * kRgbaComponentCount * componentBytes != requiredSize)
             {
                 return {};
             }
 
             storage.resize(static_cast<size_t>(requiredSize));
-            const size_t rgbBytes{3u * componentBytes};
+            const size_t rgbBytes{kRgbComponentCount * componentBytes};
             for (size_t texel = 0; texel < texelCount; ++texel)
             {
-                uint8_t* destination{storage.data() + texel * 4 * componentBytes};
+                uint8_t* destination{storage.data() + texel * kRgbaComponentCount * componentBytes};
                 std::memcpy(destination, data.data() + texel * rgbBytes, rgbBytes);
                 std::memcpy(destination + rgbBytes, &alpha, componentBytes);
             }
@@ -247,11 +291,11 @@ namespace Babylon
         void TransformImage(const bimg::ImageContainer* src, bimg::ImageContainer* dst, TransformFn transformFn)
         {
             const uint8_t* srcData{static_cast<const uint8_t*>(src->m_data)};
-            const uint8_t srcBytesPerPixel{static_cast<uint8_t>(bimg::getBitsPerPixel(src->m_format) >> 3)};
+            const uint8_t srcBytesPerPixel{static_cast<uint8_t>(bimg::getBitsPerPixel(src->m_format) / kBitsPerByte)};
             const uint8_t* srcDataEnd{srcData + src->m_size};
 
             uint8_t* dstData{static_cast<uint8_t*>(dst->m_data)};
-            const uint8_t dstBytesPerPixel{static_cast<uint8_t>(bimg::getBitsPerPixel(dst->m_format) >> 3)};
+            const uint8_t dstBytesPerPixel{static_cast<uint8_t>(bimg::getBitsPerPixel(dst->m_format) / kBitsPerByte)};
             const uint8_t* dstDataEnd{dstData + dst->m_size};
 
             while (srcData < srcDataEnd && dstData < dstDataEnd)
@@ -372,7 +416,7 @@ namespace Babylon
                 // Other formats could be handled in the future, but this should at least cover jpeg images.
                 if (image->m_format == bimg::TextureFormat::RGBA8)
                 {
-                    assert(bimg::getBitsPerPixel(image->m_format) == sizeof(uint32_t) * 8);
+                    assert(bimg::getBitsPerPixel(image->m_format) == sizeof(uint32_t) * kBitsPerByte);
                     ReorientImage(gsl::make_span(static_cast<uint32_t*>(image->m_data), image->m_size / sizeof(uint32_t)), image->m_width, image->m_height, image->m_orientation);
                 }
             }
@@ -522,17 +566,17 @@ namespace Babylon
             }
             else
             {
-                bool hasMips = images.size() > 6 || firstImage->m_numMips > 1;
+                bool hasMips = images.size() > kCubeFaceCount || firstImage->m_numMips > 1;
                 bgfx::TextureFormat::Enum format = Cast(firstImage->m_format);
                 uint64_t flags = srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE;
                 texture->CreateCube(static_cast<uint16_t>(size), hasMips, 1, format, flags);
             }
 
-            if (images.size() > 6)
+            if (images.size() > kCubeFaceCount)
             {
-                assert(images.size() % 6 == 0);
-                const uint8_t numMips{static_cast<uint8_t>(images.size() / 6)};
-                for (uint8_t side = 0; side < 6; ++side)
+                assert(images.size() % kCubeFaceCount == 0);
+                const uint8_t numMips{static_cast<uint8_t>(images.size() / kCubeFaceCount)};
+                for (uint8_t side = 0; side < kCubeFaceCount; ++side)
                 {
                     for (uint8_t mip = 0; mip < numMips; ++mip)
                     {
@@ -554,7 +598,7 @@ namespace Babylon
             }
             else
             {
-                for (uint8_t side = 0; side < 6; ++side)
+                for (uint8_t side = 0; side < kCubeFaceCount; ++side)
                 {
                     bimg::ImageContainer* image{images[side]};
                     for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
@@ -611,9 +655,9 @@ namespace Babylon
         // back from the GPU (_readTexturePixels throws for cube faces), so we compute the harmonics
         // here from the bimg-decoded top mip. Returns the 9x3 polynomial coefficients in
         // SphericalPolynomial.FromArray order: x, y, z, xx, yy, zz, yz, zx, xy.
-        std::array<float, 27> ComputeCubeSphericalPolynomial(bx::AllocatorI& allocator, bimg::ImageContainer* image)
+        std::array<float, kSphericalPolynomialValueCount> ComputeCubeSphericalPolynomial(bx::AllocatorI& allocator, bimg::ImageContainer* image)
         {
-            std::array<float, 27> result{};
+            std::array<float, kSphericalPolynomialValueCount> result{};
 
             bimg::ImageContainer* f32{bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false)};
             if (f32 == nullptr)
@@ -628,11 +672,11 @@ namespace Babylon
             // (+X, -X, +Y, -Y, +Z, -Z): worldAxisForNormal, worldAxisForFileX, worldAxisForFileY.
             struct FaceAxes
             {
-                double n[3];
-                double fx[3];
-                double fy[3];
+                double n[kRgbComponentCount];
+                double fx[kRgbComponentCount];
+                double fy[kRgbComponentCount];
             };
-            static const FaceAxes faces[6] = {
+            static const FaceAxes faces[kCubeFaceCount] = {
                 {{1, 0, 0}, {0, 0, -1}, {0, -1, 0}},  // +X right
                 {{-1, 0, 0}, {0, 0, 1}, {0, -1, 0}},  // -X left
                 {{0, 1, 0}, {1, 0, 0}, {0, 0, 1}},    // +Y up
@@ -641,7 +685,7 @@ namespace Babylon
                 {{0, 0, -1}, {-1, 0, 0}, {0, -1, 0}}, // -Z back
             };
 
-            const double shConst[9] = {
+            const double shConst[kSphericalHarmonicCoefficientCount] = {
                 std::sqrt(1.0 / (4.0 * pi)),
                 -std::sqrt(3.0 / (4.0 * pi)),
                 std::sqrt(3.0 / (4.0 * pi)),
@@ -652,11 +696,11 @@ namespace Babylon
                 -std::sqrt(15.0 / (4.0 * pi)),
                 std::sqrt(15.0 / (16.0 * pi)),
             };
-            const double cosKernel[9] = {pi, 2.0 * pi / 3.0, 2.0 * pi / 3.0, 2.0 * pi / 3.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0};
+            const double cosKernel[kSphericalHarmonicCoefficientCount] = {pi, 2.0 * pi / 3.0, 2.0 * pi / 3.0, 2.0 * pi / 3.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0, pi / 4.0};
 
             const auto areaElement = [](double x, double y) { return std::atan2(x * y, std::sqrt(x * x + y * y + 1.0)); };
 
-            double sh[9][3] = {};
+            double sh[kSphericalHarmonicCoefficientCount][kRgbComponentCount] = {};
             double totalSolidAngle{0.0};
 
             const double du{2.0 / static_cast<double>(size)};
@@ -664,7 +708,7 @@ namespace Babylon
             const double minUV{halfTexel - 1.0};
             const double maxHdri{4096.0};
 
-            for (uint16_t side = 0; side < 6; ++side)
+            for (uint16_t side = 0; side < kCubeFaceCount; ++side)
             {
                 bimg::ImageMip mip{};
                 if (!bimg::imageGetRawData(*f32, side, 0, f32->m_data, f32->m_size, mip))
@@ -681,7 +725,7 @@ namespace Babylon
                     double u{minUV};
                     for (uint32_t x = 0; x < size; ++x)
                     {
-                        double dir[3] = {
+                        double dir[kRgbComponentCount] = {
                             f.fx[0] * u + f.fy[0] * v + f.n[0],
                             f.fx[1] * u + f.fy[1] * v + f.n[1],
                             f.fx[2] * u + f.fy[2] * v + f.n[2],
@@ -697,9 +741,9 @@ namespace Babylon
                             areaElement(u + halfTexel, v - halfTexel) +
                             areaElement(u + halfTexel, v + halfTexel)};
 
-                        const size_t idx{(static_cast<size_t>(y) * size + x) * 4};
-                        double rgb[3] = {data[idx + 0], data[idx + 1], data[idx + 2]};
-                        for (int c = 0; c < 3; ++c)
+                        const size_t idx{(static_cast<size_t>(y) * size + x) * kRgbaComponentCount};
+                        double rgb[kRgbComponentCount] = {data[idx + 0], data[idx + 1], data[idx + 2]};
+                        for (size_t c = 0; c < kRgbComponentCount; ++c)
                         {
                             if (std::isnan(rgb[c]))
                             {
@@ -708,7 +752,7 @@ namespace Babylon
                             rgb[c] = rgb[c] < 0.0 ? 0.0 : (rgb[c] > maxHdri ? maxHdri : rgb[c]);
                         }
 
-                        const double trig[9] = {
+                        const double trig[kSphericalHarmonicCoefficientCount] = {
                             1.0,
                             dir[1],
                             dir[2],
@@ -719,7 +763,7 @@ namespace Babylon
                             dir[0] * dir[2],
                             dir[0] * dir[0] - dir[1] * dir[1],
                         };
-                        for (int lm = 0; lm < 9; ++lm)
+                        for (size_t lm = 0; lm < kSphericalHarmonicCoefficientCount; ++lm)
                         {
                             const double basis{shConst[lm] * trig[lm] * deltaSolidAngle};
                             sh[lm][0] += rgb[0] * basis;
@@ -742,7 +786,7 @@ namespace Babylon
 
             // scaleInPlace(correction) + convertIncidentRadianceToIrradiance + convertIrradianceToLambertianRadiance.
             const double correction{(4.0 * pi) / totalSolidAngle};
-            for (int lm = 0; lm < 9; ++lm)
+            for (size_t lm = 0; lm < kSphericalHarmonicCoefficientCount; ++lm)
             {
                 const double scale{correction * cosKernel[lm] / pi};
                 sh[lm][0] *= scale;
@@ -751,20 +795,20 @@ namespace Babylon
             }
 
             // SphericalPolynomial.FromHarmonics (updateFromHarmonics then *1/pi).
-            for (int c = 0; c < 3; ++c)
+            for (size_t c = 0; c < kRgbComponentCount; ++c)
             {
                 const double l00{sh[0][c]}, l1_1{sh[1][c]}, l10{sh[2][c]}, l11{sh[3][c]};
                 const double l2_2{sh[4][c]}, l2_1{sh[5][c]}, l20{sh[6][c]}, l21{sh[7][c]}, l22{sh[8][c]};
                 const double invPi{1.0 / pi};
-                result[0 * 3 + c] = static_cast<float>(-1.02333 * l11 * invPi);                                     // x
-                result[1 * 3 + c] = static_cast<float>(-1.02333 * l1_1 * invPi);                                    // y
-                result[2 * 3 + c] = static_cast<float>(1.02333 * l10 * invPi);                                      // z
-                result[3 * 3 + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 + 0.429043 * l22) * invPi); // xx
-                result[4 * 3 + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 - 0.429043 * l22) * invPi); // yy
-                result[5 * 3 + c] = static_cast<float>((0.886277 * l00 + 0.495417 * l20) * invPi);                  // zz
-                result[6 * 3 + c] = static_cast<float>(-0.858086 * l2_1 * invPi);                                   // yz
-                result[7 * 3 + c] = static_cast<float>(-0.858086 * l21 * invPi);                                    // zx
-                result[8 * 3 + c] = static_cast<float>(0.858086 * l2_2 * invPi);                                    // xy
+                result[0 * kRgbComponentCount + c] = static_cast<float>(-1.02333 * l11 * invPi);                                     // x
+                result[1 * kRgbComponentCount + c] = static_cast<float>(-1.02333 * l1_1 * invPi);                                    // y
+                result[2 * kRgbComponentCount + c] = static_cast<float>(1.02333 * l10 * invPi);                                      // z
+                result[3 * kRgbComponentCount + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 + 0.429043 * l22) * invPi); // xx
+                result[4 * kRgbComponentCount + c] = static_cast<float>((0.886277 * l00 - 0.247708 * l20 - 0.429043 * l22) * invPi); // yy
+                result[5 * kRgbComponentCount + c] = static_cast<float>((0.886277 * l00 + 0.495417 * l20) * invPi);                  // zz
+                result[6 * kRgbComponentCount + c] = static_cast<float>(-0.858086 * l2_1 * invPi);                                   // yz
+                result[7 * kRgbComponentCount + c] = static_cast<float>(-0.858086 * l21 * invPi);                                    // zx
+                result[8 * kRgbComponentCount + c] = static_cast<float>(0.858086 * l2_2 * invPi);                                    // xy
             }
 
             return result;
@@ -796,7 +840,7 @@ namespace Babylon
             // store, so the allocation is released exactly once, after bgfx has
             // consumed the final upload.
             const uint8_t numMips{static_cast<uint8_t>(image->m_numMips)};
-            for (uint8_t side = 0; side < 6; ++side)
+            for (uint8_t side = 0; side < kCubeFaceCount; ++side)
             {
                 for (uint8_t mip = 0; mip < numMips; ++mip)
                 {
@@ -804,7 +848,7 @@ namespace Babylon
                     if (bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip))
                     {
                         bgfx::ReleaseFn releaseFn{};
-                        if (side == 5 && mip == numMips - 1)
+                        if (side == kLastCubeFace && mip == numMips - 1)
                         {
                             releaseFn = [](void*, void* userData) {
                                 bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
@@ -821,15 +865,15 @@ namespace Babylon
 
         auto RenderTargetSamplesToBgfxRtFlag(uint32_t renderTargetSamples)
         {
-            switch (renderTargetSamples)
+            switch (static_cast<RenderTargetSampleCount>(renderTargetSamples))
             {
-                case 2:
+                case RenderTargetSampleCount::X2:
                     return BGFX_TEXTURE_RT_MSAA_X2;
-                case 4:
+                case RenderTargetSampleCount::X4:
                     return BGFX_TEXTURE_RT_MSAA_X4;
-                case 8:
+                case RenderTargetSampleCount::X8:
                     return BGFX_TEXTURE_RT_MSAA_X8;
-                case 16:
+                case RenderTargetSampleCount::X16:
                     return BGFX_TEXTURE_RT_MSAA_X16;
             }
 
@@ -856,7 +900,7 @@ namespace Babylon
             JS_CLASS_NAME,
             {
                 // This must match the version in nativeEngine.ts
-                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 9)),
+                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, kNativeEngineProtocolVersion)),
 
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, limits.maxTextureSize)),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
@@ -1471,8 +1515,7 @@ namespace Babylon
             return;
         }
 
-        constexpr uint32_t kWidth = 256;
-        const uint32_t height = (count + kWidth - 1) / kWidth;
+        const uint32_t height = (count + kBufferReadbackTextureWidth - 1) / kBufferReadbackTextureWidth;
         if (height > bgfx::getCaps()->limits.maxTextureSize)
         {
             throw Napi::RangeError::New(info.Env(), "readTransformFeedbackBuffer buffer is too large");
@@ -1483,14 +1526,16 @@ namespace Babylon
             static constexpr const char* kSource = R"(#version 310 es
 precision highp float;
 precision highp int;
-layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+#define READBACK_WORKGROUP_SIZE 64
+#define READBACK_TEXTURE_WIDTH 256u
+layout(local_size_x = READBACK_WORKGROUP_SIZE, local_size_y = 1, local_size_z = 1) in;
 layout(std430, binding = 0) readonly buffer Source { float sourceData[]; };
 layout(r32f, binding = 1) writeonly uniform highp image2D destination;
 uniform vec4 readbackCount;
 void main() {
     uint i = gl_GlobalInvocationID.x;
     if (i >= uint(readbackCount.x)) { return; }
-    imageStore(destination, ivec2(int(i % 256u), int(i / 256u)), vec4(sourceData[i], 0.0, 0.0, 0.0));
+    imageStore(destination, ivec2(int(i % READBACK_TEXTURE_WIDTH), int(i / READBACK_TEXTURE_WIDTH)), vec4(sourceData[i], 0.0, 0.0, 0.0));
 }
 )";
             auto program = std::make_shared<Program>(m_deviceContext);
@@ -1501,9 +1546,9 @@ void main() {
         // Keeps the render thread parked in FinishRenderingCurrentFrame so ForceMidFrameFlush can run.
         auto frameScope = m_deviceContext.AcquireFrameCompletionScope();
 
-        const bgfx::TextureHandle texture = bgfx::createTexture2D(static_cast<uint16_t>(kWidth), static_cast<uint16_t>(height),
+        const bgfx::TextureHandle texture = bgfx::createTexture2D(static_cast<uint16_t>(kBufferReadbackTextureWidth), static_cast<uint16_t>(height),
             /*hasMips*/ false, /*numLayers*/ 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_COMPUTE_WRITE);
-        const bgfx::TextureHandle readbackTexture = bgfx::createTexture2D(static_cast<uint16_t>(kWidth), static_cast<uint16_t>(height),
+        const bgfx::TextureHandle readbackTexture = bgfx::createTexture2D(static_cast<uint16_t>(kBufferReadbackTextureWidth), static_cast<uint16_t>(height),
             /*hasMips*/ false, /*numLayers*/ 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
         const auto destroyTextures = gsl::finally([texture, readbackTexture] {
             if (bgfx::isValid(texture))
@@ -1526,7 +1571,7 @@ void main() {
         encoder->setUniform(m_bufferReadbackProgram->GetUniformInfo("readbackCount")->Handle, readbackCount);
         encoder->setImage(1, texture, 0, bgfx::Access::Write, bgfx::TextureFormat::R32F);
         storage.SetCompute(encoder, 0, bgfx::Access::Read);
-        GetBoundFrameBuffer().Compute(*encoder, m_bufferReadbackProgram->Handle(), (count + 63) / 64, 1, 1);
+        GetBoundFrameBuffer().Compute(*encoder, m_bufferReadbackProgram->Handle(), (count + kBufferReadbackWorkgroupSize - 1) / kBufferReadbackWorkgroupSize, 1, 1);
         bgfx::TextureRegion destinationRegion{};
         destinationRegion.init(readbackTexture);
         bgfx::TextureRegion sourceRegion{};
@@ -1541,7 +1586,7 @@ void main() {
             std::atomic<bool> Failed{false};
         };
         auto readback = std::make_shared<Readback>();
-        readback->Pixels.resize(static_cast<size_t>(kWidth) * height * sizeof(float));
+        readback->Pixels.resize(static_cast<size_t>(kBufferReadbackTextureWidth) * height * sizeof(float));
         m_deviceContext.ReadTextureAsync(readbackTexture, readback->Pixels)
             .then(arcana::inline_scheduler, arcana::cancellation::none(), [readback](const arcana::expected<void, std::exception_ptr>& result) {
                 readback->Failed = result.has_error();
@@ -2026,7 +2071,7 @@ void main() {
         const uint16_t textureLayers = (isCube || is3D) ? 1 : (numLayers > 0 ? numLayers : 1);
         auto createFlags = (!isCube && !is3D) || (is3D && textureDepth == 1 && renderTarget)
             ? flags | BGFX_TEXTURE_BLIT_DST : flags;
-        const uint16_t physicalDepth = is3D ? std::max<uint16_t>(2, textureDepth) : 0;
+        const uint16_t physicalDepth = is3D ? std::max(kMinimum3DTextureLayerCount, textureDepth) : 0;
         if ((createFlags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 && textureLayers == 1 &&
             !bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags) &&
             bgfx::isTextureValid(physicalDepth, isCube, textureLayers, format, createFlags & ~BGFX_TEXTURE_MSAA_SAMPLE))
@@ -2265,7 +2310,7 @@ void main() {
         const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
         // A cube texture is addressed by 6 faces per array layer (bgfx side index 0-5). The JS side passes the
         // face in the same "layer" argument used for 2D-array slices, so the valid range is 6*numLayers.
-        const uint16_t maxLayers{texture->IsCube() ? static_cast<uint16_t>(6 * numLayers) : numLayers};
+        const uint16_t maxLayers{texture->IsCube() ? static_cast<uint16_t>(kCubeFaceCount * numLayers) : numLayers};
         if (width == 0 || height == 0 ||
             static_cast<uint32_t>(x) + width > mipWidth ||
             static_cast<uint32_t>(y) + height > mipHeight ||
@@ -2320,7 +2365,7 @@ void main() {
                 // single "layer" argument it also uses for 2D-array slices (6 consecutive faces per array layer,
                 // which is what the bounds check above allows). Decompose it, otherwise a cube-array face index
                 // above 5 would be forwarded as an out-of-range side and every update would land on array layer 0.
-                texture->UpdateCube(static_cast<uint16_t>(layer / 6), static_cast<uint8_t>(layer % 6), level, levelX, targetY, levelWidth, levelHeight, mem);
+                texture->UpdateCube(static_cast<uint16_t>(layer / kCubeFaceCount), static_cast<uint8_t>(layer % kCubeFaceCount), level, levelX, targetY, levelWidth, levelHeight, mem);
             }
             else
             {
@@ -2359,7 +2404,7 @@ void main() {
         {
             const uint32_t nextWidth{std::max(1u, levelWidth >> 1)};
             const uint32_t nextHeight{std::max(1u, levelHeight >> 1)};
-            std::vector<float> next(static_cast<size_t>(nextWidth) * nextHeight * 4);
+            std::vector<float> next(static_cast<size_t>(nextWidth) * nextHeight * kRgbaComponentCount);
             for (uint32_t row = 0; row < nextHeight; ++row)
             {
                 for (uint32_t column = 0; column < nextWidth; ++column)
@@ -2368,10 +2413,10 @@ void main() {
                     const uint32_t x1{std::min(column * 2 + 1, levelWidth - 1)};
                     const uint32_t y0{std::min(row * 2, levelHeight - 1)};
                     const uint32_t y1{std::min(row * 2 + 1, levelHeight - 1)};
-                    for (uint32_t channel = 0; channel < 4; ++channel)
+                    for (uint32_t channel = 0; channel < kRgbaComponentCount; ++channel)
                     {
-                        const auto at = [&](uint32_t sx, uint32_t sy) { return levelSource[(static_cast<size_t>(sy) * levelWidth + sx) * 4 + channel]; };
-                        next[(static_cast<size_t>(row) * nextWidth + column) * 4 + channel] = (at(x0, y0) + at(x1, y0) + at(x0, y1) + at(x1, y1)) * 0.25f;
+                        const auto at = [&](uint32_t sx, uint32_t sy) { return levelSource[(static_cast<size_t>(sy) * levelWidth + sx) * kRgbaComponentCount + channel]; };
+                        next[(static_cast<size_t>(row) * nextWidth + column) * kRgbaComponentCount + channel] = (at(x0, y0) + at(x1, y0) + at(x0, y1) + at(x1, y1)) * 0.25f;
                     }
                 }
             }
@@ -2431,7 +2476,7 @@ void main() {
 
         // bgfx collapses one-layer arrays to 2D textures, which cannot bind to array samplers.
         // Allocate two physical layers while exposing and uploading only the requested layer.
-        const uint16_t allocLayers{depth > 1 ? depth : static_cast<uint16_t>(2)};
+        const uint16_t allocLayers{depth > 1 ? depth : kMinimum3DTextureLayerCount};
 
         const bool flipRows = !bgfx::getCaps()->originBottomLeft;
         const bool decodeBlocks = flipRows && bimg::isCompressed(format);
@@ -2610,7 +2655,7 @@ void main() {
                     LoadCubeTextureFromContainer(texture, image, srgb);
                     return sphericalPolynomial;
                 })
-                .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{std::move(dataRef)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<std::array<float, 27>, std::exception_ptr> result) {
+                .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{std::move(dataRef)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<std::array<float, kSphericalPolynomialValueCount>, std::exception_ptr> result) {
                     if (result.has_error())
                     {
                         onErrorRef.Call({});
@@ -2630,8 +2675,8 @@ void main() {
             return;
         }
 
-        std::array<Napi::Reference<Napi::TypedArray>, 6> dataRefs;
-        std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, 6> tasks;
+        std::array<Napi::Reference<Napi::TypedArray>, kCubeFaceCount> dataRefs;
+        std::array<arcana::task<bimg::ImageContainer*, std::exception_ptr>, kCubeFaceCount> tasks;
         for (uint32_t face = 0; face < data.Length(); face++)
         {
             const auto typedArray{data[face].As<Napi::TypedArray>()};
@@ -2674,12 +2719,12 @@ void main() {
         const auto onError{info[5].As<Napi::Function>()};
 
         const auto numMips{static_cast<size_t>(data.Length())};
-        std::vector<Napi::Reference<Napi::TypedArray>> dataRefs(6 * numMips);
-        std::vector<arcana::task<bimg::ImageContainer*, std::exception_ptr>> tasks(6 * numMips);
+        std::vector<Napi::Reference<Napi::TypedArray>> dataRefs(kCubeFaceCount * numMips);
+        std::vector<arcana::task<bimg::ImageContainer*, std::exception_ptr>> tasks(kCubeFaceCount * numMips);
         for (uint32_t mip = 0; mip < numMips; mip++)
         {
             const auto faceData = data[mip].As<Napi::Array>();
-            for (uint32_t face = 0; face < 6; face++)
+            for (uint32_t face = 0; face < kCubeFaceCount; face++)
             {
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
@@ -2801,33 +2846,32 @@ void main() {
         uint32_t flags = texture.SamplerFlags();
         flags &= ~BGFX_SAMPLER_COMPARE_MASK;
 
-        // GL enum values used by Babylon.Constants (NEVER=0x0200 .. ALWAYS=0x0207).
-        switch (comparisonFunction)
+        switch (static_cast<TextureComparisonFunction>(comparisonFunction))
         {
-            case 0:
+            case TextureComparisonFunction::Disabled:
                 break;
-            case 0x0200: // NEVER
+            case TextureComparisonFunction::Never:
                 flags |= BGFX_SAMPLER_COMPARE_NEVER;
                 break;
-            case 0x0201: // LESS
+            case TextureComparisonFunction::Less:
                 flags |= BGFX_SAMPLER_COMPARE_LESS;
                 break;
-            case 0x0202: // EQUAL
+            case TextureComparisonFunction::Equal:
                 flags |= BGFX_SAMPLER_COMPARE_EQUAL;
                 break;
-            case 0x0203: // LEQUAL
+            case TextureComparisonFunction::LessOrEqual:
                 flags |= BGFX_SAMPLER_COMPARE_LEQUAL;
                 break;
-            case 0x0204: // GREATER
+            case TextureComparisonFunction::Greater:
                 flags |= BGFX_SAMPLER_COMPARE_GREATER;
                 break;
-            case 0x0205: // NOTEQUAL
+            case TextureComparisonFunction::NotEqual:
                 flags |= BGFX_SAMPLER_COMPARE_NOTEQUAL;
                 break;
-            case 0x0206: // GEQUAL
+            case TextureComparisonFunction::GreaterOrEqual:
                 flags |= BGFX_SAMPLER_COMPARE_GEQUAL;
                 break;
-            case 0x0207: // ALWAYS
+            case TextureComparisonFunction::Always:
                 flags |= BGFX_SAMPLER_COMPARE_ALWAYS;
                 break;
             default:
@@ -2916,7 +2960,7 @@ void main() {
         const double requestedBufferOffset{info[7].As<Napi::Number>().DoubleValue()};
         const double requestedBufferLength{info[8].As<Napi::Number>().DoubleValue()};
         // Optional cube-map face index (0-5). -1 (or absent) means a plain 2D read.
-        const double requestedFaceIndex{(info.Length() > 9 && !info[9].IsUndefined()) ? info[9].As<Napi::Number>().DoubleValue() : -1};
+        const double requestedFaceIndex{(info.Length() > 9 && !info[9].IsUndefined()) ? info[9].As<Napi::Number>().DoubleValue() : kNoCubeFace};
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
 
@@ -2972,7 +3016,7 @@ void main() {
         // legitimately exceed 5), and -1 for a plain 2D read -- so the bound is the texture's srcZ extent,
         // not a flat 0-5.
         const uint16_t numLayers{texture->NumLayers() > 0 ? texture->NumLayers() : static_cast<uint16_t>(1)};
-        const uint32_t maxSrcZ{texture->IsCube() ? 6u * numLayers : numLayers};
+        const uint32_t maxSrcZ{texture->IsCube() ? static_cast<uint32_t>(kCubeFaceCount) * numLayers : numLayers};
         // The mip level is JS-controlled and is both used as a shift distance below and forwarded to
         // encoder->blit. Reject it before either happens: a mip >= 32 would make the shifts undefined
         // behaviour, and any mip past the end of the chain would trip a bgfx assert. A texture created
@@ -2981,8 +3025,8 @@ void main() {
         bgfx::calcTextureSize(mipChainInfo, texture->Width(), texture->Height(), 1, texture->IsCube(), texture->HasMips(), 1, sourceTextureFormat);
         // Guard the shift independently of the mip-chain check so malformed JS input cannot
         // trigger undefined behavior while computing the extents used by validation.
-        const uint32_t mipWidth{mipLevel < 32 ? std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel) : 0};
-        const uint32_t mipHeight{mipLevel < 32 ? std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel) : 0};
+        const uint32_t mipWidth{mipLevel < std::numeric_limits<uint32_t>::digits ? std::max(1u, static_cast<uint32_t>(texture->Width()) >> mipLevel) : 0};
+        const uint32_t mipHeight{mipLevel < std::numeric_limits<uint32_t>::digits ? std::max(1u, static_cast<uint32_t>(texture->Height()) >> mipLevel) : 0};
         if (mipLevel >= mipChainInfo.numMips)
         {
             deferred.Reject(Napi::Error::New(env, "readTexture mip level is out of range for this texture.").Value());
@@ -3146,7 +3190,7 @@ void main() {
         {
             throw Napi::Error::New(info.Env(), "Multisampled cube render targets are not supported");
         }
-        const uint16_t maxLayer = texture == nullptr ? 0 : isCube ? 5 :
+        const uint16_t maxLayer = texture == nullptr ? 0 : isCube ? kLastCubeFace :
             texture->Is3D() ? texture->Depth() - 1 : texture->NumLayers() - 1;
         if (!std::isfinite(layer) || layer != std::floor(layer) || layer < 0 || layer > maxLayer)
         {
@@ -3181,7 +3225,7 @@ void main() {
 
         const uint32_t colorCount = colorTexturesArray.Length();
         // BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS is 8, so at most 8 color attachments fit alongside the depth attachment.
-        std::array<Graphics::Texture*, 8> colorTextures{};
+        std::array<Graphics::Texture*, kMaximumColorAttachments> colorTextures{};
         if (colorCount > colorTextures.size())
         {
             throw Napi::Error::New(info.Env(), "Invalid number of color attachments for multi render target frame buffer");
@@ -3192,7 +3236,7 @@ void main() {
             colorTextures[i] = colorTexturesArray.Get(i).As<Napi::Pointer<Graphics::Texture>>().Get();
         }
 
-        std::array<uint16_t, 8> perAttachmentLayers{};
+        std::array<uint16_t, kMaximumColorAttachments> perAttachmentLayers{};
         uint32_t layerCount = 0;
         if (info.Length() > 6 && info[6].IsArray())
         {
@@ -3243,7 +3287,7 @@ void main() {
         }
 
         // BGFX_CONFIG_MAX_FRAME_BUFFER_ATTACHMENTS is 8, so 8 color + 1 depth fits in a fixed array.
-        std::array<bgfx::Attachment, 9> attachments{};
+        std::array<bgfx::Attachment, kMaximumFrameBufferAttachments> attachments{};
         uint8_t numAttachments = 0;
         uint8_t depthOneVolumeAttachmentMask{};
 
@@ -3268,7 +3312,7 @@ void main() {
                 continue;
             }
 
-            const auto layers = texture->IsCube() ? 6 : texture->Is3D()
+            const auto layers = texture->IsCube() ? kCubeFaceCount : texture->Is3D()
                 ? std::max(1, texture->Depth() >> mip) : texture->NumLayers();
             if (attachmentLayer >= layers)
             {
@@ -3398,7 +3442,7 @@ void main() {
             bx::Error fbErr;
             bgfx::isFrameBufferValid(numAttachments, attachments.data(), &fbErr);
             const bx::StringView reason = fbErr.getMessage();
-            char message[512];
+            char message[kFrameBufferValidationMessageLength];
             snprintf(message, sizeof(message), "Failed to create frame buffer: %.*s",
                 static_cast<int>(reason.getLength()), reason.getPtr());
             throw Napi::Error::New(env, message);
@@ -3790,7 +3834,7 @@ void main() {
         // in size_t: on 32-bit builds size_t is 32-bit, so even within the 16-bit
         // dimension cap above bufferWidth*bufferHeight*4 can exceed it (~17GB) and
         // wrap to an undersized allocation that stbir_resize would then write past.
-        const uint64_t outputByteCount = static_cast<uint64_t>(bufferWidth) * bufferHeight * 4;
+        const uint64_t outputByteCount = static_cast<uint64_t>(bufferWidth) * bufferHeight * kRgbaComponentCount;
         if constexpr (std::numeric_limits<size_t>::max() < std::numeric_limits<uint64_t>::max())
         {
             if (outputByteCount > static_cast<uint64_t>(std::numeric_limits<size_t>::max()))
@@ -3846,7 +3890,7 @@ void main() {
         const uint32_t ref{data.ReadUint32()};
         const uint32_t funcMask{hasComparisonMask ? data.ReadUint32() : UINT8_MAX};
 
-        m_stencilState = BGFX_STENCIL_FUNC_RMASK(funcMask & 0xFFu);
+        m_stencilState = BGFX_STENCIL_FUNC_RMASK(funcMask & kStencilMask);
         m_stencilState |= stencilOpFail;
         m_stencilState |= depthOpFail;
         // bgfx write mask is always 0xFF, to not change stencil value when writemask is 0
@@ -3961,7 +4005,7 @@ void main() {
 
         std::vector<VertexBuffer*> inputs;
         const uint32_t inputCount = m_currentProgram->TransformFeedbackInputCount();
-        std::vector<float> inputLayout(std::max<size_t>(inputCount, 1) * 4, 0.0f);
+        std::vector<float> inputLayout(std::max<size_t>(inputCount, 1) * kTransformFeedbackLayoutComponentCount, 0.0f);
         if (m_boundVertexArray != nullptr)
         {
             for (const auto& [index, record] : m_boundVertexArray->GetTransformFeedbackInputs())
@@ -3984,10 +4028,14 @@ void main() {
                     found = inputs.insert(inputs.end(), record.Buffer);
                 }
                 const uint32_t buffer = static_cast<uint32_t>(found - inputs.begin());
-                inputLayout[index * 4 + 0] = static_cast<float>(record.ByteOffset);
-                inputLayout[index * 4 + 1] = static_cast<float>(record.ByteStride);
-                inputLayout[index * 4 + 2] = static_cast<float>(record.NumElements);
-                inputLayout[index * 4 + 3] = static_cast<float>(buffer * 16 + static_cast<uint32_t>(record.Type) * 2 + (record.Normalized ? 1 : 0));
+                const size_t layoutOffset = index * kTransformFeedbackLayoutComponentCount;
+                inputLayout[layoutOffset] = static_cast<float>(record.ByteOffset);
+                inputLayout[layoutOffset + 1] = static_cast<float>(record.ByteStride);
+                inputLayout[layoutOffset + 2] = static_cast<float>(record.NumElements);
+                inputLayout[layoutOffset + 3] = static_cast<float>(
+                    buffer * kTransformFeedbackBufferEncodingScale +
+                    static_cast<uint32_t>(record.Type) * kTransformFeedbackTypeEncodingScale +
+                    (record.Normalized ? 1 : 0));
             }
         }
 
@@ -4054,29 +4102,29 @@ void main() {
     {
         uint64_t fillModeState{0}; // indexed triangle list
 
-        switch (fillMode)
+        switch (static_cast<PrimitiveModeExpansion::Mode>(fillMode))
         {
-            case 0: // MATERIAL_TriangleFillMode
+            case PrimitiveModeExpansion::Mode::TriangleFill:
                 fillModeState = 0;
                 break;
-            case 1: // MATERIAL_WireFrameFillMode
-            case 4: // MATERIAL_LineListDrawMode
+            case PrimitiveModeExpansion::Mode::WireFrameFill:
+            case PrimitiveModeExpansion::Mode::LineList:
                 fillModeState = BGFX_STATE_PT_LINES;
                 break;
-            case 2: // MATERIAL_PointFillMode
-            case 3: // MATERIAL_PointListDrawMode
+            case PrimitiveModeExpansion::Mode::PointFill:
+            case PrimitiveModeExpansion::Mode::PointList:
                 fillModeState = BGFX_STATE_PT_POINTS;
                 break;
-            case 5: // MATERIAL_LineLoopDrawMode
+            case PrimitiveModeExpansion::Mode::LineLoop:
                 fillModeState = BGFX_STATE_PT_LINES;
                 break;
-            case 6: // MATERIAL_LineStripDrawMode
+            case PrimitiveModeExpansion::Mode::LineStrip:
                 fillModeState = BGFX_STATE_PT_LINESTRIP;
                 break;
-            case 7: // MATERIAL_TriangleStripDrawMode
+            case PrimitiveModeExpansion::Mode::TriangleStrip:
                 fillModeState = BGFX_STATE_PT_TRISTRIP;
                 break;
-            case 8: // MATERIAL_TriangleFanDrawMode
+            case PrimitiveModeExpansion::Mode::TriangleFan:
                 fillModeState = 0;
                 break;
         }
@@ -4268,12 +4316,13 @@ void main() {
 
     void NativeEngine::DisposeDrainTestSchedule(const Napi::CallbackInfo&)
     {
+        static constexpr auto kTestTaskDelay = std::chrono::milliseconds{500};
         s_disposeDrainTestTaskStarted = false;
         s_disposeDrainTestTaskFinished = false;
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [asyncTaskScope{TrackAsyncTask()}]() {
                 s_disposeDrainTestTaskStarted = true;
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                std::this_thread::sleep_for(kTestTaskDelay);
                 s_disposeDrainTestTaskFinished = true;
             });
     }

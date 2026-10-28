@@ -61,6 +61,13 @@ namespace
 
 namespace Babylon
 {
+    namespace
+    {
+        constexpr size_t kVectorComponentCount = 4;
+        constexpr size_t kMatrix3Dimension = 3;
+        constexpr size_t kMatrix4Dimension = 4;
+    }
+
     Program::Program(Graphics::DeviceContext& deviceContext)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
@@ -228,14 +235,23 @@ namespace Babylon
         value.Data.assign(data.begin(), data.end());
 
         // bgfx reads a type-dependent number of floats per array element from uniform data.
-        // Must match bgfx g_uniformTypeSize (bgfx.cpp): Vec4=4, Mat3=9, Mat4=16.
         assert((itUniformInfo == m_uniformInfos.end() || [&]() {
-            static_assert(bgfx::UniformType::Vec4 == 2 && bgfx::UniformType::Mat3 == 3 && bgfx::UniformType::Mat4 == 4);
-            const size_t FloatsPerElement[] = {4, 9, 16};
-            bgfx::UniformType::Enum type = itUniformInfo->second.Type;
-            return (type >= bgfx::UniformType::Vec4 && type <= bgfx::UniformType::Mat4)
-                       ? value.Data.size() == FloatsPerElement[type - bgfx::UniformType::Vec4] * elementLength
-                       : false;
+            size_t floatsPerElement{};
+            switch (itUniformInfo->second.Type)
+            {
+                case bgfx::UniformType::Vec4:
+                    floatsPerElement = kVectorComponentCount;
+                    break;
+                case bgfx::UniformType::Mat3:
+                    floatsPerElement = kMatrix3Dimension * kMatrix3Dimension;
+                    break;
+                case bgfx::UniformType::Mat4:
+                    floatsPerElement = kMatrix4Dimension * kMatrix4Dimension;
+                    break;
+                default:
+                    return false;
+            }
+            return value.Data.size() == floatsPerElement * elementLength;
         }()));
 
         value.ElementLength = static_cast<uint16_t>(elementLength);
