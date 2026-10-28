@@ -42,6 +42,9 @@ jobs:
   steps:
   - checkout: self
 
+  - pwsh: ./.github/scripts/free-disk-space.ps1
+    displayName: Free disk space
+
   - script: |
       cmake -G "Visual Studio 17 2022" -B build -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D BABYLON_DEBUG_TRACE=ON
     displayName: 'Generate solution'
@@ -451,9 +454,10 @@ jobs:
     steps:
     - checkout: self
 
+    - pwsh: ./.github/scripts/free-disk-space.ps1
+      displayName: Free disk space
+
     - ${{ if eq(engine, 'Hermes') }}:
-      - pwsh: ./.github/scripts/free-disk-space.ps1
-        displayName: Free disk space
       - script: command -v ninja >/dev/null 2>&1 || brew install ninja
         displayName: 'Install Ninja (Hermes host-compiler bootstrap)'
 
