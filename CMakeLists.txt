@@ -1,11 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
 
-# Use these vendored copies for every declaration of these names, including those
-# in fetched dependencies such as JsRuntimeHost. Override parent source-package
-# paths because _deps/*-src copies are no longer produced for these dependencies.
-set(FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/AndroidExtensions")
-set(FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/CMakeExtensions")
-
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
@@ -16,16 +10,8 @@ include(FetchContent)
 # Declarations
 # --------------------------------------------------
 
-# EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
-# targets to the ALL_BUILD target.  We do this for all dependencies except
-# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
-# that are part of the Babylon Native contract. When adding dependencies using
-# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
-# targets that are part of the Babylon Native contract.
+# EXCLUDE_FROM_ALL keeps externally fetched dependencies out of ALL_BUILD.
 
-FetchContent_Declare(AndroidExtensions
-    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS}"
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
@@ -38,8 +24,17 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(CMakeExtensions
-    SOURCE_DIR "${FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS}"
+FetchContent_Declare(bx
+    GIT_REPOSITORY https://github.com/bkaradzic/bx.git
+    GIT_TAG 0e5bbca6878000f6371c65c53fe06f6f0ae87ca9
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(bimg
+    GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
+    GIT_TAG 9bfbd6493b48a15238f2d1374a718ec026524515
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(bgfx
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
+    GIT_TAG ed962cc39c5211863b6aa92e38dc8f780b03084d
     EXCLUDE_FROM_ALL)
 # Dawn (WebGPU) — only populated + built when BABYLON_NATIVE_PLUGIN_NATIVEDAWN is
 # ON (see the guarded FetchContent_MakeAvailable below). Declaring it here is
@@ -85,9 +80,6 @@ FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.5.0
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 980cfb0197f7fda661d362df4b275cff42d1e7f2)
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
@@ -99,18 +91,15 @@ FetchContent_Declare(SPIRV-Cross
 
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+include(Dependencies/CMakeExtensions/CMakeLists.txt)
 
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
 # which makes all dependencies to be fetched and packaged.
 # At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
 # and FetchContent uses the provided local source overrides.
-# bgfx.cmake itself is tracked locally; source-tree mode stages that wrapper beside
-# its three selected child trees in _deps/bgfx.cmake-src for existing packagers.
-# FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE remains a local wrapper override.
-# AndroidExtensions and CMakeExtensions are vendored and always resolve from Dependencies/;
-# no _deps/*-src copies are produced for them.
+# AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
+# in Dependencies/ and added as subdirectories; no _deps/*-src copies are produced.
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)

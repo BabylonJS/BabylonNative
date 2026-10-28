@@ -1,8 +1,10 @@
-# NativeDawn validation with fixed UrlLib
+# NativeDawn validation
 
-**Latest results:** [October 27 CI change and full validation](#ci-runtime-step-disabled-and-full-validation-2026-10-27).
+**Latest results:** [October 28 monorepo validation](#monorepo-integration-and-validation-2026-10-28).
 The original sections below describe earlier override-based 9.21.2 runs, not
-the current pinned 9.31.3 consumer.
+the current monorepo consumer. Older dependency pins and external transport
+requirements below describe historical runs only: transport fixes are now
+included in-tree and require no separate checkout or pull request.
 
 **Run date: 2026-10-07.** Both complete Babylon.js WebGPU visualization catalogs
 and the complete Babylon-Lite parity schedule were rerun locally on Windows.
@@ -27,11 +29,11 @@ catalog; the unchanged bundle and Babylon-Lite do not fully pass.** Dependency
 pins and the default Babylon.js bundle remain unchanged. The validation and
 diagnostic runs themselves made no commits or pushes.
 
-## PR publication scope
+## Historical PR publication scope (before monorepo integration)
 
 This report accompanies the BabylonNative-only update to
 [#1781](https://github.com/BabylonJS/BabylonNative/pull/1781).
-**The PR is expected to fail validation with its unchanged dependency pins.**
+**This describes the earlier publication, not the current monorepo setup.**
 The passing integration results below are not passing results for a clean
 checkout of the PR:
 
@@ -40,8 +42,7 @@ checkout of the PR:
   are not included.
 - UrlLib remains transitively pinned by that host to
   `0c991337a1160ba7a2d062bf8e342d0a66f48dc9`.
-  The fixes in [BabylonJS/UrlLib#39](https://github.com/BabylonJS/UrlLib/pull/39)
-  are not included.
+  The transport fixes were not included in that publication.
 - No local dependency source override or canonical Babylon.js font-backport
   bundle is installed by the published source. Conditional Compression
   initialization consumes the host target only if it exists; it does not
@@ -57,8 +58,7 @@ by the PR. The report and BabylonNative parity tooling are included.
 ## Tested sources and environment
 
 The consumer was rebuilt with the local UrlLib source override at the clean,
-published revision containing the transport fixes:
-[BabylonJS/UrlLib#39](https://github.com/BabylonJS/UrlLib/pull/39),
+published revision containing the transport fixes,
 commit `4dabd8dbd65d7406bf80d9c5b3f8d2108b0e17ef`.
 This includes missing Windows response-MIME handling, data-URL GET decoding,
 case-insensitive request content-header routing, and byte-preserving POST bodies.
@@ -475,8 +475,8 @@ Both local dependency overrides were cleared before configuring and rebuilding.
 This pass uses clean fetched **JsRuntimeHost
 `2f8b9be3a4d691d4a76c85c9c856319eb25f744c`** and **UrlLib
 `0c991337a1160ba7a2d062bf8e342d0a66f48dc9`**. Master's host update does not
-include the separate uncommitted capability/URL fixes. The UrlLib fixes from
-[BabylonJS/UrlLib#39](https://github.com/BabylonJS/UrlLib/pull/39) remain excluded.
+include the separate uncommitted capability/URL fixes. The transport fixes
+were excluded from that historical run.
 The app lockfile was restored with `npm ci`; the tested Babylon.js bundle is
 the normal repository-downleveled **9.29.0** package, with no isolated font
 backport or diagnostic source replacement.
@@ -807,3 +807,108 @@ The tested executable SHA256 is
 `b20dad00d6eb4ea7fa86be71e4381210a96caeadbe3c6d7cb9c4f10b5dd281b1`;
 the BabylonNative source fingerprint, excluding Markdown, is
 `af2bffe5ed160476ec0b35e979c1c3fc4f74458670b081ef553593dde34e4331`.
+
+## Monorepo integration and validation (2026-10-28)
+
+Integrated master `e79a4e30b6b6edc5b3fd58afbb1476d211b98f22` into the
+working tree. Resolved Android/iOS/macOS workflow, aggregate-CI and catalog
+conflicts, preserving Dawn build routes alongside the new component tests.
+Accepted master's newly enabled catalog coverage and retained the branch's
+non-conflicting WebGPU coverage and JavaScriptCore exclusions.
+The merge and follow-up changes remain uncommitted.
+
+The shared transport fixes are now applied directly to
+`Dependencies\UrlLib`: data-URL GET decoding, optional Windows response-MIME
+handling, byte-preserving POST bodies on Windows/Apple/Android, and associated
+loopback/cancellation/reuse regressions. The imported source revision is
+`81ea0404f6d719e2bc306c20d99594c30c434b19`. Monorepo sibling paths,
+desktop-only test configuration and newer Android test skips were retained;
+the existing root notice already contains the required base-n license.
+**No external transport checkout, source override or separate pull request
+is required to use these fixes.**
+
+NativeDawn's V8 internal-header path now uses the vendored host rather than
+a FetchContent source directory. The Windows Dawn CI target list includes
+both component test executables, matching master's new test steps.
+Provenance capture now records the in-tree component sources. Build
+instructions and the historical parity report no longer direct consumers
+to external transport prerequisites.
+
+The Windows x64/V8/RelWithDebInfo build uses the tracked monorepo sources,
+Babylon.js 9.32.1 and Dawn/D3D12 on NVIDIA RTX 4060. Playground, native unit
+tests, transport tests and ModuleLoadTest built successfully. The aggregate
+build was blocked by the host test's symbolic-link fixture creation:
+Windows reports that the process lacks the required privilege. Ordinary
+host assets were staged separately for diagnosis; no symlinks were replaced
+with fake files and no tests were skipped to produce a passing verdict.
+
+| Local suite | Results | Duration | Exit |
+|---|---|---|---:|
+| Babylon.js 9.32.1 / WebGPU full catalog | 784 executed: 520 passed, 264 failed; 78 skipped; zero missing references | 24m 32.945s application time | -1 |
+| Babylon-Lite original full schedule | 537 executed: 451 passed, 81 failed, 5 timed out; zero skipped | 35m 19.658s invocation wall time | 1 |
+| Vendored transport tests | 54 passed, 6 existing error-detail skips, zero failures; CTest also passed 1/1 | 7.146s direct test time | 0 |
+| Native unit tests, including shared Canvas | 174/174 passed | 83.131s | 0 |
+| Parity tooling regressions | 8/8 passed | 92ms | 0 |
+| Dawn Babylon.js host regression | 21/21 checks passed | 1.015s | 0 |
+| Fresh Lite scene1 smoke | Passed; 1.623% differing pixels against unchanged 5% ceiling | 1.563s | 0 |
+| Standalone runtime regression | Failed at empty-valued URL query presence/search | 797ms | -1 |
+| Vendored host tests, after ordinary asset staging | 35 passed, 1 skipped, 1 failed aggregate test; embedded JS: 250 passed, 4 pending, 2 missing-symlink failures | 10.697s | 1 |
+| ModuleLoadTest | Same three unexpected Windows modules: `bcrypt.dll`, `ole32.dll`, `shlwapi.dll` | See log | 1 |
+
+**The full suites remain failing.** WebGPU has 263 pixel mismatches plus
+the Material Plugin shader-language incompatibility. Lite completes all
+537 scheduled cases in 537 attempts, using the same fixed Lite checkout
+`206de862a935c4ceace9aaf0107062f1effbd5fa` and previously generated 262
+native bundles. It runs with one worker, no retries and unchanged
+60-second deadlines after WebGPU finishes. Chrome is 156.0.8078.48; Node is
+22.22.0; the locked Babylon.js oracle remains 9.28.0 at 1280x720, DPR one,
+sRGB. Master, Babylon.js and Chrome changed, so comparisons with October 27
+are not a controlled transport-only experiment.
+
+There are 188 passing native-reaching scene cases out of 271.
+Native navigation reaches 261/262 scenes; scene 27 remains blocked by
+its browser-oracle timeout. Scene verdicts are 180 visual PASS,
+2 BEHAVIOR PASS, 5 HARNESS LIMIT, 21 PIXEL MISMATCH, 7 FAIL,
+1 ORACLE / HARNESS BLOCKED, 7 TIMEOUT, 37 RUNTIME FAIL and
+2 DIMENSION MISMATCH. There are **no native crashes** in this run.
+The three prior response-MIME crash cases now reach their actual outcomes:
+scene 12 passes its pixel assertions (MAD 0.0247 against 0.027),
+scene 186 passes its behavioral assertions, and scene 304 explicitly fails
+at unsupported DOM click injection rather than crashing.
+Browser-only checks and behavior-only passes are not pixel-parity passes.
+
+The shared-host `?live` URL assertion and remaining native/browser-adapter
+limitations are separate from transport. The runtime CI step stays disabled
+as previously requested. ModuleLoadTest's allowlist and all test assertions,
+thresholds and reference policies remain unchanged.
+
+Retained local artifacts:
+
+- [Full summary](build/monorepo-validation-20261028/summary.json),
+  [source provenance](build/monorepo-validation-20261028/provenance.json)
+  and [reviewed import adaptations](build/monorepo-validation-20261028/transport-import-reviewed.json).
+- [Final provenance-helper check](build/monorepo-validation-20261028/final-provenance/provenance.json)
+  records the subsequent path-portability cleanup in the capture script;
+  the tested executable and consumer inputs are unchanged.
+- [WebGPU log](build/monorepo-validation-20261028/validation.log),
+  [262-scene Lite report](build/monorepo-validation-20261028/lite/report.md)
+  and [full Lite log](build/monorepo-validation-20261028/lite/full-suite.log).
+- [Transport CTest](build/monorepo-validation-20261028/transport-ctest.log),
+  [host fixture failures](build/monorepo-validation-20261028/host-unit-tests-assets.log),
+  [runtime failure](build/monorepo-validation-20261028/runtime.log)
+  and [module-load failure](build/monorepo-validation-20261028/module.log).
+
+Artifact root:
+`C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\monorepo-validation-20261028`.
+WebGPU screenshots/diffs are in
+`standard\consumer\Apps\Playground\Results` and
+`standard\consumer\Apps\Playground\Errors`; Lite images are in
+`lite\references\<scene-slug>\`.
+Post-run verification matched all 934 standard-consumer files, 1,459
+Lite-consumer files, 893 original visualization references and 108 original
+Lite references against their pre-run hashes, and both vendored component
+patches against their captured identities. The owned Lite server was stopped.
+Executable SHA256:
+`c9eb767211d27c69a9d237357f48bb4444df7bf8457af8f259e69d0664803a7c`.
+Tested BabylonNative source fingerprint, excluding Markdown:
+`c6ca475e9d19eeafd4fbc9defb2e5c31060cd89d56922e33e77a59671b313dc7`.

@@ -21,21 +21,27 @@ the `build` directory from the repository root. The `.gitignore` file is set up 
 ignore this `build` directory.
 
 The bgfx CMake wrapper is tracked in `Dependencies/bgfx.cmake`; CMake fetches
-only its pinned bgfx, bx and bimg sources. Default child roots remain under
-`<build>/_deps/bgfx.cmake-src/{bgfx,bx,bimg}` and wrapper binaries under
-`<build>/_deps/bgfx.cmake-build`. Explicit `BGFX_DIR`, `BX_DIR`, `BIMG_DIR` or
-standard child `FETCHCONTENT_SOURCE_DIR_*` overrides select local trees.
-`FETCHCONTENT_SOURCE_DIR_BGFX.CMAKE` is supported as a local wrapper override.
-See the [wrapper documentation](Dependencies/bgfx.cmake/README.md) for precedence,
-disconnected builds and Git-free source packaging.
+only its pinned bgfx, bx and bimg sources. Default child roots are
+`<build>/_deps/{bgfx,bx,bimg}-src` and wrapper binaries are under
+`<build>/Dependencies/bgfx.cmake`. Explicit `BGFX_DIR`, `BX_DIR`, `BIMG_DIR` or
+`FETCHCONTENT_SOURCE_DIR_BGFX`, `_BX` and `_BIMG` overrides
+select local trees.
+The root always uses the tracked wrapper, not a wrapper-source override.
+See the bgfx notes in [Dependencies/CMakeLists.txt](Dependencies/CMakeLists.txt)
+for source selection. Source packages must include the tracked wrapper and each
+selected child source tree separately.
 
-AndroidExtensions and CMakeExtensions are vendored with their history in
-`Dependencies/AndroidExtensions` and `Dependencies/CMakeExtensions`. The root
-`CMakeLists.txt` unconditionally sets `FETCHCONTENT_SOURCE_DIR_ANDROIDEXTENSIONS`
-and `FETCHCONTENT_SOURCE_DIR_CMAKEEXTENSIONS` to these folders, so every declaration
-uses these copies, including those in fetched dependencies such as JsRuntimeHost.
-Source-tree packaging uses these tracked folders; no `_deps/*-src` copies are
-produced for these two dependencies.
+AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are vendored with
+their history under `Dependencies/`. The root includes CMakeExtensions as a shared
+helper module and adds the other components with `add_subdirectory`, without
+FetchContent source overrides for these in-tree components. Their nested projects
+also use these sibling directories instead of fetching the former standalone
+repositories. Build files live under `<build>/Dependencies/`; source-tree packaging
+uses the tracked sources without producing `_deps/*-src` compatibility copies.
+
+AndroidExtensions and the bgfx wrapper retain `EXCLUDE_FROM_ALL`, so unneeded
+dependency targets do not enter the default build. UrlLib and JsRuntimeHost
+participate in the default build, including enabled component unit tests.
 
 **NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
 Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have
@@ -97,7 +103,7 @@ Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
 
 The standalone runtime and Babylon.js host checks above remain available locally.
 The Windows CI `NativeDawn Runtime Regression Tests` step is disabled while the
-pinned shared URL implementation fails the query-flag regression (`?live`).
+shared URL implementation fails the query-flag regression (`?live`).
 The Lite smoke test and full WebGPU visualization step remain enabled in CI;
 disabling the runtime step does not make that unresolved regression a pass.
 The Dawn validation adapter reports both its graphics API and JavaScript engine
@@ -108,30 +114,12 @@ initializes the shared JsRuntimeHost polyfills before NativeDawn; standalone
 hosts must do the same. UTF-16 decoding, asynchronous WebAssembly compilation,
 and blob URL resolution use JsRuntimeHost's implementations, not Dawn-specific
 replacements. The V8 finalizer-draining compatibility code is still needed until
-JsRuntimeHost's deferred-finalizer support is merged and the dependency pin is
-updated.
+the vendored JsRuntimeHost implements deferred-finalizer support.
 
-The extended Lite regression run also uses local JsRuntimeHost and UrlLib fixes
-that are not provided by the unchanged dependency pins. Configure an existing
-Dawn build with explicit source overrides before rebuilding:
-
-```powershell
-cmake -S . -B build\dawn `
-    -DFETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST="C:\path\to\JsRuntimeHost-worktree" `
-    -DFETCHCONTENT_SOURCE_DIR_URLLIB="C:\path\to\UrlLib-worktree" `
-    -DJSRUNTIMEHOST_POLYFILL_COMPRESSION=ON
-cmake --build build\dawn --config RelWithDebInfo --target Playground UnitTests
-```
-
-The shared host supplies multipart Blob/File, Streams and gzip decompression,
-queueMicrotask, V8 structuredClone, and URL query-flag/duplicate preservation.
-Embedding initializes Compression only when that optional host target exists,
-so the older pinned host remains build-compatible. UrlLib supplies data-URL GET
-decoding, missing response Content-Type handling, and byte-preserving Windows
-POST bodies with case-insensitive Content-Type handling; these changes are in
-[BabylonJS/UrlLib#39](https://github.com/BabylonJS/UrlLib/pull/39).
-An override is a local integration experiment, not a dependency-pin update.
-Results against those sources must not be attributed to the default pins.
+The shared transport fixes are included in this repository. No external
+transport checkout, source override or separate pull request is required.
+Extended Lite tests still expose shared-host capability gaps; those failures
+must not be treated as passing merely because transport is now in-tree.
 
 NativeDawn Canvas2D uses real NanoVG/Dawn rasterization and straight-RGBA GPU
 readback for getImageData, PNG encoding, and external-image uploads. Backend

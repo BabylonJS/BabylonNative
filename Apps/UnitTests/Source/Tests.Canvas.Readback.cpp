@@ -231,7 +231,7 @@ TEST(CanvasReadback, TranslucentGradientsOverOpaqueBackdrop)
             {
                 EXPECT_NEAR(pixels[channel], expected[channel], 3) << "radial=" << radial << ", channel=" << channel;
             }
-            EXPECT_EQ(pixels[3], 255);
+            EXPECT_EQ(pixels[size_t{3}], 255);
         }
     });
 }

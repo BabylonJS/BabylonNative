@@ -64,7 +64,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_compile_definitions(NativeDawn PRIVATE NATIVEDAWN_V8_FINALIZER_DRAIN)
     target_include_directories(NativeDawn PRIVATE
         $<TARGET_PROPERTY:napi,INCLUDE_DIRECTORIES>
-        "${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Source")
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/JsRuntimeHost/Core/Node-API/Source")
 endif()
 
 if(WIN32)

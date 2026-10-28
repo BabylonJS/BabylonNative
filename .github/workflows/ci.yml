@@ -44,6 +44,11 @@ jobs:
       js-engine: QuickJS
 
   # ── Win32─────────────────────────────────────────────────────
+  Win32_x86_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: Win32
+
   Win32_x64_D3D11:
     uses: ./.github/workflows/build-win32.yml
     with:
@@ -82,6 +87,18 @@ jobs:
     uses: ./.github/workflows/build-uwp.yml
     with:
       platform: x64
+
+  UWP_x64_JSI:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+      napi-type: jsi
+
+  UWP_x64_V8:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+      napi-type: V8
 
   UWP_arm64:
     uses: ./.github/workflows/build-uwp.yml
@@ -130,20 +147,28 @@ jobs:
   Android_Ubuntu_JSC:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       js-engine: JavaScriptCore
 
   Android_Ubuntu_V8:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       js-engine: V8
 
   Android_Ubuntu_QuickJS:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       js-engine: QuickJS
+
+  AndroidTests:
+    needs: [Android_Ubuntu_JSC, Android_Ubuntu_V8, Android_Ubuntu_QuickJS]
+    uses: ./.github/workflows/test-android.yml
+
+  iOSTests:
+    needs: [iOS_Xcode26]
+    uses: ./.github/workflows/test-ios.yml
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
@@ -209,13 +234,13 @@ jobs:
       nativedawn: true
   ci-complete:
     name: ci-complete
-    # Run after unsuccessful dependencies too, so they cannot skip the required check.
-    if: always()
+    # Run after unsuccessful dependencies too, but allow superseded runs to cancel.
+    if: ${{ !cancelled() }}
     needs:
       - MacOS
       - MacOS_Ninja
-      - iOS_Xcode26
       - MacOS_QuickJS
+      - Win32_x86_D3D11
       - Win32_x64_D3D11
       - Win32_x64_JSI_D3D11
       - Win32_x64_V8_D3D11
@@ -223,6 +248,8 @@ jobs:
       - Win32_x64_D3D12
       - Win32_x64_D3D11_PrecompiledShaderTest
       - UWP_x64
+      - UWP_x64_JSI
+      - UWP_x64_V8
       - UWP_arm64
       - UWP_arm64_JSI
       - Ubuntu_Clang_JSC
@@ -232,6 +259,8 @@ jobs:
       - Android_Ubuntu_JSC
       - Android_Ubuntu_V8
       - Android_Ubuntu_QuickJS
+      - AndroidTests
+      - iOSTests
       - iOS_Installation
       - Linux_Installation
       - MacOS_Installation
@@ -241,17 +270,12 @@ jobs:
       - iOS_NativeDawn
       - Ubuntu_NativeDawn
       - Android_NativeDawn
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify all jobs succeeded
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "Job results: $RESULTS"
-          for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
-              echo "::error::CI did not succeed (results: $RESULTS)"
-              exit 1
-            fi
-          done
+          echo "$NEEDS_JSON" | jq -e 'to_entries | map(select(.value.result != "success")) |
+            if length == 0 then true else error("CI did not succeed: \(.)") end'

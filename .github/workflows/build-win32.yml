@@ -67,7 +67,7 @@ jobs:
           # its standalone tools and unit tests.
           if [ "${{ inputs.nativedawn }}" = "true" ]; then
             echo "dawn_flag=-D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON" >> "$GITHUB_OUTPUT"
-            echo "build_target=--target Playground UnitTests" >> "$GITHUB_OUTPUT"
+            echo "build_target=--target Playground UnitTests JsRuntimeHostUnitTests UrlLibTests" >> "$GITHUB_OUTPUT"
           else
             echo "dawn_flag=" >> "$GITHUB_OUTPUT"
             echo "build_target=" >> "$GITHUB_OUTPUT"
@@ -287,10 +287,23 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo
           ModuleLoadTest
 
+      - name: JsRuntimeHost Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo
+          JsRuntimeHostUnitTests
+
+      - name: UrlLib Unit Tests
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\UrlLib\Tests\RelWithDebInfo
+          UrlLibTests
+
       - name: Stage UnitTests Crash Dump
         if: failure()
         shell: powershell
         run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\Dumps" | Out-Null
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Upload Crash Dumps

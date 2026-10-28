@@ -1,5 +1,10 @@
 # Babylon-Lite parity on NativeDawn
 
+**Historical results:** the measurements below predate the monorepo integration.
+Current results are recorded in [the validation report](Dawn-UrlLib-Validation.md).
+Transport fixes are now included in the repository; no external checkout or
+separate transport pull request is a prerequisite.
+
 ## Correctness follow-up (local sources)
 
 The table below is the preserved **pre-fix baseline**, not the current renderer
@@ -81,15 +86,14 @@ semantics remain separate capabilities; browser-only checks never count as
 native passes. Scenes 102/103 have incompatible reference dimensions, and
 shared browser failures are not established as NativeDawn defects.
 
-The dependency pins remain unchanged. The local UrlLib source is published as
-[BabylonJS/UrlLib#39](https://github.com/BabylonJS/UrlLib/pull/39), at
-`4dabd8dbd65d7406bf80d9c5b3f8d2108b0e17ef`. JsRuntimeHost is HEAD
+This historical run used transport revision
+`4dabd8dbd65d7406bf80d9c5b3f8d2108b0e17ef`. JsRuntimeHost was HEAD
 `33e4a233dea178712352ec90a647683084bfbf1d` plus uncommitted source-patch SHA256
 `675da9a5ab3c5c465ffbe609f5dc9c49948dd2a55789bfcd1a3dcf4d57a4bc2c`.
 That host's combined Windows checks pass on V8 (230) and QuickJS (221, with
 eight V8-only clone skips); those are upstream host results, not native GPU
-parity cases. Reproduction commands and local CMake overrides are in
-[BUILDING.md](BUILDING.md), and exact source/executable/cache identity is in
+parity cases. Current build commands are in
+[BUILDING.md](BUILDING.md), and historical source/executable/cache identity is in
 [post-fix provenance](build/lite-parity-postfix-results/provenance.json).
 
 Representative screenshots are in
@@ -148,12 +152,10 @@ Iridescence failure is permanently fixed. Fresh evidence is in
 
 ### Remaining integration work after upstream merges
 
-Merge and pin the shared JsRuntimeHost capabilities and the approved UrlLib
-revision, then rebuild without local source overrides and repeat the runtime,
-Lite, and Babylon.js checks. Only that consumer confirmation justifies deleting
-old-pin URL/data-URL compatibility paths; local-source results alone do not.
-JsRuntimeHost's current patch remains uncommitted, and this work does not change
-either dependency pin.
+Complete the remaining shared-host capabilities in the vendored sources and
+repeat the runtime, Lite and Babylon.js checks. Transport fixes are already
+included in-tree; an external transport merge or dependency-pin update is no
+longer required. Historical override results above are not current verdicts.
 
 Merge the canonical Babylon.js headless font-line-box correction and refresh
 that consumer only when authorized. The isolated 9.21.2 backport confirms the

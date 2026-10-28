@@ -1,0 +1,73 @@
+name: Android unit tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: UnitTests-Android-JsRuntimeHost-*
+          path: test-artifacts
+      - name: Enable emulator acceleration
+        run: sudo chmod 0666 /dev/kvm
+      - name: Identify emulator image
+        id: emulator-image
+        run: |
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          sdkmanager --install emulator 'system-images;android-33;google_apis;x86_64'
+          revision=$(cat "$ANDROID_HOME/emulator/source.properties" \
+            "$ANDROID_HOME/system-images/android-33/google_apis/x86_64/source.properties" \
+            | sha256sum | cut -d ' ' -f 1)
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "image-os=$ImageOS" >> "$GITHUB_OUTPUT"
+      - name: Restore clean emulator snapshot
+        id: avd-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ~/.android/avd/babylon-native-tests.avd
+            ~/.android/avd/babylon-native-tests.ini
+          key: android-avd-${{ runner.os }}-${{ runner.arch }}-${{ steps.emulator-image.outputs.image-os }}-33-google_apis-x86_64-${{ steps.emulator-image.outputs.revision }}-${{ hashFiles('.github/workflows/test-android.yml') }}
+      - name: Generate clean emulator snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          avd-name: babylon-native-tests
+          force-avd-creation: false
+          emulator-options: -no-snapshot-load -no-window -no-boot-anim -no-audio -gpu swiftshader_indirect
+          script: adb shell getprop sys.boot_completed
+      - name: Wait for snapshot shutdown
+        run: timeout 60s bash -c 'while pgrep -f "[q]emu-system.*-avd babylon-native-tests" > /dev/null; do sleep 1; done'
+      - name: Save clean emulator snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.android/avd/babylon-native-tests.avd
+            ~/.android/avd/babylon-native-tests.ini
+          key: ${{ steps.avd-cache.outputs.cache-primary-key }}
+      - name: Install and run all Android test artifacts sequentially
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          avd-name: babylon-native-tests
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -no-boot-anim -no-audio -gpu swiftshader_indirect
+          script: bash .github/scripts/run-android-runtime-tests.sh test-artifacts JavaScriptCore V8 QuickJS
+      - name: Upload test results
+        if: ${{ !cancelled() && hashFiles('test-results/**') != '' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: Android-unit-test-results
+          path: test-results
+          if-no-files-found: error

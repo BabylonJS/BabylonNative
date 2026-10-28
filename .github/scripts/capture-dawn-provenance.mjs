@@ -12,14 +12,6 @@ const cache = Object.fromEntries((await readFile(resolve(build, "CMakeCache.txt"
         return match ? [[match[1], match[2]]] : [];
     }));
 
-function dependencySource(override, source) {
-    const directory = cache[override] || cache[source];
-    if (!directory) {
-        throw new Error(`Missing dependency source in CMake cache: ${override} / ${source}`);
-    }
-    return resolve(directory);
-}
-
 async function identity(name, directory, excludeReports = false) {
     const git = (...args) => execFileSync("git", ["-C", directory, ...args], { maxBuffer: 20 * 1024 * 1024 });
     const exclusions = excludeReports ? [":!*.md"] : [];
@@ -51,8 +43,8 @@ async function identity(name, directory, excludeReports = false) {
 const executablePath = resolve(process.argv[4] ?? resolve(build, "Apps", "Playground", "Playground.exe"));
 const repositories = {
     BabylonNative: await identity("BabylonNative", resolve("."), true),
-    JsRuntimeHost: await identity("JsRuntimeHost", dependencySource("FETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST", "JsRuntimeHost_SOURCE_DIR")),
-    UrlLib: await identity("UrlLib", dependencySource("FETCHCONTENT_SOURCE_DIR_URLLIB", "UrlLib_SOURCE_DIR")),
+    JsRuntimeHost: await identity("JsRuntimeHost", resolve("Dependencies", "JsRuntimeHost")),
+    UrlLib: await identity("UrlLib", resolve("Dependencies", "UrlLib")),
     BabylonLite: await identity("BabylonLite", resolve("build\\lite-parity")),
 };
 await writeFile(output, JSON.stringify({
@@ -61,7 +53,7 @@ await writeFile(output, JSON.stringify({
     executable: { path: executablePath, sha256: sha256(await readFile(executablePath)) },
     build,
     cache: Object.fromEntries(Object.entries(cache).filter(([name]) =>
-        /^(CMAKE_(BUILD_TYPE|GENERATOR|CXX_COMPILER)|NAPI_JAVASCRIPT_ENGINE|BABYLON_NATIVE_PLUGIN_NATIVEDAWN|JSRUNTIMEHOST_POLYFILL_COMPRESSION|FETCHCONTENT_SOURCE_DIR_(URLLIB|JSRUNTIMEHOST))$/.test(name))),
+        /^(CMAKE_(BUILD_TYPE|GENERATOR|CXX_COMPILER)|NAPI_JAVASCRIPT_ENGINE|BABYLON_NATIVE_PLUGIN_NATIVEDAWN|JSRUNTIMEHOST_POLYFILL_COMPRESSION)$/.test(name))),
     fingerprintDefinition: "SHA256(git diff --binary --no-ext-diff --no-textconv HEAD bytes || UTF-8 manifest with ordinal-sorted new file name, tab, lowercase SHA256, LF)",
 }, null, 2));
 console.log(`Recorded source and executable provenance at ${output}`);
