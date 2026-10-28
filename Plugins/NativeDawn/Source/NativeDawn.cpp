@@ -775,38 +775,6 @@ namespace Babylon::Plugins::NativeDawn
             return { nullptr, 0 };
         }
 
-        bool Base64Decode(const char* data, size_t size, std::vector<uint8_t>& out)
-        {
-            static int8_t rev[256];
-            static bool init = false;
-            if (!init)
-            {
-                for (int i = 0; i < 256; ++i) rev[i] = -1;
-                const char* T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-                for (int i = 0; i < 64; ++i) rev[(uint8_t)T[i]] = (int8_t)i;
-                init = true;
-            }
-            out.clear();
-            out.reserve((size / 4) * 3);
-            uint32_t buf = 0;
-            int bits = 0;
-            for (size_t i = 0; i < size; ++i)
-            {
-                uint8_t c = (uint8_t)data[i];
-                if (c == '=' || c == '\n' || c == '\r' || c == ' ' || c == '\t') continue;
-                int8_t v = rev[c];
-                if (v < 0) return false;
-                buf = (buf << 6) | (uint32_t)v;
-                bits += 6;
-                if (bits >= 8)
-                {
-                    bits -= 8;
-                    out.push_back((uint8_t)((buf >> bits) & 0xFF));
-                }
-            }
-            return true;
-        }
-
         // IEEE-754 float32 -> float16 (half). Adequate for the [0,1] image data
         // that copyExternalImageToTexture converts into half-float textures.
         uint16_t FloatToHalf(float value)
@@ -3824,7 +3792,16 @@ namespace Babylon::Plugins::NativeDawn
         //
         // All state is JS-thread-only (the plugin only ever runs on the JS thread).
 
-        std::vector<Napi::FunctionReference> g_rafQueue;
+        struct RafEntry
+        {
+            uint32_t id;
+            Napi::FunctionReference callback;
+        };
+        std::vector<RafEntry> g_rafQueue;
+        // Entries currently being run by Tick; kept reachable so a callback can
+        // cancel a sibling that has not run yet.
+        std::vector<RafEntry> g_rafRunning;
+        uint32_t g_rafNextId = 0;
         Napi::ObjectReference g_presentationCanvas;
 
         // Deferred framebuffer readback for the validation harness. The harness
@@ -4164,28 +4141,6 @@ namespace Babylon::Plugins::NativeDawn
             }
             if (src.IsString())
             {
-                const std::string id = src.As<Napi::String>().Utf8Value();
-                if (id.rfind("data:", 0) == 0)
-                {
-                    auto d = Napi::Promise::Deferred::New(env);
-                    size_t comma = id.find(',');
-                    size_t semi = id.find(";base64");
-                    if (comma != std::string::npos && semi != std::string::npos && semi < comma)
-                    {
-                        std::vector<uint8_t> bytes;
-                        const char* b64 = id.c_str() + comma + 1;
-                        size_t b64len = id.size() - comma - 1;
-                        if (Base64Decode(b64, b64len, bytes))
-                        {
-                            Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, bytes.size());
-                            std::memcpy(ab.Data(), bytes.data(), bytes.size());
-                            d.Resolve(ab);
-                            return d.Promise();
-                        }
-                    }
-                    d.Resolve(Napi::ArrayBuffer::New(env, 0));
-                    return d.Promise();
-                }
                 Napi::Value fetchVal = env.Global().Get("fetch");
                 if (fetchVal.IsFunction())
                 {
@@ -4257,6 +4212,7 @@ namespace Babylon::Plugins::NativeDawn
             Napi::Object global = env.Global();
 
             g_rafQueue.clear();
+            g_rafRunning.clear();
 
             // Babylon's WebGPU shader path (and the emscripten glslang/twgsl glue
             // it loads) references the `self` global, which browsers/web-workers
@@ -4496,26 +4452,6 @@ namespace Babylon::Plugins::NativeDawn
             }
 
             // ---- image decoding shims ----------------------------------------
-            // The host's native URL polyfill requires its arguments to be strings
-            // and throws "A string was expected" when passed a URL object as the
-            // base (e.g. `new URL(".", new URL(src, base))`, which Babylon-Lite's
-            // glTF loader does). Browsers stringify such arguments. Wrap URL to
-            // coerce non-string url/base args to strings while preserving the
-            // native static helpers (createObjectURL/revokeObjectURL).
-            {
-                static const char* kUrlCoercePatch =
-                    "(function(){var N=globalThis.URL;"
-                    "if(!N||N.__dawnCoerce)return;"
-                    "function W(u,b){var us=(u===undefined||u===null)?u:String(u);"
-                    "return (b===undefined||b===null)?new N(us):new N(us,String(b));}"
-                    "W.prototype=N.prototype;W.__dawnCoerce=true;"
-                    "for(var k in N){try{W[k]=N[k];}catch(e){}}"
-                    "if(N.createObjectURL)W.createObjectURL=function(){return N.createObjectURL.apply(N,arguments);};"
-                    "if(N.revokeObjectURL)W.revokeObjectURL=function(){return N.revokeObjectURL.apply(N,arguments);};"
-                    "globalThis.URL=W;})();";
-                env.RunScript(kUrlCoercePatch);
-            }
-
             if (global.Get("createImageBitmap").IsUndefined())
             {
                 SetMethod(global, "createImageBitmap", [](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -4603,19 +4539,30 @@ namespace Babylon::Plugins::NativeDawn
                             Napi::Env env = info.Env();
                             Napi::Object img = imgRef->Value();
                             imgRef->Reset();
-                            Napi::Object bmp = DecodeToBitmap(env, info.Length() > 0 ? info[0] : env.Undefined());
-                            img.Set("width", bmp.Get("width"));
-                            img.Set("naturalWidth", bmp.Get("width"));
-                            img.Set("height", bmp.Get("height"));
-                            img.Set("naturalHeight", bmp.Get("height"));
-                            img.Set("__pixels", bmp.Get("__pixels"));
-                            img.Set("complete", Napi::Boolean::New(env, true));
-                            Napi::Value onload = img.Get("onload");
-                            if (onload.IsFunction())
+                            try
                             {
-                                Napi::Object ev = Napi::Object::New(env);
-                                ev.Set("target", img);
-                                onload.As<Napi::Function>().Call(img, {ev});
+                                Napi::Object bmp = DecodeToBitmap(env, info.Length() > 0 ? info[0] : env.Undefined());
+                                img.Set("width", bmp.Get("width"));
+                                img.Set("naturalWidth", bmp.Get("width"));
+                                img.Set("height", bmp.Get("height"));
+                                img.Set("naturalHeight", bmp.Get("height"));
+                                img.Set("__pixels", bmp.Get("__pixels"));
+                                img.Set("complete", Napi::Boolean::New(env, true));
+                                Napi::Value onload = img.Get("onload");
+                                if (onload.IsFunction())
+                                {
+                                    Napi::Object ev = Napi::Object::New(env);
+                                    ev.Set("target", img);
+                                    onload.As<Napi::Function>().Call(img, {ev});
+                                }
+                            }
+                            catch (const Napi::Error& error)
+                            {
+                                Napi::Value onerror = img.Get("onerror");
+                                if (onerror.IsFunction())
+                                {
+                                    onerror.As<Napi::Function>().Call(img, {error.Value()});
+                                }
                             }
                             return env.Undefined();
                         });
@@ -4648,11 +4595,29 @@ namespace Babylon::Plugins::NativeDawn
             SetMethod(global, "requestAnimationFrame", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 if (info.Length() > 0 && info[0].IsFunction())
                 {
-                    g_rafQueue.push_back(Napi::Persistent(info[0].As<Napi::Function>()));
+                    const uint32_t id = ++g_rafNextId;
+                    g_rafQueue.push_back({id, Napi::Persistent(info[0].As<Napi::Function>())});
+                    return Napi::Number::New(info.Env(), static_cast<double>(id));
                 }
-                return Napi::Number::New(info.Env(), static_cast<double>(g_rafQueue.size()));
+                return Napi::Number::New(info.Env(), 0);
             });
-            SetMethod(global, "cancelAnimationFrame", Noop);
+            SetMethod(global, "cancelAnimationFrame", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                if (info.Length() > 0 && info[0].IsNumber())
+                {
+                    const uint32_t id = info[0].As<Napi::Number>().Uint32Value();
+                    for (auto* list : {&g_rafQueue, &g_rafRunning})
+                    {
+                        for (auto& entry : *list)
+                        {
+                            if (entry.id == id)
+                            {
+                                entry.callback.Reset();
+                            }
+                        }
+                    }
+                }
+                return info.Env().Undefined();
+            });
 
             // Forward timer/animation methods onto `window` (Window polyfill
             // provides `window` but not these).
@@ -4869,6 +4834,7 @@ namespace Babylon::Plugins::NativeDawn
         g_readbackPending = false;
         g_readbackCallback.Reset();
         g_rafQueue.clear();
+        g_rafRunning.clear();
         g_presentationCanvas.Reset();
 
         // Drain deferred wrapper finalizers while both the N-API environment and
@@ -4940,12 +4906,16 @@ namespace Babylon::Plugins::NativeDawn
                 now = nowFn.As<Napi::Function>().Call(perf, {}).ToNumber().DoubleValue();
             }
         }
-        std::vector<Napi::FunctionReference> queue;
-        queue.swap(g_rafQueue);
-        for (auto& cb : queue)
+        g_rafRunning.clear();
+        g_rafRunning.swap(g_rafQueue);
+        for (auto& entry : g_rafRunning)
         {
-            cb.Value().Call({Napi::Number::New(env, now)});
+            if (!entry.callback.IsEmpty())
+            {
+                entry.callback.Value().Call({Napi::Number::New(env, now)});
+            }
         }
+        g_rafRunning.clear();
 
         // Read back after render callbacks submit, but before the next present.
         if (g_readbackPending)

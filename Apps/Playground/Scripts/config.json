@@ -4537,12 +4537,6 @@
             "reason": "bgfx/D3D11 crashes with an access violation (c0000005); Dawn renders but is 96.170% off the reference. An earlier reason claimed Dawn passed; re-measured 2026-08-24 and it does not"
         },
         {
-            "title": "Spotlight shadows",
-            "playgroundId": "#U2F7P9#4",
-            "referenceImage": "point-light-shadows.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
-        },
-        {
             "title": "Sliders",
             "playgroundId": "#HATGQZ#3",
             "referenceImage": "Sliders.png",

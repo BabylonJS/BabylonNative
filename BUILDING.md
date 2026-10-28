@@ -104,8 +104,10 @@ Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
 The standalone runtime and Babylon.js host checks above remain available locally.
 The Windows CI `NativeDawn Runtime Regression Tests` step is disabled while the
 shared URL implementation fails the query-flag regression (`?live`).
-The Lite smoke test and full WebGPU visualization step remain enabled in CI;
-disabling the runtime step does not make that unresolved regression a pass.
+The Lite smoke test and the Win32 WebGPU visualization step still run in CI, but
+the latter uses `--generate-references`, so it is only a crash/smoke run without
+pixel comparison; disabling the runtime step does not make that unresolved
+regression a pass.
 The Dawn validation adapter reports both its graphics API and JavaScript engine
 so the shared catalog applies backend and engine exclusions consistently.
 

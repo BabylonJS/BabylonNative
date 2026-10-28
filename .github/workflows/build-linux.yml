@@ -112,7 +112,7 @@ jobs:
             -D OpenGL_GL_PREFERENCE=GLVND \
             -D BABYLON_DEBUG_TRACE=ON \
             -D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON .
-          ninja -C build/Linux NativeDawn
+          ninja -C build/Linux NativeDawn JsRuntimeHostUnitTests UrlLibTests
 
       - name: Enable Core Dump
         if: ${{ !inputs.nativedawn }}
