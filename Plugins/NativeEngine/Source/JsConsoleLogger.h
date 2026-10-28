@@ -2,15 +2,8 @@
 
 #include <napi/env.h>
 
-#include <functional>
-#include <mutex>
-#include <string>
-
 namespace Babylon
 {
-    /**
-     * Utility struct to log messages to JS console.
-     */
     struct JsConsoleLogger final
     {
         JsConsoleLogger() = delete;

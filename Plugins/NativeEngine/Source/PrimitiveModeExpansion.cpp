@@ -37,6 +37,8 @@ namespace Babylon::PrimitiveModeExpansion
                     return runLength >= 2 ? runLength * 2 : 0;
                 case Mode::TriangleFan:
                     return runLength >= 3 ? (runLength - 2) * 3 : 0;
+                default:
+                    break;
             }
 
             throw std::invalid_argument{"Unsupported primitive expansion mode"};

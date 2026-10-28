@@ -18,10 +18,7 @@ namespace Babylon
     class StorageBuffer;
     class VertexArray;
 
-    // Repacks GPU-written per-instance data (transform feedback output, packed float-by-float in a
-    // raw storage buffer) into bgfx's 16-byte-per-attribute i_data slot layout, entirely on the GPU. Attributes
-    // land in the slots of the given VertexBuffer::InstanceDataLayout, like BuildInstanceDataBuffer, so the
-    // existing instanced shader-variant path renders it unchanged.
+    // Repacks GPU-written instance data into bgfx's 16-byte i_data slots on the GPU.
     class InstanceRepacker final
     {
     public:
@@ -31,28 +28,22 @@ namespace Babylon
         InstanceRepacker(const InstanceRepacker&) = delete;
         InstanceRepacker& operator=(const InstanceRepacker&) = delete;
 
-        // Dispatches the repack compute for the given vertex array's storage-backed instances on the
-        // frame buffer's (sequential) view so it is ordered before the subsequent draw, and returns
-        // the dynamic vertex buffer handle to bind via setInstanceDataBuffer. Returns an invalid
-        // handle if there is nothing to repack.
+        // The frame buffer view orders the compute dispatch before the subsequent draw.
         bgfx::DynamicVertexBufferHandle Repack(Graphics::FrameBuffer& frameBuffer, VertexArray* vertexArray,
             const std::map<uint32_t, VertexBuffer::InstanceInfo>& instances, const VertexBuffer::InstanceDataLayout& layout,
             uint32_t instanceCount);
 
-        // Releases the GPU resources associated with a vertex array (call on vertex-array deletion).
         void Forget(VertexArray* vertexArray);
 
     private:
-        // Upper bound on bgfx's maxInstanceData slots.
         static constexpr uint32_t kMaxAttributes = 32;
 
         struct PerVertexArray
         {
-            // Destination is a StorageBuffer so the repack kernel can bind it as a RAW UAV
-            // (same path as the params and source). Handle() is then passed to setInstanceDataBuffer.
+            // StorageBuffer allows both raw compute writes and instance-data binding.
             std::shared_ptr<StorageBuffer> DestStorage;
-            uint32_t Capacity{}; // in instances
-            uint16_t Stride{};   // bytes per instance (== layout.SlotCount * 16)
+            uint32_t Capacity{}; // Instances
+            uint16_t Stride{};   // Bytes per instance
         };
 
         void EnsureProgram();

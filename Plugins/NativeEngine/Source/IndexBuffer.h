@@ -21,7 +21,6 @@ namespace Babylon
         IndexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, uint16_t flags, bool dynamic);
         ~IndexBuffer();
 
-        // No copy or move semantics
         IndexBuffer(const IndexBuffer&) = delete;
         IndexBuffer(IndexBuffer&&) = delete;
 

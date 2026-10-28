@@ -9,6 +9,11 @@
 
 namespace Babylon
 {
+    namespace
+    {
+        constexpr uint32_t kMaximumVertexAttributeComponents = 4;
+    }
+
     VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
         : m_deviceContext{deviceContext}
         , m_deviceId{m_deviceContext.GetDeviceId()}
@@ -85,23 +90,23 @@ namespace Babylon
             {
                 case bgfx::AttribType::Float:
                     inputType = Graphics::TransformFeedbackInputType::Float;
-                    componentSize = 4;
+                    componentSize = sizeof(float);
                     break;
                 case bgfx::AttribType::Int8:
                     inputType = Graphics::TransformFeedbackInputType::Int8;
-                    componentSize = 1;
+                    componentSize = sizeof(int8_t);
                     break;
                 case bgfx::AttribType::Uint8:
                     inputType = Graphics::TransformFeedbackInputType::Uint8;
-                    componentSize = 1;
+                    componentSize = sizeof(uint8_t);
                     break;
                 case bgfx::AttribType::Int16:
                     inputType = Graphics::TransformFeedbackInputType::Int16;
-                    componentSize = 2;
+                    componentSize = sizeof(int16_t);
                     break;
                 case bgfx::AttribType::Uint16:
                     inputType = Graphics::TransformFeedbackInputType::Uint16;
-                    componentSize = 2;
+                    componentSize = sizeof(uint16_t);
                     break;
                 default:
                     throw std::runtime_error{"Unsupported transform feedback vertex input type"};
@@ -110,7 +115,7 @@ namespace Babylon
             {
                 throw std::runtime_error{"Transform feedback vertex inputs cannot be instanced"};
             }
-            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > 4)
+            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > kMaximumVertexAttributeComponents)
             {
                 throw std::runtime_error{"Transform feedback vertex inputs must be aligned to their component size"};
             }
@@ -128,13 +133,8 @@ namespace Babylon
 
             const bgfx::Caps* caps = bgfx::getCaps();
 
-            // Use the runtime cap, not MAX_INSTANCE_DATA_SLOT_COUNT: backends clamp maxInstanceData
-            // to the device's maxVertexAttributes during init, so the compile-time value is a
-            // ceiling a device need not honour. The constant stays for the shader compiler's
-            // static_asserts, which need a compile-time bound.
-            //
-            // Only a new attribute can overflow -- re-recording an existing one overwrites its
-            // entry -- and the check runs before the insert, so `size() >= max` is the overflow.
+            // Backends may clamp maxInstanceData below the shader compiler's compile-time ceiling.
+            // Only new attributes can overflow because existing entries are overwritten.
             const uint32_t maxInstanceData = caps->limits.maxInstanceData;
             if (m_vertexBufferInstances.find(location) == m_vertexBufferInstances.end() &&
                 m_vertexBufferInstances.size() >= maxInstanceData)
@@ -262,9 +262,7 @@ namespace Babylon
         }
         else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
         {
-            // The shader declares built-in per-instance inputs this draw does not supply, e.g. the node
-            // material InstancesBlock declares world0-3 but reads them only under #ifdef INSTANCES.
-            // D3D input layouts must cover every declared input, so bind zeroed instance data.
+            // D3D input layouts must cover declared built-in instance inputs even when unused.
             static constexpr uint16_t kSlotSize = 16;
             const uint32_t count = std::max(instanceCount, 1u);
             const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * kSlotSize);
@@ -279,12 +277,7 @@ namespace Babylon
         }
         else if (instanceCount > 0 && !HasStorageInstances())
         {
-            // Attribute-less instancing: the draw requests multiple instances but has no per-instance
-            // vertex data (e.g. the clustered-light tile-mask proxies, which derive the light index,
-            // vertical batch offset and bit mask purely from gl_InstanceID). Without an instance data
-            // buffer bgfx would fall back to drawing a single instance, leaving the tile mask empty and
-            // breaking clustered lighting. Tell bgfx the instance count explicitly so gl_InstanceID
-            // iterates 0..instanceCount-1.
+            // Without per-instance data, bgfx needs an explicit count for gl_InstanceID-based draws.
             encoder->setInstanceCount(instanceCount);
         }
 
