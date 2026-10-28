@@ -262,9 +262,14 @@ const validateAssembled = async () => {
     'Repo/Embedding/CMakeLists.txt',
     'Repo/Dependencies/CMakeExtensions/CMakeLists.txt',
     'Repo/Dependencies/AndroidExtensions/CMakeLists.txt',
-    'Repo/Dependencies/bgfx.cmake/cmake/babylon-native.cmake',
-    'deps/bgfx.cmake-src/CMakeLists.txt',
-    'deps/jsruntimehost-src/CMakeLists.txt',
+    'Repo/Dependencies/bgfx.cmake/cmake/dependency-pins.cmake',
+    'deps/bx-src/include/bx/bx.h',
+    'deps/bimg-src/include/bimg/bimg.h',
+    'deps/bgfx-src/include/bgfx/bgfx.h',
+    'Repo/Dependencies/JsRuntimeHost/CMakeLists.txt',
+    'Repo/Dependencies/UrlLib/CMakeLists.txt',
+    'deps/asio-src/asio/include/asio.hpp',
+    'deps/llhttp-src/CMakeLists.txt',
     'deps/ios-cmake-src/ios.toolchain.cmake',
   ]) {
     if (!fs.existsSync(path.join(TARGET_DIR, file))) {
@@ -384,11 +389,11 @@ const buildBabylonNativeSourceTree = async () => {
   // Keep only the 3rdparty folders that bgfx/src actually includes:
   // renderdoc (debug_renderdoc.cpp), metal-cpp (renderer_mtl.h), h264 (video.h),
   // plus stb/sdf and the graphics API headers.
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/3rdparty`, ['renderdoc', 'stb', 'sdf', 'metal-cpp', 'h264', 'khronos', 'directx-headers']);
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/examples`,['common']);
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/bindings`);
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/docs`);
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx.cmake-src/bgfx/tools`);
+  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx-src/3rdparty`, ['renderdoc', 'stb', 'sdf', 'metal-cpp', 'h264', 'khronos', 'directx-headers']);
+  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx-src/examples`,['common']);
+  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx-src/bindings`);
+  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx-src/docs`);
+  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/bgfx-src/tools`);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/spirv-cross-src/reference`);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/spirv-cross-src/shaders`);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/spirv-cross-src/shaders-msl`);
@@ -399,7 +404,6 @@ const buildBabylonNativeSourceTree = async () => {
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/arcore-android-sdk-src/media`);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/arcore-android-sdk-src/samples`);
   deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/arcore-android-sdk-src/tools`);
-  deleteFolderRecursive(`${DEPS_OUTPUT_DIR}/jsruntimehost-src/Tests`);
 }
 
 const copyFiles = gulp.series(copyCommonFiles, copySharedFiles, copyAndroidARCoreFiles , copyiOSARKitFiles, copyIOSFiles, copyAndroidFiles, copyWindowsFiles);
