@@ -3530,10 +3530,8 @@
         {
             "title": "Havok FloatingOrigin Multi-Region",
             "playgroundId": "#ND10JJ#0",
-            "renderCount": 180,
             "useLargeWorldRendering": true,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "requiresHavok": true,
             "referenceImage": "Havok-FloatingOrigin-Multi-Region.png"
         },
         {
