@@ -216,11 +216,7 @@ namespace Babylon::Polyfills::Internal
                 return nvgRGBA((color >> 16), (color >> 8) & 0xFF, (color & 0xFF), 0xFF);
             }
 
-            // CSS colour functions. The components are matched as generic CSS
-            // numbers with an optional '%' suffix rather than as 1-3 digit
-            // integers: the old integer-only pattern silently failed to match
-            // any fractional value, so a perfectly ordinary rgba(0, 0, 0, 0.5)
-            // fell through to the "Unable to parse color" throw.
+            // CSS color components accept fractional values and optional percentages.
             static const std::string number{R"((-?(?:\d+(?:\.\d*)?|\.\d+))(%?))"};
             static const std::string separator{R"((?:\s*,\s*|\s+))"};
             static const std::string alphaSeparator{R"((?:\s*,\s*|\s*/\s*))"};
@@ -228,16 +224,8 @@ namespace Babylon::Polyfills::Internal
                 R"(\(\s*)" + number + separator + number + separator + number +
                 "(?:" + alphaSeparator + number + R"()?\s*\))"};
 
-            // Component group indices: value/percent pairs at 1-2, 3-4, 5-6 and
-            // the optional alpha at 7-8.
-            //
-            // Parsed with strtof rather than std::stof: the regex above accepts a digit string of
-            // any length, and std::stof throws std::out_of_range for one that does not fit a
-            // float. That exception is not a Napi::Error, so it would escape this callback and
-            // terminate the host instead of producing a color. strtof cannot throw -- it
-            // saturates to +/-HUGE_VALF on overflow and returns zero on underflow -- and the
-            // infinities are folded back to finite extremes so the clamps below stay well
-            // defined (fmodf of an infinity, which nvgHSLA does to the hue, would be NaN).
+            // strtof avoids exceptions for unbounded numeric input. Fold infinities back to
+            // finite values so clamping and hue wrapping remain defined.
             const auto toFloat = [](const std::ssub_match& match) {
                 const std::string text{match.str()};
                 const float value = std::strtof(text.c_str(), nullptr);
@@ -269,7 +257,6 @@ namespace Babylon::Polyfills::Internal
                 return nvgRGBA(channel(rgbMatch, 1), channel(rgbMatch, 3), channel(rgbMatch, 5), alpha(rgbMatch, 7));
             }
 
-            // hsl()/hsla(). Babylon GUI's ColorPicker emits these.
             static const std::regex hslRegex("hsla?" + components);
             std::smatch hslMatch;
             if (std::regex_match(str, hslMatch, hslRegex))

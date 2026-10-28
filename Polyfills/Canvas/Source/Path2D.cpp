@@ -1,10 +1,8 @@
-#include <bgfx/bgfx.h>
 #include <cassert>
-#include <map>
-#include "Canvas.h"
+#include <cstring>
 #include "NativeInstanceRegistry.h"
 #include "Path2D.h"
-#include <napi/pointer.h>
+#include "RoundRectUtils.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -52,11 +50,6 @@ namespace Babylon::Polyfills::Internal
         global.Set(JS_PATH2D_CONSTRUCTOR_NAME, func);
     }
 
-    bool NativeCanvasPath2D::IsInstance(Napi::Env env, const Napi::Value& value)
-    {
-        return TryUnwrap(env, value) != nullptr;
-    }
-
     NativeCanvasPath2D* NativeCanvasPath2D::TryUnwrap(Napi::Env env, const Napi::Value& value)
     {
         return NativeInstanceRegistry<NativeCanvasPath2D>::TryUnwrap(env, value);
@@ -64,7 +57,6 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvasPath2D::NativeCanvasPath2D(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
-        , m_commands{std::deque<Path2DCommand>()}
     {
         // Path2D | DOMString union: only a real Path2D is copied; everything else stringifies.
         const NativeCanvasPath2D* path = info.Length() >= 1
@@ -134,22 +126,22 @@ namespace Babylon::Polyfills::Internal
         NativeInstanceRegistry<NativeCanvasPath2D>::Remove(this);
     }
 
-    typename std::deque<Path2DCommand>::iterator NativeCanvasPath2D::begin()
+    std::deque<Path2DCommand>::iterator NativeCanvasPath2D::begin()
     {
         return m_commands.begin();
     }
 
-    typename std::deque<Path2DCommand>::iterator NativeCanvasPath2D::end()
+    std::deque<Path2DCommand>::iterator NativeCanvasPath2D::end()
     {
         return m_commands.end();
     }
 
-    typename std::deque<Path2DCommand>::const_iterator NativeCanvasPath2D::begin() const
+    std::deque<Path2DCommand>::const_iterator NativeCanvasPath2D::begin() const
     {
         return m_commands.begin();
     }
 
-    typename std::deque<Path2DCommand>::const_iterator NativeCanvasPath2D::end() const
+    std::deque<Path2DCommand>::const_iterator NativeCanvasPath2D::end() const
     {
         return m_commands.end();
     }
@@ -172,7 +164,6 @@ namespace Babylon::Polyfills::Internal
             throw Napi::TypeError::New(info.Env(), "Path2D.addPath: the first argument is not a Path2D.");
         }
 
-        // optional transform arg
         bool xformInvReady{false};
         float xformInv[6];
         if (info.Length() == 2)
@@ -199,7 +190,6 @@ namespace Babylon::Polyfills::Internal
             m_commands.push_back(command);
         }
 
-        // invert transform after all commands played
         if (info.Length() == 2)
         {
             assert(xformInvReady);
@@ -209,7 +199,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void NativeCanvasPath2D::ClosePath(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::ClosePath(const Napi::CallbackInfo&)
     {
         AppendCommand(P2D_CLOSE, {});
     }
@@ -321,72 +311,25 @@ namespace Babylon::Polyfills::Internal
         const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
         const auto width = static_cast<float>(info[2].As<Napi::Number>().DoubleValue());
         const auto height = static_cast<float>(info[3].As<Napi::Number>().DoubleValue());
-        const auto radii = info[4];
-
-        if (radii.IsNumber())
+        const auto radii = ParseRoundRectRadii(info.Env(), info[4]);
+        Path2DCommandArgs args{};
+        switch (radii.type)
         {
-            const auto radius = radii.As<Napi::Number>().FloatValue();
-            Path2DCommandArgs args = {};
-            args.roundRect = {x, y, width, height, radius};
-            AppendCommand(P2D_ROUNDRECT, args);
-        }
-        else if (radii.IsArray())
-        {
-            const auto radiiArray = radii.As<Napi::Array>();
-            const auto radiiArrayLength = radiiArray.Length();
-            if (radiiArrayLength == 1)
-            {
-                const auto radius = radiiArray[0u].As<Napi::Number>().FloatValue();
-                Path2DCommandArgs args = {};
-                args.roundRect = {x, y, width, height, radius};
+            case RoundRectRadiiType::Uniform:
+                args.roundRect = {x, y, width, height, radii.values[0]};
                 AppendCommand(P2D_ROUNDRECT, args);
-            }
-            else if (radiiArrayLength == 2)
-            {
-                const auto topLeftBottomRight = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
-                Path2DCommandArgs args = {};
-                args.roundRectVarying = {x, y, width, height, topLeftBottomRight, topRightBottomLeft, topLeftBottomRight, topRightBottomLeft};
+                break;
+            case RoundRectRadiiType::Varying:
+                args.roundRectVarying = {x, y, width, height,
+                    radii.values[0], radii.values[1], radii.values[2], radii.values[3]};
                 AppendCommand(P2D_ROUNDRECTVARYING, args);
-            }
-            else if (radiiArrayLength == 3)
-            {
-                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
-                Path2DCommandArgs args = {};
-                args.roundRectVarying = {x, y, width, height, topLeft, topRightBottomLeft, bottomRight, topRightBottomLeft};
-                AppendCommand(P2D_ROUNDRECTVARYING, args);
-            }
-            else if (radiiArrayLength == 4)
-            {
-                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRight = radiiArray[1u].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
-                const auto bottomLeft = radiiArray[3u].As<Napi::Number>().FloatValue();
-                Path2DCommandArgs args = {};
-                args.roundRectVarying = {x, y, width, height, topLeft, topRight, bottomRight, bottomLeft};
-                AppendCommand(P2D_ROUNDRECTVARYING, args);
-            }
-            else
-            {
-                throw Napi::Error::New(info.Env(), "Invalid number of parameters for radii");
-            }
-        }
-        // DOMPoint
-        // TODO: move duplicate Path2D & Context args parsing into a utils.cpp
-        else if (radii.IsObject())
-        {
-            const auto dompoint = radii.As<Napi::Object>();
-            const auto radiusX = dompoint.Get("x").As<Napi::Number>().FloatValue();
-            const auto radiusY = dompoint.Get("y").As<Napi::Number>().FloatValue();
-            Path2DCommandArgs args = {};
-            args.roundRectElliptic = {x, y, width, height, radiusX, radiusY, radiusX, radiusY, radiusX, radiusY, radiusX, radiusY};
-            AppendCommand(P2D_ROUNDRECTELLIPTIC, args);
-        }
-        else
-        {
-            throw Napi::Error::New(info.Env(), "Invalid radii parameter");
+                break;
+            case RoundRectRadiiType::Elliptic:
+                args.roundRectElliptic = {x, y, width, height,
+                    radii.values[0], radii.values[1], radii.values[2], radii.values[3],
+                    radii.values[4], radii.values[5], radii.values[6], radii.values[7]};
+                AppendCommand(P2D_ROUNDRECTELLIPTIC, args);
+                break;
         }
     }
 }

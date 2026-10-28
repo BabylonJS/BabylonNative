@@ -28,10 +28,6 @@ public:
     inline static int s_bgfxRefCount = 0;
     inline static Uniforms m_uniforms{};
 
-    void AddSepia(float strength) {}
-    void AddContrast(float strength) {}
-    void AddBlur(int horizontal, int vertical) {}
-
     void Render(
         bgfx::ProgramHandle firstProg,
         std::function<void(bgfx::UniformHandle, const void *value, const uint16_t num)> setUniform,
@@ -43,52 +39,20 @@ public:
         std::function<void(Babylon::Graphics::FrameBuffer*)> release,
         bool separateComposite = false
     );
-    void Render(std::function<void()> element);
-
     bool HasFilters() const { return stackElementCount > 0; }
 
     void ParseString(const std::string& string);
     static bool ValidString(const std::string& string);
 
-    void AddDropShadow()
-    {
-        // break down shadow as blur + color
-    }
-
 protected:
-
-    enum StackElementTypes
-    {
-        SE_SEPIA = 0,
-        SE_CONTRAST = 1,
-        SE_BLUR = 2,
-    };
-
-    struct SepiaElement
-    {
-        float strength;
-    };
-    struct Contrast
-    {
-        float strength;
-    };
     struct Blur
     {
-        float horizontal, vertical; // blur strength (standard deviation px)
-    };
-    struct StackElement
-    {
-        StackElementTypes type;
-        union
-        {
-            SepiaElement sepiaElement;
-            Contrast contrastElement;
-            Blur blurElement;
-        };
+        float horizontal;
+        float vertical;
     };
     int stackElementCount{0};
     static const int MAX_STACK_SIZE = 32;
-    StackElement stackElements[MAX_STACK_SIZE]{};
+    Blur stackElements[MAX_STACK_SIZE]{};
 
 private:
     std::vector<float> CalculateGaussianKernel(float sigma, int kernelSize);

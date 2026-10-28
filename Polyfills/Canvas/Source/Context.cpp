@@ -39,6 +39,7 @@
 #include "Colors.h"
 #include "LineCaps.h"
 #include "Gradient.h"
+#include "RoundRectUtils.h"
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
@@ -174,11 +175,7 @@ namespace Babylon::Polyfills::Internal
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        // TODO: commented code doesn't compile with napi-jsi. Using non read-only property for now
-        //info.This().ToObject().DefineProperty(Napi::PropertyDescriptor::Value("canvas", info[0], napi_enumerable));
         info.This().ToObject().Set("canvas", info[0]);
-
-        // Fonts loaded after this Context is created are picked up in Flush().
     }
 
     Context::~Context()
@@ -221,65 +218,67 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Context::BindFillStyle(const Napi::CallbackInfo& info)
+    void Context::BindStyle(const Napi::CallbackInfo& info, const Style& style, bool stroke)
     {
-        if (std::holds_alternative<std::string>(m_state.fillStyle))
+        if (std::holds_alternative<std::string>(style))
         {
-            const auto& str = std::get<std::string>(m_state.fillStyle);
-            // Treat unset/empty fillStyle as opaque white (nvg's default fill color) instead of
-            // the transparent black returned by StringToColor("") — this matches how fillStyle
-            // behaves before any explicit assignment via SetFillStyle.
-            const auto color = str.empty() ? nvgRGBA(255, 255, 255, 255) : StringToColor(info.Env(), str);
-            nvgFillColor(*m_nvg, color);
+            const auto& value = std::get<std::string>(style);
+            const auto color = value.empty()
+                ? (stroke ? nvgRGBA(0, 0, 0, 255) : nvgRGBA(255, 255, 255, 255))
+                : StringToColor(info.Env(), value);
+            if (stroke)
+            {
+                nvgStrokeColor(*m_nvg, color);
+            }
+            else
+            {
+                nvgFillColor(*m_nvg, color);
+            }
+            return;
         }
-        else if (std::holds_alternative<GradientStyle>(m_state.fillStyle))
+
+        if (std::holds_alternative<GradientStyle>(style))
         {
-            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(m_state.fillStyle)->Value());
+            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(style)->Value());
             if (gradient == nullptr)
             {
-                throw Napi::TypeError::New(info.Env(), "fillStyle must be a string or CanvasGradient.");
+                throw Napi::TypeError::New(info.Env(), stroke
+                    ? "strokeStyle must be a string or CanvasGradient."
+                    : "fillStyle must be a string or CanvasGradient.");
             }
-            nvgFillPaint(*m_nvg, gradient->Paint());
+            if (stroke)
+            {
+                nvgStrokePaint(*m_nvg, gradient->Paint());
+            }
+            else
+            {
+                nvgFillPaint(*m_nvg, gradient->Paint());
+            }
+            return;
         }
-        else
-        {
-            throw Napi::TypeError::New(info.Env(), "fillStyle must be a string or CanvasGradient.");
-        }
+
+        throw Napi::TypeError::New(info.Env(), stroke
+            ? "strokeStyle must be a string or CanvasGradient."
+            : "fillStyle must be a string or CanvasGradient.");
+    }
+
+    void Context::BindFillStyle(const Napi::CallbackInfo& info)
+    {
+        BindStyle(info, m_state.fillStyle, false);
     }
 
     void Context::BindStrokeStyle(const Napi::CallbackInfo& info)
     {
-        if (std::holds_alternative<std::string>(m_state.strokeStyle))
-        {
-            const auto& str = std::get<std::string>(m_state.strokeStyle);
-            // Treat unset/empty strokeStyle as opaque black -- both the Canvas2D default
-            // ("#000000") and nvg's default stroke color -- instead of the transparent black
-            // StringToColor("") would return.
-            const auto color = str.empty() ? nvgRGBA(0, 0, 0, 255) : StringToColor(info.Env(), str);
-            nvgStrokeColor(*m_nvg, color);
-        }
-        else if (std::holds_alternative<GradientStyle>(m_state.strokeStyle))
-        {
-            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(m_state.strokeStyle)->Value());
-            if (gradient == nullptr)
-            {
-                throw Napi::TypeError::New(info.Env(), "strokeStyle must be a string or CanvasGradient.");
-            }
-            nvgStrokePaint(*m_nvg, gradient->Paint());
-        }
-        else
-        {
-            throw Napi::TypeError::New(info.Env(), "strokeStyle must be a string or CanvasGradient.");
-        }
+        BindStyle(info, m_state.strokeStyle, true);
     }
 
     void Context::SetFilterStack()
     {
-        if (m_state.filter.length())
+        if (!m_state.filter.empty())
         {
             nanovg_filterstack filterStack;
             filterStack.ParseString(m_state.filter);
-            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
+            nvgFilterStack(*m_nvg, filterStack);
         }
     }
 
@@ -300,68 +299,55 @@ namespace Babylon::Polyfills::Internal
         nvgFill(*m_nvg);
     }
 
+    Napi::Value Context::GetStyle(const Style& style)
+    {
+        if (std::holds_alternative<std::string>(style))
+        {
+            return Napi::Value::From(Env(), std::get<std::string>(style));
+        }
+        return std::get<GradientStyle>(style)->Value();
+    }
+
+    void Context::SetStyle(const Napi::CallbackInfo& info, const Napi::Value& value, Style& style, bool stroke)
+    {
+        if (value.IsString())
+        {
+            auto string = value.As<Napi::String>().Utf8Value();
+            const auto color = StringToColor(info.Env(), string);
+            style = string;
+            if (stroke)
+            {
+                nvgStrokeColor(*m_nvg, color);
+            }
+            else
+            {
+                nvgFillColor(*m_nvg, color);
+            }
+        }
+        else if (CanvasGradient::IsInstance(info.Env(), value))
+        {
+            style = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
+        }
+    }
+
     Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
     {
-        if (std::holds_alternative<std::string>(m_state.fillStyle))
-        {
-            return Napi::Value::From(Env(), std::get<std::string>(m_state.fillStyle));
-        }
-        else
-        {
-            // Return the gradient object that was assigned, as the spec requires, so that
-            // `otherCtx.fillStyle = ctx.fillStyle` round-trips.
-            return std::get<GradientStyle>(m_state.fillStyle)->Value();
-        }
+        return GetStyle(m_state.fillStyle);
     }
 
     void Context::SetFillStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        // Per spec the setter takes (DOMString or CanvasGradient or CanvasPattern); anything
-        // else stringifies, fails color parsing and is ignored. Test for the gradient rather
-        // than for "is an object", so `ctx.fillStyle = {}` cannot reach Unwrap.
-        if (value.IsString())
-        {
-            auto string = value.As<Napi::String>().Utf8Value();
-            const auto color = StringToColor(info.Env(), string);
-            m_state.fillStyle = string;
-            nvgFillColor(*m_nvg, color);
-        }
-        else if (CanvasGradient::IsInstance(info.Env(), value))
-        {
-            m_state.fillStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
-        }
-        // Anything else leaves fillStyle unchanged, as the spec requires.
+        SetStyle(info, value, m_state.fillStyle, false);
     }
 
     Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
     {
-        if (std::holds_alternative<std::string>(m_state.strokeStyle))
-        {
-            return Napi::Value::From(Env(), std::get<std::string>(m_state.strokeStyle));
-        }
-        else
-        {
-            return std::get<GradientStyle>(m_state.strokeStyle)->Value();
-        }
+        return GetStyle(m_state.strokeStyle);
     }
 
     void Context::SetStrokeStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        // strokeStyle accepts a CanvasGradient just like fillStyle does; GUI controls such as
-        // Line and the border of a Button assign one directly.
-        if (value.IsString())
-        {
-            auto string = value.As<Napi::String>().Utf8Value();
-            const auto color = StringToColor(info.Env(), string);
-            m_state.strokeStyle = string;
-            nvgStrokeColor(*m_nvg, color);
-        }
-        else if (CanvasGradient::IsInstance(info.Env(), value))
-        {
-            m_state.strokeStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
-        }
-        // Per spec, assigning anything that is neither a color string nor a
-        // gradient/pattern leaves strokeStyle unchanged.
+        SetStyle(info, value, m_state.strokeStyle, true);
     }
 
     Napi::Value Context::GetLineWidth(const Napi::CallbackInfo&)
@@ -510,59 +496,21 @@ namespace Babylon::Polyfills::Internal
         const auto y = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
-        const auto radii = info[4];
-        if (radii.IsNumber())
+        const auto radii = ParseRoundRectRadii(info.Env(), info[4]);
+        switch (radii.type)
         {
-            const auto radius = radii.As<Napi::Number>().FloatValue();
-            nvgRoundedRect(*m_nvg, x, y, width, height, radius);
-        }
-        else if (radii.IsArray())
-        {
-            const auto radiiArray = radii.As<Napi::Array>();
-            const auto radiiArrayLength = radiiArray.Length();
-            if (radiiArrayLength == 1)
-            {
-                const auto radius = radiiArray[0u].As<Napi::Number>().FloatValue();
-                nvgRoundedRect(*m_nvg, x, y, width, height, radius);
-            }
-            else if (radiiArrayLength == 2)
-            {
-                const auto topLeftBottomRight = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
-                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeftBottomRight, topRightBottomLeft, topLeftBottomRight, topRightBottomLeft);
-            }
-            else if (radiiArrayLength == 3)
-            {
-                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
-                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRightBottomLeft, bottomRight, topRightBottomLeft);
-            }
-            else if (radiiArrayLength == 4)
-            {
-                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRight = radiiArray[1u].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
-                const auto bottomLeft = radiiArray[3u].As<Napi::Number>().FloatValue();
-                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRight, bottomRight, bottomLeft);
-            }
-            else
-            {
-                throw Napi::Error::New(info.Env(), "Invalid number of parameters for radii");
-            }
-        }
-        // DOMPoint
-        // TODO: move duplicate Path2D & Context args parsing into a utils.cpp
-        else if (radii.IsObject())
-        {
-            const auto dompoint = radii.As<Napi::Object>();
-            const auto dpx = dompoint.Get("x").As<Napi::Number>().FloatValue();
-            const auto dpy = dompoint.Get("y").As<Napi::Number>().FloatValue();
-            nvgRoundedRectElliptic(*m_nvg, x, y, width, height, dpx, dpy, dpx, dpy, dpx, dpy, dpx, dpy);
-        }
-        else
-        {
-            throw Napi::Error::New(info.Env(), "Invalid radii parameter");
+            case RoundRectRadiiType::Uniform:
+                nvgRoundedRect(*m_nvg, x, y, width, height, radii.values[0]);
+                break;
+            case RoundRectRadiiType::Varying:
+                nvgRoundedRectVarying(*m_nvg, x, y, width, height,
+                    radii.values[0], radii.values[1], radii.values[2], radii.values[3]);
+                break;
+            case RoundRectRadiiType::Elliptic:
+                nvgRoundedRectElliptic(*m_nvg, x, y, width, height,
+                    radii.values[0], radii.values[1], radii.values[2], radii.values[3],
+                    radii.values[4], radii.values[5], radii.values[6], radii.values[7]);
+                break;
         }
 
         m_rectangleClipping = {x, y, width, height};
@@ -822,7 +770,7 @@ namespace Babylon::Polyfills::Internal
         {
             return false;
         }
-        else if (m_state.currentFontId >= 0)
+        if (m_state.currentFontId >= 0)
         {
             nvgFontFaceId(*m_nvg, m_state.currentFontId);
         }
@@ -833,35 +781,43 @@ namespace Babylon::Polyfills::Internal
         return true;
     }
 
-    void Context::FillText(const Napi::CallbackInfo& info)
+    void Context::DrawText(const Napi::CallbackInfo& info, bool stroke)
     {
         std::string text = info[0].As<Napi::String>().Utf8Value();
-        auto x = info[1].As<Napi::Number>().FloatValue();
-        auto y = info[2].As<Napi::Number>().FloatValue();
+        const auto x = info[1].As<Napi::Number>().FloatValue();
+        const auto y = info[2].As<Napi::Number>().FloatValue();
 
         // TODO: support ligatures, etc.
-        if (m_state.direction.compare("rtl") == 0) {
+        if (m_state.direction == "rtl")
+        {
             std::reverse(text.begin(), text.end());
         }
 
-        if (SetFontFaceId())
+        if (!SetFontFaceId())
+        {
+            return;
+        }
+
+        if (stroke)
+        {
+            BindStrokeStyle(info);
+            nvgStrokeText(*m_nvg, x, y, text.c_str(), nullptr);
+        }
+        else
         {
             BindFillStyle(info);
-
-            if (m_state.filter.length())
-            {
-                nanovg_filterstack filterStack;
-                filterStack.ParseString(m_state.filter);
-                nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
-            }
-
+            SetFilterStack();
             nvgText(*m_nvg, x, y, text.c_str(), nullptr);
         }
     }
 
+    void Context::FillText(const Napi::CallbackInfo& info)
+    {
+        DrawText(info, false);
+    }
+
     void Context::EnsureFontsLoaded()
     {
-        // Pick up any fonts that were loaded after this Context was created.
         for (auto& font : NativeCanvas::fontsInfos)
         {
             if (m_fonts.end() == m_fonts.find(font.first))
@@ -891,7 +847,6 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // Pick up any fonts loaded after this Context was created (#1683).
         EnsureFontsLoaded();
 
         // If called outside the frame cycle (e.g., during initialization/font loading
@@ -903,23 +858,8 @@ namespace Babylon::Polyfills::Internal
             scope.emplace(m_graphicsContext.AcquireFrameCompletionScope());
         }
 
-        // A canvas flush is the one stretch of a frame that acquires views without ever
-        // reaching NativeEngine::GetEncoder, so no budget check runs inside it. Its cost is
-        // not bounded either: the pool recycles framebuffers but not view ids (Acquire ->
-        // Bind() drops the cached id, the draw re-acquires, Release -> Clear() acquires
-        // again), so it scales with filter-op count. That means kViewFlushMargin cannot be
-        // sized to cover it, and a frame that is just under the flush threshold on entry
-        // here would run past maxViews and throw "Too many views".
-        //
-        // Check once, here. This is the only safe point in the flush:
-        //   - after the scope above, so m_pendingFrameScopes > 0 and the flush handshake is
-        //     actually serviceable by the parked render thread (it no-ops otherwise);
-        //   - before the encoder is read below, so a flush that swaps the frame encoder
-        //     cannot leave us holding a stale pointer;
-        //   - before nvgBeginFrame, so no nanovg transient buffer exists to be invalidated
-        //     (those are allocated in glnvg__renderFlush during nvgEndFrame).
-        // This does not bound a single canvas' cost, but it reduces the requirement from
-        // "the margin must cover an arbitrary canvas" to "one canvas must fit in maxViews".
+        // Canvas filtering can consume an unbounded number of views. Flush before reading
+        // the encoder or allocating NanoVG transient buffers so neither can become stale.
         m_graphicsContext.FlushViewsIfNeeded();
 
         bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
@@ -928,13 +868,9 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // Discard any residual encoder state from NativeEngine rendering.
-        // In the old model Canvas had its own per-thread encoder with clean state;
-        // now it shares the frame encoder with NativeEngine.
+        // Canvas shares the frame encoder, so discard residual rendering state.
         encoder->discard(BGFX_DISCARD_ALL);
 
-        // bgfx framebuffer pool exhaustion can throw both from UpdateRenderTarget() and
-        // from FrameBufferPool::Acquire() reached via nvgEndFrame() below.
         const bool needClear = m_canvas->UpdateRenderTarget();
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
@@ -950,7 +886,6 @@ namespace Babylon::Polyfills::Internal
 
         for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
         {
-            // sanity check no buffers should have been acquired yet
             assert(buffer.isAvailable == true);
         }
         std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this]() -> Babylon::Graphics::FrameBuffer* {
@@ -959,7 +894,6 @@ namespace Babylon::Polyfills::Internal
             return frameBuffer;
         };
         std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-            // clear framebuffer when released
             frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.f, 0);
             this->m_canvas->m_frameBufferPool.Release(frameBuffer);
             frameBuffer->Unbind();
@@ -989,7 +923,6 @@ namespace Babylon::Polyfills::Internal
 
         for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
         {
-            // sanity check no unreleased buffers
             assert(buffer.isAvailable == true);
         }
     }
@@ -1004,12 +937,9 @@ namespace Babylon::Polyfills::Internal
             return rgba;
         }
 
-        // Capture can run with a non-null encoder but no JS-owned scope (notably in
-        // unit-test hosts). Acquire before FlushCore so both NanoVG submission and
-        // the readback remain in a frame the render thread cannot close underneath us.
+        // Keep NanoVG submission and readback in a frame the render thread cannot close.
         auto scope = m_graphicsContext.AcquireFrameCompletionScope();
 
-        // Push pending NanoVG draws into the canvas RT first.
         FlushCore();
         if (!m_canvas->HasFrameBuffer())
         {
@@ -1088,14 +1018,8 @@ namespace Babylon::Polyfills::Internal
                     readback->Cv.notify_one();
                 });
 
-        // Drive mid-frame flushes until the readback completes. Each flush ends the
-        // current encoder, runs bgfx::frame(FLUSH), completes ready readTexture
-        // requests, and opens a fresh encoder for the rest of the logical frame.
-        //
-        // Keep `scope` alive for the whole wait: releasing it while a parent RAF
-        // FrameCompletionScope is still held would leave FinishRendering blocked on
-        // that parent while we block on cv — deadlock. ForceMidFrameFlush is the
-        // path that advances bgfx while any scope remains.
+        // Keep the scope alive while mid-frame flushes advance the asynchronous readback;
+        // releasing it before the wait completes can deadlock with a parent frame scope.
         for (;;)
         {
             {
@@ -1115,8 +1039,7 @@ namespace Babylon::Polyfills::Internal
                 {
                     break;
                 }
-                // Yield briefly so a render thread that is between Finish/Start
-                // (unit-test pump) can enter Finish and service flushRequested.
+                // Let a render thread between Finish/Start service the flush request.
                 readback->Cv.wait_for(lock, std::chrono::milliseconds{1}, [&] { return readback->Done; });
             }
         }
@@ -1403,12 +1326,7 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // NativeEngine.createImageBitmap() returns a plain object carrying the raw decoded pixels
-        // ({data, width, height, format}) rather than a wrapped NativeCanvasImage. Because Babylon
-        // Native sets forceBitmapOverHTMLImageElement, LoadImage delivers these bitmaps to drawImage
-        // (e.g. Mesh.applyDisplacementMap, height/flow maps). Unwrapping such a plain object as a
-        // NativeCanvasImage would dereference garbage and crash, so handle it explicitly by
-        // converting the pixels to RGBA8 and drawing them directly.
+        // createImageBitmap returns a plain pixel object, not a NativeCanvasImage wrapper.
         if (isImageBitmap)
         {
             const uint32_t width = imageObj.Get("width").As<Napi::Number>().Uint32Value();
@@ -1427,9 +1345,7 @@ namespace Babylon::Polyfills::Internal
             }
             const auto data = dataValue.As<Napi::Uint8Array>();
             const auto format = static_cast<bimg::TextureFormat::Enum>(imageObj.Get("format").As<Napi::Number>().Uint32Value());
-            // Everything below is caller-supplied. bimg::imageConvert reads the source and writes
-            // width*height*4 bytes to the destination without knowing either buffer's real length,
-            // so validate both before handing it any pointers.
+            // bimg cannot validate the caller-owned source and destination buffer lengths.
             if (format >= bimg::TextureFormat::Count)
             {
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap has an out-of-range pixel format.");
@@ -1441,19 +1357,13 @@ namespace Babylon::Polyfills::Internal
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions are too large.");
             }
 
-            // imageGetSize takes uint16_t extents, so anything above 65535 would be truncated and
-            // produce a size for a much smaller image. A 65537x1 RGBA8 bitmap would come back as
-            // 1x1 (4 bytes), a 4-byte buffer would pass the check below, and the RGBA8 memcpy
-            // would then read width*height*4 bytes from it. Reject what bimg cannot describe.
+            // imageGetSize truncates extents to uint16_t.
             if (width > std::numeric_limits<uint16_t>::max() || height > std::numeric_limits<uint16_t>::max())
             {
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions exceed the maximum supported size.");
             }
 
-            // Ask bimg for the size rather than computing width*height*bpp/8: block-compressed
-            // formats round up to whole blocks and have a minimum block count, so a 1x1 BC1 image
-            // still occupies one 8-byte block. The naive bits-per-pixel math would accept a
-            // 1-byte buffer for it and imageConvert would then read past the end.
+            // Block-compressed formats require whole blocks, so use bimg's size calculation.
             const uint64_t requiredBytes = bimg::imageGetSize(nullptr, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, false, false, 1, format);
             if (requiredBytes == 0 || data.ByteLength() < requiredBytes)
             {
@@ -1810,30 +1720,14 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetLineDash(const Napi::CallbackInfo& info)
     {
-        // An empty (or absent) dash list means "solid", which is exactly what we
-        // already draw -- so accept it silently. Babylon GUI's Line and MultiLine
-        // controls call setLineDash(this._dash) unconditionally on every render,
-        // and _dash defaults to [], so throwing here aborted any scene containing
-        // a GUI line even though nothing was actually being asked for.
-        //
-        // A non-empty pattern we genuinely cannot honor: nanovg has no dashed
-        // stroke, and emulating one means splitting every path into segments.
-        // Draw solid and warn once rather than failing the whole scene, and keep
-        // the list so getLineDash() round-trips as the spec requires.
-        //
-        // Parsed into a temporary and committed only once every segment
-        // validates, because the spec keeps the previous list when the argument
-        // is rejected -- clearing m_state.lineDash up front would destroy it first.
+        // NanoVG cannot draw dashed strokes. Retain valid patterns for round-tripping,
+        // but draw solid and leave the previous list unchanged when validation fails.
         std::vector<double> parsed;
 
         if (info.Length() > 0)
         {
             if (!info[0].IsArray())
             {
-                // Present but not a list: the spec rejects the call, which leaves the
-                // previous list in place. Committing the empty temporary here would clear
-                // it instead, so setLineDash("x") would wipe a list that setLineDash([-1])
-                // correctly keeps.
                 return;
             }
 
@@ -1843,9 +1737,6 @@ namespace Babylon::Polyfills::Internal
                 const auto segment = segments.Get(index);
                 if (!segment.IsNumber())
                 {
-                    // Per spec, a list containing a non-finite or negative value
-                    // is ignored entirely and the previous list is retained; a
-                    // non-numeric entry cannot be interpreted, so ignore it too.
                     return;
                 }
 
@@ -1884,20 +1775,7 @@ namespace Babylon::Polyfills::Internal
 
     void Context::StrokeText(const Napi::CallbackInfo& info)
     {
-        std::string text = info[0].As<Napi::String>().Utf8Value();
-        auto x = info[1].As<Napi::Number>().FloatValue();
-        auto y = info[2].As<Napi::Number>().FloatValue();
-
-        // TODO: support ligatures, etc.
-        if (m_state.direction.compare("rtl") == 0) {
-            std::reverse(text.begin(), text.end());
-        }
-
-        if (SetFontFaceId())
-        {
-            BindStrokeStyle(info);
-            nvgStrokeText(*m_nvg, x, y, text.c_str(), nullptr);
-        }
+        DrawText(info, true);
     }
 
     Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo& info)
@@ -1929,7 +1807,6 @@ namespace Babylon::Polyfills::Internal
         float xform[6];
         nvgCurrentTransform(*m_nvg, xform);
 
-        // set DOMMatrix properties
         Napi::Object obj = Napi::Object::New(Env());
         obj.Set("a", xform[0]);
         obj.Set("b", xform[1]);
@@ -2024,7 +1901,6 @@ namespace Babylon::Polyfills::Internal
     void Context::SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         std::string filterString = value.As<Napi::String>().Utf8Value();
-        // Keep existing filter if the new one is invalid
         if (nanovg_filterstack::ValidString(filterString))
         {
             m_state.filter = filterString;
@@ -2039,8 +1915,7 @@ namespace Babylon::Polyfills::Internal
     void Context::SetDirection(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         std::string direction = value.As<Napi::String>().Utf8Value();
-        const bool valid = !(direction.compare("ltr") && direction.compare("rtl"));
-        if (valid)
+        if (direction == "ltr" || direction == "rtl")
         {
             m_state.direction = direction;
         }
@@ -2091,7 +1966,6 @@ namespace Babylon::Polyfills::Internal
     {
         const std::string letterSpacingOption = value.ToString();
 
-        // regex the letter spacing string
         static const std::regex letterSpacingRegex("(\\d+(\\.\\d+)?)px");
         std::smatch letterSpacingMatch;
         if (std::regex_match(letterSpacingOption, letterSpacingMatch, letterSpacingRegex))
@@ -2128,22 +2002,12 @@ namespace Babylon::Polyfills::Internal
         nvgGlobalAlpha(*m_nvg, m_state.globalAlpha);
     }
 
-    // nanovg has no shadow primitive, so the shadow attributes are stored and
-    // reported back but not rendered. Throwing was the wrong response: these are
-    // ordinary state attributes, and reading one, or writing the default, asks
-    // for nothing at all. Babylon GUI resets shadowBlur/shadowOffsetX/OffsetY to
-    // 0 after drawing a shadowed control, so the throw killed the scene on the
-    // *reset* path as well as the request path, and any control with a drop
-    // shadow aborted outright rather than drawing without one.
-    //
-    // Storing them keeps the spec-required round trip working and lets content
-    // that saves and restores canvas state continue to function; a shadow that
-    // is genuinely requested warns once instead of failing the scene.
+    // NanoVG has no shadow primitive. Store the attributes for spec-compliant
+    // round-tripping and warn once only when a shadow is actually requested.
     void Context::WarnShadowUnsupported()
     {
         if (m_state.shadowBlur == 0.0 && m_state.shadowOffsetX == 0.0 && m_state.shadowOffsetY == 0.0)
         {
-            // Nothing is being asked for: no offset and no blur draws no shadow.
             return;
         }
 

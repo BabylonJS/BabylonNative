@@ -13,13 +13,11 @@ namespace Babylon::Polyfills
             Graphics::FrameBuffer* frameBuffer;
             bool isAvailable;
         };
-        // acquire a frame buffer from the pool, graphics context must be set
         Graphics::FrameBuffer* Acquire();
         void Add(int nBuffers);
         void Clear();
         void Release(Graphics::FrameBuffer* frameBuffer);
         void SetDimensions(int width, int height);
-        // sets graphics context to be used for creating framebuffers
         void SetGraphicsContext(Graphics::DeviceContext *graphicsContext);
         const std::vector<PoolBuffer>& GetPoolBuffers();
 

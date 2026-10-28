@@ -21,7 +21,6 @@ enum Path2DCommandTypes
     P2D_TRANSFORM = 12,
 };
 
-struct Path2DClose {}; // TODO: don't bother if no args?
 struct Path2DMoveTo { float x; float y; };
 struct Path2DLineTo { float x; float y; }; 
 struct Path2DBezierTo { float cp1x; float cp1y; float cp2x; float cp2y; float x; float y; };
@@ -37,7 +36,6 @@ struct Path2DTransform { float a; float b; float c; float d; float e; float f; }
 
 union Path2DCommandArgs
 {
-    Path2DClose close;
     Path2DMoveTo moveTo;
     Path2DLineTo lineTo;
     Path2DBezierTo bezierTo;
@@ -64,9 +62,6 @@ namespace Babylon::Polyfills::Internal
     {
     public:
         static void Initialize(Napi::Env env);
-
-        // Validate the native brand before unwrapping.
-        static bool IsInstance(Napi::Env env, const Napi::Value& value);
 
         // Returns the wrapped path, or nullptr when `value` is not one of ours.
         static NativeCanvasPath2D* TryUnwrap(Napi::Env env, const Napi::Value& value);

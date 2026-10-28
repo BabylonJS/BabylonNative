@@ -27,8 +27,7 @@ namespace Babylon::Polyfills::Internal
         float textMetrics[3] = {0, 0, 0};
         nvgTextMetrics(context->GetNVGContext(), &textMetrics[0], &textMetrics[1], &textMetrics[2]);
 
-        // CSS TextMetrics distances are signed when all ink lies on the opposite side
-        // of the alignment baseline.
+        // TextMetrics distances remain signed across the alignment baseline.
         const float inkAscent = -bounds[1];
         const float inkDescent = bounds[3];
         // Keep the browser-compatible integral CSS line box used by Babylon GUI.
@@ -40,7 +39,6 @@ namespace Babylon::Polyfills::Internal
         auto obj{Napi::Object::New(env)};
         obj.Set("width", Napi::Value::From(env, advance));
         obj.Set("height", Napi::Value::From(env, bounds[3] - bounds[1]));
-        // actualBoundingBoxLeft is positive left of the alignment point.
         obj.Set("actualBoundingBoxLeft", Napi::Value::From(env, -bounds[0]));
         obj.Set("actualBoundingBoxRight", Napi::Value::From(env, bounds[2]));
         obj.Set("actualBoundingBoxAscent", Napi::Value::From(env, inkAscent));

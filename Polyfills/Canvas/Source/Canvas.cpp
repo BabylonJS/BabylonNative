@@ -14,7 +14,6 @@
 #include "Colors.h"
 #include "Gradient.h"
 #include "Font.h"
-#include "NativeInstanceRegistry.h"
 #include <basen.hpp>
 #include <bimg/encode.h>
 #include <bx/allocator.h>
@@ -102,7 +101,6 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::Remove(const Napi::CallbackInfo&)
     {
-        // called when removed from document which has no meaning for Native
     }
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
@@ -117,8 +115,7 @@ namespace Babylon::Polyfills::Internal
             throw Napi::TypeError::New(info.Env(), std::string{methodName} + " expects the font name as a string in argument 1.");
         }
 
-        // don't allow same font to be loaded more than once
-        // why? because Context doesn't update nvgCreateFontMem when old fontBuffer released
+        // NanoVG retains the original font buffer.
         auto fontName = info[0].As<Napi::String>().Utf8Value();
         if (fontsInfos.find(fontName) == fontsInfos.end())
         {
@@ -162,21 +159,7 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto width = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
-        if (!width)
-        {
-            return;
-        }
-
-        if (width == m_width)
-        {
-            m_clear = true;
-        }
-        else
-        {
-            m_width = width;
-            m_dirty = true;
-        }
+        SetDimension(m_width, value);
     }
 
     Napi::Value NativeCanvas::GetHeight(const Napi::CallbackInfo&)
@@ -186,32 +169,36 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto height = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
-        if (!height)
+        SetDimension(m_height, value);
+    }
+
+    void NativeCanvas::SetDimension(uint16_t& dimension, const Napi::Value& value)
+    {
+        const auto newDimension = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
+        if (!newDimension)
         {
             return;
         }
 
-        if (height == m_height)
+        if (newDimension == dimension)
         {
             m_clear = true;
         }
         else
         {
-            m_height = height;
+            dimension = newDimension;
             m_dirty = true;
         }
     }
 
     bool NativeCanvas::UpdateRenderTarget()
     {
-        // in some scenarios (eg. no size change on SetSize/SetHeight) we can re-use framebuffer
         bool needClear = m_clear;
         m_clear = false;
 
         if (m_dirty || !m_frameBuffer)
         {
-            // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
+            // WebGL requires new render targets to be initialized to zero.
             const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * 4);
             std::memset(mem->data, 0, mem->size);
 
@@ -219,9 +206,7 @@ namespace Babylon::Polyfills::Internal
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem),
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
 
-            // See NativeEngine::CreateFrameBuffer: bgfx validation now asserts when BGFX_ATTACHMENT_AUTO_GEN_MIPS is used
-            // with a texture whose format doesn't have BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN. Gate the color attachment
-            // on the capability and pass BGFX_ATTACHMENT_NONE for the depth attachment (depth formats never support autogen).
+            // Only request mip generation for formats that support it; depth never does.
             const bgfx::Caps* caps = bgfx::getCaps();
             const uint8_t colorResolve = 0 != (caps->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
                 ? BGFX_ATTACHMENT_AUTO_GEN_MIPS
@@ -233,8 +218,7 @@ namespace Babylon::Polyfills::Internal
             auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
             if (!bgfx::isValid(handle))
             {
-                // Free any textures we managed to allocate so they don't leak alongside the failed FB.
-                // Guard with isValid: a failed createTexture2D returns an invalid handle that bgfx::destroy would assert on.
+                // Failed texture creation returns an invalid handle that cannot be destroyed.
                 for (auto texture : textures)
                 {
                     if (bgfx::isValid(texture))
@@ -429,7 +413,6 @@ namespace Babylon::Polyfills::Internal
         {
             try
             {
-                // GPU readback after flush so NanoVG content (fillRect/text/paths) is included.
                 rgba = m_context->CaptureRGBA();
             }
             catch (const std::exception& ex)

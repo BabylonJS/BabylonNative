@@ -125,7 +125,6 @@ void screenSpaceQuad(bgfx::Encoder* encoder, bool _originBottomLeft, float _widt
         vertex[2].m_u = maxu;
         vertex[2].m_v = maxv;
 
-        //bgfx::setVertexBuffer(0, &vb);
         encoder->setVertexBuffer(0, &vb);
     }
 }
@@ -266,12 +265,8 @@ namespace
         PoolInterface frameBufferPool;
         bgfx::Encoder* encoder;
 
-        // When true, the next non-filtered draw call must acquire a fresh (higher)
-        // bgfx view on the canvas framebuffer so it is ordered after any pool-buffer
-        // views used by a preceding filtered draw. Consecutive non-filtered draws
-        // otherwise share a single view to avoid exhausting the bgfx view budget
-        // (a canvas painted with thousands of ops would otherwise leak thousands of
-        // views within a single device frame -> "Too many views").
+        // Refresh after filtered draws to preserve view order, but reuse consecutive
+        // unfiltered views to avoid exhausting the per-frame view budget.
         bool canvasViewNeedsRefresh;
         bool deferClip;
 
@@ -280,7 +275,6 @@ namespace
         int ntextures;
         int ctextures;
         int textureId;
-        int vertBuf;
         int fragSize;
         int edgeAntiAlias;
 
@@ -389,7 +383,7 @@ namespace
         gl->s_tex             = bgfx::createUniform("s_tex",             bgfx::UniformType::Sampler);
         gl->s_tex2            = bgfx::createUniform("s_tex2",            bgfx::UniformType::Sampler);
         gl->s_clip            = bgfx::createUniform("s_clip",            bgfx::UniformType::Sampler);
-        nanovg_filterstack::InitBgfx(); // initialize filter stack uniforms + programs
+        nanovg_filterstack::InitBgfx();
 
         gl->u_halfTexel.idx = bgfx::kInvalidHandle;
 
@@ -620,7 +614,7 @@ namespace
             // tex2 is optional
             if (paint->image2 != 0)
             {
-                tex2 = glnvg__findTexture(gl, paint->image2); // TODO get paint image
+                tex2 = glnvg__findTexture(gl, paint->image2);
                 if (tex)
                 {
                     gl->th2 = tex2->id;
@@ -753,12 +747,7 @@ namespace
         encoder->setIndexBuffer(&tib);
     }
 
-    // Gates acquisition of a fresh bgfx view for a canvas draw call. A filtered draw
-    // (blur/etc.) uses intermediate pool framebuffers on higher-id views, so the next
-    // canvas draw must be re-bound to a fresh (higher) view to preserve draw order.
-    // Consecutive non-filtered draws instead share the canvas framebuffer's current
-    // view, preventing view-budget exhaustion ("Too many views") when a DynamicTexture
-    // is painted with thousands of ops in a single device frame.
+    // Filter passes use higher view IDs, so the next canvas draw must bind a fresh view.
     static Babylon::Graphics::FrameBuffer* glnvg__beginFinalFrameBuffer(struct GLNVGcontext* gl, struct GLNVGcall* call)
     {
         Babylon::Graphics::FrameBuffer* finalFrameBuffer = gl->frameBuffer;
@@ -1123,7 +1112,6 @@ namespace
     static void nvgRenderFlush(void* _userPtr)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
-        //gl->frameBuffer->SetViewPort(gl->encoder, 0.f, 0.f, gl->view[0], gl->view[1]);
         // The canvas framebuffer is bound with a fresh view by Context::Flush before this
         // flush runs, so the first draw call can reuse that view without re-binding.
         gl->canvasViewNeedsRefresh = false;
@@ -1142,20 +1130,8 @@ namespace
 
         if (gl->ncalls > 0)
         {
-            // bgfx asserts inside allocTransientVertexBuffer when the request exceeds what
-            // remains of this frame's transient buffer, so the request must be checked
-            // *before* the call - inspecting gl->tvb afterwards (as this code used to) is
-            // unreachable in an assert-enabled build. A canvas painted with a very large
-            // number of ops, or several canvases sharing one frame, can legitimately exceed
-            // the budget.
-            //
-            // The draw calls below index the buffer using offsets recorded while the geometry
-            // was built, so a partial allocation cannot be rendered: every draw past the
-            // truncation point would read outside the buffer. That is not merely wrong
-            // visually - it makes the D3D11 debug layer emit an oversized diagnostic per draw
-            // call, which is slow enough to stall a validation run for the better part of an
-            // hour. Drop the whole flush instead, so the frame is simply missing this canvas
-            // content rather than issuing out-of-bounds draws or aborting the process.
+            // bgfx asserts on oversized transient allocations, and partial geometry cannot
+            // be rendered safely because draw offsets address the complete buffer.
             const uint32_t availVerts = bgfx::getAvailTransientVertexBuffer(uint32_t(gl->nverts), s_nvgLayout);
             const bool vertsFit = availVerts >= uint32_t(gl->nverts);
             BX_WARN(vertsFit, "Canvas draw skipped: transient vertex buffer exhausted (%d requested, %u available)", gl->nverts, availVerts);

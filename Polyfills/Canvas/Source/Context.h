@@ -33,16 +33,13 @@ namespace Babylon::Polyfills::Internal
 
         NVGcontext* GetNVGContext() const { return *m_nvg.get(); }
 
-        // Flushes and reads the rendered region into dst (w*h*4 straight-alpha RGBA8 bytes).
-        // Pixels outside the canvas are transparent black.
+        // Reads straight-alpha RGBA8; pixels outside the canvas are transparent black.
         void ReadPixels(int64_t sx, int64_t sy, uint32_t w, uint32_t h, uint8_t* dst);
 
-        // Flush pending NanoVG draws to the canvas framebuffer, then read the full
-        // RGBA8 contents back from the GPU. Shared by all Canvas pixel-readback APIs.
+        // Flushes pending draws and reads the full framebuffer as RGBA8.
         std::vector<uint8_t> CaptureRGBA();
 
-        // Called by NativeCanvas when the canvas wrapper is destroyed so this context
-        // does not keep a dangling m_canvas pointer across JS finalizer ordering.
+        // Breaks the reverse pointer when Canvas is finalized first.
         void DetachCanvas();
 
     private:
@@ -115,43 +112,27 @@ namespace Babylon::Polyfills::Internal
         bool SetFontFaceId();
         void EnsureFontsLoaded();
         void Flush(const Napi::CallbackInfo&);
-        // Shared body of Flush() for C++ callers (CaptureRGBA). Throws std::exception on failure.
         void FlushCore();
         void RetainImageUntilFlush(int imageIndex);
         void ReleaseImagesAfterFlush();
+        void DrawText(const Napi::CallbackInfo&, bool stroke);
 
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 
-        // A gradient style holds the assigned JavaScript object, not a bare CanvasGradient*.
-        // CanvasGradient is an ObjectWrap, so its native instance is deleted by the wrapper's
-        // finalizer; `ctx.fillStyle = ctx.createLinearGradient(...)` leaves no other reference,
-        // and the pointer dangles as soon as the collector runs. shared_ptr rather than a bare
-        // Napi::ObjectReference because State is copied on save()/restore() and a reference is
-        // move-only -- the copies share one strong reference to the same object.
+        // Keep the JavaScript gradient alive; State copies share this move-only reference.
         using GradientStyle = std::shared_ptr<Napi::ObjectReference>;
+        using Style = std::variant<std::string, GradientStyle>;
 
-        // The wrapper-side drawing state: every attribute save()/restore() has to rewind.
-        // These are kept together, and pushed/popped as a whole, so that adding an attribute
-        // cannot silently miss save()/restore() the way a hand-written field list allows.
-        //
-        // They exist because nvgSave/nvgRestore rewinds nanovg's own copy of the attributes it
-        // knows about but never these C++ mirrors, so without rewinding them a getter keeps
-        // reporting its post-save() value after restore(). The shadow/dash/filter/direction
-        // fields have no nanovg counterpart at all, so nothing else would ever rewind them.
-        //
-        // The current path is deliberately not here: per the spec save() does not save it, so
-        // the path-tracking members below stay outside the stack.
+        // NanoVG does not rewind these C++ mirrors. Keep them together for save/restore;
+        // the current path remains separate because Canvas state does not include it.
         struct ClipMask;
         struct State
         {
             std::shared_ptr<ClipMask> clipMask;
-            std::variant<std::string, GradientStyle> fillStyle{};
-            std::variant<std::string, GradientStyle> strokeStyle{};
-            // These four mirror state nanovg also holds. Their initial values must match what
-            // nvgReset actually installs (NVG_BUTT, NVG_MITER, strokeWidth 1, miterLimit 10),
-            // which is also what the spec requires, or a fresh context reports a default it is
-            // not drawing with.
+            Style fillStyle{};
+            Style strokeStyle{};
+            // Defaults must match both NanoVG's reset state and Canvas2D.
             std::string lineCap{"butt"};   // 'butt', 'round', 'square'
             std::string lineJoin{"miter"}; // 'round', 'bevel', 'miter'
 
@@ -173,17 +154,14 @@ namespace Babylon::Polyfills::Internal
             float globalAlpha{1.f};
             float letterSpacing{0.f};
 
-            // font is worse than the getter-only cases above: currentFontId is what the text
-            // draw path binds, so without rewinding it the wrong face actually renders after a
-            // restore(). nvgRestore rewinds the size it set, but not either of these.
+            // NanoVG restores font size, but not these wrapper-side font values.
             Font font{};
             int currentFontId{-1};
         };
         State m_state{};
         std::vector<State> m_savedStates;
 
-        // Registry of font faces loaded into nanovg, keyed by family. Not part of State:
-        // it is a resource cache for the whole context, not an attribute save() rewinds.
+        // Context-wide resource cache; save/restore does not rewind loaded fonts.
         std::map<std::string, int> m_fonts;
 
         Graphics::DeviceContext& m_graphicsContext;
@@ -211,6 +189,9 @@ namespace Babylon::Polyfills::Internal
         // Transient ImageData/canvas snapshots stay alive until nvgEndFrame has
         // consumed every queued draw that references them.
         std::vector<int> m_imagesPendingFlush;
+        Napi::Value GetStyle(const Style& style);
+        void SetStyle(const Napi::CallbackInfo& info, const Napi::Value& value, Style& style, bool stroke);
+        void BindStyle(const Napi::CallbackInfo& info, const Style& style, bool stroke);
         void BindFillStyle(const Napi::CallbackInfo& info);
         void BindStrokeStyle(const Napi::CallbackInfo& info);
         void FlushGraphicResources() override;

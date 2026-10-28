@@ -109,7 +109,7 @@ namespace Babylon::Polyfills::Internal
         auto end = fontString.cend();
         std::smatch match;
 
-        // The style and weight can be in any order
+        // Style and weight may appear in either order.
         bool foundStyle = false;
         bool foundWeight = false;
         while (!foundStyle || !foundWeight)
@@ -133,18 +133,7 @@ namespace Babylon::Polyfills::Internal
                 }
                 else if (match[1] != "normal")
                 {
-                    // WEIGHT_REGEX also accepts the "normal" keyword, which is
-                    // simply the default weight. Passing it to std::stoi throws
-                    // std::invalid_argument, and because that is not a
-                    // Napi::Error it escapes the N-API callback and terminates
-                    // the process instead of surfacing as a JS exception.
-                    // Babylon GUI composes exactly this string
-                    // ("normal normal 18px Arial") from its default font style
-                    // and weight.
-                    //
-                    // std::stoi throws std::out_of_range just as fatally for a digit run too
-                    // long for an int, and WEIGHT_REGEX bounds neither the length nor the
-                    // magnitude, so parse without exceptions and clamp to the CSS 1-1000 range.
+                    // Parse without exceptions and clamp to the CSS 1-1000 range.
                     const std::string weightText{match[1].str()};
                     font.m_weight = static_cast<int>(std::clamp(std::strtol(weightText.c_str(), nullptr, 10), 1L, 1000L));
                 }
@@ -160,9 +149,7 @@ namespace Babylon::Polyfills::Internal
             return std::nullopt;
         }
         begin = match[0].second;
-        // SIZE_REGEX accepts an exponent, so "18e999px" parses as a valid size that std::stof
-        // would reject with a fatal std::out_of_range. strtof saturates to infinity instead;
-        // reject a non-finite size outright rather than handing it to nanovg.
+        // strtof avoids exceptions for oversized exponents.
         const std::string sizeText{match[1].str()};
         const float size = std::strtof(sizeText.c_str(), nullptr);
         if (!std::isfinite(size))

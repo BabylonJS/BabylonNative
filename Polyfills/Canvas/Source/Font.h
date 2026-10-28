@@ -9,14 +9,7 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    // Extracts the font file bytes from the second argument of Canvas.loadTTF / loadTTFAsync.
-    //
-    // Accepts an ArrayBuffer or any ArrayBuffer view (typed array / DataView), matching what
-    // callers actually have on hand. Anything else throws a Napi::TypeError naming the method,
-    // the argument and what was received, instead of the bare "Invalid argument" that an
-    // unchecked As<Napi::ArrayBuffer>() cast produces -- that message gives no clue which call
-    // failed or why, and in practice it is almost always a caller that fetched the font as text
-    // rather than binary.
+    // Accepts an ArrayBuffer or any ArrayBuffer view and reports descriptive type errors.
     std::vector<uint8_t> GetFontDataArgument(const Napi::CallbackInfo& info, size_t index, const char* methodName);
 
     enum class FontStyle
