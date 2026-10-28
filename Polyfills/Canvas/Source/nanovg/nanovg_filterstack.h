@@ -51,10 +51,12 @@ protected:
         float vertical;
     };
     int stackElementCount{0};
-    static const int MAX_STACK_SIZE = 32;
+    static constexpr int MAX_STACK_SIZE = 32;
     Blur stackElements[MAX_STACK_SIZE]{};
 
 private:
+    static constexpr size_t BOX_KERNEL_COMPONENT_COUNT = 2;
+
     std::vector<float> CalculateGaussianKernel(float sigma, int kernelSize);
-    std::array<float, 2> CalculateBoxKernel(float sigma);
+    std::array<float, BOX_KERNEL_COMPONENT_COUNT> CalculateBoxKernel(float sigma);
 };

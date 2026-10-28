@@ -18,13 +18,19 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    namespace
+    {
+        constexpr size_t TEXT_BOUNDS_COMPONENT_COUNT = 4;
+        constexpr size_t TEXT_METRICS_COMPONENT_COUNT = 3;
+    }
+
     Napi::Value MeasureText::CreateInstance(Napi::Env env, Context* context, const std::string& text)
     {
         // Ink extents (not the full line box): nvgTextBounds replaces ymin/ymax with
         // fonsLineBounds, which would make height/actualBoundingBox* the em line box.
-        float bounds[4] = {0, 0, 0, 0};
+        float bounds[TEXT_BOUNDS_COMPONENT_COUNT]{};
         const float advance = nvgTextBoundsInk(context->GetNVGContext(), 0, 0, text.c_str(), nullptr, bounds);
-        float textMetrics[3] = {0, 0, 0};
+        float textMetrics[TEXT_METRICS_COMPONENT_COUNT]{};
         nvgTextMetrics(context->GetNVGContext(), &textMetrics[0], &textMetrics[1], &textMetrics[2]);
 
         // TextMetrics distances remain signed across the alignment baseline.

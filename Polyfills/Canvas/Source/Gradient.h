@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
+#include "CanvasConstants.h"
 #include <map>
 #include "nanovg/nanovg.h"
 
@@ -8,6 +9,12 @@ struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
+    namespace GradientConstants
+    {
+        constexpr float MIN_IMAGE_EXTENT = 1e-4f;
+        constexpr float QUADRATIC_RELATIVE_EPSILON = 1e-6f;
+    }
+
     class CanvasGradient final : public Napi::ObjectWrap<CanvasGradient>
     {
     public:
@@ -34,10 +41,10 @@ namespace Babylon::Polyfills::Internal
     protected:
         float x0, y0, x1, y1;
         float r0, r1;
-        float imageX{}, imageY{}, imageW{1e-4f}, imageH{1e-4f};
+        float imageX{}, imageY{}, imageW{GradientConstants::MIN_IMAGE_EXTENT}, imageH{GradientConstants::MIN_IMAGE_EXTENT};
         // Equal-offset stops express hard transitions and retain insertion order.
         std::multimap<float, NVGcolor> colors;
-        int cachedImage{-1};
+        int cachedImage{CanvasConstants::INVALID_NANOVG_IMAGE};
         std::weak_ptr< NVGcontext*> context;
         bool dirty{};
         enum class GradientType

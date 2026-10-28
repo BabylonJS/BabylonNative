@@ -4,6 +4,7 @@
 #include <limits>
 #include <exception>
 #include "Canvas.h"
+#include "CanvasConstants.h"
 #include "Context.h"
 #include "ImageData.h"
 
@@ -54,7 +55,7 @@ namespace Babylon::Polyfills::Internal
         // Context::GetImageData already rejects regions this large, but keep the invariant local
         // so the size_t multiplication below can never wrap (size_t is 32-bit on 32-bit ABIs).
         const uint64_t pixelCount{static_cast<uint64_t>(m_width) * m_height};
-        if (pixelCount > std::numeric_limits<size_t>::max() / 4)
+        if (pixelCount > std::numeric_limits<size_t>::max() / CanvasConstants::RGBA_CHANNEL_COUNT)
         {
             throw Napi::RangeError::New(info.Env(), "ImageData: requested region is too large.");
         }
@@ -63,7 +64,7 @@ namespace Babylon::Polyfills::Internal
         // to 0..255, whereas a plain Uint8Array wraps them modulo 256, so
         // saturating arithmetic in JS (`data[i] = value + 40`) silently produces
         // a dark pixel instead of a bright one.
-        const auto byteLength{static_cast<size_t>(pixelCount) * 4};
+        const auto byteLength{static_cast<size_t>(pixelCount) * CanvasConstants::RGBA_CHANNEL_COUNT};
         auto data{Napi::Uint8Array::New(info.Env(), byteLength, napi_uint8_clamped_array)};
         if (context != nullptr && byteLength > 0)
         {

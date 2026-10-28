@@ -5,6 +5,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include "Path2D.h"
 #include "Font.h"
+#include "CanvasConstants.h"
 #include "nanovg/nanovg_filterstack.h"
 #include <variant>
 #include <vector>
@@ -129,6 +130,8 @@ namespace Babylon::Polyfills::Internal
         struct ClipMask;
         struct State
         {
+            static constexpr float DEFAULT_MITER_LIMIT = 10.f;
+
             std::shared_ptr<ClipMask> clipMask;
             Style fillStyle{};
             Style strokeStyle{};
@@ -149,14 +152,14 @@ namespace Babylon::Polyfills::Internal
             double shadowOffsetY{0.0};
             std::string filter{};
             std::string direction{"ltr"}; // 'ltr', 'rtl'
-            float miterLimit{10.f};
+            float miterLimit{DEFAULT_MITER_LIMIT};
             float lineWidth{1.f};
             float globalAlpha{1.f};
             float letterSpacing{0.f};
 
             // NanoVG restores font size, but not these wrapper-side font values.
             Font font{};
-            int currentFontId{-1};
+            int currentFontId{CanvasConstants::INVALID_NANOVG_FONT};
         };
         State m_state{};
         std::vector<State> m_savedStates;
@@ -182,7 +185,7 @@ namespace Babylon::Polyfills::Internal
 
         struct CachedNVGImage
         {
-            int index{-1};
+            int index{CanvasConstants::INVALID_NANOVG_IMAGE};
             uint32_t generation{0};
         };
         std::unordered_map<const NativeCanvasImage*, CachedNVGImage> m_nvgImageIndices;

@@ -30,10 +30,11 @@ namespace Babylon::Polyfills::Internal
     private:
         static constexpr const int NORMAL_WEIGHT = 400;
         static constexpr const int BOLD_WEIGHT = 700;
+        static constexpr float DEFAULT_SIZE_PX = 10.f;
 
         FontStyle m_style{FontStyle::Normal};
         int m_weight{NORMAL_WEIGHT};
-        float m_size{10};
+        float m_size{DEFAULT_SIZE_PX};
         std::string m_family{"sans-serif"};
     };
 }

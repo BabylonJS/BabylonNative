@@ -9,6 +9,10 @@
 
 namespace
 {
+    constexpr long MIN_CSS_FONT_WEIGHT = 1;
+    constexpr long MAX_CSS_FONT_WEIGHT = 1000;
+    constexpr int DECIMAL_RADIX = 10;
+
     auto STYLE_REGEX = std::regex(R"(^\s*(normal|italic)\s)");
     auto WEIGHT_REGEX = std::regex(R"(^\s*(normal|bold|\d+)\s)");
     auto SIZE_REGEX = std::regex(R"(^\s*((?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)px\s)");
@@ -135,7 +139,10 @@ namespace Babylon::Polyfills::Internal
                 {
                     // Parse without exceptions and clamp to the CSS 1-1000 range.
                     const std::string weightText{match[1].str()};
-                    font.m_weight = static_cast<int>(std::clamp(std::strtol(weightText.c_str(), nullptr, 10), 1L, 1000L));
+                    font.m_weight = static_cast<int>(std::clamp(
+                        std::strtol(weightText.c_str(), nullptr, DECIMAL_RADIX),
+                        MIN_CSS_FONT_WEIGHT,
+                        MAX_CSS_FONT_WEIGHT));
                 }
             }
             else

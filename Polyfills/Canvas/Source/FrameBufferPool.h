@@ -22,10 +22,12 @@ namespace Babylon::Polyfills
         const std::vector<PoolBuffer>& GetPoolBuffers();
 
     private:
+        static constexpr int DEFAULT_DIMENSION = 256;
+
         std::vector<PoolBuffer> mPoolBuffers{};
         Graphics::DeviceContext* m_graphicsContext;
         int m_available{0};
-        int m_width{256};
-        int m_height{256};
+        int m_width{DEFAULT_DIMENSION};
+        int m_height{DEFAULT_DIMENSION};
     };
 }

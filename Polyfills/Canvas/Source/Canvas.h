@@ -7,6 +7,7 @@
 #include <Babylon/Graphics/Texture.h>
 
 #include "FrameBufferPool.h"
+#include "CanvasConstants.h"
 #include <array>
 
 namespace Babylon::Polyfills
@@ -106,6 +107,14 @@ namespace Babylon::Polyfills::Internal
         }
 
     private:
+        enum class ConvertedTextureKind : size_t
+        {
+            NoMipMaps,
+            StraightAlphaMipMaps,
+            PremultipliedAlphaMipMaps,
+            Count,
+        };
+
         Napi::Value GetContext(const Napi::CallbackInfo&);
         Napi::Value GetWidth(const Napi::CallbackInfo&);
         void SetWidth(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -137,7 +146,7 @@ namespace Babylon::Polyfills::Internal
             std::unique_ptr<Graphics::FrameBuffer> FrameBuffer{};
             std::unique_ptr<Graphics::Texture> Texture{};
         };
-        std::array<ConvertedTexture, 3> m_convertedTextures{};
+        std::array<ConvertedTexture, static_cast<size_t>(ConvertedTextureKind::Count)> m_convertedTextures{};
         bgfx::ProgramHandle m_unpremultiplyProgram{BGFX_INVALID_HANDLE};
         bgfx::UniformHandle m_copySampler{BGFX_INVALID_HANDLE};
         bgfx::UniformHandle m_copyParams{BGFX_INVALID_HANDLE};
