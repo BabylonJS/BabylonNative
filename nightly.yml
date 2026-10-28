@@ -175,6 +175,9 @@ jobs:
   steps:
   - checkout: self
 
+  - pwsh: ./.github/scripts/free-hermes-disk-space.ps1
+    displayName: Free disk space for Hermes
+
   # ccache through MSBuild, as in .github/workflows/build-win32.yml: a copy of ccache.exe named
   # cl.exe (CLToolPath), one source per cl.exe call (UseMultiToolTask), /Z7 debug info, no PCH.
   - powershell: |
@@ -287,6 +290,9 @@ jobs:
   steps:
   - checkout: self
 
+  - pwsh: ./.github/scripts/free-hermes-disk-space.ps1
+    displayName: Free disk space for Hermes
+
   - script: |
       set -e
       sudo apt-get update
@@ -360,6 +366,9 @@ jobs:
     NDK_VERSION: '28.2.13676358'
   steps:
   - checkout: self
+
+  - pwsh: ./.github/scripts/free-hermes-disk-space.ps1
+    displayName: Free disk space for Hermes
 
   - script: |
       set -e
@@ -443,6 +452,8 @@ jobs:
     - checkout: self
 
     - ${{ if eq(engine, 'Hermes') }}:
+      - pwsh: ./.github/scripts/free-hermes-disk-space.ps1
+        displayName: Free disk space for Hermes
       - script: command -v ninja >/dev/null 2>&1 || brew install ninja
         displayName: 'Install Ninja (Hermes host-compiler bootstrap)'
 

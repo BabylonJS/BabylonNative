@@ -17,6 +17,12 @@ and precompiled headers are disabled, because ccache can't cache `/Zi` or PCH co
 The Hermes and Android jobs in `nightly.yml` also use ccache, kept with the Azure
 `Cache@2` task and restored from the job's previous run.
 
+Hermes jobs free disk space before building by removing unused hosted-runner
+toolchains through `.github/scripts/free-hermes-disk-space.ps1`. This applies to
+the nightly jobs and reusable GitHub workflows, including macOS-hosted Android
+when Hermes is selected. Native compilers, required Android tools, and build
+caches are preserved; other JavaScript engine jobs are unchanged.
+
 Hermes builds (Win32 x64 D3D11, Linux Clang, and Android on Ubuntu) and the
 macOS-hosted Android builds run only in the Azure Pipelines `nightly.yml`
 pipeline, scheduled at 23:00 UTC Monday through Friday, or when that pipeline is
