@@ -302,6 +302,7 @@ namespace Babylon::Graphics
             init.swapChain.width = 0;
             init.swapChain.height = 0;
             init.swapChain.depth = BGFX_INVALID_HANDLE;
+            init.swapChain.flags &= ~BGFX_SWAP_CHAIN_MSAA_MASK;
             if (!bgfx::init(init))
             {
                 throw std::runtime_error{"Failed to initialize bgfx."};
