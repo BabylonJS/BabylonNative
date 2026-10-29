@@ -1910,18 +1910,14 @@
         },
         {
             "title": "Instances + motion blur",
-            "playgroundId": "#YB006J#547",
+            "playgroundId": "#YB006J#800",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "instances-mb.png"
         },
         {
             "title": "Instances + GBR + motion blur",
-            "playgroundId": "#YB006J#549",
+            "playgroundId": "#YB006J#801",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "instances-gbr-mb.png"
         },
         {
