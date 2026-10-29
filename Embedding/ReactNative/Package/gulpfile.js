@@ -74,8 +74,8 @@ const buildAndroid = async () => {
 };
 
 const copyCommonFiles = () => {
+  fs.rmSync('Assembled/LICENSE', { force: true });
   return gulp.src('../Modules/@babylonjs/react-native/README.md')
-    .pipe(gulp.src('../LICENSE'))
     .pipe(gulp.src('../../../LICENSE.md'))
     .pipe(gulp.src('../../../NOTICE.md'))
     .pipe(gulp.src(`../Modules/@babylonjs/react-native/react-native-babylon.podspec`))
@@ -172,7 +172,6 @@ const validateAssembled = async () => {
     'Assembled/ReactNativeEngine.js.map',
     'Assembled/README.md',
     'Assembled/LICENSE.md',
-    'Assembled/LICENSE',
     'Assembled/NOTICE.md',
     'Assembled/shared',
     'Assembled/shared/BabylonNative.h',

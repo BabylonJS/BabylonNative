@@ -238,3 +238,9 @@ The Android specific `androidView` property can help set the type of the view us
 
 More information on TextureView vs SurfaceView performance here:
 https://developer.android.com/reference/android/view/TextureView
+
+## License
+
+Copyright (c) 2020 Babylon.js
+
+Licensed under the MIT License. The license text is included in `LICENSE.md` in the published package and at the Babylon Native repository root.
