@@ -85,6 +85,10 @@ namespace Babylon
         // queue explicitly (Napi::DrainJobs / JS_ExecutePendingJob).
         void DrainMicrotasks(Napi::Env env);
 
+        // Engine-specific maintenance that should run once after a complete
+        // dispatcher turn, rather than after each callback in that turn.
+        void DrainPostDispatchWork(Napi::Env env);
+
         Internal::DelayedTaskScheduler& GetDelayedTaskScheduler();
 
         Options m_options;

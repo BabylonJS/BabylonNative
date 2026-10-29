@@ -126,4 +126,11 @@ namespace Babylon
     {
         // V8 auto-drains microtasks. Foreground tasks run on AppRuntime's dispatcher.
     }
+
+    void AppRuntime::DrainPostDispatchWork(Napi::Env env)
+    {
+        // N-API finalizers deferred by a V8 garbage collection require a safe
+        // host boundary, but should not monopolize a dispatcher turn.
+        Napi::DrainFinalizers(env);
+    }
 }
