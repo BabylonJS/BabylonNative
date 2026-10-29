@@ -3269,8 +3269,6 @@
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Analytic Lights",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#GRQHVV#112",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Analytic-Lights.png"
         },
