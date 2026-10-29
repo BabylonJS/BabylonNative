@@ -56,6 +56,7 @@
         {
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
+            "errorRatio": 3,
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
             "renderCount": 10,
             "workarounds": ["wait-for-readiness"]
@@ -303,7 +304,7 @@
         {
             "title": "Multi camera rendering with scissors",
             "playgroundId": "#1LK70I#35",
-            "errorRatio": 35,
+            "errorRatio": 3,
             "referenceImage": "multiCameraRenderingWithScissors.png"
         },
         {
@@ -448,8 +449,7 @@
             "title": "GLTF Material Specular Glossiness (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_SpecularGlossiness, __page__, 1, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfMaterialSpecularGlossiness1.png",
-            "errorRatio": 5.0
+            "referenceImage": "gltfMaterialSpecularGlossiness1.png"
         },
         {
             "excludedGraphicsApis": ["WebGPU"],
@@ -457,8 +457,7 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode0.png",
-            "errorRatio": 8.0,
-            "reason": "upstream Babylon.js gap, not Dawn: the Mesh_PrimitiveMode asset uses glTF LINE_LOOP/TRIANGLE_FAN, which WebGPU has no topology for, so WebGPUCacheRenderPipeline._GetTopology throws (see the TODO WEBGPU Line Loop Mode Fallback in webgpuCacheRenderPipeline.ts). Affects browser WebGPU identically. Emulating the topologies makes both tests pass on Dawn (2.740% and 2.667% against the 8% errorRatio), so the fix belongs in the Babylon.js loader/mesh layer as an index rewrite (LINE_LOOP to line-strip with the first index repeated, TRIANGLE_FAN to triangle-list)"
+            "reason": "upstream Babylon.js gap, not Dawn: the Mesh_PrimitiveMode asset uses glTF LINE_LOOP/TRIANGLE_FAN, which WebGPU has no topology for, so WebGPUCacheRenderPipeline._GetTopology throws (see the TODO WEBGPU Line Loop Mode Fallback in webgpuCacheRenderPipeline.ts). Affects browser WebGPU identically. Emulating the topologies makes both tests pass on Dawn (2.740% and 2.667% pixel difference), so the fix belongs in the Babylon.js loader/mesh layer as an index rewrite (LINE_LOOP to line-strip with the first index repeated, TRIANGLE_FAN to triangle-list)"
         },
         {
             "excludedGraphicsApis": ["WebGPU"],
@@ -466,8 +465,7 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode1.png",
-            "errorRatio": 8.0,
-            "reason": "upstream Babylon.js gap, not Dawn: the Mesh_PrimitiveMode asset uses glTF LINE_LOOP/TRIANGLE_FAN, which WebGPU has no topology for, so WebGPUCacheRenderPipeline._GetTopology throws (see the TODO WEBGPU Line Loop Mode Fallback in webgpuCacheRenderPipeline.ts). Affects browser WebGPU identically. Emulating the topologies makes both tests pass on Dawn (2.740% and 2.667% against the 8% errorRatio), so the fix belongs in the Babylon.js loader/mesh layer as an index rewrite (LINE_LOOP to line-strip with the first index repeated, TRIANGLE_FAN to triangle-list)"
+            "reason": "upstream Babylon.js gap, not Dawn: the Mesh_PrimitiveMode asset uses glTF LINE_LOOP/TRIANGLE_FAN, which WebGPU has no topology for, so WebGPUCacheRenderPipeline._GetTopology throws (see the TODO WEBGPU Line Loop Mode Fallback in webgpuCacheRenderPipeline.ts). Affects browser WebGPU identically. Emulating the topologies makes both tests pass on Dawn (2.740% and 2.667% pixel difference), so the fix belongs in the Babylon.js loader/mesh layer as an index rewrite (LINE_LOOP to line-strip with the first index repeated, TRIANGLE_FAN to triangle-list)"
         },
         {
             "title": "GLTF Mesh Primitives",
@@ -627,12 +625,14 @@
         {
             "title": "SOGS with SH",
             "playgroundId": "#QA2662#13",
+            "errorRatio": 5,
             "renderCount": 15,
             "referenceImage": "gsplat-sogs-sh.png"
         },
         {
             "title": "Gaussian Splatting Part Test",
             "playgroundId": "#BTS11N#0",
+            "errorRatio": 5,
             "renderCount": 15,
             "referenceImage": "gsplat-part-test.png"
         },
@@ -839,8 +839,7 @@
         {
             "title": "GUI Input Text Area with Placeholder",
             "playgroundId": "#NVAEWD#364",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "errorRatio": 4,
             "referenceImage": "gui-inputtextarea-withplaceholder.png"
         },
         {
@@ -928,6 +927,7 @@
         {
             "title": "Node material 1",
             "playgroundId": "#QJ71C6#5",
+            "errorRatio": 4,
             "referenceImage": "node-material1.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
             "reason": "GUI text labels render with red text on red background instead of green (BN GUI color regression affecting many GUI tests); Dawn/WebGPU renders it correctly, so WebGPU keeps the coverage"
@@ -978,8 +978,7 @@
         {
             "title": "LOD + Billboards + Instances",
             "playgroundId": "#UAIZCS#0",
-            "referenceImage": "lodbillboardinstances.png",
-            "errorRatio": 5
+            "referenceImage": "lodbillboardinstances.png"
         },
         {
             "title": "Nested BBG",
@@ -1084,6 +1083,7 @@
         {
             "title": "Yeti",
             "playgroundId": "#8ZNZFY#0",
+            "errorRatio": 3,
             "renderCount": 150,
             "referenceImage": "yeti.png"
         },
@@ -1142,17 +1142,15 @@
         {
             "title": "Advanced shadows",
             "playgroundId": "#SLV8LW#3",
+            "errorRatio": 5,
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows.png"
         },
         {
             "title": "Advanced shadows (right handed)",
             "playgroundId": "#B48X7G#64",
+            "errorRatio": 5,
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows2.png"
         },
         {
@@ -1346,7 +1344,6 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
-            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1354,7 +1351,6 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
-            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1362,7 +1358,6 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
-            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1370,7 +1365,6 @@
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
             "workarounds": ["refresh-export-matrices"],
-            "errorRatio": 3.5,
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1429,6 +1423,7 @@
         {
             "title": "Enable disable post process",
             "playgroundId": "#1VI6WV#19",
+            "errorRatio": 3,
             "renderCount": 50,
             "referenceImage": "enableDisablePostProcess.png",
             "workarounds": ["opaque-clear-alpha"]
@@ -1725,6 +1720,7 @@
         {
             "title": "Prepass SSAO + depth of field",
             "playgroundId": "#8F5HYV#72",
+            "errorRatio": 3.5,
             "renderCount": 10,
             "workarounds": ["opaque-clear-alpha"],
             "referenceImage": "prepass-ssao-dof.png"
@@ -1804,6 +1800,7 @@
         {
             "title": "Prepass SSAO + LOD",
             "playgroundId": "#FFMFW5#29",
+            "errorRatio": 6,
             "renderCount": 10,
             "referenceImage": "prepass-ssao-lod.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -1845,6 +1842,7 @@
         {
             "title": "Prepass SSAO + thin instances",
             "playgroundId": "#V1JE4Z#25",
+            "errorRatio": 3,
             "renderCount": 10,
             "referenceImage": "prepass-ssao-thin-instances.png",
             "excludedGraphicsApis": ["OpenGL"],
@@ -2069,6 +2067,7 @@
         {
             "title": "GUI Input Test",
             "playgroundId": "#UB4F3B#8",
+            "errorRatio": 4,
             "renderCount": 2,
             "referenceImage": "guiInputTest.png",
             "workarounds": ["global-self"]
@@ -2096,11 +2095,13 @@
         {
             "title": "Load GUI snippet with unicode",
             "playgroundId": "#YS93KY#1",
+            "errorRatio": 4,
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
             "title": "Parse GUI json with unicode",
             "playgroundId": "#ERVGT5#1",
+            "errorRatio": 4,
             "referenceImage": "parseGuiJsonWithUnicode.png"
         },
         {
@@ -2147,6 +2148,7 @@
         {
             "title": "GUI Gradient Linear",
             "playgroundId": "#XCPP9Y#17227",
+            "errorRatio": 4,
             "referenceImage": "GUI-Gradient-Linear.png"
         },
         {
@@ -2208,15 +2210,13 @@
         {
             "title": "GUI Text Block with resizeToFit and forceResizeWidth",
             "playgroundId": "#XCPP9Y#17810",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "errorRatio": 4,
             "referenceImage": "GUI-Text-Block-with-resizeToFit-and-forceResizeWidth.png"
         },
         {
             "title": "GUI Horizontal Stack Panel and Text Block with resizeToFit and forceResizeWidth",
             "playgroundId": "#XCPP9Y#17811",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "errorRatio": 4,
             "referenceImage": "GUI-Horizontal-Stack-Panel-and-Text-Block-with-resizeToFit-and-forceResizeWidth.png"
         },
         {
@@ -2233,6 +2233,7 @@
         {
             "title": "Rounding values on controls inside StackPanel",
             "playgroundId": "#XCPP9Y#18325",
+            "errorRatio": 4,
             "referenceImage": "Rounding-values-on-controls-inside-StackPanel.png"
         },
         {
@@ -2408,14 +2409,14 @@
         {
             "title": "show-multiple-guis",
             "playgroundId": "#6X9UMD#12",
+            "errorRatio": 4,
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "show-multiple-guis.png"
         },
         {
             "title": "skybox-with-boombox",
             "playgroundId": "#I2TR8G#0",
+            "errorRatio": 4,
             "renderCount": 20,
             "referenceImage": "skybox-with-boombox.png"
         },
@@ -2476,6 +2477,7 @@
         {
             "title": "Render to 3D RT",
             "playgroundId": "#XSNYAU#83",
+            "errorRatio": 3,
             "renderCount": 5,
             "referenceImage": "Render to 3D RT.png"
         },
@@ -2541,6 +2543,7 @@
         {
             "title": "IBL Voxel Shadowing",
             "playgroundId": "#8R5SSE#796",
+            "errorRatio": 5,
             "renderCount": 15,
             "referenceImage": "voxelShadows.png",
             "excludedGraphicsApis": ["D3D11"],
@@ -2571,6 +2574,7 @@
         {
             "title": "IBL Screen-space Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#799",
+            "errorRatio": 5,
             "renderCount": 15,
             "referenceImage": "ssShadowsLeftHanded.png",
             "excludedGraphicsApis": ["D3D11"],
@@ -2579,6 +2583,7 @@
         {
             "title": "IBL Screen-space Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#800",
+            "errorRatio": 5,
             "renderCount": 15,
             "referenceImage": "ssShadowsRightHanded.png",
             "excludedGraphicsApis": ["D3D11"],
@@ -2618,6 +2623,7 @@
         {
             "title": "FrameGraph nrge depth of field",
             "playgroundId": "#GAGVQO#19",
+            "errorRatio": 3,
             "referenceImage": "FrameGraph-nrge-depth-of-field.png"
         },
         {
@@ -2656,8 +2662,10 @@
         {
             "title": "FrameGraph nrge bounding boxes",
             "playgroundId": "#IG8NRC#85",
-            "referenceImage": "FrameGraph-nrge-bounding-boxes.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "errorRatio": 14,
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: 14.6% pixel difference",
+            "referenceImage": "FrameGraph-nrge-bounding-boxes.png"
         },
         {
             "title": "FrameGraph nrge frozen meshes",
@@ -2796,7 +2804,8 @@
             "title": "FrameGraph sharpen post process",
             "playgroundId": "#SYQW69#1367",
             "referenceImage": "FrameGraph-sharpen-post-process.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
+            "reason": "bgfx: Pixel comparison fails (~6-6.6% pixels differ, varies by run); WebGPU keeps the coverage"
         },
         {
             "title": "FrameGraph custom post process",
@@ -3756,7 +3765,6 @@
         {
             "title": "Particles - Emitters - Cylinder",
             "playgroundId": "#96154U#0",
-            "errorRatio": 4,
             "referenceImage": "particles-emitters-cylinder.png"
         },
         {
@@ -4203,6 +4211,7 @@
         {
             "title": "terrain-erosion",
             "playgroundId": "#C90R62#17",
+            "errorRatio": 6,
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
             "reason": "Chakra parse failure on modern JS syntax",
