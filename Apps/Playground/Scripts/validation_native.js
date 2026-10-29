@@ -2098,10 +2098,12 @@
 
     Promise.all([
         loadFontAssetAsync("app:///Scripts/DroidSans.ttf"),
-        loadFontAssetAsync("app:///Scripts/Arimo-Regular.ttf")
+        loadFontAssetAsync("app:///Scripts/Arimo-Regular.ttf"),
+        loadFontAssetAsync("app:///Scripts/Tinos-Regular.ttf")
     ]).then(function (fonts) {
         _native.Canvas.loadTTF("droidsans", fonts[0]);
         _native.Canvas.loadTTF("monospace", fonts[0]);
+        _native.Canvas.loadTTF("Times New Roman", fonts[2]);
         return _native.Canvas.loadTTFAsync("Arial", fonts[1]);
     }).then(function () {
         _native.RootUrl = "https://playground.babylonjs.com";
