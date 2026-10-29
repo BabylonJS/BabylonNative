@@ -1467,7 +1467,7 @@
                             evaluated = true;
                             stopped = true;
                             pendingScreenshot = null;
-                            if (/cancel/i.test(String(error && error.message))) {
+                            if (/cancel|lost/i.test(String(error && error.message))) {
                                 readbackCanceled = true;
                             }
                             console.error(error);
@@ -1749,7 +1749,7 @@
 
                                     if (createdScene && createdScene.then) {
                                         // Bound async creation before scene readiness begins; native blocking needs an external timeout.
-                                        const createSceneTimeoutMs = 10 * 60 * 1000;
+                                        const createSceneTimeoutMs = Math.min(10 * 60 * 1000, INITIAL_READINESS_TIMEOUT_MS);
                                         let createSceneTimeoutId;
                                         try {
                                             createdScene = await Promise.race([

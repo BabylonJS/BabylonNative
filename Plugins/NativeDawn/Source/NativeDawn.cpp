@@ -237,6 +237,16 @@ namespace Babylon::Plugins::NativeDawn
             DawnLog(LogLevel::Error, text);
         }
 
+        // Diagnostic only: an intentional destroy is silent, anything else is logged.
+        void LogDeviceLost(WGPUDevice const*, WGPUDeviceLostReason reason, WGPUStringView message, void*, void*)
+        {
+            if (reason == WGPUDeviceLostReason_Destroyed || reason == WGPUDeviceLostReason_CallbackCancelled)
+            {
+                return;
+            }
+            DawnLogF(LogLevel::Error, "device lost (reason %d): %s", static_cast<int>(reason), SvToStr(message).c_str());
+        }
+
         // Blocks the calling thread until `f` resolves. The C API has no
         // convenience overload, so the wait info has to be built explicitly.
         void WaitFuture(WGPUFuture f)
@@ -355,6 +365,10 @@ namespace Babylon::Plugins::NativeDawn
                 .requiredLimits = haveLimits ? &supportedLimits : nullptr,
                 .defaultQueue = {
                     .label = EmptyStringView(),
+                },
+                .deviceLostCallbackInfo = {
+                    .mode = WGPUCallbackMode_AllowSpontaneous,
+                    .callback = &LogDeviceLost,
                 },
                 .uncapturedErrorCallbackInfo = {
                     .callback = &LogDeviceError,
@@ -3812,6 +3826,7 @@ namespace Babylon::Plugins::NativeDawn
         // holds the freshly-submitted render.
         bool g_readbackPending = false;
         Napi::FunctionReference g_readbackCallback;
+        Napi::FunctionReference g_readbackErrorCallback;
 
         Napi::Value Noop(const Napi::CallbackInfo& info) { return info.Env().Undefined(); }
 
@@ -4762,6 +4777,11 @@ namespace Babylon::Plugins::NativeDawn
             // before present, so the surface texture holds the submitted render.
             SetMethod(tu, "getFrameBufferData", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 g_readbackCallback = Napi::Persistent(info[0].As<Napi::Function>());
+                g_readbackErrorCallback.Reset();
+                if (info.Length() > 1 && info[1].IsFunction())
+                {
+                    g_readbackErrorCallback = Napi::Persistent(info[1].As<Napi::Function>());
+                }
                 g_readbackPending = true;
                 return info.Env().Undefined();
             });
@@ -4833,6 +4853,7 @@ namespace Babylon::Plugins::NativeDawn
         // napi_env during the CRT on-exit pass.
         g_readbackPending = false;
         g_readbackCallback.Reset();
+        g_readbackErrorCallback.Reset();
         g_rafQueue.clear();
         g_rafRunning.clear();
         g_presentationCanvas.Reset();
@@ -4922,7 +4943,23 @@ namespace Babylon::Plugins::NativeDawn
         {
             g_readbackPending = false;
             auto callback = std::move(g_readbackCallback);
-            Napi::Object res = env.Global().Get("_nativeDawnReadPixels").As<Napi::Function>().Call({}).As<Napi::Object>();
+            auto errorCallback = std::move(g_readbackErrorCallback);
+            Napi::Value readResult;
+            try
+            {
+                readResult = env.Global().Get("_nativeDawnReadPixels").As<Napi::Function>().Call({});
+            }
+            catch (const Napi::Error& e)
+            {
+                if (errorCallback.IsEmpty())
+                {
+                    throw;
+                }
+                errorCallback.Value().Call({e.Value()});
+                PumpJsFinalizers(env, true);
+                return;
+            }
+            Napi::Object res = readResult.As<Napi::Object>();
             Napi::ArrayBuffer ab = res.Get("data").As<Napi::ArrayBuffer>();
             Napi::Uint8Array u8 = Napi::Uint8Array::New(env, ab.ByteLength(), ab, 0);
             callback.Value().Call({u8});
