@@ -8,6 +8,7 @@
 #include <glslang/Public/ShaderLang.h>
 #include <map>
 #include <string>
+#include <unordered_set>
 
 namespace Babylon::ShaderCompilerCommon
 {
@@ -27,7 +28,8 @@ namespace Babylon::ShaderCompilerCommon
     TransformFeedbackShader GenerateTransformFeedbackShader(std::string_view vertexSource, const std::vector<std::string>& varyings);
 
     // Returns compiled uniform names mapped to the names supplied by the application.
-    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr);
+    // Uniforms named in reservedNames (e.g. target language keywords) are renamed as well.
+    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr, const std::unordered_set<std::string>* reservedNames = nullptr);
 
     std::string ProcessShaderCoordinates(std::string_view source);
 

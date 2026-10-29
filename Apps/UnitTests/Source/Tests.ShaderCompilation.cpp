@@ -265,6 +265,32 @@ TEST(ShaderCompilation, UniformNamesDoNotCollideWithIntrinsicsOrBgfx)
     EXPECT_FALSE(shader.FragmentBytes.empty());
 }
 
+TEST(ShaderCompilation, UniformNamedAfterTargetKeywordDoesNotCollide)
+{
+    // "kernel" is reserved in MSL and SPIRV-Cross would emit it as "kernel0", colliding with the
+    // vertex uniform of that name, so it must be renamed before compilation.
+    Babylon::Plugins::ShaderCompiler compiler{};
+    const auto shader = compiler.Compile(R"(
+        in vec2 position;
+        uniform float kernel0;
+        void main() { gl_Position = vec4(position * kernel0, 0.0, 1.0); }
+    )", R"(
+        precision highp float;
+        uniform float kernel[9];
+        out vec4 color;
+        void main() { color = vec4(kernel[0] + kernel[8]); }
+    )");
+
+#ifdef __APPLE__
+    ASSERT_EQ(shader.UniformNames.size(), 1u);
+    EXPECT_NE(shader.UniformNames.begin()->first, "kernel0");
+    EXPECT_EQ(shader.UniformNames.begin()->second, "kernel");
+#else
+    EXPECT_TRUE(shader.UniformNames.empty());
+#endif
+    EXPECT_FALSE(shader.FragmentBytes.empty());
+}
+
 TEST(ShaderCompilation, UniformNamesDoNotCollideWithRenderTargetTransform)
 {
     Babylon::Plugins::ShaderCompiler compiler{};
