@@ -12,9 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Free disk space
-        shell: pwsh
-        run: ./.github/scripts/free-disk-space.ps1
 
       - name: Install packages
         run: |

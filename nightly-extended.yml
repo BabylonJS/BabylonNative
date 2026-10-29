@@ -32,9 +32,6 @@ jobs:
   steps:
   - checkout: self
 
-  - pwsh: ./.github/scripts/free-disk-space.ps1
-    displayName: Free disk space
-
   - script: |
       cmake -G "Visual Studio 17 2022" -B build/Win32_x64_V8 -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=D3D11 -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON -D ENABLE_SANITIZERS=ON
     displayName: 'Generate solution'
@@ -214,9 +211,6 @@ jobs:
   steps:
   - checkout: self
 
-  - pwsh: ./.github/scripts/free-disk-space.ps1
-    displayName: Free disk space
-
   - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
     displayName: 'Select Xcode 26.4'
 
@@ -282,9 +276,6 @@ jobs:
   steps:
   - checkout: self
 
-  - pwsh: ./.github/scripts/free-disk-space.ps1
-    displayName: Free disk space
-
   - script: |
       set -euo pipefail
       sudo apt-get update
@@ -321,9 +312,6 @@ jobs:
   timeoutInMinutes: 60
   steps:
   - checkout: self
-
-  - pwsh: ./.github/scripts/free-disk-space.ps1
-    displayName: Free disk space
 
   - script: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
     displayName: Select Xcode 26.4
