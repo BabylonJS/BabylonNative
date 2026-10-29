@@ -2113,8 +2113,8 @@
             "title": "Fluid rendering box sphere",
             "playgroundId": "#PCMH7A#2",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "replace": "this._makeGUI();,",
+            "reason": "The demo settings panel uses lil-gui, which needs a DOM the native host does not have; it throws before the fluid simulation is attached, so the panel is not built.",
             "referenceImage": "fluidBoxSphere.png"
         },
         {
