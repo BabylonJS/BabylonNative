@@ -67,9 +67,9 @@ namespace Babylon
         {
             throw std::runtime_error{"StorageBuffer update out of range"};
         }
-        if (byteOffset % m_byteStride != 0)
+        if (byteOffset % sizeof(uint32_t) != 0)
         {
-            throw std::runtime_error{"StorageBuffer update byteOffset must be a multiple of the buffer stride"};
+            throw std::runtime_error{"StorageBuffer update byteOffset must be a multiple of 4"};
         }
     }
 
@@ -99,9 +99,12 @@ namespace Babylon
             return;
         }
 
-        // bgfx addresses dynamic vertex buffers by element, so the offset must be stride-aligned.
+        // bgfx addresses dynamic vertex buffers by element, so update the whole elements the bytes
+        // touch from the shadow.
         const uint32_t startVertex = byteOffset / m_byteStride;
-        bgfx::update(m_handle, startVertex, bgfx::copy(bytes.data(), static_cast<uint32_t>(bytes.size())));
+        const uint32_t start = startVertex * m_byteStride;
+        const uint32_t end = RoundUp(byteOffset + static_cast<uint32_t>(bytes.size()), m_byteStride);
+        bgfx::update(m_handle, startVertex, bgfx::copy(m_shadow.data() + start, end - start));
     }
 
     void StorageBuffer::EnsureCreated()

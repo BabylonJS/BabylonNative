@@ -156,7 +156,7 @@ namespace Babylon
         }
     }
 
-    StorageBuffer& VertexBuffer::PromoteToGpuStorage()
+    StorageBuffer& VertexBuffer::PromoteToGpuStorage(uint32_t vertexByteStride)
     {
         if (m_gpuStorage)
         {
@@ -176,9 +176,11 @@ namespace Babylon
             throw std::runtime_error{"Transform feedback vertex buffers must not be empty"};
         }
 
-        // A 4-byte storage stride keeps any float-aligned update offset addressable. The storage
-        // pads byte- and short-component data to whole words.
-        auto storage = std::make_unique<StorageBuffer>(m_deviceContext, static_cast<uint32_t>(m_bytes.size()), static_cast<uint32_t>(sizeof(float)));
+        // The storage pads byte- and short-component data to whole words.
+        constexpr uint32_t kWordSize = sizeof(uint32_t);
+        const bool strideUsable = vertexByteStride != 0 && vertexByteStride % kWordSize == 0 && vertexByteStride <= UINT16_MAX;
+        const uint32_t storageStride = strideUsable ? vertexByteStride : kWordSize;
+        auto storage = std::make_unique<StorageBuffer>(m_deviceContext, static_cast<uint32_t>(m_bytes.size()), storageStride);
         storage->Update(m_bytes, 0);
         m_gpuStorage = std::move(storage);
         m_bytes.clear();
@@ -191,11 +193,11 @@ namespace Babylon
         return m_gpuStorage ? m_gpuStorage->ByteLength() : static_cast<uint32_t>(m_bytes.size());
     }
 
-    void VertexBuffer::SetComputeRead(bgfx::Encoder* encoder, uint8_t stage)
+    void VertexBuffer::SetComputeRead(bgfx::Encoder* encoder, uint8_t stage, uint32_t vertexByteStride)
     {
         if (m_gpuStorage || !bgfx::isValid(m_handle))
         {
-            PromoteToGpuStorage().SetCompute(encoder, stage, bgfx::Access::Read);
+            PromoteToGpuStorage(vertexByteStride).SetCompute(encoder, stage, bgfx::Access::Read);
         }
         else if (!m_computeReadable)
         {
