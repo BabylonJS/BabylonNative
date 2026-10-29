@@ -9,10 +9,12 @@
 #include <Babylon/Plugins/ShaderCompiler.h>
 #include <gsl/util>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <future>
 #include <iostream>
 #include <memory>
@@ -182,6 +184,95 @@ TEST(NativeEngineCompute, GraphicsStagesKeepEmptyRawMasks)
 }
 #endif
 
+namespace
+{
+    // Runs record() on the JS thread, then dispatches ReadSource over the buffer bound at stage 6 and
+    // reads the resulting 4x4 image back from the GPU.
+    std::array<uint8_t, 4 * 4 * 4> ReadStorageBufferOnGpu(
+        const std::function<Babylon::StorageBuffer&(Babylon::Graphics::DeviceContext&, bgfx::Encoder*, ComputeResources&, Babylon::Plugins::ShaderCompiler&)>& record)
+    {
+        Babylon::Graphics::Device device{g_deviceConfig};
+        device.StartRenderingCurrentFrame();
+        std::array<uint8_t, 4 * 4 * 4> pixels{};
+        std::promise<void> completed;
+        auto completion = completed.get_future();
+        {
+            Babylon::AppRuntime runtime;
+            ComputeResources resources;
+            runtime.Dispatch([&](Napi::Env env) {
+                try
+                {
+                    device.AddToJavaScript(env);
+                    auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+                    auto scope = context.AcquireFrameCompletionScope();
+                    Babylon::Plugins::ShaderCompiler compiler;
+                    resources.ReadProgram = CreateComputeProgram(compiler.CompileCompute(ReadSource));
+
+                    resources.Texture = bgfx::createTexture2D(4, 4, false, 1, bgfx::TextureFormat::RGBA8,
+                        BGFX_TEXTURE_COMPUTE_WRITE);
+                    resources.Readback = bgfx::createTexture2D(4, 4, false, 1, bgfx::TextureFormat::RGBA8,
+                        BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+                    if (!bgfx::isValid(resources.Texture) || !bgfx::isValid(resources.Readback))
+                    {
+                        throw std::runtime_error{"Failed to create compute readback texture"};
+                    }
+
+                    auto* encoder = context.GetActiveEncoder();
+                    if (encoder == nullptr)
+                    {
+                        throw std::runtime_error{"Expected an active compute encoder"};
+                    }
+                    record(context, encoder, resources, compiler).SetCompute(encoder, 6, bgfx::Access::Read);
+                    encoder->setImage(0, resources.Texture, 0, bgfx::Access::Write, bgfx::TextureFormat::RGBA8);
+                    encoder->dispatch(context.AcquireNewViewId(), resources.ReadProgram, 4, 4);
+                    bgfx::TextureRegion destinationRegion{};
+                    destinationRegion.init(resources.Readback);
+                    bgfx::TextureRegion sourceRegion{};
+                    sourceRegion.init(resources.Texture);
+                    encoder->blit(context.AcquireNewViewId(), destinationRegion, sourceRegion);
+
+                    context.ReadTextureAsync(resources.Readback, pixels)
+                        .then(arcana::inline_scheduler, arcana::cancellation::none(),
+                            [&completed](const arcana::expected<void, std::exception_ptr>& result) {
+                                if (result.has_error())
+                                {
+                                    completed.set_exception(result.error());
+                                }
+                                else
+                                {
+                                    completed.set_value();
+                                }
+                            });
+                }
+                catch (...)
+                {
+                    completed.set_exception(std::current_exception());
+                }
+            });
+
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{30};
+            while (completion.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready)
+            {
+                if (std::chrono::steady_clock::now() >= deadline)
+                {
+                    std::cerr << "Timed out waiting for raw storage-buffer GPU readback" << std::endl;
+                    std::quick_exit(1);
+                }
+                device.FinishRenderingCurrentFrame();
+                device.StartRenderingCurrentFrame();
+            }
+        }
+        device.FinishRenderingCurrentFrame();
+        completion.get();
+        return pixels;
+    }
+
+    void UpdateWords(Babylon::StorageBuffer& buffer, gsl::span<const uint32_t> words, uint32_t byteOffset)
+    {
+        buffer.Update(gsl::make_span(reinterpret_cast<const uint8_t*>(words.data()), words.size_bytes()), byteOffset);
+    }
+}
+
 TEST(NativeEngineCompute, RawStorageBufferRoundTrip)
 {
 #if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
@@ -191,99 +282,75 @@ TEST(NativeEngineCompute, RawStorageBufferRoundTrip)
     {
         GTEST_SKIP() << "Renderer does not support compute";
     }
-    Babylon::Graphics::Device device{g_deviceConfig};
-    device.StartRenderingCurrentFrame();
     std::array<uint8_t, 4 * 4 * 4> pixels{};
-    std::promise<void> completed;
-    auto completion = completed.get_future();
-    {
-        Babylon::AppRuntime runtime;
-        ComputeResources resources;
-        runtime.Dispatch([&](Napi::Env env) {
-            try
-            {
-                device.AddToJavaScript(env);
-                auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
-                auto scope = context.AcquireFrameCompletionScope();
-                Babylon::Plugins::ShaderCompiler compiler;
-                resources.WriteProgram = CreateComputeProgram(compiler.CompileCompute(WriteSource));
-                resources.ReadProgram = CreateComputeProgram(compiler.CompileCompute(ReadSource));
-
-                resources.Source = std::make_unique<Babylon::StorageBuffer>(context, 64, 16, false);
-                resources.Destination = std::make_unique<Babylon::StorageBuffer>(context, 64);
-                std::array<uint32_t, 16> source{};
-                resources.Source->Update(gsl::make_span(reinterpret_cast<const uint8_t*>(source.data()), sizeof(source)), 0);
-                for (uint32_t i = 0; i < source.size(); ++i)
-                {
-                    source[i] = 3u * i + 1u;
-                }
-                resources.Source->Update(gsl::make_span(reinterpret_cast<const uint8_t*>(source.data()), sizeof(source)), 0);
-
-                resources.Texture = bgfx::createTexture2D(4, 4, false, 1, bgfx::TextureFormat::RGBA8,
-                    BGFX_TEXTURE_COMPUTE_WRITE);
-                resources.Readback = bgfx::createTexture2D(4, 4, false, 1, bgfx::TextureFormat::RGBA8,
-                    BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
-                if (!bgfx::isValid(resources.Texture) || !bgfx::isValid(resources.Readback))
-                {
-                    throw std::runtime_error{"Failed to create compute readback texture"};
-                }
-
-                auto* encoder = context.GetActiveEncoder();
-                if (encoder == nullptr)
-                {
-                    throw std::runtime_error{"Expected an active compute encoder"};
-                }
-                resources.Source->SetCompute(encoder, 3, bgfx::Access::Read);
-                resources.Destination->SetCompute(encoder, 5, bgfx::Access::ReadWrite);
-                encoder->dispatch(context.AcquireNewViewId(), resources.WriteProgram, 16);
-                resources.Destination->SetCompute(encoder, 6, bgfx::Access::Read);
-                encoder->setImage(0, resources.Texture, 0, bgfx::Access::Write, bgfx::TextureFormat::RGBA8);
-                encoder->dispatch(context.AcquireNewViewId(), resources.ReadProgram, 4, 4);
-                bgfx::TextureRegion destinationRegion{};
-                destinationRegion.init(resources.Readback);
-                bgfx::TextureRegion sourceRegion{};
-                sourceRegion.init(resources.Texture);
-                encoder->blit(context.AcquireNewViewId(), destinationRegion, sourceRegion);
-
-                context.ReadTextureAsync(resources.Readback, pixels)
-                    .then(arcana::inline_scheduler, arcana::cancellation::none(),
-                        [&completed](const arcana::expected<void, std::exception_ptr>& result) {
-                            if (result.has_error())
-                            {
-                                completed.set_exception(result.error());
-                            }
-                            else
-                            {
-                                completed.set_value();
-                            }
-                        });
-            }
-            catch (...)
-            {
-                completed.set_exception(std::current_exception());
-            }
-        });
-
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{30};
-        while (completion.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready)
+    ASSERT_NO_THROW(pixels = ReadStorageBufferOnGpu([](Babylon::Graphics::DeviceContext& context, bgfx::Encoder* encoder,
+                                                        ComputeResources& resources, Babylon::Plugins::ShaderCompiler& compiler) -> Babylon::StorageBuffer& {
+        resources.WriteProgram = CreateComputeProgram(compiler.CompileCompute(WriteSource));
+        resources.Source = std::make_unique<Babylon::StorageBuffer>(context, 64, 16, false);
+        resources.Destination = std::make_unique<Babylon::StorageBuffer>(context, 64);
+        std::array<uint32_t, 16> source{};
+        UpdateWords(*resources.Source, source, 0);
+        for (uint32_t i = 0; i < source.size(); ++i)
         {
-            if (std::chrono::steady_clock::now() >= deadline)
-            {
-                std::cerr << "Timed out waiting for raw storage-buffer GPU readback" << std::endl;
-                std::quick_exit(1);
-            }
-            device.FinishRenderingCurrentFrame();
-            device.StartRenderingCurrentFrame();
+            source[i] = 3u * i + 1u;
         }
-    }
-    device.FinishRenderingCurrentFrame();
-    ASSERT_NO_THROW(completion.get());
+        UpdateWords(*resources.Source, source, 0);
+
+        resources.Source->SetCompute(encoder, 3, bgfx::Access::Read);
+        resources.Destination->SetCompute(encoder, 5, bgfx::Access::ReadWrite);
+        encoder->dispatch(context.AcquireNewViewId(), resources.WriteProgram, 16);
+        return *resources.Destination;
+    }));
     for (uint32_t i = 0; i < 16; ++i)
     {
         EXPECT_EQ(pixels[i * 4], 6u * i + 7u) << "pixel " << i;
         EXPECT_EQ(pixels[i * 4 + 1], i) << "pixel " << i;
         EXPECT_EQ(pixels[i * 4 + 2], 0u) << "pixel " << i;
         EXPECT_EQ(pixels[i * 4 + 3], 255u) << "pixel " << i;
+    }
+#endif
+}
+
+TEST(NativeEngineCompute, PartialUpdatesOfStridedReadOnlyBuffer)
+{
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    if (!RendererSupportsCompute())
+    {
+        GTEST_SKIP() << "Renderer does not support compute";
+    }
+    // 64 bytes with a 12-byte stride: five whole elements plus a padded final element at bytes 60..72.
+    constexpr uint32_t ByteLength = 64;
+    constexpr uint32_t ByteStride = 12;
+    constexpr uint32_t WordCount = ByteLength / sizeof(uint32_t);
+    std::array<uint32_t, WordCount> expected{};
+    for (uint32_t i = 0; i < WordCount; ++i)
+    {
+        expected[i] = 3u * i + 1u;
+    }
+    // Starts mid-element and crosses the element boundary at byte 12.
+    const std::array<uint32_t, 4> first{200, 201, 202, 203};
+    constexpr uint32_t FirstOffset = 4;
+    // Crosses the boundary at byte 60 into the padded final element.
+    const std::array<uint32_t, 2> second{210, 211};
+    constexpr uint32_t SecondOffset = 56;
+
+    std::array<uint8_t, 4 * 4 * 4> pixels{};
+    ASSERT_NO_THROW(pixels = ReadStorageBufferOnGpu([&](Babylon::Graphics::DeviceContext& context, bgfx::Encoder*,
+                                                        ComputeResources& resources, Babylon::Plugins::ShaderCompiler&) -> Babylon::StorageBuffer& {
+        resources.Source = std::make_unique<Babylon::StorageBuffer>(context, ByteLength, ByteStride, false);
+        UpdateWords(*resources.Source, expected, 0);
+        UpdateWords(*resources.Source, first, FirstOffset);
+        UpdateWords(*resources.Source, second, SecondOffset);
+        return *resources.Source;
+    }));
+
+    std::copy(first.begin(), first.end(), expected.begin() + FirstOffset / sizeof(uint32_t));
+    std::copy(second.begin(), second.end(), expected.begin() + SecondOffset / sizeof(uint32_t));
+    for (uint32_t i = 0; i < WordCount; ++i)
+    {
+        EXPECT_EQ(pixels[i * 4], expected[i]) << "word " << i;
     }
 #endif
 }
