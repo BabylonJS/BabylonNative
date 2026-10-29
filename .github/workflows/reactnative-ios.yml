@@ -1,0 +1,27 @@
+name: React Native Build iOS
+on: workflow_call
+jobs:
+  build-iOS:
+    runs-on: macos-15
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4.2.2
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Setting up developer environment
+      run: node setup_dev.js
+      working-directory: Embedding/ReactNative/Package
+    - name: Clean and Install Pods
+      run: |
+        cd ios
+        rm -rf Pods Podfile.lock
+        pod install
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Gulp (iOS)
+      run: npx gulp buildIOS
+      working-directory: Embedding/ReactNative/Package
+    timeout-minutes: 90
+permissions:
+  contents: read

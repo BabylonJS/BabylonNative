@@ -1,0 +1,28 @@
+{
+  "name": "Playground",
+  "displayName": "Playground",
+  "components": [
+    {
+      "appKey": "Playground",
+      "displayName": "Playground"
+    }
+  ],
+  "resources": {
+    "android": [
+      "dist/res",
+      "dist/main.android.jsbundle"
+    ],
+    "ios": [
+      "dist/assets",
+      "dist/main.ios.jsbundle"
+    ],
+    "macos": [
+      "dist/assets",
+      "dist/main.macos.jsbundle"
+    ],
+    "windows": [
+      "dist/assets",
+      "dist/main.windows.bundle"
+    ]
+  }
+}
