@@ -26,15 +26,15 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bx
     GIT_REPOSITORY https://github.com/bkaradzic/bx.git
-    GIT_TAG dae5c595b767b94fc2a4d5177815ef22dd1f3f2f
+    GIT_TAG 75b1de824a7d96a1e478caf8f68e4ad765976334
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bimg
     GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
     GIT_TAG 9bfbd6493b48a15238f2d1374a718ec026524515
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx
-    GIT_REPOSITORY https://github.com/bkaradzic-microsoft/bgfx.git
-    GIT_TAG 6144e8620c25ce781d34cf3539fc58c6182630cc
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
+    GIT_TAG b3df9b3f2e5ab7b45091704d53ec3d220b4f1cb3
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
