@@ -2790,8 +2790,7 @@
         {
             "title": "FrameGraph sharpen post process",
             "playgroundId": "#SYQW69#1367",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (~6-6.6% pixels differ, varies by run)",
+            "errorRatio": 6,
             "referenceImage": "FrameGraph-sharpen-post-process.png"
         },
         {
