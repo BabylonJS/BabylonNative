@@ -549,34 +549,7 @@ namespace Babylon::ShaderCompilerCommon
         return result;
     }
 
-    namespace
-    {
-        void RecordUniformAliases(Graphics::BgfxShaderInfo& shaderInfo, const NonSamplerUniformsInfo& uniformsInfo)
-        {
-            for (const auto& uniform : uniformsInfo.Uniforms)
-            {
-                if (!uniform.OriginalName.empty())
-                {
-                    shaderInfo.UniformNames[uniform.Name] = uniform.OriginalName;
-                }
-            }
-        }
-    }
-
-    void MergeUniformNames(Graphics::BgfxShaderInfo& shaderInfo, std::map<std::string, std::string> renamedUniforms)
-    {
-        for (auto& [compiledName, originalName] : shaderInfo.UniformNames)
-        {
-            const auto renamed = renamedUniforms.find(originalName);
-            if (renamed != renamedUniforms.end())
-            {
-                originalName = renamed->second;
-            }
-        }
-        shaderInfo.UniformNames.merge(renamedUniforms);
-    }
-
-    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource)
+    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource, const std::unordered_set<std::string>* reservedNames)
     {
         const auto first = TokenizeShader(source);
         const auto second = pairedSource ? TokenizeShader(*pairedSource) : std::vector<ShaderToken>{};
@@ -603,7 +576,8 @@ namespace Babylon::ShaderCompilerCommon
                     uniform = false;
                 }
                 else if (uniform && (token.Text == "textureSize" || token.Text.starts_with(Graphics::SAMPLER_STATE_UNIFORM_PREFIX) ||
-                    std::find(std::begin(predefined), std::end(predefined), token.Text) != std::end(predefined)))
+                    std::find(std::begin(predefined), std::end(predefined), token.Text) != std::end(predefined) ||
+                    (reservedNames && reservedNames->count(std::string{token.Text}))))
                 {
                     candidates.emplace(token.Text);
                     stageCandidates.emplace(token.Text);
@@ -886,14 +860,6 @@ namespace Babylon::ShaderCompilerCommon
                 auto& uniform = info.Uniforms[index];
 
                 uniform.Name = compiler.get_member_name(uniformBuffer.base_type_id, index);
-                // SPIRV-Cross renames members that collide with target-language keywords
-                // (e.g. Metal's "kernel" becomes "kernel0"). Keep the compiled name in the
-                // bgfx uniform table, since backends match it against shader reflection.
-                const std::string& originalName = parser.get_parsed_ir().get_member_name(uniformBuffer.base_type_id, index);
-                if (!originalName.empty() && originalName != uniform.Name)
-                {
-                    uniform.OriginalName = originalName;
-                }
                 uniform.Offset = compiler.get_member_decoration(uniformBuffer.base_type_id, index, spv::DecorationOffset);
 
                 const auto spirType = compiler.get_type(type.member_types[index]);
@@ -945,11 +911,6 @@ namespace Babylon::ShaderCompilerCommon
                     if (uniform.Name.empty())
                     {
                         throw std::runtime_error{"Uniform with empty name detected — likely a UBO block or struct uniform was incorrectly type-converted."};
-                    }
-                    const std::string& originalName = parser.get_parsed_ir().get_name(id);
-                    if (!originalName.empty() && originalName != uniform.Name)
-                    {
-                        uniform.OriginalName = originalName;
                     }
                     uniform.Offset = 0; // Not actually used for anything by OpenGL.
 
@@ -1071,7 +1032,6 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
 
         AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
         AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-        RecordUniformAliases(bgfxShaderInfo, uniformsInfo);
         appendSamplers(vertexBytes, compiler, vertexShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
 
         AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
@@ -1129,7 +1089,6 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
 
         AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
         AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-        RecordUniformAliases(bgfxShaderInfo, uniformsInfo);
         appendSamplers(fragmentBytes, compiler, fragmentShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
 
         AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
@@ -1189,7 +1148,6 @@ Graphics::BgfxShaderInfo CreateBgfxComputeShader(ShaderInfo computeShaderInfo, S
 
     AppendBytes(computeBytes, static_cast<uint16_t>(numUniforms));
     AppendUniformBuffer(computeBytes, uniformsInfo, false);
-    RecordUniformAliases(bgfxShaderInfo, uniformsInfo);
     appendSamplers(computeBytes, compiler, computeShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
 #if VULKAN
     {

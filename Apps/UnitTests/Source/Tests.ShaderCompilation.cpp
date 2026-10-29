@@ -11,7 +11,6 @@
 #endif
 #include <Babylon/ScriptLoader.h>
 
-#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <cstdlib>
@@ -266,14 +265,15 @@ TEST(ShaderCompilation, UniformNamesDoNotCollideWithIntrinsicsOrBgfx)
     EXPECT_FALSE(shader.FragmentBytes.empty());
 }
 
-TEST(ShaderCompilation, UniformRenamedForTargetKeywordMapsToOriginalName)
+TEST(ShaderCompilation, UniformNamedAfterTargetKeywordDoesNotCollide)
 {
-    // "kernel" is a Metal keyword, so SPIRV-Cross emits the member as "kernel0". Babylon.js still
-    // sets it as "kernel" (ConvolutionPostProcess), so UniformNames must map the table name back.
+    // "kernel" is reserved in MSL and SPIRV-Cross would emit it as "kernel0", colliding with the
+    // vertex uniform of that name, so it must be renamed before compilation.
     Babylon::Plugins::ShaderCompiler compiler{};
     const auto shader = compiler.Compile(R"(
         in vec2 position;
-        void main() { gl_Position = vec4(position, 0.0, 1.0); }
+        uniform float kernel0;
+        void main() { gl_Position = vec4(position * kernel0, 0.0, 1.0); }
     )", R"(
         precision highp float;
         uniform float kernel[9];
@@ -281,25 +281,14 @@ TEST(ShaderCompilation, UniformRenamedForTargetKeywordMapsToOriginalName)
         void main() { color = vec4(kernel[0] + kernel[8]); }
     )");
 
-    const auto& bytes = shader.FragmentBytes;
-    ASSERT_GE(bytes.size(), 22u);
-    size_t offset = 20;
-    uint16_t count{};
-    std::memcpy(&count, bytes.data() + offset, sizeof(count));
-    offset += sizeof(count);
-    std::vector<std::string> names;
-    for (uint16_t i = 0; i < count; ++i)
-    {
-        ASSERT_LT(offset, bytes.size());
-        const size_t nameSize = bytes[offset];
-        ASSERT_LE(offset + 1 + nameSize, bytes.size());
-        std::string name{reinterpret_cast<const char*>(bytes.data() + offset + 1), nameSize};
-        const auto alias = shader.UniformNames.find(name);
-        names.push_back(alias == shader.UniformNames.end() ? name : alias->second);
-        // name, type, count, register index, register count, texture component/dimension/format.
-        offset += 1 + nameSize + 1 + 1 + 2 + 2 + 1 + 1 + 2;
-    }
-    EXPECT_NE(std::find(names.begin(), names.end(), "kernel"), names.end());
+#ifdef __APPLE__
+    ASSERT_EQ(shader.UniformNames.size(), 1u);
+    EXPECT_NE(shader.UniformNames.begin()->first, "kernel0");
+    EXPECT_EQ(shader.UniformNames.begin()->second, "kernel");
+#else
+    EXPECT_TRUE(shader.UniformNames.empty());
+#endif
+    EXPECT_FALSE(shader.FragmentBytes.empty());
 }
 
 TEST(ShaderCompilation, UniformNamesDoNotCollideWithRenderTargetTransform)

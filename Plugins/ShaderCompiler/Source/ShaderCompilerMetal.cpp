@@ -12,6 +12,13 @@
 
 namespace
 {
+    // SPIRV-Cross appends "0" to identifiers that are reserved in MSL (e.g. "kernel"), which would
+    // hide those uniforms from Babylon.js and could collide with a uniform of the renamed name.
+    struct MslReservedNames : spirv_cross::CompilerMSL
+    {
+        using spirv_cross::CompilerMSL::get_reserved_keyword_set;
+    };
+
     void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
     {
         const std::array<const char*, 1> sources{source.data()};
@@ -124,7 +131,7 @@ namespace Babylon::Plugins
     {
         auto vertexText = PreprocessShader(EShLangVertex, vertexSource);
         auto fragmentText = PreprocessShader(EShLangFragment, fragmentSource);
-        auto uniformNames = RenameShaderUniforms(vertexText, &fragmentText);
+        auto uniformNames = RenameShaderUniforms(vertexText, &fragmentText, &MslReservedNames::get_reserved_keyword_set());
         vertexSource = vertexText;
         fragmentSource = fragmentText;
         glslang::TProgram program;
@@ -169,14 +176,14 @@ namespace Babylon::Plugins
             {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexMSL.data()), vertexMSL.size()), std::move(vertexAttributeRenaming)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentMSL.data()), fragmentMSL.size()), {}},
             std::move(builtInInstanceDataSlots));
-        MergeUniformNames(result, std::move(uniformNames));
+        result.UniformNames = std::move(uniformNames);
         return result;
     }
 
     Graphics::BgfxShaderInfo ShaderCompiler::CompileCompute(std::string_view computeSource)
     {
         auto source = PreprocessShader(EShLangCompute, computeSource);
-        auto uniformNames = RenameShaderUniforms(source);
+        auto uniformNames = RenameShaderUniforms(source, nullptr, &MslReservedNames::get_reserved_keyword_set());
         computeSource = source;
         glslang::TProgram program;
 
@@ -203,7 +210,7 @@ namespace Babylon::Plugins
 
         auto result = CreateBgfxComputeShader(
             {std::move(computeParser), std::move(computeCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(computeMSL.data()), computeMSL.size()), {}});
-        MergeUniformNames(result, std::move(uniformNames));
+        result.UniformNames = std::move(uniformNames);
         return result;
     }
 }

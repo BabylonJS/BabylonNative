@@ -65,7 +65,7 @@ namespace Babylon::Plugins::ShaderCache
     //    to render cube faces in GL row order, and dFdy now scales by it.
     // 10: persist ComputeBytes, append a separately keyed section of transform feedback
     //     compute shaders, and key instanced variants by their routed attributes.
-    // 11: UniformNames also maps uniforms renamed by the target compiler (e.g. Metal keywords).
+    // 11: Metal renames uniforms named after MSL keywords before compilation.
     static const uint32_t CACHE_VERSION = 11;
 
     void ShaderCacheImpl::Clear()

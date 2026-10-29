@@ -278,7 +278,7 @@ namespace Babylon::Plugins
             {}};
 
         auto result = CreateBgfxShader(std::move(vertexShaderInfo), std::move(fragmentShaderInfo), std::move(builtInInstanceDataSlots));
-        MergeUniformNames(result, std::move(uniformNames));
+        result.UniformNames = std::move(uniformNames);
         return result;
     }
 
@@ -317,7 +317,7 @@ namespace Babylon::Plugins
         ReflectRawBindings(computeShaderInfo);
 
         auto result = CreateBgfxComputeShader(std::move(computeShaderInfo));
-        MergeUniformNames(result, std::move(uniformNames));
+        result.UniformNames = std::move(uniformNames);
         return result;
     }
 }

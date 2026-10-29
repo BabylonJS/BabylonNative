@@ -26,7 +26,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bx
     GIT_REPOSITORY https://github.com/bkaradzic/bx.git
-    GIT_TAG 75b1de824a7d96a1e478caf8f68e4ad765976334
+    GIT_TAG dae5c595b767b94fc2a4d5177815ef22dd1f3f2f
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bimg
     GIT_REPOSITORY https://github.com/bkaradzic/bimg.git

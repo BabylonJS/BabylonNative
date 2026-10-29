@@ -8,6 +8,7 @@
 #include <glslang/Public/ShaderLang.h>
 #include <map>
 #include <string>
+#include <unordered_set>
 
 namespace Babylon::ShaderCompilerCommon
 {
@@ -27,7 +28,8 @@ namespace Babylon::ShaderCompilerCommon
     TransformFeedbackShader GenerateTransformFeedbackShader(std::string_view vertexSource, const std::vector<std::string>& varyings);
 
     // Returns compiled uniform names mapped to the names supplied by the application.
-    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr);
+    // Uniforms named in reservedNames (e.g. target language keywords) are renamed as well.
+    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr, const std::unordered_set<std::string>* reservedNames = nullptr);
 
     std::string ProcessShaderCoordinates(std::string_view source);
 
@@ -69,8 +71,6 @@ namespace Babylon::ShaderCompilerCommon
             };
 
             std::string Name{};
-            // The GLSL name, when the target compiler renamed the uniform (e.g. a keyword).
-            std::string OriginalName{};
             uint8_t ElementLength{};
             uint32_t Offset{};
             uint16_t RegisterSize{};
@@ -87,11 +87,6 @@ namespace Babylon::ShaderCompilerCommon
         void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment);
         void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::ParsedIR& originalIr, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages);
     NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler);
-
-    /// Combines the aliases produced by RenameShaderUniforms with those recorded in the shader
-    /// info for uniforms renamed by the target compiler, mapping every bgfx uniform name back to
-    /// the name Babylon.js uses.
-    void MergeUniformNames(Graphics::BgfxShaderInfo& shaderInfo, std::map<std::string, std::string> renamedUniforms);
 
         // Which SPIR-V resource list is packaged as bgfx sampler uniforms.
         enum class SamplerResourceSet
