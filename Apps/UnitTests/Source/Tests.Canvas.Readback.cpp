@@ -11,6 +11,7 @@
 #include <bx/error.h>
 #include "../../../Polyfills/Canvas/Source/Canvas.h"
 #include "../../../Polyfills/Canvas/Source/Context.h"
+#include "../../../Polyfills/Canvas/Source/Colors.h"
 #include "../../../Polyfills/Canvas/Source/Gradient.h"
 #include "../../../Polyfills/Canvas/Source/Image.h"
 #include "../../../Polyfills/Canvas/Source/NativeInstanceRegistry.h"
@@ -165,7 +166,7 @@ TEST(CanvasGradients, InterpolatesStraightColorAndAlpha)
     std::array<uint32_t, 256> ramp{};
     gradientSpan(ramp.data(), red, transparentBlue, 0, 1);
     EXPECT_EQ(ramp[0], 0xff0000ffu);
-    EXPECT_EQ(ramp[128], 0x7f7f007fu);
+    EXPECT_EQ(ramp[128], 0x80800080u);
     const auto midpoint = lerpColor(red, transparentBlue, 0, 1, 0.5f);
     EXPECT_FLOAT_EQ(midpoint.r, 0.5f);
     EXPECT_FLOAT_EQ(midpoint.g, 0.0f);
@@ -173,9 +174,9 @@ TEST(CanvasGradients, InterpolatesStraightColorAndAlpha)
     EXPECT_FLOAT_EQ(midpoint.a, 0.5f);
 
     gradientSpan(ramp.data(), nvgRGBAf(1, 0, 0, 0), transparentBlue, 0, 1);
-    EXPECT_EQ(ramp[128], 0x007f007fu);
+    EXPECT_EQ(ramp[128], 0x00800080u);
     gradientSpan(ramp.data(), nvgRGBAf(0, 1, 0, 1), nvgRGBAf(0, 0, 1, 1), 0, 1);
-    EXPECT_EQ(ramp[128], 0xff7f7f00u);
+    EXPECT_EQ(ramp[128], 0xff808000u);
     const auto previous = ramp;
     gradientSpan(ramp.data(), red, transparentBlue, 0.5f, 0.5f);
     EXPECT_EQ(ramp, previous);
@@ -465,6 +466,32 @@ TEST(CanvasReadback, DrawImageRejectsArityAndNoOpGeometryBeforeReadbackOrUpload)
         }
         EXPECT_FALSE(sourceCanvas->HasFrameBuffer()) << "no-op drawImage must not flush/read the source";
         EXPECT_FALSE(destinationCanvas->HasFrameBuffer());
+    });
+}
+
+TEST(CanvasColors, HslRoundsCssComponentsBeforeGpuRasterization)
+{
+    RunCanvasTest([](Napi::Env env) {
+        const std::array<std::array<unsigned char, 3>, 16> expected{{
+            {122, 31, 31}, {122, 65, 31}, {122, 99, 31}, {111, 122, 31},
+            {77, 122, 31}, {42, 122, 31}, {31, 122, 54}, {31, 122, 88},
+            {31, 122, 122}, {31, 88, 122}, {31, 54, 122}, {42, 31, 122},
+            {77, 31, 122}, {111, 31, 122}, {122, 31, 99}, {122, 31, 65},
+        }};
+        for (size_t i = 0; i < expected.size(); ++i)
+        {
+            const auto color = Babylon::Polyfills::Internal::StringToColor(env,
+                "hsl(" + std::to_string(i * 22.5) + ",60%,30%)");
+            EXPECT_FLOAT_EQ(color.r, expected[i][0] / 255.f);
+            EXPECT_FLOAT_EQ(color.g, expected[i][1] / 255.f);
+            EXPECT_FLOAT_EQ(color.b, expected[i][2] / 255.f);
+            EXPECT_FLOAT_EQ(color.a, 1.f);
+        }
+        const auto wrapped = Babylon::Polyfills::Internal::StringToColor(env, "hsla(-90,60%,30%,0.5)");
+        EXPECT_FLOAT_EQ(wrapped.r, 77.f / 255.f);
+        EXPECT_FLOAT_EQ(wrapped.g, 31.f / 255.f);
+        EXPECT_FLOAT_EQ(wrapped.b, 122.f / 255.f);
+        EXPECT_FLOAT_EQ(wrapped.a, 128.f / 255.f);
     });
 }
 

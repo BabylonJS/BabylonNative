@@ -61,6 +61,7 @@ namespace UrlLib
 
         void Abort();
 
+        // data: GET URLs are decoded in the shared layer (see README.md for the supported contract).
         void Open(UrlMethod method, const std::string& url);
 
         // Registers a resolver for a non-transport URL scheme such as "blob". Registration is
@@ -69,6 +70,8 @@ namespace UrlLib
         // SendAsync() time, so every consumer (fetch, XMLHttpRequest, image / video src, texture
         // loaders, ...) resolves such URLs uniformly through UrlRequest instead of each carrying
         // its own branch.
+        // A registered "data" resolver overrides the built-in decoder until unregistered.
+        // Shared resolvers observe Abort() before invocation, returning a cancelled task.
         //
         // A resolver that reports the URL as not handled -- or that throws -- surfaces as a
         // transport-style failure (status stays None, with an error symbol recorded); an exception

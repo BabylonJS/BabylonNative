@@ -15,11 +15,11 @@ FetchContent_MakeAvailable(googletest)
 set_property(TARGET gtest PROPERTY FOLDER Dependencies)
 set_property(TARGET gtest_main PROPERTY FOLDER Dependencies)
 
-add_executable(UrlLibTests UrlRequestErrorReporting.cpp SchemeResolver.cpp)
+add_executable(UrlLibTests Main.cpp UrlRequestErrorReporting.cpp SchemeResolver.cpp DataUrl.cpp)
 
 target_link_libraries(UrlLibTests
     PRIVATE UrlLib
-    PRIVATE GTest::gtest_main)
+    PRIVATE GTest::gtest)
 
 if(APPLE)
     # The UrlLib static library's NSURLSession-based backend needs Foundation at link time.

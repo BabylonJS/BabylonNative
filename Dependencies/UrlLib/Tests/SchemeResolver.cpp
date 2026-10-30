@@ -230,6 +230,29 @@ TEST(SchemeResolver, RegisteringNullResolverThrows)
     UrlLib::UrlRequest::UnregisterSchemeResolver(scheme);
 }
 
+TEST(SchemeResolver, AbortBeforeSendDoesNotInvokeResolver)
+{
+    const std::string scheme = "urllibtest-cancel";
+    int calls = 0;
+    UrlLib::UrlRequest::RegisterSchemeResolver(scheme, [&calls](const std::string&) {
+        ++calls;
+        return UrlLib::UrlSchemeResolverResult{};
+    });
+    UrlLib::UrlRequest request;
+    request.Open(UrlLib::UrlMethod::Get, scheme + ":anything");
+    request.Abort();
+    bool completed = false;
+    request.SendAsync().then(arcana::inline_scheduler, arcana::cancellation::none(),
+        [&completed](const arcana::expected<void, std::exception_ptr>& result) {
+            EXPECT_TRUE(result.has_error());
+            completed = true;
+        });
+    EXPECT_TRUE(completed);
+    EXPECT_EQ(calls, 0);
+    EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::None);
+    UrlLib::UrlRequest::UnregisterSchemeResolver(scheme);
+}
+
 // After unregistering, the scheme is no longer diverted: the resolver is never invoked again and the
 // request falls through to the platform transport. The transport's outcome for an unknown scheme is
 // platform-specific (it may throw at Open, fail synchronously, or fail asynchronously), so this

@@ -8,7 +8,10 @@
 #include <arcana/threading/cancellation.h>
 
 #include <gtest/gtest.h>
+#include <gsl/util>
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -205,15 +208,16 @@ namespace
         uint16_t m_port;
     };
 
-    // A loopback TCP server that accepts connections but never responds, so an HTTP request to it
+    // A loopback TCP server that accepts connections but, by default, never responds, so a request
     // hangs until it is aborted. A background thread accept()s connections and holds them open
     // until teardown. Used to verify that UrlRequest::Abort() interrupts an in-flight request
     // rather than waiting for the transport's own timeout. Non-movable: the accept thread captures
-    // `this`.
+    // `this`. An optional wire response also supports deterministic HTTP response tests.
     class HangingServer
     {
     public:
-        HangingServer()
+        explicit HangingServer(std::string response = {}, std::promise<std::string>* capturedRequest = nullptr,
+            size_t requestBodyLength = 0, std::promise<void>* connectionAccepted = nullptr)
         {
             if (!EnsureSocketsInitialized())
             {
@@ -241,7 +245,8 @@ namespace
 
             m_listener = listener;
             m_port = ntohs(address.sin_port);
-            m_acceptThread = std::thread{[this]() {
+            m_acceptThread = std::thread{[this, response = std::move(response), capturedRequest,
+                requestBodyLength, connectionAccepted]() mutable {
                 for (;;)
                 {
                     NativeSocket connection = ::accept(m_listener, nullptr, nullptr);
@@ -249,7 +254,77 @@ namespace
                     {
                         break; // listener closed during teardown
                     }
-                    m_accepted.push_back(connection); // hold open, never respond
+                    if (connectionAccepted)
+                    {
+                        connectionAccepted->set_value();
+                        connectionAccepted = nullptr;
+                    }
+                    if (response.empty())
+                    {
+                        m_accepted.push_back(connection); // hold open, never respond
+                    }
+                    else
+                    {
+#if defined(__APPLE__)
+                        const int noSignal = 1;
+                        ::setsockopt(connection, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, sizeof(noSignal));
+#endif
+#if defined(_WIN32)
+                        const DWORD timeout = 5000;
+#else
+                        const timeval timeout{5, 0};
+#endif
+                        if (::setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO,
+                            reinterpret_cast<const char*>(&timeout), sizeof(timeout)) != 0)
+                        {
+                            ShutdownSocket(connection);
+                            CloseSocket(connection);
+                            continue;
+                        }
+                        char chunk[4096];
+                        std::string request;
+                        bool received = false;
+                        for (;;)
+                        {
+                            const auto count = ::recv(connection, chunk, sizeof(chunk), 0);
+                            if (count <= 0)
+                            {
+                                break;
+                            }
+                            received = true;
+                            if (!capturedRequest)
+                            {
+                                break;
+                            }
+                            request.append(chunk, static_cast<size_t>(count));
+                            const auto headerEnd = request.find("\r\n\r\n");
+                            if (headerEnd != std::string::npos && request.size() - headerEnd - 4 >= requestBodyLength)
+                            {
+                                break;
+                            }
+                        }
+                        if (capturedRequest)
+                        {
+                            capturedRequest->set_value(std::move(request));
+                            capturedRequest = nullptr;
+                        }
+                        if (received)
+                        {
+                            size_t sent = 0;
+                            while (sent < response.size())
+                            {
+                                const auto count = ::send(connection, response.data() + sent,
+                                    static_cast<int>(response.size() - sent), 0);
+                                if (count <= 0)
+                                {
+                                    break;
+                                }
+                                sent += static_cast<size_t>(count);
+                            }
+                        }
+                        ShutdownSocket(connection);
+                        CloseSocket(connection);
+                    }
                 }
             }};
         }
@@ -286,6 +361,11 @@ namespace
         std::string Url() const
         {
             return "http://127.0.0.1:" + std::to_string(m_port) + "/";
+        }
+
+        uint16_t Port() const
+        {
+            return m_port;
         }
 
     private:
@@ -333,6 +413,255 @@ namespace
     };
 }
 
+namespace
+{
+    class HttpPost : public testing::Test
+    {
+    protected:
+        void SetUp() override
+        {
+#if !defined(_WIN32) && !defined(__APPLE__)
+            GTEST_SKIP() << "the Linux backend does not implement POST yet";
+#endif
+        }
+
+        void CheckPost(std::optional<std::string> headerName, const std::string& body,
+            const std::string& contentType = "application/json")
+        {
+            std::promise<std::string> capturedRequest;
+            auto wire = capturedRequest.get_future();
+            HangingServer server{
+                "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok",
+                &capturedRequest, body.size()};
+            ASSERT_TRUE(server.Valid());
+            UrlLib::UrlRequest request;
+            request.Open(UrlLib::UrlMethod::Post, server.Url());
+            if (headerName)
+            {
+                request.SetRequestHeader(*headerName, contentType);
+            }
+            request.SetRequestHeader("x-urllib-test", "post");
+            request.SetRequestBody(body);
+            ASSERT_TRUE(SendAndWait(request));
+            ASSERT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::Ok) << request.ErrorString();
+            EXPECT_EQ(request.ResponseString(), "ok");
+            EXPECT_TRUE(request.ErrorString().empty());
+            ASSERT_EQ(wire.wait_for(std::chrono::seconds{5}), std::future_status::ready);
+            const auto sent = wire.get();
+            EXPECT_EQ(sent.find("POST / HTTP/1.1\r\n"), 0u);
+            const auto headerEnd = sent.find("\r\n\r\n");
+            ASSERT_NE(headerEnd, std::string::npos);
+            EXPECT_EQ(sent.substr(headerEnd + 4), body);
+            std::string headers = sent.substr(0, headerEnd + 2);
+            std::transform(headers.begin(), headers.end(), headers.begin(),
+                [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+            EXPECT_NE(headers.find("\r\nx-urllib-test: post\r\n"), std::string::npos);
+            if (headerName)
+            {
+                EXPECT_NE(headers.find("\r\ncontent-type: " + contentType + "\r\n"), std::string::npos);
+            }
+#if defined(_WIN32)
+            else
+            {
+                EXPECT_EQ(headers.find("\r\ncontent-type:"), std::string::npos);
+            }
+#endif
+        }
+    };
+}
+
+TEST_F(HttpPost, JsonContentTypeIsCaseInsensitive)
+{
+    for (const auto* name : {"Content-Type", "content-type", "CoNtEnT-TyPe"})
+    {
+        SCOPED_TRACE(name);
+        CheckPost(name, "{\"message\":\"caf\xC3\xA9\"}\n");
+    }
+}
+
+TEST_F(HttpPost, WithoutContentType)
+{
+    CheckPost(std::nullopt, "plain text\r\n");
+    CheckPost(std::nullopt, "");
+}
+
+TEST_F(HttpPost, PreservesContentTypeParameters)
+{
+    CheckPost("content-type", "{\"ready\":true}", "application/json; charset=utf-8");
+}
+
+TEST_F(HttpPost, PreservesRawBodyBytes)
+{
+    for (const auto& body : {std::string{"a\0b", 3}, std::string{"\x80\xff\r\n", 4},
+        std::string{"\0\x80\xff\r\n", 5}})
+    {
+        CheckPost("content-type", body, "application/octet-stream");
+    }
+}
+
+#if defined(_WIN32)
+namespace
+{
+    class WindowsHttp : public testing::Test
+    {
+    protected:
+        void CheckResponse(const std::string& wire, int status, std::string_view body,
+            std::optional<std::string> contentType)
+        {
+            HangingServer server{wire};
+            ASSERT_TRUE(server.Valid());
+            for (auto type : {UrlLib::UrlResponseType::String, UrlLib::UrlResponseType::Buffer})
+            {
+                UrlLib::UrlRequest request;
+                request.Open(UrlLib::UrlMethod::Get, server.Url());
+                request.ResponseType(type);
+                auto settled = std::make_shared<std::promise<std::exception_ptr>>();
+                auto future = settled->get_future();
+                request.SendAsync().then(arcana::inline_scheduler, arcana::cancellation::none(),
+                    [settled](const arcana::expected<void, std::exception_ptr>& result) {
+                        settled->set_value(result.has_error() ? result.error() : nullptr);
+                    });
+                ASSERT_EQ(future.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+                const auto error = future.get();
+                ASSERT_EQ(error, nullptr) << "HTTP task failed";
+                EXPECT_EQ(static_cast<int>(request.StatusCode()), status);
+                EXPECT_EQ(request.GetResponseHeader("content-type"), contentType);
+                EXPECT_TRUE(request.ErrorString().empty());
+                if (type == UrlLib::UrlResponseType::String)
+                {
+                    EXPECT_EQ(request.ResponseString(), body);
+                }
+                else
+                {
+                    const auto bytes = request.ResponseBuffer();
+                    ASSERT_EQ(bytes.size(), body.size());
+                    if (!bytes.empty())
+                    {
+                        EXPECT_EQ(std::string_view(reinterpret_cast<const char*>(bytes.data()), bytes.size()), body);
+                    }
+                }
+            }
+        }
+    };
+}
+
+TEST_F(WindowsHttp, MissingContentTypePreservesBody)
+{
+    CheckResponse("HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nhello",
+        200, "hello", std::nullopt);
+}
+
+TEST_F(WindowsHttp, PostRejectsInvalidContentTypeAndCanReopen)
+{
+    const std::string body = "reopened without Content-Type";
+    std::promise<std::string> capturedRequest;
+    auto wire = capturedRequest.get_future();
+    HangingServer server{"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        &capturedRequest, body.size()};
+    ASSERT_TRUE(server.Valid());
+    UrlLib::UrlRequest request;
+    request.Open(UrlLib::UrlMethod::Post, server.Url());
+    request.SetRequestHeader("content-type", "not a media type");
+    request.SetRequestBody("unchanged");
+    ASSERT_TRUE(SendAndWait(request));
+    EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::None);
+    EXPECT_FALSE(request.ErrorString().empty());
+    EXPECT_TRUE(request.ResponseString().empty());
+    EXPECT_TRUE(request.GetAllResponseHeaders().empty());
+
+    request.Open(UrlLib::UrlMethod::Post, server.Url());
+    request.SetRequestBody(body);
+    ASSERT_TRUE(SendAndWait(request));
+    ASSERT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::Ok) << request.ErrorString();
+    EXPECT_TRUE(request.ErrorString().empty());
+    ASSERT_EQ(wire.wait_for(std::chrono::seconds{5}), std::future_status::ready);
+    const auto sent = wire.get();
+    const auto headerEnd = sent.find("\r\n\r\n");
+    ASSERT_NE(headerEnd, std::string::npos);
+    EXPECT_EQ(sent.substr(headerEnd + 4), body);
+    std::string headers = sent.substr(0, headerEnd);
+    std::transform(headers.begin(), headers.end(), headers.begin(),
+        [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+    EXPECT_EQ(headers.find("\r\ncontent-type:"), std::string::npos);
+}
+
+TEST_F(WindowsHttp, MissingContentTypeWithEmptyBody)
+{
+    CheckResponse("HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        200, "", std::nullopt);
+}
+
+TEST_F(WindowsHttp, NoContentRetainsExistingSuccessNormalization)
+{
+    CheckResponse("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n",
+        200, "", std::nullopt);
+}
+
+TEST_F(WindowsHttp, ContentTypePreserved)
+{
+    CheckResponse("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 5\r\nConnection: close\r\n\r\nhello",
+        200, "hello", std::string{"text/plain; charset=utf-8"});
+}
+
+TEST_F(WindowsHttp, NonSuccessRetainsExistingStatusAndEmptyBody)
+{
+    CheckResponse("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 7\r\nConnection: close\r\n\r\nmissing",
+        404, "", std::nullopt);
+    CheckResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        500, "", std::nullopt);
+    CheckResponse("HTTP/1.1 304 Not Modified\r\nConnection: close\r\n\r\n",
+        304, "", std::nullopt);
+}
+
+TEST_F(WindowsHttp, ConnectionFailureIsNotSuccess)
+{
+    const auto port = RefusingPort::Acquire();
+    ASSERT_TRUE(port);
+    UrlLib::UrlRequest request;
+    request.Open(UrlLib::UrlMethod::Get, port->Url());
+    auto settled = std::make_shared<std::promise<bool>>();
+    auto future = settled->get_future();
+    request.SendAsync().then(arcana::inline_scheduler, arcana::cancellation::none(),
+        [settled](const arcana::expected<void, std::exception_ptr>& result) {
+            settled->set_value(result.has_error());
+        });
+    ASSERT_EQ(future.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    EXPECT_TRUE(future.get() || !request.ErrorString().empty());
+    EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::None);
+    EXPECT_TRUE(request.ResponseString().empty());
+    EXPECT_TRUE(request.GetAllResponseHeaders().empty());
+}
+#endif
+
+TEST(LoopbackServer, IdleResponseConnectionDoesNotBlockTeardown)
+{
+    std::promise<void> accepted;
+    auto acceptedFuture = accepted.get_future();
+    auto server = std::make_unique<HangingServer>(
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", nullptr, 0, &accepted);
+    ASSERT_TRUE(server->Valid());
+    const NativeSocket connection = ::socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_NE(connection, InvalidSocket);
+    auto closeConnection = gsl::finally([connection] { CloseSocket(connection); });
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(server->Port());
+    ASSERT_EQ(::connect(connection, reinterpret_cast<const sockaddr*>(&address), sizeof(address)), 0);
+    ASSERT_EQ(acceptedFuture.wait_for(std::chrono::seconds{5}), std::future_status::ready);
+
+    std::promise<void> destroyed;
+    auto destroyedFuture = destroyed.get_future();
+    std::thread teardown{[server = std::move(server), &destroyed]() mutable {
+        server.reset();
+        destroyed.set_value();
+    }};
+    const auto completion = destroyedFuture.wait_for(std::chrono::seconds{10});
+    ShutdownSocket(connection);
+    teardown.join();
+    EXPECT_EQ(completion, std::future_status::ready);
+}
+
 TEST(UrlRequestErrorReporting, SuccessfulLocalFileReportsNoError)
 {
     const TempFile file{"ok", "hello urllib"};
@@ -347,6 +676,27 @@ TEST(UrlRequestErrorReporting, SuccessfulLocalFileReportsNoError)
     EXPECT_TRUE(request.ErrorString().empty()) << request.ErrorString();
     EXPECT_TRUE(request.ErrorSymbol().empty()) << request.ErrorSymbol();
     EXPECT_EQ(request.ErrorCode(), 0);
+}
+
+TEST(UrlRequestErrorReporting, SwitchingBetweenDataAndPlatformTransportClearsResponse)
+{
+    const TempFile file{"scheme_reuse", "file body"};
+    UrlLib::UrlRequest request;
+    request.ResponseType(UrlLib::UrlResponseType::Buffer);
+    request.Open(UrlLib::UrlMethod::Get, "data:application/octet-stream,previous");
+    ASSERT_TRUE(SendAndWait(request));
+    ASSERT_EQ(request.ResponseBuffer().size(), 8u);
+    request.Open(UrlLib::UrlMethod::Get, file.Url());
+    ASSERT_TRUE(SendAndWait(request));
+    EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::Ok);
+    EXPECT_FALSE(request.GetResponseHeader("content-type"));
+    const auto body = request.ResponseBuffer();
+    ASSERT_EQ(body.size(), 9u);
+    EXPECT_EQ(std::string_view(reinterpret_cast<const char*>(body.data()), body.size()), "file body");
+    request.Open(UrlLib::UrlMethod::Get, "data:,");
+    ASSERT_TRUE(SendAndWait(request));
+    EXPECT_TRUE(request.ResponseBuffer().empty());
+    EXPECT_EQ(request.GetResponseHeader("content-type"), std::optional<std::string>{"text/plain;charset=US-ASCII"});
 }
 
 TEST(UrlRequestErrorReporting, MissingLocalFileReportsError)
