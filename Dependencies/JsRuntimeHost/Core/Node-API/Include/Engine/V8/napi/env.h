@@ -52,6 +52,8 @@ namespace Napi
 
   void Detach(Napi::Env);
 
+  void DrainFinalizers(Napi::Env);
+
   Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl);
 
   v8::Local<v8::Context> GetContext(Napi::Env);
