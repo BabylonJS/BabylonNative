@@ -141,12 +141,25 @@ namespace Babylon::Plugins::Internal
         std::map<std::string, int> m_fonts;
         int m_currentFontId{-1};
 
+        // Shadow properties are stored so scenes that set and restore them keep working;
+        // shadows themselves are not rendered.
+        struct ShadowState
+        {
+            std::string color{"rgba(0, 0, 0, 0)"};
+            double blur{0.0};
+            double offsetX{0.0};
+            double offsetY{0.0};
+        };
+        ShadowState m_shadow;
+        void WarnShadowUnsupported() const;
+
         struct SavedStyle
         {
             std::variant<std::string, GradientStyle> fillStyle;
             std::variant<std::string, GradientStyle> strokeStyle;
             Font font;
             int currentFontId;
+            ShadowState shadow;
         };
         std::vector<SavedStyle> m_savedStyles;
 

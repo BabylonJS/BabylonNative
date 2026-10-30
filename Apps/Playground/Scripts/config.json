@@ -965,8 +965,8 @@
         {
             "title": "Node material PBR 1",
             "playgroundId": "#D8AK3Z#121",
-            "excludedGraphicsApis": ["D3D11", "OpenGL"],
-            "reason": "D3D11 and OpenGL CI fail pixel comparison (7.338% and 7.677% different pixels respectively; allowed 2.5%).",
+            "excludedGraphicsApis": ["D3D11", "OpenGL", "WebGPU"],
+            "reason": "D3D11 and OpenGL CI fail pixel comparison (7.338% and 7.677% different pixels respectively; allowed 2.5%). WebGPU: intermittently the createScene promise never resolves in a full-suite run (waited out the whole timeout once; passes in ~4 s when run alone), which burns CI time.",
             "referenceImage": "node-material-pbr-1.png"
         },
         {
@@ -2051,6 +2051,8 @@
         {
             "title": "Material Plugin",
             "playgroundId": "#22HT5Z#10",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: the scene adds a GLSL-only material plugin (BlackAndWhite), which Babylon.js rejects for WGSL materials.",
             "referenceImage": "materialPlugin.png"
         },
         {
@@ -3001,86 +3003,120 @@
         },
         {
             "title": "Atmosphere Day",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#39",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Planet Origin)",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#40",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Ray Marching)",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#41",
             "referenceImage": "atmosphere-day-ray-marching.png"
         },
         {
             "title": "Atmosphere Sunset",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#42",
             "referenceImage": "atmosphere-sunset.png"
         },
         {
             "title": "Atmosphere Sunset (Planet Origin)",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#43",
             "referenceImage": "atmosphere-sunset.png"
         },
         {
             "title": "Atmosphere Night",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#45",
             "referenceImage": "atmosphere-night.png"
         },
         {
             "title": "Atmosphere Night (Planet Origin)",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#46",
             "referenceImage": "atmosphere-night.png"
         },
         {
             "title": "Atmosphere Space View",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene never becomes ready and the D3D12 device is lost (DXGI_ERROR_DEVICE_REMOVED), after which later scenes stall until the readiness timeout. It renders in seconds on a hardware GPU.",
             "playgroundId": "#VO1Z0C#47",
             "referenceImage": "atmosphere-space-view.png"
         },
         {
             "title": "OpenPBR IBL Reflectance with IOR",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#KQYNYS#56",
             "referenceImage": "OpenPBR-IBL-Reflectance-with-IOR.png"
         },
         {
             "title": "OpenPBR IBL F82 Specular Metal vs Weight",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#GRQHVV#172",
             "referenceImage": "OpenPBR-IBL-F82-Specular-Metal-vs-Weight.png"
         },
         {
             "title": "OpenPBR IBL F82 Specular Roughness vs Weight",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#GRQHVV#173",
             "referenceImage": "OpenPBR-IBL-F82-Specular-Roughness-vs-Weight.png"
         },
         {
             "title": "OpenPBR IBL Furnace Test for Metal-Rough",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#KQYNYS#47",
             "referenceImage": "OpenPBR-IBL-Furnace-Test-for-Metal-Rough.png"
         },
         {
             "title": "OpenPBR IBL Specular IOR vs Coat IOR",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#GRQHVV#39",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-IOR.png"
         },
         {
             "title": "OpenPBR IBL Metalness vs Coat IOR",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#GRQHVV#176",
             "referenceImage": "OpenPBR-IBL-Metalness-vs-Coat-IOR.png"
         },
         {
             "title": "OpenPBR IBL Specular IOR vs Coat Weight",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#GRQHVV#182",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-Weight.png"
         },
         {
             "title": "OpenPBR IBL Specular Roughness vs Coat Roughness",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#GRQHVV#183",
             "referenceImage": "OpenPBR-IBL-Specular-Roughness-vs-Coat-Roughness.png"
         },
         {
             "title": "OpenPBR Analytic Lights Specular Roughness vs Coat Roughness",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: on the CI software adapter (Microsoft Basic Render Driver / WARP) this scene stalls until the readiness timeout and the device is then lost (DXGI_ERROR_DEVICE_REMOVED) in the surrounding Atmosphere/OpenPBR scenes. It renders in seconds on a hardware GPU.",
             "playgroundId": "#GRQHVV#42",
             "referenceImage": "OpenPBR-Analytic-Lights-Specular-Roughness-vs-Coat-Roughness.png"
         },

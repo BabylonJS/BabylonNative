@@ -356,7 +356,7 @@ namespace Babylon::Plugins::Internal
     {
         nvgSave(*m_nvg);
         // BindFillStyle/SetFontFaceId must not rebind state that NanoVG has already restored.
-        m_savedStyles.push_back({m_fillStyle, m_strokeStyle, m_font, m_currentFontId});
+        m_savedStyles.push_back({m_fillStyle, m_strokeStyle, m_font, m_currentFontId, m_shadow});
     }
 
     void ContextDawn::Restore(const Napi::CallbackInfo&)
@@ -370,6 +370,7 @@ namespace Babylon::Plugins::Internal
             m_strokeStyle = saved.strokeStyle;
             m_font = saved.font;
             m_currentFontId = saved.currentFontId;
+            m_shadow = saved.shadow;
             m_savedStyles.pop_back();
         }
     }
@@ -1556,43 +1557,91 @@ namespace Babylon::Plugins::Internal
         nvgGlobalAlpha(*m_nvg, alpha);
     }
 
+    void ContextDawn::WarnShadowUnsupported() const
+    {
+        if (m_shadow.blur == 0.0 && m_shadow.offsetX == 0.0 && m_shadow.offsetY == 0.0)
+        {
+            return;
+        }
+
+        static bool warned = false;
+        if (!warned)
+        {
+            warned = true;
+            fprintf(stderr, "Context2D: shadows are not supported; drawing without a shadow.\n");
+        }
+    }
+
     Napi::Value ContextDawn::GetShadowColor(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowColor (get): not implemented");
+        return Napi::String::New(info.Env(), m_shadow.color);
     }
 
     void ContextDawn::SetShadowColor(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowColor (set): not implemented");
+        // Per spec an unparseable shadowColor is ignored, keeping the old value.
+        const auto color = value.As<Napi::String>().Utf8Value();
+        try
+        {
+            StringToColor(info.Env(), color);
+        }
+        catch (const Napi::Error&)
+        {
+            return;
+        }
+
+        m_shadow.color = color;
     }
 
     Napi::Value ContextDawn::GetShadowBlur(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowBlur (get): not implemented");
+        return Napi::Number::New(info.Env(), m_shadow.blur);
     }
 
     void ContextDawn::SetShadowBlur(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowBlur (set): not implemented");
+        // Per spec, negative and non-finite values are ignored.
+        const double blur = value.As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(blur) || blur < 0.0)
+        {
+            return;
+        }
+
+        m_shadow.blur = blur;
+        WarnShadowUnsupported();
     }
 
     Napi::Value ContextDawn::GetShadowOffsetX(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetX (get): not implemented");
+        return Napi::Number::New(info.Env(), m_shadow.offsetX);
     }
 
     void ContextDawn::SetShadowOffsetX(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetX (set): not implemented");
+        const double offset = value.As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(offset))
+        {
+            return;
+        }
+
+        m_shadow.offsetX = offset;
+        WarnShadowUnsupported();
     }
 
     Napi::Value ContextDawn::GetShadowOffsetY(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetY (get): not implemented");
+        return Napi::Number::New(info.Env(), m_shadow.offsetY);
     }
 
     void ContextDawn::SetShadowOffsetY(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetY (set): not implemented");
+        const double offset = value.As<Napi::Number>().DoubleValue();
+        if (!std::isfinite(offset))
+        {
+            return;
+        }
+
+        m_shadow.offsetY = offset;
+        WarnShadowUnsupported();
     }
 }
