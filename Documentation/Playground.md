@@ -45,7 +45,7 @@ build/macOS/Apps/Playground/RelWithDebInfo/Playground.app/Contents/MacOS/Playgro
   --headless --test-index=140,159,167 app:///Scripts/validation_native.js
 ```
 
-Use `--headless --list` to list tests, or add `--include-excluded` to compare an
+Use `--list` to list tests (it implies `--headless`), or add `--include-excluded` to compare an
 excluded test against its existing reference. The runner exits nonzero on failure;
 omit the test filters to run the automatically selected suite. `--once` runs only
 the first matching runnable test, not the entire selection.

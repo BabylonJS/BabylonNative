@@ -2074,6 +2074,15 @@ void main() {
         {
             texture->Create2D(width, height, hasMips, textureLayers, format, flags);
         }
+
+        // WebGL creates render-target and cube textures with CLAMP_TO_EDGE, and raw InternalTexture binds
+        // (post-process inputs) never reapply a wrap mode.
+        if (renderTarget || isCube)
+        {
+            constexpr uint32_t addressMask = BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK;
+            constexpr uint32_t clampAll = BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_W_CLAMP;
+            texture->SamplerFlags((texture->SamplerFlags() & ~addressMask) | clampAll);
+        }
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
