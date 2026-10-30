@@ -217,7 +217,7 @@ Babylon.js reference navigations still use real Chrome. The adapter preserves
 scene assertions and thresholds, rejects dimension mismatches, and attempts
 quarantined scenes rather than omitting them. Unsupported native browser APIs
 fail explicitly. Browser-only bundle-size checks are not native rendering
-coverage. `Dawn-Lite-Parity.md` records each scene's outcome and evidence; a
+coverage. `Plugins/NativeDawn/Dawn-Lite-Parity.md` records each scene's outcome and evidence; a
 timeout or unavailable oracle is not a pixel-parity pass. Generated tests,
 copied references, logs, and images remain in the build directories.
 

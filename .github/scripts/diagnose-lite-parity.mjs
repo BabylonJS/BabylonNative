@@ -47,7 +47,7 @@ const result = await run(join(clone, "node_modules", "@playwright", "test", "cli
         },
     });
 const report = await run(join(scripts, "report-lite-parity.mjs"), [
-    clone, nativeArtifacts, resolve("Dawn-Lite-Parity.md"), browserArtifacts,
+    clone, nativeArtifacts, resolve("Plugins", "NativeDawn", "Dawn-Lite-Parity.md"), browserArtifacts,
 ], { cwd: resolve(".") });
 if (report !== 0) {
     throw new Error("Cannot refresh the parity report: exit " + report);

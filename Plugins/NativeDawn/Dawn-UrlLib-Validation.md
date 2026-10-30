@@ -90,7 +90,7 @@ rebuilt before execution. The local lab server was stopped afterward.
 
 Exact source patches, new-file hashes, CMake override paths, and package
 manifests are recorded in
-[run provenance](build/urllib-validation-20261007/provenance.json).
+[run provenance](../../build/urllib-validation-20261007/provenance.json).
 The BabylonNative fingerprint excludes Markdown files to avoid self-referential
 report hashes.
 
@@ -150,12 +150,12 @@ No new browser-Lite diagnostic replay was performed; earlier replay annotations
 are deliberately excluded from the fresh report.
 
 Full per-scene reasons, measurements, screenshots, and native-log links:
-[Babylon-Lite detailed report](build/urllib-validation-20261007/lite/report.md).
+[Babylon-Lite detailed report](../../build/urllib-validation-20261007/lite/report.md).
 Structured results:
-[summary](build/urllib-validation-20261007/lite/summary.json),
-[case records](build/urllib-validation-20261007/lite/cases.jsonl),
-[metrics](build/urllib-validation-20261007/lite/metrics.jsonl),
-[complete log](build/urllib-validation-20261007/lite/playwright.log).
+[summary](../../build/urllib-validation-20261007/lite/summary.json),
+[case records](../../build/urllib-validation-20261007/lite/cases.jsonl),
+[metrics](../../build/urllib-validation-20261007/lite/metrics.jsonl),
+[complete log](../../build/urllib-validation-20261007/lite/playwright.log).
 
 ### Readiness/deadline investigation
 
@@ -210,7 +210,7 @@ or shader: NativeDawn currently implements `destroy()` as a no-op and creates
 a `lost` promise with no resolving path. Genuine device ownership, destruction,
 loss notification and replacement/recovery need implementation. No post-loss
 image invariance or resource reconstruction is established. The diagnostic
-[pre-loss screenshot](build/urllib-validation-20261007/readiness/scene164-before-loss.png)
+[pre-loss screenshot](../../build/urllib-validation-20261007/readiness/scene164-before-loss.png)
 is retained separately from the original full-run screenshot.
 
 **Text demos, scenes 180/181:** both successfully load all 876,576 bytes of
@@ -228,10 +228,10 @@ not reached.
 
 Evidence, including per-second datasets, completed body transfers, script
 appends, device lifecycle observations and the terminal stacks:
-[Lite readiness diagnostics](build/urllib-validation-20261007/readiness/lite-readiness.json),
-[diagnostic bundle identities](build/urllib-validation-20261007/readiness/bundle-identities.json),
-[driver](build/urllib-validation-20261007/readiness/probe-lite.mjs),
-[telemetry](build/urllib-validation-20261007/readiness/telemetry.js).
+[Lite readiness diagnostics](../../build/urllib-validation-20261007/readiness/lite-readiness.json),
+[diagnostic bundle identities](../../build/urllib-validation-20261007/readiness/bundle-identities.json),
+[driver](../../build/urllib-validation-20261007/readiness/probe-lite.mjs),
+[telemetry](../../build/urllib-validation-20261007/readiness/telemetry.js).
 Only diagnostic copies of scenes 180/181 add terminal rejection reporting;
 the other six diagnostic scene bundles are byte-identical to the tested
 originals. The bridge temporarily copies these into its runnable consumer;
@@ -271,10 +271,10 @@ fixed those intermittent failures. These runs are likewise not a controlled
 UrlLib-only comparison; existing NativeDawn and shared-host fixes are included.
 
 Logs, summaries, native result/diff images, and tested packages:
-[unchanged-bundle summary](build/urllib-validation-20261007/standard/summary.json),
-[unchanged-bundle log](build/urllib-validation-20261007/standard/validation.log),
-[canonical summary](build/urllib-validation-20261007/canonical/summary.json),
-[canonical log](build/urllib-validation-20261007/canonical/validation.log).
+[unchanged-bundle summary](../../build/urllib-validation-20261007/standard/summary.json),
+[unchanged-bundle log](../../build/urllib-validation-20261007/standard/validation.log),
+[canonical summary](../../build/urllib-validation-20261007/canonical/summary.json),
+[canonical log](../../build/urllib-validation-20261007/canonical/validation.log).
 The canonical directory also contains the upstream patch, regeneration script,
 and bundle provenance.
 
@@ -293,7 +293,7 @@ Three fresh isolated repetitions with the unchanged 9.21.2 bundle and original
 runner produced **one convergence failure (8.244s), then two passes (2.499s and
 2.439s)**. Both successful pixel comparisons measured **552/240000 = 0.230%**,
 well below the unchanged 2.5% allowance. The passing screenshot is preserved
-[separately](build/urllib-validation-20261007/readiness/gui-near-menu-original-attempts-2-3.png);
+[separately](../../build/urllib-validation-20261007/readiness/gui-near-menu-original-attempts-2-3.png);
 it is not evidence that the original full-catalog failed attempt captured a frame.
 
 An additional five isolated repetitions used a separately named, reason-only
@@ -312,12 +312,12 @@ investigation is to reproduce that failure with the guard diagnostics enabled,
 not simply raise the deadline or count retries as a pass. No RenderDoc capture
 was attempted because the failing attempt never reached pixel comparison.
 Evidence:
-[original failed isolated run](build/urllib-validation-20261007/readiness/gui-near-menu-original-1.log),
-[original passing run](build/urllib-validation-20261007/readiness/gui-near-menu-original-2.log),
-[instrumented run](build/urllib-validation-20261007/readiness/gui-near-menu-diagnostic-1.log),
-[diagnostic runner generator](build/urllib-validation-20261007/readiness/prepare-gui-probe.mjs),
-[derived runner](build/urllib-validation-20261007/readiness/gui-derived-runner.js),
-[runner hashes](build/urllib-validation-20261007/readiness/gui-runner-provenance.json).
+[original failed isolated run](../../build/urllib-validation-20261007/readiness/gui-near-menu-original-1.log),
+[original passing run](../../build/urllib-validation-20261007/readiness/gui-near-menu-original-2.log),
+[instrumented run](../../build/urllib-validation-20261007/readiness/gui-near-menu-diagnostic-1.log),
+[diagnostic runner generator](../../build/urllib-validation-20261007/readiness/prepare-gui-probe.mjs),
+[derived runner](../../build/urllib-validation-20261007/readiness/gui-derived-runner.js),
+[runner hashes](../../build/urllib-validation-20261007/readiness/gui-runner-provenance.json).
 All three original and five instrumented logs are in the same `readiness` directory.
 The temporary GUI runner was removed from the original consumer afterward;
 the generator recreates it for a labelled diagnostic repetition.
@@ -401,16 +401,16 @@ diagnostic runners. The original full-catalog failure remains recorded as failed
 No RenderDoc capture was needed to identify this readiness mechanism.
 
 Evidence:
-[structured image/timing analysis](build/urllib-validation-20261007/iridescence/analysis.json),
-[delayed original-scene log](build/urllib-validation-20261007/iridescence/delayed-unawaited-1.log),
-[delayed black-sphere reproduction](build/urllib-validation-20261007/iridescence/delayed-unawaited-1.png),
-[order-preserving delayed log](build/urllib-validation-20261007/iridescence/delayed-awaited-preserving-order-1.log),
-[order-preserving passing frame](build/urllib-validation-20261007/iridescence/delayed-awaited-preserving-order-1.png),
-[unchanged isolated log](build/urllib-validation-20261007/iridescence/original-1.log),
-[runner generator](build/urllib-validation-20261007/iridescence/prepare-probe.mjs),
-[runner provenance](build/urllib-validation-20261007/iridescence/runner-provenance.json),
-[initial-control source provenance](build/urllib-validation-20261007/iridescence/first-runner-provenance.json),
-[copied-consumer identities](build/urllib-validation-20261007/iridescence/consumer-identities.json).
+[structured image/timing analysis](../../build/urllib-validation-20261007/iridescence/analysis.json),
+[delayed original-scene log](../../build/urllib-validation-20261007/iridescence/delayed-unawaited-1.log),
+[delayed black-sphere reproduction](../../build/urllib-validation-20261007/iridescence/delayed-unawaited-1.png),
+[order-preserving delayed log](../../build/urllib-validation-20261007/iridescence/delayed-awaited-preserving-order-1.log),
+[order-preserving passing frame](../../build/urllib-validation-20261007/iridescence/delayed-awaited-preserving-order-1.png),
+[unchanged isolated log](../../build/urllib-validation-20261007/iridescence/original-1.log),
+[runner generator](../../build/urllib-validation-20261007/iridescence/prepare-probe.mjs),
+[runner provenance](../../build/urllib-validation-20261007/iridescence/runner-provenance.json),
+[initial-control source provenance](../../build/urllib-validation-20261007/iridescence/first-runner-provenance.json),
+[copied-consumer identities](../../build/urllib-validation-20261007/iridescence/consumer-identities.json).
 All 17 logs, frames, original/corrected diagnostic runner sources, and public
 scene/node-material JSON payloads are retained under
 `build\urllib-validation-20261007\iridescence`.
@@ -582,18 +582,18 @@ Artifact root:
 C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\master-validation-20261007
 ```
 
-- [Corrected full summary](build/master-validation-20261007/run-summary-corrected.json),
-  [initial full summary](build/master-validation-20261007/run-summary.json) and
-  [complete Lite scene report](build/master-validation-20261007/lite/report.md).
-- [Corrected visualization log](build/master-validation-20261007/standard-corrected/validation.log),
-  [Lite full-suite log](build/master-validation-20261007/lite/full-suite.log) and
-  [focused input result](build/master-validation-20261007/standard-corrected/picking-smoke.log).
-- [Recorded binding descriptors](build/master-validation-20261007/binding-probe/probe.log),
-  [descriptor analysis](build/master-validation-20261007/binding-probe/analysis.json),
-  [isolated emitter reproduction](build/master-validation-20261007/binding-probe/emitter-reproduction.json)
-  and [reproduction script](build/master-validation-20261007/binding-probe/reproduce-downlevel-collision.mjs).
-- [Corrected provenance](build/master-validation-20261007/standard-corrected/provenance.json)
-  and [Lite provenance](build/master-validation-20261007/lite/provenance.json).
+- [Corrected full summary](../../build/master-validation-20261007/run-summary-corrected.json),
+  [initial full summary](../../build/master-validation-20261007/run-summary.json) and
+  [complete Lite scene report](../../build/master-validation-20261007/lite/report.md).
+- [Corrected visualization log](../../build/master-validation-20261007/standard-corrected/validation.log),
+  [Lite full-suite log](../../build/master-validation-20261007/lite/full-suite.log) and
+  [focused input result](../../build/master-validation-20261007/standard-corrected/picking-smoke.log).
+- [Recorded binding descriptors](../../build/master-validation-20261007/binding-probe/probe.log),
+  [descriptor analysis](../../build/master-validation-20261007/binding-probe/analysis.json),
+  [isolated emitter reproduction](../../build/master-validation-20261007/binding-probe/emitter-reproduction.json)
+  and [reproduction script](../../build/master-validation-20261007/binding-probe/reproduce-downlevel-collision.mjs).
+- [Corrected provenance](../../build/master-validation-20261007/standard-corrected/provenance.json)
+  and [Lite provenance](../../build/master-validation-20261007/lite/provenance.json).
 
 Final visualization result PNGs and red diff overlays are respectively in
 `standard-corrected\consumer\Apps\Playground\Results` and
@@ -688,13 +688,13 @@ response-MIME stack. Diagnostic retries have not replaced any original result.
 
 Retained artifacts:
 
-- [Complete summary and integrity counts](build/master-validation-20261019/summary.json)
-  and [source/dependency provenance](build/master-validation-20261019/provenance.json).
-- [Full WebGPU log](build/master-validation-20261019/standard/validation.log)
-  and [per-scene Lite report](build/master-validation-20261019/lite/report.md).
-- [Lite full-suite log](build/master-validation-20261019/lite/full-suite.log),
-  [runtime failure](build/master-validation-20261019/dawn_runtime_native.log)
-  and [shared Canvas results](build/master-validation-20261019/canvas-tests.log).
+- [Complete summary and integrity counts](../../build/master-validation-20261019/summary.json)
+  and [source/dependency provenance](../../build/master-validation-20261019/provenance.json).
+- [Full WebGPU log](../../build/master-validation-20261019/standard/validation.log)
+  and [per-scene Lite report](../../build/master-validation-20261019/lite/report.md).
+- [Lite full-suite log](../../build/master-validation-20261019/lite/full-suite.log),
+  [runtime failure](../../build/master-validation-20261019/dawn_runtime_native.log)
+  and [shared Canvas results](../../build/master-validation-20261019/canvas-tests.log).
 
 The artifact root is
 `C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\master-validation-20261019`.
@@ -787,14 +787,14 @@ new engine-identity method.
 Artifacts are retained locally under
 `C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\full-validation-20261027-fixed`:
 
-- [Full summary](build/full-validation-20261027-fixed/summary.json),
-  [source/dependency provenance](build/full-validation-20261027-fixed/provenance.json)
-  and [descriptor reproduction](build/full-validation-20261027-fixed/binding-reproduction.json).
-- [Full WebGPU log](build/full-validation-20261027-fixed/validation.log)
-  and [262-scene Lite report](build/full-validation-20261027-fixed/lite/report.md).
-- [Lite full-suite log](build/full-validation-20261027-fixed/lite/full-suite.log),
-  [runtime failure](build/full-validation-20261027-fixed/runtime.log)
-  and [module-load failure](build/full-validation-20261027-fixed/module.log).
+- [Full summary](../../build/full-validation-20261027-fixed/summary.json),
+  [source/dependency provenance](../../build/full-validation-20261027-fixed/provenance.json)
+  and [descriptor reproduction](../../build/full-validation-20261027-fixed/binding-reproduction.json).
+- [Full WebGPU log](../../build/full-validation-20261027-fixed/validation.log)
+  and [262-scene Lite report](../../build/full-validation-20261027-fixed/lite/report.md).
+- [Lite full-suite log](../../build/full-validation-20261027-fixed/lite/full-suite.log),
+  [runtime failure](../../build/full-validation-20261027-fixed/runtime.log)
+  and [module-load failure](../../build/full-validation-20261027-fixed/module.log).
 
 WebGPU screenshots and diff overlays are in
 `standard\consumer\Apps\Playground\Results` and
@@ -884,19 +884,19 @@ thresholds and reference policies remain unchanged.
 
 Retained local artifacts:
 
-- [Full summary](build/monorepo-validation-20261028/summary.json),
-  [source provenance](build/monorepo-validation-20261028/provenance.json)
-  and [reviewed import adaptations](build/monorepo-validation-20261028/transport-import-reviewed.json).
-- [Final provenance-helper check](build/monorepo-validation-20261028/final-provenance/provenance.json)
+- [Full summary](../../build/monorepo-validation-20261028/summary.json),
+  [source provenance](../../build/monorepo-validation-20261028/provenance.json)
+  and [reviewed import adaptations](../../build/monorepo-validation-20261028/transport-import-reviewed.json).
+- [Final provenance-helper check](../../build/monorepo-validation-20261028/final-provenance/provenance.json)
   records the subsequent path-portability cleanup in the capture script;
   the tested executable and consumer inputs are unchanged.
-- [WebGPU log](build/monorepo-validation-20261028/validation.log),
-  [262-scene Lite report](build/monorepo-validation-20261028/lite/report.md)
-  and [full Lite log](build/monorepo-validation-20261028/lite/full-suite.log).
-- [Transport CTest](build/monorepo-validation-20261028/transport-ctest.log),
-  [host fixture failures](build/monorepo-validation-20261028/host-unit-tests-assets.log),
-  [runtime failure](build/monorepo-validation-20261028/runtime.log)
-  and [module-load failure](build/monorepo-validation-20261028/module.log).
+- [WebGPU log](../../build/monorepo-validation-20261028/validation.log),
+  [262-scene Lite report](../../build/monorepo-validation-20261028/lite/report.md)
+  and [full Lite log](../../build/monorepo-validation-20261028/lite/full-suite.log).
+- [Transport CTest](../../build/monorepo-validation-20261028/transport-ctest.log),
+  [host fixture failures](../../build/monorepo-validation-20261028/host-unit-tests-assets.log),
+  [runtime failure](../../build/monorepo-validation-20261028/runtime.log)
+  and [module-load failure](../../build/monorepo-validation-20261028/module.log).
 
 Artifact root:
 `C:\Users\cedric\dev\copilot-worktrees\BabylonNative\cedricguillemet-supreme-waffle\build\monorepo-validation-20261028`.

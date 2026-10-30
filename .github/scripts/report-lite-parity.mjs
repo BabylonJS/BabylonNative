@@ -5,7 +5,7 @@ import { latestCases, metricsForCases, summarizeRun } from "./lite-parity-record
 
 const clone = resolve(process.argv[2] ?? "build\\lite-parity");
 const artifacts = resolve(process.argv[3] ?? "build\\lite-parity-results");
-const output = resolve(process.argv[4] ?? "Dawn-Lite-Parity.md");
+const output = resolve(process.argv[4] ?? resolve("Plugins", "NativeDawn", "Dawn-Lite-Parity.md"));
 const browserArtifacts = resolve(process.argv[5] ?? "build\\lite-parity-browser-results");
 const catalog = JSON.parse(await readFile(resolve(clone, "scene-config.json"), "utf8"));
 async function optionalJson(path) {

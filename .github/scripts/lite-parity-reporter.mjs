@@ -51,7 +51,7 @@ export default class ParityReporter {
             execFileSync(process.execPath, [
                 fileURLToPath(new URL("./report-lite-parity.mjs", import.meta.url)),
                 process.cwd(), this.output,
-                fileURLToPath(new URL("../../Dawn-Lite-Parity.md", import.meta.url)),
+                fileURLToPath(new URL("../../Plugins/NativeDawn/Dawn-Lite-Parity.md", import.meta.url)),
             ], { stdio: "inherit" });
         }
     }

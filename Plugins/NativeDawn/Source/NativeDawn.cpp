@@ -45,6 +45,7 @@
 #include <string>
 #include <string_view>
 #include <functional>
+#include <mutex>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -237,14 +238,50 @@ namespace Babylon::Plugins::NativeDawn
             DawnLog(LogLevel::Error, text);
         }
 
-        // Diagnostic only: an intentional destroy is silent, anything else is logged.
+        // Dawn may invoke this from any thread, so the JS promise is resolved
+        // later from Tick() on the JS thread.
+        std::mutex g_deviceLostMutex;
+        bool g_deviceLostPending = false;
+        bool g_deviceLostDestroyed = false;
+        std::string g_deviceLostMessage;
+        std::unique_ptr<Napi::Promise::Deferred> g_deviceLostDeferred;
+
         void LogDeviceLost(WGPUDevice const*, WGPUDeviceLostReason reason, WGPUStringView message, void*, void*)
         {
-            if (reason == WGPUDeviceLostReason_Destroyed || reason == WGPUDeviceLostReason_CallbackCancelled)
+            if (reason == WGPUDeviceLostReason_CallbackCancelled)
             {
                 return;
             }
-            DawnLogF(LogLevel::Error, "device lost (reason %d): %s", static_cast<int>(reason), SvToStr(message).c_str());
+            const bool destroyed = reason == WGPUDeviceLostReason_Destroyed;
+            if (!destroyed)
+            {
+                DawnLogF(LogLevel::Error, "device lost (reason %d): %s", static_cast<int>(reason), SvToStr(message).c_str());
+            }
+            std::lock_guard<std::mutex> lock{g_deviceLostMutex};
+            g_deviceLostPending = true;
+            g_deviceLostDestroyed = destroyed;
+            g_deviceLostMessage = SvToStr(message);
+        }
+
+        void ResolveDeviceLost(Napi::Env env)
+        {
+            bool destroyed;
+            std::string message;
+            {
+                std::lock_guard<std::mutex> lock{g_deviceLostMutex};
+                if (!g_deviceLostPending || !g_deviceLostDeferred)
+                {
+                    return;
+                }
+                g_deviceLostPending = false;
+                destroyed = g_deviceLostDestroyed;
+                message = std::move(g_deviceLostMessage);
+            }
+            Napi::Object info = Napi::Object::New(env);
+            info.Set("reason", Napi::String::New(env, destroyed ? "destroyed" : "unknown"));
+            info.Set("message", Napi::String::New(env, message));
+            auto deferred = std::move(g_deviceLostDeferred);
+            deferred->Resolve(info);
         }
 
         // Blocks the calling thread until `f` resolves. The C API has no
@@ -654,11 +691,32 @@ namespace Babylon::Plugins::NativeDawn
         }
 
         template <typename T>
+        struct HandleTag;
+#define NATIVEDAWN_HANDLE_TAG(Type, Tag) \
+        template <> struct HandleTag<Type> { static constexpr const char* value = Tag; };
+        NATIVEDAWN_HANDLE_TAG(WGPUBuffer, "GPUBuffer")
+        NATIVEDAWN_HANDLE_TAG(WGPUTextureView, "GPUTextureView")
+        NATIVEDAWN_HANDLE_TAG(WGPUTexture, "GPUTexture")
+        NATIVEDAWN_HANDLE_TAG(WGPUSampler, "GPUSampler")
+        NATIVEDAWN_HANDLE_TAG(WGPUBindGroupLayout, "GPUBindGroupLayout")
+        NATIVEDAWN_HANDLE_TAG(WGPUBindGroup, "GPUBindGroup")
+        NATIVEDAWN_HANDLE_TAG(WGPUPipelineLayout, "GPUPipelineLayout")
+        NATIVEDAWN_HANDLE_TAG(WGPUShaderModule, "GPUShaderModule")
+        NATIVEDAWN_HANDLE_TAG(WGPUQuerySet, "GPUQuerySet")
+        NATIVEDAWN_HANDLE_TAG(WGPUCommandBuffer, "GPUCommandBuffer")
+        NATIVEDAWN_HANDLE_TAG(WGPURenderPipeline, "GPURenderPipeline")
+        NATIVEDAWN_HANDLE_TAG(WGPUComputePipeline, "GPUComputePipeline")
+        NATIVEDAWN_HANDLE_TAG(WGPURenderBundle, "GPURenderBundle")
+#undef NATIVEDAWN_HANDLE_TAG
+
+        template <typename T>
         T* GetH(Napi::Value v)
         {
             if (!v.IsObject()) return nullptr;
             Napi::Object o = v.As<Napi::Object>();
-            if (!o.Has("_h")) return nullptr;
+            if (!o.Has("_h") || !o.Has("_type")) return nullptr;
+            Napi::Value t = o.Get("_type");
+            if (!t.IsString() || t.As<Napi::String>().Utf8Value() != HandleTag<T>::value) return nullptr;
             Napi::Value h = o.Get("_h");
             if (!h.IsExternal()) return nullptr;
             return h.As<Napi::External<T>>().Data();
@@ -3066,10 +3124,12 @@ namespace Babylon::Plugins::NativeDawn
                 FillLimits(limits, L);
                 o.Set("limits", limits);
             }
-            // lost: a promise that never resolves.
+            // lost: resolved from Tick() when Dawn reports the device lost.
             {
-                auto lost = Napi::Promise::Deferred::New(env);
-                o.Set("lost", lost.Promise());
+                auto lost = std::make_unique<Napi::Promise::Deferred>(Napi::Promise::Deferred::New(env));
+                o.Set("lost", lost->Promise());
+                std::lock_guard<std::mutex> lock{g_deviceLostMutex};
+                g_deviceLostDeferred = std::move(lost);
             }
 
             SetMethod(o, "createBuffer", [](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -3652,8 +3712,8 @@ namespace Babylon::Plugins::NativeDawn
                 {
                     throw Napi::Error::New(env, "_nativeDawnReadPixels: no completed framebuffer is available");
                 }
-                const uint32_t w = g_state.width;
-                const uint32_t h = g_state.height;
+                const uint32_t w = wgpuTextureGetWidth(source);
+                const uint32_t h = wgpuTextureGetHeight(source);
                 const uint32_t unpadded = w * 4u;
                 const uint32_t padded = (unpadded + 255u) & ~255u;
                 const uint64_t bufSize = static_cast<uint64_t>(padded) * h;
@@ -4449,8 +4509,14 @@ namespace Babylon::Plugins::NativeDawn
                     return MakeCanvas(info.Env(), w, h);
                 }));
             }
-            SetMethod(global, "addEventListener", Noop);
-            SetMethod(global, "removeEventListener", Noop);
+            if (!global.Get("addEventListener").IsFunction())
+            {
+                SetMethod(global, "addEventListener", Noop);
+            }
+            if (!global.Get("removeEventListener").IsFunction())
+            {
+                SetMethod(global, "removeEventListener", Noop);
+            }
 
             if (global.Get("location").IsUndefined())
             {
@@ -4649,11 +4715,20 @@ namespace Babylon::Plugins::NativeDawn
                         w.Set(name, fn);
                     }
                 }
-                SetMethod(w, "addEventListener", Noop);
-                SetMethod(w, "removeEventListener", Noop);
-                SetMethod(w, "dispatchEvent", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                    return Napi::Boolean::New(info.Env(), true);
-                });
+                if (!w.Get("addEventListener").IsFunction())
+                {
+                    SetMethod(w, "addEventListener", Noop);
+                }
+                if (!w.Get("removeEventListener").IsFunction())
+                {
+                    SetMethod(w, "removeEventListener", Noop);
+                }
+                if (!w.Get("dispatchEvent").IsFunction())
+                {
+                    SetMethod(w, "dispatchEvent", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                        return Napi::Boolean::New(info.Env(), true);
+                    });
+                }
             }
 
             // ---- inert event constructors ------------------------------------
@@ -4690,7 +4765,10 @@ namespace Babylon::Plugins::NativeDawn
                 Napi::Object w = windowVal.As<Napi::Object>();
                 for (const char* name : {"PointerEvent", "MouseEvent", "WheelEvent"})
                 {
-                    w.Set(name, global.Get(name));
+                    if (w.Get(name).IsUndefined())
+                    {
+                        w.Set(name, global.Get(name));
+                    }
                 }
             }
 
@@ -4916,6 +4994,7 @@ namespace Babylon::Plugins::NativeDawn
             ApplyPendingSurfaceResize();
         }
         wgpuInstanceProcessEvents(g_state.instance);
+        ResolveDeviceLost(env);
 
         double now = 0.0;
         Napi::Value perf = env.Global().Get("performance");
@@ -4933,7 +5012,14 @@ namespace Babylon::Plugins::NativeDawn
         {
             if (!entry.callback.IsEmpty())
             {
-                entry.callback.Value().Call({Napi::Number::New(env, now)});
+                try
+                {
+                    entry.callback.Value().Call({Napi::Number::New(env, now)});
+                }
+                catch (const Napi::Error& e)
+                {
+                    DawnLog(LogLevel::Error, std::string{"requestAnimationFrame callback threw: "} + e.what());
+                }
             }
         }
         g_rafRunning.clear();
