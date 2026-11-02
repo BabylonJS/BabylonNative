@@ -4345,22 +4345,19 @@
             "title": "Gaussian Splatting SPZ Extensions",
             "playgroundId": "#XSNFXP#8",
             "referenceImage": "gsplat-spz-extensions.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting SPZ V4 Extensions",
             "playgroundId": "#XSNFXP#25",
             "referenceImage": "gsplat-spz-v4-extensions.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4",
             "playgroundId": "#XSNFXP#5",
             "referenceImage": "gsplat-spz-sh-order-4.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4 No WASM",
@@ -4373,8 +4370,7 @@
             "title": "Gaussian Splatting SPZ Detailed Splat",
             "playgroundId": "#XSNFXP#6",
             "referenceImage": "gsplat-spz-detailed-splat.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat No WASM",
@@ -4393,104 +4389,102 @@
             "title": "Gaussian Splatting Debug Opacity Scale",
             "playgroundId": "#XSNFXP#16",
             "referenceImage": "gsplat-debug-opacity-scale.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Opacity Saturate",
             "playgroundId": "#XSNFXP#17",
             "referenceImage": "gsplat-debug-opacity-saturate.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Size Culling",
             "playgroundId": "#XSNFXP#19",
             "referenceImage": "gsplat-debug-size-culling.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Opacity Culling",
             "playgroundId": "#XSNFXP#20",
             "referenceImage": "gsplat-debug-opacity-culling.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Clipping Box",
             "playgroundId": "#XSNFXP#21",
             "referenceImage": "gsplat-debug-clipping-box.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Diffuse Only",
             "playgroundId": "#XSNFXP#22",
             "referenceImage": "gsplat-debug-diffuse-only.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug SH4 Only",
             "playgroundId": "#XSNFXP#24",
             "referenceImage": "gsplat-debug-sh4-only.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Compound Incremental Update",
             "playgroundId": "#DAID4Q#7",
             "referenceImage": "gsplat-compound-incremental-update.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "errorRatio": 4,
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Compound No SH then Full SH",
             "playgroundId": "#DAID4Q#8",
             "referenceImage": "gsplat-compound-no-sh-then-full-sh.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "errorRatio": 4,
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting IBL Shadows",
             "playgroundId": "#DAID4Q#2",
             "referenceImage": "gsplat-ibl-shadows.png",
             "renderCount": 15,
+            "workarounds": ["es-module-import"],
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "reason": "IBL shadow pipeline unsupported natively: bgfx/NativeEngine throws 'Unsupported alpha mode: 19' on the first frame; on Dawn the scene renders blank because a 3D texture binding at @group(1) @binding(4) mismatches the shader's texture_2d"
         },
         {
             "title": "Gaussian Splatting IBL Shadows Camera Switch",
             "playgroundId": "#DAID4Q#10",
             "referenceImage": "gsplat-ibl-shadows-camera-switch.png",
             "renderCount": 15,
+            "workarounds": ["es-module-import"],
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "reason": "IBL shadow pipeline unsupported natively: bgfx/NativeEngine throws 'Unsupported alpha mode: 19' on the first frame; on Dawn the scene renders blank because a 3D texture binding at @group(1) @binding(4) mismatches the shader's texture_2d"
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Single Part",
             "playgroundId": "#DAID4Q#4",
             "referenceImage": "gsplat-compound-ibl-shadows-single-part.png",
             "renderCount": 15,
+            "workarounds": ["es-module-import"],
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "reason": "IBL shadow pipeline unsupported natively: bgfx/NativeEngine throws 'Unsupported alpha mode: 19' on the first frame; on Dawn the scene renders blank because a 3D texture binding at @group(1) @binding(4) mismatches the shader's texture_2d"
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts",
             "playgroundId": "#DAID4Q#5",
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts.png",
             "renderCount": 15,
+            "workarounds": ["es-module-import"],
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "reason": "IBL shadow pipeline unsupported natively: bgfx/NativeEngine throws 'Unsupported alpha mode: 19' on the first frame; on Dawn the scene renders blank because a 3D texture binding at @group(1) @binding(4) mismatches the shader's texture_2d"
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts Mixed Visibility",
             "playgroundId": "#DAID4Q#6",
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts-mixed-visibility.png",
             "renderCount": 15,
+            "workarounds": ["es-module-import"],
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "reason": "IBL shadow pipeline unsupported natively: bgfx/NativeEngine throws 'Unsupported alpha mode: 19' on the first frame; on Dawn the scene renders blank because a 3D texture binding at @group(1) @binding(4) mismatches the shader's texture_2d"
         },
         {
             "title": "SOGS with SH no texture lookup",
@@ -5241,8 +5235,7 @@
             "playgroundId": "#1HYT9N#0",
             "referenceImage": "csg2-righthanded-gltf-winding.png",
             "errorRatio": 1.5,
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
-            "reason": "upstream Babylon.js gap, not Dawn: the SPZ loader calls Tools._LoadScriptModuleAsync, and Tools._LoadScriptNative(url, onSuccess, onError) takes only 3 args and always treats arg 1 as a URL, while Tools._LoadScriptWeb(url, onSuccess, onError, scriptId, isModule) honours the 5th isModule arg. Native therefore tries to open the literal ES module SOURCE TEXT (\"import createSpzModule from ...\") as a URL. Fails identically on bgfx/D3D11"
+            "workarounds": ["es-module-import"]
         },
         {
             "title": "FreeCamera framerate-independent movement",
