@@ -1161,7 +1161,7 @@
         },
         {
             "title": "Displacement map",
-            "playgroundId": "#WZ8JL4#0",
+            "playgroundId": "#WZ8JL4#1",
             "referenceImage": "displacementMap.png"
         },
         {
@@ -2790,8 +2790,7 @@
         {
             "title": "FrameGraph sharpen post process",
             "playgroundId": "#SYQW69#1367",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (~6-6.6% pixels differ, varies by run)",
+            "errorRatio": 6,
             "referenceImage": "FrameGraph-sharpen-post-process.png"
         },
         {
@@ -3270,8 +3269,6 @@
         },
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Analytic Lights",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#GRQHVV#112",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Analytic-Lights.png"
         },
