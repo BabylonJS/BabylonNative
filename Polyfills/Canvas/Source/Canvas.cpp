@@ -271,7 +271,17 @@ namespace Babylon::Polyfills::Internal
     {
         if (!m_frameBuffer)
         {
-            throw Napi::Error::New(info.Env(), "Canvas.getCanvasTexture requires a flushed context.");
+            // Context::FlushCore skips the flush when no frame encoder is active, so the render
+            // target may not exist yet. Hand back the zero-filled target, as WebGL does for an
+            // untouched canvas, and keep any pending clear for the next flush.
+            try
+            {
+                m_clear = UpdateRenderTarget();
+            }
+            catch (const std::exception& ex)
+            {
+                throw Napi::Error::New(info.Env(), ex.what());
+            }
         }
         // Omitted arguments preserve the raw, premultiplied texture used by older engines.
         const bool premulAlpha = info.Length() == 0 || info[0].IsUndefined() || info[0].As<Napi::Boolean>().Value();
