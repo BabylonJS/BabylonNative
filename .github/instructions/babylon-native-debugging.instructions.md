@@ -120,7 +120,7 @@ per flag** (intentional design -- long-name aliases were removed).
 
 ```
 -h, --help                  Show help and exit (0)
--l, --list                  List configured tests as TSV and exit (0)
+-l, --list                  List configured tests as TSV and exit (0); implies --headless
     --headless              Don't show window; route all logs to stdout
     --break-on-fail         Trigger debugger break on a failing test
     --stop-on-first-failure Exit as soon as a test fails; by default the runner
