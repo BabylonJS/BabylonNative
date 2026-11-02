@@ -4345,18 +4345,24 @@
             "title": "Gaussian Splatting SPZ Extensions",
             "playgroundId": "#XSNFXP#8",
             "referenceImage": "gsplat-spz-extensions.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting SPZ V4 Extensions",
             "playgroundId": "#XSNFXP#25",
             "referenceImage": "gsplat-spz-v4-extensions.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4",
             "playgroundId": "#XSNFXP#5",
             "referenceImage": "gsplat-spz-sh-order-4.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
@@ -4370,6 +4376,8 @@
             "title": "Gaussian Splatting SPZ Detailed Splat",
             "playgroundId": "#XSNFXP#6",
             "referenceImage": "gsplat-spz-detailed-splat.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
@@ -4389,42 +4397,56 @@
             "title": "Gaussian Splatting Debug Opacity Scale",
             "playgroundId": "#XSNFXP#16",
             "referenceImage": "gsplat-debug-opacity-scale.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Opacity Saturate",
             "playgroundId": "#XSNFXP#17",
             "referenceImage": "gsplat-debug-opacity-saturate.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Size Culling",
             "playgroundId": "#XSNFXP#19",
             "referenceImage": "gsplat-debug-size-culling.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Opacity Culling",
             "playgroundId": "#XSNFXP#20",
             "referenceImage": "gsplat-debug-opacity-culling.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Clipping Box",
             "playgroundId": "#XSNFXP#21",
             "referenceImage": "gsplat-debug-clipping-box.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug Diffuse Only",
             "playgroundId": "#XSNFXP#22",
             "referenceImage": "gsplat-debug-diffuse-only.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
             "title": "Gaussian Splatting Debug SH4 Only",
             "playgroundId": "#XSNFXP#24",
             "referenceImage": "gsplat-debug-sh4-only.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
@@ -4432,6 +4454,8 @@
             "playgroundId": "#DAID4Q#7",
             "referenceImage": "gsplat-compound-incremental-update.png",
             "errorRatio": 4,
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
@@ -4439,6 +4463,8 @@
             "playgroundId": "#DAID4Q#8",
             "referenceImage": "gsplat-compound-no-sh-then-full-sh.png",
             "errorRatio": 4,
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
@@ -5235,6 +5261,8 @@
             "playgroundId": "#1HYT9N#0",
             "referenceImage": "csg2-righthanded-gltf-winding.png",
             "errorRatio": 1.5,
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the Manifold WASM module never finishes loading, so createScene times out (passes on V8)",
             "workarounds": ["es-module-import"]
         },
         {
