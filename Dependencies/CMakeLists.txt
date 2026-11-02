@@ -99,10 +99,6 @@ endif()
 
 add_subdirectory(bgfx.cmake EXCLUDE_FROM_ALL)
 
-# Consumers build with -Wpedantic -Werror, which GCC applies to bx's unsigned __int128 in math.inl.
-get_target_property(_bx_include_dirs bx INTERFACE_INCLUDE_DIRECTORIES)
-set_target_properties(bx PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_bx_include_dirs}")
-
 # Plugins and apps currently need these paths from the wrapper's directory scope.
 # TODO: Review those consumers and remove the source-path exports if possible.
 get_directory_property(BGFX_DIR DIRECTORY bgfx.cmake DEFINITION BGFX_DIR)
