@@ -163,7 +163,19 @@
                 if (typeof HavokPhysics !== "function") {
                     throw new Error("HavokPhysics_umd.js did not register HavokPhysics");
                 }
-                return HavokPhysics({ wasmBinary: new Uint8Array(sources[1]) });
+                const wasmBinary = new Uint8Array(sources[1]);
+                // Async WebAssembly.instantiate never settles on JavaScriptCore; instantiate synchronously.
+                return HavokPhysics({
+                    wasmBinary: wasmBinary,
+                    instantiateWasm: function (imports, successCallback) {
+                        const module = new WebAssembly.Module(wasmBinary);
+                        const instance = new WebAssembly.Instance(module, imports);
+                        Promise.resolve().then(function () {
+                            successCallback(instance, module);
+                        });
+                        return {};
+                    }
+                });
             }).then(function (instance) {
                 globalThis.HK = instance;
             });
