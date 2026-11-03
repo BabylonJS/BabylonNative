@@ -425,8 +425,11 @@ jobs:
       set -euo pipefail
       du -sh Dependencies/JsRuntimeHost/Build/Android
       rm -rf -- Dependencies/JsRuntimeHost/Build/Android
+      du -sh "$ANDROID_HOME/ndk/$(NDK_VERSION)" "$ANDROID_HOME/ndk/27.2.12479018"
+      "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --uninstall \
+        "ndk;$(NDK_VERSION)" "ndk;27.2.12479018"
       df -h .
-    displayName: Release runtime native build intermediates
+    displayName: Release runtime native build intermediates and completed toolchains
 
   - script: |
       set -euo pipefail
