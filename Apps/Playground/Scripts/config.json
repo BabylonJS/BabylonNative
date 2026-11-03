@@ -1336,28 +1336,24 @@
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -2915,7 +2911,6 @@
         {
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
-            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
@@ -2946,7 +2941,6 @@
         {
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
-            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
@@ -2967,7 +2961,6 @@
         {
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
-            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {
