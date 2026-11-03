@@ -64,12 +64,6 @@
         "wait-for-import": "wait for loader promises started by createScene before rendering",
         // Example clears opaque but writes alpha < 1 that the browser would composite.
         "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
-        // Example changes node transforms right before a glTF export; the exporter's no-op root
-        // check reads cached world matrices and can drop a scaled root node.
-        "refresh-export-matrices": "recompute world matrices before glTF export",
-        // Babylon.js 9.29 scene readiness skips the clustered-light proxy shader, so lit
-        // materials can all report not-ready on the first frame and draw nothing.
-        "wait-for-clustered-lights": "prepare clustered-light proxies before rendering",
         // Babylon.js material readiness checks area-light LTC data only once AREALIGHTUSED is in
         // the defines; a cached effect can make the first check pass, so whenReadyAsync resolves
         // before the LTC download and area-lit surfaces render black.
@@ -722,32 +716,6 @@
         });
     }
 
-    // refresh-export-matrices: set to the running test when it opts in.
-    let refreshExportMatricesTest = null;
-    function wrapExportFunction(owner, name) {
-        const original = owner && owner[name];
-        if (typeof original !== "function") {
-            return;
-        }
-        owner[name] = function (scene) {
-            if (refreshExportMatricesTest && scene && scene.getNodes) {
-                noteWorkaround(refreshExportMatricesTest, "refresh-export-matrices");
-                const nodes = scene.getNodes();
-                for (let i = 0; i < nodes.length; ++i) {
-                    if (typeof nodes[i].computeWorldMatrix === "function") {
-                        nodes[i].computeWorldMatrix(true);
-                    }
-                }
-            }
-            return original.apply(this, arguments);
-        };
-    }
-    if (BABYLON.GLTF2Export) {
-        ["GLTFAsync", "GLBAsync"].forEach(function (name) {
-            wrapExportFunction(BABYLON.GLTF2Export, name);
-        });
-    }
-
     function waitForTrackedImports(test, scene) {
         const tracked = importTracker || [];
         importTracker = null;
@@ -1311,7 +1279,6 @@
             ? getConvergenceScenes
             : function (scene) { return [scene]; };
         const primeEffectLayers = hasWorkaround(test, "prime-effect-layers");
-        const waitForClusteredLights = hasWorkaround(test, "wait-for-clustered-lights");
         const waitForAreaLightLtc = hasWorkaround(test, "wait-for-area-light-ltc");
         let areaLightLtcWaitStart = 0;
         // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
@@ -1382,25 +1349,6 @@
                         for (let i = 0; i < convergenceScenes.length; i++) {
                             convergenceScenes[i].incrementRenderId();
                         }
-                        return;
-                    }
-
-                    // _isReady() also starts compiling the proxy shader, so this wait converges.
-                    if (waitForClusteredLights && frameIndex === 0 &&
-                        !currentScene.lights.every(function (light) {
-                            return light.getClassName() !== "ClusteredLightContainer" || !light.isSupported ||
-                                !light.isEnabled() || light._isReady();
-                        })) {
-                        noteWorkaround(test, "wait-for-clustered-lights");
-                        if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
-                            stopped = true;
-                            evaluated = true;
-                            console.error("Scene '" + (test.title || "?") + "' clustered lights did not become ready within " +
-                                MAX_CONVERGENCE_TICKS + " render-loop ticks.");
-                            failTest(done);
-                            return;
-                        }
-                        convergenceTicks++;
                         return;
                     }
 
@@ -1701,7 +1649,6 @@
                                     }
 
                                     importTracker = hasWorkaround(test, "wait-for-import") ? [] : null;
-                                    refreshExportMatricesTest = hasWorkaround(test, "refresh-export-matrices") ? test : null;
                                     if (hasWorkaround(test, "xhr-events")) {
                                         installXhrEvents(test);
                                     }
