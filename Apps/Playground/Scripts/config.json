@@ -781,8 +781,6 @@
         },
         {
             "title": "Convolution Post Process",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#FBH4J7#281",
             "referenceImage": "convolution.png"
         },
@@ -1389,16 +1387,12 @@
             "title": "GLTF Extension KHR_materials_volume",
             "playgroundId": "#YG3BBF#16",
             "renderCount": 5,
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
             "referenceImage": "gltfExtensionKhrMaterialsVolume.png"
         },
         {
             "title": "GLTF Extension KHR_materials_volume with analytic light",
             "playgroundId": "#YG3BBF#48",
             "renderCount": 5,
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png"
         },
         {
@@ -3274,8 +3268,6 @@
         },
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - Analytic Lights",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#GRQHVV#109",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---Analytic-Lights.png"
         },
