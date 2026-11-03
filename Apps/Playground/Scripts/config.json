@@ -1022,11 +1022,9 @@
         },
         {
             "title": "LineEdgesRenderer",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#FF1HHK#0",
             "renderCount": 50,
-            "referenceImage": "LineEdgesRenderer.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (5.5% px); passes on Win32 D3D11."
+            "referenceImage": "LineEdgesRenderer.png"
         },
         {
             "title": "Simulate pointer",
@@ -1274,16 +1272,12 @@
         },
         {
             "title": "GLTF Serializer KHR materials clearcoat",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#9N6CLU#23",
-            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.8% px); passes on Win32 D3D11."
+            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png"
         },
         {
             "title": "GLTF Serializer KHR gpu instancing",
             "playgroundId": "#1Q2BWN#10",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (3.4%); passes on ANGLE GLES and D3D11.",
             "referenceImage": "glTFSerializerKhrGpuInstancing.png",
             "workarounds": ["leak-cleanup"]
         },
@@ -1500,10 +1494,8 @@
         },
         {
             "title": "Instanced Bones",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#2YLJ1L#2",
-            "referenceImage": "instancedBones.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.9% px); passes on Win32 D3D11."
+            "referenceImage": "instancedBones.png"
         },
         {
             "title": "GlowLayer",
@@ -1544,10 +1536,8 @@
         },
         {
             "title": "MeshSimplification",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#1ED15P#46",
-            "referenceImage": "meshSimplification.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (16% px); passes on Win32 D3D11."
+            "referenceImage": "meshSimplification.png"
         },
         {
             "title": "DepthRenderer",
@@ -1992,10 +1982,8 @@
         },
         {
             "title": "Baked Vertex Animation",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#14WJWW#13",
-            "referenceImage": "bakedVertexAnimation.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.5% px); passes on Win32 D3D11."
+            "referenceImage": "bakedVertexAnimation.png"
         },
         {
             "title": "Baked Vertex Animation with Depth Of Field",
@@ -2287,8 +2275,6 @@
         {
             "title": "Command encoder order in WebGPU 1",
             "playgroundId": "#064AUB#125",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: intermittent full-suite pixel comparison failure on Linux Clang CI (45.535% different pixels; allowed 2.5%), despite passing other runs.",
             "referenceImage": "CommandEncodedWebGPU1.png",
             "workarounds": ["wait-for-readiness"]
         },
@@ -2315,11 +2301,9 @@
         },
         {
             "title": "show-bounding-box",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Y2TD10#0",
             "renderCount": 5,
-            "referenceImage": "show-bounding-box.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (7.6% px); passes on Win32 D3D11."
+            "referenceImage": "show-bounding-box.png"
         },
         {
             "title": "cube-reflection-with-probe-and-mirrors",
@@ -2505,19 +2489,15 @@
         },
         {
             "title": "glTF Loader Cameras RH",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = true;",
-            "referenceImage": "glTFLoaderCameras.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
+            "referenceImage": "glTFLoaderCameras.png"
         },
         {
             "title": "glTF Loader Cameras LH",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = false;",
-            "referenceImage": "glTFLoaderCameras.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
+            "referenceImage": "glTFLoaderCameras.png"
         },
         {
             "title": "IBL Voxel Shadowing",
@@ -3501,8 +3481,6 @@
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.4% px); passes on Win32 D3D11.",
             "referenceImage": "Lighting-Volume.png"
         },
         {
