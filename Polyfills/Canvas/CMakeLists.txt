@@ -13,6 +13,7 @@ set(SOURCES
     "Source/ImageData.h"
     "Source/Path2D.cpp"
     "Source/Path2D.h"
+    "Source/RoundRectUtils.h"
     "Source/LineCaps.h"
     "Source/Context.cpp"
     "Source/Context.h"

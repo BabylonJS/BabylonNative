@@ -4,30 +4,35 @@
 #include <stdexcept>
 
 #include <bgfx/bgfx.h>
+#include "CanvasConstants.h"
 #include "FrameBufferPool.h"
 
 namespace Babylon::Polyfills
 {
+    namespace
+    {
+        constexpr uint8_t FRAME_BUFFER_TEXTURE_COUNT = 2;
+        constexpr uint8_t COLOR_ATTACHMENT_INDEX = 0;
+        constexpr uint8_t DEPTH_STENCIL_ATTACHMENT_INDEX = 1;
+    }
+
     const std::vector<FrameBufferPool::PoolBuffer>& FrameBufferPool::GetPoolBuffers()
     {
         return mPoolBuffers;
     }
 
-    // sets dimension of framebuffers, can only be set if no buffers in pool
     void FrameBufferPool::SetDimensions(int width, int height)
     {
         assert(width > 0 && height > 0);
-        // TODO: support multiple framebuffer dimensions
-        if (mPoolBuffers.size() > 0)
+        if (!mPoolBuffers.empty())
         {
             throw std::runtime_error("Cannot set dimensions. FrameBufferPool already has buffers.");
         }
 
-        this->m_width = width;
-        this->m_height = height;
+        m_width = width;
+        m_height = height;
     }
 
-    // sets graphics context to be used for creating framebuffers
     void FrameBufferPool::SetGraphicsContext(Graphics::DeviceContext* graphicsContext)
     {
         m_graphicsContext = graphicsContext;
@@ -45,31 +50,28 @@ namespace Babylon::Polyfills
             bgfx::FrameBufferHandle TextBuffer{bgfx::kInvalidHandle};
             Graphics::FrameBuffer* FrameBuffer;
 
-            // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-            const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * 4);
+            // WebGL requires new render targets to be initialized to zero.
+            const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * CanvasConstants::RGBA_BYTES_PER_PIXEL);
             std::memset(mem->data, 0, mem->size);
-            // TODO: make sampler flags configurable
-            // border sampling will result in transparent edge artifacts for blur, but this behaviour is consistent with browser implementation
-            std::array<bgfx::TextureHandle, 2> textures{
+            // Browser blur behavior includes transparent edges from border sampling.
+            std::array<bgfx::TextureHandle, FRAME_BUFFER_TEXTURE_COUNT> textures{
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(0), mem),
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT | BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(0))};
 
-            // See NativeEngine::CreateFrameBuffer: bgfx validation now asserts when BGFX_ATTACHMENT_AUTO_GEN_MIPS is used
-            // with a texture whose format doesn't have BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN. Gate the color attachment
-            // on the capability and pass BGFX_ATTACHMENT_NONE for the depth attachment (depth formats never support autogen).
+            // Only request mip generation for formats that support it; depth never does.
             const bgfx::Caps* caps = bgfx::getCaps();
             const uint8_t colorResolve = 0 != (caps->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
                 ? BGFX_ATTACHMENT_AUTO_GEN_MIPS
                 : BGFX_ATTACHMENT_NONE;
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
-            attachments[0].init(textures[0], bgfx::Access::Write, 0, 1, 0, colorResolve);
-            attachments[1].init(textures[1], bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
+            attachments[COLOR_ATTACHMENT_INDEX].init(textures[COLOR_ATTACHMENT_INDEX], bgfx::Access::Write, 0, 1, 0, colorResolve);
+            attachments[DEPTH_STENCIL_ATTACHMENT_INDEX].init(textures[DEPTH_STENCIL_ATTACHMENT_INDEX], bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
             TextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
 
             if (!bgfx::isValid(TextBuffer))
             {
-                // Guard with isValid: a failed createTexture2D returns an invalid handle that bgfx::destroy would assert on.
+                // Failed texture creation returns an invalid handle that cannot be destroyed.
                 for (auto texture : textures)
                 {
                     if (bgfx::isValid(texture))
@@ -80,7 +82,9 @@ namespace Babylon::Polyfills
                 throw std::runtime_error{"FrameBufferPool::Add: bgfx::createFrameBuffer returned invalid handle (pool exhausted)"};
             }
 
-            FrameBuffer = new Graphics::FrameBuffer(*m_graphicsContext, TextBuffer, m_width, m_height, false, false, false, -1, false);
+            FrameBuffer = new Graphics::FrameBuffer(
+                *m_graphicsContext, TextBuffer, m_width, m_height, false, false, false,
+                CanvasConstants::NO_DEPTH_STENCIL_ATTACHMENT, false);
             m_available++;
             mPoolBuffers.push_back({FrameBuffer, true});
         }
@@ -102,7 +106,6 @@ namespace Babylon::Polyfills
 
     Graphics::FrameBuffer* FrameBufferPool::Acquire()
     {
-        // no buffers in pool, add one
         if (m_available == 0)
         {
             Add(1);
