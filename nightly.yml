@@ -447,9 +447,8 @@ jobs:
         echo "Missing virtual device configuration: $ANDROID_AVD_HOME/runtime-tests.ini" >&2
         exit 1
       fi
-      printf '\ndisk.dataPartition.size=2G\n' >> "$ANDROID_AVD_HOME/runtime-tests.avd/config.ini"
       export ANDROID_SERIAL=emulator-5554
-      emulator -avd runtime-tests -port 5554 -no-window -no-snapshot -no-boot-anim \
+      emulator -avd runtime-tests -partition-size 2048 -port 5554 -no-window -no-snapshot -no-boot-anim \
         -no-audio -gpu swiftshader_indirect > test-results/emulator.log 2>&1 &
       trap 'result=$?; timeout 30s adb emu kill || result=1; exit "$result"' EXIT
       timeout 180s adb wait-for-device
