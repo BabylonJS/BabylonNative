@@ -186,6 +186,15 @@ namespace Babylon
         return *m_gpuStorage;
     }
 
+    void VertexBuffer::ReplaceGpuStorage(std::unique_ptr<StorageBuffer> storage)
+    {
+        if (m_gpuStorage)
+        {
+            m_gpuStorage->Dispose();
+        }
+        m_gpuStorage = std::move(storage);
+    }
+
     uint32_t VertexBuffer::ByteLength() const
     {
         return m_gpuStorage ? m_gpuStorage->ByteLength() : static_cast<uint32_t>(m_bytes.size());

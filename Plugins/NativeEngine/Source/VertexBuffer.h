@@ -40,7 +40,10 @@ namespace Babylon
         // stride match it.
         StorageBuffer& PromoteToGpuStorage(uint32_t vertexByteStride = 0);
         StorageBuffer* GpuStorage() const { return m_gpuStorage.get(); }
+        void ReplaceGpuStorage(std::unique_ptr<StorageBuffer> storage);
         uint32_t ByteLength() const;
+        // Stride of the vertex layouts the buffer is drawn with, or 0 before it is first built.
+        uint32_t ByteStride() const { return m_byteStride; }
 
         // Binds the contents as a read-only raw compute buffer (transform feedback vertex input). A
         // buffer that was never built is promoted to GPU storage; a built one must be compute readable.

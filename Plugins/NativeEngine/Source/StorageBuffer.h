@@ -36,6 +36,7 @@ namespace Babylon
         void SetVertex(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout);
 
         uint32_t ByteLength() const { return m_byteLength; }
+        uint32_t ByteStride() const { return m_byteStride; }
         gsl::span<const uint8_t> ShadowBytes() const { return gsl::make_span(m_shadow.data(), m_shadow.size()); }
         bgfx::DynamicVertexBufferHandle Handle();
 
