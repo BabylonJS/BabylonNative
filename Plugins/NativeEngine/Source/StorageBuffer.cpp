@@ -9,7 +9,7 @@ namespace Babylon
 {
     namespace
     {
-        constexpr uint32_t kDefaultByteStride = 16;
+        constexpr uint32_t DEFAULT_BYTE_STRIDE = 16;
 
         uint32_t RoundUp(uint32_t value, uint32_t multiple)
         {
@@ -32,7 +32,7 @@ namespace Babylon
         , m_deviceId{m_deviceContext.GetDeviceId()}
         , m_byteLength{byteLength}
         , m_computeWrite{computeWrite}
-        , m_byteStride{byteStride == 0 ? kDefaultByteStride : byteStride}
+        , m_byteStride{byteStride == 0 ? DEFAULT_BYTE_STRIDE : byteStride}
         , m_shadow(RoundUp(byteLength, m_byteStride), 0)
     {
     }

@@ -229,20 +229,20 @@ namespace Babylon
 
         // bgfx reads a type-dependent number of floats per array element from uniform data.
         assert((itUniformInfo == m_uniformInfos.end() || [&]() {
-            constexpr size_t kVectorComponentCount = 4;
-            constexpr size_t kMatrix3Dimension = 3;
-            constexpr size_t kMatrix4Dimension = 4;
+            constexpr size_t VECTOR_COMPONENT_COUNT = 4;
+            constexpr size_t MATRIX3_DIMENSION = 3;
+            constexpr size_t MATRIX4_DIMENSION = 4;
             size_t floatsPerElement{};
             switch (itUniformInfo->second.Type)
             {
                 case bgfx::UniformType::Vec4:
-                    floatsPerElement = kVectorComponentCount;
+                    floatsPerElement = VECTOR_COMPONENT_COUNT;
                     break;
                 case bgfx::UniformType::Mat3:
-                    floatsPerElement = kMatrix3Dimension * kMatrix3Dimension;
+                    floatsPerElement = MATRIX3_DIMENSION * MATRIX3_DIMENSION;
                     break;
                 case bgfx::UniformType::Mat4:
-                    floatsPerElement = kMatrix4Dimension * kMatrix4Dimension;
+                    floatsPerElement = MATRIX4_DIMENSION * MATRIX4_DIMENSION;
                     break;
                 default:
                     return false;

@@ -36,7 +36,7 @@ namespace Babylon
         void Forget(VertexArray* vertexArray);
 
     private:
-        static constexpr uint32_t kMaxAttributes = 32;
+        static constexpr uint32_t MAX_ATTRIBUTES = 32;
 
         struct PerVertexArray
         {

@@ -11,7 +11,7 @@ namespace Babylon
 {
     namespace
     {
-        constexpr uint32_t kMaximumVertexAttributeComponents = 4;
+        constexpr uint32_t MAXIMUM_VERTEX_ATTRIBUTE_COMPONENTS = 4;
     }
 
     VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
@@ -115,7 +115,7 @@ namespace Babylon
             {
                 throw std::runtime_error{"Transform feedback vertex inputs cannot be instanced"};
             }
-            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > kMaximumVertexAttributeComponents)
+            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > MAXIMUM_VERTEX_ATTRIBUTE_COMPONENTS)
             {
                 throw std::runtime_error{"Transform feedback vertex inputs must be aligned to their component size"};
             }
@@ -263,9 +263,9 @@ namespace Babylon
         else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
         {
             // D3D input layouts must cover declared built-in instance inputs even when unused.
-            static constexpr uint16_t kSlotSize = 16;
+            static constexpr uint16_t SLOT_SIZE = 16;
             const uint32_t count = std::max(instanceCount, 1u);
-            const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * kSlotSize);
+            const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * SLOT_SIZE);
             if (bgfx::getAvailInstanceDataBuffer(count, stride) < count)
             {
                 throw std::runtime_error{"Transient instance data buffer exhausted"};

@@ -272,7 +272,7 @@ namespace Babylon
         const InstanceDataLayout& layout)
     {
         // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
-        static constexpr uint16_t kSlotSize = 16;
+        static constexpr uint16_t SLOT_SIZE = 16;
 
         if (instances.empty())
         {
@@ -301,7 +301,7 @@ namespace Babylon
             throw std::runtime_error{"Instance-data layout does not cover every recorded attribute."};
         }
 
-        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
+        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * SLOT_SIZE);
 
         bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
 
@@ -319,8 +319,8 @@ namespace Babylon
             {
                 throw std::runtime_error{"Instance-data attribute maps outside the allocated buffer."};
             }
-            const uint32_t slotOffset = slot * kSlotSize;
-            assert(element.ElementSize <= kSlotSize);
+            const uint32_t slotOffset = slot * SLOT_SIZE;
+            assert(element.ElementSize <= SLOT_SIZE);
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {
