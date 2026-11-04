@@ -438,8 +438,15 @@ jobs:
       sudo chmod 0666 /dev/kvm
       export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
       sdkmanager --install emulator 'system-images;android-33;google_apis;x86_64'
-      echo "no" | avdmanager create avd --force --name runtime-tests \
-        --package 'system-images;android-33;google_apis;x86_64'
+      export ANDROID_AVD_HOME="$(Agent.TempDirectory)/runtime-tests-avd"
+      mkdir -p "$ANDROID_AVD_HOME"
+      echo "no" | avdmanager --verbose create avd --force --name runtime-tests \
+        --package 'system-images;android-33;google_apis;x86_64' \
+        --path "$ANDROID_AVD_HOME/runtime-tests.avd"
+      if [[ ! -s "$ANDROID_AVD_HOME/runtime-tests.ini" ]]; then
+        echo "Missing virtual device configuration: $ANDROID_AVD_HOME/runtime-tests.ini" >&2
+        exit 1
+      fi
       export ANDROID_SERIAL=emulator-5554
       emulator -avd runtime-tests -port 5554 -no-window -no-snapshot -no-boot-anim \
         -no-audio -gpu swiftshader_indirect > test-results/emulator.log 2>&1 &
