@@ -788,8 +788,6 @@
         },
         {
             "title": "Convolution Post Process",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#FBH4J7#281",
             "referenceImage": "convolution.png"
         },
@@ -965,8 +963,8 @@
         {
             "title": "Node material PBR 1",
             "playgroundId": "#D8AK3Z#121",
-            "excludedGraphicsApis": ["D3D11", "OpenGL", "WebGPU"],
-            "reason": "D3D11 and OpenGL CI fail pixel comparison (7.338% and 7.677% different pixels respectively; allowed 2.5%). WebGPU: intermittently the createScene promise never resolves in a full-suite run (waited out the whole timeout once; passes in ~4 s when run alone), which burns CI time.",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: intermittently the createScene promise never resolves in a full-suite run (waited out the whole timeout once; passes in ~4 s when run alone), which burns CI time.",
             "referenceImage": "node-material-pbr-1.png"
         },
         {
@@ -1031,11 +1029,9 @@
         },
         {
             "title": "LineEdgesRenderer",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#FF1HHK#0",
             "renderCount": 50,
-            "referenceImage": "LineEdgesRenderer.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (5.5% px); passes on Win32 D3D11."
+            "referenceImage": "LineEdgesRenderer.png"
         },
         {
             "title": "Simulate pointer",
@@ -1283,16 +1279,12 @@
         },
         {
             "title": "GLTF Serializer KHR materials clearcoat",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#9N6CLU#23",
-            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.8% px); passes on Win32 D3D11."
+            "referenceImage": "glTFSerializerKhrMaterialsClearcoat.png"
         },
         {
             "title": "GLTF Serializer KHR gpu instancing",
             "playgroundId": "#1Q2BWN#10",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (3.4%); passes on ANGLE GLES and D3D11.",
             "referenceImage": "glTFSerializerKhrGpuInstancing.png",
             "workarounds": ["leak-cleanup"]
         },
@@ -1343,28 +1335,24 @@
             "title": "GLTF Serializer camera rotation animation, RH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, RH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = true; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> RH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = true; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
             "title": "GLTF Serializer camera rotation animation, LH -> LH",
             "playgroundId": "#3A00GJ#42",
             "replace": "//options//, roundtripCount = 1; srcRH = false; destRH = false; const lookArgs = [BABYLON.Vector3.Forward()]; lookArgs.push(BABYLON.Vector3.Up()); const lookForward = Math.abs(BABYLON.Quaternion.FromLookDirectionLH(...lookArgs).w) > 0.5 ? BABYLON.Vector3.Backward : BABYLON.Vector3.Forward;, FromLookDirectionLH(BABYLON.Vector3.Forward, FromLookDirectionLH(lookForward, FromLookDirectionRH(BABYLON.Vector3.Forward, FromLookDirectionRH(lookForward",
-            "workarounds": ["refresh-export-matrices"],
             "referenceImage": "glTFSerializerCameraRotationAnimation.png"
         },
         {
@@ -1396,19 +1384,13 @@
             "title": "GLTF Extension KHR_materials_volume",
             "playgroundId": "#YG3BBF#16",
             "renderCount": 5,
-            "referenceImage": "gltfExtensionKhrMaterialsVolume.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s"
+            "referenceImage": "gltfExtensionKhrMaterialsVolume.png"
         },
         {
             "title": "GLTF Extension KHR_materials_volume with analytic light",
             "playgroundId": "#YG3BBF#48",
             "renderCount": 5,
-            "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s"
+            "referenceImage": "gltfExtensionKhrMaterialsVolumeHemiLight.png"
         },
         {
             "title": "GLTF Node visibility test",
@@ -1519,10 +1501,8 @@
         },
         {
             "title": "Instanced Bones",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#2YLJ1L#2",
-            "referenceImage": "instancedBones.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (2.9% px); passes on Win32 D3D11."
+            "referenceImage": "instancedBones.png"
         },
         {
             "title": "GlowLayer",
@@ -1563,10 +1543,8 @@
         },
         {
             "title": "MeshSimplification",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#1ED15P#46",
-            "referenceImage": "meshSimplification.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux CI (16% px); passes on Win32 D3D11."
+            "referenceImage": "meshSimplification.png"
         },
         {
             "title": "DepthRenderer",
@@ -1919,17 +1897,15 @@
         },
         {
             "title": "Instances + motion blur",
-            "playgroundId": "#YB006J#547",
+            "playgroundId": "#YB006J#800",
             "renderCount": 10,
-            "referenceImage": "instances-mb.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "instances-mb.png"
         },
         {
             "title": "Instances + GBR + motion blur",
-            "playgroundId": "#YB006J#549",
+            "playgroundId": "#YB006J#801",
             "renderCount": 10,
-            "referenceImage": "instances-gbr-mb.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "referenceImage": "instances-gbr-mb.png"
         },
         {
             "title": "Instances manual update + motion blur",
@@ -2013,10 +1989,8 @@
         },
         {
             "title": "Baked Vertex Animation",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#14WJWW#13",
-            "referenceImage": "bakedVertexAnimation.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.5% px); passes on Win32 D3D11."
+            "referenceImage": "bakedVertexAnimation.png"
         },
         {
             "title": "Baked Vertex Animation with Depth Of Field",
@@ -2122,8 +2096,8 @@
             "title": "Fluid rendering box sphere",
             "playgroundId": "#PCMH7A#2",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "replace": "this._makeGUI();,",
+            "reason": "The demo settings panel uses lil-gui, which needs a DOM the native host does not have; it throws before the fluid simulation is attached, so the panel is not built.",
             "referenceImage": "fluidBoxSphere.png"
         },
         {
@@ -2286,8 +2260,6 @@
         {
             "title": "Font style inheritance",
             "playgroundId": "#QFK9K4#26",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Font-style-inheritance.png"
         },
         {
@@ -2298,8 +2270,6 @@
         {
             "title": "Child overriding parent font properties",
             "playgroundId": "#QFK9K4#25",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Childoverridingparentfontproperties.png"
         },
         {
@@ -2310,8 +2280,6 @@
         {
             "title": "Command encoder order in WebGPU 1",
             "playgroundId": "#064AUB#125",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: intermittent full-suite pixel comparison failure on Linux Clang CI (45.535% different pixels; allowed 2.5%), despite passing other runs.",
             "referenceImage": "CommandEncodedWebGPU1.png",
             "workarounds": ["wait-for-readiness"]
         },
@@ -2338,11 +2306,9 @@
         },
         {
             "title": "show-bounding-box",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#Y2TD10#0",
             "renderCount": 5,
-            "referenceImage": "show-bounding-box.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (7.6% px); passes on Win32 D3D11."
+            "referenceImage": "show-bounding-box.png"
         },
         {
             "title": "cube-reflection-with-probe-and-mirrors",
@@ -2528,19 +2494,15 @@
         },
         {
             "title": "glTF Loader Cameras RH",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = true;",
-            "referenceImage": "glTFLoaderCameras.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
+            "referenceImage": "glTFLoaderCameras.png"
         },
         {
             "title": "glTF Loader Cameras LH",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#933H4X#11",
             "replace": "//options//, useRightHandedSystem = false;",
-            "referenceImage": "glTFLoaderCameras.png",
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (2.7% px); passes on Win32 D3D11."
+            "referenceImage": "glTFLoaderCameras.png"
         },
         {
             "title": "IBL Voxel Shadowing",
@@ -2930,7 +2892,6 @@
         {
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
-            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
@@ -2961,7 +2922,6 @@
         {
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
-            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
@@ -2982,7 +2942,6 @@
         {
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
-            "workarounds": ["wait-for-clustered-lights"],
             "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {
@@ -3323,8 +3282,6 @@
         },
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - Analytic Lights",
-            "excludedGraphicsApis": ["Metal"],
-            "reason": "Metal: pixel comparison against the reference image fails on macOS.",
             "playgroundId": "#GRQHVV#109",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---Analytic-Lights.png"
         },
@@ -3569,8 +3526,6 @@
         {
             "title": "Lighting Volume",
             "playgroundId": "#MU9P6L#1",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: pixel diff out of tolerance on Linux llvmpipe (4.4% px); passes on Win32 D3D11.",
             "referenceImage": "Lighting-Volume.png"
         },
         {
@@ -3578,6 +3533,8 @@
             "playgroundId": "#ND10JJ#0",
             "useLargeWorldRendering": true,
             "requiresHavok": true,
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: the Playground WebGPU bootstrap creates one engine and does not support changing large-world rendering between tests.",
             "referenceImage": "Havok-FloatingOrigin-Multi-Region.png"
         },
         {

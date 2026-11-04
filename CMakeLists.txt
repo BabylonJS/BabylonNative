@@ -26,15 +26,15 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bx
     GIT_REPOSITORY https://github.com/bkaradzic/bx.git
-    GIT_TAG dae5c595b767b94fc2a4d5177815ef22dd1f3f2f
+    GIT_TAG 9a8cbb251787d766bb15858cce05aeaa7c12acad
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bimg
     GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
-    GIT_TAG 9bfbd6493b48a15238f2d1374a718ec026524515
+    GIT_TAG 64a34f7441af8f06e40ccab08d76bbf5e59e55b1
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
-    GIT_TAG 5a0a89260aa1affd336707bb935282249e7bf72f
+    GIT_TAG 1dfbb5ffb10a8d0df6f52f5f8fc8b69f0367b7d4
     EXCLUDE_FROM_ALL)
 # Dawn (WebGPU) — only populated + built when BABYLON_NATIVE_PLUGIN_NATIVEDAWN is
 # ON (see the guarded FetchContent_MakeAvailable below). Declaring it here is

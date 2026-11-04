@@ -552,55 +552,55 @@ namespace Babylon::Plugins::Internal
             const auto args = command.args;
             switch (command.type)
             {
-                case P2D_CLOSE:
+                case Path2DCommandType::Close:
                     nvgClosePath(*m_nvg);
                     break;
-                case P2D_MOVETO:
+                case Path2DCommandType::MoveTo:
                     nvgMoveTo(*m_nvg, args.moveTo.x, args.moveTo.y);
                     break;
-                case P2D_LINETO:
+                case Path2DCommandType::LineTo:
                     nvgLineTo(*m_nvg, args.lineTo.x, args.lineTo.y);
                     break;
-                case P2D_BEZIERTO:
+                case Path2DCommandType::BezierTo:
                     nvgBezierTo(*m_nvg, args.bezierTo.cp1x, args.bezierTo.cp1y,
                         args.bezierTo.cp2x, args.bezierTo.cp2y,
                         args.bezierTo.x, args.bezierTo.y);
                     break;
-                case P2D_QUADTO:
+                case Path2DCommandType::QuadTo:
                     nvgQuadTo(*m_nvg, args.quadTo.cpx, args.quadTo.cpy,
                         args.quadTo.x, args.quadTo.y);
                     break;
-                case P2D_ARC:
+                case Path2DCommandType::Arc:
                     nvgArc(*m_nvg, args.arc.x, args.arc.y, args.arc.radius,
                         args.arc.startAngle, args.arc.endAngle,
                         args.arc.counterclockwise ? NVG_CCW : NVG_CW);
                     break;
-                case P2D_ARCTO:
+                case Path2DCommandType::ArcTo:
                     nvgArcTo(*m_nvg, args.arcTo.x1, args.arcTo.y1,
                         args.arcTo.x2, args.arcTo.y2,
                         args.arcTo.radius);
                     break;
-                case P2D_ELLIPSE:
+                case Path2DCommandType::Ellipse:
                     // TODO: handle clockwise for nvgElipse (args.ellipse.counterclockwise)
                     nvgEllipse(*m_nvg, args.ellipse.x, args.ellipse.y,
                         args.ellipse.radiusX, args.ellipse.radiusY);
                     break;
-                case P2D_RECT:
+                case Path2DCommandType::Rect:
                     nvgRect(*m_nvg, args.rect.x, args.rect.y,
                         args.rect.width, args.rect.height);
                     break;
-                case P2D_ROUNDRECT:
+                case Path2DCommandType::RoundRect:
                     nvgRoundedRect(*m_nvg, args.roundRect.x, args.roundRect.y,
                         args.roundRect.width, args.roundRect.height,
                         args.roundRect.radii);
                     break;
-                case P2D_ROUNDRECTVARYING:
+                case Path2DCommandType::RoundRectVarying:
                     nvgRoundedRectVarying(*m_nvg, args.roundRectVarying.x, args.roundRectVarying.y,
                         args.roundRectVarying.width, args.roundRectVarying.height,
                         args.roundRectVarying.topLeft, args.roundRectVarying.topRight,
                         args.roundRectVarying.bottomRight, args.roundRectVarying.bottomLeft);
                     break;
-                case P2D_ROUNDRECTELLIPTIC:
+                case Path2DCommandType::RoundRectElliptic:
                     nvgRoundedRectElliptic(*m_nvg, args.roundRectElliptic.x, args.roundRectElliptic.y,
                         args.roundRectElliptic.width, args.roundRectElliptic.height,
                         args.roundRectElliptic.topLeftX, args.roundRectElliptic.topLeftY,
@@ -608,7 +608,7 @@ namespace Babylon::Plugins::Internal
                         args.roundRectElliptic.bottomRightX, args.roundRectElliptic.bottomRightY,
                         args.roundRectElliptic.bottomLeftX, args.roundRectElliptic.bottomLeftY);
                     break;
-                case P2D_TRANSFORM:
+                case Path2DCommandType::Transform:
                     nvgTransform(*m_nvg,
                         args.transform.a, args.transform.b, args.transform.c,
                         args.transform.d, args.transform.e, args.transform.f);

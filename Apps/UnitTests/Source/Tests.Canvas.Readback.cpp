@@ -541,10 +541,12 @@ TEST(CanvasReadback, CanvasTexturePreservesLegacyPremultipliedSource)
         canvas.Set("height", 4);
         auto context = canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
         auto getTexture = canvas.Get("getCanvasTexture").As<Napi::Function>();
-        EXPECT_THROW(getTexture.Call(canvas, {}), Napi::Error);
-        context.Get("flush").As<Napi::Function>().Call(context, {});
         auto* nativeCanvas = Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas);
+        const auto unflushed = getTexture.Call(canvas, {}).As<Napi::Pointer<Babylon::Graphics::Texture>>().Get()->Handle();
+        EXPECT_TRUE(nativeCanvas->HasFrameBuffer());
+        context.Get("flush").As<Napi::Function>().Call(context, {});
         const auto source = bgfx::getTexture(nativeCanvas->GetFrameBuffer().Handle());
+        EXPECT_EQ(unflushed.idx, source.idx);
         for (const std::vector<Napi::Value>& arguments : std::vector<std::vector<Napi::Value>>{
                  {}, {env.Undefined()}, {Napi::Boolean::New(env, true)}})
         {

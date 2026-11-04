@@ -75,18 +75,16 @@ namespace Babylon
                 // bgfx only supports vertex start index and not arbitrary byte offsets.
                 throw std::runtime_error{"Cannot update dynamic vertex buffer with a byte offset not divisible by its byte stride"};
             }
-
             bgfx::update(m_dynamicHandle, startVertex, bgfx::copy(bytes.data(), static_cast<uint32_t>(bytes.size())));
+            return;
         }
-        else
-        {
-            if (byteOffset + bytes.size() > m_bytes.size())
-            {
-                throw std::runtime_error{"Cannot update vertex buffer due to buffer overflow"};
-            }
 
-            std::memcpy(m_bytes.data() + byteOffset, bytes.data(), bytes.size());
+        if (byteOffset + bytes.size() > m_bytes.size())
+        {
+            throw std::runtime_error{"Cannot update vertex buffer due to buffer overflow"};
         }
+
+        std::memcpy(m_bytes.data() + byteOffset, bytes.data(), bytes.size());
     }
 
     void VertexBuffer::Build(uint32_t byteStride)
@@ -274,7 +272,7 @@ namespace Babylon
         const InstanceDataLayout& layout)
     {
         // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
-        static constexpr uint16_t kSlotSize = 16;
+        static constexpr uint16_t SLOT_SIZE = 16;
 
         if (instances.empty())
         {
@@ -303,9 +301,8 @@ namespace Babylon
             throw std::runtime_error{"Instance-data layout does not cover every recorded attribute."};
         }
 
-        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
+        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * SLOT_SIZE);
 
-        // Create instance datas. Instance Data Buffer is transient.
         bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
 
         uint8_t* data{instanceDataBuffer.data};
@@ -322,8 +319,8 @@ namespace Babylon
             {
                 throw std::runtime_error{"Instance-data attribute maps outside the allocated buffer."};
             }
-            const uint32_t slotOffset = slot * kSlotSize;
-            assert(element.ElementSize <= kSlotSize);
+            const uint32_t slotOffset = slot * SLOT_SIZE;
+            assert(element.ElementSize <= SLOT_SIZE);
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {

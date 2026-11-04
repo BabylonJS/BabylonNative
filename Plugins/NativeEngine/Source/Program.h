@@ -42,11 +42,9 @@ namespace Babylon
     public:
         Program(Graphics::DeviceContext& deviceContext);
 
-        // Copy semantics
         Program(const Program&) = delete;
         Program& operator=(const Program&) = delete;
 
-        // Move semantics
         Program(Program&&) = delete;
         Program& operator=(Program&&) = delete;
 
@@ -54,7 +52,6 @@ namespace Babylon
 
         void Initialize(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo);
 
-        // Creates a bgfx compute program (single CSH shader) from shaderInfo->ComputeBytes.
         void InitializeCompute(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo);
 
         // Creates the compute program that emulates a transform feedback vertex shader (see
@@ -68,8 +65,7 @@ namespace Babylon
 
         void Dispose();
 
-        // Stores the original GLSL sources so divisor-driven instanced variants can be
-        // recompiled lazily on the first instanced draw (see GetOrCreateInstancedVariant).
+        // Sources are retained to lazily compile divisor-driven instanced variants.
         void SetSources(std::string vertexSource, std::string fragmentSource);
 
         // Returns a program handle whose vertex shader routes the given consumer-instanced

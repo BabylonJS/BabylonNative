@@ -549,7 +549,7 @@ namespace Babylon::ShaderCompilerCommon
         return result;
     }
 
-    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource)
+    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource, const std::unordered_set<std::string>* reservedNames)
     {
         const auto first = TokenizeShader(source);
         const auto second = pairedSource ? TokenizeShader(*pairedSource) : std::vector<ShaderToken>{};
@@ -576,7 +576,8 @@ namespace Babylon::ShaderCompilerCommon
                     uniform = false;
                 }
                 else if (uniform && (token.Text == "textureSize" || token.Text.starts_with(Graphics::SAMPLER_STATE_UNIFORM_PREFIX) ||
-                    std::find(std::begin(predefined), std::end(predefined), token.Text) != std::end(predefined)))
+                    std::find(std::begin(predefined), std::end(predefined), token.Text) != std::end(predefined) ||
+                    (reservedNames && reservedNames->count(std::string{token.Text}))))
                 {
                     candidates.emplace(token.Text);
                     stageCandidates.emplace(token.Text);
