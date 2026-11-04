@@ -2249,8 +2249,6 @@
         {
             "title": "Font style inheritance",
             "playgroundId": "#QFK9K4#26",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Font-style-inheritance.png"
         },
         {
@@ -2261,8 +2259,6 @@
         {
             "title": "Child overriding parent font properties",
             "playgroundId": "#QFK9K4#25",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Childoverridingparentfontproperties.png"
         },
         {

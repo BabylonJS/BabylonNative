@@ -19,6 +19,9 @@ set(DEPENDENCIES
     "../Dependencies/DroidSans.ttf"
     "../Dependencies/DroidSans-APACHE-2.0.txt"
     "../Dependencies/DroidSans-PROVENANCE.txt"
+    "../Dependencies/Tinos-Regular.ttf"
+    "../Dependencies/Tinos-OFL.txt"
+    "../Dependencies/Tinos-PROVENANCE.txt"
     "../Dependencies/ammo.js"
     "../Dependencies/meshwriter.min.js"
     "../Dependencies/recast.js")

@@ -1508,6 +1508,12 @@ describe("Canvas2D", function () {
     }).to.not.throw();
   });
 
+  it("keeps every word of an unquoted multi-word font family", function () {
+    const ctx = createContext();
+    ctx.font = "normal normal 18px Times  New Roman";
+    expect(ctx.font).to.equal('18px "Times New Roman"');
+  });
+
   it("rejects a createImageData source whose dimensions are not valid extents", function () {
     const ctx = createContext();
     // The ImageData overload is duck-typed, so these never went through WebIDL's
