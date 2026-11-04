@@ -149,7 +149,10 @@ int main(int _argc, const char* const* _argv)
     XInternAtoms(display, (char **)&wmDeleteWindowName, 1, False, &wmDeleteWindow);
     XSetWMProtocols(display, window, &wmDeleteWindow, 1);
 
-    XMapWindow(display, window);
+    if (!options.Headless)
+    {
+        XMapWindow(display, window);
+    }
     XStoreName(display, window, s_applicationName);
 
     XClassHint* hint = XAllocClassHint();
