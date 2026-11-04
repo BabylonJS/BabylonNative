@@ -125,16 +125,16 @@ namespace Babylon::Plugins::Internal
         using GradientStyle = std::shared_ptr<Napi::ObjectReference>;
         std::variant<std::string, GradientStyle> m_fillStyle{};
         std::variant<std::string, GradientStyle> m_strokeStyle{};
-        std::string m_lineCap{};  // 'butt', 'round', 'square'
-        std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
+        std::string m_lineCap{"butt"};  // 'butt', 'round', 'square'
+        std::string m_lineJoin{"miter"}; // 'round', 'bevel', 'miter'
 
         // Dash pattern from setLineDash. Retained only so getLineDash() round-trips;
         // strokes are always drawn solid (nanovg has no dashed stroke).
         std::vector<double> m_lineDash{};
         std::string m_filter{};
         std::string m_direction{"ltr"}; // 'ltr', 'rtl'
-        float m_miterLimit{0.f};
-        float m_lineWidth{0.f};
+        float m_miterLimit{10.f};
+        float m_lineWidth{1.f};
         float m_globalAlpha{1.f};
         float m_letterSpacing{0.f};
 
@@ -160,6 +160,15 @@ namespace Babylon::Plugins::Internal
             Font font;
             int currentFontId;
             ShadowState shadow;
+            std::string lineCap;
+            std::string lineJoin;
+            std::vector<double> lineDash;
+            std::string filter;
+            std::string direction;
+            float miterLimit;
+            float lineWidth;
+            float globalAlpha;
+            float letterSpacing;
         };
         std::vector<SavedStyle> m_savedStyles;
 
@@ -172,7 +181,13 @@ namespace Babylon::Plugins::Internal
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
-        std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
+        struct CachedImage
+        {
+            int index;
+            uint32_t generation;
+        };
+        std::unordered_map<const NativeCanvasImage*, CachedImage> m_nvgImageIndices;
+        std::vector<int> m_retiredNvgImages;
         void BindFillStyle(const Napi::CallbackInfo& info);
         void BindStrokeStyle(const Napi::CallbackInfo& info);
 

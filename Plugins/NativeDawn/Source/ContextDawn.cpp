@@ -162,8 +162,13 @@ namespace Babylon::Plugins::Internal
         {
             for (auto& image : m_nvgImageIndices)
             {
-                nvgDeleteImage(*m_nvg, image.second);
+                nvgDeleteImage(*m_nvg, image.second.index);
             }
+            for (const int retired : m_retiredNvgImages)
+            {
+                nvgDeleteImage(*m_nvg, retired);
+            }
+            m_retiredNvgImages.clear();
             NvgDeleteDawn(*m_nvg);
             m_nvg = nullptr;
         }
@@ -356,7 +361,8 @@ namespace Babylon::Plugins::Internal
     {
         nvgSave(*m_nvg);
         // BindFillStyle/SetFontFaceId must not rebind state that NanoVG has already restored.
-        m_savedStyles.push_back({m_fillStyle, m_strokeStyle, m_font, m_currentFontId, m_shadow});
+        m_savedStyles.push_back({m_fillStyle, m_strokeStyle, m_font, m_currentFontId, m_shadow,
+            m_lineCap, m_lineJoin, m_lineDash, m_filter, m_direction, m_miterLimit, m_lineWidth, m_globalAlpha, m_letterSpacing});
     }
 
     void ContextDawn::Restore(const Napi::CallbackInfo&)
@@ -371,6 +377,15 @@ namespace Babylon::Plugins::Internal
             m_font = saved.font;
             m_currentFontId = saved.currentFontId;
             m_shadow = saved.shadow;
+            m_lineCap = saved.lineCap;
+            m_lineJoin = saved.lineJoin;
+            m_lineDash = saved.lineDash;
+            m_filter = saved.filter;
+            m_direction = saved.direction;
+            m_miterLimit = saved.miterLimit;
+            m_lineWidth = saved.lineWidth;
+            m_globalAlpha = saved.globalAlpha;
+            m_letterSpacing = saved.letterSpacing;
             m_savedStyles.pop_back();
         }
     }
@@ -752,6 +767,12 @@ namespace Babylon::Plugins::Internal
             nvgEndFrame(*m_nvg);
             NvgSetDawnRenderPass(*m_nvg, nullptr);
 
+            for (const int retired : m_retiredNvgImages)
+            {
+                nvgDeleteImage(*m_nvg, retired);
+            }
+            m_retiredNvgImages.clear();
+
             m_canvas->EndFrame(pass);
         }
         catch (const std::exception& ex)
@@ -1049,11 +1070,19 @@ namespace Babylon::Plugins::Internal
         if (nvgImageIter == m_nvgImageIndices.end())
         {
             imageIndex = canvasImage->CreateNVGImageForContext(*m_nvg);
-            m_nvgImageIndices.try_emplace(canvasImage, imageIndex);
+            m_nvgImageIndices.try_emplace(canvasImage, CachedImage{imageIndex, canvasImage->GetContentGeneration()});
+        }
+        else if (nvgImageIter->second.generation != canvasImage->GetContentGeneration())
+        {
+            // The image was reloaded: upload the new pixels, but keep the old texture
+            // alive until already queued draws have been flushed.
+            m_retiredNvgImages.push_back(nvgImageIter->second.index);
+            imageIndex = canvasImage->CreateNVGImageForContext(*m_nvg);
+            nvgImageIter->second = CachedImage{imageIndex, canvasImage->GetContentGeneration()};
         }
         else
         {
-            imageIndex = nvgImageIter->second;
+            imageIndex = nvgImageIter->second.index;
         }
         assert(imageIndex != -1);
 

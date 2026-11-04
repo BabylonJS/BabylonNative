@@ -150,10 +150,11 @@ namespace Babylon::Embedding
         const bool firstAttachEver = !m_runtime.m_dawnInitialized;
         if (!firstAttachEver)
         {
-            // Re-attach to an existing Runtime: reconfigure the Dawn surface to
-            // the current size on the JS thread (where the Dawn device lives).
-            m_runtime.m_appRuntime->Dispatch([lw, lh](Napi::Env env) {
-                Babylon::Plugins::NativeDawn::ResizeSurface(env, lw, lh);
+            // Re-attach to an existing Runtime: rebind the Dawn surface to this View's
+            // window at the current size on the JS thread (where the Dawn device lives).
+            void* window = m_window;
+            m_runtime.m_appRuntime->Dispatch([window, lw, lh](Napi::Env env) {
+                Babylon::Plugins::NativeDawn::RebindSurface(env, window, lw, lh);
             });
         }
         m_initialized = true;

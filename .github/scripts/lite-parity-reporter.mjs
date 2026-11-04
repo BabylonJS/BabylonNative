@@ -10,10 +10,23 @@ export default class ParityReporter {
     }
 
     onBegin(config, suite) {
-        writeFileSync(join(this.output, "scheduled-tests.json"), JSON.stringify(
-            suite.allTests().map(test => ({
-                id: test.id, title: test.titlePath(), location: test.location,
-            })), null, 2));
+        const tests = suite.allTests().map(test => ({
+            id: test.id, title: test.titlePath(), location: test.location,
+        }));
+        writeFileSync(join(this.output, "scheduled-tests.json"), JSON.stringify(tests, null, 2));
+
+        // Cumulative schedule: retrying a subset must not erase earlier pending cases.
+        const fullPath = join(this.output, "full-scheduled-tests.json");
+        let full = [];
+        try {
+            full = JSON.parse(readFileSync(fullPath, "utf8"));
+        } catch (error) {
+            if (error.code !== "ENOENT") {
+                throw error;
+            }
+        }
+        const known = new Set(full.map(item => item.id));
+        writeFileSync(fullPath, JSON.stringify(full.concat(tests.filter(item => !known.has(item.id))), null, 2));
     }
 
     onTestEnd(test, result) {

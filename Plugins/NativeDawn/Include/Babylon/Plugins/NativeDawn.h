@@ -29,6 +29,10 @@ namespace Babylon::Plugins::NativeDawn
     // resize handling belongs to the host. Must be called on the JS thread.
     void ResizeSurface(Napi::Env env, uint32_t width, uint32_t height);
 
+    // Recreates the surface from a new native window (a View re-attached with a
+    // different window), preserving the device and JS state. JS thread only.
+    void RebindSurface(Napi::Env env, void* window, uint32_t width, uint32_t height);
+
     // Pumps animation callbacks, deferred readback and GPU resource retirement.
     // Presents submitted surface work before starting the next frame. Call once
     // per native frame on the JS thread.

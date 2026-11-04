@@ -5071,6 +5071,75 @@ namespace Babylon::Plugins::NativeDawn
         ResizeDrawingBuffer(width, height);
     }
 
+    void RebindSurface(Napi::Env env, void* window, uint32_t width, uint32_t height)
+    {
+        if (width < 1) width = 1;
+        if (height < 1) height = 1;
+        if (!g_state.ready || g_state.instance == nullptr || g_state.device == nullptr)
+        {
+            return;
+        }
+#if defined(_WIN32)
+        const bool wasConfigured = g_surfaceConfigured;
+#if BABYLON_NATIVE_PLUGIN_TESTUTILS
+        ReleasePresentedTexture();
+#endif
+        ReleaseSurfaceTexture();
+        g_currentTextureAcquired = false;
+        g_surfaceWorkPending = false;
+        if (g_state.surface)
+        {
+            if (wasConfigured)
+            {
+                wgpuSurfaceUnconfigure(g_state.surface);
+            }
+            wgpuSurfaceRelease(g_state.surface);
+            g_state.surface = nullptr;
+        }
+
+        WGPUSurfaceSourceWindowsHWND chained{
+            .chain = {
+                .sType = WGPUSType_SurfaceSourceWindowsHWND,
+            },
+            .hinstance = ::GetModuleHandle(nullptr),
+            .hwnd = window,
+        };
+        WGPUSurfaceDescriptor surfDesc{
+            .nextInChain = &chained.chain,
+            .label = EmptyStringView(),
+        };
+        g_state.surface = wgpuInstanceCreateSurface(g_state.instance, &surfDesc);
+        if (!g_state.surface)
+        {
+            DawnLog(LogLevel::Error, "RebindSurface: CreateSurface failed");
+            g_surfaceConfigured = false;
+            return;
+        }
+
+        g_state.width = width;
+        g_state.height = height;
+        g_requestedWidth = width;
+        g_requestedHeight = height;
+        if (wasConfigured)
+        {
+            WGPUSurfaceConfiguration cfg{
+                .device = g_state.device,
+                .format = g_state.surfaceFormat,
+                .usage = g_surfaceUsage,
+                .width = width,
+                .height = height,
+                .alphaMode = g_surfaceAlphaMode,
+                .presentMode = WGPUPresentMode_Fifo,
+            };
+            wgpuSurfaceConfigure(g_state.surface, &cfg);
+        }
+        ResizeSurface(env, width, height);
+#else
+        (void)window;
+        ResizeSurface(env, width, height);
+#endif
+    }
+
     void ResizeSurface(Napi::Env env, uint32_t width, uint32_t height)
     {
         ResizeSurface(width, height);
