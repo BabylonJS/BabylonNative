@@ -37,8 +37,8 @@ FetchContent_Declare(bgfx
     GIT_TAG 1dfbb5ffb10a8d0df6f52f5f8fc8b69f0367b7d4
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
-    GIT_REPOSITORY https://github.com/bkaradzic-microsoft/glslang.git
-    GIT_TAG 2ea332770f87c3b3441c0ba03d59eafe45d1edec
+    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
+    GIT_TAG f02debc9c37c4026a5ae2f1229e7f08c7df767e4
     EXCLUDE_FROM_ALL)
 # The codec does not use the transcoder's external dependencies.
 set(_draco_submodules "")
