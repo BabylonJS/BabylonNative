@@ -38,6 +38,7 @@ namespace Babylon
     }
 
     class InstanceRepacker;
+    class StorageBufferCopier;
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
@@ -252,7 +253,7 @@ namespace Babylon
         std::unique_ptr<InstanceRepacker> m_instanceRepacker{};
         // Copies a storage buffer into an R32F image for readTransformFeedbackBuffer; created on first use.
         std::shared_ptr<Program> m_bufferReadbackProgram{};
-        std::shared_ptr<Program> m_bufferCopyProgram{};
+        std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;

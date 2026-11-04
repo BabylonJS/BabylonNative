@@ -7,6 +7,7 @@
 
 #include "JsConsoleLogger.h"
 #include "InstanceRepacker.h"
+#include "StorageBufferCopier.h"
 #include "StorageBuffer.h"
 
 #include <arcana/threading/task.h>
@@ -4135,34 +4136,13 @@ void main() {
                 return;
             }
 
-            if (m_bufferCopyProgram == nullptr)
+            if (m_storageBufferCopier == nullptr)
             {
-                static constexpr const char* source = R"(#version 310 es
-precision highp float;
-precision highp int;
-layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
-layout(std430, binding = 0) readonly buffer Source { uint sourceData[]; };
-layout(std430, binding = 1) writeonly buffer Destination { uint destinationData[]; };
-uniform vec4 copyCount;
-void main() {
-    uint i = gl_GlobalInvocationID.x;
-    if (i >= uint(copyCount.x)) { return; }
-    destinationData[i] = sourceData[i];
-}
-)";
-                auto program = std::make_shared<Program>(m_deviceContext);
-                program->InitializeCompute(m_shaderProvider.GetCompute(source));
-                m_bufferCopyProgram = std::move(program);
+                m_storageBufferCopier = std::make_unique<StorageBufferCopier>(m_deviceContext);
             }
 
             // Transform feedback may have written the contents on the GPU only, so copy there.
-            auto restrided = std::make_unique<StorageBuffer>(m_deviceContext, storage->ByteLength(), stride);
-            const uint32_t count = (storage->ByteLength() + sizeof(uint32_t) - 1) / sizeof(uint32_t);
-            const float copyCount[4]{static_cast<float>(count), 0.0f, 0.0f, 0.0f};
-            encoder->setUniform(m_bufferCopyProgram->GetUniformInfo("copyCount")->Handle, copyCount);
-            storage->SetCompute(encoder, 0, bgfx::Access::Read);
-            restrided->SetCompute(encoder, 1, bgfx::Access::Write);
-            GetBoundFrameBuffer().Compute(*encoder, m_bufferCopyProgram->Handle(), (count + 63) / 64, 1, 1);
+            auto restrided = m_storageBufferCopier->CopyWithStride(*encoder, GetBoundFrameBuffer(), *storage, stride);
             vertexBuffer.ReplaceGpuStorage(std::move(restrided));
         });
     }
