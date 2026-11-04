@@ -107,16 +107,13 @@ namespace Babylon::Graphics
         bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
         uint8_t AcquireClearPaletteIndex(const std::array<float, 4>& color);
 
-        // Mid-frame view flush. If the current logical frame has acquired close to
-        // the maximum number of bgfx views, flush the accumulated views via a
-        // cross-thread bgfx::frame() and reset the view counter so rendering can
-        // continue within the same Babylon frame instead of running out of views
-        // (which previously threw "Too many views"). Called from the JS thread at
-        // draw/clear operation boundaries where no encoder work is pending.
-        void FlushViewsIfNeeded();
+        // Throws "Too many views" when the current logical frame has acquired close to
+        // the maximum number of bgfx views. Called from the JS thread at draw/clear
+        // operation boundaries, before views run out mid-operation.
+        void CheckViewBudget();
 
         // Unconditionally request a mid-frame bgfx flush when a FrameCompletionScope
-        // is active (same handshake as FlushViewsIfNeeded). Used by Canvas GPU
+        // is active. Used by Canvas GPU
         // readback so bgfx::readTexture can complete without waiting for the end of
         // the logical frame. Returns false when the render thread cannot service it.
         bool ForceMidFrameFlush();
@@ -203,14 +200,6 @@ namespace Babylon::Graphics
         std::mutex m_clearPaletteMutex{};
         std::array<std::array<float, 4>, 16> m_clearPalette{};
         uint8_t m_clearPaletteSize{};
-
-        // Number of mid-frame view flushes performed during the current logical frame; reset
-        // when the frame is actually presented. The flush lets a logical frame exceed bgfx's
-        // per-frame view budget, but each one is a blocking round-trip to the render thread,
-        // so an unbounded number of them turns pathological content into an apparent hang
-        // instead of an error. FlushViewsIfNeeded stops rescuing past kMaxMidFrameViewFlushes
-        // and lets AcquireNewViewId throw, which is the pre-existing behaviour.
-        std::atomic<uint32_t> m_midFrameFlushCount{0};
 
         std::atomic<bool> m_captureNextFrame{false};
 
@@ -310,7 +299,7 @@ namespace Babylon::Graphics
         int m_pendingFrameScopes{0};
         bool m_frameBlocked{true};
 
-        // Mid-frame view-flush handshake (guarded by m_frameSyncMutex):
+        // Mid-frame flush handshake (guarded by m_frameSyncMutex):
         //   - JS thread sets m_flushRequested and waits on m_flushCompleteCV.
         //   - Render thread (parked in FinishRenderingCurrentFrame) services the
         //     request via PerformMidFrameViewFlush, clears the flag, and notifies.

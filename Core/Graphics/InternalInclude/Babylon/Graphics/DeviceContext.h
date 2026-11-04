@@ -132,10 +132,9 @@ namespace Babylon::Graphics
         bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
         uint8_t AcquireClearPaletteIndex(const std::array<float, 4>& color);
 
-        // If the current frame is close to exhausting bgfx views, flush accumulated
-        // views (cross-thread bgfx::frame + view-counter reset) so rendering can
-        // continue within the same logical frame. Call at draw/clear op boundaries.
-        void FlushViewsIfNeeded();
+        // Throws "Too many views" if the current frame is close to exhausting bgfx
+        // views. Call at draw/clear op boundaries.
+        void CheckViewBudget();
 
         // Flush pending compute writes or readbacks while a FrameCompletionScope is
         // held. Returns false when the render thread cannot service the request.

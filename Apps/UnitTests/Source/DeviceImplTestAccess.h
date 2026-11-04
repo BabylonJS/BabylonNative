@@ -2,7 +2,7 @@
 
 #include "../../../Core/Graphics/Source/DeviceImpl.h"
 
-#include <chrono>
+#include <mutex>
 
 namespace Babylon::Graphics
 {
@@ -24,10 +24,13 @@ namespace Babylon::Graphics
             device.PerformMidFrameViewFlush();
         }
 
-        static bool WaitForFlushRequest(DeviceImpl& device, std::chrono::milliseconds timeout)
+        static void SetFrameBlocked(DeviceImpl& device, bool blocked)
         {
-            std::unique_lock lock{device.m_frameSyncMutex};
-            return device.m_frameSyncCV.wait_for(lock, timeout, [&] { return device.m_flushRequested; });
+            {
+                std::scoped_lock lock{device.m_frameSyncMutex};
+                device.m_frameBlocked = blocked;
+            }
+            device.m_frameSyncCV.notify_all();
         }
 
         static size_t CachedVertexLayouts(DeviceImpl& device)
