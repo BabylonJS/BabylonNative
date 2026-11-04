@@ -1,27 +1,27 @@
 #pragma once
 
+#include <cstdint>
 #include <queue>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
-enum Path2DCommandTypes
+enum class Path2DCommandType : uint32_t
 {
-    P2D_CLOSE = 0,
-    P2D_MOVETO = 1,
-    P2D_LINETO = 2,
-    P2D_BEZIERTO = 3,
-    P2D_QUADTO = 4,
-    P2D_ARC = 5,
-    P2D_ARCTO = 6,
-    P2D_ELLIPSE = 7,
-    P2D_RECT = 8,
-    P2D_ROUNDRECT = 9,
-    P2D_ROUNDRECTVARYING = 10,
-    P2D_ROUNDRECTELLIPTIC = 11,
-    P2D_TRANSFORM = 12,
+    Close,
+    MoveTo,
+    LineTo,
+    BezierTo,
+    QuadTo,
+    Arc,
+    ArcTo,
+    Ellipse,
+    Rect,
+    RoundRect,
+    RoundRectVarying,
+    RoundRectElliptic,
+    Transform,
 };
 
-struct Path2DClose {}; // TODO: don't bother if no args?
 struct Path2DMoveTo { float x; float y; };
 struct Path2DLineTo { float x; float y; }; 
 struct Path2DBezierTo { float cp1x; float cp1y; float cp2x; float cp2y; float x; float y; };
@@ -37,7 +37,6 @@ struct Path2DTransform { float a; float b; float c; float d; float e; float f; }
 
 union Path2DCommandArgs
 {
-    Path2DClose close;
     Path2DMoveTo moveTo;
     Path2DLineTo lineTo;
     Path2DBezierTo bezierTo;
@@ -54,7 +53,7 @@ union Path2DCommandArgs
 
 struct Path2DCommand
 {
-    Path2DCommandTypes type;
+    Path2DCommandType type;
     Path2DCommandArgs args;
 };
 
@@ -64,9 +63,6 @@ namespace Babylon::Polyfills::Internal
     {
     public:
         static void Initialize(Napi::Env env);
-
-        // Validate the native brand before unwrapping.
-        static bool IsInstance(Napi::Env env, const Napi::Value& value);
 
         // Returns the wrapped path, or nullptr when `value` is not one of ours.
         static NativeCanvasPath2D* TryUnwrap(Napi::Env env, const Napi::Value& value);
@@ -93,7 +89,7 @@ namespace Babylon::Polyfills::Internal
         void RoundRect(const Napi::CallbackInfo&);
         void RoundRectVarying(const Napi::CallbackInfo&);
 
-        void AppendCommand(Path2DCommandTypes type, Path2DCommandArgs args);
+        void AppendCommand(Path2DCommandType type, Path2DCommandArgs args);
 
         std::deque<Path2DCommand> m_commands; // use deque because iterable
     };

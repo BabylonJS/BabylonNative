@@ -19,6 +19,8 @@ namespace Playground
     // the first view.
     void Initialize(const PlaygroundOptions& options = {});
 
+    void QueueOptions(Babylon::Embedding::Runtime& runtime, const PlaygroundOptions& options);
+
     // Queue the standard Babylon.js bootstrap scripts (core, loaders,
     // materials, GUI, serializers, etc.) onto `runtime` in dependency order.
     //

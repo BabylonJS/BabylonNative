@@ -104,44 +104,6 @@ namespace
         return runtimeOptions;
     }
 
-    void QueuePlaygroundOptions()
-    {
-        g_runtime->RunOnJsThread([playgroundOptions = options](Napi::Env env) {
-            auto js = Napi::Object::New(env);
-            js.Set("listTests",          Napi::Boolean::New(env, playgroundOptions.ListTests));
-            js.Set("headless",           Napi::Boolean::New(env, playgroundOptions.Headless));
-            js.Set("breakOnFail",        Napi::Boolean::New(env, playgroundOptions.BreakOnFail));
-            js.Set("stopOnFirstFailure", Napi::Boolean::New(env, playgroundOptions.StopOnFirstFailure));
-            js.Set("generateReferences", Napi::Boolean::New(env, playgroundOptions.GenerateReferences));
-            js.Set("runOnce",            Napi::Boolean::New(env, playgroundOptions.RunOnce));
-            js.Set("includeExcluded",    Napi::Boolean::New(env, playgroundOptions.IncludeExcluded));
-            if (playgroundOptions.SaveResults.has_value())
-            {
-                js.Set("saveResults", Napi::Boolean::New(env, *playgroundOptions.SaveResults));
-            }
-            if (playgroundOptions.CaptureFrame.has_value())
-            {
-                js.Set("captureFrame", Napi::Number::New(env, *playgroundOptions.CaptureFrame));
-            }
-
-            auto filters = Napi::Array::New(env, playgroundOptions.TestFilters.size());
-            for (uint32_t idx = 0; idx < playgroundOptions.TestFilters.size(); ++idx)
-            {
-                filters[idx] = Napi::String::New(env, playgroundOptions.TestFilters[idx]);
-            }
-            js.Set("testFilters", filters);
-
-            auto indices = Napi::Array::New(env, playgroundOptions.TestIndices.size());
-            for (uint32_t idx = 0; idx < playgroundOptions.TestIndices.size(); ++idx)
-            {
-                indices[idx] = Napi::Number::New(env, playgroundOptions.TestIndices[idx]);
-            }
-            js.Set("testIndices", indices);
-
-            env.Global().Set("_playgroundOptions", js);
-        });
-    }
-
     void LoadScripts()
     {
         Playground::LoadBootstrapScripts(*g_runtime);
@@ -174,7 +136,7 @@ namespace
 
         g_runtime.emplace(MakeRuntimeOptions());
         Playground::Initialize(options);
-        QueuePlaygroundOptions();
+        Playground::QueueOptions(*g_runtime, options);
         LoadScripts();
 
         // First View attach triggers Device construction, plugin init, and

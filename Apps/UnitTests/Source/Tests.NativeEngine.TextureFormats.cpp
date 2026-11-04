@@ -70,8 +70,8 @@ namespace
                 std::cerr << "Timed out waiting for NativeEngine texture format test" << std::endl;
                 std::quick_exit(1);
             }
+            device.FinishRenderingCurrentFrame();
         }
-        device.FinishRenderingCurrentFrame();
         ASSERT_NO_THROW(completion.get());
     }
 
@@ -111,8 +111,15 @@ TEST(NativeEngineTextureFormats, D24RenderTargetUsesSupportedBackingStorage)
         {
             SCOPED_TRACE(samples);
             texture->Dispose();
-            const auto flags = samples == 1 ? BGFX_TEXTURE_RT :
+            auto flags = samples == 1 ? BGFX_TEXTURE_RT :
                 (samples == 2 ? BGFX_TEXTURE_RT_MSAA_X2 : BGFX_TEXTURE_RT_MSAA_X4) | BGFX_TEXTURE_MSAA_SAMPLE;
+            if ((flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 &&
+                !IsSupported(bgfx::TextureFormat::D24, flags) &&
+                IsSupported(bgfx::TextureFormat::D24, flags & ~BGFX_TEXTURE_MSAA_SAMPLE))
+            {
+                // Backends without multisampled textures (GLES 3.0) resolve MSAA depth into single-sample storage.
+                flags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
+            }
             const auto expectedFormat = IsSupported(bgfx::TextureFormat::D24, flags)
                 ? bgfx::TextureFormat::D24 : bgfx::TextureFormat::D24S8;
             if (!IsSupported(expectedFormat, flags))
@@ -472,5 +479,40 @@ TEST(NativeEngineTextureFormats, SamplingModesSeparateLodClampFromFilterFlags)
             EXPECT_EQ(texture->SamplerFlags(), preservedFlags | test.Flags);
             EXPECT_EQ(texture->SamplerMaxLod(), test.MaxLod);
         }
+
+    });
+}
+
+TEST(NativeEngineCommands, LegacyAndExtendedPayloadsKeepFollowingCommandsAligned)
+{
+    RunTextureTest([](Napi::Object engine, Napi::Value value) {
+        auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+        auto run = Napi::Eval(engine.Env(), R"(
+            (function(engine, texture) {
+                if (_native.Engine.PROTOCOL_VERSION !== 9) throw new Error("Expected protocol 9");
+                const commands = _native.Engine;
+                const stream = new _native.NativeDataStream(function() {});
+                engine.setCommandDataStream({_nativeDataStream: stream});
+                const clear = [0, 0, 0, 0, 0x3f800000, 0, 0x3f800000, 0, 0];
+                const stencil = [255, commands.STENCIL_OP_FAIL_S_KEEP, commands.STENCIL_OP_FAIL_Z_KEEP,
+                    commands.STENCIL_OP_PASS_Z_KEEP, commands.STENCIL_TEST_ALWAYS, 0];
+                const words = [];
+                function append(command, values) {
+                    words.push(...command, ...values);
+                    words.push(...commands.COMMAND_SETTEXTURESAMPLING, ...texture, commands.TEXTURE_NEAREST_NEAREST);
+                }
+                append(commands.COMMAND_CLEAR, clear);
+                append(commands.COMMAND_SETSTENCIL2, stencil.concat(3));
+                append(commands.COMMAND_CLEAR2, clear.concat(0));
+                append(commands.COMMAND_SETSTENCIL, stencil);
+                const data = new Uint32Array(words);
+                stream.writeBuffer(data.buffer, data.length);
+                engine.submitCommands();
+            })
+        )", "native-command-versions.js").As<Napi::Function>();
+        EXPECT_NO_THROW(run.Call({engine, value}));
+        EXPECT_EQ(texture->SamplerFlags() & (BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT),
+            BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT);
+        EXPECT_EQ(texture->SamplerMaxLod(), 0);
     });
 }

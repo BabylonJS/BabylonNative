@@ -27,6 +27,11 @@ namespace Babylon::Plugins::Internal
         return Napi::Value::From(info.Env(), STRINGIZE(GRAPHICS_API));
     }
 
+    Napi::Value TestUtils::GetJavaScriptEngineName(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), STRINGIZE(NAPI_JAVASCRIPT_ENGINE));
+    }
+
     void TestUtils::SetMSAASamples(const Napi::CallbackInfo& info)
     {
         if (info.Length() == 0 || !info[0].IsNumber())

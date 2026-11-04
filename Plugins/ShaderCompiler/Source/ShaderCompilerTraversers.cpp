@@ -124,6 +124,8 @@ namespace Babylon::ShaderCompilerTraversers
                 auto* scope = new AllocationsScope();
                 Traverse(program.getIntermediate(EShLangVertex), ids, *scope);
                 Traverse(program.getIntermediate(EShLangFragment), ids, *scope);
+                // Compute-only programs (GPU particles, etc.) have neither VS nor FS.
+                Traverse(program.getIntermediate(EShLangCompute), ids, *scope);
                 return std::unique_ptr<AllocationsScopeBase>(scope);
             }
 
@@ -167,6 +169,11 @@ namespace Babylon::ShaderCompilerTraversers
 
             static void Traverse(TIntermediate* intermediate, IdGenerator& ids, AllocationsScope& scope)
             {
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
                 NonSamplerUniformToStructTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
 
@@ -298,6 +305,8 @@ namespace Babylon::ShaderCompilerTraversers
                 auto* scope = new AllocationsScope();
                 Traverse(program.getIntermediate(EShLangVertex), ids, *scope);
                 Traverse(program.getIntermediate(EShLangFragment), ids, *scope);
+                // Compute-only programs (GPU particles, etc.) have neither VS nor FS.
+                Traverse(program.getIntermediate(EShLangCompute), ids, *scope);
                 return std::unique_ptr<AllocationsScopeBase>(scope);
             }
 
@@ -504,6 +513,11 @@ namespace Babylon::ShaderCompilerTraversers
 
             static void Traverse(TIntermediate* intermediate, IdGenerator&, AllocationsScope& scope)
             {
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
                 UniformTypeChangeTraverser traverser{intermediate, scope};
                 intermediate->getTreeRoot()->traverse(&traverser);
             }
@@ -983,7 +997,9 @@ namespace Babylon::ShaderCompilerTraversers
         public:
             void visitSymbol(TIntermSymbol* symbol) override
             {
-                if (symbol->getType().getQualifier().storage == EvqUniform && symbol->getType().getBasicType() == EbtSampler)
+                // Storage images (compute only) are bound as images, not texture + sampler pairs.
+                if (symbol->getType().getQualifier().storage == EvqUniform && symbol->getType().getBasicType() == EbtSampler &&
+                    !symbol->getType().getSampler().isImage())
                 {
                     // Collect all sampler uniform symbols into the relevant caches
                     // later proccessing. Note that we treat linker object replacement
@@ -1015,12 +1031,22 @@ namespace Babylon::ShaderCompilerTraversers
                 // shaders that declare many sampler uniforms but only use a few.
                 std::map<std::string, unsigned int> nameToBinding{};
                 unsigned int nextBinding{0};
-                Traverse(program.getIntermediate(EShLangVertex), ids, nameToBinding, nextBinding);
-                Traverse(program.getIntermediate(EShLangFragment), ids, nameToBinding, nextBinding);
+                for (auto stage : {EShLangVertex, EShLangFragment})
+                {
+                    if (auto* intermediate = program.getIntermediate(stage))
+                    {
+                        Traverse(intermediate, ids, nameToBinding, nextBinding, false);
+                    }
+                }
+                // Compute samplers declare explicit bindings past the storage buffer stages; keep them.
+                if (auto* intermediate = program.getIntermediate(EShLangCompute))
+                {
+                    Traverse(intermediate, ids, nameToBinding, nextBinding, true);
+                }
             }
 
         private:
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::map<std::string, unsigned int>& nameToBinding, unsigned int& nextBinding)
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::map<std::string, unsigned int>& nameToBinding, unsigned int& nextBinding, bool preserveBindings)
             {
                 SamplerSplitterTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -1039,7 +1065,11 @@ namespace Babylon::ShaderCompilerTraversers
                     // on the public Traverse() overload for why bindings are shared.
                     unsigned int layoutBinding;
                     const auto bindingIt = nameToBinding.find(name);
-                    if (bindingIt != nameToBinding.end())
+                    if (preserveBindings && symbol->getType().getQualifier().hasBinding())
+                    {
+                        layoutBinding = symbol->getType().getQualifier().layoutBinding;
+                    }
+                    else if (bindingIt != nameToBinding.end())
                     {
                         layoutBinding = bindingIt->second;
                     }
@@ -1152,8 +1182,13 @@ namespace Babylon::ShaderCompilerTraversers
             static void Traverse(TProgram& program, IdGenerator& ids)
             {
                 SamplerFunctionParameterSplitterTraverser pass{};
-                pass.Traverse(program.getIntermediate(EShLangVertex), ids);
-                pass.Traverse(program.getIntermediate(EShLangFragment), ids);
+                for (auto stage : {EShLangVertex, EShLangFragment, EShLangCompute})
+                {
+                    if (auto* intermediate = program.getIntermediate(stage))
+                    {
+                        pass.Traverse(intermediate, ids);
+                    }
+                }
             }
 
         private:
@@ -1597,6 +1632,7 @@ namespace Babylon::ShaderCompilerTraversers
                 StructLocalZeroInitializerTraverser pass{};
                 pass.TraverseStage(program.getIntermediate(EShLangVertex));
                 pass.TraverseStage(program.getIntermediate(EShLangFragment));
+                pass.TraverseStage(program.getIntermediate(EShLangCompute));
             }
 
         private:
@@ -2104,41 +2140,6 @@ namespace Babylon::ShaderCompilerTraversers
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
 
-        class InvertYDerivativeOperandsTraverser : public TIntermTraverser
-        {
-        public:
-            static void Traverse(TProgram& program)
-            {
-                auto intermediate{program.getIntermediate(EShLangFragment)};
-                InvertYDerivativeOperandsTraverser invertYDerivativeOperandsTraverser{intermediate};
-                intermediate->getTreeRoot()->traverse(&invertYDerivativeOperandsTraverser);
-            }
-
-        protected:
-            virtual bool visitUnary(TVisit visit, TIntermUnary* unary) override
-            {
-                if (visit == EvPreVisit)
-                {
-                    auto op = unary->getOp();
-                    if (op == EOpDPdy || op == EOpDPdyFine || op == EOpDPdyCoarse)
-                    {
-                        unary->setOperand(m_intermediate->addUnaryNode(EOpNegative, unary->getOperand(), {}));
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-        private:
-            InvertYDerivativeOperandsTraverser(TIntermediate* intermediate)
-                : m_intermediate{intermediate}
-            {
-            }
-
-            TIntermediate* m_intermediate{};
-        };
-
         class FlipSamplerCoordinatesTraverser : public TIntermTraverser
         {
         public:
@@ -2150,6 +2151,7 @@ namespace Babylon::ShaderCompilerTraversers
                     if (intermediate != nullptr)
                     {
                         FlipSamplerCoordinatesTraverser traverser{intermediate, ids};
+                        traverser.AddSamplerStates();
                         intermediate->getTreeRoot()->traverse(&traverser);
                     }
                 }
@@ -2163,7 +2165,7 @@ namespace Babylon::ShaderCompilerTraversers
                     auto& sequence = node->getSequence();
                     if (sequence.size() >= 2)
                     {
-                        // Raw array uploads keep their rows; leave array coordinates and cube directions unchanged.
+                        // Raw uploads and rendered layers share the framebuffer origin; preserve cube directions.
                         auto* sampler = sequence[0]->getAsTyped();
                         auto* coordinate = sequence[1]->getAsTyped();
                         if (sampler != nullptr && coordinate != nullptr &&
@@ -2173,9 +2175,9 @@ namespace Babylon::ShaderCompilerTraversers
                         {
                             const TSampler& samp = sampler->getType().getSampler();
                             const int vecSize = coordinate->getType().getVectorSize();
-                            if (!samp.arrayed && (samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
+                            if ((samp.is2D() || samp.dim == Esd3D) && vecSize >= 2 && vecSize <= 4)
                             {
-                                sequence[1] = FlipVerticalCoordinate(coordinate);
+                                sequence[1] = FlipSampleCoordinate(coordinate, sampler);
                                 if (node->getOp() == EOpTextureGrad)
                                 {
                                     sequence[2] = FlipVerticalCoordinate(sequence[2]->getAsTyped(), true);
@@ -2183,6 +2185,25 @@ namespace Babylon::ShaderCompilerTraversers
                                 }
                             }
                         }
+                    }
+                }
+                else if (visit == EvPostVisit && node->getOp() == EOpFunctionCall)
+                {
+                    const auto function = m_functionStates.find(node->getName().c_str());
+                    if (function != m_functionStates.end())
+                    {
+                        auto& arguments = node->getSequence();
+                        auto& qualifiers = node->getQualifierList();
+                        if (arguments.size() != qualifiers.size())
+                        {
+                            throw std::runtime_error{"Sampler state call qualifiers do not match arguments."};
+                        }
+                        for (const auto index : function->second.Parameters)
+                        {
+                            arguments.push_back(SamplerHeight(arguments[index]->getAsTyped()));
+                            qualifiers.push_back(EvqIn);
+                        }
+                        node->setName(function->second.Name.c_str());
                     }
                 }
                 else if (visit == EvPostVisit && node->getOp() == EOpTextureFetch)
@@ -2200,7 +2221,8 @@ namespace Babylon::ShaderCompilerTraversers
                             !coordinate->getType().isArray())
                         {
                             const int vecSize = coordinate->getType().getVectorSize();
-                            if (vecSize == 2 || (vecSize == 3 && sampler->getType().getSampler().dim == Esd3D))
+                            const auto& samp = sampler->getType().getSampler();
+                            if (vecSize == 2 || (vecSize == 3 && (samp.dim == Esd3D || samp.arrayed)))
                             {
                                 const auto& loc = coordinate->getLoc();
                                 TIntermSymbol coordinateTemp{m_ids.Next(), "bnTexelCoordinate", TType{EbtInt, EvqTemporary, vecSize}};
@@ -2220,6 +2242,131 @@ namespace Babylon::ShaderCompilerTraversers
             }
 
         private:
+            struct FunctionState
+            {
+                std::string Name;
+                std::vector<size_t> Parameters;
+            };
+
+            static bool NeedsSamplerState(const TType& type)
+            {
+                return type.getBasicType() == EbtSampler && !type.isArray() && type.getSampler().isCombined() &&
+                    (type.getSampler().is2D() || type.getSampler().dim == Esd3D);
+            }
+
+            void AddSamplerStates()
+            {
+                auto* root = m_intermediate->getTreeRoot()->getAsAggregate();
+                for (auto* node : root->getSequence())
+                {
+                    auto* aggregate = node->getAsAggregate();
+                    if (aggregate == nullptr)
+                    {
+                        continue;
+                    }
+                    if (aggregate->getOp() == EOpLinkerObjects)
+                    {
+                        TIntermSequence states;
+                        for (auto* declaration : aggregate->getSequence())
+                        {
+                            auto* sampler = declaration->getAsSymbolNode();
+                            if (sampler != nullptr && NeedsSamplerState(sampler->getType()))
+                            {
+                                const auto name = std::string{Graphics::SAMPLER_STATE_UNIFORM_PREFIX} + sampler->getName().c_str();
+                                auto* state = m_intermediate->addSymbol(TIntermSymbol{
+                                    m_ids.Next(), name.c_str(), TType{EbtFloat, EvqUniform, 4}});
+                                m_samplerStates.emplace(sampler->getId(), state);
+                                states.push_back(state);
+                            }
+                        }
+                        aggregate->getSequence().insert(aggregate->getSequence().end(), states.begin(), states.end());
+                    }
+                    else if (aggregate->getOp() == EOpFunction)
+                    {
+                        auto* parameters = aggregate->getSequence().front()->getAsAggregate();
+                        auto& sequence = parameters->getSequence();
+                        const auto count = sequence.size();
+                        FunctionState function;
+                        for (size_t index = 0; index < count; ++index)
+                        {
+                            auto* sampler = sequence[index]->getAsSymbolNode();
+                            if (NeedsSamplerState(sampler->getType()))
+                            {
+                                const auto name = std::string{sampler->getName().c_str()} + "BnSamplerHeight";
+                                auto* state = m_intermediate->addSymbol(TIntermSymbol{
+                                    m_ids.Next(), name.c_str(), TType{EbtFloat, EvqIn}});
+                                m_samplerStates.emplace(sampler->getId(), state);
+                                sequence.push_back(state);
+                                function.Parameters.push_back(index);
+                            }
+                        }
+                        if (!function.Parameters.empty())
+                        {
+                            const std::string originalName{aggregate->getName().c_str()};
+                            TString name{originalName.substr(0, originalName.find('(') + 1).c_str()};
+                            for (auto* parameter : sequence)
+                            {
+                                parameter->getAsTyped()->getType().appendMangledName(name);
+                            }
+                            function.Name = name.c_str();
+                            aggregate->setName(name);
+                            m_functionStates.emplace(originalName, std::move(function));
+                        }
+                    }
+                }
+            }
+
+            TIntermTyped* SamplerHeight(TIntermTyped* sampler)
+            {
+                auto* symbol = sampler->getAsSymbolNode();
+                if (symbol == nullptr || !m_samplerStates.count(symbol->getId()))
+                {
+                    throw std::runtime_error{"Sampler filter state requires a standalone sampler uniform or function parameter."};
+                }
+                auto* state = m_intermediate->addSymbol(*m_samplerStates.at(symbol->getId()));
+                if (state->getType().isVector())
+                {
+                    return Component(state, 0);
+                }
+                return state;
+            }
+
+            TIntermTyped* Component(TIntermTyped* vector, int index)
+            {
+                const auto& loc = vector->getLoc();
+                auto* result = m_intermediate->addIndex(EOpIndexDirect, vector, m_intermediate->addConstantUnion(index, loc), loc);
+                result->setType(TType{EbtFloat, EvqTemporary});
+                return result;
+            }
+
+            TIntermTyped* FlipSampleCoordinate(TIntermTyped* coordinate, TIntermTyped* sampler)
+            {
+                const auto& loc = coordinate->getLoc();
+                const auto size = coordinate->getType().getVectorSize();
+                TIntermSymbol temporary{m_ids.Next(), "bnSampleCoordinate", TType{EbtFloat, EvqTemporary, size}};
+                auto* capture = m_intermediate->addAssign(EOpAssign, m_intermediate->addSymbol(temporary), coordinate, loc);
+                auto* height = SamplerHeight(sampler);
+                auto* y = Component(m_intermediate->addSymbol(temporary), 1);
+                auto* pixel = m_intermediate->addBinaryMath(EOpMul, y, height, loc);
+                auto* rounded = m_intermediate->addBuiltInFunctionCall(loc, EOpFloor, true, pixel, TType{EbtFloat, EvqTemporary});
+                auto* center = m_intermediate->addBinaryMath(EOpAdd, rounded, m_intermediate->addConstantUnion(0.5, EbtFloat, loc), loc);
+                auto* normalized = m_intermediate->addBinaryMath(EOpDiv, center, SamplerHeight(sampler), loc);
+                auto* components = m_intermediate->makeAggregate(Component(m_intermediate->addSymbol(temporary), 0), loc);
+                components = m_intermediate->growAggregate(components, normalized, loc);
+                for (int index = 2; index < size; ++index)
+                {
+                    components = m_intermediate->growAggregate(components, Component(m_intermediate->addSymbol(temporary), index), loc);
+                }
+                const auto operation = size == 2 ? EOpConstructVec2 : size == 3 ? EOpConstructVec3 : EOpConstructVec4;
+                auto* snapped = m_intermediate->setAggregateOperator(components, operation, temporary.getType(), loc);
+                auto* enabled = m_intermediate->addBinaryMath(EOpGreaterThan, SamplerHeight(sampler),
+                    m_intermediate->addConstantUnion(0.0, EbtFloat, loc), loc);
+                // Select the GL nearest texel before changing origins. Flipping a boundary first
+                // selects the adjacent row. Linear and mip-filtered samples retain their coordinates.
+                auto* selected = m_intermediate->addSelection(enabled, snapped, m_intermediate->addSymbol(temporary), loc);
+                return m_intermediate->addComma(capture, FlipVerticalCoordinate(selected), loc);
+            }
+
             // Rewrite texelFetch after nested samples have been visited.
             FlipSamplerCoordinatesTraverser(TIntermediate* intermediate, IdGenerator& ids)
                 : TIntermTraverser{true, false, true}
@@ -2378,11 +2525,16 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
             IdGenerator& m_ids;
+            std::map<long long, TIntermSymbol*> m_samplerStates;
+            std::map<std::string, FunctionState> m_functionStates;
         };
 
-        /// Convert gl_FragCoord to GL coordinates on top-left-origin backends.
-        /// Pixel centers require targetHeight - y, without a -1 term.
-        /// Use the full target height, not u_viewRect, which may describe a smaller viewport.
+        /// Convert gl_FragCoord.y and dFdy to GL orientation on top-left-origin backends, driven by the
+        /// per-draw RENDER_TARGET_TRANSFORM_UNIFORM_NAME so one shader serves both storage orders:
+        ///   gl_FragCoord.y -> T.x + T.y * gl_FragCoord.y   (targetHeight - y on ordinary targets)
+        ///   dFdy(v)        -> dFdy(v * T.y)                (dFdy(-v) on ordinary targets, as bgfx_shader.sh)
+        /// Pixel centers require targetHeight - y, without a -1 term. Use the full target height, not
+        /// u_viewRect, which may describe a smaller viewport.
         class FragCoordYFlipTraverser final : private TIntermTraverser
         {
         public:
@@ -2397,23 +2549,23 @@ namespace Babylon::ShaderCompilerTraversers
                 FragCoordYFlipTraverser traverser{intermediate};
                 intermediate->getTreeRoot()->traverse(&traverser);
 
-                if (traverser.m_symbolsToParents.empty())
+                if (traverser.m_symbolsToParents.empty() && traverser.m_derivatives.empty())
                 {
                     return;
                 }
 
-                // Declare before uniform collection so target size joins the Frame struct and uniform table.
-                TType targetSizeType{EbtFloat, EvqUniform, 4};
-                TIntermSymbol* targetSize{intermediate->addSymbol(TIntermSymbol{ids.Next(), Graphics::FRAGCOORD_TARGET_SIZE_UNIFORM_NAME, targetSizeType})};
+                // Declare before uniform collection so the transform joins the Frame struct and uniform table.
+                TType transformType{EbtFloat, EvqUniform, 4};
+                TIntermSymbol* transform{intermediate->addSymbol(TIntermSymbol{ids.Next(), Graphics::RENDER_TARGET_TRANSFORM_UNIFORM_NAME, transformType})};
 
                 auto* linkerObjects = FindLinkerObjects(intermediate->getTreeRoot()->getAsAggregate());
                 if (linkerObjects == nullptr)
                 {
                     throw std::runtime_error{"FragCoordYFlip: fragment stage has no linker objects sequence."};
                 }
-                linkerObjects->getSequence().push_back(targetSize);
+                linkerObjects->getSequence().push_back(transform);
 
-                traverser.ApplyReplacements(targetSize);
+                traverser.ApplyReplacements(transform);
             }
 
         protected:
@@ -2426,6 +2578,16 @@ namespace Babylon::ShaderCompilerTraversers
                 }
 
                 m_symbolsToParents.emplace_back(symbol, getParentNode());
+            }
+
+            bool visitUnary(TVisit, TIntermUnary* unary) override
+            {
+                const auto op = unary->getOp();
+                if (op == EOpDPdy || op == EOpDPdyFine || op == EOpDPdyCoarse)
+                {
+                    m_derivatives.push_back(unary);
+                }
+                return true;
             }
 
         private:
@@ -2454,17 +2616,35 @@ namespace Babylon::ShaderCompilerTraversers
                 return nullptr;
             }
 
-            void ApplyReplacements(TIntermSymbol* targetSize)
+            void ApplyReplacements(TIntermSymbol* transform)
             {
                 for (const auto& [symbol, parent] : m_symbolsToParents)
                 {
                     // Build a fresh replacement per occurrence to avoid sharing AST parents.
-                    MakeReplacements({{"gl_FragCoord", BuildFlippedFragCoord(symbol, targetSize)}}, {{symbol, parent}});
+                    MakeReplacements({{"gl_FragCoord", BuildFlippedFragCoord(symbol, transform)}}, {{symbol, parent}});
+                }
+
+                for (auto* derivative : m_derivatives)
+                {
+                    TIntermTyped* operand{derivative->getOperand()};
+                    TIntermTyped* scaled{m_intermediate->addBinaryMath(EOpMul, operand, TransformComponent(transform, 1, operand->getLoc()), operand->getLoc())};
+                    if (scaled == nullptr)
+                    {
+                        throw std::runtime_error{"FragCoordYFlip: could not scale a dFdy operand."};
+                    }
+                    derivative->setOperand(scaled);
                 }
             }
 
+            TIntermTyped* TransformComponent(TIntermSymbol* transform, int index, const TSourceLoc& loc)
+            {
+                TIntermTyped* component{m_intermediate->addIndex(EOpIndexDirect, m_intermediate->addSymbol(*transform), m_intermediate->addConstantUnion(index, loc), loc)};
+                component->setType(TType{EbtFloat, EvqTemporary, 1});
+                return component;
+            }
+
             /// Reconstruct the vec4 to support whole-vector, swizzled, and indexed reads.
-            TIntermTyped* BuildFlippedFragCoord(TIntermSymbol* fragCoord, TIntermSymbol* targetSize)
+            TIntermTyped* BuildFlippedFragCoord(TIntermSymbol* fragCoord, TIntermSymbol* transform)
             {
                 const TSourceLoc& loc{fragCoord->getLoc()};
                 TType floatType{EbtFloat, EvqTemporary, 1};
@@ -2478,10 +2658,8 @@ namespace Babylon::ShaderCompilerTraversers
                     return element;
                 };
 
-                TIntermTyped* height{m_intermediate->addIndex(EOpIndexDirect, m_intermediate->addSymbol(*targetSize), m_intermediate->addConstantUnion(1, loc), loc)};
-                height->setType(floatType);
-
-                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpSub, height, component(1), loc)};
+                TIntermTyped* scaledY{m_intermediate->addBinaryMath(EOpMul, TransformComponent(transform, 1, loc), component(1), loc)};
+                TIntermTyped* flippedY{m_intermediate->addBinaryMath(EOpAdd, TransformComponent(transform, 0, loc), scaledY, loc)};
 
                 TIntermAggregate* constructed{m_intermediate->makeAggregate(component(0), loc)};
                 constructed = m_intermediate->growAggregate(constructed, flippedY, loc);
@@ -2492,6 +2670,7 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+            std::vector<TIntermUnary*> m_derivatives{};
         };
 
         /// Assign matching locations across stages; mutate symbols in place to retain single-parent ASTs.
@@ -2653,11 +2832,6 @@ namespace Babylon::ShaderCompilerTraversers
     void AssignInterStageVaryingLocations(TProgram& program, IdGenerator& ids)
     {
         InterStageVaryingLocationTraverser::Traverse(program, ids);
-    }
-
-    void InvertYDerivativeOperands(TProgram& program)
-    {
-        InvertYDerivativeOperandsTraverser::Traverse(program);
     }
 
     void FlipSamplerCoordinates(TProgram& program, IdGenerator& ids)

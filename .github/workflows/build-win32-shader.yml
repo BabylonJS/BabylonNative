@@ -35,7 +35,7 @@ jobs:
       - name: Build PrecompiledShaderTest
         shell: cmd
         run: |
-          cmake --build build/Win32_${{ inputs.platform }}_PrecompiledShaderTest --config RelWithDebInfo --target PrecompiledShaderTest -- /m
+          cmake --build build/Win32_${{ inputs.platform }}_PrecompiledShaderTest --config RelWithDebInfo --target PrecompiledShaderTest JsRuntimeHostUnitTests UrlLibTests -- /m
 
       - name: Enable Crash Dump
         shell: cmd
@@ -51,6 +51,18 @@ jobs:
           cd build\Win32_${{ inputs.platform }}_PrecompiledShaderTest\Apps\PrecompiledShaderTest\RelWithDebInfo
           PrecompiledShaderTest
 
+      - name: Run JsRuntimeHost Unit Tests
+        shell: cmd
+        run: |
+          cd build\Win32_${{ inputs.platform }}_PrecompiledShaderTest\Dependencies\JsRuntimeHost\Tests\UnitTests\RelWithDebInfo
+          JsRuntimeHostUnitTests
+
+      - name: Run UrlLib Unit Tests
+        shell: cmd
+        run: |
+          cd build\Win32_${{ inputs.platform }}_PrecompiledShaderTest\Dependencies\UrlLib\Tests\RelWithDebInfo
+          UrlLibTests
+
       - name: Upload Crash Dumps
         if: failure()
         uses: actions/upload-artifact@v6
@@ -58,5 +70,7 @@ jobs:
           name: precompiled-shader-test-crash-dumps
           path: |
             build/Win32_${{ inputs.platform }}_PrecompiledShaderTest/Apps/PrecompiledShaderTest/RelWithDebInfo/PrecompiledShaderTest.*
+            build/Win32_${{ inputs.platform }}_PrecompiledShaderTest/Dependencies/JsRuntimeHost/Tests/UnitTests/RelWithDebInfo/JsRuntimeHostUnitTests.*
+            build/Win32_${{ inputs.platform }}_PrecompiledShaderTest/Dependencies/UrlLib/Tests/RelWithDebInfo/UrlLibTests.*
             ${{ runner.temp }}/Dumps/
           if-no-files-found: ignore

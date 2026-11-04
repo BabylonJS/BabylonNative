@@ -89,6 +89,7 @@ namespace Babylon
                     assert(m_sessionState == nullptr);
 
                     m_sessionState = std::make_unique<SessionState>(context);
+                    m_sessionEnding = false;
 
                     if (!m_system.IsInitialized() &&
                         !m_system.TryInitialize())
@@ -108,8 +109,18 @@ namespace Babylon
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::EndSessionAsync()
         {
+            if (m_sessionEnding || !m_beginTask)
+            {
+                return m_endTask;
+            }
+
             assert(m_beginTask);
             assert(m_sessionState != nullptr);
+
+            // Publish the shared task before cancellation can synchronously request another end.
+            arcana::task_completion_source<void, std::exception_ptr> endCompletion{};
+            m_endTask = endCompletion.as_task();
+            m_sessionEnding = true;
 
             m_sessionState->CancellationSource.cancel();
 
@@ -120,7 +131,7 @@ namespace Babylon
             m_sessionState->CreateRenderTexture.Reset();
 
             // Don't try to end the session while it is still starting.
-            m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
+            m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
                                        // Also don't try to end the session while a frame is in progress.
                                        return m_sessionState->FrameTask;
                                    })
@@ -145,6 +156,9 @@ namespace Babylon
                                 m_sessionState.reset();
                                 m_beginTask.reset();
                                 NotifySessionStateChanged(false);
+                            })
+                            .then(arcana::inline_scheduler, arcana::cancellation::none(), [endCompletion](const arcana::expected<void, std::exception_ptr>& result) mutable {
+                                endCompletion.complete(result);
                             });
 
             return m_endTask;
@@ -166,7 +180,7 @@ namespace Babylon
             m_sessionState->FrameTask = arcana::make_task(m_sessionState->GraphicsContext.FrameStartScheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, frameScope{std::make_shared<Graphics::FrameCompletionScope>(m_sessionState->GraphicsContext.AcquireFrameCompletionScope())}, thisRef{shared_from_this()}]() {
+                arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, frameScope{std::make_shared<Graphics::FrameCompletionScope>(m_sessionState->GraphicsContext.AcquireFrameCompletionScope())}, thisRef{shared_from_this()}]() {
                     m_sessionState->FrameScheduled = false;
 
                     BeginUpdate();
@@ -186,7 +200,14 @@ namespace Babylon
                       {
                           Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
                       }
-                  }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                  });
+
+                // Queue EndFrame on this frame's AfterRender tick now, rather than as a continuation of the JS task.
+                // The frame completion scope acquired above keeps that tick from running until the JS task is done,
+                // but arcana releases the scope before running the task's continuations. A continuation could
+                // therefore be queued after the render thread drained AfterRender, and EndFrame would then consume the
+                // next frame and leave that frame's EndFrame without an active frame.
+                return arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
                     EndFrame();
                 });
             });

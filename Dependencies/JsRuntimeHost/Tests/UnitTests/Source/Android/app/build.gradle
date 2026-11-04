@@ -1,0 +1,124 @@
+plugins {
+    id 'com.android.application'
+}
+
+def jsEngine = "V8"
+if (project.hasProperty("jsEngine")) {
+    jsEngine = project.property("jsEngine")
+}
+
+def cmakeArguments = [
+    "-DANDROID_STL=c++_shared",
+    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
+    "-DJSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR=ON"
+]
+// Hermes for Android needs HOST hermesc/shermes (they emit bytecode at build
+// time and can't run as NDK-cross-compiled binaries). The JsRuntimeHost CMake
+// bootstraps these host compilers automatically when cross-compiling, so no
+// hand-off is normally required. This property is an optional manual override:
+// pass -PimportHostCompilers=<ImportHostCompilers.cmake> to reuse a prebuilt
+// host-compiler set and skip the in-CMake bootstrap.
+if (project.hasProperty("importHostCompilers")) {
+    cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property('importHostCompilers')}")
+}
+
+android {
+    namespace 'com.jsruntimehost.unittests'
+    compileSdk 33
+    ndkVersion = "23.1.7779620"
+    if (project.hasProperty("ndkVersion")) {
+        ndkVersion = project.property("ndkVersion")
+    }
+
+    defaultConfig {
+        applicationId "com.jsruntimehost.unittests"
+        minSdk 21
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                arguments(*cmakeArguments)
+            }
+        }
+
+        if (project.hasProperty("abiFilters")) {
+            ndk {
+                abiFilters project.getProperty("abiFilters")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            buildStagingDirectory '../../../../../Build/Android'
+            version '3.22.1+'
+        }
+    }
+    buildFeatures {
+        viewBinding true
+    }
+    sourceSets {
+        main {
+            assets.srcDirs = []
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.0'
+    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
+    implementation group: 'org.java-websocket', name: 'Java-WebSocket', version: '1.5.3'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+['Debug', 'Release'].each { variant ->
+    def variantName = variant.toLowerCase()
+    def bundleDir = file("$buildDir/generated/test-bundle/$variantName")
+    def assetsDir = file("$buildDir/generated/test-assets/$variantName")
+    def buildBundle = tasks.register("build${variant}TestBundle", Exec) {
+        dependsOn "merge${variant}NativeLibs"
+        workingDir file('../../../..')
+        commandLine System.getProperty('os.name').toLowerCase().contains('windows') ? 'npm.cmd' : 'npm',
+            'run', 'build', '--', '--output-path', bundleDir.absolutePath
+        inputs.files(fileTree('../../../Source/Scripts') { include '**/*.ts' })
+        inputs.files files('../../../../webpack.config.js', '../../../../babel-plugin-replace-bigint.js',
+            '../../../../package.json', '../../../../package-lock.json')
+        outputs.file file("$bundleDir/tests.js")
+    }
+    def copyAssets = tasks.register(variant == 'Debug' ? 'copyAssets' : "copy${variant}Assets", Sync) {
+        dependsOn buildBundle
+        from(bundleDir) { into 'Assets' }
+        from('../../../Assets') { into 'Assets' }
+        into assetsDir
+        doFirst {
+            delete 'src/main/assets/Scripts', 'src/main/assets/Assets/tests.js'
+        }
+    }
+    android.sourceSets.getByName(variantName).assets.srcDir(copyAssets)
+    // Lint reads the asset source directory independently of mergeAssets.
+    tasks.configureEach { task ->
+        if (task.name == "merge${variant}Assets" ||
+            task.name == "lintVitalAnalyze${variant}" ||
+            task.name == "generate${variant}LintVitalReportModel") {
+            task.dependsOn(copyAssets)
+        }
+    }
+}

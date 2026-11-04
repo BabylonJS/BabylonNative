@@ -10,6 +10,66 @@
 #include <stdexcept>
 #endif
 
+TEST(NativeOptimizations, VertexTransformsAcceptArrayMatricesAndDefaultRanges)
+{
+#ifndef HAS_NATIVE_OPTIMIZATIONS
+    GTEST_SKIP() << "NativeOptimizations is disabled";
+#else
+    std::promise<void> completed;
+    auto completion = completed.get_future();
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&](Napi::Env env) {
+        try
+        {
+            Babylon::Plugins::NativeOptimizations::Initialize(env);
+            Napi::Eval(env, R"(
+                (function () {
+                    const values = [1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 1];
+                    const transforms = [
+                        ["_TransformVector3Coordinates", 3, [1, 2, 3], [40, 47, 54]],
+                        ["_TransformVector3Normals", 3, [1, 2, 3], [30, 36, 42]],
+                        ["_TransformVector4Normals", 4, [1, 2, 3, 4], [30, 36, 42, 4]],
+                    ];
+                    for (const matrix of [new Float32Array(values), values]) {
+                        for (const [name, stride, input, expected] of transforms) {
+                            for (const range of [[], [undefined, undefined], [0, stride]]) {
+                                const data = new Float32Array(input);
+                                _native[name](data, { _m: matrix }, ...range);
+                                if (Array.from(data).join(",") !== expected.join(",")) {
+                                    throw new Error(name + " produced " + Array.from(data).join(","));
+                                }
+                            }
+                        }
+                    }
+                    for (const Type of [Uint16Array, Uint32Array, Int32Array]) {
+                        const indices = new Type([0, 1, 2, 3, 4, 5]);
+                        _native._FlipFaces(indices);
+                        if (Array.from(indices).join(",") !== "0,2,1,3,5,4") {
+                            throw new Error("_FlipFaces did not default to the whole array");
+                        }
+                    }
+                })();
+            )", "native-vertex-transforms.js");
+            completed.set_value();
+        }
+        catch (const Napi::Error& error)
+        {
+            completed.set_exception(std::make_exception_ptr(std::runtime_error{Napi::GetErrorString(error)}));
+        }
+        catch (...)
+        {
+            completed.set_exception(std::current_exception());
+        }
+    });
+    if (completion.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
+    {
+        ADD_FAILURE() << "Timed out waiting for native vertex transforms";
+        std::quick_exit(1);
+    }
+    EXPECT_NO_THROW(completion.get());
+#endif
+}
+
 TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
 {
 #ifndef HAS_NATIVE_OPTIMIZATIONS

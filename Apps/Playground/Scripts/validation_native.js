@@ -48,13 +48,80 @@
     const cliCaptureFrame = (typeof opts.captureFrame === "number" && opts.captureFrame > 0) ? (opts.captureFrame | 0) : 0;
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
-    // Stopgap so native validation can pass. Examples should wait for their own
-    // scene, material, GUI, and utility-scene resources; that belongs in the
-    // examples, not this harness. Waiting here only because fixing each test
-    // individually is a much larger task.
+    // Workarounds for bugs in the examples, not in Babylon Native. A test opts in
+    // by listing IDs in its config.json "workarounds" array, so that list is also
+    // the list of examples to fix.
+    const WORKAROUNDS = {
+        // Example renders before its utility scenes, GUI images, sprites, or material effects are ready.
+        "wait-for-readiness": "wait for utility scenes, GUI textures, sprites, and material effects before rendering",
+        // Example reads the browser-only global `name` (window.name).
+        "undeclared-name": "declare `name` for the example code",
+        // Example captures effect-layer output before its render targets were submitted once.
+        "prime-effect-layers": "render one extra frame before capture when effect layers exist",
+        // Example leaves textures or Draco state behind for later tests.
+        "leak-cleanup": "release leaked textures and reset Draco after the test",
+        // Example starts an async model or node material load in createScene without awaiting it.
+        "wait-for-import": "wait for loader promises started by createScene before rendering",
+        // Example clears opaque but writes alpha < 1 that the browser would composite.
+        "opaque-clear-alpha": "skip canvas-background compositing when the scene clears opaque",
+        // Babylon.js material readiness checks area-light LTC data only once AREALIGHTUSED is in
+        // the defines; a cached effect can make the first check pass, so whenReadyAsync resolves
+        // before the LTC download and area-lit surfaces render black.
+        "wait-for-area-light-ltc": "wait for area-light LTC textures before rendering",
+        // Example relies on XMLHttpRequest events the native polyfill does not raise.
+        "xhr-events": "raise XMLHttpRequest load events, and report URL-open failures as asynchronous error/loadend events",
+        // Example loads an ES module (e.g. the SPZ decoder) through Tools.LoadScript's module path;
+        // the native script host has no ES module loader.
+        "es-module-import": "evaluate default imports of single-export ES modules for Tools.LoadScript module loads",
+        // Example reaches code that uses the browser/worker global `self` (e.g. GUI InputText
+        // focus registers clipboard listeners on self); the native host does not define it.
+        "global-self": "define the global self as window while the test runs",
+        // Example loads Basis textures; the Basis transcoder runs in a Web Worker created from a
+        // Blob URL, and the native host has no Worker.
+        "basis-worker": "run Blob URL worker scripts (the Basis transcoder) in-process while the test runs",
+    };
+    let appliedWorkarounds = [];
+
+    function hasWorkaround(test, id) {
+        return !!test && Array.isArray(test.workarounds) && test.workarounds.indexOf(id) !== -1;
+    }
+
+    // Logged only when the workaround changed what the runner did for the test.
+    function noteWorkaround(test, id) {
+        if (appliedWorkarounds.indexOf(id) !== -1) {
+            return;
+        }
+        appliedWorkarounds.push(id);
+        console.log("Workaround '" + id + "' applied for '" + ((test && test.title) || "(unnamed)") + "'");
+    }
+
+    function validateWorkarounds(tests) {
+        const errors = [];
+        for (let i = 0; i < tests.length; ++i) {
+            const ids = tests[i].workarounds;
+            if (ids === undefined) {
+                continue;
+            }
+            if (!Array.isArray(ids)) {
+                errors.push("test " + i + " '" + (tests[i].title || "") + "': workarounds must be an array");
+                continue;
+            }
+            for (let j = 0; j < ids.length; ++j) {
+                if (!Object.prototype.hasOwnProperty.call(WORKAROUNDS, ids[j])) {
+                    errors.push("test " + i + " '" + (tests[i].title || "") + "': unknown workaround '" + ids[j] + "'");
+                }
+            }
+        }
+        return errors;
+    }
+
+    // wait-for-readiness limits.
     const MAX_CONVERGENCE_TICKS = 240;
-    const INITIAL_READINESS_TIMEOUT_MS = 10 * 60 * 1000;
+    // The Win32 sanitizer job needs ~9.5 min for EXR Loader alone (ASAN-instrumented EXR decode), so keep a wide margin.
+    const INITIAL_READINESS_TIMEOUT_MS = 20 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
+    // The LTC data is a network download, so bound the wait in time rather than render-loop ticks.
+    const AREA_LIGHT_LTC_TIMEOUT_MS = 60 * 1000;
     const utilityLayerOwners = new WeakMap();
     const dracoDecoderConfiguration = Object.assign({}, BABYLON.DracoDecoder.DefaultConfiguration);
     const dracoEncoderConfiguration = Object.assign({}, BABYLON.DracoEncoder.DefaultConfiguration);
@@ -62,8 +129,8 @@
     const dracoDecoderModule = globalThis.DracoDecoderModule;
     const dracoEncoderModule = globalThis.DracoEncoderModule;
 
-    // UtilityLayerRenderer exposes both sides of the association, but its utility
-    // scene can have no active camera when the layer is created before the main camera.
+    // Used by wait-for-readiness. UtilityLayerRenderer exposes both sides of the association,
+    // but its utility scene can have no active camera when the layer is created before the main camera.
     const updateUtilityLayerCamera = BABYLON.UtilityLayerRenderer.prototype._updateCamera;
     BABYLON.UtilityLayerRenderer.prototype._updateCamera = function () {
         const result = updateUtilityLayerCamera.apply(this, arguments);
@@ -86,7 +153,19 @@
                 if (typeof HavokPhysics !== "function") {
                     throw new Error("HavokPhysics_umd.js did not register HavokPhysics");
                 }
-                return HavokPhysics({ wasmBinary: new Uint8Array(sources[1]) });
+                const wasmBinary = new Uint8Array(sources[1]);
+                // Async WebAssembly.instantiate never settles on JavaScriptCore; instantiate synchronously.
+                return HavokPhysics({
+                    wasmBinary: wasmBinary,
+                    instantiateWasm: function (imports, successCallback) {
+                        const module = new WebAssembly.Module(wasmBinary);
+                        const instance = new WebAssembly.Instance(module, imports);
+                        Promise.resolve().then(function () {
+                            successCallback(instance, module);
+                        });
+                        return {};
+                    }
+                });
             }).then(function (instance) {
                 globalThis.HK = instance;
             });
@@ -111,6 +190,542 @@
         return true;
     }
 
+    // undeclared-name: browsers resolve a bare `name` to window.name (""). A direct eval
+    // here sees this local, without a real global (which breaks the UMD bundles) or
+    // rewriting the example text (which would shift line numbers and "use strict").
+    function evalWithName(code) {
+        // eslint-disable-next-line no-unused-vars
+        var name = "";
+        return eval(code);
+    }
+
+    function evalExample(test, code) {
+        if (hasWorkaround(test, "undeclared-name")) {
+            noteWorkaround(test, "undeclared-name");
+            return evalWithName(code);
+        }
+        return eval(code);
+    }
+
+    // es-module-import: Babylon.js loads some decoders (SPZ, Manifold, recast) by passing inline
+    // module source such as `import X from 'url'; const returnedValue = await X();` to
+    // Tools.LoadScript with useModule. Browsers run it as <script type="module">; the native
+    // script host has no module loader. Handle only that shape: each import must be a default
+    // import of a module whose sole export is a trailing `export default name` (Emscripten
+    // EXPORT_ES6 output). Anything else is rejected rather than misread. Dynamic import()
+    // expressions (e.g. Emscripten's Node-only `await import('module')` branch) are left as-is:
+    // they are valid in classic scripts and only fail if actually reached.
+    let restoreEsModuleImport = null;
+    function installEsModuleImport(test) {
+        if (restoreEsModuleImport) {
+            return;
+        }
+        const originalLoadScript = BABYLON.Tools.LoadScript;
+        const moduleSyntax = /^[ \t]*(?:import|export)(?=[\s{*'"])/m;
+
+        function loadDefaultExportAsync(url) {
+            return BABYLON.Tools.LoadFileAsync(url, false).then(function (text) {
+                const match = /\bexport[ \t]+default[ \t]+([A-Za-z_$][\w$]*)[ \t]*;?\s*$/.exec(text);
+                const head = match ? text.slice(0, match.index).replace(/\bimport\.meta\.url\b/g, JSON.stringify(url)) : "";
+                if (!match || moduleSyntax.test(head) || /\bimport\s*\./.test(head)) {
+                    throw new Error("es-module-import: '" + url + "' is not a single default-export module");
+                }
+                return Function(head + "\nreturn " + match[1] + ";")();
+            });
+        }
+
+        function evaluateModuleSourceAsync(source) {
+            const names = [];
+            const urls = [];
+            const body = source.replace(/^[ \t]*import[ \t]+([A-Za-z_$][\w$]*)[ \t]+from[ \t]*(['"])([^'"\n]+)\2[ \t]*;?/gm, function (_, name, quote, url) {
+                names.push(name);
+                urls.push(url);
+                return "";
+            });
+            if (moduleSyntax.test(body)) {
+                return Promise.reject(new Error("es-module-import: unsupported module syntax"));
+            }
+            return Promise.all(urls.map(loadDefaultExportAsync)).then(function (values) {
+                const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
+                return new AsyncFunction(...names, body)(...values);
+            });
+        }
+
+        BABYLON.Tools.LoadScript = function (scriptUrl, onSuccess, onError, scriptId, useModule) {
+            if (!useModule) {
+                return originalLoadScript.apply(this, arguments);
+            }
+            noteWorkaround(test, "es-module-import");
+            evaluateModuleSourceAsync(scriptUrl).then(function () {
+                if (onSuccess) {
+                    onSuccess();
+                }
+            }, function (e) {
+                if (onError) {
+                    onError("LoadScript Error", e);
+                }
+            });
+        };
+        restoreEsModuleImport = function () {
+            BABYLON.Tools.LoadScript = originalLoadScript;
+            restoreEsModuleImport = null;
+        };
+    }
+
+    // global-self: browsers and workers define `self`; the native host does not, so code
+    // such as AdvancedDynamicTexture.registerClipboardEvents throws a ReferenceError. Point
+    // self at the polyfilled window (which has add/removeEventListener) for the test only.
+    let restoreGlobalSelf = null;
+    function installGlobalSelf(test) {
+        if (restoreGlobalSelf || typeof globalThis.self !== "undefined") {
+            return;
+        }
+        Object.defineProperty(globalThis, "self", { value: window, configurable: true, writable: true });
+        noteWorkaround(test, "global-self");
+        // GUI disposal does not unregister clipboard listeners (only InputText blur does), so
+        // drop the ones added during the test to avoid retaining its disposed GUI.
+        const clipboardEvents = ["copy", "cut", "paste"];
+        const existing = new Map(clipboardEvents.map((type) => [type, (domListeners.get(type) || []).slice()]));
+        restoreGlobalSelf = function () {
+            for (const type of clipboardEvents) {
+                const list = domListeners.get(type);
+                if (list) {
+                    const keep = existing.get(type);
+                    domListeners.set(type, list.filter((listener) => keep.includes(listener)));
+                }
+            }
+            delete globalThis.self;
+            restoreGlobalSelf = null;
+        };
+    }
+
+    // basis-worker: Babylon.js creates the Basis transcoder worker from a Blob URL holding its
+    // worker script, then sends an init message naming the transcoder script to importScripts.
+    // The native host has no Worker. Record the text of string-only Blobs, and give Worker an
+    // in-process stand-in that loads the transcoder itself and evaluates it in the same function
+    // scope as the worker script. The init message is then delivered without its URL, so the
+    // worker script never calls importScripts. Messages are delivered asynchronously in both
+    // directions. Transfer lists are ignored, because sender and receiver share one heap.
+    // Babylon.js caches the worker at module level, so an instance created here outlives the test.
+    let restoreBasisWorker = null;
+    function installBasisWorker(test) {
+        if (restoreBasisWorker || typeof globalThis.Worker !== "undefined") {
+            return;
+        }
+        const OriginalBlob = globalThis.Blob;
+        const OriginalURL = globalThis.URL;
+        const blobSources = new WeakMap();
+        const urlSources = new Map();
+
+        globalThis.Blob = new Proxy(OriginalBlob, {
+            construct: function (target, args) {
+                const blob = Reflect.construct(target, args);
+                const parts = args[0];
+                if (Array.isArray(parts) && parts.every((part) => typeof part === "string")) {
+                    blobSources.set(blob, parts.join(""));
+                }
+                return blob;
+            },
+        });
+        // The native URL.createObjectURL is read-only and non-configurable, so shadow it in a subclass.
+        globalThis.URL = class extends OriginalURL {
+            static createObjectURL(blob) {
+                const url = OriginalURL.createObjectURL(blob);
+                if (blobSources.has(blob)) {
+                    urlSources.set(url, blobSources.get(blob));
+                }
+                return url;
+            }
+        };
+
+        // The asynchronous WebAssembly.compile and WebAssembly.instantiate never settle on the
+        // JavaScriptCore host (the synchronous constructors work), so the transcoder module would
+        // never initialize. Give the worker scope a WebAssembly whose async entry points compile
+        // synchronously and return settled promises.
+        const NativeWebAssembly = globalThis.WebAssembly;
+        const syncWebAssembly = NativeWebAssembly && Object.create(NativeWebAssembly, {
+            compile: {
+                value: function (bytes) {
+                    return new Promise(function (resolve) {
+                        resolve(new NativeWebAssembly.Module(bytes));
+                    });
+                },
+            },
+            instantiate: {
+                value: function (source, imports) {
+                    return new Promise(function (resolve) {
+                        if (source instanceof NativeWebAssembly.Module) {
+                            resolve(new NativeWebAssembly.Instance(source, imports));
+                        } else {
+                            const module = new NativeWebAssembly.Module(source);
+                            resolve({ module: module, instance: new NativeWebAssembly.Instance(module, imports) });
+                        }
+                    });
+                },
+            },
+            compileStreaming: { value: undefined },
+            instantiateStreaming: { value: undefined },
+        });
+
+        class InProcessWorker {
+            constructor(url) {
+                const source = urlSources.get(String(url));
+                if (source === undefined) {
+                    throw new Error("basis-worker: '" + url + "' is not a recorded Blob URL worker script");
+                }
+                noteWorkaround(test, "basis-worker");
+                this._source = source;
+                this._listeners = [];
+                this._handler = null;
+                this._terminated = false;
+                this.onmessage = null;
+            }
+
+            addEventListener(type, listener) {
+                if (type === "message" && this._listeners.indexOf(listener) === -1) {
+                    this._listeners.push(listener);
+                }
+            }
+
+            removeEventListener(type, listener) {
+                const index = this._listeners.indexOf(listener);
+                if (type === "message" && index !== -1) {
+                    this._listeners.splice(index, 1);
+                }
+            }
+
+            terminate() {
+                this._terminated = true;
+                this._listeners = [];
+            }
+
+            postMessage(data) {
+                if (!this._handler) {
+                    this._handler = this._startAsync(data);
+                }
+                const worker = this;
+                this._handler.then(function (handler) {
+                    if (worker._terminated) {
+                        return;
+                    }
+                    if (data && data.action === "init") {
+                        data = Object.assign({}, data, { url: undefined });
+                    }
+                    handler({ data: data });
+                }).catch(function (e) {
+                    worker._dispatch({ action: "error", error: e });
+                });
+            }
+
+            _dispatch(data) {
+                const worker = this;
+                setTimeout(function () {
+                    if (worker._terminated) {
+                        return;
+                    }
+                    const event = { data: data, target: worker };
+                    for (const listener of worker._listeners.slice()) {
+                        listener.call(worker, event);
+                    }
+                    if (typeof worker.onmessage === "function") {
+                        worker.onmessage(event);
+                    }
+                }, 0);
+            }
+
+            _startAsync(firstMessage) {
+                const worker = this;
+                const scriptUrl = firstMessage && firstMessage.action === "init" ? firstMessage.url : undefined;
+                const scriptText = scriptUrl ? BABYLON.Tools.LoadFileAsync(scriptUrl, false) : Promise.resolve("");
+                return scriptText.then(function (text) {
+                    const run = Function("postMessage", "WebAssembly", text + "\nvar onmessage;\n" + worker._source + "\nreturn onmessage;");
+                    const handler = run(function (message) {
+                        worker._dispatch(message);
+                    }, syncWebAssembly);
+                    if (typeof handler !== "function") {
+                        throw new Error("basis-worker: the worker script did not set onmessage");
+                    }
+                    return handler;
+                });
+            }
+        }
+
+        Object.defineProperty(globalThis, "Worker", { value: InProcessWorker, configurable: true, writable: true });
+        restoreBasisWorker = function () {
+            globalThis.Blob = OriginalBlob;
+            globalThis.URL = OriginalURL;
+            delete globalThis.Worker;
+            restoreBasisWorker = null;
+        };
+    }
+
+    // xhr-events: the native XMLHttpRequest raises only readystatechange, error and loadend,
+    // raises error for any non-2xx status, and its open() throws for URLs it cannot open.
+    // Browsers raise load before loadend for every completed response, raise error only for
+    // transport failures, and report open failures asynchronously as a DONE request with
+    // status 0. Native methods are read-only, so each new instance is patched with own properties.
+    let restoreXhrEvents = null;
+    function installXhrEvents(test) {
+        if (restoreXhrEvents) {
+            return;
+        }
+        const restores = [];
+        const reported = [];
+        // Babylon.js prefers _native.XMLHttpRequest over the global one when it exists.
+        const globalObject = typeof globalThis !== "undefined" ? globalThis : Function("return this")();
+        [typeof _native !== "undefined" ? _native : undefined, globalObject].forEach(function (holder) {
+            const Original = holder && holder.XMLHttpRequest;
+            // JavaScriptCore reports native N-API constructors as typeof "object".
+            if (!Original || (typeof Original !== "function" && typeof Original !== "object")) {
+                return;
+            }
+            const Patched = function XMLHttpRequest() {
+                const xhr = new Original();
+                patchXhrInstance(test, xhr, reported);
+                return xhr;
+            };
+            Patched.prototype = Original.prototype;
+            ["UNSENT", "OPENED", "HEADERS_RECEIVED", "LOADING", "DONE"].forEach(function (name) {
+                if (name in Original) {
+                    Patched[name] = Original[name];
+                }
+            });
+            try {
+                holder.XMLHttpRequest = Patched;
+            } catch (e) {
+                // Leave the original in place; the test still runs, without the workaround.
+            }
+            if (holder.XMLHttpRequest !== Patched) {
+                console.warn("xhr-events: unable to replace XMLHttpRequest");
+                return;
+            }
+            restores.push(function () {
+                holder.XMLHttpRequest = Original;
+            });
+        });
+        restoreXhrEvents = function () {
+            restores.forEach(function (restore) {
+                restore();
+            });
+            restoreXhrEvents = null;
+        };
+    }
+
+    // The native polyfill's open() throws a plain Error with no type or code, so the
+    // URL-open failure can only be told apart by its message ("Unknown error opening URL"
+    // and similar UrlLib messages all contain this text). Keep the match in one place.
+    const URL_OPEN_ERROR_TEXT = "Error opening URL";
+    function isUrlOpenError(e) {
+        return String((e && e.message) || e).toLowerCase().indexOf(URL_OPEN_ERROR_TEXT.toLowerCase()) !== -1;
+    }
+
+    function patchXhrInstance(test, xhr, reported) {
+        const original = {
+            open: xhr.open,
+            send: xhr.send,
+            abort: xhr.abort,
+            addEventListener: xhr.addEventListener,
+            removeEventListener: xhr.removeEventListener,
+        };
+        const listeners = { readystatechange: [], load: [], error: [], loadend: [] };
+        // Handlers assigned through the onload / onerror / onloadend / onreadystatechange properties.
+        const handlers = { readystatechange: null, load: null, error: null, loadend: null };
+        let openError = null;
+        let failing = false;
+        // Bumped by open() and abort() so a deferred failure never reports into a newer request.
+        let generation = 0;
+
+        function define(name, value) {
+            Object.defineProperty(xhr, name, { value: value, configurable: true, writable: true });
+        }
+        function dispatch(type) {
+            const event = { type: type, target: xhr, currentTarget: xhr };
+            const targets = listeners[type].slice();
+            if (handlers[type]) {
+                targets.push(handlers[type]);
+            }
+            targets.forEach(function (listener) {
+                try {
+                    // Like the DOM, accept functions and objects with a handleEvent method.
+                    if (typeof listener === "function") {
+                        listener.call(xhr, event);
+                    } else if (listener && typeof listener.handleEvent === "function") {
+                        listener.handleEvent(event);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+        }
+        function hasListeners(type) {
+            return listeners[type].length > 0 || !!handlers[type];
+        }
+
+        // All four events are dispatched from JavaScript. The native object clears its handlers
+        // after every request, so these bridges are attached again by each send(). Native raises
+        // error for any non-2xx status; browsers raise error only for transport failures
+        // (status 0) and load for every completed response.
+        const bridges = {
+            readystatechange: function () {
+                dispatch("readystatechange");
+            },
+            loadend: function () {
+                if (xhr.status === 0) {
+                    dispatch("error");
+                } else {
+                    if (hasListeners("load")) {
+                        noteWorkaround(test, "xhr-events");
+                    }
+                    dispatch("load");
+                }
+                dispatch("loadend");
+            },
+        };
+        function detachBridges() {
+            Object.keys(bridges).forEach(function (type) {
+                original.removeEventListener.call(xhr, type, bridges[type]);
+            });
+        }
+        function attachBridges() {
+            detachBridges();
+            Object.keys(bridges).forEach(function (type) {
+                original.addEventListener.call(xhr, type, bridges[type]);
+            });
+        }
+        function clearFailure() {
+            generation++;
+            openError = null;
+            failing = false;
+            delete xhr.readyState;
+            delete xhr.status;
+        }
+
+        Object.keys(handlers).forEach(function (type) {
+            Object.defineProperty(xhr, "on" + type, {
+                configurable: true,
+                get: function () {
+                    return handlers[type];
+                },
+                set: function (value) {
+                    handlers[type] = typeof value === "function" ? value : null;
+                },
+            });
+        });
+        define("addEventListener", function (type, listener) {
+            const list = listeners[type];
+            if (!list) {
+                return original.addEventListener.apply(xhr, arguments);
+            }
+            if (list.indexOf(listener) === -1) {
+                list.push(listener);
+            }
+        });
+        define("removeEventListener", function (type, listener) {
+            const list = listeners[type];
+            if (!list) {
+                return original.removeEventListener.apply(xhr, arguments);
+            }
+            if (list.indexOf(listener) !== -1) {
+                list.splice(list.indexOf(listener), 1);
+            }
+        });
+        define("open", function () {
+            clearFailure();
+            detachBridges();
+            try {
+                original.open.apply(xhr, arguments);
+            } catch (e) {
+                // Only URL-open failures are deferred; other errors still throw at the call site.
+                if (!isUrlOpenError(e)) {
+                    throw e;
+                }
+                openError = e;
+                failing = true;
+                return;
+            }
+            dispatch("readystatechange");
+        });
+        define("abort", function () {
+            const pending = failing;
+            clearFailure();
+            if (!pending) {
+                return original.abort.apply(xhr, arguments);
+            }
+        });
+        define("send", function () {
+            if (!openError) {
+                attachBridges();
+                return original.send.apply(xhr, arguments);
+            }
+            noteWorkaround(test, "xhr-events");
+            const message = String(openError.message || openError);
+            if (reported.indexOf(message) === -1) {
+                reported.push(message);
+                console.log("xhr-events: reporting '" + message + "' as a failed request");
+            }
+            openError = null;
+            const scheduled = generation;
+            setTimeout(function () {
+                if (scheduled !== generation) {
+                    return;
+                }
+                failing = false;
+                define("readyState", 4);
+                define("status", 0);
+                dispatch("readystatechange");
+                dispatch("error");
+                dispatch("loadend");
+            }, 0);
+        });
+    }
+
+    // wait-for-import: while a tracker is active, loader promises are recorded so the
+    // runner can wait for loads the example did not await.
+    let importTracker = null;
+    function wrapImportFunction(owner, name) {
+        const original = owner && owner[name];
+        if (typeof original !== "function") {
+            return;
+        }
+        owner[name] = function () {
+            const promise = original.apply(this, arguments);
+            if (importTracker && promise && typeof promise.then === "function") {
+                const entry = { settled: false };
+                entry.promise = promise.then(
+                    function () { entry.settled = true; },
+                    function (error) { entry.settled = true; throw error; });
+                // Keep abandoned trackers quiet; waitForTrackedImports still sees the rejection.
+                entry.promise.catch(function () { });
+                importTracker.push(entry);
+            }
+            return promise;
+        };
+    }
+    ["ImportMeshAsync", "AppendSceneAsync", "LoadAssetContainerAsync"].forEach(function (name) {
+        wrapImportFunction(BABYLON, name);
+    });
+    ["ImportMeshAsync", "AppendAsync", "LoadAssetContainerAsync"].forEach(function (name) {
+        wrapImportFunction(BABYLON.SceneLoader, name);
+    });
+    // Scene readiness doesn't track node material JSON loads. The instance loadAsync calls an
+    // internal parse function, so it needs its own wrapper besides the static ones.
+    if (BABYLON.NodeMaterial) {
+        wrapImportFunction(BABYLON.NodeMaterial.prototype, "loadAsync");
+        ["ParseFromFileAsync", "ParseFromSnippetAsync"].forEach(function (name) {
+            wrapImportFunction(BABYLON.NodeMaterial, name);
+        });
+    }
+
+    function waitForTrackedImports(test, scene) {
+        const tracked = importTracker || [];
+        importTracker = null;
+        if (tracked.some(function (entry) { return !entry.settled; })) {
+            noteWorkaround(test, "wait-for-import");
+        }
+        return Promise.all(tracked.map(function (entry) { return entry.promise; }))
+            .then(function () { return scene; });
+    }
+
     function failTest(done) {
         if (breakOnFail) {
             // eslint-disable-next-line no-debugger
@@ -119,46 +734,37 @@
         done(false);
     }
 
-    // Reset the reused engine between tests.
-    function cleanupAfterTest() {
-        if (currentScene) {
-            try { currentScene.dispose(); } catch (e) { console.error(e); }
-            currentScene = null;
-        }
-
-        // Async loads may leave additional scenes registered on the engine.
-        if (engine && engine.scenes) {
-            const strayScenes = engine.scenes.slice();
-            for (let i = 0; i < strayScenes.length; ++i) {
-                try { strayScenes[i].dispose(); } catch (e) { console.error(e); }
+    function hasDracoStateChanged() {
+        function configChanged(current, saved) {
+            const keys = Object.keys(Object.assign({}, current, saved));
+            for (let i = 0; i < keys.length; ++i) {
+                if (current[keys[i]] !== saved[keys[i]]) {
+                    return true;
+                }
             }
+            return false;
         }
+        return BABYLON.DracoCompression.DefaultNumWorkers !== dracoDefaultNumWorkers ||
+            configChanged(BABYLON.DracoDecoder.DefaultConfiguration, dracoDecoderConfiguration) ||
+            configChanged(BABYLON.DracoEncoder.DefaultConfiguration, dracoEncoderConfiguration) ||
+            globalThis.DracoDecoderModule !== dracoDecoderModule ||
+            globalThis.DracoEncoderModule !== dracoEncoderModule;
+    }
 
-        if (!engine) {
-            return;
-        }
-
-        engine.setHardwareScalingLevel(1);
-
-        engine.setStencilBuffer(false);
-        engine.disableScissor();
-        engine.useReverseDepthBuffer = false;
-        engine.setDepthFunctionToLessOrEqual();
-
-        // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
-        engine.releaseEffects();
+    // leak-cleanup: release state the example left behind so it cannot change later tests.
+    function cleanupLeaks(test) {
+        let leaked = false;
 
         // Cache keys omit load-time options; leaked textures can change later tests.
         const leakedTextures = engine.getLoadedTexturesCache();
+        leaked = leaked || leakedTextures.length > 0;
         for (let i = leakedTextures.length - 1; i >= 0; --i) {
             engine._releaseTexture(leakedTextures[i]);
         }
         engine.clearInternalTexturesCache();
 
-        // Global loader observers outlive scenes and can leak settings into later tests.
-        BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
-
         // Each scene must load matching Draco JS/WASM modules, not reuse another scene's factory.
+        leaked = leaked || hasDracoStateChanged();
         BABYLON.DracoCompression.ResetDefault();
         BABYLON.DracoDecoder.ResetDefault();
         BABYLON.DracoEncoder.ResetDefault();
@@ -167,10 +773,72 @@
         BABYLON.DracoEncoder.DefaultConfiguration = Object.assign({}, dracoEncoderConfiguration);
         globalThis.DracoDecoderModule = dracoDecoderModule;
         globalThis.DracoEncoderModule = dracoEncoderModule;
+
+        if (leaked) {
+            noteWorkaround(test, "leak-cleanup");
+        }
+    }
+
+    // Reset the reused engine between tests.
+    function cleanupAfterTest(test) {
+        if (restoreXhrEvents) {
+            restoreXhrEvents();
+        }
+        if (restoreEsModuleImport) {
+            restoreEsModuleImport();
+        }
+        if (restoreGlobalSelf) {
+            restoreGlobalSelf();
+        }
+        if (restoreBasisWorker) {
+            restoreBasisWorker();
+        }
+
+        if (currentScene) {
+            try { currentScene.dispose(); } catch (e) { console.error(e); }
+            currentScene = null;
+        }
+
+        if (!engine) {
+            return;
+        }
+
+        // Async loads may leave additional scenes registered on the engine, including when a
+        // failed test never assigned currentScene, so dispose them for every test.
+        const strayScenes = engine.scenes.slice();
+        for (let i = 0; i < strayScenes.length; ++i) {
+            try { strayScenes[i].dispose(); } catch (e) { console.error(e); }
+        }
+
+        if (hasWorkaround(test, "leak-cleanup")) {
+            cleanupLeaks(test);
+        }
+
+        engine.setHardwareScalingLevel(1);
+
+        // Restore the StencilState defaults; tests that set the stencil function, mask, or
+        // operations directly on the engine would otherwise leak them into later tests.
+        engine.setStencilBuffer(false);
+        engine.setStencilMask(0xFF);
+        engine.setStencilFunction(BABYLON.Constants.ALWAYS);
+        engine.setStencilFunctionReference(1);
+        engine.setStencilFunctionMask(0xFF);
+        engine.setStencilOperationFail(BABYLON.Constants.KEEP);
+        engine.setStencilOperationDepthFail(BABYLON.Constants.KEEP);
+        engine.setStencilOperationPass(BABYLON.Constants.REPLACE);
+        engine.disableScissor();
+        engine.useReverseDepthBuffer = false;
+        engine.setDepthFunctionToLessOrEqual();
+
+        // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
+        engine.releaseEffects();
+
+        // Global loader observers outlive scenes and can leak settings into later tests.
+        BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
     }
 
     // Every completion path must stop rendering and clean up exactly once.
-    function makeTestDone(outerDone) {
+    function makeTestDone(outerDone, test) {
         let finished = false;
         return function (status) {
             if (finished) {
@@ -184,7 +852,7 @@
             } catch (e) {
                 console.error(e);
             }
-            cleanupAfterTest();
+            cleanupAfterTest(test);
             outerDone(status);
         };
     }
@@ -209,6 +877,9 @@
     let skippedCount = 0;
     let missingRefCount = 0;
     const failedTitles = [];
+    // Native cancels framebuffer readbacks once the graphics device is lost. Later tests
+    // cannot render or validate, and some wait forever, so the run stops instead.
+    let readbackCanceled = false;
 
     function getExclusionReason(t) {
         if (t.onlyVisual) {
@@ -219,6 +890,9 @@
         }
         if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
             return "excludedGraphicsApis: " + TestUtils.getGraphicsApiName();
+        }
+        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(TestUtils.getJavaScriptEngineName())) {
+            return "excludedJavaScriptEngines: " + TestUtils.getJavaScriptEngineName();
         }
         return null;
     }
@@ -432,8 +1106,6 @@
     }
 
     // Match browser screenshots: composite over the CSS canvas background, then the white page.
-    // FrameGraph may copy transparent attachments regardless of scene.clearColor.
-    // Legacy paths retain the clear-alpha gate because some write invalid alpha after opaque clears.
     const CANVAS_BACKGROUND = [173, 255, 47];
 
     function compositeOverCanvasBackground(data, canvasBackgroundColor) {
@@ -459,10 +1131,27 @@
         return data;
     }
 
+    function hasTranslucentPixel(data) {
+        for (let index = 3; index < data.length; index += 4) {
+            if (data[index] !== 255) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function evaluateScreenshot(test, screenshot, referenceImage, done, compareFunction) {
         let testRes = true;
 
-        if (test.canvasBackgroundColor || (currentScene && (currentScene.frameGraph || (currentScene.clearColor && currentScene.clearColor.a < 1)))) {
+        // opaque-clear-alpha: the browser always composites; skip it when the scene clears opaque
+        // (FrameGraph may copy transparent attachments regardless of scene.clearColor).
+        const opaqueClear = !test.canvasBackgroundColor && currentScene && !currentScene.frameGraph &&
+            !(currentScene.clearColor && currentScene.clearColor.a < 1);
+        if (opaqueClear && hasWorkaround(test, "opaque-clear-alpha")) {
+            if (hasTranslucentPixel(screenshot)) {
+                noteWorkaround(test, "opaque-clear-alpha");
+            }
+        } else {
             compositeOverCanvasBackground(screenshot, test.canvasBackgroundColor);
         }
 
@@ -494,10 +1183,14 @@
         });
     }
 
-    function areGuiTexturesReady(scene) {
-        return scene.textures.every(function (texture) {
+    function areSceneResourcesReady(scene) {
+        const guiReady = scene.textures.every(function (texture) {
             return typeof texture.guiIsReady !== "function" || texture.guiIsReady();
         });
+        const spritesReady = !scene.spritesEnabled || !scene.spriteManagers || scene.spriteManagers.every(function (manager) {
+            return manager.isReady();
+        });
+        return guiReady && spritesReady;
     }
 
     function isSceneConverged(scene) {
@@ -507,7 +1200,7 @@
             if (!scene.isReady()) {
                 return false;
             }
-            if (!areGuiTexturesReady(scene)) {
+            if (!areSceneResourcesReady(scene)) {
                 return false;
             }
 
@@ -580,6 +1273,14 @@
         let readinessReconcileTimer = null;
         let readinessTimeoutTimer = null;
         let waitingForReadiness = true;
+        const waitForReadiness = hasWorkaround(test, "wait-for-readiness");
+        // Without wait-for-readiness, match the browser: main-scene executeWhenReady only.
+        const getReadinessScenes = waitForReadiness
+            ? getConvergenceScenes
+            : function (scene) { return [scene]; };
+        const primeEffectLayers = hasWorkaround(test, "prime-effect-layers");
+        const waitForAreaLightLtc = hasWorkaround(test, "wait-for-area-light-ltc");
+        let areaLightLtcWaitStart = 0;
         // Effect-layer RTTs need one submitted frame before composition, even with renderCount=1.
         let effectLayerPrimed = false;
 
@@ -632,8 +1333,9 @@
                     }
                     // Recompute because utility layers can be attached or disposed while
                     // convergence is pending, updating the engine's virtual-scene list.
-                    const convergenceScenes = getConvergenceScenes(currentScene);
+                    const convergenceScenes = waitForReadiness ? getConvergenceScenes(currentScene) : [];
                     if (!convergenceScenes.every(isSceneConverged)) {
+                        noteWorkaround(test, "wait-for-readiness");
                         if (convergenceTicks >= MAX_CONVERGENCE_TICKS) {
                             stopped = true;
                             evaluated = true;
@@ -650,8 +1352,27 @@
                         return;
                     }
 
-                    if (!effectLayerPrimed && currentScene.effectLayers && currentScene.effectLayers.length > 0) {
+                    const ltcTextures = currentScene._ltcTextures;
+                    if (waitForAreaLightLtc && frameIndex === 0 && ltcTextures &&
+                        !(ltcTextures.LTC1.isReady() && ltcTextures.LTC2.isReady())) {
+                        if (!areaLightLtcWaitStart) {
+                            areaLightLtcWaitStart = Date.now();
+                            noteWorkaround(test, "wait-for-area-light-ltc");
+                        }
+                        if (Date.now() - areaLightLtcWaitStart >= AREA_LIGHT_LTC_TIMEOUT_MS) {
+                            stopped = true;
+                            evaluated = true;
+                            console.error("Scene '" + (test.title || "?") + "' area-light LTC textures did not become ready within " +
+                                AREA_LIGHT_LTC_TIMEOUT_MS + " ms.");
+                            failTest(done);
+                            return;
+                        }
+                        return;
+                    }
+
+                    if (primeEffectLayers && !effectLayerPrimed && currentScene.effectLayers && currentScene.effectLayers.length > 0) {
                         effectLayerPrimed = true;
+                        noteWorkaround(test, "prime-effect-layers");
                         currentScene.render();
                         return;
                     }
@@ -678,6 +1399,9 @@
                             evaluated = true;
                             stopped = true;
                             pendingScreenshot = null;
+                            if (/cancel/i.test(String(error && error.message))) {
+                                readbackCanceled = true;
+                            }
                             console.error(error);
                             failTest(done);
                         });
@@ -716,7 +1440,7 @@
                     readinessReconcileTimer = null;
                 }
 
-                const scenes = getConvergenceScenes(currentScene);
+                const scenes = getReadinessScenes(currentScene);
                 const newScenes = [];
                 for (let i = 0; i < scenes.length; i++) {
                     if (readinessScenes.indexOf(scenes[i]) === -1) {
@@ -765,11 +1489,16 @@
 
                 let allReady = readinessScenes.length > 0;
                 for (let i = 0; i < readinessScenes.length; i++) {
-                    // GUI image loads are not included in Scene.executeWhenReady.
-                    if (readyScenes.indexOf(readinessScenes[i]) === -1 || !areGuiTexturesReady(readinessScenes[i])) {
+                    // GUI images and packed sprite metadata are not included in Scene.executeWhenReady.
+                    if (readyScenes.indexOf(readinessScenes[i]) === -1 ||
+                        (waitForReadiness && !areSceneResourcesReady(readinessScenes[i]))) {
                         allReady = false;
                         break;
                     }
+                }
+                if (!allReady && readyScenes.indexOf(currentScene) !== -1) {
+                    // The browser would have started rendering here.
+                    noteWorkaround(test, "wait-for-readiness");
                 }
                 if (allReady) {
                     startRendering();
@@ -911,8 +1640,6 @@
                                 if (finished) {
                                     return;
                                 }
-                                // eslint-disable-next-line no-unused-vars
-                                var name = ""; // see the note on the scriptToRun eval below
                                 try {
                                     if (test.requiresHavok) {
                                         await initializeHavokAsync();
@@ -921,7 +1648,25 @@
                                         }
                                     }
 
-                                    let createdScene = eval(pgCode);
+                                    importTracker = hasWorkaround(test, "wait-for-import") ? [] : null;
+                                    if (hasWorkaround(test, "xhr-events")) {
+                                        installXhrEvents(test);
+                                    }
+                                    if (hasWorkaround(test, "es-module-import")) {
+                                        installEsModuleImport(test);
+                                    }
+                                    if (hasWorkaround(test, "global-self")) {
+                                        installGlobalSelf(test);
+                                    }
+                                    if (hasWorkaround(test, "basis-worker")) {
+                                        installBasisWorker(test);
+                                    }
+                                    let createdScene = evalExample(test, pgCode);
+                                    if (importTracker) {
+                                        createdScene = Promise.resolve(createdScene).then(function (scene) {
+                                            return waitForTrackedImports(test, scene);
+                                        });
+                                    }
 
                                     if (createdScene && createdScene.then) {
                                         // Bound async creation before scene readiness begins; native blocking needs an external timeout.
@@ -1028,11 +1773,8 @@
                             if (finished) {
                                 return;
                             }
-                            // Direct eval sees the browser's default name through this local binding.
-                            // eslint-disable-next-line no-unused-vars
-                            var name = "";
                             try {
-                                currentScene = eval(scriptCode);
+                                currentScene = evalExample(test, scriptCode);
                                 stopSceneProcessing = processCurrentScene(test, referenceImage, done, compareFunction);
                             }
                             catch (e) {
@@ -1056,13 +1798,14 @@
         }
     }
     function runTest(index, outerDone) {
-        const done = makeTestDone(outerDone);
+        const test = config.tests[index];
+        const done = makeTestDone(outerDone, test);
+        appliedWorkarounds = [];
         if (index >= config.tests.length) {
             done(false);
             return;
         }
 
-        const test = config.tests[index];
         const testInfo = "Running " + test.title;
         console.log(testInfo);
         TestUtils.setTitle(testInfo);
@@ -1206,12 +1949,23 @@
         if (xhr.status === 200) {
             config = JSON.parse(xhr.responseText);
 
+            const workaroundErrors = validateWorkarounds(config.tests);
+            if (workaroundErrors.length > 0) {
+                for (let i = 0; i < workaroundErrors.length; ++i) {
+                    console.error("config.json: " + workaroundErrors[i]);
+                }
+                console.error("Known workarounds: " + Object.keys(WORKAROUNDS).join(", "));
+                TestUtils.exit(1);
+                return;
+            }
+
             if (listTests) {
                 // TSV exclusions reflect the catalog, regardless of --include-excluded.
                 for (let i = 0; i < config.tests.length; ++i) {
                     const t = config.tests[i];
                     const reason = getExclusionReason(t) || "";
-                    console.log(i + "\t" + (t.title || "") + "\t" + (t.referenceImage || "") + "\t" + reason);
+                    const workarounds = Array.isArray(t.workarounds) ? t.workarounds.join(",") : "";
+                    console.log(i + "\t" + (t.title || "") + "\t" + (t.referenceImage || "") + "\t" + reason + "\t" + workarounds);
                 }
                 TestUtils.exit(0);
                 return;
@@ -1264,6 +2018,13 @@
                         }
                     } else {
                         passedCount++;
+                    }
+                    if (readbackCanceled) {
+                        console.error("Framebuffer readback was canceled (graphics device lost) during '" + currentTitle +
+                            "'; aborting the remaining tests.");
+                        logRunSummary();
+                        TestUtils.exit(-1);
+                        return;
                     }
                     i++;
                     if (justOnce || i >= config.tests.length) {

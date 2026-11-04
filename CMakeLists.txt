@@ -10,17 +10,8 @@ include(FetchContent)
 # Declarations
 # --------------------------------------------------
 
-# EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
-# targets to the ALL_BUILD target.  We do this for all dependencies except
-# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
-# that are part of the Babylon Native contract. When adding dependencies using
-# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
-# targets that are part of the Babylon Native contract.
+# EXCLUDE_FROM_ALL keeps externally fetched dependencies out of ALL_BUILD.
 
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 2e85a8d43b89246c460112c9e5546ad54b6e87b4
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
@@ -33,13 +24,17 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 3f10778bba095c6e72958dd9494ee934320e9390
+FetchContent_Declare(bx
+    GIT_REPOSITORY https://github.com/bkaradzic/bx.git
+    GIT_TAG 9a8cbb251787d766bb15858cce05aeaa7c12acad
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
+FetchContent_Declare(bimg
+    GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
+    GIT_TAG 64a34f7441af8f06e40ccab08d76bbf5e59e55b1
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(bgfx
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
+    GIT_TAG 1dfbb5ffb10a8d0df6f52f5f8fc8b69f0367b7d4
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
@@ -67,28 +62,26 @@ FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.5.0
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 2f8b9be3a4d691d4a76c85c9c856319eb25f744c)
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 7c8705749fc1e234119c20695f82179b30d90914
+    GIT_TAG 2b078efc3ca2ca3f6ce0069339ac409c643b0136
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+include(Dependencies/CMakeExtensions/CMakeLists.txt)
 
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
 # which makes all dependencies to be fetched and packaged.
 # At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
-# and FetchContent_MakeAvailable_With_Message will use provided local folder provided to cmake command line
-# like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
+# and FetchContent uses the provided local source overrides.
+# AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
+# in Dependencies/ and added as subdirectories; no _deps/*-src copies are produced.
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
@@ -137,6 +130,11 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin Nativ
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES "Enable image loading in NativeEngine (LoadTexture, image bitmap, bimg)." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS "Include Babylon Native Plugin NativeEngine - Compile Shaders." ON)
+# Disable WebMin in glslang and SPIRV-Cross. WebMin strips those libraries down to the
+# WebGL2 GLSL subset, which excludes compute shaders: referencing any compute built-in
+# (e.g. gl_GlobalInvocationID) crashes the WebMin glslang. Compute support (GPUParticleSystem
+# on the native path) requires the full builds, so this defaults ON here.
+option(BABYLON_NATIVE_DISABLE_WEBMIN "Disable WebMin minimization in glslang and SPIRV-Cross (required for compute shaders)." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT "Include Babylon Native Plugin NativeMeshopt." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)

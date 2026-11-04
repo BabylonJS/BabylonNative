@@ -1,6 +1,6 @@
 import * as Mocha from "mocha";
 import { expect } from "chai";
-import { Constants, DynamicTexture, NativeEngine, Scene } from "@babylonjs/core";
+import { Constants, DynamicTexture, FreeCamera, NativeEngine, Scene, Vector3 } from "@babylonjs/core";
 
 type CanvasContext = ReturnType<DynamicTexture["getContext"]>;
 
@@ -16,8 +16,8 @@ function fillImageData(context: CanvasContext, width: number, height: number, pi
     context.putImageData(imageData, dx, dy);
 }
 
-async function readTexture(texture: DynamicTexture): Promise<Uint8Array> {
-    texture.update(false);
+async function readTexture(texture: DynamicTexture, premulAlpha = false): Promise<Uint8Array> {
+    texture.update(false, premulAlpha);
     const pixels = await texture.readPixels();
     if (!(pixels instanceof Uint8Array)) {
         throw new Error("Expected RGBA8 GPU readback for the canvas texture");
@@ -40,6 +40,44 @@ export function registerCanvasImageTests(
     describe("NativeEngine Canvas pixel-backed images", function () {
         this.timeout(10000);
         const test = skipCanvasGpuTests ? it.skip : it;
+
+        test("copies regenerated Canvas mipmaps in the requested alpha representation", async function () {
+            const engine = new NativeEngine();
+            const scene = new Scene(engine);
+            try {
+                const texture = new DynamicTexture("Canvas mip chain", { width: 8, height: 8 }, scene, true, Constants.TEXTURE_TRILINEAR_SAMPLINGMODE);
+                if (!texture.getInternalTexture()?.generateMipMaps) {
+                    this.skip();
+                }
+                const context = texture.getContext();
+                for (const premulAlpha of [false, true]) {
+                    for (const blue of [true, false]) {
+                        context.clearRect(0, 0, 8, 8);
+                        fillImageData(context, 8, 8, (x, y) => (
+                            (x + y) % 2 === 0 ? [255, 0, 0, 102] : blue ? [0, 0, 255, 102] : [0, 255, 0, 102]
+                        ));
+                        texture.update(false, premulAlpha);
+                        for (const mip of [1, 2, 3]) {
+                            const pixels = await texture.readPixels(0, mip);
+                            if (!(pixels instanceof Uint8Array)) {
+                                throw new Error("Expected RGBA8 Canvas mip readback");
+                            }
+                            const rgba = pixels;
+                            const size = 8 >> mip;
+                            expect(rgba.length).to.equal(size * size * 4);
+                            const half = premulAlpha ? 51 : 128;
+                            const expected = blue ? [half, 0, half, 102] : [half, half, 0, 102];
+                            for (let index = 0; index < rgba.length; ++index) {
+                                expect(rgba[index], `mip ${mip}, byte ${index}`).to.be.closeTo(expected[index % 4], 1);
+                            }
+                        }
+                    }
+                }
+            } finally {
+                scene.dispose();
+                engine.dispose();
+            }
+        });
 
         test("keeps putImageData pixels alive through the GPU flush", async function () {
             const engine = new NativeEngine();
@@ -126,8 +164,8 @@ export function registerCanvasImageTests(
                 const source = engine.createCanvas(18, 8);
                 fillImageData(source.getContext("2d"), 18, 8, (x) => (
                     x < 6 ? [255, 0, 0, 255] :
-                        x < 12 ? [0, 255, 0, 255] :
-                            [0, 0, 255, 255]
+                    x < 12 ? [0, 255, 0, 255] :
+                    [0, 0, 255, 255]
                 ));
 
                 const texture = new DynamicTexture(
