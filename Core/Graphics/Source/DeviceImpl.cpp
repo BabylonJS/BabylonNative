@@ -956,6 +956,7 @@ namespace Babylon::Graphics
 
         ResetClearPalette();
         m_nextViewId.store(0);
+        m_viewIdGeneration.fetch_add(1);
     }
 
     void DeviceImpl::CompleteReadTextureRequests(uint32_t frameNumber)
