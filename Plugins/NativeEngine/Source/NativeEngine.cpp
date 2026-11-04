@@ -7,6 +7,7 @@
 
 #include "JsConsoleLogger.h"
 #include "InstanceRepacker.h"
+#include "StorageBufferCopier.h"
 #include "StorageBuffer.h"
 
 #include <arcana/threading/task.h>
@@ -3573,6 +3574,7 @@ void main() {
         bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
+            MatchStorageVertexStrides(encoder, *m_boundVertexArray);
             const bgfx::DynamicVertexBufferHandle repacked = instanced
                 ? RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount)
                 : bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
@@ -3631,6 +3633,7 @@ void main() {
         bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
+            MatchStorageVertexStrides(encoder, *m_boundVertexArray);
             // GPU-written instance sources are repacked by a compute dispatch before draw bindings.
             const bgfx::DynamicVertexBufferHandle repacked = instanced
                 ? RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount)
@@ -4023,6 +4026,7 @@ void main() {
         }
 
         std::vector<VertexBuffer*> inputs;
+        std::vector<uint32_t> inputStrides;
         const uint32_t inputCount = m_currentProgram->TransformFeedbackInputCount();
         std::vector<float> inputLayout(std::max<size_t>(inputCount, 1) * TRANSFORM_FEEDBACK_LAYOUT_COMPONENT_COUNT, 0.0f);
         if (m_boundVertexArray != nullptr)
@@ -4045,6 +4049,7 @@ void main() {
                         throw std::runtime_error{"Transform feedback inputs come from too many vertex buffers"};
                     }
                     found = inputs.insert(inputs.end(), record.Buffer);
+                    inputStrides.push_back(record.ByteStride);
                 }
                 const uint32_t buffer = static_cast<uint32_t>(found - inputs.begin());
                 const size_t layoutOffset = index * TRANSFORM_FEEDBACK_LAYOUT_COMPONENT_COUNT;
@@ -4092,7 +4097,8 @@ void main() {
             }
             else
             {
-                inputs[buffer < inputs.size() ? buffer : 0]->SetComputeRead(encoder, stage);
+                const size_t input = buffer < inputs.size() ? buffer : 0;
+                inputs[input]->SetComputeRead(encoder, stage, inputStrides[input]);
             }
         }
         outputStorage.SetCompute(encoder, static_cast<uint8_t>(Graphics::TRANSFORM_FEEDBACK_OUTPUT_BINDING), bgfx::Access::Write);
@@ -4115,6 +4121,28 @@ void main() {
         }
 
         return m_instanceRepacker->Repack(GetBoundFrameBuffer(), vertexArray, vertexArray->GetInstances(), instanceDataLayout, instanceCount);
+    }
+
+    void NativeEngine::MatchStorageVertexStrides(bgfx::Encoder* encoder, VertexArray& vertexArray)
+    {
+        vertexArray.ForEachVertexBuffer([&](VertexBuffer& vertexBuffer) {
+            StorageBuffer* storage = vertexBuffer.GpuStorage();
+            const uint32_t stride = vertexBuffer.ByteStride();
+            // Raw views address whole words, so only word-aligned strides can back storage.
+            if (storage == nullptr || stride == 0 || stride == storage->ByteStride() || stride % sizeof(uint32_t) != 0 || stride > UINT16_MAX)
+            {
+                return;
+            }
+
+            if (m_storageBufferCopier == nullptr)
+            {
+                m_storageBufferCopier = std::make_unique<StorageBufferCopier>(m_deviceContext);
+            }
+
+            // Transform feedback may have written the contents on the GPU only, so copy there.
+            auto restrided = m_storageBufferCopier->CopyWithStride(*encoder, GetBoundFrameBuffer(), *storage, stride);
+            vertexBuffer.ReplaceGpuStorage(std::move(restrided));
+        });
     }
 
     void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout)

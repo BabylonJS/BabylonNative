@@ -38,6 +38,7 @@ namespace Babylon
     }
 
     class InstanceRepacker;
+    class StorageBufferCopier;
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
@@ -167,6 +168,10 @@ namespace Babylon
         bgfx::DynamicVertexBufferHandle RepackStorageInstances(VertexArray* vertexArray,
             const VertexBuffer::InstanceDataLayout& instanceDataLayout, uint32_t instanceCount);
 
+        // Copies GPU storage whose element stride differs from the stride the vertex array draws
+        // the buffer with into storage with the draw stride. Same call-order rule as above.
+        void MatchStorageVertexStrides(bgfx::Encoder* encoder, VertexArray& vertexArray);
+
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
         void ResetDefaultFrameBuffer();
@@ -248,6 +253,7 @@ namespace Babylon
         std::unique_ptr<InstanceRepacker> m_instanceRepacker{};
         // Copies a storage buffer into an R32F image for readTransformFeedbackBuffer; created on first use.
         std::shared_ptr<Program> m_bufferReadbackProgram{};
+        std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
