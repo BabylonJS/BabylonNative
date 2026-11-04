@@ -162,9 +162,9 @@ namespace Babylon::Graphics
         return m_graphicsImpl.AcquireClearPaletteIndex(color);
     }
 
-    void DeviceContext::FlushViewsIfNeeded()
+    void DeviceContext::CheckViewBudget()
     {
-        m_graphicsImpl.FlushViewsIfNeeded();
+        m_graphicsImpl.CheckViewBudget();
     }
 
     bool DeviceContext::ForceMidFrameFlush()

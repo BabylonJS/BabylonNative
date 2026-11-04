@@ -2183,8 +2183,6 @@ void main() {
 
     void NativeEngine::CopyTexture(NativeDataStream::Reader& data)
     {
-        // Note: GetEncoder may perform a mid-frame view flush, which resets the view counter.
-        // Fetch it before reading the reservation below so the generation check sees that.
         bgfx::Encoder* encoder = GetEncoder();
 
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
@@ -4323,8 +4321,8 @@ void main() {
 
     bgfx::Encoder* NativeEngine::GetEncoder()
     {
-        // Flush at this common recording boundary; flushing may replace the active encoder.
-        m_deviceContext.FlushViewsIfNeeded();
+        // Check the view budget at this common recording boundary.
+        m_deviceContext.CheckViewBudget();
 
         bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
         assert(encoder != nullptr);

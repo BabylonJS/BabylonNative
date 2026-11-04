@@ -13,7 +13,7 @@ namespace
     // backend leaves that framebuffer. A later readback resolves mip 0 and drops this flag.
     void SubmitResolveSwitch(Babylon::Graphics::DeviceContext& context)
     {
-        context.FlushViewsIfNeeded();
+        context.CheckViewBudget();
         if (bgfx::getStats()->numFrameBuffers == bgfx::getCaps()->limits.maxFrameBuffers &&
             !context.ForceMidFrameFlush())
         {
@@ -80,7 +80,7 @@ namespace
         {
             for (uint8_t mip = 0; mip < info.numMips; ++mip)
             {
-                context.FlushViewsIfNeeded();
+                context.CheckViewBudget();
                 const auto mipWidth = static_cast<uint16_t>(std::max(1, width >> mip));
                 const auto mipHeight = static_cast<uint16_t>(std::max(1, height >> mip));
                 if (resolveMipChain && mip != 0)

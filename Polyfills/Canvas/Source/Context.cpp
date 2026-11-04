@@ -877,18 +877,13 @@ namespace Babylon::Polyfills::Internal
 
         EnsureFontsLoaded();
 
-        // If called outside the frame cycle (e.g., during initialization/font loading
-        // or async texture load callbacks), acquire a FrameCompletionScope which blocks
-        // until StartRenderingCurrentFrame provides the encoder.
-        std::optional<Graphics::FrameCompletionScope> scope;
-        if (m_graphicsContext.GetActiveEncoder() == nullptr)
-        {
-            scope.emplace(m_graphicsContext.AcquireFrameCompletionScope());
-        }
+        // Encoder presence does not protect its lifetime in timer or image-load callbacks.
+        // Hold our own scope through all encoder work.
+        auto scope = m_graphicsContext.AcquireFrameCompletionScope();
 
-        // Canvas filtering can consume an unbounded number of views. Flush before reading
-        // the encoder or allocating NanoVG transient buffers so neither can become stale.
-        m_graphicsContext.FlushViewsIfNeeded();
+        // Canvas filtering can consume an unbounded number of views. Check the budget before
+        // reading the encoder or allocating NanoVG transient buffers.
+        m_graphicsContext.CheckViewBudget();
 
         bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
         if (encoder == nullptr)
@@ -999,7 +994,7 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{"Canvas.CaptureRGBA: failed to create readback texture."};
         }
 
-        // maxViews-1 is reserved for readback blits (see DeviceImpl::FlushViewsIfNeeded).
+        // maxViews-1 is reserved for readback blits (see DeviceImpl::CheckViewBudget).
         const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(
             bgfx::getCaps()->limits.maxViews - READBACK_RESERVED_VIEW_COUNT);
         bgfx::TextureRegion dstRegion{};

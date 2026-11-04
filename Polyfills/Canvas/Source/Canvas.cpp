@@ -308,7 +308,7 @@ namespace Babylon::Polyfills::Internal
     Graphics::Texture& NativeCanvas::GetConvertedTexture(bool premulAlpha, bool generateMipMaps)
     {
         auto scope = m_graphicsContext.AcquireFrameCompletionScope();
-        m_graphicsContext.FlushViewsIfNeeded();
+        m_graphicsContext.CheckViewBudget();
         auto* encoder = m_graphicsContext.GetActiveEncoder();
         if (encoder == nullptr)
         {

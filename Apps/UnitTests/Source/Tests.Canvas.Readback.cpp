@@ -18,15 +18,20 @@
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg.h"
 #include "../../../Polyfills/Canvas/Source/nanovg/nanovg_filterstack.h"
 #include <napi/pointer.h>
+#include "DeviceImplTestAccess.h"
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <future>
 #include <limits>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <utility>
 #include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -39,8 +44,22 @@ namespace Babylon::Polyfills::Internal
 
 namespace
 {
+    std::pair<Napi::Object, Napi::Object> CreateFilledCanvas(Napi::Env env)
+    {
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+        auto canvas = constructor.New({});
+        canvas.Set("width", Napi::Number::New(env, 16));
+        canvas.Set("height", Napi::Number::New(env, 16));
+        auto context = canvas.Get("getContext").As<Napi::Function>()
+                           .Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+        context.Get("fillRect").As<Napi::Function>().Call(context, {
+            Napi::Number::New(env, 0), Napi::Number::New(env, 0),
+            Napi::Number::New(env, 16), Napi::Number::New(env, 16)});
+        return {canvas, context};
+    }
+
     template<typename CallbackT>
-    void RunCanvasTest(CallbackT callback)
+    void RunCanvasTest(CallbackT callback, bool cycleFrames = true)
     {
         Babylon::Graphics::Device device{g_deviceConfig};
         device.StartRenderingCurrentFrame();
@@ -63,6 +82,15 @@ namespace
             completed.set_value(std::move(error));
         });
 
+        if (!cycleFrames)
+        {
+            // Like a host that waits for JavaScript before it finishes the frame.
+            if (future.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
+            {
+                std::cerr << "Timed out waiting for JavaScript without finishing a frame" << std::endl;
+                std::quick_exit(1);
+            }
+        }
         while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
         {
             device.FinishRenderingCurrentFrame();
@@ -89,6 +117,75 @@ TEST(CanvasReadback, HostOwnerMayOutliveRuntime)
         initialized.get_future().get();
     }
     canvas.reset();
+}
+
+TEST(CanvasReadback, FlushOwnsFrameScopeWithActiveEncoder)
+{
+    RunCanvasTest([](Napi::Env env) {
+        auto [canvas, context] = CreateFilledCanvas(env);
+        const auto dispose = gsl::finally([&] {
+            context.Get("dispose").As<Napi::Function>().Call(context, {});
+            canvas.Get("dispose").As<Napi::Function>().Call(canvas, {});
+        });
+
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        auto& impl = Babylon::Graphics::DeviceImpl::GetFromJavaScript(env);
+        ASSERT_NE(graphics.GetActiveEncoder(), nullptr);
+
+        // FinishRenderingCurrentFrame closes the frame gate before it ends the published encoder,
+        // so a flush that relied on the encoder alone could record into an encoder being ended.
+        Babylon::Graphics::DeviceImplTestAccess::SetFrameBlocked(impl, true);
+        std::atomic<bool> reopened{false};
+        std::thread opener{[&] {
+            std::this_thread::sleep_for(std::chrono::milliseconds{100});
+            reopened = true;
+            Babylon::Graphics::DeviceImplTestAccess::SetFrameBlocked(impl, false);
+        }};
+        const auto join = gsl::finally([&] { opener.join(); });
+
+        context.Get("flush").As<Napi::Function>().Call(context, {});
+
+        EXPECT_TRUE(reopened) << "flush did not wait for its own frame completion scope";
+        EXPECT_TRUE(Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas)->HasFrameBuffer());
+        EXPECT_NO_THROW(canvas.Get("getCanvasTexture").As<Napi::Function>().Call(canvas, {}));
+    }, false);
+}
+
+// The host does not finish a frame while JavaScript runs, so exhausting views must fail rather than
+// wait for the host to service a mid-frame flush.
+TEST(CanvasReadback, FlushReportsViewExhaustionWithoutWaitingForHost)
+{
+    RunCanvasTest([](Napi::Env env) {
+        auto [canvas, context] = CreateFilledCanvas(env);
+        const auto dispose = gsl::finally([&] {
+            context.Get("dispose").As<Napi::Function>().Call(context, {});
+            canvas.Get("dispose").As<Napi::Function>().Call(canvas, {});
+        });
+
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+        // Leave only the view reserved for readback blits.
+        while (graphics.PeekNextViewId() < bgfx::getCaps()->limits.maxViews - 1)
+        {
+            graphics.AcquireNewViewId();
+        }
+
+        const auto expectTooManyViews = [&] {
+            try
+            {
+                context.Get("flush").As<Napi::Function>().Call(context, {});
+                ADD_FAILURE() << "flush did not report view exhaustion";
+            }
+            catch (const std::exception& ex)
+            {
+                EXPECT_NE(std::string_view{ex.what()}.find("Too many views"), std::string_view::npos) << ex.what();
+            }
+        };
+        expectTooManyViews();
+        {
+            auto callerScope = graphics.AcquireFrameCompletionScope();
+            expectTooManyViews();
+        }
+    }, false);
 }
 
 TEST(CanvasReadback, NativeBrandsRequireTheOriginalReceiver)
