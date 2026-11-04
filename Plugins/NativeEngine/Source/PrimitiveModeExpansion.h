@@ -11,7 +11,14 @@ namespace Babylon
     {
         enum class Mode : uint32_t
         {
+            TriangleFill = 0,
+            WireFrameFill = 1,
+            PointFill = 2,
+            PointList = 3,
+            LineList = 4,
             LineLoop = 5,
+            LineStrip = 6,
+            TriangleStrip = 7,
             TriangleFan = 8,
         };
 
