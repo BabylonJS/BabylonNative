@@ -7,6 +7,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/embedded_shader.h>
 #include <napi/pointer.h>
+#include <arcana/threading/task.h>
 #include <array>
 #include <cassert>
 #include <cstring>
@@ -110,9 +111,6 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::Remove(const Napi::CallbackInfo&)
     {
-        // Babylon.js calls remove() when disposing a canvas it owns (DynamicTexture). Release the GPU
-        // resources now instead of waiting for GC; they are recreated on demand if the canvas is reused.
-        Dispose();
     }
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
@@ -511,6 +509,21 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
     {
+        // Copy commands already queued by NativeEngine hold raw pointers to the canvas textures and are
+        // consumed when the engine submits its commands later in this frame. Keep those textures and
+        // their framebuffers alive until the frame has been rendered.
+        auto retired = std::make_shared<std::vector<std::shared_ptr<void>>>();
+        for (auto& converted : m_convertedTextures)
+        {
+            retired->emplace_back(std::move(converted.Texture));
+            retired->emplace_back(std::move(converted.FrameBuffer));
+        }
+        retired->emplace_back(std::move(m_texture));
+        retired->emplace_back(std::move(m_frameBuffer));
+        arcana::make_task(m_graphicsContext.BeforeRenderScheduler(), arcana::cancellation::none(), [] {})
+            .then(m_graphicsContext.AfterRenderScheduler(), arcana::cancellation::none(),
+                [retired = std::move(retired)] { (void)retired; });
+
         Dispose();
     }
 }
