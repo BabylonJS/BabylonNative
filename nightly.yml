@@ -420,6 +420,13 @@ jobs:
       artifact: Android-Hermes-runtime-test-packages
     displayName: Publish Hermes runtime test packages
 
+  - script: |
+      set -euo pipefail
+      du -sh Build/Android Dependencies/JsRuntimeHost/Build/Android "$(CCACHE_DIR)"
+      rm -rf -- Build/Android Dependencies/JsRuntimeHost/Build/Android
+      df -h .
+    displayName: Release completed Android intermediates before cache save
+
 - job: Android_Ubuntu_Hermes_Runtime
   displayName: Android Hermes runtime tests
   dependsOn: Android_Ubuntu_Hermes
