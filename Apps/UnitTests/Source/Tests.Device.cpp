@@ -41,6 +41,25 @@ namespace
     }
 }
 
+TEST(Device, ViewReservationsExpireAtFrameAndFlushBoundaries)
+{
+    using namespace Babylon::Graphics;
+    DeviceImpl device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    const auto firstView = device.AcquireNewViewId();
+    const auto firstGeneration = device.ViewIdGeneration();
+    device.FinishRenderingCurrentFrame();
+    device.StartRenderingCurrentFrame();
+    EXPECT_EQ(device.AcquireNewViewId(), firstView);
+    EXPECT_NE(device.ViewIdGeneration(), firstGeneration);
+
+    const auto secondGeneration = device.ViewIdGeneration();
+    DeviceImplTestAccess::FlushViews(device);
+    EXPECT_EQ(device.AcquireNewViewId(), firstView);
+    EXPECT_NE(device.ViewIdGeneration(), secondGeneration);
+    device.FinishRenderingCurrentFrame();
+}
+
 TEST(Device, VertexLayoutsRetireAtFlushFrameAndShutdown)
 {
     using namespace Babylon::Graphics;
