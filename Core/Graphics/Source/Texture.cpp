@@ -163,6 +163,38 @@ namespace Babylon::Graphics
         return bgfx::isValid(m_handle);
     }
 
+    void Texture::GenerateMipMaps()
+    {
+        if (!IsValid() || !m_hasMips || (m_flags & BGFX_TEXTURE_RT_MASK) == 0)
+        {
+            throw std::runtime_error{"Explicit mip generation requires a render-target texture with mip storage"};
+        }
+        if ((bgfx::getCaps()->formats[m_format] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) == 0)
+        {
+            throw std::runtime_error{"Explicit mip generation is not supported for this texture format"};
+        }
+
+        auto scope = m_deviceContext.AcquireFrameCompletionScope();
+        m_deviceContext.CheckViewBudget();
+        if (bgfx::getStats()->numFrameBuffers == bgfx::getCaps()->limits.maxFrameBuffers &&
+            !m_deviceContext.ForceMidFrameFlush())
+        {
+            throw std::runtime_error{"No framebuffer available for explicit mip generation"};
+        }
+        bgfx::Attachment attachment{};
+        attachment.init(m_handle, bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_AUTO_GEN_MIPS);
+        const auto handle = bgfx::createFrameBuffer(1, &attachment);
+        if (!bgfx::isValid(handle))
+        {
+            throw std::runtime_error{"Failed to create explicit mip generation framebuffer"};
+        }
+        const bool multisampled = (m_flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
+        FrameBuffer framebuffer{m_deviceContext, handle, m_width, m_height, false, false, false, -1, multisampled};
+        // An empty draw resolves with generation enabled, without clearing or modifying mip 0.
+        framebuffer.Clear(*m_deviceContext.GetActiveEncoder(), BGFX_CLEAR_NONE, 0, 0, 0, 0, 0, 0);
+        SubmitResolveSwitch(m_deviceContext);
+    }
+
     void Texture::SetMetadata(
         uint16_t width,
         uint16_t height,

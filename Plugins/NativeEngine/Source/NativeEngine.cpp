@@ -1139,6 +1139,7 @@ namespace Babylon
                 StaticValue("COMMAND_SETFLOAT4", Napi::FunctionPointer::Create(env, &NativeEngine::SetFloat4)),
                 StaticValue("COMMAND_BINDFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::BindFrameBuffer)),
                 StaticValue("COMMAND_UNBINDFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::UnbindFrameBuffer)),
+                StaticValue("COMMAND_GENERATEMIPMAPS", Napi::FunctionPointer::Create(env, &NativeEngine::GenerateMipMaps)),
                 StaticValue("COMMAND_DELETEFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::DeleteFrameBuffer)),
                 StaticValue("COMMAND_DRAWINDEXED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexed)),
                 StaticValue("COMMAND_DRAWINDEXEDINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexedInstanced)),
@@ -3561,6 +3562,16 @@ void main() {
         m_boundFrameBuffer->Unbind();
         m_boundFrameBuffer = nullptr;
         m_boundFrameBufferNeedsRebinding.Set(false);
+    }
+
+    void NativeEngine::GenerateMipMaps(NativeDataStream::Reader& data)
+    {
+        data.ReadPointer<Graphics::Texture>()->GenerateMipMaps();
+        if (m_boundFrameBuffer != nullptr)
+        {
+            // Subsequent draws must use a later view than the explicit generation pass.
+            m_boundFrameBuffer->Bind();
+        }
     }
 
     VertexBuffer::InstanceDataLayout NativeEngine::GetInstanceDataLayout() const

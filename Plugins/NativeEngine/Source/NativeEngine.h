@@ -133,6 +133,7 @@ namespace Babylon
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
+        void GenerateMipMaps(NativeDataStream::Reader& data);
         VertexBuffer::InstanceDataLayout GetInstanceDataLayout() const;
         void DrawIndexed(NativeDataStream::Reader& data);
         void DrawIndexedInstanced(NativeDataStream::Reader& data);

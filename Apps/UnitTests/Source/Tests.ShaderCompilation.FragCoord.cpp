@@ -1005,6 +1005,8 @@ TEST(NativeEngineMipmaps, MultiRenderTargetPreservesAuthoredMipLevels)
                     engine.bindAttachments(engine.buildTextureLayout([true, true]));
                     engine.clear(new BABYLON.Color4(base[0] / 255, base[1] / 255, base[2] / 255, 1), true, false, false);
                     engine.restoreDefaultFramebuffer();
+                    // Submit a different framebuffer view so every backend resolves the MRT before readback.
+                    engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, false, false);
                     for (var attachment = 0; attachment < 2; ++attachment) {
                         for (var mip = 0; mip <= 2; ++mip) {
                             var size = 4 >> mip;
@@ -1017,6 +1019,21 @@ TEST(NativeEngineMipmaps, MultiRenderTargetPreservesAuthoredMipLevels)
                                     throw new Error("MRT mip generation flags=" + JSON.stringify(flags) +
                                         ", attachment=" + attachment + ", mip=" + mip + ", byte=" + i +
                                         ": expected " + expected[i % 4] + ", got " + actual[i]);
+                                }
+                            }
+                        }
+                    }
+                    if (flags && !flags[0]) {
+                        engine._commandBufferEncoder.startEncodingCommand(_native.Engine.COMMAND_GENERATEMIPMAPS);
+                        engine._commandBufferEncoder.encodeCommandArgAsNativeData(handles[0]);
+                        engine._commandBufferEncoder.finishEncodingCommand();
+                        for (var mip = 0; mip <= 2; ++mip) {
+                            var size = 4 >> mip;
+                            var actual = await engine._readTexturePixels(target.textures[0], size, size, -1, mip);
+                            for (var i = 0; i < actual.length; ++i) {
+                                if (Math.abs(actual[i] - base[i % 4]) > 1) {
+                                    throw new Error("Explicit MRT mip generation, mip=" + mip + ", byte=" + i +
+                                        ": expected " + base[i % 4] + ", got " + actual[i]);
                                 }
                             }
                         }
