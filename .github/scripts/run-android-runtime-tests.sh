@@ -50,11 +50,11 @@ for engine in "$@"; do
         set -euo pipefail
         installed=()
         trap 'code=$?; for package in "${installed[@]}"; do timeout 120s adb uninstall "$package" || code=1; done; exit "$code"' EXIT
-        timeout 120s adb install -r "$directory/app.apk"
+        timeout 120s adb install "$directory/app.apk"
         installed+=("$application")
-        timeout 120s adb install -r "$directory/tests.apk"
+        timeout 120s adb install "$directory/tests.apk"
         installed=("$application.test" "$application")
-        timeout 120s adb shell pm clear "$application"
+        # Fresh installs need no data clear, which can still stop the app after returning.
         timeout 20m adb shell am instrument -w -r \
             "$application.test/androidx.test.runner.AndroidJUnitRunner" 2>&1 | tee "test-results/$name.log"
         grep -Eq '^OK \([1-9][0-9]* tests?\)[[:space:]]*$' "test-results/$name.log"
