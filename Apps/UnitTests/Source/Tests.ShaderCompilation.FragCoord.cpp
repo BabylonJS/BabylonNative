@@ -1056,6 +1056,98 @@ TEST(NativeEngineMipmaps, MultiRenderTargetPreservesAuthoredMipLevels)
 #endif
 }
 
+TEST(NativeEngineMipmaps, ExplicitGenerationHonorsTextureLayersAndVolumeSupport)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        "precision highp float; void main() { gl_FragColor = vec4(1.0); }", false, R"(
+            globalThis.__prepare = async function () {
+                function generate(texture) {
+                    engine._commandBufferEncoder.startEncodingCommand(_native.Engine.COMMAND_GENERATEMIPMAPS);
+                    engine._commandBufferEncoder.encodeCommandArgAsNativeData(texture._hardwareTexture.underlyingResource);
+                    engine._commandBufferEncoder.finishEncodingCommand();
+                }
+                function authored(size, color) {
+                    var pixels = new Uint8Array(size * size * 4);
+                    for (var i = 0; i < pixels.length; ++i) pixels[i] = color[i % 4];
+                    return pixels;
+                }
+                async function check(texture, layer, mip, color) {
+                    var size = 4 >> mip;
+                    var actual = await engine._readTexturePixels(texture, size, size, layer, mip);
+                    if (actual.length !== size * size * 4) throw new Error("Incorrect layered mip readback size");
+                    for (var i = 0; i < actual.length; ++i) {
+                        if (Math.abs(actual[i] - color[i % 4]) > 1) {
+                            throw new Error("Explicit layered mip generation, layer=" + layer + ", mip=" + mip +
+                                ", byte=" + i + ": expected " + color[i % 4] + ", got " + actual[i]);
+                        }
+                    }
+                }
+                var array = engine.createRenderTargetTexture({ width: 4, height: 4, layers: 3 }, {
+                    createMipMaps: true, generateMipMaps: false, generateDepthBuffer: false
+                });
+                for (var layer = 0; layer < 3; ++layer) {
+                    var base = [64 + 32 * layer, 128, 192, 255];
+                    engine.bindFramebuffer(array, undefined, undefined, undefined, true, 0, layer);
+                    engine.clear(new BABYLON.Color4(base[0] / 255, base[1] / 255, base[2] / 255, 1), true, false, false);
+                    engine.restoreDefaultFramebuffer();
+                    for (var mip = 1; mip <= 2; ++mip) {
+                        var size = 4 >> mip;
+                        var color = [16 + mip, 32 + layer, 48, 255];
+                        engine.updateTextureData(array.texture, authored(size, color), 0, 0, size, size, layer, mip);
+                        await check(array.texture, layer, mip, color);
+                    }
+                }
+                generate(array.texture);
+                for (var layer = 0; layer < 3; ++layer) {
+                    for (var mip = 0; mip <= 2; ++mip) {
+                        await check(array.texture, layer, mip, [64 + 32 * layer, 128, 192, 255]);
+                    }
+                }
+                array.dispose();
+
+                var volume = engine.createRenderTargetTexture({ width: 4, height: 4, depth: 4 }, {
+                    createMipMaps: true, generateMipMaps: false, generateDepthBuffer: false
+                });
+                for (var mip = 0; mip <= 2; ++mip) {
+                    var size = 4 >> mip;
+                    var color = mip === 0 ? [64, 128, 192, 255] : [16 + mip, 32, 48, 255];
+                    for (var layer = 0; layer < (4 >> mip); ++layer) {
+                        engine.bindFramebuffer(volume, undefined, size, size, true, mip, layer);
+                        engine.clear(new BABYLON.Color4(color[0] / 255, color[1] / 255, color[2] / 255, 1), true, false, false);
+                        engine.restoreDefaultFramebuffer();
+                    }
+                    await check(volume.texture, 0, mip, color);
+                }
+                var rejected = false;
+                try {
+                    generate(volume.texture);
+                } catch (error) {
+                    if (globalThis.__supportsExplicitVolumeMipGeneration ||
+                        error.message.indexOf("Explicit 3D mip generation is not supported") < 0) throw error;
+                    rejected = true;
+                }
+                if (rejected === globalThis.__supportsExplicitVolumeMipGeneration) {
+                    throw new Error("Incorrect explicit volume generation support");
+                }
+                for (var mip = 0; mip <= 2; ++mip) {
+                    var color = mip === 0 || !rejected ? [64, 128, 192, 255] : [16 + mip, 32, 48, 255];
+                    await check(volume.texture, 0, mip, color);
+                }
+                volume.dispose();
+            };
+        )", std::chrono::seconds{30}, [](Napi::Env env) {
+            const auto renderer = bgfx::getRendererType();
+            env.Global().Set("__supportsExplicitVolumeMipGeneration",
+                renderer != bgfx::RendererType::Direct3D12 && renderer != bgfx::RendererType::Vulkan);
+        });
+    EXPECT_EQ(pixels, (std::vector<uint8_t>{255, 255, 255, 255}));
+#endif
+}
+
 TEST(NativeEngineClear, PreservesTextureBindings)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)

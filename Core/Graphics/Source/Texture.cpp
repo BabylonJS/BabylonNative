@@ -169,6 +169,11 @@ namespace Babylon::Graphics
         {
             throw std::runtime_error{"Explicit mip generation requires a render-target texture with mip storage"};
         }
+        const auto renderer = bgfx::getRendererType();
+        if (m_is3D && (renderer == bgfx::RendererType::Direct3D12 || renderer == bgfx::RendererType::Vulkan))
+        {
+            throw std::runtime_error{"Explicit 3D mip generation is not supported on this backend"};
+        }
         if ((bgfx::getCaps()->formats[m_format] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) == 0)
         {
             throw std::runtime_error{"Explicit mip generation is not supported for this texture format"};
@@ -182,7 +187,9 @@ namespace Babylon::Graphics
             throw std::runtime_error{"No framebuffer available for explicit mip generation"};
         }
         bgfx::Attachment attachment{};
-        attachment.init(m_handle, bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_AUTO_GEN_MIPS);
+        // Cube resolves cover all faces; array resolves use the attachment's layer count.
+        const uint16_t numLayers = m_isCube ? 1 : std::max<uint16_t>(1, m_numLayers);
+        attachment.init(m_handle, bgfx::Access::Write, 0, numLayers, 0, BGFX_ATTACHMENT_AUTO_GEN_MIPS);
         const auto handle = bgfx::createFrameBuffer(1, &attachment);
         if (!bgfx::isValid(handle))
         {
