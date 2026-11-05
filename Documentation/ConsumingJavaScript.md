@@ -8,6 +8,8 @@ Loading the JavaScript files into the engine is completely up to the consuming a
 
 For simplicity we manually load all the required Babylon.js UMD modules in the example Playground application in this repo. The benefit to this approach is that changes can be made instantaneously in the application script (in this case ```YOUR_SCRIPT.js```) and the application can just be re-launched, and everything will work. No bundling process is required. 
 
+The sample apps use the published ES5 bundles for compatibility with Chakra. `npm install` copies each `.es5.js` bundle over the historical filename used by the apps; `npm run getNightly` downloads the preview ES5 bundles under those same names. Neither path transpiles Babylon.js locally.
+
 ```C++
 Babylon::ScriptLoader loader{*runtime};
 
@@ -36,4 +38,3 @@ loader.LoadScript("app:///Scripts/bundle.js");
 
 > **WARNING:**
 > Starting with version 7.19.0 Babylon.js started using dynamic imports to achieve smaller bundle size. However, this feature is not currently supported in Babylon Native. Therefore, when consuming Babylon.js using ES6 and creating a bundle for it to be loaded in Babylon Native, one must specify that dynamic import should be turned off. This can be done using the [following instructions for Webpack](https://webpack.js.org/plugins/limit-chunk-count-plugin/) and setting the chunks count to 1. For those using rollupjs you should specify ```inlineDynamicImports = true``` following [this documentation](https://rollupjs.org/configuration-options/#output-inlinedynamicimports)
-
