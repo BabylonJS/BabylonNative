@@ -43,7 +43,7 @@ jobs:
   - checkout: self
 
   - script: |
-      cmake -G "Visual Studio 17 2022" -B build -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D BABYLON_DEBUG_TRACE=ON
+      cmake -G "Visual Studio 17 2022" -B build -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON
     displayName: 'Generate solution'
 
   - script: |
@@ -413,6 +413,18 @@ jobs:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
     displayName: Build Hermes runtime test artifacts
+
+  # The emulator system image doesn't fit next to the Hermes build trees. Only the APKs copied to
+  # test-artifacts are needed from here on; the ccache directory is kept for the Cache@2 save.
+  - script: |
+      set -e
+      df -h /
+      rm -rf Build/Android Dependencies/JsRuntimeHost/Build/Android \
+        Apps/Playground/Android/app/build Apps/Playground/Android/BabylonNative/build \
+        Dependencies/JsRuntimeHost/Tests/UnitTests/Source/Android/app/build \
+        ~/.gradle/caches
+      df -h /
+    displayName: Free build disk space
 
   - script: |
       set -euo pipefail
