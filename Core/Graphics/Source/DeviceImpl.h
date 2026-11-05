@@ -176,10 +176,9 @@ namespace Babylon::Graphics
         // so it is always safe to narrow back to a bgfx::ViewId.
         std::atomic<uint32_t> m_nextViewId{0};
 
-        // Incremented every time PerformMidFrameViewFlush resets m_nextViewId in the middle of a
-        // logical frame. Anything that caches a view id across draw calls must also cache this
-        // value and re-acquire when it no longer matches, otherwise the cached (high) id would
-        // sort after ids acquired from the reset counter and invert submission order.
+        // Incremented whenever m_nextViewId resets, including ordinary frame completion.
+        // Cached view ids must be reacquired when this changes to preserve submission order
+        // and avoid reusing a view assigned to different work in the next frame.
         std::atomic<uint32_t> m_viewIdGeneration{0};
         struct LayoutKey
         {

@@ -30,9 +30,7 @@ env:
 
 jobs:
   build:
-    # Pinned: ubuntu-latest (ubuntu-26.04, Clang 21) fails to build glslang (SpvBuilder.h lacks <cstdint>).
-    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     # Ubuntu_Clang_JSC (build + full validation run) takes ~28-29 minutes, so 30 caused spurious cancellations.
     timeout-minutes: 180
     env:
