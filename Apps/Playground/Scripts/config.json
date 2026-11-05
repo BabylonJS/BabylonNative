@@ -222,6 +222,16 @@
             "referenceImage": "sharpen.png"
         },
         {
+            "title": "FSR1 render pipeline",
+            "playgroundId": "#JV4PZC#0",
+            "referenceImage": "fsr1.png"
+        },
+        {
+            "title": "Lens render pipeline",
+            "playgroundId": "#DX6AV#389",
+            "referenceImage": "lens-render-pipeline.png"
+        },
+        {
             "title": "GLTF BoomBox with Unlit Material",
             "playgroundId": "#GYM97C#2",
             "referenceImage": "gltfUnlit.png"
@@ -285,6 +295,11 @@
             "playgroundId": "#N55Q2M#0",
             "renderCount": 20,
             "referenceImage": "bwpp.png"
+        },
+        {
+            "title": "White balance post-process",
+            "playgroundId": "#N55Q2M#11",
+            "referenceImage": "white-balance-post-process.png"
         },
         {
             "title": "Multi camera rendering",
@@ -559,6 +574,13 @@
             "referenceImage": "gsplat-splat-modify.png"
         },
         {
+            "title": "Gaussian Splatting GPU Picking",
+            "playgroundId": "#834G5K#0",
+            "renderCount": 15,
+            "errorRatio": 5,
+            "referenceImage": "gsplat-gpu-picking.png"
+        },
+        {
             "title": "Gaussian Splatting PLY SH Reload",
             "playgroundId": "#YMXPPW#1",
             "referenceImage": "gsplat-ply-sh-reload.png"
@@ -591,6 +613,86 @@
             "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out after 600s (passes on V8)."
         },
         {
+            "title": "Gaussian Splatting Projected Size",
+            "playgroundId": "#8FOB3C#0",
+            "referenceImage": "gsplat-debug-projected-size.png"
+        },
+        {
+            "title": "Gaussian Splatting Overdraw",
+            "playgroundId": "#D4U720#1",
+            "referenceImage": "gsplat-debug-overdraw.png"
+        },
+        {
+            "title": "Gaussian Splatting SPZ SH No WASM",
+            "playgroundId": "##XSNFXP#12",
+            "referenceImage": "gsplat-spz-sh.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: ReadableStream is not defined"
+        },
+        {
+            "title": "Gaussian Splatting SPZ Extensions",
+            "playgroundId": "#XSNFXP#8",
+            "referenceImage": "gsplat-spz-extensions.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting SPZ V4 Extensions",
+            "playgroundId": "#XSNFXP#25",
+            "referenceImage": "gsplat-spz-v4-extensions.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting glTF SPZ Compression",
+            "playgroundId": "#GAV8LX#1",
+            "referenceImage": "gsplat-gltf-spz-compression.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Required extension KHR_gaussian_splatting_compression_spz_2 is not available"
+        },
+        {
+            "title": "Gaussian Splatting glTF SPZ Compression Compound Part",
+            "playgroundId": "#JXYWHI#1",
+            "referenceImage": "gsplat-gltf-spz-compression-compound-part.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Required extension KHR_gaussian_splatting_compression_spz_2 is not available"
+        },
+        {
+            "title": "Gaussian Splatting SPZ SH Order 4",
+            "playgroundId": "#XSNFXP#5",
+            "referenceImage": "gsplat-spz-sh-order-4.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting SPZ SH Order 4 No WASM",
+            "playgroundId": "#XSNFXP#13",
+            "referenceImage": "gsplat-spz-sh-order-4.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: ReadableStream is not defined"
+        },
+        {
+            "title": "Gaussian Splatting SPZ Detailed Splat",
+            "playgroundId": "#XSNFXP#6",
+            "referenceImage": "gsplat-spz-detailed-splat.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting SPZ Detailed Splat No WASM",
+            "playgroundId": "#XSNFXP#14",
+            "referenceImage": "gsplat-spz-detailed-splat.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: ReadableStream is not defined"
+        },
+        {
+            "title": "Gaussian Splatting PLY SH Order 4",
+            "playgroundId": "#XSNFXP#7",
+            "referenceImage": "gsplat-ply-sh-order-4.png"
+        },
+        {
+            "title": "Gaussian Splatting PLY 16 Bit",
+            "playgroundId": "#XSNFXP#26",
+            "referenceImage": "gsplat-ply-16-bit.png"
+        },
+        {
             "title": "Gaussian Splatting viewports",
             "playgroundId": "#IMVJUY#0",
             "renderCount": 15,
@@ -601,6 +703,127 @@
             "playgroundId": "#R6MGUZ#0",
             "renderCount": 15,
             "referenceImage": "gsplat-shadows.png"
+        },
+        {
+            "title": "Gaussian Splatting Debug Opacity Scale",
+            "playgroundId": "#XSNFXP#16",
+            "referenceImage": "gsplat-debug-opacity-scale.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting Debug Opacity Saturate",
+            "playgroundId": "#XSNFXP#17",
+            "referenceImage": "gsplat-debug-opacity-saturate.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting Debug Size Culling",
+            "playgroundId": "#XSNFXP#19",
+            "referenceImage": "gsplat-debug-size-culling.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting Debug Opacity Culling",
+            "playgroundId": "#XSNFXP#20",
+            "referenceImage": "gsplat-debug-opacity-culling.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting Debug Clipping Box",
+            "playgroundId": "#XSNFXP#21",
+            "referenceImage": "gsplat-debug-clipping-box.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting Debug Diffuse Only",
+            "playgroundId": "#XSNFXP#22",
+            "referenceImage": "gsplat-debug-diffuse-only.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting Debug SH4 Only",
+            "playgroundId": "#XSNFXP#24",
+            "referenceImage": "gsplat-debug-sh4-only.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Gaussian Splatting Compound Incremental Update",
+            "playgroundId": "#DAID4Q#7",
+            "referenceImage": "gsplat-compound-incremental-update.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 3.697% pixel difference"
+        },
+        {
+            "title": "Gaussian Splatting Compound No SH then Full SH",
+            "playgroundId": "#DAID4Q#8",
+            "referenceImage": "gsplat-compound-no-sh-then-full-sh.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 3.524% pixel difference"
+        },
+        {
+            "title": "Gaussian Splatting IBL Shadows",
+            "playgroundId": "#DAID4Q#2",
+            "renderCount": 15,
+            "referenceImage": "gsplat-ibl-shadows.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+        },
+        {
+            "title": "Gaussian Splatting IBL on Shadow Only Ground",
+            "playgroundId": "#DAID4Q#21",
+            "renderCount": 15,
+            "referenceImage": "gsplat-ibl-shadow-only-ground.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+        },
+        {
+            "title": "Gaussian Splatting LOD SH and IBL Shadows",
+            "playgroundId": "#DAID4Q#11",
+            "renderCount": 15,
+            "errorRatio": 10,
+            "referenceImage": "gsplat-lod-sh-ibl-shadows.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+        },
+        {
+            "title": "Gaussian Splatting IBL Shadows Camera Switch",
+            "playgroundId": "#DAID4Q#10",
+            "renderCount": 15,
+            "referenceImage": "gsplat-ibl-shadows-camera-switch.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+        },
+        {
+            "title": "Gaussian Splatting Compound IBL Shadows Single Part",
+            "playgroundId": "#DAID4Q#4",
+            "renderCount": 15,
+            "referenceImage": "gsplat-compound-ibl-shadows-single-part.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+        },
+        {
+            "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts",
+            "playgroundId": "#DAID4Q#5",
+            "renderCount": 15,
+            "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+        },
+        {
+            "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts Mixed Visibility",
+            "playgroundId": "#DAID4Q#6",
+            "renderCount": 15,
+            "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts-mixed-visibility.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
         },
         {
             "title": "NPE - Angle align",
@@ -623,10 +846,36 @@
             "referenceImage": "gsplat-sogs-sh.png"
         },
         {
+            "title": "SOGS with SH no texture lookup",
+            "playgroundId": "#QA2662#24",
+            "errorRatio": 5,
+            "referenceImage": "gsplat-sogs-sh-nolookup.png"
+        },
+        {
             "title": "Gaussian Splatting Part Test",
             "playgroundId": "#BTS11N#0",
             "errorRatio": 5,
             "renderCount": 15,
+            "referenceImage": "gsplat-part-test.png"
+        },
+        {
+            "title": "Gaussian Splatting Debug Part Test",
+            "playgroundId": "#BTS11N#2",
+            "renderCount": 5,
+            "errorRatio": 5,
+            "referenceImage": "gsplat-debug-part-test.png"
+        },
+        {
+            "title": "Gaussian Splatting Debug Part Auto Tracking Test",
+            "playgroundId": "#BTS11N#3",
+            "renderCount": 5,
+            "errorRatio": 5,
+            "referenceImage": "gsplat-debug-part-auto-tracking-test.png"
+        },
+        {
+            "title": "Gaussian Splatting Part Serialize Test",
+            "playgroundId": "#XQZVOI#0",
+            "errorRatio": 5,
             "referenceImage": "gsplat-part-test.png"
         },
         {
@@ -644,6 +893,13 @@
             "title": "MSDF",
             "playgroundId": "#6RLCWP#20",
             "referenceImage": "msdf.png"
+        },
+        {
+            "title": "Alpha-to-coverage transparent overlap",
+            "playgroundId": "#M4GBLK#0",
+            "referenceImage": "alpha-to-coverage-transparent-overlap.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 27.212% pixel difference"
         },
         {
             "title": "MSDF Screen projected",
@@ -675,6 +931,16 @@
             "title": "OpenPBR Base Weight",
             "playgroundId": "#DT1XPP#4",
             "referenceImage": "openpbr-base-weight.png"
+        },
+        {
+            "title": "OpenPBR Metallic Area Light Edge Tint",
+            "playgroundId": "#UVZI6U#0",
+            "referenceImage": "openpbr-metallic-area-light-edge-tint.png"
+        },
+        {
+            "title": "OpenPBR Anisotropic 2D Environment",
+            "playgroundId": "#6N05SO#0",
+            "referenceImage": "openpbr-anisotropic-2d-environment.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Analytical Lights",
@@ -759,6 +1025,13 @@
             "referenceImage": "gsplat-loading.png"
         },
         {
+            "title": "Gaussian Splatting Loading RH",
+            "playgroundId": "#CID4NN#398",
+            "referenceImage": "gsplat-loading-rh.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 7.807% pixel difference"
+        },
+        {
             "title": "Simple refraction",
             "playgroundId": "#22KZUW#652",
             "referenceImage": "simple-refraction.png"
@@ -772,6 +1045,13 @@
             "title": "needDepthPrePass",
             "playgroundId": "#7A66KI#1",
             "referenceImage": "needDepthPrePass.png"
+        },
+        {
+            "title": "needDepthPrePass StandardMaterial alpha test (diffuse, opacity texture, vertex, material, instance colour, opacity fresnel)",
+            "playgroundId": "#7EDYVC#5",
+            "referenceImage": "needDepthPrePassStandardAlphaTest.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: SyntaxError: Cannot use import statement outside a module"
         },
         {
             "title": "Decal map PP",
@@ -821,6 +1101,12 @@
             "title": "GPUPicker",
             "playgroundId": "#1RWFMT#8",
             "referenceImage": "gpuPicker.png"
+        },
+        {
+            "title": "GPUPicker Depth Point and Normal",
+            "playgroundId": "#JVKFZJ#0",
+            "renderCount": 30,
+            "referenceImage": "gpuPickerDepthPointNormal.png"
         },
         {
             "title": "Trailmesh tapered and untapered",
@@ -1081,6 +1367,12 @@
             "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
             "referenceImage": "csg.png",
             "workarounds": ["es-module-import"]
+        },
+        {
+            "title": "Charting",
+            "playgroundId": "#FX57Z1#0",
+            "errorRatio": 3,
+            "referenceImage": "charting.png"
         },
         {
             "title": "Fresnel",
@@ -1436,6 +1728,11 @@
             "workarounds": ["wait-for-readiness"]
         },
         {
+            "title": "Reflection probes",
+            "playgroundId": "#JHGNUU#0",
+            "referenceImage": "refprobe.png"
+        },
+        {
             "title": "PBRMetallicRoughnessMaterial",
             "playgroundId": "#2FDQT5#13",
             "referenceImage": "PBRMetallicRoughnessMaterial.png"
@@ -1584,6 +1881,11 @@
             "referenceImage": "objTestLoader.png"
         },
         {
+            "title": "OBJ empty normal",
+            "playgroundId": "#26R8NS#15",
+            "referenceImage": "objEmptyNormal.png"
+        },
+        {
             "title": "OBJ Stanford Bunny normals (LH)",
             "playgroundId": "#26R8NS#6",
             "referenceImage": "objStanfordBunnyNormalsLH.png"
@@ -1627,6 +1929,108 @@
             "playgroundId": "#E5YGEL#20",
             "renderCount": 10,
             "referenceImage": "motionBlur.png"
+        },
+        {
+            "title": "Object ID and mesh tag - Geometry buffer renderer",
+            "playgroundId": "#O0BI9B#0",
+            "referenceImage": "object-id-texture-geometry-buffer.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Object ID and mesh tag - FrameGraph object ID first",
+            "playgroundId": "#XKTMFR#0",
+            "referenceImage": "object-id-mesh-tag-framegraph.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Object ID and mesh tag - FrameGraph mesh tag first",
+            "playgroundId": "#XKTMFR#0",
+            "replace": "const meshTagFirst = false;, const meshTagFirst = true;",
+            "referenceImage": "object-id-mesh-tag-framegraph.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - coastal cliff scenery",
+            "playgroundId": "#BJBKKU#12",
+            "replace": "const showControls = true;, const showControls = false;, const showGpuTime = true;, const showGpuTime = false;",
+            "referenceImage": "mesh-blending-coastal-cliff.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: document.getElementsByTagName is not a function"
+        },
+        {
+            "title": "Mesh blending - FrameGraph alpha cutoff coverage",
+            "playgroundId": "#OGVQ6C#0",
+            "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
+            "referenceImage": "mesh-blending-alpha-cutoff.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - viewport-edge continuation",
+            "playgroundId": "#Q46SI1#2",
+            "replace": "const scenario = \"all\";, const scenario = \"viewportEdges\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Low",
+            "referenceImage": "mesh-blending-phase4-low.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - mixed radius continuation",
+            "playgroundId": "#Q46SI1#2",
+            "replace": "const scenario = \"all\";, const scenario = \"mixedRadius\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Cinematic",
+            "referenceImage": "mesh-blending-phase4-cinematic.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - shadow attenuation enabled",
+            "playgroundId": "#CYSYH2#7",
+            "referenceImage": "mesh-blending-phase5-target-shadow-seam.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - shadow attenuation disabled",
+            "playgroundId": "#CYSYH2#7",
+            "replace": "const useShadowAttenuation = true;, const useShadowAttenuation = false;",
+            "referenceImage": "mesh-blending-phase5-shadow-attenuation-disabled.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - HDR SceneColor",
+            "playgroundId": "#GC20U3#0",
+            "referenceImage": "mesh-blending-phase5-hdr-scene-color.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - classic parity reference",
+            "playgroundId": "#O05LI8#6",
+            "errorRatio": 0.1,
+            "referenceImage": "mesh-blending-classic-framegraph-parity.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - FrameGraph parity",
+            "playgroundId": "#O05LI8#6",
+            "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
+            "errorRatio": 0.1,
+            "referenceImage": "mesh-blending-classic-framegraph-parity.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "Mesh blending - NRGE without albedo",
+            "playgroundId": "#O05LI8#6",
+            "replace": "const useNRGE = false;, const useNRGE = true;",
+            "errorRatio": 0.1,
+            "referenceImage": "mesh-blending-classic-framegraph-parity.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
         },
         {
             "title": "Shadows and LODs",
@@ -2019,6 +2423,11 @@
             "referenceImage": "materialPlugin.png"
         },
         {
+            "title": "Dithered Tile Fade Material Plugin",
+            "playgroundId": "#HI17VI#0",
+            "referenceImage": "ditheredTileFadeMaterialPlugin.png"
+        },
+        {
             "title": "Serialize and Load Instanced Hierarchy",
             "playgroundId": "#3ZQ1SL#7",
             "referenceImage": "serializeAndLoadInstancedHierarchy.png"
@@ -2088,6 +2497,58 @@
             "replace": "this._makeGUI();,",
             "reason": "The demo settings panel uses lil-gui, which needs a DOM the native host does not have; it throws before the fluid simulation is attached, so the panel is not built.",
             "referenceImage": "fluidBoxSphere.png"
+        },
+        {
+            "title": "Fluid rendering custom particles per-particle size",
+            "playgroundId": "#DBSRBB#1",
+            "renderCount": 10,
+            "referenceImage": "fluidCustomParticlesPerParticleSize.png"
+        },
+        {
+            "title": "Fluid rendering custom particles uniform size fallback",
+            "playgroundId": "#DBSRBB#1",
+            "renderCount": 10,
+            "replace": "var withSizeBuffer = true, var withSizeBuffer = false",
+            "referenceImage": "fluidCustomParticlesUniformSizeFallback.png"
+        },
+        {
+            "title": "Fluid rendering GPU particle system per-particle size",
+            "playgroundId": "#M9FSIH#5",
+            "renderCount": 60,
+            "referenceImage": "fluidGpuParticleSystemPerParticleSize.png"
+        },
+        {
+            "title": "Fluid rendering GPU particle system uniform size",
+            "playgroundId": "#M9FSIH#5",
+            "renderCount": 60,
+            "replace": "UsePerParticleSizeAttribute = true;, UsePerParticleSizeAttribute = false;",
+            "referenceImage": "fluidGpuParticleSystemUniformSize.png"
+        },
+        {
+            "title": "Fluid rendering GPU particle system per-particle size with asymmetric scale",
+            "playgroundId": "#M9FSIH#6",
+            "renderCount": 60,
+            "referenceImage": "fluidGpuParticleSystemPerParticleSizeAsymmetricScale.png"
+        },
+        {
+            "title": "Fluid rendering GPU particle system uniform size with asymmetric scale",
+            "playgroundId": "#M9FSIH#6",
+            "renderCount": 60,
+            "replace": "UsePerParticleSizeAttribute = true;, UsePerParticleSizeAttribute = false;",
+            "referenceImage": "fluidGpuParticleSystemUniformSizeAsymmetricScale.png"
+        },
+        {
+            "title": "Fluid rendering GPU particle system without diffuse texture",
+            "playgroundId": "#NAW8JS#0",
+            "renderCount": 60,
+            "referenceImage": "fluidGpuParticleSystemWithoutDiffuseTexture.png"
+        },
+        {
+            "title": "Fluid rendering GPU particle system with diffuse texture",
+            "playgroundId": "#NAW8JS#0",
+            "renderCount": 60,
+            "replace": "var generateDiffuseTexture = false;, var generateDiffuseTexture = true;",
+            "referenceImage": "fluidGpuParticleSystemWithDiffuseTexture.png"
         },
         {
             "title": "Export GLTF Extension KHR_texture_transform",
@@ -2287,6 +2748,31 @@
             "title": "cube-with-holes-using-stencil-buffer",
             "playgroundId": "#CW5PRI#11",
             "referenceImage": "cube-with-holes-using-stencil-buffer.png"
+        },
+        {
+            "title": "Grid Material",
+            "playgroundId": "#RKGF05",
+            "referenceImage": "grid-material.png"
+        },
+        {
+            "title": "Multi Scale Grid Material",
+            "playgroundId": "#RKGF05#5",
+            "referenceImage": "multi-scale-grid-material.png"
+        },
+        {
+            "title": "Simple Sky Material",
+            "playgroundId": "#VBTSKJ#2",
+            "referenceImage": "simple-sky-material.png"
+        },
+        {
+            "title": "Overcast Sky Material",
+            "playgroundId": "#VBTSKJ#3",
+            "referenceImage": "overcast-sky-material.png"
+        },
+        {
+            "title": "HDR Sky Material as IBL",
+            "playgroundId": "#VBTSKJ#6",
+            "referenceImage": "hdr-sky-material-as-ibl.png"
         },
         {
             "title": "water-material",
@@ -2774,6 +3260,65 @@
             "referenceImage": "FrameGraph-multi-render-targets.png"
         },
         {
+            "title": "Object ID texture - FrameGraph geometry renderer",
+            "playgroundId": "#00T6WJ#0",
+            "referenceImage": "object-id-texture-framegraph.png"
+        },
+        {
+            "title": "FrameGraph geometry renderer - Beauty",
+            "playgroundId": "#PVK3RV#2",
+            "errorRatio": 0.5,
+            "referenceImage": "framegraph-geometry-renderers-beauty.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "FrameGraph object renderer - Beauty reference",
+            "playgroundId": "#1OC90Y#1",
+            "errorRatio": 0.5,
+            "referenceImage": "framegraph-geometry-renderers-beauty.png"
+        },
+        {
+            "title": "FrameGraph geometry renderer - Normals",
+            "playgroundId": "#Z6QI9V#2",
+            "errorRatio": 0.5,
+            "referenceImage": "framegraph-geometry-renderers-normals.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "FrameGraph geometry renderer - Geometry only",
+            "playgroundId": "#RT0TA2#2",
+            "errorRatio": 0.5,
+            "referenceImage": "framegraph-geometry-renderers-geometry-only.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "FrameGraph geometry renderer - NRGE",
+            "playgroundId": "#NIXFAQ#2",
+            "errorRatio": 0.5,
+            "referenceImage": "framegraph-geometry-renderers-nrge.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "FrameGraph geometry renderer - Gaussian mesh",
+            "playgroundId": "#RQLLM5#0",
+            "errorRatio": 0.5,
+            "referenceImage": "framegraph-geometry-gaussian-mesh.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+        },
+        {
+            "title": "FrameGraph object renderer - Gaussian mesh reference",
+            "playgroundId": "#5F1T3C#0",
+            "errorRatio": 0.5,
+            "referenceImage": "framegraph-geometry-gaussian-mesh.png",
+            "workarounds": ["es-module-import"]
+        },
+        {
             "title": "FrameGraph selection outline",
             "playgroundId": "#E1F0GP#4",
             "referenceImage": "FrameGraph-selection-outline.png"
@@ -2938,6 +3483,21 @@
             "referenceImage": "Clustered-Lighting-rhs-pbr-nodematerial-.png"
         },
         {
+            "title": "Clustered Lighting (pbr sheen)",
+            "playgroundId": "#40VFIF#0",
+            "referenceImage": "clustered-lighting-pbr-sheen.png"
+        },
+        {
+            "title": "StandardMaterial skips out-of-range lighting",
+            "playgroundId": "#5LPD6E#1",
+            "referenceImage": "StandardMaterial-skips-out-of-range-lighting.png"
+        },
+        {
+            "title": "CellMaterial point lights with finite range",
+            "playgroundId": "#R8MA0W",
+            "referenceImage": "CellMaterial-point-lights-with-finite-range.png"
+        },
+        {
             "title": "Clustered Light Serialization",
             "playgroundId": "#QRQPNN#0",
             "referenceImage": "clustered-light-serialization.png",
@@ -3004,6 +3564,21 @@
             "referenceImage": "OpenPBR-IBL-Furnace-Test-for-Metal-Rough.png"
         },
         {
+            "title": "OpenPBR IBL Furnace Test for Dielectric Energy Compensation",
+            "playgroundId": "#KQYNYS#61",
+            "referenceImage": "OpenPBR-IBL-Furnace-Test-for-Dielectric-Energy-Compensation.png"
+        },
+        {
+            "title": "OpenPBR IBL Furnace Test for Metal Energy Compensation",
+            "playgroundId": "#KQYNYS#62",
+            "referenceImage": "OpenPBR-IBL-Furnace-Test-for-Metal-Energy-Compensation.png"
+        },
+        {
+            "title": "OpenPBR IBL Furnace Test for Thin Film Transparency",
+            "playgroundId": "#GRQHVV#320",
+            "referenceImage": "OpenPBR-IBL-Furnace-Test-for-Thin-Film-Transparency.png"
+        },
+        {
             "title": "OpenPBR IBL Specular IOR vs Coat IOR",
             "playgroundId": "#GRQHVV#39",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-IOR.png"
@@ -3017,6 +3592,11 @@
             "title": "OpenPBR IBL Specular IOR vs Coat Weight",
             "playgroundId": "#GRQHVV#182",
             "referenceImage": "OpenPBR-IBL-Specular-IOR-vs-Coat-Weight.png"
+        },
+        {
+            "title": "OpenPBR IBL Specular Weight vs Coat Weight",
+            "playgroundId": "#GRQHVV#328",
+            "referenceImage": "OpenPBR-IBL-Specular-Weight-vs-Coat-Weight.png"
         },
         {
             "title": "OpenPBR IBL Specular Roughness vs Coat Roughness",
@@ -3214,6 +3794,16 @@
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight---IBL.png"
         },
         {
+            "title": "OpenPBR Thin Film and Specular Color - IBL",
+            "playgroundId": "#GRQHVV#322",
+            "referenceImage": "OpenPBR-Thin-Film-and-Specular-Color---IBL.png"
+        },
+        {
+            "title": "OpenPBR Thin Film and Specular IOR Match - IBL",
+            "playgroundId": "#GRQHVV#323",
+            "referenceImage": "OpenPBR-Thin-Film-and-Specular-IOR-Match---IBL.png"
+        },
+        {
             "title": "OpenPBR Thin Film Textures - IBL",
             "playgroundId": "#GRQHVV#174",
             "renderCount": 2,
@@ -3269,6 +3859,11 @@
             "title": "OpenPBR Transmission Roughness glTF - Analytic Lights",
             "playgroundId": "#GRQHVV#124",
             "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png"
+        },
+        {
+            "title": "OpenPBR Transmission Roughness glTF - Combination Lights",
+            "playgroundId": "#GRQHVV#314",
+            "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Combination-Lights.png"
         },
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
@@ -3427,6 +4022,26 @@
             "referenceImage": "OpenPBR-Subsurface-Color-Scaling---IBL.png"
         },
         {
+            "title": "OpenPBR Subsurface Scatter Anisotropy - glTF",
+            "playgroundId": "#GRQHVV#333",
+            "referenceImage": "OpenPBR-Subsurface-Scatter-Anisotropy---glTF.png"
+        },
+        {
+            "title": "OpenPBR Subsurface Scatter Color Density - glTF",
+            "playgroundId": "#GRQHVV#332",
+            "referenceImage": "OpenPBR-Subsurface-Scatter-Color-Density---glTF.png"
+        },
+        {
+            "title": "OpenPBR Subsurface Scatter Strength Thin-Walled - glTF",
+            "playgroundId": "#GRQHVV#343",
+            "referenceImage": "OpenPBR-Subsurface-Scatter-Strength-Thin-Walled---glTF.png"
+        },
+        {
+            "title": "OpenPBR Subsurface Scatter Strength - glTF",
+            "playgroundId": "#GRQHVV#344",
+            "referenceImage": "OpenPBR-Subsurface-Scatter-Strength---glTF.png"
+        },
+        {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - IBL",
             "playgroundId": "#BY1IOY#0",
             "renderCount": 5,
@@ -3456,6 +4071,11 @@
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Anisotropy---IBL.png"
         },
         {
+            "title": "OpenPBR Thin Walled Subsurface Anisotropy - Realtime IBL",
+            "playgroundId": "#MB4ZGH#0",
+            "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Anisotropy---Realtime-IBL.png"
+        },
+        {
             "title": "OpenPBR Thin Walled Subsurface Anisotropy - Analytic Lights",
             "playgroundId": "#GRQHVV#248",
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Anisotropy---Analytic-Lights.png",
@@ -3466,6 +4086,41 @@
             "playgroundId": "#URIA5X#0",
             "renderCount": 5,
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Transmission-Blending---IBL.png"
+        },
+        {
+            "title": "OpenPBR Subsurface Transmission Volume Blending with Textures",
+            "playgroundId": "#SXXR4T#3",
+            "referenceImage": "OpenPBR-Subsurface-Transmission-Volume-Blending-with-Textures.png"
+        },
+        {
+            "title": "OpenPBR Subsurface Transmission Thin-walled Blending with Textures",
+            "playgroundId": "#SXXR4T#4",
+            "referenceImage": "OpenPBR-Subsurface-Transmission-Thin-walled-Blending-with-Textures.png"
+        },
+        {
+            "title": "OpenPBR Subsurface SSS Frame Graph - Shadows - IBL",
+            "playgroundId": "#PJ5JXH#120",
+            "referenceImage": "OpenPBR-Subsurface-SSS-Frame-Graph---Shadows---IBL.png"
+        },
+        {
+            "title": "OpenPBR Subsurface SSS Frame Graph - Analytic Lights",
+            "playgroundId": "#PJ5JXH#121",
+            "referenceImage": "OpenPBR-Subsurface-SSS-Frame-Graph---Analytic-Lights.png"
+        },
+        {
+            "title": "OpenPBR Subsurface SSS Frame Graph - Shadows - Combination Lights",
+            "playgroundId": "#PJ5JXH#122",
+            "referenceImage": "OpenPBR-Subsurface-SSS-Frame-Graph---Shadows---Combination-Lights.png"
+        },
+        {
+            "title": "OpenPBR glTF Surface Tinting",
+            "playgroundId": "#GRQHVV#325",
+            "referenceImage": "OpenPBR-glTF-Surface-Tinting.png"
+        },
+        {
+            "title": "OpenPBR Geometry Opacity",
+            "playgroundId": "#GRQHVV#327",
+            "referenceImage": "OpenPBR-Geometry-Opacity.png"
         },
         {
             "title": "Background material blur",
@@ -3848,6 +4503,11 @@
             "workarounds": ["prime-effect-layers"]
         },
         {
+            "title": "Selection outline layer instance selected with LOD",
+            "playgroundId": "#M4HHTC#0",
+            "referenceImage": "selectionOutlineInstanceLOD.png"
+        },
+        {
             "title": "Vertex Pulling - Normals UVs Colors Tangents",
             "playgroundId": "#664OF3#6",
             "referenceImage": "vertexPullingNormalsUVsColors.png"
@@ -4013,6 +4673,71 @@
             "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
+            "title": "GPU Particles - Change - Color Gradient With Color2",
+            "playgroundId": "#3PCCJ0#0",
+            "referenceImage": "gpu-particles-change-color-gradient-with-color2.png"
+        },
+        {
+            "title": "GPU Particles - Change - Speed Range",
+            "playgroundId": "#JPPZGY#0",
+            "referenceImage": "gpu-particles-change-speed-range.png"
+        },
+        {
+            "title": "GPU Particles - Change - Speed Limit Range",
+            "playgroundId": "#UQ1RMS#0",
+            "referenceImage": "gpu-particles-change-speed-limit-range.png"
+        },
+        {
+            "title": "GPU Particles - Change - Angular Speed Range",
+            "playgroundId": "#MSX6FE#0",
+            "referenceImage": "gpu-particles-change-angular-speed-range.png"
+        },
+        {
+            "title": "GPU Particles - Change - Drag Range",
+            "playgroundId": "#Q1JW04#0",
+            "referenceImage": "gpu-particles-change-drag-range.png"
+        },
+        {
+            "title": "GPU Particles - Change - Emit Rate Gradient",
+            "playgroundId": "#SV62YO#1",
+            "referenceImage": "gpu-particles-change-emit-rate-gradient.png"
+        },
+        {
+            "title": "GPU Particles - Change - Emit Rate Gradient 2",
+            "playgroundId": "#RBK6TJ#1",
+            "referenceImage": "gpu-particles-change-emit-rate-gradient-2.png"
+        },
+        {
+            "title": "GPU Particles - Change - Emit Rate Gradient Range",
+            "playgroundId": "#9KLZH0#1",
+            "referenceImage": "gpu-particles-change-emit-rate-gradient-range.png"
+        },
+        {
+            "title": "GPU Particles - Change - Start Size Gradient",
+            "playgroundId": "#HF5UQ7#0",
+            "referenceImage": "gpu-particles-change-start-size-gradient.png"
+        },
+        {
+            "title": "GPU Particles - Change - Start Size Gradient Range",
+            "playgroundId": "#9QAHDL#0",
+            "referenceImage": "gpu-particles-change-start-size-gradient-range.png"
+        },
+        {
+            "title": "GPU Particles - Change - Lifetime Gradient",
+            "playgroundId": "#ZEQD5L#0",
+            "referenceImage": "gpu-particles-change-lifetime-gradient.png"
+        },
+        {
+            "title": "GPU Particles - Change - Lifetime Gradient 2",
+            "playgroundId": "#E980M9#0",
+            "referenceImage": "gpu-particles-change-lifetime-gradient-2.png"
+        },
+        {
+            "title": "GPU Particles - Change - Lifetime Gradient Range",
+            "playgroundId": "#716Y0L#0",
+            "referenceImage": "gpu-particles-change-lifetime-gradient-range.png"
+        },
+        {
             "title": "GPU Particles - Emitters - Point",
             "playgroundId": "#PS8GQ3#0",
             "referenceImage": "gpu-particles-emitters-point.png",
@@ -4077,6 +4802,11 @@
             "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
         },
         {
+            "title": "GPU Particles - Emitters - Mesh",
+            "playgroundId": "#7XBJVF#0",
+            "referenceImage": "gpu-particles-emitters-mesh.png"
+        },
+        {
             "title": "GPU Particles - Billboard Y",
             "playgroundId": "#8QHGVT#0",
             "referenceImage": "gpu-particles-billboard-y.png",
@@ -4089,6 +4819,11 @@
             "referenceImage": "gpu-particles-billboard-stretched.png",
             "excludedGraphicsApis": ["OpenGL"],
             "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
+        },
+        {
+            "title": "GPU Particles - Billboard Stretched Local",
+            "playgroundId": "#HLL4B1#0",
+            "referenceImage": "gpu-particles-billboard-stretched-local.png"
         },
         {
             "title": "GPU Particles - Multiply Blend",
@@ -4124,6 +4859,229 @@
             "referenceImage": "gpu-particles-local-space.png",
             "excludedGraphicsApis": ["OpenGL"],
             "reason": "OpenGL: particle effect fails to compile on Linux CI (Error compiling effect, thrown before pixel comparison); passes on Win32 D3D11."
+        },
+        {
+            "title": "GPU Particles - Attractors Single",
+            "playgroundId": "#2GCFP9#0",
+            "errorRatio": 2.5,
+            "referenceImage": "gpu-particles-attractors-single.png"
+        },
+        {
+            "title": "GPU Particles - Attractors Multiple",
+            "playgroundId": "#S02QKE#0",
+            "errorRatio": 2.5,
+            "referenceImage": "gpu-particles-attractors-multiple.png"
+        },
+        {
+            "title": "GPU Particles - Attractors Ring",
+            "playgroundId": "#D08NSG#0",
+            "errorRatio": 2.5,
+            "referenceImage": "gpu-particles-attractors-ring.png"
+        },
+        {
+            "title": "GPU Particles - Attractors Local",
+            "playgroundId": "#UK6P4V#0",
+            "errorRatio": 2.5,
+            "referenceImage": "gpu-particles-attractors-local.png"
+        },
+        {
+            "title": "GPU Particles - From Particle System",
+            "playgroundId": "#7JQ28N#0",
+            "referenceImage": "gpu-particles-from-particle-system.png"
+        },
+        {
+            "title": "GPU Particles - From Particle System - Flow Map",
+            "playgroundId": "#9H7NNG#0",
+            "referenceImage": "gpu-particles-from-particle-system-flow-map.png"
+        },
+        {
+            "title": "ArcRotate legacy inertia comparison",
+            "playgroundId": "#UAPORV#0",
+            "renderCount": 30,
+            "referenceImage": "arc-legacy-inertia-comparison.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: renders at 1200x800 but the reference is 600x400"
+        },
+        {
+            "title": "ArcRotate legacy panningInertia glide",
+            "playgroundId": "#8S8H0S#0",
+            "renderCount": 30,
+            "referenceImage": "arc-legacy-panning-inertia.png"
+        },
+        {
+            "title": "ArcRotate legacy inertialRadiusOffset glide",
+            "playgroundId": "#98108I#0",
+            "renderCount": 30,
+            "referenceImage": "arc-legacy-radius-glide.png"
+        },
+        {
+            "title": "ArcRotate legacy beta limits clamp glide",
+            "playgroundId": "#FBLW1J#0",
+            "renderCount": 30,
+            "referenceImage": "arc-legacy-beta-limits.png"
+        },
+        {
+            "title": "ArcRotate legacy radius limits clamp glide",
+            "playgroundId": "#QWTJH9#0",
+            "renderCount": 30,
+            "referenceImage": "arc-legacy-radius-limits.png"
+        },
+        {
+            "title": "ArcRotate legacy combined axis glide",
+            "playgroundId": "#SJJRY4#0",
+            "renderCount": 30,
+            "referenceImage": "arc-legacy-combined-glide.png"
+        },
+        {
+            "title": "Texture Repetition - Standard Material",
+            "playgroundId": "#ESP440#0",
+            "referenceImage": "texture-repetition-standard-material.png"
+        },
+        {
+            "title": "Texture Repetition - PBR Material",
+            "playgroundId": "#6EPUUH#0",
+            "errorRatio": 7.5,
+            "referenceImage": "texture-repetition-pbr-material.png"
+        },
+        {
+            "title": "Texture Repetition - OpenPBR Material",
+            "playgroundId": "#GOKMFP#0",
+            "errorRatio": 7.5,
+            "referenceImage": "texture-repetition-openpbr-material.png"
+        },
+        {
+            "title": "FBX loader - cube + Phong material",
+            "playgroundId": "#DZBTQU#0",
+            "referenceImage": "fbx-m01-cube-phong.png"
+        },
+        {
+            "title": "FBX loader - n-gons + vertex colors",
+            "playgroundId": "#DZBTQU#1",
+            "referenceImage": "fbx-m02-ngons.png"
+        },
+        {
+            "title": "FBX loader - smooth vs flat normals",
+            "playgroundId": "#DZBTQU#2",
+            "referenceImage": "fbx-m03-normals.png"
+        },
+        {
+            "title": "FBX loader - material properties",
+            "playgroundId": "#DZBTQU#3",
+            "referenceImage": "fbx-m04-materials.png"
+        },
+        {
+            "title": "FBX loader - texture slots",
+            "playgroundId": "#DZBTQU#4",
+            "referenceImage": "fbx-m05-textures.png"
+        },
+        {
+            "title": "FBX loader - UV transform",
+            "playgroundId": "#DZBTQU#5",
+            "referenceImage": "fbx-m06-uv-transform.png"
+        },
+        {
+            "title": "FBX loader - multi-material submeshes",
+            "playgroundId": "#DZBTQU#6",
+            "referenceImage": "fbx-m07-multimaterial.png"
+        },
+        {
+            "title": "FBX loader - transform chains",
+            "playgroundId": "#DZBTQU#7",
+            "referenceImage": "fbx-m08-transforms.png"
+        },
+        {
+            "title": "FBX loader - skinning",
+            "playgroundId": "#DZBTQU#8",
+            "referenceImage": "fbx-m09-skinning.png"
+        },
+        {
+            "title": "FBX loader - morph targets",
+            "playgroundId": "#DZBTQU#9",
+            "referenceImage": "fbx-m10-morph.png"
+        },
+        {
+            "title": "FBX loader - node animation",
+            "playgroundId": "#DZBTQU#10",
+            "referenceImage": "fbx-m11-node-anim.png"
+        },
+        {
+            "title": "FBX loader - skeletal animation",
+            "playgroundId": "#DZBTQU#11",
+            "referenceImage": "fbx-m12-skeletal-anim.png"
+        },
+        {
+            "title": "FBX loader - morph animation",
+            "playgroundId": "#DZBTQU#12",
+            "referenceImage": "fbx-m13-morph-anim.png"
+        },
+        {
+            "title": "FBX loader - multiple animation clips",
+            "playgroundId": "#DZBTQU#13",
+            "referenceImage": "fbx-m14-multiclip.png"
+        },
+        {
+            "title": "FBX loader - cameras and lights",
+            "playgroundId": "#DZBTQU#14",
+            "referenceImage": "fbx-m15-camera-lights.png"
+        },
+        {
+            "title": "FBX loader - axis Y-up",
+            "playgroundId": "#DZBTQU#15",
+            "referenceImage": "fbx-m16-axis-yup.png"
+        },
+        {
+            "title": "FBX loader - axis Z-up conversion",
+            "playgroundId": "#DZBTQU#16",
+            "referenceImage": "fbx-m16-axis-zup.png"
+        },
+        {
+            "title": "FBX loader - unit scale",
+            "playgroundId": "#DZBTQU#17",
+            "referenceImage": "fbx-m16-units.png"
+        },
+        {
+            "title": "USD loader - analytic primitives",
+            "playgroundId": "#PS2UEU#0",
+            "referenceImage": "usd-loader-analytic-primitives.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: ReferenceError: location is not defined"
+        },
+        {
+            "title": "USD loader - PBR materials",
+            "playgroundId": "#KBHY1R#0",
+            "referenceImage": "usd-loader-pbr-materials.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: ReferenceError: location is not defined"
+        },
+        {
+            "title": "CSG2 Right-Handed glTF winding",
+            "playgroundId": "#1HYT9N#0",
+            "errorRatio": 1.5,
+            "referenceImage": "csg2-righthanded-gltf-winding.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Loading a script as an ES module is not supported in Babylon Native"
+        },
+        {
+            "title": "FreeCamera framerate-independent movement",
+            "playgroundId": "#Y3PG6K#0",
+            "renderCount": 1,
+            "referenceImage": "freecamera-framerate-independent-movement.png"
+        },
+        {
+            "title": "FlyCamera framerate-independent movement",
+            "playgroundId": "#PX1JQY#0",
+            "renderCount": 1,
+            "referenceImage": "flycamera-framerate-independent-movement.png"
+        },
+        {
+            "title": "glTF Loader - PBRMaterial Scatter Color Density",
+            "playgroundId": "#GRQHVV#338",
+            "referenceImage": "glTF-Loader---PBRMaterial-Scatter-Color-Density.png"
+        },
+        {
+            "title": "glTF Loader - PBRMaterial Scatter Strength Thin-Walled",
+            "playgroundId": "#GRQHVV#341",
+            "referenceImage": "glTF-Loader---PBRMaterial-Scatter-Strength-Thin-Walled.png"
         },
         {
             "title": "Node material PBR Pure WebGPU",
@@ -4209,6 +5167,93 @@
             "title": "WebGPU async pipeline pre-warming",
             "playgroundId": "#823Q62#0",
             "referenceImage": "webgpuAsyncPipelinePreWarm.png"
+        },
+        {
+            "title": "PBR Bent Normal Reflection Occlusion",
+            "playgroundId": "#ZH5HB3#3",
+            "referenceImage": "pbr-bent-normal-reflection-occlusion.png"
+        },
+        {
+            "title": "PBR Bent Normal Regression Cases",
+            "playgroundId": "#R7QHEO#3",
+            "referenceImage": "pbr-bent-normal-regression-cases.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: TypeError: Cannot read properties of undefined (reading 'ownerBlock')"
+        },
+        {
+            "title": "PBR Bent Normal Visibility Invariants",
+            "playgroundId": "#3PC7QS#0",
+            "referenceImage": "pbr-bent-normal-visibility-invariants.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 33.663% pixel difference"
+        },
+        {
+            "title": "PBR Bent Normal Mixed UV Frames",
+            "playgroundId": "#TWCK59#0",
+            "referenceImage": "pbr-bent-normal-mixed-uv-frames.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 46.250% pixel difference"
+        },
+        {
+            "title": "PBR Bent Normal Nonuniform Scaling",
+            "playgroundId": "#HFS4KH#0",
+            "referenceImage": "pbr-bent-normal-nonuniform-scaling.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 33.222% pixel difference"
+        },
+        {
+            "title": "PBR Bent Normal Mediump Precision",
+            "playgroundId": "#G3UAD8#0",
+            "referenceImage": "pbr-bent-normal-mediump-precision.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 41.586% pixel difference"
+        },
+        {
+            "title": "Solid Particle System Mixed Model Winding",
+            "playgroundId": "#B1NNWI#2",
+            "renderCount": 1,
+            "referenceImage": "sps-mixed-model-winding.png"
+        },
+        {
+            "title": "Raw Texture 2D Array Mipmaps",
+            "playgroundId": "#I5RZPG#1",
+            "renderCount": 1,
+            "referenceImage": "raw-texture-2d-array-mipmaps.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: Error: Texture 2D array currently do not support mipmaps."
+        },
+        {
+            "title": "Gaussian Splatting GLTF",
+            "playgroundId": "#WSAFDA#0",
+            "referenceImage": "gsplat-splat-gltf.png"
+        },
+        {
+            "title": "Gaussian Splatting LOD",
+            "playgroundId": "#418POI#12",
+            "renderCount": 15,
+            "referenceImage": "gsplat-lod.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 27.099% pixel difference"
+        },
+        {
+            "title": "Gaussian Splatting Ranged Source Row Boundary",
+            "playgroundId": "#7AZH52#1",
+            "referenceImage": "gsplat-ranged-source-row-boundary.png"
+        },
+        {
+            "title": "Gaussian Splatting LOD COMPOUND",
+            "playgroundId": "#418POI#21",
+            "renderCount": 15,
+            "referenceImage": "gsplat-lod-compound.png",
+            "workarounds": ["es-module-import"],
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 75.243% pixel difference"
+        },
+        {
+            "title": "MSAA RTT samples=4 (magnified)",
+            "playgroundId": "#DY1H5P#0",
+            "errorRatio": 5,
+            "referenceImage": "msaa-rtt-samples4-magnified.png"
         }
     ]
 }
