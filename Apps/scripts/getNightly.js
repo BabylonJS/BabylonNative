@@ -1,7 +1,5 @@
 var https = require('https');
 var fs = require('fs');
-var path = require('path');
-var spawnSync = require('child_process').spawnSync;
 
 function download(filename, url) {
   return new Promise(function (resolve, reject) {
@@ -18,8 +16,6 @@ function download(filename, url) {
     }
 
     file.on('error', fail);
-    // 'close', not 'finish': 'finish' fires once the data is flushed but before the descriptor is
-    // released, and the down-level step runs against these files immediately afterwards.
     file.on('close', function () {
       if (!settled) {
         settled = true;
@@ -50,52 +46,28 @@ function download(filename, url) {
 }
 
 var files = [
-  ['node_modules/babylonjs/babylon.max.js', 'https://preview.babylonjs.com/babylon.max.js'],
+  ['node_modules/babylonjs/babylon.es5.js', 'https://preview.babylonjs.com/babylon.es5.js'],
   ['node_modules/babylonjs/babylon.max.js.map', 'https://preview.babylonjs.com/babylon.max.js.map'],
-  ['node_modules/babylonjs-addons/babylonjs.addons.js', 'https://preview.babylonjs.com/addons/babylonjs.addons.js'],
+  ['node_modules/babylonjs-addons/babylonjs.addons.es5.js', 'https://preview.babylonjs.com/addons/babylonjs.addons.es5.js'],
   ['node_modules/babylonjs-addons/babylonjs.addons.js.map', 'https://preview.babylonjs.com/addons/babylonjs.addons.js.map'],
-  ['node_modules/babylonjs-materials/babylonjs.materials.js', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.js'],
+  ['node_modules/babylonjs-materials/babylonjs.materials.es5.js', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.es5.js'],
   ['node_modules/babylonjs-materials/babylonjs.materials.js.map', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.js.map'],
-  ['node_modules/babylonjs-loaders/babylonjs.loaders.js', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.js'],
+  ['node_modules/babylonjs-loaders/babylonjs.loaders.es5.js', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.es5.js'],
   ['node_modules/babylonjs-loaders/babylonjs.loaders.js.map', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.js.map'],
-  ['node_modules/babylonjs-gui/babylon.gui.js', 'https://preview.babylonjs.com/gui/babylon.gui.js'],
+  ['node_modules/babylonjs-gui/babylon.gui.es5.js', 'https://preview.babylonjs.com/gui/babylon.gui.es5.js'],
   ['node_modules/babylonjs-gui/babylon.gui.js.map', 'https://preview.babylonjs.com/gui/babylon.gui.js.map'],
-  ['node_modules/babylonjs-serializers/babylonjs.serializers.js', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.js'],
+  ['node_modules/babylonjs-serializers/babylonjs.serializers.es5.js', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.es5.js'],
   ['node_modules/babylonjs-serializers/babylonjs.serializers.js.map', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.js.map'],
-  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.js'],
+  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.es5.js', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.es5.js'],
   ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js.map', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.js.map'],
 ];
 
 console.log('Downloading babylon.js nightly');
 
 // Awaited so a failed or partial download fails the script instead of silently leaving the previous
-// file in place, and so the down-level step that runs next cannot race an incomplete write.
+// file in place.
 Promise.all(files.map(function (f) { return download(f[0], f[1]); })).then(function () {
   console.log('Downloaded ' + files.length + ' file(s)');
-
-  // Every bundle we just replaced needs the ES5 down-level, not just babylon.max.js: they all end up
-  // in BABYLON_SCRIPTS and all have to run on Chakra. Deriving the list from `files` means adding a
-  // new download above can never again silently skip this step.
-  var scripts = files
-    .map(function (f) { return f[0]; })
-    .filter(function (p) { return /babylon.*\.js$/i.test(p); });
-
-  if (scripts.length === 0) {
-    return;
-  }
-
-  console.log('Down-leveling ' + scripts.length + ' script(s)');
-  var result = spawnSync(
-    process.execPath,
-    [path.join(__dirname, 'downlevelNativeScripts.mjs')].concat(scripts),
-    { stdio: 'inherit' });
-
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    throw new Error('downlevelNativeScripts.mjs exited with code ' + result.status);
-  }
 }).catch(function (err) {
   console.error(err.message);
   process.exit(1);

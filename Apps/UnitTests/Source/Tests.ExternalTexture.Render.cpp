@@ -73,7 +73,7 @@ TEST(ExternalTexture, RenderTextureArray)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.LoadScript("app:///Assets/tests.externalTexture.render.js");
 
     loader.Dispatch([&inputExternalTexture, &outputExternalTexture, &startupDone](Napi::Env env) {

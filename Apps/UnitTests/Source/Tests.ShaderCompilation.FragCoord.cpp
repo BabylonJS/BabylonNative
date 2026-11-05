@@ -170,7 +170,7 @@ namespace
         });
 
         Babylon::ScriptLoader loader{runtime};
-        loader.LoadScript("app:///Assets/babylon.max.js");
+        loader.LoadScript("app:///Assets/babylon.es5.js");
 
         const std::string script = R"(
             (function () {
@@ -1134,7 +1134,7 @@ TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWa
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
 
     auto setupDone = std::make_shared<std::promise<void>>();
     auto setupFuture = setupDone->get_future();

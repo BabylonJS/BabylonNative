@@ -103,8 +103,8 @@ Push-Location build\win32\Apps\ModuleLoadTest\RelWithDebInfo
 Pop-Location
 ```
 
-Keep the configure-time npm hook enabled: it downlevels the Babylon bundles for
-Chakra. Use short build paths if Windows compiler paths approach 260 characters.
+The apps load the published ECMAScript 5 (ES5) bundles for Chakra compatibility.
+Use short build paths if Windows compiler paths approach 260 characters.
 The full validation command intentionally has no `--once` or test filter.
 
 ## **Building on Windows 10, Targeting Universal Windows Platform (UWP)**
