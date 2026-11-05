@@ -1,4 +1,5 @@
 #include "Canvas.h"
+#include "CanvasEncoding.h"
 #include "CanvasConstants.h"
 #include "Image.h"
 #include "Path2D.h"
@@ -15,10 +16,6 @@
 #include "Colors.h"
 #include "Gradient.h"
 #include "Font.h"
-#include <basen.hpp>
-#include <bimg/encode.h>
-#include <bx/allocator.h>
-#include <bx/readerwriter.h>
 
 #include "Shaders/dxbc/vs_fspass.h"
 #include "Shaders/dxil/vs_fspass.h"
@@ -446,22 +443,14 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        bx::MemoryBlock memoryBlock{&Graphics::DeviceContext::GetDefaultAllocator()};
-        bx::MemoryWriter writer{&memoryBlock};
-        bx::Error err{};
-        bimg::imageWritePng(&writer, width, height, width * CanvasConstants::RGBA_CHANNEL_COUNT, rgba.data(), bimg::TextureFormat::RGBA8, false, &err);
-        // MemoryBlock reports allocation capacity, not the number of encoded bytes.
-        const size_t pngSize = static_cast<size_t>(bx::getSize(&writer));
-        if (!err.isOk() || pngSize == 0)
+        try
         {
-            throw Napi::Error::New(info.Env(), "Canvas.toDataURL: PNG encode failed.");
+            return Napi::String::New(info.Env(), EncodeCanvasPNG(width, height, rgba));
         }
-
-        // more(0) returns the buffer start without growing (see bx::MemoryBlock).
-        const char* pngBytes = static_cast<const char*>(memoryBlock.more(0));
-        std::string encoded;
-        bn::encode_b64(pngBytes, pngBytes + pngSize, std::back_inserter(encoded));
-        return Napi::String::New(info.Env(), "data:image/png;base64," + encoded);
+        catch (const std::exception& error)
+        {
+            throw Napi::Error::New(info.Env(), error.what());
+        }
     }
 
     Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)

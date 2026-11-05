@@ -4,6 +4,8 @@
 #include <android/asset_manager.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
+#include <gsl/util>
+#include <algorithm>
 
 using namespace android::global;
 using namespace android::net;
@@ -15,6 +17,47 @@ namespace UrlLib
 {
     namespace
     {
+        void ThrowIfJavaFaulted(JNIEnv* env)
+        {
+            if (env->ExceptionCheck())
+            {
+                const auto exception = env->ExceptionOccurred();
+                env->ExceptionClear();
+                const auto releaseException = gsl::finally([&] { env->DeleteLocalRef(exception); });
+                throw Throwable{exception};
+            }
+        }
+
+        void WriteRequestBody(OutputStream& stream, const std::string& body)
+        {
+            auto* env = GetEnvForCurrentThread();
+            const auto streamClass = stream.GetClass();
+            const auto writeMethod = env->GetMethodID(streamClass, "write", "([BII)V");
+            ThrowIfJavaFaulted(env);
+            const auto closeMethod = env->GetMethodID(streamClass, "close", "()V");
+            ThrowIfJavaFaulted(env);
+
+            if (!body.empty())
+            {
+                // Write bytes directly: NewStringUTF is NUL-terminated and uses modified UTF-8.
+                const auto capacity = std::min(body.size(), size_t{16384});
+                const auto buffer = env->NewByteArray(static_cast<jsize>(capacity));
+                ThrowIfJavaFaulted(env);
+                const auto releaseBuffer = gsl::finally([&] { env->DeleteLocalRef(buffer); });
+                for (size_t offset{}; offset < body.size();)
+                {
+                    const auto count = static_cast<jsize>(std::min(body.size() - offset, capacity));
+                    env->SetByteArrayRegion(buffer, 0, count, reinterpret_cast<const jbyte*>(body.data() + offset));
+                    ThrowIfJavaFaulted(env);
+                    env->CallVoidMethod(stream, writeMethod, buffer, 0, count);
+                    ThrowIfJavaFaulted(env);
+                    offset += static_cast<size_t>(count);
+                }
+            }
+            env->CallVoidMethod(stream, closeMethod);
+            ThrowIfJavaFaulted(env);
+        }
+
         template<typename T> void LoadAsset(AAssetManager* assetManager, const char* url, T& data)
         {
             AAsset* asset = AAssetManager_open(assetManager, url, AASSET_MODE_UNKNOWN);
@@ -115,9 +158,7 @@ namespace UrlLib
                             connection.SetRequestProperty("Content-Length", std::to_string(numBytes));
 
                             OutputStream outputStream{connection.GetOutputStream()};
-                            OutputStreamWriter writer{outputStream};
-                            writer.Write(m_requestBody);
-                            writer.Close();
+                            WriteRequestBody(outputStream, m_requestBody);
                         }
 
                         connection.Connect();

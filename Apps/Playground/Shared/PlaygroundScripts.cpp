@@ -51,6 +51,10 @@ namespace Playground
             {
                 js.Set("captureFrame", Napi::Number::New(env, *options.CaptureFrame));
             }
+            if (options.ReadinessTimeoutSeconds.has_value())
+            {
+                js.Set("readinessTimeoutSeconds", Napi::Number::New(env, *options.ReadinessTimeoutSeconds));
+            }
 
             auto filters = Napi::Array::New(env, options.TestFilters.size());
             for (uint32_t index = 0; index < options.TestFilters.size(); ++index)
@@ -80,8 +84,10 @@ namespace Playground
         // any polygon scene fails with `ReferenceError: earcut is not defined`.
         runtime.LoadScript("app:///Scripts/earcut.min.js");
         runtime.LoadScript("app:///Scripts/babylon.max.js");
-        // Load addons right after babylon.max.js so addons init sees a fully
-        // constructed BABYLON global.
+#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+        runtime.LoadScript("app:///Scripts/dawn_playground.js");
+#endif
+        // Load addons after the core/bootstrap so BABYLON is fully constructed.
         runtime.LoadScript("app:///Scripts/babylonjs.addons.js");
         runtime.LoadScript("app:///Scripts/babylonjs.loaders.js");
         runtime.LoadScript("app:///Scripts/babylonjs.materials.js");

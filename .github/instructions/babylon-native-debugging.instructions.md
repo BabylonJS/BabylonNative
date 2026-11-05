@@ -145,6 +145,9 @@ per flag** (intentional design -- long-name aliases were removed).
                             is to launch via `renderdoccmd capture -w` or
                             `rdc capture --trigger -w`, both of which inject
                             the paired DLL before main.
+    --readiness-timeout=SECONDS
+                            Fail a test whose scene is not ready within
+                            SECONDS (default 1200).
 -t, --test=PATTERN          Run tests whose title contains PATTERN (substring,
                             case-insensitive). Repeatable; multiple = OR.
     --test-index=LIST       Run only the listed indices.

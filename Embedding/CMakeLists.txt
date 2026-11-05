@@ -69,6 +69,11 @@ if(TARGET Scheduling)
     target_link_libraries(Embedding PRIVATE Scheduling)
 endif()
 
+if(TARGET Compression)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_COMPRESSION=1)
+    target_link_libraries(Embedding PRIVATE Compression)
+endif()
+
 if(TARGET URL)
     target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_URL=1)
     target_link_libraries(Embedding PRIVATE URL)
@@ -81,9 +86,19 @@ endif()
 
 # ----- Conditionally-included plugins -----
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
+# NativeDawn takes the rendering role in Embedding when both backends are built.
+# NativeEngine remains available to standalone tools and its unit tests.
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE AND NOT BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
     target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEENGINE=1)
     target_link_libraries(Embedding PRIVATE NativeEngine)
+endif()
+
+# NativeDawn (experimental WebGPU-via-Dawn backend). When enabled, the
+# View/Runtime route the graphics-device lifecycle to the NativeDawn plugin
+# instead of the bgfx Graphics::Device.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    target_compile_definitions(Embedding PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEDAWN=1)
+    target_link_libraries(Embedding PRIVATE NativeDawn)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)

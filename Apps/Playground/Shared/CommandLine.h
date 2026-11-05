@@ -29,6 +29,9 @@ struct PlaygroundOptions
     // `rdc capture --trigger`); bgfx auto-adopts an already-loaded DLL.
     std::optional<int> CaptureFrame;
 
+    // Overrides the runner's per-test initial readiness timeout, in seconds.
+    std::optional<int> ReadinessTimeoutSeconds;
+
     std::vector<std::string> TestFilters;
     std::vector<int> TestIndices;
 

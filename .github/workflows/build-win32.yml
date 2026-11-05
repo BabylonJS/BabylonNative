@@ -18,6 +18,10 @@ on:
         required: false
         type: boolean
         default: false
+      nativedawn:
+        required: false
+        type: boolean
+        default: false
 
 # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
 # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
@@ -63,6 +67,15 @@ jobs:
           echo "js_define=$JS_DEFINE" >> "$GITHUB_OUTPUT"
           echo "solution_name=Win32_${{ inputs.platform }}${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "sanitizer_flag=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}" >> "$GITHUB_OUTPUT"
+          # NativeDawn drives the Playground while NativeEngine remains built for
+          # its standalone tools and unit tests.
+          if [ "${{ inputs.nativedawn }}" = "true" ]; then
+            echo "dawn_flag=-D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON" >> "$GITHUB_OUTPUT"
+            echo "build_target=--target Playground UnitTests JsRuntimeHostUnitTests UrlLibTests" >> "$GITHUB_OUTPUT"
+          else
+            echo "dawn_flag=" >> "$GITHUB_OUTPUT"
+            echo "build_target=" >> "$GITHUB_OUTPUT"
+          fi
 
       # MSBuild uses ccache through a copy of ccache.exe named cl.exe (see Generate solution). Invoked
       # under that name, ccache runs the real cl.exe from the PATH that MSBuild sets up.
@@ -108,6 +121,7 @@ jobs:
             -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded ^
             -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON ^
             ${{ steps.vars.outputs.js_define }} ^
+            ${{ steps.vars.outputs.dawn_flag }} ^
             -D BX_CONFIG_DEBUG=ON ^
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
             -D BABYLON_DEBUG_TRACE=ON ^
@@ -119,7 +133,7 @@ jobs:
         shell: cmd
         run: |
           ccache --zero-stats
-          cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo -- /m || exit /b 1
+          cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo ${{ steps.vars.outputs.build_target }} -- /m || exit /b 1
           ccache --show-stats
 
       - name: Save ccache
@@ -161,14 +175,89 @@ jobs:
       # Visual validation runs only on V8 so results don't depend on engine-specific
       # quirks of Chakra/JSI/Hermes/QuickJS; the other engines still run UnitTests.
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground app:///Scripts/validation_native.js
 
+      # ── Babylon-Lite bundle smoke test (NativeDawn / WebGPU only) ──────────
+      # Clone Babylon-Lite, build its library, bundle the first scene (scene1 —
+      # BoomBox PBR) into a single self-contained IIFE, then run it through the
+      # Playground on the WebGPU/Dawn backend and pixel-compare the render
+      # against a committed reference (Apps/Playground/ReferenceImages/
+      # lite-scene1.png). This validates that a real Babylon-Lite consumer bundle
+      # renders correctly on NativeDawn. Runs BEFORE the visualization tests.
+      - name: Setup pnpm (NativeDawn Lite bundle)
+        if: ${{ inputs.nativedawn }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - name: Setup Node (NativeDawn Lite bundle)
+        if: ${{ inputs.nativedawn }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build Babylon-Lite scene1 bundle
+        if: ${{ inputs.nativedawn }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $lite = Join-Path $env:RUNNER_TEMP "babylon-lite"
+          git clone --depth 1 https://github.com/BabylonJS/Babylon-Lite.git $lite
+          Set-Location $lite
+          pnpm install --no-frozen-lockfile
+          pnpm build:lib
+          $dest = Join-Path $env:GITHUB_WORKSPACE "build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Scripts"
+          $script = Join-Path $env:GITHUB_WORKSPACE ".github/scripts/bundle-lite-scene.mjs"
+          node $script $lite scene1 (Join-Path $dest "scene1.playground.js")
+          # brdf-lut.png is fetched at runtime as "/brdf-lut.png" -> redirected
+          # to app:///Scripts/brdf-lut.png by the Lite test harness.
+          Copy-Item (Join-Path $lite "lab/public/brdf-lut.png") (Join-Path $dest "brdf-lut.png") -Force
+          Get-Item (Join-Path $dest "scene1.playground.js") | Select-Object FullName, Length
+
+      - name: Babylon-Lite Bundle Test (NativeDawn)
+        if: ${{ inputs.nativedawn }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground --headless app:///Scripts/lite_native.js
+
+      # NativeDawn (WebGPU) validation. CI uses the Microsoft software adapter,
+      # whose raster output differs substantially from the hardware-generated
+      # references. Generate result images instead of comparing across adapters;
+      # this still gates scene loading/rendering failures for the full WebGPU
+      # subset. The preceding Babylon-Lite test retains WARP-specific pixel
+      # validation. --headless routes all logs to stdout for CI diagnostics.
+      # The default 20-minute readiness wait is sized for the ASAN job; scenes
+      # that never become ready on WARP would otherwise exhaust the job timeout.
+      - name: Validation Tests
+        if: ${{ inputs.nativedawn }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground --headless --generate-references --readiness-timeout=300 app:///Scripts/validation_native.js
+
+      - name: Upload Rendered Pictures (NativeDawn)
+        if: ${{ inputs.nativedawn && !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-rendered-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Results
+          if-no-files-found: ignore
+
+      - name: Upload Error Pictures (NativeDawn)
+        if: ${{ inputs.nativedawn && failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-error-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Errors
+          if-no-files-found: ignore
+
       - name: Upload Rendered Pictures
-        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !cancelled() }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !inputs.nativedawn && !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
@@ -198,7 +287,7 @@ jobs:
           UnitTests
 
       - name: Module Load Test
-        if: ${{ !inputs.enable-sanitizers }}
+        if: ${{ !inputs.enable-sanitizers && !inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo

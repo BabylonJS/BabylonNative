@@ -46,6 +46,71 @@ Platform support: the Apple (`NSURLSession`) and Linux (`libcurl`) backends popu
 these accessors today; the Windows and Android backends currently always report
 empty/zero (contributions welcome — the plumbing in `UrlRequest_Base.h` is shared).
 
+## In-memory data URLs
+
+`UrlRequest` provides a built-in, platform-independent `data:` GET decoder through the
+same shared scheme-resolution path as registered resolvers. No network transport or
+consumer-specific image/fetch wrapper is involved. The supported contract is:
+
+* `data:[type/subtype[;name=value...]][;base64],payload`, with a required comma.
+  An omitted type defaults to `text/plain;charset=US-ASCII`; the `;charset=...`
+  shorthand uses `text/plain`. Explicit MIME types use ASCII HTTP token syntax;
+  parameter values are nonempty tokens or ASCII quoted strings with backslash escapes.
+  Type/subtype and parameter names are lowercased; parameter values are retained.
+  Invalid or unsupported MIME syntax is rejected, not replaced by a guessed MIME type.
+* Scheme and the final `;base64` marker are ASCII case-insensitive. Surrounding ASCII
+  whitespace in the metadata, and spaces between that semicolon and `base64`, are allowed.
+  The payload is percent-decoded to **bytes** before optional base64 decoding. Literal
+  `+` is preserved; incomplete or non-hex percent escapes remain literal, as in URL percent
+  decoding. Raw non-ASCII payload bytes are preserved; callers should supply UTF-8 or
+  percent-encoded bytes, not expect locale-dependent URI unescaping.
+* Base64 uses the standard alphabet and forgiving-base64 rules: ASCII whitespace is ignored,
+  padding may be omitted, and unused trailing bits are ignored. Bad alphabet characters,
+  misplaced/excess padding, and lengths congruent to one modulo four are errors. Base64url
+  (`-`/`_`) is not supported.
+* A literal `?` belongs to the payload (or to the metadata if before the comma), not a
+  separate query to discard. A literal `#` starts a fragment, which is excluded from decoding
+  and `ResponseUrl()`. Encode these bytes as `%3F`/`%23` to include them literally.
+* Success is status 200 / `"OK"`, with a `content-type` header and the decoded body, including
+  empty bodies. `Buffer` returns exact bytes; `String` also preserves those bytes (including
+  NUL), without charset transcoding, matching the shared resolver contract.
+* Decoding is synchronous at `SendAsync()`, once per `Open()`. Malformed/unsupported input
+  completes normally with status 0, empty body/headers, and a diagnostic `DataUrlInvalid`
+  error. Non-GET requests similarly report `DataUrlUnsupportedMethod`; other decoder
+  exceptions report `DataUrlFailed`. No invalid payload is passed to the platform transport.
+  `Abort()` before sending prevents shared resolution and returns an operation-cancelled task,
+  as for cancellation-guarded Windows continuations. There is no asynchronous decoding to
+  interrupt; aborting an already-completed request does not erase its response. As with the
+  existing transport cancellation source, reopening an aborted request does not reset cancellation.
+
+This is a bounded byte/MIME transport, not an implementation of all Fetch behavior: it
+does not implement browser URL canonicalization, permissive MIME-parser recovery,
+charset conversion, streaming, CORS, or a payload-size policy. Supply a serialized URL
+without surrounding control characters. A resolver explicitly registered for `"data"`
+overrides the built-in decoder; unregistering it restores the built-in behavior.
+Base64 decoding reuses the pinned `base-n` helper, with validation before invoking its
+otherwise permissive decoder.
+
+On Windows, a successful HTTP response without a Content-Type header leaves that header
+absent rather than dereferencing the optional WinRT value or inventing a MIME type.
+Existing Windows HTTP response behavior is otherwise unchanged: successful 2xx responses normalize
+to 200 after body reading; non-success responses retain their wire status and do not read
+their body or publish response headers.
+
+Windows POST matches Content-Type case-insensitively and sets it on the content headers,
+not the request headers. Bodies are sent byte-for-byte without UTF-8 transcoding or an
+automatically added charset. Omitted Content-Type stays absent; supplied MIME parameters
+are preserved, and an invalid supplied MIME type reports a transport error rather than success.
+
+Apple POST also preserves body bytes, using length-aware NSData rather than a
+NUL-terminated UTF-8 string. The shared POST wire tests run on Windows and Apple;
+Linux explicitly skips them because its backend does not implement POST yet.
+
+Android POST writes raw byte-array chunks to the connection's output stream instead of
+converting the body to a Java string. This preserves embedded NULs and UTF-8 bytes while
+keeping Content-Length consistent with the supplied body. Android coverage comes from
+JsRuntimeHost's Fetch/XHR HTTP transport tests.
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](../../CONTRIBUTING.md) for details on our code of conduct, and
