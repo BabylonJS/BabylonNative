@@ -921,6 +921,60 @@ TEST(NativeEngineViewport, MatchesClipSpaceRegion)
 #endif
 }
 
+TEST(NativeEngineClear, PreservesUnselectedRenderTargetAttachments)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        "precision highp float; void main() { gl_FragColor = vec4(1.0); }", false, R"(
+            globalThis.__prepare = async function () {
+                for (var restartPass of [false, true]) {
+                    for (var scissor of [false, true]) {
+                        var target = engine.createMultipleRenderTarget({ width: 2, height: 2 }, {
+                            textureCount: 2, generateDepthBuffer: false, generateMipMaps: false
+                        });
+                        engine.bindFramebuffer(target);
+                        engine.bindAttachments(engine.buildTextureLayout([true, true]));
+                        engine.clear(new BABYLON.Color4(64 / 255, 128 / 255, 192 / 255, 1), true, false, false);
+                        if (restartPass) {
+                            engine.restoreDefaultFramebuffer();
+                            engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, false, false);
+                            engine.bindFramebuffer(target);
+                        }
+                        if (scissor) engine.enableScissor(0, 0, 1, 2);
+                        engine.bindAttachments(engine.buildTextureLayout([false, true]));
+                        engine.clear(new BABYLON.Color4(32 / 255, 64 / 255, 96 / 255, 1), true, false, false);
+                        engine.bindAttachments(engine.buildTextureLayout([false, false]));
+                        engine.clear(new BABYLON.Color4(1, 0, 1, 1), true, false, false);
+                        if (scissor) engine.disableScissor();
+                        engine.restoreDefaultFramebuffer();
+                        for (var attachment = 0; attachment < 2; ++attachment) {
+                            var actual = await engine._readTexturePixels(target.textures[attachment], 2, 2);
+                            if (actual.length !== 16) throw new Error("Incorrect MRT readback size");
+                            for (var pixel = 0; pixel < 4; ++pixel) {
+                                var expected = attachment === 1 && (!scissor || pixel % 2 === 0)
+                                    ? [32, 64, 96, 255] : [64, 128, 192, 255];
+                                for (var channel = 0; channel < 4; ++channel) {
+                                    if (Math.abs(actual[pixel * 4 + channel] - expected[channel]) > 1) {
+                                        throw new Error("Masked clear changed attachment " + attachment +
+                                            ", restartPass=" + restartPass + ", scissor=" + scissor +
+                                            ", pixel=" + pixel + ", channel=" + channel +
+                                            ": expected " + expected[channel] + ", got " + actual[pixel * 4 + channel]);
+                                    }
+                                }
+                            }
+                        }
+                        target.dispose();
+                    }
+                }
+            };
+        )");
+    EXPECT_EQ(pixels, (std::vector<uint8_t>{255, 255, 255, 255}));
+#endif
+}
+
 TEST(NativeEngineClear, PreservesTextureBindings)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
