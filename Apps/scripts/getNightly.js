@@ -46,19 +46,19 @@ function download(filename, url) {
 }
 
 var files = [
-  ['node_modules/babylonjs/babylon.max.js', 'https://preview.babylonjs.com/babylon.es5.js'],
+  ['node_modules/babylonjs/babylon.es5.js', 'https://preview.babylonjs.com/babylon.es5.js'],
   ['node_modules/babylonjs/babylon.max.js.map', 'https://preview.babylonjs.com/babylon.max.js.map'],
-  ['node_modules/babylonjs-addons/babylonjs.addons.js', 'https://preview.babylonjs.com/addons/babylonjs.addons.es5.js'],
+  ['node_modules/babylonjs-addons/babylonjs.addons.es5.js', 'https://preview.babylonjs.com/addons/babylonjs.addons.es5.js'],
   ['node_modules/babylonjs-addons/babylonjs.addons.js.map', 'https://preview.babylonjs.com/addons/babylonjs.addons.js.map'],
-  ['node_modules/babylonjs-materials/babylonjs.materials.js', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.es5.js'],
+  ['node_modules/babylonjs-materials/babylonjs.materials.es5.js', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.es5.js'],
   ['node_modules/babylonjs-materials/babylonjs.materials.js.map', 'https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.js.map'],
-  ['node_modules/babylonjs-loaders/babylonjs.loaders.js', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.es5.js'],
+  ['node_modules/babylonjs-loaders/babylonjs.loaders.es5.js', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.es5.js'],
   ['node_modules/babylonjs-loaders/babylonjs.loaders.js.map', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.js.map'],
-  ['node_modules/babylonjs-gui/babylon.gui.js', 'https://preview.babylonjs.com/gui/babylon.gui.es5.js'],
+  ['node_modules/babylonjs-gui/babylon.gui.es5.js', 'https://preview.babylonjs.com/gui/babylon.gui.es5.js'],
   ['node_modules/babylonjs-gui/babylon.gui.js.map', 'https://preview.babylonjs.com/gui/babylon.gui.js.map'],
-  ['node_modules/babylonjs-serializers/babylonjs.serializers.js', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.es5.js'],
+  ['node_modules/babylonjs-serializers/babylonjs.serializers.es5.js', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.es5.js'],
   ['node_modules/babylonjs-serializers/babylonjs.serializers.js.map', 'https://preview.babylonjs.com/serializers/babylonjs.serializers.js.map'],
-  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.es5.js'],
+  ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.es5.js', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.es5.js'],
   ['node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js.map', 'https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.js.map'],
 ];
 

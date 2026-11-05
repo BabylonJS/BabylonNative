@@ -416,7 +416,7 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.LoadScript("app:///Assets/tests.shaderCompilation.comprehensiveGLSL.js");
     loader.Dispatch([&scriptIsDone](Napi::Env) {
         scriptIsDone.set_value();
@@ -458,7 +458,7 @@ TEST(ShaderCompilation, ExistingVec4UniformArrayIsNotReshaped)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.Eval(R"(
         const engine = new BABYLON.NativeEngine();
         engine.getCaps().parallelShaderCompile = null;
@@ -512,7 +512,7 @@ TEST(ShaderCompilation, ReturnedUniformIsShapeConverted)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.Eval(R"(
         const engine = new BABYLON.NativeEngine();
         engine.getCaps().parallelShaderCompile = null;
@@ -564,7 +564,7 @@ TEST(ShaderCompilation, DisjointStageSamplersCompile)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.Eval(R"(
         const engine = new BABYLON.NativeEngine();
         engine.getCaps().parallelShaderCompile = null;
@@ -617,7 +617,7 @@ TEST(ShaderCompilation, PartiallySharedStageSamplersCompile)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.Eval(R"(
         const engine = new BABYLON.NativeEngine();
         engine.getCaps().parallelShaderCompile = null;
@@ -741,7 +741,7 @@ namespace
         )";
 
         Babylon::ScriptLoader loader{runtime};
-        loader.LoadScript("app:///Assets/babylon.max.js");
+        loader.LoadScript("app:///Assets/babylon.es5.js");
         loader.Eval(script, "vulkan_sampler_boundary_test.js");
 
         std::promise<SamplerCompilationResult> done{};

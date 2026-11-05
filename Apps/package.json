@@ -6,8 +6,7 @@
     "UnitTests/JavaScript"
   ],
   "scripts": {
-    "getNightly": "node scripts/getNightly.js",
-    "postinstall": "node scripts/copyEs5Bundles.js"
+    "getNightly": "node scripts/getNightly.js"
   },
   "dependencies": {
     "@babylonjs/havok": "1.3.12",

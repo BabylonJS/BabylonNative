@@ -219,8 +219,8 @@ TEST(JavaScript, All)
 
     Babylon::ScriptLoader loader{runtime};
     loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
-    loader.LoadScript("app:///Assets/babylon.max.js");
-    loader.LoadScript("app:///Assets/babylonjs.materials.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
+    loader.LoadScript("app:///Assets/babylonjs.materials.es5.js");
     loader.LoadScript("app:///Assets/tests.javaScript.all.js");
 
     // Pump frames while JS tests run — tests use RAF internally and

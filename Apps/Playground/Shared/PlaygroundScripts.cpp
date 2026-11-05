@@ -79,17 +79,17 @@ namespace Playground
         // PolygonMeshBuilder resolves `earcut` as a global at triangulation time, so without this
         // any polygon scene fails with `ReferenceError: earcut is not defined`.
         runtime.LoadScript("app:///Scripts/earcut.min.js");
-        runtime.LoadScript("app:///Scripts/babylon.max.js");
-        // Load addons right after babylon.max.js so addons init sees a fully
+        runtime.LoadScript("app:///Scripts/babylon.es5.js");
+        // Load addons right after babylon.es5.js so addons init sees a fully
         // constructed BABYLON global.
-        runtime.LoadScript("app:///Scripts/babylonjs.addons.js");
-        runtime.LoadScript("app:///Scripts/babylonjs.loaders.js");
-        runtime.LoadScript("app:///Scripts/babylonjs.materials.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.addons.es5.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.loaders.es5.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.materials.es5.js");
         // Procedural-textures library (Fire/Wood/Marble/... ProceduralTexture).
-        runtime.LoadScript("app:///Scripts/babylonjs.proceduralTextures.js");
-        runtime.LoadScript("app:///Scripts/babylon.gui.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.proceduralTextures.es5.js");
+        runtime.LoadScript("app:///Scripts/babylon.gui.es5.js");
         runtime.LoadScript("app:///Scripts/meshwriter.min.js");
-        runtime.LoadScript("app:///Scripts/babylonjs.serializers.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.serializers.es5.js");
     }
 
     std::function<void(Babylon::Embedding::LogLevel, std::string_view)>

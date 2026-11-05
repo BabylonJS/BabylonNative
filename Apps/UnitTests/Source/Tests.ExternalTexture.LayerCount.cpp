@@ -68,7 +68,7 @@ TEST(ExternalTexture, WrapNativeTextureLayerCount)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.LoadScript("app:///Assets/tests.externalTexture.layerCount.js");
 
     // Creates a native texture with the requested array size, wraps it via the synchronous

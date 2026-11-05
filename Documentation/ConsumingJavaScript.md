@@ -8,16 +8,16 @@ Loading the JavaScript files into the engine is completely up to the consuming a
 
 For simplicity we manually load all the required Babylon.js UMD modules in the example Playground application in this repo. The benefit to this approach is that changes can be made instantaneously in the application script (in this case ```YOUR_SCRIPT.js```) and the application can just be re-launched, and everything will work. No bundling process is required. 
 
-The sample apps use the published ES5 bundles for compatibility with Chakra. `npm install` copies each `.es5.js` bundle over the historical filename used by the apps; `npm run getNightly` downloads the preview ES5 bundles under those same names. Neither path transpiles Babylon.js locally.
+The sample apps load the published ECMAScript 5 (ES5) bundles directly for compatibility with Chakra. `npm install` provides the `.es5.js` files, and `npm run getNightly` replaces them with the preview ES5 bundles under the same filenames. Neither path renames or transpiles Babylon.js locally.
 
 ```C++
 Babylon::ScriptLoader loader{*runtime};
 
 // Load JS dependencies
-loader.LoadScript("app:///Scripts/babylon.max.js");
-loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
-loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-loader.LoadScript("app:///Scripts/babylon.gui.js");
+loader.LoadScript("app:///Scripts/babylon.es5.js");
+loader.LoadScript("app:///Scripts/babylonjs.loaders.es5.js");
+loader.LoadScript("app:///Scripts/babylonjs.materials.es5.js");
+loader.LoadScript("app:///Scripts/babylon.gui.es5.js");
 loader.LoadScript("app:///Scripts/meshwriter.min.js");
 
 // Load your script
