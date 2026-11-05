@@ -10,8 +10,10 @@
 #include <arcana/threading/dispatcher.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Texture.h>
 #include <arcana/threading/task_schedulers.h>
 #include <memory>
+#include <optional>
 #include <Foundation/Foundation.h>
 #include <AVFoundation/AVFoundation.h>
 
@@ -236,8 +238,9 @@ namespace Babylon::Plugins
         id<MTLCommandQueue> commandQueue{};
         id<MTLCommandBuffer> currentCommandBuffer{};
         bool isInitialized{false};
-        bool refreshBgfxHandle{true};
-        bgfx::TextureHandle textureHandle{};
+        bool refreshBgfxTexture{true};
+        Graphics::Texture* bgfxTexture{};
+        bgfx::TextureHandle bgfxTextureHandle{bgfx::kInvalidHandle};
 
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
         std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
@@ -416,8 +419,8 @@ namespace Babylon::Plugins
 
             m_impl->isInitialized = true;
         } else {
-            // Always refresh the bgfx handle to point to textureRGBA on re-open.
-            m_impl->refreshBgfxHandle = true;
+            // Always refresh the bgfx texture to point to textureRGBA on re-open.
+            m_impl->refreshBgfxTexture = true;
         }
 
         // Construct the camera texture delegate, which is responsible for handling updates for device orientation and the capture session.
@@ -577,143 +580,150 @@ namespace Babylon::Plugins
         });
     }
 
-    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
+    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(Graphics::Texture& texture)
     {
-        // Hook into AfterRender to copy over the texture, ensuring that the textureHandle has already been initialized by bgfx.
-        // Capture the cancellation token so that the shared pointer is kept alive when arcana checks internally for cancellation.
-        arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), *m_impl->cancellationSource, [this, textureHandle, cancellationSource{m_impl->cancellationSource}] {
-            id<MTLTexture> textureY{};
-            id<MTLTexture> textureCbCr{};
-            int64_t width{0};
-            int64_t height{0};
+        id<MTLTexture> textureY{};
+        id<MTLTexture> textureCbCr{};
+        int64_t width{0};
+        int64_t height{0};
 
-            @synchronized(m_impl->cameraTextureDelegate) {
-                textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
-                textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
+        @synchronized(m_impl->cameraTextureDelegate) {
+            textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
+            textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
 
+            switch (m_impl->cameraTextureDelegate->Orientation)
+            {
+                case VideoOrientation::LandscapeRight:
+                case VideoOrientation::LandscapeLeft:
+                    width = [textureY width];
+                    height = [textureY height];
+                    break;
+                case VideoOrientation::Portrait:
+                case VideoOrientation::PortraitUpsideDown:
+                    // In portrait orientation the camera sensor is rotated 90 degrees so the width and height should be swapped
+                    width = [textureY height];
+                    height = [textureY width];
+                    break;
+            }
+        }
+
+        // Skip processing this frame if width and height are invalid.
+        if (width == 0 || height == 0) {
+            return CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
+        }
+
+        // Check if we've been handed a different texture or if its bgfx handle was recreated.
+        if (m_impl->bgfxTexture != &texture || m_impl->bgfxTextureHandle.idx != texture.Handle().idx)
+        {
+            m_impl->refreshBgfxTexture = true;
+        }
+
+        // Recreate the output texture when the camera dimensions change.
+        if (m_impl->textureRGBA == nil || m_impl->cameraDimensions.width != width || m_impl->cameraDimensions.height != height)
+        {
+            MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
+            textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+            m_impl->textureRGBA = [m_impl->metalDevice newTextureWithDescriptor:textureDescriptor];
+            m_impl->cameraDimensions.width = static_cast<uint32_t>(width);
+            m_impl->cameraDimensions.height = static_cast<uint32_t>(height);
+            m_impl->refreshBgfxTexture = true;
+        }
+
+        if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil)
+        {
+            m_impl->currentCommandBuffer = [m_impl->commandQueue commandBuffer];
+            m_impl->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
+            MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+
+            if (renderPassDescriptor != nil) {
+                // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
+                renderPassDescriptor.colorAttachments[0].texture = m_impl->textureRGBA;
+                renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+                // Create and end the render encoder.
+                id<MTLRenderCommandEncoder> renderEncoder = [m_impl->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                renderEncoder.label = @"NativeCameraEncoder";
+
+                // Set the shader pipeline.
+                [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
+
+                // Set the vertex & UV data based on current orientation
                 switch (m_impl->cameraTextureDelegate->Orientation)
                 {
-                    case VideoOrientation::LandscapeRight:
                     case VideoOrientation::LandscapeLeft:
-                        width = [textureY width];
-                        height = [textureY height];
+                        if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
+                        {
+                            // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
+                            [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
+                        }
+                        else
+                        {
+                            [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
+                        }
                         break;
                     case VideoOrientation::Portrait:
+                        [renderEncoder setVertexBytes:vertices_portrait length:sizeof(vertices_portrait) atIndex:0];
+                        break;
                     case VideoOrientation::PortraitUpsideDown:
-                        // In portrait orientation the camera sensor is rotated 90 degrees so the width and height should be swapped
-                        width = [textureY height];
-                        height = [textureY width];
+                        [renderEncoder setVertexBytes:vertices_portrait_upsideddown length:sizeof(vertices_portrait_upsideddown) atIndex:0];
+                        break;
+                    case VideoOrientation::LandscapeRight:
+                        if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
+                        {
+                            // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
+                            [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
+                        }
+                        else
+                        {
+                            [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
+                        }
                         break;
                 }
-            }
 
-            // Skip processing this frame if width and height are invalid.
-            if (width == 0 || height == 0) {
-                return;
-            }
+                // Set the textures.
+                [renderEncoder setFragmentTexture:textureY atIndex:1];
+                [renderEncoder setFragmentTexture:textureCbCr atIndex:2];
 
-            // Check if the we've been handed a new texture handle and if so refresh our override
-            if (m_impl->textureHandle.idx != textureHandle.idx)
-            {
-                m_impl->refreshBgfxHandle = true;
-                m_impl->textureHandle = textureHandle;
-            }
+                // Draw the triangles.
+                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
-            // Recreate the output texture when the camera dimensions change.
-            if (m_impl->textureRGBA == nil || m_impl->cameraDimensions.width != width || m_impl->cameraDimensions.height != height)
-            {
-                MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
-                textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-                m_impl->textureRGBA = [m_impl->metalDevice newTextureWithDescriptor:textureDescriptor];
-                m_impl->cameraDimensions.width = static_cast<uint32_t>(width);
-                m_impl->cameraDimensions.height = static_cast<uint32_t>(height);
-                // Setting up the bgfx texture may fail if the textureHandle hasn't been initialized in a bgfx::frame call yet, if so try agin on
-                // the next frame to override it.
-                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
-            }
-            else if (m_impl->refreshBgfxHandle)
-            {
-                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
-            }
+                [renderEncoder endEncoding];
 
-            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil && !m_impl->refreshBgfxHandle)
-            {
-                m_impl->currentCommandBuffer = [m_impl->commandQueue commandBuffer];
-                m_impl->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
-                MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-
-                if (renderPassDescriptor != nil) {
-                    // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
-                    renderPassDescriptor.colorAttachments[0].texture = m_impl->textureRGBA;
-                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-                    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
-
-                    // Create and end the render encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [m_impl->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"NativeCameraEncoder";
-
-                    // Set the shader pipeline.
-                    [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
-
-                    // Set the vertex & UV data based on current orientation
-                    switch (m_impl->cameraTextureDelegate->Orientation)
-                    {
-                        case VideoOrientation::LandscapeLeft:
-                            if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
-                            {
-                                // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
-                                [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
-                            }
-                            else
-                            {
-                                [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
-                            }
-                            break;
-                        case VideoOrientation::Portrait:
-                            [renderEncoder setVertexBytes:vertices_portrait length:sizeof(vertices_portrait) atIndex:0];
-                            break;
-                        case VideoOrientation::PortraitUpsideDown:
-                            [renderEncoder setVertexBytes:vertices_portrait_upsideddown length:sizeof(vertices_portrait_upsideddown) atIndex:0];
-                            break;
-                        case VideoOrientation::LandscapeRight:
-                            if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
-                            {
-                                // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
-                                [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
-                            }
-                            else
-                            {
-                                [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
-                            }
-                            break;
+                [m_impl->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                    if (textureY != nil) {
+                        [textureY setPurgeableState:MTLPurgeableStateEmpty];
                     }
 
-                    // Set the textures.
-                    [renderEncoder setFragmentTexture:textureY atIndex:1];
-                    [renderEncoder setFragmentTexture:textureCbCr atIndex:2];
-
-                    // Draw the triangles.
-                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
-
-                    [renderEncoder endEncoding];
-
-                    [m_impl->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
-                        if (textureY != nil) {
-                            [textureY setPurgeableState:MTLPurgeableStateEmpty];
-                        }
-
-                        if (textureCbCr != nil) {
-                            [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
-                        }
-                    }];
-                }
-
-                // Finalize rendering here & push the command buffer to the GPU.
-                [m_impl->currentCommandBuffer commit];
-                
-                [m_impl->currentCommandBuffer waitUntilCompleted];
+                    if (textureCbCr != nil) {
+                        [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                }];
             }
-        });
+
+            // Finalize rendering here & push the command buffer to the GPU.
+            [m_impl->currentCommandBuffer commit];
+
+            [m_impl->currentCommandBuffer waitUntilCompleted];
+        }
+
+        // Import on the calling thread while the Texture wrapper is still owned by the caller.
+        if (m_impl->refreshBgfxTexture && m_impl->textureRGBA != nil)
+        {
+            texture.Create2D(
+                static_cast<uint16_t>(width),
+                static_cast<uint16_t>(height),
+                texture.HasMips(),
+                texture.NumLayers(),
+                texture.Format(),
+                texture.Flags(),
+                reinterpret_cast<uintptr_t>(m_impl->textureRGBA),
+                std::shared_ptr<void>{(__bridge_retained void*)m_impl->textureRGBA, [](void* resource) { CFRelease(resource); }});
+            m_impl->bgfxTexture = &texture;
+            m_impl->bgfxTextureHandle = texture.Handle();
+            m_impl->refreshBgfxTexture = false;
+        }
+
         // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
         // of the video should be swapped
         // NOTE: This code returns (width, height) independently of the VideoOrientation. As no bug as been reported, this code
@@ -825,10 +835,10 @@ namespace Babylon::Plugins
             // to a deadlock where Babylon is waiting for the frame to finish render on the main thread and AVCaptureSession::stopRunning is waiting
             // for the main thread to free up while blocking the current frame from rendering.
             //
-            // Capturing textureRGBA, textureDelegate, and textureCache is done here because it's used in bgfx::overrideInternal but due to ARC being enabled in this project the lifetime of the texture
-            // needs to be maintained until after the render pass. Otherwise bgfx will try to access a destroyed texture handle during the render pass.
+            // Keep capture resources alive until the session stops. Imported output textures
+            // are retained separately by their Graphics::Texture wrappers.
             arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), arcana::cancellation::none(),
-                [avCaptureSession = m_impl->avCaptureSession, textureRGBA = m_impl->textureRGBA, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
+                [avCaptureSession = m_impl->avCaptureSession, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
             {
                 [avCaptureSession stopRunning];
 

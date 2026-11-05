@@ -1,11 +1,25 @@
 #include "VertexArray.h"
+#include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <string>
+#include <tuple>
 #include "Babylon/Graphics/BgfxShaderInfo.h"
 #include "Babylon/Graphics/DeviceContext.h"
 
 namespace Babylon
 {
+    namespace
+    {
+        constexpr uint32_t MAXIMUM_VERTEX_ATTRIBUTE_COMPONENTS = 4;
+    }
+
+    VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
+        : m_deviceContext{deviceContext}
+        , m_deviceId{m_deviceContext.GetDeviceId()}
+    {
+    }
+
     VertexArray::~VertexArray()
     {
         Dispose();
@@ -19,8 +33,32 @@ namespace Babylon
         }
 
         m_indexBuffer = nullptr;
+        if (m_deviceId == m_deviceContext.GetDeviceId())
+        {
+            for (const auto& pair : m_vertexBufferRecords)
+            {
+                const auto& record{pair.second};
+                if (bgfx::isValid(record.LayoutHandle))
+                {
+                    bgfx::destroy(record.LayoutHandle);
+                }
+            }
+        }
         m_vertexBufferRecords.clear();
         m_vertexBufferInstances.clear();
+        m_transformFeedbackInputs.clear();
+        if (m_deviceId == m_deviceContext.GetDeviceId())
+        {
+            for (const auto& [key, buffer] : m_unindexedExpandedBuffers)
+            {
+                static_cast<void>(key);
+                if (bgfx::isValid(buffer.Handle))
+                {
+                    bgfx::destroy(buffer.Handle);
+                }
+            }
+        }
+        m_unindexedExpandedBuffers.clear();
 
         m_disposed = true;
     }
@@ -33,7 +71,58 @@ namespace Babylon
 
     void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized, uint32_t divisor)
     {
+        if (m_disposed)
+        {
+            throw std::runtime_error{"Cannot record a vertex buffer in a disposed vertex array"};
+        }
+        if (m_deviceId != m_deviceContext.GetDeviceId())
+        {
+            throw std::runtime_error{"Cannot record a vertex buffer in a stale vertex array after device loss"};
+        }
+
         auto attribType = static_cast<bgfx::AttribType::Enum>(type);
+
+        if (location >= Graphics::TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE)
+        {
+            Graphics::TransformFeedbackInputType inputType{};
+            uint32_t componentSize{};
+            switch (attribType)
+            {
+                case bgfx::AttribType::Float:
+                    inputType = Graphics::TransformFeedbackInputType::Float;
+                    componentSize = sizeof(float);
+                    break;
+                case bgfx::AttribType::Int8:
+                    inputType = Graphics::TransformFeedbackInputType::Int8;
+                    componentSize = sizeof(int8_t);
+                    break;
+                case bgfx::AttribType::Uint8:
+                    inputType = Graphics::TransformFeedbackInputType::Uint8;
+                    componentSize = sizeof(uint8_t);
+                    break;
+                case bgfx::AttribType::Int16:
+                    inputType = Graphics::TransformFeedbackInputType::Int16;
+                    componentSize = sizeof(int16_t);
+                    break;
+                case bgfx::AttribType::Uint16:
+                    inputType = Graphics::TransformFeedbackInputType::Uint16;
+                    componentSize = sizeof(uint16_t);
+                    break;
+                default:
+                    throw std::runtime_error{"Unsupported transform feedback vertex input type"};
+            }
+            if (divisor != 0)
+            {
+                throw std::runtime_error{"Transform feedback vertex inputs cannot be instanced"};
+            }
+            if (byteOffset % componentSize != 0 || byteStride % componentSize != 0 || numElements == 0 || numElements > MAXIMUM_VERTEX_ATTRIBUTE_COMPONENTS)
+            {
+                throw std::runtime_error{"Transform feedback vertex inputs must be aligned to their component size"};
+            }
+            m_transformFeedbackInputs[location - Graphics::TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE] = {
+                vertexBuffer, byteOffset, byteStride != 0 ? byteStride : numElements * componentSize, numElements, inputType, normalized};
+            return;
+        }
 
         if (divisor == 1)
         {
@@ -42,21 +131,10 @@ namespace Babylon
                 throw std::runtime_error{"Unsupported vertex buffer attribute type or normalized flag"};
             }
 
-            // Check if instancing is supported.
             const bgfx::Caps* caps = bgfx::getCaps();
-            const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & caps->supported);
-            if (!instancingSupported)
-            {
-                throw std::runtime_error{"Instancing is not supported"};
-            }
 
-            // Use the runtime cap, not MAX_INSTANCE_DATA_SLOT_COUNT: backends clamp maxInstanceData
-            // to the device's maxVertexAttributes during init, so the compile-time value is a
-            // ceiling a device need not honour. The constant stays for the shader compiler's
-            // static_asserts, which need a compile-time bound.
-            //
-            // Only a new attribute can overflow -- re-recording an existing one overwrites its
-            // entry -- and the check runs before the insert, so `size() >= max` is the overflow.
+            // Backends may clamp maxInstanceData below the shader compiler's compile-time ceiling.
+            // Only new attributes can overflow because existing entries are overwritten.
             const uint32_t maxInstanceData = caps->limits.maxInstanceData;
             if (m_vertexBufferInstances.find(location) == m_vertexBufferInstances.end() &&
                 m_vertexBufferInstances.size() >= maxInstanceData)
@@ -69,6 +147,10 @@ namespace Babylon
         else
         {
             auto attrib = static_cast<bgfx::Attrib::Enum>(location);
+            if (m_vertexBufferRecords.find(attrib) != m_vertexBufferRecords.end())
+            {
+                throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+            }
             vertexBuffer->Build(byteStride);
 
             bgfx::VertexLayout layout{};
@@ -78,11 +160,38 @@ namespace Babylon
             layout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
             layout.end();
 
-            if (!m_vertexBufferRecords.try_emplace(attrib, vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)).second)
+            const auto layoutHandle = m_deviceContext.CreateVertexLayout(layout);
+            if (!bgfx::isValid(layoutHandle))
             {
-                throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+                throw std::runtime_error{"Failed to create vertex layout (attribute=" + std::to_string(location) +
+                    ", stride=" + std::to_string(byteStride) + ", offset=" + std::to_string(byteOffset) +
+                    "). The maxVertexLayouts limit of " + std::to_string(bgfx::getCaps()->limits.maxVertexLayouts) + " may be exhausted"};
+            }
+            try
+            {
+                if (!m_vertexBufferRecords.try_emplace(attrib, vertexBuffer, byteOffset / byteStride, layoutHandle).second)
+                {
+                    throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+                }
+            }
+            catch (...)
+            {
+                bgfx::destroy(layoutHandle);
+                throw;
             }
         }
+    }
+
+    bool VertexArray::HasStorageInstances() const
+    {
+        for (const auto& pair : m_vertexBufferInstances)
+        {
+            if (pair.second.ResolveStorage() != nullptr)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     void VertexArray::SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
@@ -93,15 +202,83 @@ namespace Babylon
         }
     }
 
+    bool VertexArray::SetExpandedIndexBuffer(bgfx::Encoder* encoder, PrimitiveModeExpansion::Mode mode, uint32_t firstIndex, uint32_t numIndices)
+    {
+        if (m_indexBuffer == nullptr)
+        {
+            throw std::runtime_error{"Indexed primitive expansion requires an index buffer"};
+        }
+
+        return m_indexBuffer->SetExpanded(encoder, mode, firstIndex, numIndices);
+    }
+
+    bool VertexArray::SetExpandedUnindexedBuffer(bgfx::Encoder* encoder, PrimitiveModeExpansion::Mode mode, uint32_t numVertices)
+    {
+        const UnindexedExpansionKey key{mode, numVertices};
+        auto existing = m_unindexedExpandedBuffers.find(key);
+        if (existing == m_unindexedExpandedBuffers.end())
+        {
+            auto expanded = PrimitiveModeExpansion::ExpandUnindexed(numVertices, mode);
+            if (expanded.IndexCount == 0)
+            {
+                return false;
+            }
+
+            const uint16_t flags = expanded.Index32 ? BGFX_BUFFER_INDEX32 : 0;
+            const bgfx::Memory* memory = bgfx::copy(expanded.Bytes.data(), static_cast<uint32_t>(expanded.Bytes.size()));
+            const bgfx::IndexBufferHandle handle = bgfx::createIndexBuffer(memory, flags);
+            if (!bgfx::isValid(handle))
+            {
+                throw std::runtime_error{"Failed to create expanded primitive index buffer"};
+            }
+
+            try
+            {
+                existing = m_unindexedExpandedBuffers.emplace(key, ExpandedBuffer{handle, expanded.IndexCount}).first;
+            }
+            catch (...)
+            {
+                bgfx::destroy(handle);
+                throw;
+            }
+        }
+
+        encoder->setIndexBuffer(existing->second.Handle, 0, existing->second.IndexCount);
+        return true;
+    }
+
+    bool VertexArray::UnindexedExpansionKey::operator<(const UnindexedExpansionKey& other) const
+    {
+        return std::tie(Mode, VertexCount) < std::tie(other.Mode, other.VertexCount);
+    }
+
     void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
-        // Check if instancing is supported.
-        const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
-        if (!m_vertexBufferInstances.empty() && instancingSupported)
+        if (!m_vertexBufferInstances.empty() && !HasStorageInstances())
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
             VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
+        }
+        else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
+        {
+            // D3D input layouts must cover declared built-in instance inputs even when unused.
+            static constexpr uint16_t SLOT_SIZE = 16;
+            const uint32_t count = std::max(instanceCount, 1u);
+            const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * SLOT_SIZE);
+            if (bgfx::getAvailInstanceDataBuffer(count, stride) < count)
+            {
+                throw std::runtime_error{"Transient instance data buffer exhausted"};
+            }
+            bgfx::InstanceDataBuffer instanceDataBuffer{};
+            bgfx::allocInstanceDataBuffer(&instanceDataBuffer, count, stride);
+            std::memset(instanceDataBuffer.data, 0, static_cast<size_t>(stride) * count);
+            encoder->setInstanceDataBuffer(&instanceDataBuffer);
+        }
+        else if (instanceCount > 0 && !HasStorageInstances())
+        {
+            // Without per-instance data, bgfx needs an explicit count for gl_InstanceID-based draws.
+            encoder->setInstanceCount(instanceCount);
         }
 
         uint8_t stream = 0;

@@ -1,0 +1,72 @@
+name: iOS unit tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode
+        run: sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+      - uses: actions/download-artifact@v7
+        with:
+          name: UnitTests-iOS-JsRuntimeHost-JavaScriptCore
+          path: test-artifacts/UnitTests-iOS-JsRuntimeHost-JavaScriptCore
+      - name: Boot iOS simulator
+        id: simulator
+        uses: futureware-tech/simulator-action@v5
+        with:
+          model: 'iPhone 17'
+          os_version: '>=26.0'
+          wait_for_boot: true
+      - name: Ensure per-suite timeout tool
+        run: command -v gtimeout || brew install coreutils
+      - name: Install and run iOS JsRuntimeHost tests
+        env:
+          SIMULATOR: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          shopt -s nullglob
+          artifacts=(test-artifacts/*)
+          [[ ${#artifacts[@]} -eq 1 ]] || { echo "::error::Expected exactly one iOS artifact"; exit 1; }
+          name=UnitTests-iOS-JsRuntimeHost-JavaScriptCore
+          directory="test-artifacts/$name"
+          application=com.jsruntimehost.unittests
+          app=UnitTests.app
+          test -f "$directory/app.tar.gz"
+          tar -xzf "$directory/app.tar.gz" -C "$directory"
+          test -d "$directory/$app"
+          gtimeout 120s xcrun simctl install "$SIMULATOR" "$directory/$app"
+          trap 'code=$?; gtimeout 120s xcrun simctl uninstall "$SIMULATOR" "$application" || code=1; exit "$code"' EXIT
+          status=0
+          gtimeout 20m xcrun simctl launch --console "$SIMULATOR" "$application" \
+            > "test-results/$name.stdout.log" 2> "test-results/$name.stderr.log" || status=$?
+          echo "Simulator launch exit status: $status"
+          cat "test-results/$name.stdout.log"
+          cat "test-results/$name.stderr.log" >&2
+          test "$status" -eq 0
+          tail -n 1 "test-results/$name.stderr.log" | tr -d '\r ' | grep -x 0
+      - name: Collect iOS failure diagnostics
+        if: ${{ failure() && steps.simulator.outputs.udid != '' }}
+        env:
+          SIMULATOR: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -euo pipefail
+          mkdir -p test-results/diagnostics
+          find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 -type f \
+            \( -name 'UnitTests*.ips' -o -name 'UnitTests*.crash' \) \
+            -exec cp {} test-results/diagnostics/ \;
+          gtimeout 120s xcrun simctl spawn "$SIMULATOR" log show --last 10m --style compact \
+            --predicate 'process == "UnitTests" OR eventMessage CONTAINS "com.jsruntimehost.unittests"' \
+            > test-results/diagnostics/simulator.log
+      - name: Upload test results
+        if: ${{ !cancelled() && hashFiles('test-results/**') != '' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: iOS-unit-test-results
+          path: test-results
+          if-no-files-found: error

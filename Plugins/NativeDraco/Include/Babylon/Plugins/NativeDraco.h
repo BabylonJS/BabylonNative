@@ -5,8 +5,7 @@
 
 namespace Babylon::Plugins::NativeDraco
 {
-    // Exposes `_native.decodeDracoMesh(dataView, attributes?)`, a synchronous
-    // native replacement for Babylon's WebAssembly Draco decoder. Babylon.js
-    // routes its DracoDecoder to this function when it is present.
+    // Exposes the versioned `_native.DracoCodec` API and the compatible
+    // `_native.decodeDracoMesh` / `_native.encodeDracoMesh` entry points.
     void BABYLON_API Initialize(Napi::Env env);
 }

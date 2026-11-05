@@ -35,7 +35,8 @@ namespace Babylon::Graphics
         BackBufferColorT BackBufferColor{};
 
         // Depth stencil back buffer to use instead of creating one internally.
-        // @remarks Only available for D3D11. DepthStencilFormat is ignored when specified.
+        // @remarks Only available for D3D11. BackBufferDepthStencilFormat is ignored when specified.
+        // With a window and no BackBufferColor, only writable, non-array, mip-0 views are supported.
         BackBufferDepthStencilT BackBufferDepthStencil{};
 #endif
 
@@ -96,6 +97,7 @@ namespace Babylon::Graphics
         // Features and functionalities will be added and
         // method and structure might change.
 
+        // Switches the rendering surface at the next frame boundary without recreating the device.
         void UpdateWindow(WindowT window);
 
         // Sets the underlying graphics device used for rendering. The new device takes effect on
@@ -111,6 +113,8 @@ namespace Babylon::Graphics
         void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        // Retains the supplied views while in use. Changes take effect at the next frame boundary.
+        // The same depth-view restrictions as Configuration::BackBufferDepthStencil apply.
         void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil = {});
 #endif
 
@@ -120,6 +124,14 @@ namespace Babylon::Graphics
 
         void EnableRendering();
         void DisableRendering();
+
+        // Thread-safe. Remains true after loss until rendering is successfully reinitialized.
+        // When false, the initial headless Noop renderer is not considered a lost device.
+        // After loss, the host must stop rendering, disable rendering, replace the device,
+        // and re-enable rendering. Without replacement, bgfx renders through Noop.
+        // Pending readbacks are canceled, not replayed after recovery. New readbacks
+        // are rejected while the device is lost.
+        bool IsDeviceLost() const;
 
         [[deprecated("DeviceUpdate is a no-op; remove GetUpdate/Start/Finish calls.")]]
         DeviceUpdate GetUpdate(const char* /*updateName*/) { return {}; }

@@ -5,11 +5,13 @@
 #include <arcana/experimental/array.h>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Include/intermediate.h>
+#include <glslang/MachineIndependent/localintermediate.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_glsl.hpp>
 #include <bgfx/bgfx.h>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -17,6 +19,8 @@
 
 #define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20) // Copy-pasta from bgfx_p.h
 
+// Same as ShaderCompilerTraversers: IR node types live in namespace glslang.
+using namespace glslang;
 
 namespace
 {
@@ -32,11 +36,147 @@ namespace
     // bgfx Vulkan m_bindInfo is indexed by sampler stage 0..15.
     constexpr unsigned kMaxBgfxTextureStages = 16;
 
+    // TIntermSymbol stores its TType by value, so a layout change on a linker object does not reach
+    // the uses in function bodies (which GlslangToSpv may visit first). Copy linker-object bindings
+    // to every symbol node with the same id.
+    class SymbolBindingPropagator final : public TIntermTraverser
+    {
+    public:
+        explicit SymbolBindingPropagator(std::map<long long, unsigned> bindings)
+            : m_bindings{std::move(bindings)}
+        {
+        }
+
+        void visitSymbol(TIntermSymbol* symbol) override
+        {
+            if (auto it = m_bindings.find(symbol->getId()); it != m_bindings.end())
+            {
+                symbol->getWritableType().getQualifier().layoutBinding = it->second;
+            }
+        }
+
+    private:
+        std::map<long long, unsigned> m_bindings;
+    };
+
+    void PropagateLinkerObjectBindings(TIntermediate* intermediate)
+    {
+        auto* root = intermediate->getTreeRoot()->getAsAggregate();
+        auto* linkerObjects = root->getSequence().back()->getAsAggregate();
+        std::map<long long, unsigned> bindings;
+        for (TIntermNode* node : linkerObjects->getSequence())
+        {
+            auto* symbol = node->getAsSymbolNode();
+            if (symbol != nullptr && symbol->getType().getQualifier().hasBinding())
+            {
+                bindings[symbol->getId()] = symbol->getType().getQualifier().layoutBinding;
+            }
+        }
+        SymbolBindingPropagator propagator{std::move(bindings)};
+        intermediate->getTreeRoot()->traverse(&propagator);
+    }
+
+    class VulkanInterfaceLocationTraverser final : public TIntermTraverser
+    {
+    public:
+        void Collect(TIntermediate& intermediate, TStorageQualifier storage)
+        {
+            m_storage = storage;
+            intermediate.getTreeRoot()->traverse(this);
+        }
+
+        void AssignLocations()
+        {
+            std::map<std::string, unsigned> locations;
+            std::set<unsigned> reserved;
+            for (const auto& [name, symbols] : m_symbols)
+            {
+                for (const auto* symbol : symbols)
+                {
+                    const auto& qualifier = symbol->getQualifier();
+                    if (qualifier.hasLocation())
+                    {
+                        locations[name] = qualifier.layoutLocation;
+                        const auto count = TIntermediate::computeTypeLocationSize(symbol->getType(), EShLangFragment);
+                        for (int offset = 0; offset < count; ++offset)
+                        {
+                            reserved.insert(qualifier.layoutLocation + offset);
+                        }
+                    }
+                }
+            }
+            for (const auto& [name, symbols] : m_symbols)
+            {
+                if (locations.find(name) == locations.end())
+                {
+                    const auto count = TIntermediate::computeTypeLocationSize(symbols.front()->getType(), EShLangFragment);
+                    unsigned location{};
+                    for (int offset = 0; offset < count; ++offset)
+                    {
+                        if (reserved.count(location + offset))
+                        {
+                            location += offset + 1;
+                            offset = -1;
+                        }
+                    }
+                    locations[name] = location;
+                    for (int offset = 0; offset < count; ++offset)
+                    {
+                        reserved.insert(location + offset);
+                    }
+                }
+                for (auto* symbol : symbols)
+                {
+                    symbol->getWritableType().getQualifier().layoutLocation = locations.at(name);
+                }
+            }
+        }
+
+    private:
+        void visitSymbol(TIntermSymbol* symbol) override
+        {
+            const auto& type = symbol->getType();
+            if (type.getQualifier().storage != m_storage || type.isBuiltIn())
+            {
+                return;
+            }
+            if (type.isStruct() && !type.getStruct()->empty() && type.getStruct()->front().type->isBuiltIn())
+            {
+                return;
+            }
+            // Block instance names are stage-local; the block type identifies the interface.
+            const auto& name = type.getBasicType() == EbtBlock ? type.getTypeName() : symbol->getName();
+            m_symbols[name.c_str()].push_back(symbol);
+        }
+
+        TStorageQualifier m_storage{};
+        std::map<std::string, std::vector<TIntermSymbol*>> m_symbols;
+    };
+
+    class VulkanBuiltInTraverser final : public TIntermTraverser
+    {
+        void visitSymbol(TIntermSymbol* symbol) override
+        {
+            auto& qualifier = symbol->getWritableType().getQualifier();
+            switch (qualifier.builtIn)
+            {
+                case EbvVertexId:
+                    qualifier.builtIn = EbvVertexIndex;
+                    break;
+                case EbvInstanceId:
+                    qualifier.builtIn = EbvInstanceIndex;
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
     void CollectStageUniforms(
         glslang::TIntermediate* intermediate,
-        std::vector<glslang::TIntermSymbol*>& textures,
-        std::vector<glslang::TIntermSymbol*>& pureSamplers,
-        std::vector<glslang::TIntermSymbol*>& ubos)
+        std::vector<TIntermSymbol*>& textures,
+        std::vector<TIntermSymbol*>& pureSamplers,
+        std::vector<TIntermSymbol*>& ubos)
     {
         if (intermediate == nullptr)
         {
@@ -55,7 +195,7 @@ namespace
             return;
         }
 
-        for (glslang::TIntermNode* node : linkerObjects->getSequence())
+        for (TIntermNode* node : linkerObjects->getSequence())
         {
             auto* symbol = node->getAsSymbolNode();
             if (symbol == nullptr)
@@ -88,6 +228,54 @@ namespace
         }
     }
 
+    void ApplyBgfxVulkanStageBindings(glslang::TIntermediate* intermediate, unsigned uboBinding)
+    {
+        std::vector<TIntermSymbol*> textures;
+        std::vector<TIntermSymbol*> pureSamplers;
+        std::vector<TIntermSymbol*> ubos;
+        CollectStageUniforms(intermediate, textures, pureSamplers, ubos);
+
+        // SamplerSplitterTraverser assigns one shared layoutBinding per sampler name
+        // across VS/FS. Preserve that slot and only apply bgfx's fixed shifts —
+        // do not compact per-stage (different subsets would desync the same
+        // sampler across stages and overwrite UniformStages).
+        for (auto* texture : textures)
+        {
+            const unsigned originalBinding = texture->getType().getQualifier().layoutBinding;
+            const unsigned imageBinding = kSpirvBindShift + originalBinding;
+            texture->getWritableType().getQualifier().layoutBinding = imageBinding;
+
+            std::string texName = texture->getName().c_str();
+            std::string baseName = texName;
+            constexpr char kSuffix[] = "Texture";
+            constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
+            if (baseName.size() > kSuffixLen && baseName.compare(baseName.size() - kSuffixLen, kSuffixLen, kSuffix) == 0)
+            {
+                baseName.resize(baseName.size() - kSuffixLen);
+            }
+
+            for (auto* samplerSymbol : pureSamplers)
+            {
+                if (std::string{samplerSymbol->getName().c_str()} == baseName)
+                {
+                    samplerSymbol->getWritableType().getQualifier().layoutBinding = imageBinding + kSpirvSamplerShift;
+                    break;
+                }
+            }
+        }
+
+        for (auto* ubo : ubos)
+        {
+            // Frame is the UBO synthesized by MoveNonSamplerUniformsIntoStruct.
+            // Extra user UBOs are rare on the Vulkan path; leave their existing
+            // bindings alone so we do not collide with the image range.
+            if (std::string{ubo->getName().c_str()} == "Frame" || ubos.size() == 1)
+            {
+                ubo->getWritableType().getQualifier().layoutBinding = uboBinding;
+            }
+        }
+    }
+
     void ApplyBgfxVulkanResourceBindings(glslang::TProgram& program)
     {
         // Count distinct sampler slots shared across VS/FS (SamplerSplitter assigns one
@@ -95,9 +283,9 @@ namespace
         {
             std::set<unsigned> uniqueSlots;
             auto collectSlots = [&](glslang::TIntermediate* intermediate) {
-                std::vector<glslang::TIntermSymbol*> textures;
-                std::vector<glslang::TIntermSymbol*> pureSamplers;
-                std::vector<glslang::TIntermSymbol*> ubos;
+                std::vector<TIntermSymbol*> textures;
+                std::vector<TIntermSymbol*> pureSamplers;
+                std::vector<TIntermSymbol*> ubos;
                 CollectStageUniforms(intermediate, textures, pureSamplers, ubos);
                 for (auto* texture : textures)
                 {
@@ -113,55 +301,33 @@ namespace
             }
         }
 
-        auto applyStage = [](glslang::TIntermediate* intermediate, unsigned uboBinding) {
-            std::vector<glslang::TIntermSymbol*> textures;
-            std::vector<glslang::TIntermSymbol*> pureSamplers;
-            std::vector<glslang::TIntermSymbol*> ubos;
-            CollectStageUniforms(intermediate, textures, pureSamplers, ubos);
+        ApplyBgfxVulkanStageBindings(program.getIntermediate(EShLangVertex), kSpirvVertexBinding);
+        ApplyBgfxVulkanStageBindings(program.getIntermediate(EShLangFragment), kSpirvFragmentBinding);
+    }
 
-            // SamplerSplitterTraverser assigns one shared layoutBinding per sampler name
-            // across VS/FS. Preserve that slot and only apply bgfx's fixed shifts —
-            // do not compact per-stage (different subsets would desync the same
-            // sampler across stages and overwrite UniformStages).
-            for (auto* texture : textures)
+    void ApplyBgfxVulkanComputeResourceBindings(glslang::TProgram& program)
+    {
+        auto* intermediate = program.getIntermediate(EShLangCompute);
+        ApplyBgfxVulkanStageBindings(intermediate, kSpirvVertexBinding);
+
+        // Storage buffers share bgfx's stage space with textures: binding = stage + kSpirvBindShift.
+        auto* root = intermediate->getTreeRoot()->getAsAggregate();
+        auto* linkerObjects = root->getSequence().back()->getAsAggregate();
+        for (TIntermNode* node : linkerObjects->getSequence())
+        {
+            auto* symbol = node->getAsSymbolNode();
+            if (symbol != nullptr && symbol->getType().getQualifier().storage == glslang::EvqBuffer)
             {
-                const unsigned originalBinding = texture->getType().getQualifier().layoutBinding;
-                const unsigned imageBinding = kSpirvBindShift + originalBinding;
-                texture->getWritableType().getQualifier().layoutBinding = imageBinding;
-
-                std::string texName = texture->getName().c_str();
-                std::string baseName = texName;
-                constexpr char kSuffix[] = "Texture";
-                constexpr size_t kSuffixLen = sizeof(kSuffix) - 1;
-                if (baseName.size() > kSuffixLen && baseName.compare(baseName.size() - kSuffixLen, kSuffixLen, kSuffix) == 0)
+                auto& qualifier = symbol->getWritableType().getQualifier();
+                if (!qualifier.hasBinding() || qualifier.layoutBinding >= kMaxBgfxTextureStages)
                 {
-                    baseName.resize(baseName.size() - kSuffixLen);
+                    throw std::runtime_error{"Vulkan compute storage buffers need an explicit binding below 16"};
                 }
-
-                for (auto* samplerSymbol : pureSamplers)
-                {
-                    if (std::string{samplerSymbol->getName().c_str()} == baseName)
-                    {
-                        samplerSymbol->getWritableType().getQualifier().layoutBinding = imageBinding + kSpirvSamplerShift;
-                        break;
-                    }
-                }
+                qualifier.layoutBinding += kSpirvBindShift;
             }
+        }
 
-            for (auto* ubo : ubos)
-            {
-                // Frame is the UBO synthesized by MoveNonSamplerUniformsIntoStruct.
-                // Extra user UBOs are rare on the Vulkan path; leave their existing
-                // bindings alone so we do not collide with the image range.
-                if (std::string{ubo->getName().c_str()} == "Frame" || ubos.size() == 1)
-                {
-                    ubo->getWritableType().getQualifier().layoutBinding = uboBinding;
-                }
-            }
-        };
-
-        applyStage(program.getIntermediate(EShLangVertex), kSpirvVertexBinding);
-        applyStage(program.getIntermediate(EShLangFragment), kSpirvFragmentBinding);
+        PropagateLinkerObjectBindings(intermediate);
     }
 
     // Vulkan-only bgfx sampler packaging: separate_images with Texture-suffix stripped,
@@ -256,6 +422,11 @@ namespace Babylon::Plugins
 
     Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, const std::map<std::string, uint32_t>& instancedAttributes)
     {
+        auto vertexText = PreprocessShader(EShLangVertex, vertexSource);
+        auto fragmentText = PreprocessShader(EShLangFragment, fragmentSource);
+        auto uniformNames = RenameShaderUniforms(vertexText, &fragmentText);
+        vertexSource = vertexText;
+        fragmentSource = fragmentText;
         glslang::TProgram program;
 
         glslang::TShader vertexShader{EShLangVertex};
@@ -274,9 +445,23 @@ namespace Babylon::Plugins
             throw std::runtime_error{program.getInfoLog()};
         }
 
+        // The GLSLANG_WEB build omits mapIO. Match stage interfaces by name and
+        // reserve explicit locations before allocating implicit ones.
+        VulkanInterfaceLocationTraverser varyings;
+        varyings.Collect(*program.getIntermediate(EShLangVertex), EvqVaryingOut);
+        varyings.Collect(*program.getIntermediate(EShLangFragment), EvqVaryingIn);
+        varyings.AssignLocations();
+        VulkanInterfaceLocationTraverser outputs;
+        outputs.Collect(*program.getIntermediate(EShLangFragment), EvqVaryingOut);
+        outputs.AssignLocations();
+
+        // Parse Babylon's ordinary GLSL, but emit Vulkan's index built-ins.
+        VulkanBuiltInTraverser builtIns;
+        program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&builtIns);
+
         ShaderCompilerTraversers::IdGenerator ids{};
         // Flip 2D texture sample coordinates (replaces the former ProcessSamplerFlip texture() macro).
-        ShaderCompilerTraversers::FlipSamplerCoordinates(program);
+        ShaderCompilerTraversers::FlipSamplerCoordinates(program, ids);
         // Must precede the uniform struct move, which collects the uniform this declares.
         ShaderCompilerTraversers::FlipFragCoordY(program, ids);
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
@@ -287,7 +472,6 @@ namespace Babylon::Plugins
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ApplyBgfxVulkanResourceBindings(program);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
-        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         std::vector<uint32_t> spirvVS;
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, spirvVS);
@@ -295,11 +479,52 @@ namespace Babylon::Plugins
         std::vector<uint32_t> spirvFS;
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, spirvFS);
 
-        return CreateBgfxShader(
+        auto result = CreateBgfxShader(
             {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(spirvVS.data()), spirvVS.size() * sizeof(uint32_t)), std::move(vertexAttributeRenaming)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(spirvFS.data()), spirvFS.size() * sizeof(uint32_t)), {}},
             std::move(builtInInstanceDataSlots),
             SamplerResourceSet::SeparateImages,
             AppendSamplersVulkan);
+        result.UniformNames = std::move(uniformNames);
+        return result;
+    }
+
+    Graphics::BgfxShaderInfo ShaderCompiler::CompileCompute(std::string_view computeSource)
+    {
+        auto source = PreprocessShader(EShLangCompute, computeSource);
+        auto uniformNames = RenameShaderUniforms(source);
+        computeSource = source;
+        glslang::TProgram program;
+
+        glslang::TShader computeShader{EShLangCompute};
+        AddShader(program, computeShader, ProcessSamplerFlip(computeSource));
+
+        glslang::SpvVersion spv{};
+        spv.spv = 0x10000;
+        computeShader.getIntermediate()->setSpv(spv);
+
+        if (!program.link(EShMsgDefault))
+        {
+            throw std::runtime_error{program.getInfoLog()};
+        }
+
+        ShaderCompilerTraversers::IdGenerator ids{};
+        ShaderCompilerTraversers::FlipSamplerCoordinates(program, ids);
+        auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
+        auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
+        ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
+        ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
+        ApplyBgfxVulkanComputeResourceBindings(program);
+        ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
+
+        std::vector<uint32_t> spirvCS;
+        auto [computeParser, computeCompiler] = CompileShader(program, EShLangCompute, spirvCS);
+
+        auto result = CreateBgfxComputeShader(
+            {std::move(computeParser), std::move(computeCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(spirvCS.data()), spirvCS.size() * sizeof(uint32_t)), {}},
+            SamplerResourceSet::SeparateImages,
+            AppendSamplersVulkan);
+        result.UniformNames = std::move(uniformNames);
+        return result;
     }
 }

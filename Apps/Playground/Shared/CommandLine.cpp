@@ -141,12 +141,19 @@ namespace
         FlagSpec{"--list", "-l", FlagKind::Boolean, "",
             "List configured tests as TSV and exit (0).",
             "                              Columns: index, title, referenceImage,\n"
-            "                              exclusionReason. exclusionReason reflects\n"
-            "                              config state (ignores --include-excluded).\n",
-            [](PlaygroundOptions& o, std::string_view, std::string&) { o.ListTests = true; }},
+            "                              exclusionReason, workarounds. exclusionReason\n"
+            "                              reflects config state (ignores\n"
+            "                              --include-excluded). Implies --headless\n"
+            "                              and, without a script, loads\n"
+            "                              validation_native.js.\n",
+            [](PlaygroundOptions& o, std::string_view, std::string&) {
+                o.ListTests = true;
+                o.Headless = true;
+            }},
 
         FlagSpec{"--headless", "", FlagKind::Boolean, "",
-            "Don't show a window (still creates HWND).", "",
+            "Don't show a window (keeps a render surface).",
+            "                              Disables the JavaScript debugger listener.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.Headless = true; }},
 
         FlagSpec{"--break-on-fail", "", FlagKind::Boolean, "",
@@ -173,7 +180,8 @@ namespace
         FlagSpec{"--include-excluded", "", FlagKind::Boolean, "",
             "Force-run tests that have",
             "                              excludeFromAutomaticTesting / onlyVisual /\n"
-            "                              excludedGraphicsApis set in config.json.\n"
+            "                              excludedGraphicsApis / excludedJavaScriptEngines\n"
+            "                              set in config.json.\n"
             "                              Useful for debugging quarantined tests\n"
             "                              without editing the config.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.IncludeExcluded = true; }},
@@ -394,6 +402,11 @@ namespace CommandLine
 
             // Positional argument (script path / URL).
             opt.Scripts.emplace_back(arg);
+        }
+
+        if (opt.ListTests && opt.Scripts.empty())
+        {
+            opt.Scripts.emplace_back("app:///Scripts/validation_native.js");
         }
 
         return opt;

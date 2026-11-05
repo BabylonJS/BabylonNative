@@ -2,6 +2,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -14,6 +15,7 @@
 
 #include <future>
 #include <iostream>
+#include <memory>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -136,4 +138,112 @@ TEST(ExternalTexture, JavaScriptDisposeThinTexturePreventsUpdate)
 #else
     TestJavaScriptDisposePreventsUpdate(true);
 #endif
+}
+
+TEST(ExternalTexture, NativeImportRetainsOwnerThroughHandleDestruction)
+{
+    for (bool afterRender : {false, true})
+    {
+        for (uint32_t action : {0u, 1u, 2u})
+        {
+            SCOPED_TRACE(afterRender);
+            SCOPED_TRACE(action);
+            Babylon::Graphics::Device device{g_deviceConfig};
+            Babylon::AppRuntime runtime{};
+            std::promise<Babylon::Graphics::DeviceContext*> result;
+            auto future = result.get_future();
+            runtime.Dispatch([&](Napi::Env env) {
+                device.AddToJavaScript(env);
+                result.set_value(&Babylon::Graphics::DeviceContext::GetFromJavaScript(env));
+            });
+            auto& context = *future.get();
+            device.StartRenderingCurrentFrame();
+
+            if (bgfx::getRendererType() != bgfx::RendererType::Direct3D11 &&
+                bgfx::getRendererType() != bgfx::RendererType::Metal)
+            {
+                device.FinishRenderingCurrentFrame();
+                GTEST_SKIP() << "Native pointer import coverage requires D3D11 or Metal.";
+            }
+
+            auto native = std::shared_ptr<void>{
+                Helpers::CreateTexture(device.GetPlatformInfo().Device, 4, 4),
+                Helpers::DestroyTexture};
+            std::weak_ptr<void> retained = native;
+            std::weak_ptr<void> replacement;
+            auto texture = std::make_unique<Babylon::Graphics::Texture>(context);
+            texture->Create2D(4, 4, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_NONE,
+                reinterpret_cast<uintptr_t>(native.get()), native);
+
+            // Model Close releasing the producer while the caller keeps its wrapper.
+            native.reset();
+            device.FinishRenderingCurrentFrame();
+            for (uint32_t frame = 0; frame < 2; ++frame)
+            {
+                EXPECT_TRUE(texture->IsValid());
+                EXPECT_FALSE(retained.expired());
+                device.StartRenderingCurrentFrame();
+                device.FinishRenderingCurrentFrame();
+            }
+            EXPECT_FALSE(retained.expired());
+
+            device.StartRenderingCurrentFrame();
+            auto disposeOrReplace = [&] {
+                if (action == 0)
+                {
+                    texture->Dispose();
+                }
+                else if (action == 1)
+                {
+                    texture.reset();
+                }
+                else
+                {
+                    // Replacing the producer's output must not release the old import.
+                    native = std::shared_ptr<void>{
+                        Helpers::CreateTexture(device.GetPlatformInfo().Device, 8, 8),
+                        Helpers::DestroyTexture};
+                    EXPECT_FALSE(retained.expired());
+                    replacement = native;
+                    texture->Create2D(8, 8, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_NONE,
+                        reinterpret_cast<uintptr_t>(native.get()), native);
+                    native.reset();
+                }
+                EXPECT_FALSE(retained.expired());
+            };
+            if (afterRender)
+            {
+                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation::none(), disposeOrReplace);
+            }
+            else
+            {
+                disposeOrReplace();
+            }
+            device.FinishRenderingCurrentFrame();
+
+            if (afterRender)
+            {
+                EXPECT_FALSE(retained.expired());
+                device.StartRenderingCurrentFrame();
+                device.FinishRenderingCurrentFrame();
+            }
+            EXPECT_TRUE(retained.expired());
+            if (action == 0)
+            {
+                EXPECT_FALSE(texture->IsValid());
+            }
+            else if (action == 2)
+            {
+                EXPECT_TRUE(texture->IsValid());
+                EXPECT_EQ(texture->Width(), 8);
+                EXPECT_EQ(texture->Height(), 8);
+                EXPECT_FALSE(replacement.expired());
+                texture.reset();
+                EXPECT_FALSE(replacement.expired());
+                device.StartRenderingCurrentFrame();
+                device.FinishRenderingCurrentFrame();
+                EXPECT_TRUE(replacement.expired());
+            }
+        }
+    }
 }

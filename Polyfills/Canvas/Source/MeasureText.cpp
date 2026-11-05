@@ -1,4 +1,5 @@
 #include <bgfx/bgfx.h>
+#include <cmath>
 #include <map>
 #include "Canvas.h"
 #include "Context.h"
@@ -17,25 +18,39 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    namespace
+    {
+        constexpr size_t TEXT_BOUNDS_COMPONENT_COUNT = 4;
+        constexpr size_t TEXT_METRICS_COMPONENT_COUNT = 3;
+    }
+
     Napi::Value MeasureText::CreateInstance(Napi::Env env, Context* context, const std::string& text)
     {
-        // IMPORTANT: zero-initialize. nvgTextBounds / nvgTextMetrics do not always fill these
-        // slots (e.g. when called before the text atlas has been populated), and uninitialized
-        // stack values turn into garbage widths the size of millions of pixels, which Babylon
-        // GUI then propagates into a wildly negative fillText x coordinate, putting text off-
-        // screen.
-        float bounds[4] = {0, 0, 0, 0};
-        nvgTextBounds(context->GetNVGContext(), 0, 0, text.c_str(), nullptr, bounds);
-        float textMetrics[3] = {0, 0, 0};
+        // Ink extents (not the full line box): nvgTextBounds replaces ymin/ymax with
+        // fonsLineBounds, which would make height/actualBoundingBox* the em line box.
+        float bounds[TEXT_BOUNDS_COMPONENT_COUNT]{};
+        const float advance = nvgTextBoundsInk(context->GetNVGContext(), 0, 0, text.c_str(), nullptr, bounds);
+        float textMetrics[TEXT_METRICS_COMPONENT_COUNT]{};
         nvgTextMetrics(context->GetNVGContext(), &textMetrics[0], &textMetrics[1], &textMetrics[2]);
 
+        // TextMetrics distances remain signed across the alignment baseline.
+        const float inkAscent = -bounds[1];
+        const float inkDescent = bounds[3];
+        // Keep the browser-compatible integral CSS line box used by Babylon GUI.
+        // The raw font metrics are fractional em-scaled values; Canvas layout rounds
+        // the baseline and total line height independently.
+        const float fontAscent = std::floor(textMetrics[0]);
+        const float fontDescent = std::ceil(textMetrics[2]) - fontAscent;
+
         auto obj{Napi::Object::New(env)};
-        obj.Set("width", Napi::Value::From(env, bounds[2] - bounds[0]));
+        obj.Set("width", Napi::Value::From(env, advance));
         obj.Set("height", Napi::Value::From(env, bounds[3] - bounds[1]));
-        obj.Set("actualBoundingBoxLeft", Napi::Value::From(env, bounds[0]));
+        obj.Set("actualBoundingBoxLeft", Napi::Value::From(env, -bounds[0]));
         obj.Set("actualBoundingBoxRight", Napi::Value::From(env, bounds[2]));
-        obj.Set("fontBoundingBoxAscent", Napi::Value::From(env, textMetrics[0]));
-        obj.Set("fontBoundingBoxDescent", Napi::Value::From(env, -textMetrics[1]));
+        obj.Set("actualBoundingBoxAscent", Napi::Value::From(env, inkAscent));
+        obj.Set("actualBoundingBoxDescent", Napi::Value::From(env, inkDescent));
+        obj.Set("fontBoundingBoxAscent", Napi::Value::From(env, fontAscent));
+        obj.Set("fontBoundingBoxDescent", Napi::Value::From(env, fontDescent));
 
         return obj.As<Napi::Value>();
     }

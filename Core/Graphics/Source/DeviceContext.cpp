@@ -77,7 +77,7 @@ namespace Babylon::Graphics
         return m_graphicsImpl.GetActiveEncoder();
     }
 
-    void DeviceContext::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    void DeviceContext::RequestScreenShot(BgfxCallback::ScreenShotCallback callback)
     {
         return m_graphicsImpl.RequestScreenShot(std::move(callback));
     }
@@ -105,6 +105,16 @@ namespace Babylon::Graphics
     void DeviceContext::SetHardwareScalingLevel(float level)
     {
         m_graphicsImpl.SetHardwareScalingLevel(level);
+    }
+
+    void DeviceContext::UpdateMSAA(uint8_t samples)
+    {
+        m_graphicsImpl.UpdateMSAA(samples);
+    }
+
+    uint8_t DeviceContext::GetMSAASamples() const
+    {
+        return m_graphicsImpl.GetMSAASamples();
     }
 
     size_t DeviceContext::GetWidth() const
@@ -142,9 +152,24 @@ namespace Babylon::Graphics
         return m_graphicsImpl.ViewIdGeneration();
     }
 
-    void DeviceContext::FlushViewsIfNeeded()
+    bgfx::VertexLayoutHandle DeviceContext::CreateVertexLayout(const bgfx::VertexLayout& layout)
     {
-        m_graphicsImpl.FlushViewsIfNeeded();
+        return m_graphicsImpl.CreateVertexLayout(layout);
+    }
+
+    uint8_t DeviceContext::AcquireClearPaletteIndex(const std::array<float, 4>& color)
+    {
+        return m_graphicsImpl.AcquireClearPaletteIndex(color);
+    }
+
+    void DeviceContext::CheckViewBudget()
+    {
+        m_graphicsImpl.CheckViewBudget();
+    }
+
+    bool DeviceContext::ForceMidFrameFlush()
+    {
+        return m_graphicsImpl.ForceMidFrameFlush();
     }
 
     void DeviceContext::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
@@ -169,5 +194,10 @@ namespace Babylon::Graphics
     uintptr_t DeviceContext::GetDeviceId() const
     {
        return m_graphicsImpl.GetId();
+    }
+
+    bgfx::FrameBufferHandle DeviceContext::GetBackBufferHandle() const
+    {
+        return m_graphicsImpl.GetBackBufferHandle();
     }
 }

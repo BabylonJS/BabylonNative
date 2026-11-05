@@ -5,9 +5,12 @@
 #include <Babylon/Graphics/RendererType.h>
 #include <Babylon/JsRuntime.h>
 #include <arcana/tracing/trace_region.h>
+#include <gsl/util>
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -101,11 +104,11 @@ namespace Babylon::Graphics
 #endif
 
         //
-        // init.resolution
+        // init.swapChain
         //
 
-        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
-        init.resolution.maxFrameLatency = 1;
+        init.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
+        init.swapChain.maxFrameLatency = 1;
 
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);
@@ -114,15 +117,15 @@ namespace Babylon::Graphics
         switch (config.BackBufferDepthStencilFormat)
         {
             case DepthStencilFormat::None:
-                init.resolution.formatDepthStencil = bgfx::TextureFormat::UnknownDepth;
+                init.swapChain.formatDepthStencil = bgfx::TextureFormat::Count;
                 break;
             case DepthStencilFormat::Depth32:
                 // D32 has no DSV mapping on D3D11/D12 in current bgfx; D32F does.
-                init.resolution.formatDepthStencil = bgfx::TextureFormat::D32F;
+                init.swapChain.formatDepthStencil = bgfx::TextureFormat::D32F;
                 break;
             case DepthStencilFormat::Depth24Stencil8:
             default:
-                init.resolution.formatDepthStencil = bgfx::TextureFormat::D24S8;
+                init.swapChain.formatDepthStencil = bgfx::TextureFormat::D24S8;
                 break;
         }
     }
@@ -137,12 +140,22 @@ namespace Babylon::Graphics
         return m_bgfxId;
     }
 
+    bgfx::FrameBufferHandle DeviceImpl::GetBackBufferHandle() const
+    {
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
+        {
+            return m_externalBackBuffer.FrameBuffer;
+        }
+#endif
+        return m_windowFrameBuffer;
+    }
+
     void DeviceImpl::UpdateWindow(WindowT window)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Window = window;
-        ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
-        ConfigureBgfxRenderType(m_state.Bgfx.InitState.platformData, m_state.Bgfx.InitState.type);
+        ConfigureBgfxSwapChain(m_state.Bgfx.InitState.swapChain, window);
         m_state.Resolution.DevicePixelRatio = Babylon::Graphics::GetDevicePixelRatio(window);
         m_state.Bgfx.Dirty = true;
     }
@@ -170,7 +183,7 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_state.Mutex};
         auto& init = m_state.Bgfx.InitState;
-        init.resolution.reset &= ~BGFX_RESET_MSAA_MASK;
+        init.swapChain.flags &= ~BGFX_SWAP_CHAIN_MSAA_MASK;
         switch (value)
         {
             case 0:
@@ -178,16 +191,16 @@ namespace Babylon::Graphics
                 // disable MSAA
                 break;
             case 2:
-                init.resolution.reset |= BGFX_RESET_MSAA_X2;
+                init.swapChain.flags |= BGFX_SWAP_CHAIN_MSAA_X2;
                 break;
             case 4:
-                init.resolution.reset |= BGFX_RESET_MSAA_X4;
+                init.swapChain.flags |= BGFX_SWAP_CHAIN_MSAA_X4;
                 break;
             case 8:
-                init.resolution.reset |= BGFX_RESET_MSAA_X8;
+                init.swapChain.flags |= BGFX_SWAP_CHAIN_MSAA_X8;
                 break;
             case 16:
-                init.resolution.reset |= BGFX_RESET_MSAA_X16;
+                init.swapChain.flags |= BGFX_SWAP_CHAIN_MSAA_X16;
                 break;
             default:
                 m_bgfxCallback.trace(__FILE__, __LINE__, "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", static_cast<int>(value));
@@ -196,12 +209,19 @@ namespace Babylon::Graphics
         m_state.Bgfx.Dirty = true;
     }
 
+    uint8_t DeviceImpl::GetMSAASamples() const
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        const auto level = (m_state.Bgfx.InitState.swapChain.flags & BGFX_SWAP_CHAIN_MSAA_MASK) >> BGFX_SWAP_CHAIN_MSAA_SHIFT;
+        return static_cast<uint8_t>(1u << level);
+    }
+
     void DeviceImpl::UpdateAlphaPremultiplied(bool enabled)
     {
         std::scoped_lock lock{m_state.Mutex};
         auto& init = m_state.Bgfx.InitState;
-        init.resolution.reset &= ~BGFX_RESET_TRANSPARENT_BACKBUFFER;
-        init.resolution.reset |= enabled ? BGFX_RESET_TRANSPARENT_BACKBUFFER : 0;
+        init.swapChain.flags &= ~BGFX_SWAP_CHAIN_TRANSPARENT_BACKBUFFER;
+        init.swapChain.flags |= enabled ? BGFX_SWAP_CHAIN_TRANSPARENT_BACKBUFFER : 0;
         m_state.Bgfx.Dirty = true;
     }
 
@@ -209,8 +229,8 @@ namespace Babylon::Graphics
     void DeviceImpl::UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil)
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.InitState.platformData.backBuffer = backBufferColor;
-        m_state.Bgfx.InitState.platformData.backBufferDS = backBufferDepthStencil;
+        m_state.BackBufferColor.copy_from(backBufferColor);
+        m_state.BackBufferDepthStencil.copy_from(backBufferDepthStencil);
         m_state.Bgfx.Dirty = true;
     }
 #endif
@@ -251,26 +271,72 @@ namespace Babylon::Graphics
             // This tells bgfx to not create its own render thread.
             bgfx::renderFrame();
 
-            // Initialize bgfx.
-            const auto& init{m_state.Bgfx.InitState};
+            bool ready = false;
+            const auto rollback = gsl::finally([&] {
+                if (!ready)
+                {
+                    if (m_cancellationSource)
+                    {
+                        m_cancellationSource->cancel();
+                    }
+                    if (m_state.Bgfx.Initialized)
+                    {
+                        DestroyBackBuffer();
+                        ReleaseFrameVertexLayouts();
+                        bgfx::shutdown();
+                        m_state.Bgfx.Initialized = false;
+                        ++m_bgfxId;
+                    }
+                    m_rendering = false;
+                    m_renderThreadAffinity = {};
+                }
+            });
+
+            // Select from the host surface; the headless bootstrap must not force Android to Noop.
+            ConfigureBgfxRenderType(m_state.Bgfx.InitState);
+            auto init{m_state.Bgfx.InitState};
+            // Own the window framebuffer explicitly so reattaching a window does not
+            // recreate the device or leave bgfx presenting to the previous surface.
+            // Retain ndt so the rendering context uses the window's native display.
+            init.swapChain.nwh = nullptr;
+            init.swapChain.width = 0;
+            init.swapChain.height = 0;
+            init.swapChain.depth = BGFX_INVALID_HANDLE;
+            init.swapChain.flags &= ~BGFX_SWAP_CHAIN_MSAA_MASK;
             if (!bgfx::init(init))
             {
                 throw std::runtime_error{"Failed to initialize bgfx."};
             }
 
             m_state.Bgfx.Initialized = true;
-            m_state.Bgfx.Dirty = false;
+            ResetClearPalette();
+            UpdateBackBufferState();
 
             m_cancellationSource.emplace();
 
-            if (m_bgfxId != 0)
+            const bool deviceStillLost =
+                m_bgfxCallback.IsDeviceLost() &&
+                init.type != bgfx::RendererType::Noop &&
+                bgfx::getRendererType() == bgfx::RendererType::Noop;
+            if (m_bgfxId != 0 && !deviceStillLost)
             {
                 if (m_renderResetCallback)
                 {
                     m_renderResetCallback();
                 }
             }
+            m_state.Bgfx.Dirty = false;
+            ready = true;
+            if (!deviceStillLost)
+            {
+                m_bgfxCallback.ClearDeviceLost();
+            }
         }
+    }
+
+    bool DeviceImpl::IsDeviceLost() const
+    {
+        return m_bgfxCallback.IsDeviceLost();
     }
 
     void DeviceImpl::DisableRendering()
@@ -284,9 +350,9 @@ namespace Babylon::Graphics
             // Drain readTextures queue, completing them in an error state.
             while (!m_readTextureRequests.empty())
             {
-                auto error = arcana::make_unexpected(std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled))));
-                m_readTextureRequests.front().second.complete(error);
+                auto completionSource = std::move(m_readTextureRequests.front().second);
                 m_readTextureRequests.pop();
+                completionSource.complete(arcana::make_unexpected(ReadbackCanceled()));
             }
 
             // HACK: Render one more frame to drain the before/after render work queues.
@@ -295,6 +361,8 @@ namespace Babylon::Graphics
 
             m_cancellationSource->cancel();
 
+            DestroyBackBuffer();
+            ReleaseFrameVertexLayouts();
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
             m_bgfxId++;
@@ -365,11 +433,10 @@ namespace Babylon::Graphics
         // (meaning all encoder work for this frame is done), then block new acquisitions.
         // After this point, no bgfx encoder calls can be in flight on the JS thread.
         //
-        // While waiting, also service any mid-frame view-flush requests from the JS
-        // thread (see FlushViewsIfNeeded): the JS thread parks itself and we advance a
-        // non-presenting bgfx frame here on the render thread to reset the view counter,
-        // then hand a fresh encoder back so rendering continues within the same logical
-        // frame.
+        // While waiting, also service mid-frame flush requests from the JS thread (see
+        // ForceMidFrameFlush): the JS thread parks itself and we advance a non-presenting
+        // bgfx frame here on the render thread, then hand a fresh encoder back so
+        // rendering continues within the same logical frame.
         {
             std::unique_lock lock{m_frameSyncMutex};
             while (true)
@@ -481,9 +548,17 @@ namespace Babylon::Graphics
         return m_frameEncoder;
     }
 
-    void DeviceImpl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    void DeviceImpl::RequestScreenShot(BgfxCallback::ScreenShotCallback callback)
     {
-        m_screenShotCallbacks.push(std::move(callback));
+        {
+            std::scoped_lock lock{m_queuedScreenShotCallbacksMutex};
+            if (!IsDeviceLost())
+            {
+                m_queuedScreenShotCallbacks.push(std::move(callback));
+                return;
+            }
+        }
+        callback(arcana::make_unexpected(ReadbackCanceled()));
     }
 
     void DeviceImpl::RequestCaptureNextFrame()
@@ -494,6 +569,11 @@ namespace Babylon::Graphics
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
         arcana::task_completion_source<void, std::exception_ptr> completionSource{};
+        if (IsDeviceLost())
+        {
+            completionSource.complete(arcana::make_unexpected(ReadbackCanceled()));
+            return completionSource.as_task();
+        }
         bgfx::TextureRegion region{};
         region.init(handle);
         region.mip = mipLevel;
@@ -503,16 +583,6 @@ namespace Babylon::Graphics
 
     DeviceImpl::CaptureCallbackTicketT DeviceImpl::AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback)
     {
-        // If we're not already capturing, start.
-        {
-            std::scoped_lock lock{m_state.Mutex};
-            if ((m_state.Bgfx.InitState.resolution.reset & BGFX_RESET_CAPTURE) == 0)
-            {
-                m_state.Bgfx.InitState.resolution.reset |= BGFX_RESET_CAPTURE;
-                m_state.Bgfx.Dirty = true;
-            }
-        }
-
         return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
     }
 
@@ -550,51 +620,106 @@ namespace Babylon::Graphics
         return m_viewIdGeneration.load();
     }
 
-    void DeviceImpl::FlushViewsIfNeeded()
+    bgfx::VertexLayoutHandle DeviceImpl::CreateVertexLayout(const bgfx::VertexLayout& layout)
+    {
+        std::scoped_lock lock{m_frameVertexLayoutsMutex};
+        LayoutKey key{layout.m_stride};
+        std::copy(std::begin(layout.m_offset), std::end(layout.m_offset), key.Offsets.begin());
+        std::copy(std::begin(layout.m_attributes), std::end(layout.m_attributes), key.Attributes.begin());
+
+        auto it = m_frameVertexLayouts.find(key);
+        bool inserted = false;
+        if (it == m_frameVertexLayouts.end())
+        {
+            const auto cached = bgfx::createVertexLayout(layout);
+            if (!bgfx::isValid(cached))
+            {
+                return cached;
+            }
+            try
+            {
+                it = m_frameVertexLayouts.emplace(std::move(key), cached).first;
+                inserted = true;
+            }
+            catch (...)
+            {
+                bgfx::destroy(cached);
+                throw;
+            }
+        }
+
+        const auto handle = bgfx::createVertexLayout(layout);
+        if (!bgfx::isValid(handle) && inserted)
+        {
+            bgfx::destroy(it->second);
+            m_frameVertexLayouts.erase(it);
+        }
+        return handle;
+    }
+
+    void DeviceImpl::ReleaseFrameVertexLayouts()
+    {
+        std::scoped_lock lock{m_frameVertexLayoutsMutex};
+        for (const auto& [key, handle] : m_frameVertexLayouts)
+        {
+            bgfx::destroy(handle);
+        }
+        m_frameVertexLayouts.clear();
+    }
+
+    void DeviceImpl::ResetClearPalette()
+    {
+        std::scoped_lock lock{m_clearPaletteMutex};
+        m_clearPaletteSize = 0;
+    }
+
+    uint8_t DeviceImpl::AcquireClearPaletteIndex(const std::array<float, 4>& color)
+    {
+        std::scoped_lock lock{m_clearPaletteMutex};
+        for (uint8_t index = 0; index < m_clearPaletteSize; ++index)
+        {
+            if (m_clearPalette[index] == color)
+            {
+                return index;
+            }
+        }
+        if (m_clearPaletteSize == m_clearPalette.size())
+        {
+            throw std::runtime_error{"Too many distinct floating-point clear colors in one physical frame"};
+        }
+        const auto index = m_clearPaletteSize++;
+        m_clearPalette[index] = color;
+        bgfx::setPaletteColor(index, color.data());
+        return index;
+    }
+
+    void DeviceImpl::CheckViewBudget()
     {
         // Reserve headroom below the hard cap: a single draw/clear operation can
-        // acquire a couple of views before the next flush check, and one view
+        // acquire a couple of views before the next check, and one view
         // (maxViews - 1) is reserved for readback blits.
-        constexpr bgfx::ViewId kViewFlushMargin = 16;
+        constexpr uint32_t kViewMargin = 16;
 
-        // Maximum mid-frame flushes allowed in one logical frame. Measured: no test in the
-        // validation suite needs any at the real 256-view budget, and the heaviest content
-        // found so far (the excluded "Nested BBG", which renders in a setInterval) peaks at
-        // 5. 64 leaves generous headroom for legitimately heavy content while bounding a
-        // mechanism that is otherwise unlimited: each flush is a blocking round-trip to the
-        // render thread, so an unbounded number of them would degrade into an apparent hang
-        // rather than an error.
-        constexpr uint32_t kMaxMidFrameViewFlushes = 64;
-
-        const bgfx::ViewId maxViews = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews);
-        if (maxViews <= kViewFlushMargin)
+        // Running out is an error rather than a mid-frame flush: the flush needs the host to call
+        // FinishRenderingCurrentFrame, which a host waiting for JavaScript never does.
+        const uint32_t maxViews = bgfx::getCaps()->limits.maxViews;
+        const uint32_t usedViews = m_nextViewId.load();
+        if (maxViews > kViewMargin && usedViews >= maxViews - kViewMargin)
         {
-            return;
+            throw std::runtime_error{"Too many views: this frame used " + std::to_string(usedViews) + " of " +
+                std::to_string(maxViews) + " bgfx views"};
         }
+    }
 
-        if (m_nextViewId.load() < static_cast<uint32_t>(maxViews - kViewFlushMargin))
-        {
-            return;
-        }
-
-        // Bound the rescue. Each flush is a blocking round-trip to the render thread, so
-        // content that needs an unbounded number of them (e.g. a snippet that renders in a
-        // setInterval without ever letting the frame present) would appear to hang rather
-        // than fail. Past the budget, stop flushing and let AcquireNewViewId throw
-        // "Too many views" — the pre-existing behaviour, and a far better diagnostic than a
-        // process that makes progress too slowly to ever finish.
-        if (m_midFrameFlushCount.load() >= kMaxMidFrameViewFlushes)
-        {
-            return;
-        }
-
+    bool DeviceImpl::ForceMidFrameFlush()
+    {
         // The flush advances a bgfx frame, which must happen on the render (bgfx API)
         // thread. This method is only expected to be called from the JS thread while
         // the render thread is parked in FinishRenderingCurrentFrame. If we're on the
         // render thread (or affinity is unset), there is nothing safe to do here.
         if (m_renderThreadAffinity.check())
         {
-            return;
+            return false;
         }
 
         std::unique_lock lock{m_frameSyncMutex};
@@ -612,16 +737,17 @@ namespace Babylon::Graphics
         // is currently closed (bgfx::frame() in progress).
         if (m_frameBlocked || m_pendingFrameScopes == 0)
         {
-            return;
+            return false;
         }
 
         m_flushRequested = true;
         m_frameSyncCV.notify_all();
         m_flushCompleteCV.wait(lock, [this] { return !m_flushRequested; });
+        return true;
     }
 
     // Called on the render thread from FinishRenderingCurrentFrame while holding
-    // m_frameSyncMutex, with the requesting JS thread parked in FlushViewsIfNeeded
+    // m_frameSyncMutex, with the requesting JS thread parked in ForceMidFrameFlush
     // (so the frame encoder is idle). End the current encoder, advance a non-presenting
     // bgfx frame to submit the accumulated views and reset the view counter, then begin
     // a fresh encoder for the remainder of the logical frame.
@@ -640,16 +766,20 @@ namespace Babylon::Graphics
         // bgfx::frame() would flip a half-drawn backbuffer to the screen partway through the
         // logical frame; bgfx remembers the flush in m_flushPrevFrame so the next real frame
         // still flips exactly once.
-        bgfx::frame(BGFX_FRAME_FLUSH);
+        // Same completion path as Frame(): a mid-frame flush must unblock
+        // readTexture requests on the waiting JS thread.
+        ReleaseFrameVertexLayouts();
+        const uint32_t frameNumber{bgfx::frame(BGFX_FRAME_FLUSH)};
+        CompleteReadTextureRequests(frameNumber);
+
+        ResetClearPalette();
         m_nextViewId.store(0);
-        m_midFrameFlushCount.fetch_add(1);
 
         // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
         // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
         // Without this a cached high id would sort *after* every id handed out from the reset
         // counter, inverting submission order relative to the JS-side draw order.
         m_viewIdGeneration.fetch_add(1);
-
         m_frameEncoder = bgfx::begin(true);
     }
 
@@ -658,13 +788,18 @@ namespace Babylon::Graphics
         std::scoped_lock lock{m_state.Mutex};
         if (m_state.Bgfx.Dirty)
         {
-            bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
-
             // Discard the whole frame.
+            ReleaseFrameVertexLayouts();
             bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
+            if (m_bgfxCallback.IsDeviceLost())
+            {
+                return;
+            }
 
-            auto& res = m_state.Bgfx.InitState.resolution;
-            bgfx::reset(res.width, res.height, res.reset);
+            bgfx::reset(m_state.Bgfx.InitState.reset);
+            UpdateBackBufferState();
+            const auto& res = m_state.Bgfx.InitState.swapChain;
             bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
 
             m_state.Bgfx.Dirty = false;
@@ -674,7 +809,7 @@ namespace Babylon::Graphics
     void DeviceImpl::UpdateBgfxResolution()
     {
         std::scoped_lock lock{m_state.Mutex};
-        auto& res = m_state.Bgfx.InitState.resolution;
+        auto& res = m_state.Bgfx.InitState.swapChain;
         auto level = m_state.Resolution.HardwareScalingLevel;
         res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
         res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
@@ -686,19 +821,113 @@ namespace Babylon::Graphics
         ResizeRenderSurface(m_state.Window, res.width, res.height);
     }
 
-    void DeviceImpl::RequestScreenShots()
+    void DeviceImpl::DestroyBackBuffer()
     {
-        std::function<void(std::vector<uint8_t>)> callback;
-        while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
+        if (bgfx::isValid(m_windowFrameBuffer))
         {
-            m_bgfxCallback.AddScreenShotCallback(std::move(callback));
-#if D3D12
-            // D3D12 capture is immediate but needs an extra frame swap because back buffer is captured.
-            // Because of previous swapchain flip, back buffer is not what's just been rendered.
-            bgfx::frame();
-#endif
-            bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "DeviceImpl::RequestScreenShot");
+            bgfx::destroy(m_windowFrameBuffer);
+            m_windowFrameBuffer = BGFX_INVALID_HANDLE;
         }
+        m_windowHandle = nullptr;
+        m_displayHandle = nullptr;
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        DestroyExternalBackBuffer();
+#endif
+    }
+
+    void DeviceImpl::UpdateBackBufferState()
+    {
+        auto swapChain = m_state.Bgfx.InitState.swapChain;
+        swapChain.width = std::max(1u, swapChain.width);
+        swapChain.height = std::max(1u, swapChain.height);
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        if (m_externalBackBuffer.Color || m_externalBackBuffer.Depth || m_state.BackBufferColor || m_state.BackBufferDepthStencil)
+        {
+            DestroyBackBuffer();
+            // Release the old native swap chain before another one can bind its window.
+            ReleaseFrameVertexLayouts();
+            bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
+            if (m_state.BackBufferColor || m_state.BackBufferDepthStencil)
+            {
+                CreateExternalBackBuffer(swapChain);
+                if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
+                {
+                    return;
+                }
+                swapChain.depth = m_externalBackBuffer.DepthHandle;
+            }
+        }
+#endif
+
+        if (bgfx::isValid(m_windowFrameBuffer) &&
+            (m_windowHandle != swapChain.nwh || m_displayHandle != swapChain.ndt))
+        {
+            DestroyBackBuffer();
+            ReleaseFrameVertexLayouts();
+            bgfx::frame(BGFX_FRAME_DISCARD);
+            ResetClearPalette();
+        }
+
+        if (swapChain.nwh != nullptr)
+        {
+            if (bgfx::isValid(m_windowFrameBuffer))
+            {
+                bgfx::updateSwapChain(m_windowFrameBuffer, swapChain);
+            }
+            else
+            {
+                m_windowFrameBuffer = bgfx::createFrameBuffer(swapChain);
+                if (!bgfx::isValid(m_windowFrameBuffer))
+                {
+                    throw std::runtime_error{"Failed to create the window frame buffer."};
+                }
+                m_windowHandle = swapChain.nwh;
+                m_displayHandle = swapChain.ndt;
+            }
+        }
+    }
+
+    bool DeviceImpl::RequestScreenShots()
+    {
+        bool requested = false;
+        std::queue<BgfxCallback::ScreenShotCallback> queuedCallbacks;
+        {
+            std::scoped_lock lock{m_queuedScreenShotCallbacksMutex};
+            queuedCallbacks.swap(m_queuedScreenShotCallbacks);
+        }
+        while (!queuedCallbacks.empty())
+        {
+            m_bgfxCallback.AddScreenShotCallback(std::move(queuedCallbacks.front()));
+            queuedCallbacks.pop();
+            requested = true;
+        }
+        {
+            std::scoped_lock lock{m_captureCallbacksMutex};
+            if (!m_captureCallbacks.empty())
+            {
+                m_bgfxCallback.CaptureNextScreenShot();
+                requested = true;
+            }
+        }
+        if (!requested)
+        {
+            return false;
+        }
+        if (!bgfx::isValid(GetBackBufferHandle()))
+        {
+            throw std::runtime_error{"Cannot capture without a window or an external back buffer."};
+        }
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        if (bgfx::isValid(m_externalBackBuffer.FrameBuffer))
+        {
+            return true;
+        }
+#endif
+        // bgfx accepts only one screenshot per framebuffer in a frame.
+        bgfx::requestScreenShot(m_windowFrameBuffer, "DeviceImpl::RequestScreenShot");
+        return false;
     }
 
     void DeviceImpl::Frame()
@@ -709,35 +938,64 @@ namespace Babylon::Graphics
         UpdateBgfxState();
 
         // Request screen shots before bgfx::frame.
-        RequestScreenShots();
+        [[maybe_unused]] const bool externalScreenShot = !m_bgfxCallback.IsDeviceLost() && RequestScreenShots();
 
         // Advance frame and render!
         const uint8_t frameFlags = m_captureNextFrame.exchange(false) ? BGFX_FRAME_DEBUG_CAPTURE : 0;
+        ReleaseFrameVertexLayouts();
         uint32_t frameNumber{bgfx::frame(frameFlags)};
 
-        // Process read texture requests.
-        while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        if (externalScreenShot && !m_bgfxCallback.IsDeviceLost())
         {
-            m_readTextureRequests.front().second.complete();
-            m_readTextureRequests.pop();
+            ReadExternalBackBuffer();
+        }
+#endif
+
+        CompleteReadTextureRequests(frameNumber);
+
+        ResetClearPalette();
+        m_nextViewId.store(0);
+        m_viewIdGeneration.fetch_add(1);
+    }
+
+    void DeviceImpl::CompleteReadTextureRequests(uint32_t frameNumber)
+    {
+        if (m_bgfxCallback.IsDeviceLost())
+        {
+            std::queue<BgfxCallback::ScreenShotCallback> queuedCallbacks;
+            {
+                std::scoped_lock lock{m_queuedScreenShotCallbacksMutex};
+                queuedCallbacks.swap(m_queuedScreenShotCallbacks);
+            }
+            const auto error = ReadbackCanceled();
+            m_bgfxCallback.CancelScreenShots();
+            while (!queuedCallbacks.empty())
+            {
+                auto callback = std::move(queuedCallbacks.front());
+                queuedCallbacks.pop();
+                callback(arcana::make_unexpected(error));
+            }
+            while (!m_readTextureRequests.empty())
+            {
+                auto completionSource = std::move(m_readTextureRequests.front().second);
+                m_readTextureRequests.pop();
+                completionSource.complete(arcana::make_unexpected(error));
+            }
+            return;
         }
 
-        m_nextViewId.store(0);
-        m_midFrameFlushCount.store(0);
+        while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)
+        {
+            auto completionSource = std::move(m_readTextureRequests.front().second);
+            m_readTextureRequests.pop();
+            completionSource.complete();
+        }
     }
 
     void DeviceImpl::CaptureCallback(const BgfxCallback::CaptureData& data)
     {
         std::scoped_lock callbackLock{m_captureCallbacksMutex};
-
-        // If no one is listening anymore, stop capturing.
-        if (m_captureCallbacks.empty())
-        {
-            std::scoped_lock stateLock{m_state.Mutex};
-            m_state.Bgfx.Dirty = true;
-            m_state.Bgfx.InitState.resolution.reset &= ~BGFX_RESET_CAPTURE;
-            return;
-        }
 
         for (const auto& callback : m_captureCallbacks)
         {

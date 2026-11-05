@@ -16,22 +16,23 @@ namespace bx
 
 struct NVGcontext;
 
-///
 NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator);
 
-///
 NVGcontext* nvgCreate(int32_t _edgeaa);
 
 struct PoolInterface
 {
     std::function<Babylon::Graphics::FrameBuffer*()> acquire;
     std::function<void(Babylon::Graphics::FrameBuffer*)> release;
+    std::function<uint32_t()> samplerFlags;
 };
 
 void nvgSetFrameBufferPool(NVGcontext* _ctx, PoolInterface pool);
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
 
-///
 void nvgDelete(NVGcontext* _ctx);
+
+// Registers a texture without taking ownership; returns 0 on failure.
+int nvgCreateImageFromHandle(NVGcontext* _ctx, bgfx::TextureHandle _handle, int _width, int _height, int _flags);
 
 #endif // NANOVG_BABYLON_H_HEADER_GUARD

@@ -3,20 +3,25 @@
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include "Image.h"
 #include "Path2D.h"
 #include "Font.h"
+#include "CanvasConstants.h"
 #include "nanovg/nanovg_filterstack.h"
 #include <variant>
 #include <vector>
 #include <cstdint>
 #include <memory>
+#include <map>
+#include <unordered_map>
+#include <optional>
+#include <span>
 
 struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
     class CanvasGradient;
+    class NativeCanvasImage;
 
     class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
     {
@@ -29,9 +34,14 @@ namespace Babylon::Polyfills::Internal
 
         NVGcontext* GetNVGContext() const { return *m_nvg.get(); }
 
-        // Copies a region of the CPU-side pixel mirror (populated by DrawImage) into dst (w*h*4 RGBA8 bytes).
-        // Out-of-range pixels are written as zero. Used to implement getImageData without a GPU readback.
-        void ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst);
+        // Reads straight-alpha RGBA8; pixels outside the canvas are transparent black.
+        void ReadPixels(int64_t sx, int64_t sy, uint32_t w, uint32_t h, uint8_t* dst);
+
+        // Flushes pending draws and reads the full framebuffer as RGBA8.
+        std::vector<uint8_t> CaptureRGBA();
+
+        // Breaks the reverse pointer when Canvas is finalized first.
+        void DetachCanvas();
 
     private:
         void FillRect(const Napi::CallbackInfo&);
@@ -103,37 +113,29 @@ namespace Babylon::Polyfills::Internal
         bool SetFontFaceId();
         void EnsureFontsLoaded();
         void Flush(const Napi::CallbackInfo&);
+        void FlushCore();
+        void RetainImageUntilFlush(int imageIndex);
+        void ReleaseImagesAfterFlush();
+        void DrawText(const Napi::CallbackInfo&, bool stroke);
 
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 
-        // A gradient style holds the assigned JavaScript object, not a bare CanvasGradient*.
-        // CanvasGradient is an ObjectWrap, so its native instance is deleted by the wrapper's
-        // finalizer; `ctx.fillStyle = ctx.createLinearGradient(...)` leaves no other reference,
-        // and the pointer dangles as soon as the collector runs. shared_ptr rather than a bare
-        // Napi::ObjectReference because State is copied on save()/restore() and a reference is
-        // move-only -- the copies share one strong reference to the same object.
+        // Keep the JavaScript gradient alive; State copies share this move-only reference.
         using GradientStyle = std::shared_ptr<Napi::ObjectReference>;
+        using Style = std::variant<std::string, GradientStyle>;
 
-        // The wrapper-side drawing state: every attribute save()/restore() has to rewind.
-        // These are kept together, and pushed/popped as a whole, so that adding an attribute
-        // cannot silently miss save()/restore() the way a hand-written field list allows.
-        //
-        // They exist because nvgSave/nvgRestore rewinds nanovg's own copy of the attributes it
-        // knows about but never these C++ mirrors, so without rewinding them a getter keeps
-        // reporting its post-save() value after restore(). The shadow/dash/filter/direction
-        // fields have no nanovg counterpart at all, so nothing else would ever rewind them.
-        //
-        // The current path is deliberately not here: per the spec save() does not save it, so
-        // the path-tracking members below stay outside the stack.
+        // NanoVG does not rewind these C++ mirrors. Keep them together for save/restore;
+        // the current path remains separate because Canvas state does not include it.
+        struct ClipMask;
         struct State
         {
-            std::variant<std::string, GradientStyle> fillStyle{};
-            std::variant<std::string, GradientStyle> strokeStyle{};
-            // These four mirror state nanovg also holds. Their initial values must match what
-            // nvgReset actually installs (NVG_BUTT, NVG_MITER, strokeWidth 1, miterLimit 10),
-            // which is also what the spec requires, or a fresh context reports a default it is
-            // not drawing with.
+            static constexpr float DEFAULT_MITER_LIMIT = 10.f;
+
+            std::shared_ptr<ClipMask> clipMask;
+            Style fillStyle{};
+            Style strokeStyle{};
+            // Defaults must match both NanoVG's reset state and Canvas2D.
             std::string lineCap{"butt"};   // 'butt', 'round', 'square'
             std::string lineJoin{"miter"}; // 'round', 'bevel', 'miter'
 
@@ -150,22 +152,19 @@ namespace Babylon::Polyfills::Internal
             double shadowOffsetY{0.0};
             std::string filter{};
             std::string direction{"ltr"}; // 'ltr', 'rtl'
-            float miterLimit{10.f};
+            float miterLimit{DEFAULT_MITER_LIMIT};
             float lineWidth{1.f};
-            double globalAlpha{1.0};
+            float globalAlpha{1.f};
             float letterSpacing{0.f};
 
-            // font is worse than the getter-only cases above: currentFontId is what the text
-            // draw path binds, so without rewinding it the wrong face actually renders after a
-            // restore(). nvgRestore rewinds the size it set, but not either of these.
+            // NanoVG restores font size, but not these wrapper-side font values.
             Font font{};
-            int currentFontId{-1};
+            int currentFontId{CanvasConstants::INVALID_NANOVG_FONT};
         };
         State m_state{};
         std::vector<State> m_savedStates;
 
-        // Registry of font faces loaded into nanovg, keyed by family. Not part of State:
-        // it is a resource cache for the whole context, not an attribute save() rewinds.
+        // Context-wide resource cache; save/restore does not rewind loaded fonts.
         std::map<std::string, int> m_fonts;
 
         Graphics::DeviceContext& m_graphicsContext;
@@ -177,37 +176,41 @@ namespace Babylon::Polyfills::Internal
 
         // Set once the current path contains anything nvgScissor cannot express.
         bool m_pathHasNonRect{false};
-        // Set when clip() had such a path and had to fall back to path emulation.
-        bool m_isClipped{false};
+        uint32_t m_pathRectangleCount{};
+        std::vector<std::shared_ptr<ClipMask>> m_clipMasks;
+        void ReleaseClipMasksAfterFlush();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
-        std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
+        struct CachedNVGImage
+        {
+            int index{CanvasConstants::INVALID_NANOVG_IMAGE};
+            uint32_t generation{0};
+        };
+        std::unordered_map<const NativeCanvasImage*, CachedNVGImage> m_nvgImageIndices;
+        // Transient ImageData/canvas snapshots stay alive until nvgEndFrame has
+        // consumed every queued draw that references them.
+        std::vector<int> m_imagesPendingFlush;
+        Napi::Value GetStyle(const Style& style);
+        void SetStyle(const Napi::CallbackInfo& info, const Napi::Value& value, Style& style, bool stroke);
+        void BindStyle(const Napi::CallbackInfo& info, const Style& style, bool stroke);
         void BindFillStyle(const Napi::CallbackInfo& info);
         void BindStrokeStyle(const Napi::CallbackInfo& info);
         void FlushGraphicResources() override;
         void PlayPath2D(const NativeCanvasPath2D* path);
         void SetFilterStack();
 
-        // Start a fresh nanovg path and drop the clip state that described the old one.
-        // clip() emulates a non-rectangular path by leaving it current and letting the next
-        // fill draw it, so any operation that resets the path invalidates that emulation:
-        // leaving m_isClipped set makes FillRect skip its own nvgBeginPath and append to a
-        // path that no longer exists, and leaving m_pathHasNonRect set makes a later clip()
-        // take the emulated branch on what is now a plain rect.
+        // The current path is independent of the saved clipping region.
         void ResetPathState();
 
-        // CPU-side RGBA8 mirror of the canvas, sized to the canvas, populated by DrawImage so that
-        // getImageData can return the exact decoded pixels (the GPU nanovg framebuffer is not read back).
-        std::vector<uint8_t> m_cpuPixels;
-        uint32_t m_cpuWidth{0};
-        uint32_t m_cpuHeight{0};
-        void EnsureCpuBuffer();
-        // Core RGBA8 blit used by both the NativeCanvasImage and (plain) ImageBitmap drawImage paths.
-        void BlitPixelsToCpu(const uint8_t* src, uint32_t srcWidth, uint32_t srcHeight, int32_t sx, int32_t sy, uint32_t sw, uint32_t sh, int32_t dx, int32_t dy, uint32_t dw, uint32_t dh);
-        // Shared drawImage body: draws the nanovg image (arity 3/5/9) and mirrors it to the CPU buffer.
-        void DrawImageCommon(const Napi::CallbackInfo& info, int imageIndex, const uint8_t* srcPixels, uint32_t srcWidth, uint32_t srcHeight);
+        struct DrawImageRectangles
+        {
+            float X, Y, Width, Height;
+            float PatternX, PatternY, PatternWidth, PatternHeight;
+        };
+        static std::optional<DrawImageRectangles> ParseDrawImageRectangles(std::span<const double> arguments, uint32_t srcWidth, uint32_t srcHeight);
+        void DrawImageCommon(int imageIndex, const DrawImageRectangles& rectangles);
 
         friend class Canvas;
     };
