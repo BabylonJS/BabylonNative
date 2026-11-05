@@ -624,7 +624,7 @@
         },
         {
             "title": "Gaussian Splatting SPZ SH No WASM",
-            "playgroundId": "##XSNFXP#12",
+            "playgroundId": "#XSNFXP#12",
             "referenceImage": "gsplat-spz-sh.png",
             "excludeFromAutomaticTesting": true,
             "reason": "Fails on native: ReadableStream is not defined"
