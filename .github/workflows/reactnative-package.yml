@@ -1,0 +1,33 @@
+name: React Native Package
+on: workflow_call
+jobs:
+  package:
+    runs-on: macos-15
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4.2.2
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: NPM Install
+      run: npm install
+      working-directory: Embedding/ReactNative/Package
+    - name: Download Assembled Folder
+      uses: actions/download-artifact@v4
+      with:
+        name: Assembled
+        path: Embedding/ReactNative/Package/Assembled
+    - name: Publish Package dry run
+      run: |
+        npm publish --access public --dry-run
+        npm pack
+      working-directory: Embedding/ReactNative/Package/Assembled
+    - name: Upload .tgz tarball
+      uses: actions/upload-artifact@v4
+      with:
+        name: BabylonReactNative
+        path: Embedding/ReactNative/Package/Assembled/*.tgz
+    timeout-minutes: 90
+permissions:
+  contents: read

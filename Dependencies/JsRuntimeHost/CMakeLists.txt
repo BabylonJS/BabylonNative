@@ -314,7 +314,9 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
     FetchContent_MakeAvailable_With_Message(hermes)
 endif()
 
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+# The source-tree build packages asio and llhttp for offline V8 inspector builds
+# regardless of the engine selected at package creation time.
+if(BABYLON_NATIVE_BUILD_SOURCETREE OR (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR))
     FetchContent_MakeAvailable_With_Message(asio)
     add_library(asio INTERFACE)
     target_include_directories(asio INTERFACE "${asio_SOURCE_DIR}/asio/include")

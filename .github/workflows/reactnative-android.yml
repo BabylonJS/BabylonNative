@@ -1,0 +1,29 @@
+name: React Native Build Android
+on: workflow_call
+jobs:
+  build-android:
+    runs-on: macos-15
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4.2.2
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+    - name: Setting up developer environment
+      run: node setup_dev.js
+      working-directory: Embedding/ReactNative/Package
+    - name: List installed packages
+      run: npm ls
+      working-directory: Embedding/ReactNative/Apps/Playground
+    - name: Gulp (Android)
+      run: npx gulp buildAndroid
+      working-directory: Embedding/ReactNative/Package
+    timeout-minutes: 90
+permissions:
+  contents: read

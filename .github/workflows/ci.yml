@@ -14,6 +14,12 @@ concurrency:
 # Hermes and macOS-hosted Android builds run in the Azure pipeline nightly.yml; sanitizer builds run
 # in the Azure pipeline nightly-extended.yml.
 jobs:
+  # TEMPORARY: remove before merge; exercise React Native unconditionally on every PR.
+  ReactNative:
+    uses: ./.github/workflows/reactnative-pr.yml
+    with:
+      force-run: true
+
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
     uses: ./.github/workflows/build-macos.yml
@@ -190,6 +196,8 @@ jobs:
     # Run after unsuccessful dependencies too, but allow superseded runs to cancel.
     if: ${{ !cancelled() }}
     needs:
+      # TEMPORARY: remove before merge.
+      - ReactNative
       - MacOS
       - MacOS_Ninja
       - MacOS_QuickJS

@@ -26,6 +26,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Building on Windows, Targeting Android](BUILDING.md#building-on-windows-targeting-android)
   - [Building on Ubuntu, Targeting Linux](BUILDING.md#building-on-ubuntu-targeting-linux)
   - [Selecting the Graphics API](BUILDING.md#selecting-the-graphics-api)
+- [Babylon React Native](Embedding/ReactNative/README.md) - React Native integration, Playground, and npm packaging
 - [Documentation](Documentation/Readme.md)
   - [When to Use Babylon Native](Documentation/WhenToUseBabylonNative.md)
   - [Babylon Native Components](Documentation/Components.md)
