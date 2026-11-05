@@ -110,6 +110,9 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::Remove(const Napi::CallbackInfo&)
     {
+        // Babylon.js calls remove() when disposing a canvas it owns (DynamicTexture). Release the GPU
+        // resources now instead of waiting for GC; they are recreated on demand if the canvas is reused.
+        Dispose();
     }
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
