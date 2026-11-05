@@ -129,7 +129,7 @@ namespace Babylon
         Napi::Value ReadTextureImpl(const Napi::CallbackInfo& info, bool preserveFloat);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
-        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, bool autoGenerateMips = true, Graphics::Texture* depthStencilTexture = nullptr);
+        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, uint8_t autoGenerateMipMask = UINT8_MAX, Graphics::Texture* depthStencilTexture = nullptr);
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);

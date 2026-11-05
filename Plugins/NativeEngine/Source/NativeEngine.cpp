@@ -3231,7 +3231,7 @@ void main() {
         const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr && !requestDepthStencilTexture ? 1u : 0u};
 
         return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples, static_cast<uint16_t>(layer), mip, {},
-            nullptr, autoGenerateMips, requestDepthStencilTexture ? texture : nullptr);
+            nullptr, autoGenerateMips ? UINT8_MAX : 0, requestDepthStencilTexture ? texture : nullptr);
     }
 
     Napi::Value NativeEngine::CreateMultiFrameBuffer(const Napi::CallbackInfo& info)
@@ -3276,10 +3276,37 @@ void main() {
             explicitDepthTexture = info[7].As<Napi::Pointer<Graphics::Texture>>().Get();
         }
 
-        return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples, 0, 0, gsl::span<const uint16_t>{perAttachmentLayers.data(), layerCount}, explicitDepthTexture);
+        uint8_t autoGenerateMipMask = UINT8_MAX;
+        if (info.Length() > 8 && !info[8].IsUndefined())
+        {
+            if (!info[8].IsArray())
+            {
+                throw Napi::TypeError::New(info.Env(), "Multi render target mip generation flags must be an array");
+            }
+            const auto mipFlags = info[8].As<Napi::Array>();
+            if (mipFlags.Length() != colorCount)
+            {
+                throw Napi::RangeError::New(info.Env(), "Multi render target mip generation flags must match the color attachment count");
+            }
+            autoGenerateMipMask = 0;
+            for (uint32_t i = 0; i < colorCount; ++i)
+            {
+                const auto flag = mipFlags.Get(i);
+                if (!flag.IsBoolean())
+                {
+                    throw Napi::TypeError::New(info.Env(), "Multi render target mip generation flags must be booleans");
+                }
+                if (flag.As<Napi::Boolean>())
+                {
+                    autoGenerateMipMask |= static_cast<uint8_t>(1 << i);
+                }
+            }
+        }
+
+        return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples, 0, 0, gsl::span<const uint16_t>{perAttachmentLayers.data(), layerCount}, explicitDepthTexture, autoGenerateMipMask);
     }
 
-    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer, uint16_t mip, gsl::span<const uint16_t> perAttachmentLayers, Graphics::Texture* explicitDepthTexture, bool autoGenerateMips, Graphics::Texture* depthStencilTexture)
+    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer, uint16_t mip, gsl::span<const uint16_t> perAttachmentLayers, Graphics::Texture* explicitDepthTexture, uint8_t autoGenerateMipMask, Graphics::Texture* depthStencilTexture)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
         if (samples > 1)
@@ -3318,6 +3345,7 @@ void main() {
         for (Graphics::Texture* texture : colorTextures)
         {
             const uint16_t attachmentLayer = (colorIndex < perAttachmentLayers.size()) ? perAttachmentLayers[colorIndex] : layer;
+            const bool autoGenerateMips = 0 != (autoGenerateMipMask & (1 << colorIndex));
             ++colorIndex;
 
             if (texture == nullptr)

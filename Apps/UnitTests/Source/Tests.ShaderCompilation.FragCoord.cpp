@@ -975,6 +975,70 @@ TEST(NativeEngineClear, PreservesUnselectedRenderTargetAttachments)
 #endif
 }
 
+TEST(NativeEngineMipmaps, MultiRenderTargetPreservesAuthoredMipLevels)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        "precision highp float; void main() { gl_FragColor = vec4(1.0); }", false, R"(
+            globalThis.__prepare = async function () {
+                var base = [64, 128, 192, 255];
+                for (var flags of [[false, false], [true, true], [false, true], undefined]) {
+                    var target = engine.createMultipleRenderTarget({ width: 4, height: 4 }, {
+                        textureCount: 2, createMipMaps: true, generateMipMaps: false, generateDepthBuffer: false
+                    });
+                    var handles = target.textures.map(function (texture) { return texture._hardwareTexture.underlyingResource; });
+                    target._framebuffer = engine._engine.createMultiFrameBuffer(handles, 4, 4, false, false, 1, undefined, undefined, flags);
+                    for (var attachment = 0; attachment < 2; ++attachment) {
+                        for (var mip = 1; mip <= 2; ++mip) {
+                            var size = 4 >> mip;
+                            var authored = new Uint8Array(size * size * 4);
+                            for (var i = 0; i < authored.length; ++i) {
+                                authored[i] = [16 + mip, 32 + attachment, 48, 255][i % 4];
+                            }
+                            engine.updateTextureData(target.textures[attachment], authored, 0, 0, size, size, 0, mip);
+                        }
+                    }
+                    engine.bindFramebuffer(target);
+                    engine.bindAttachments(engine.buildTextureLayout([true, true]));
+                    engine.clear(new BABYLON.Color4(base[0] / 255, base[1] / 255, base[2] / 255, 1), true, false, false);
+                    engine.restoreDefaultFramebuffer();
+                    for (var attachment = 0; attachment < 2; ++attachment) {
+                        for (var mip = 0; mip <= 2; ++mip) {
+                            var size = 4 >> mip;
+                            var actual = await engine._readTexturePixels(target.textures[attachment], size, size, -1, mip);
+                            var expected = mip === 0 || flags === undefined || flags[attachment]
+                                ? base : [16 + mip, 32 + attachment, 48, 255];
+                            if (actual.length !== size * size * 4) throw new Error("Incorrect MRT mip readback size");
+                            for (var i = 0; i < actual.length; ++i) {
+                                if (Math.abs(actual[i] - expected[i % 4]) > 1) {
+                                    throw new Error("MRT mip generation flags=" + JSON.stringify(flags) +
+                                        ", attachment=" + attachment + ", mip=" + mip + ", byte=" + i +
+                                        ": expected " + expected[i % 4] + ", got " + actual[i]);
+                                }
+                            }
+                        }
+                    }
+                    for (var invalidFlags of [false, [false], [false, 0], [false, false, false]]) {
+                        var rejected = false;
+                        try {
+                            engine._engine.createMultiFrameBuffer(handles, 4, 4, false, false, 1, undefined, undefined, invalidFlags);
+                        } catch (error) {
+                            if (!(error instanceof TypeError) && !(error instanceof RangeError)) throw error;
+                            rejected = true;
+                        }
+                        if (!rejected) throw new Error("Invalid MRT mip generation flags were accepted");
+                    }
+                    target.dispose();
+                }
+            };
+        )");
+    EXPECT_EQ(pixels, (std::vector<uint8_t>{255, 255, 255, 255}));
+#endif
+}
+
 TEST(NativeEngineClear, PreservesTextureBindings)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
