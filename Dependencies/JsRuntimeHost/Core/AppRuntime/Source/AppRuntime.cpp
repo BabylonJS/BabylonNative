@@ -90,7 +90,10 @@ namespace Babylon
 
         while (!m_impl->m_cancelSource.cancelled())
         {
-            m_impl->m_dispatcher.blocking_tick(m_impl->m_cancelSource);
+            if (m_impl->m_dispatcher.blocking_tick(m_impl->m_cancelSource))
+            {
+                DrainPostDispatchWork(env);
+            }
         }
 
         Napi::HandleScope scope{env};

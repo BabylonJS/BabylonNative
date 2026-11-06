@@ -94,6 +94,9 @@ target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE NAPI_JAVA
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JSI)
 endif()
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_V8)
+endif()
 
 target_link_libraries(${_jsruntimehost_unit_tests_target}
     PRIVATE AppRuntime

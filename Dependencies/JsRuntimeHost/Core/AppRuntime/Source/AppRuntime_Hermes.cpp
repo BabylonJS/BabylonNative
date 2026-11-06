@@ -29,4 +29,8 @@ namespace Babylon
         // observes the same "between turns" semantics it gets on V8/Chakra.
         Napi::DrainJobs(env);
     }
+
+    void AppRuntime::DrainPostDispatchWork(Napi::Env)
+    {
+    }
 }

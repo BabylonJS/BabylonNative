@@ -82,4 +82,8 @@ namespace Babylon
         // JsSetPromiseContinuationCallback hook (see RunEnvironmentTier).
         // No explicit pump needed here.
     }
+
+    void AppRuntime::DrainPostDispatchWork(Napi::Env)
+    {
+    }
 }
