@@ -28,6 +28,7 @@ jobs:
             -B build/Win32_${{ inputs.platform }}_PrecompiledShaderTest ^
             -A ${{ inputs.platform }} ^
             -D BX_CONFIG_DEBUG=ON ^
+            -D BABYLON_NATIVE_BGFX_TRACE=OFF ^
             -D GRAPHICS_API=D3D11 ^
             -D BABYLON_DEBUG_TRACE=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS=OFF

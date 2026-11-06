@@ -109,6 +109,7 @@ jobs:
             -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON ^
             ${{ steps.vars.outputs.js_define }} ^
             -D BX_CONFIG_DEBUG=ON ^
+            -D BABYLON_NATIVE_BGFX_TRACE=OFF ^
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
             -D BABYLON_DEBUG_TRACE=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
@@ -162,25 +163,12 @@ jobs:
       # quirks of Chakra/JSI/Hermes/QuickJS; the other engines still run UnitTests.
       # --test-timeout fails a stuck test (or a native hang, via the watchdog) in
       # minutes instead of letting it run into the job timeout.
-      # The console skips bgfx trace lines; the uploaded validation.log has everything.
       - name: Validation Tests
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' }}
-        shell: pwsh
+        shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          .\Playground.exe --test-timeout=120 app:///Scripts/validation_native.js 2>&1 |
-            ForEach-Object { "$_" } |
-            Tee-Object -FilePath validation.log |
-            Where-Object { -not $_.Contains('): BGFX ') }
-          exit $LASTEXITCODE
-
-      - name: Upload Validation Log
-        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !cancelled() }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-validation-log
-          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/validation.log
-          if-no-files-found: ignore
+          Playground --test-timeout=120 app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !cancelled() }}
