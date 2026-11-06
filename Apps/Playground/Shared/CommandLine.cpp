@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -48,8 +50,10 @@ namespace
         }
         std::string str{s};
         char* end = nullptr;
+        errno = 0;
         long v = std::strtol(str.c_str(), &end, 10);
-        if (end == nullptr || *end != '\0')
+        if (end == nullptr || *end != '\0' || errno == ERANGE ||
+            v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max())
         {
             return false;
         }
