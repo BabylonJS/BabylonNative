@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <mutex>
 #include <string>
@@ -30,8 +31,21 @@ namespace
             return *instance;
         }
 
+        // Called when the host installs MakeLogCallback, the only path that feeds the watchdog.
+        void EnableFeeding()
+        {
+            m_feedable = true;
+        }
+
         void Start(std::chrono::seconds limit)
         {
+            if (!m_feedable)
+            {
+                // Hosts that route console output elsewhere (e.g. the windowed
+                // macOS BNRuntime -> os_log) would trip the watchdog while healthy.
+                std::fprintf(stderr, "Playground: --test-timeout hang watchdog disabled; this host does not feed it.\n");
+                return;
+            }
             bool expected = false;
             if (!m_started.compare_exchange_strong(expected, true))
             {
@@ -79,6 +93,7 @@ namespace
             }
         }
 
+        std::atomic<bool> m_feedable{false};
         std::atomic<bool> m_started{false};
         std::chrono::seconds m_limit{};
         std::mutex m_mutex;
@@ -181,6 +196,7 @@ namespace Playground
     std::function<void(Babylon::Embedding::LogLevel, std::string_view)>
     MakeLogCallback(std::function<void(std::string_view)> platformSink)
     {
+        Watchdog::Instance().EnableFeeding();
         return [sink = std::move(platformSink)](Babylon::Embedding::LogLevel level, std::string_view message) {
             std::string text{message};
             while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))

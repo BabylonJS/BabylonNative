@@ -148,7 +148,9 @@ per flag** (intentional design -- long-name aliases were removed).
     --test-timeout=SECONDS  Per-test scene-creation and initial-readiness timeout
                             (default 600s / 1200s). Also arms a watchdog that
                             prints a HANG banner and exits 3 after
-                            2*SECONDS+60s without console output. CI uses 120.
+                            2*SECONDS+60s without console output (only on
+                            hosts using MakeLogCallback; not the windowed
+                            macOS app). CI uses 120, except sanitizer runs.
 -t, --test=PATTERN          Run tests whose title contains PATTERN (substring,
                             case-insensitive). Repeatable; multiple = OR.
     --test-index=LIST       Run only the listed indices.
