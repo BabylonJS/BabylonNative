@@ -1,5 +1,7 @@
 #pragma once
 
+#include "XRCamera.h"
+
 namespace Babylon
 {
     class XRView : public Napi::ObjectWrap<XRView>
@@ -20,6 +22,7 @@ namespace Babylon
                     InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
                     InstanceAccessor("transform", &XRView::GetTransform, nullptr),
                     InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr),
+                    InstanceAccessor("camera", &XRView::GetCamera, nullptr),
                 });
 
             env.Global().Set(JS_CLASS_NAME, func);
@@ -40,7 +43,8 @@ namespace Babylon
         {
         }
 
-        void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::Space& space, bool isFirstPersonObserver)
+        void Update(const Napi::CallbackInfo& info, size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::Space& space, bool isFirstPersonObserver,
+            void* cameraTexturePointer, size_t cameraTextureWidth, size_t cameraTextureHeight)
         {
             if (eyeIdx != m_eyeIdx)
             {
@@ -53,6 +57,21 @@ namespace Babylon
             XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
 
             m_isFirstPersonObserver = isFirstPersonObserver;
+
+            // WebXR raw camera access: keep the per-view XRCamera in sync with the
+            // platform camera texture (null on platforms/backends that don't provide one).
+            if (cameraTexturePointer != nullptr)
+            {
+                if (m_camera.IsEmpty())
+                {
+                    m_camera = Napi::Persistent(XRCamera::New(info));
+                }
+                XRCamera::Unwrap(m_camera.Value())->Update(info.Env(), cameraTexturePointer, cameraTextureWidth, cameraTextureHeight);
+            }
+            else if (!m_camera.IsEmpty())
+            {
+                XRCamera::Unwrap(m_camera.Value())->Update(info.Env(), nullptr, 0, 0);
+            }
         }
 
     private:
@@ -61,6 +80,7 @@ namespace Babylon
         Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
         Napi::ObjectReference m_rigidTransform{};
         bool m_isFirstPersonObserver{};
+        Napi::ObjectReference m_camera{};
 
         Napi::Value GetEye(const Napi::CallbackInfo& info)
         {
@@ -80,6 +100,15 @@ namespace Babylon
         Napi::Value IsFirstPersonObserver(const Napi::CallbackInfo& info)
         {
             return Napi::Boolean::From(info.Env(), m_isFirstPersonObserver);
+        }
+
+        Napi::Value GetCamera(const Napi::CallbackInfo& info)
+        {
+            if (m_camera.IsEmpty() || !XRCamera::Unwrap(m_camera.Value())->HasTexture())
+            {
+                return info.Env().Undefined();
+            }
+            return m_camera.Value();
         }
     };
 } // Babylon
