@@ -128,7 +128,7 @@ jobs:
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
           printf '%s\n' \
-            'globalThis._playgroundOptions = { saveResults: false, testIndices: [46, 50] };' \
+            'globalThis._playgroundOptions = { saveResults: false, testIndices: [48, 53] };' \
             > Scripts/vulkan_ci_options.js
           set -o pipefail
           xvfb-run --auto-servernum ./Playground \
