@@ -51,7 +51,7 @@ function sessionFactory(options = {}) {
             }
             globalThis._native = {Engine};
             globalThis.BABYLON = {
-                Engine: {Version: ${JSON.stringify(options.version || "9.29.0")}},
+                Engine: {Version: ${JSON.stringify(options.version || require(path.resolve(__dirname, "..", "..", "..", "..", "..", "package-lock.json")).packages["node_modules/babylonjs"].version)}},
                 NativeEngine: Engine, Tools: {}, SceneLoader: {OnPluginActivatedObservable: {clear() {}}},
                 DracoDecoder: {}, MeshoptCompression: {Configuration: {}}, GLTFValidation: {},
                 KhronosTextureContainer2: {}, BasisToolsOptions: {}, NodeMaterial: {}

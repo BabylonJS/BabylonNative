@@ -1,9 +1,12 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { PNG } = require("pngjs");
+const { main } = require("../run.cjs");
+const { createTransport } = require("../transport.cjs");
+const { sessionFactory } = require("./fixtures/session.cjs");
 
 if (!process.env.BABYLON_JS_ROOT) {
     throw new Error("BABYLON_JS_ROOT is required for the shared Playwright integration controls");
@@ -11,25 +14,15 @@ if (!process.env.BABYLON_JS_ROOT) {
 const root = path.resolve(process.env.BABYLON_JS_ROOT);
 const cli = require.resolve("@playwright/test/cli", { paths: [root] });
 
-test("the actual shared suite owns scene assertions, filtering, retries and worker replacement", t => {
+test("the normal runner keeps devices through actual shared-suite assertions and worker replacement", async t => {
     const directory = fs.mkdtempSync(path.join(__dirname, "shared-suite-results-"));
     t.after(() => fs.rmSync(directory, { recursive: true }));
     const events = path.join(directory, "sessions.jsonl");
     const marker = path.join(directory, "first-failure");
-    const transport = path.join(directory, "transport.cjs");
     const config = path.join(directory, "playwright.config.cjs");
     const catalog = path.join(directory, "catalog.json");
-    fs.writeFileSync(transport, `
-        const {createTransport} = require(${JSON.stringify(path.resolve(__dirname, "..", "transport.cjs"))});
-        const {sessionFactory} = require(${JSON.stringify(path.join(__dirname, "fixtures", "session.cjs"))});
-        exports.createTransport = (onConsole, signal) => createTransport(onConsole, signal, {
-            sessionFactory: sessionFactory({events: ${JSON.stringify(events)}, retryMarker: ${JSON.stringify(marker)}}).factory,
-            auth: {redact: text => text}
-        });
-    `);
     fs.writeFileSync(config, `
         const config = require(${JSON.stringify(path.resolve(__dirname, "..", "playwright.config.cjs"))});
-        process.env.BABYLON_NATIVE_TRANSPORT = ${JSON.stringify(transport)};
         module.exports = {
             ...config,
             snapshotPathTemplate: ${JSON.stringify(path.join(directory, "{arg}{ext}"))},
@@ -52,26 +45,54 @@ test("the actual shared suite owns scene assertions, filtering, retries and work
         ...process.env, MOBILE_PLATFORM: "android", MOBILE_OUTPUT: path.join(directory, "output"),
         CONFIG_PATH: catalog, CDN_BASE_URL: "https://fixture.invalid/", TIMEOUT: "10000"
     };
-    function run(args) {
-        const result = spawnSync(process.execPath, [cli, "test", "--config", config, ...args], {
-            cwd: root, env, encoding: "utf8", timeout: 60_000
+    const original = Object.fromEntries(Object.keys(env).map(key => [key, process.env[key]]));
+    Object.assign(process.env, env);
+    t.after(() => {
+        for (const [key, value] of Object.entries(original)) {
+            if (value === undefined) { delete process.env[key]; }
+            else { process.env[key] = value; }
+        }
+    });
+    async function run(args, expectedCode = 0) {
+        const session = sessionFactory({ events, retryMarker: marker });
+        const startupEvidence = path.join(env.MOBILE_OUTPUT, "startup-evidence.json");
+        let log = "";
+        const code = await main(args, {
+            auth: { redact: text => text },
+            uploadApp: async () => ({ appUrl: "bs://fixture", sha256: "fixture", bytes: 1, uploadMs: 0 }),
+            createTransport: async (onConsole, signal, options) => {
+                const transport = await createTransport(onConsole, signal, {
+                    ...options, sessionFactory: session.factory, auth: { redact: text => text }
+                });
+                fs.writeFileSync(startupEvidence, "Created before Playwright startup");
+                return transport;
+            },
+            spawn: (command, args, options) => {
+                args[3] = config;
+                const child = spawn(command, args, { ...options, stdio: ["ignore", "pipe", "pipe"] });
+                child.stdout.on("data", bytes => { log += bytes; });
+                child.stderr.on("data", bytes => { log += bytes; });
+                return child;
+            }
         });
-        assert.equal(result.status, 0, result.error?.message || result.stdout + result.stderr);
+        assert.equal(code, expectedCode, log);
+        assert.equal(fs.readFileSync(startupEvidence, "utf8"), "Created before Playwright startup");
+        assert.equal(JSON.parse(fs.readFileSync(path.join(env.MOBILE_OUTPUT, "app-upload.json"))).sha256, "fixture");
         return JSON.parse(fs.readFileSync(path.join(directory, "report.json"), "utf8"));
     }
-    const selected = run(["--grep", "passing scene", "--workers", "1"]);
+    const selected = await run(["--grep", "passing scene", "--workers", "1"]);
     assert.equal(selected.stats.expected, 1);
     assert.equal(selected.stats.unexpected, 0);
     let lifecycle = fs.readFileSync(events, "utf8").trim().split("\n").map(line => JSON.parse(line));
     assert.deepEqual(lifecycle.map(item => item.phase), ["start", "stop"]);
     fs.writeFileSync(events, "");
-    const scaled = run(["--grep", "scaled scene|after scale", "--workers", "1"]);
+    const scaled = await run(["--grep", "scaled scene|after scale", "--workers", "1"]);
     assert.equal(scaled.stats.expected, 2);
     assert.equal(scaled.stats.unexpected, 0);
     lifecycle = fs.readFileSync(events, "utf8").trim().split("\n").map(line => JSON.parse(line));
     assert.deepEqual(lifecycle.map(item => item.phase), ["start", "stop"]);
     fs.writeFileSync(events, "");
-    const all = run(["--workers", "2", "--retries", "1"]);
+    const all = await run(["--workers", "1", "--retries", "1"]);
     assert.equal(all.stats.expected, 3);
     assert.equal(all.stats.flaky, 1);
     assert.equal(all.stats.unexpected, 0);
@@ -84,8 +105,27 @@ test("the actual shared suite owns scene assertions, filtering, retries and work
     lifecycle = fs.readFileSync(events, "utf8").trim().split("\n").map(line => JSON.parse(line));
     const started = lifecycle.filter(item => item.phase === "start").map(item => item.id).sort();
     const stopped = lifecycle.filter(item => item.phase === "stop").map(item => item.id).sort();
-    assert.equal(started.length, 3);
+    assert.equal(started.length, 1);
     assert.deepEqual(stopped, started);
+    const owner = JSON.parse(fs.readFileSync(path.join(env.MOBILE_OUTPUT, "run.json")));
+    assert.equal(owner.devices.length, 1);
+    assert.equal(owner.devices[0].history.filter(event => event.event === "acquire").length, 2);
+    fs.writeFileSync(events, "");
+    const parallel = await run(["--workers", "2"]);
+    assert.equal(parallel.stats.expected, 4);
+    lifecycle = fs.readFileSync(events, "utf8").trim().split("\n").map(line => JSON.parse(line));
+    assert.equal(lifecycle.filter(item => item.phase === "start").length, 2);
+    assert.equal(lifecycle.filter(item => item.phase === "stop").length, 2);
+    const unsupported = JSON.parse(fs.readFileSync(catalog));
+    unsupported.tests.push({
+        title: "Native transport CSS background", scriptToRun: "pass", functionToCall: "createScene",
+        referenceImage: "fixture.png", renderCount: 2, canvasBackgroundColor: "white"
+    });
+    fs.writeFileSync(catalog, JSON.stringify(unsupported));
+    const background = await run(["--grep", "CSS background", "--workers", "1"], 1);
+    assert.equal(background.stats.unexpected, 1);
+    assert.match(background.suites[0].specs[0].tests[0].results[0].errors[0].message,
+        /Native framebuffer screenshots do not support CSS canvasBackgroundColor/);
 });
 
 test("the mobile entry point refuses replacement projects, configs and reference updates", () => {

@@ -10,7 +10,7 @@ const { defineConfig } = sharedRequire("@playwright/test");
 if (!["android", "ios"].includes(process.env.MOBILE_PLATFORM)) {
     throw new Error("MOBILE_PLATFORM must be android or ios");
 }
-process.env.BABYLON_NATIVE_TRANSPORT = path.join(__dirname, "transport.cjs");
+process.env.BABYLON_NATIVE_TRANSPORT = path.join(__dirname, "device-broker.cjs");
 process.env.BABYLON_NATIVE_STARTUP_TIMEOUT_MS = "180000";
 process.env.TIMEOUT ||= "300000";
 process.env.BABYLON_NATIVE_PLATFORM = process.env.MOBILE_PLATFORM;
@@ -28,7 +28,7 @@ module.exports = defineConfig({
     globalTimeout: 95 * 60_000,
     updateSnapshots: "none",
     snapshotPathTemplate: path.join(root, "packages", "tools", "tests", "test", "visualization", "ReferenceImages", "{arg}{ext}"),
-    outputDir,
+    outputDir: path.join(outputDir, "test-results"),
     use: { trace: "off", video: "off", screenshot: "off" },
     reporter: [["line"], ["json", { outputFile: path.join(outputDir, "playwright-results.json") }]],
 });

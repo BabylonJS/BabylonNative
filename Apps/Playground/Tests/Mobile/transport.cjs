@@ -5,7 +5,11 @@ const { MobileController } = require("./controller.cjs");
 const { credentials, startSession } = require("./browserstack.cjs");
 const { decodeFrame } = require("./framebuffer.cjs");
 
-async function createTransport(onConsole, signal, { sessionFactory = startSession, auth = credentials() } = {}) {
+async function createTransport(onConsole, signal, {
+    sessionFactory = startSession, auth = credentials(),
+    uploadedApp = process.env.MOBILE_UPLOADED_APP ? JSON.parse(process.env.MOBILE_UPLOADED_APP) : undefined,
+    workerIndex = process.env.TEST_WORKER_INDEX
+} = {}) {
     const output = path.join(process.env.MOBILE_OUTPUT || path.join(__dirname, "mobile-results"), "sessions", randomUUID());
     fs.mkdirSync(output, { recursive: true });
     const controller = await new MobileController(item => onConsole(item.level, auth.redact(item.text))).listen();
@@ -14,7 +18,7 @@ async function createTransport(onConsole, signal, { sessionFactory = startSessio
     if (signal.aborted) {
         cancelStartup();
     }
-    const report = { startedAtMs: Date.now(), workerIndex: process.env.TEST_WORKER_INDEX, commands: 0 };
+    const report = { startedAtMs: Date.now(), workerIndex, commands: 0 };
     let mobile;
     let closePromise;
     function persist() {
@@ -62,7 +66,7 @@ async function createTransport(onConsole, signal, { sessionFactory = startSessio
         mobile = await sessionFactory({
             controller, platform: process.env.MOBILE_PLATFORM, deviceName: process.env.MOBILE_DEVICE,
             osVersion: process.env.MOBILE_OS_VERSION, app: process.env.MOBILE_APP, output, auth, signal,
-            uploadedApp: process.env.MOBILE_UPLOADED_APP ? JSON.parse(process.env.MOBILE_UPLOADED_APP) : undefined
+            uploadedApp
         });
         report.session = mobile.measurements;
         const version = require(path.join(__dirname, "..", "..", "..", "package-lock.json")).packages["node_modules/babylonjs"].version;
