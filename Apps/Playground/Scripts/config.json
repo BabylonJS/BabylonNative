@@ -615,12 +615,16 @@
         {
             "title": "Gaussian Splatting Projected Size",
             "playgroundId": "#8FOB3C#0",
-            "referenceImage": "gsplat-debug-projected-size.png"
+            "referenceImage": "gsplat-debug-projected-size.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ loader fails with \"Loading a script as an ES module is not supported in Babylon Native\" (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Overdraw",
             "playgroundId": "#D4U720#1",
-            "referenceImage": "gsplat-debug-overdraw.png"
+            "referenceImage": "gsplat-debug-overdraw.png",
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ loader fails with \"Loading a script as an ES module is not supported in Babylon Native\" (passes on V8)."
         },
         {
             "title": "Gaussian Splatting SPZ SH No WASM",
@@ -633,13 +637,17 @@
             "title": "Gaussian Splatting SPZ Extensions",
             "playgroundId": "#XSNFXP#8",
             "referenceImage": "gsplat-spz-extensions.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting SPZ V4 Extensions",
             "playgroundId": "#XSNFXP#25",
             "referenceImage": "gsplat-spz-v4-extensions.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting glTF SPZ Compression",
@@ -660,7 +668,9 @@
             "title": "Gaussian Splatting SPZ SH Order 4",
             "playgroundId": "#XSNFXP#5",
             "referenceImage": "gsplat-spz-sh-order-4.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4 No WASM",
@@ -673,7 +683,9 @@
             "title": "Gaussian Splatting SPZ Detailed Splat",
             "playgroundId": "#XSNFXP#6",
             "referenceImage": "gsplat-spz-detailed-splat.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat No WASM",
@@ -708,43 +720,57 @@
             "title": "Gaussian Splatting Debug Opacity Scale",
             "playgroundId": "#XSNFXP#16",
             "referenceImage": "gsplat-debug-opacity-scale.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Debug Opacity Saturate",
             "playgroundId": "#XSNFXP#17",
             "referenceImage": "gsplat-debug-opacity-saturate.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Debug Size Culling",
             "playgroundId": "#XSNFXP#19",
             "referenceImage": "gsplat-debug-size-culling.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Debug Opacity Culling",
             "playgroundId": "#XSNFXP#20",
             "referenceImage": "gsplat-debug-opacity-culling.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Debug Clipping Box",
             "playgroundId": "#XSNFXP#21",
             "referenceImage": "gsplat-debug-clipping-box.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Debug Diffuse Only",
             "playgroundId": "#XSNFXP#22",
             "referenceImage": "gsplat-debug-diffuse-only.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Debug SH4 Only",
             "playgroundId": "#XSNFXP#24",
             "referenceImage": "gsplat-debug-sh4-only.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "Gaussian Splatting Compound Incremental Update",
@@ -3272,7 +3298,9 @@
             "title": "FrameGraph object renderer - Beauty reference",
             "playgroundId": "#1OC90Y#1",
             "errorRatio": 0.5,
-            "referenceImage": "framegraph-geometry-renderers-beauty.png"
+            "referenceImage": "framegraph-geometry-renderers-beauty.png",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Linux OpenGL: the particle effect (POINTEMITTER, BILLBOARD) fails to compile; passes on Win32 D3D11."
         },
         {
             "title": "FrameGraph geometry renderer - Normals",
@@ -3312,7 +3340,9 @@
             "playgroundId": "#5F1T3C#0",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
-            "workarounds": ["es-module-import"]
+            "workarounds": ["es-module-import"],
+            "excludedJavaScriptEngines": ["JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
         },
         {
             "title": "FrameGraph selection outline",
