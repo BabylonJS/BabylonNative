@@ -71,6 +71,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("toDataURL", &NativeCanvas::ToDataURL),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
+                // Lets Babylon.js know dispose() defers GPU resource release past already-queued commands.
+                InstanceValue("supportsDeferredDispose", Napi::Boolean::New(env, true)),
                 InstanceMethod("remove", &NativeCanvas::Remove),
                 StaticMethod("parseColor", &NativeCanvas::ParseColor)});
 
