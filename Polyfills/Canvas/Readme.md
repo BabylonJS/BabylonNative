@@ -80,8 +80,10 @@ A set of precompiled shaders is included, so you don’t need to build shaderc o
 If you modify any shader, you’ll need shaderc — the bgfx shader compiler — to rebuild them. Shaderc can generate shaders targeting MSL, GLSL, HLSL, or SPIR-V.
 
 To obtain shaderc:
-- Clone bgfx.cmake and generate and build the project 
-  Or follow these instructions: https://bkaradzic.github.io/bgfx/build.html
+- Build the tracked wrapper standalone from the BabylonNative root:
+  `cmake -S Dependencies\bgfx.cmake -B build\bgfx-tools -DBGFX_BUILD_EXAMPLES=OFF`,
+  then `cmake --build build\bgfx-tools --config Release --target shaderc`.
+  Alternatively follow https://bkaradzic.github.io/bgfx/build.html.
 - Once built, locate the `shaderc` executable in the output directory.
 - Set the full path to this executable in CMake using the variable `SHADERC_PATH`.
 

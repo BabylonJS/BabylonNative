@@ -33,6 +33,15 @@ namespace Babylon
         // BuildInstanceDataBuffer path is skipped and NativeEngine binds a GPU-repacked buffer.
         bool HasStorageInstances() const;
 
+        template<typename Callback>
+        void ForEachVertexBuffer(Callback&& callback) const
+        {
+            for (const auto& pair : m_vertexBufferRecords)
+            {
+                callback(*pair.second.Buffer);
+            }
+        }
+
         // Vertex inputs of a transform feedback program (locations at or above
         // TRANSFORM_FEEDBACK_ATTRIBUTE_LOCATION_BASE), keyed by input index. The emulating compute
         // shader reads and decodes them from the vertex buffers bound as raw compute buffers.

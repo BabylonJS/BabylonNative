@@ -111,8 +111,15 @@ TEST(NativeEngineTextureFormats, D24RenderTargetUsesSupportedBackingStorage)
         {
             SCOPED_TRACE(samples);
             texture->Dispose();
-            const auto flags = samples == 1 ? BGFX_TEXTURE_RT :
+            auto flags = samples == 1 ? BGFX_TEXTURE_RT :
                 (samples == 2 ? BGFX_TEXTURE_RT_MSAA_X2 : BGFX_TEXTURE_RT_MSAA_X4) | BGFX_TEXTURE_MSAA_SAMPLE;
+            if ((flags & BGFX_TEXTURE_MSAA_SAMPLE) != 0 &&
+                !IsSupported(bgfx::TextureFormat::D24, flags) &&
+                IsSupported(bgfx::TextureFormat::D24, flags & ~BGFX_TEXTURE_MSAA_SAMPLE))
+            {
+                // Backends without multisampled textures (GLES 3.0) resolve MSAA depth into single-sample storage.
+                flags &= ~BGFX_TEXTURE_MSAA_SAMPLE;
+            }
             const auto expectedFormat = IsSupported(bgfx::TextureFormat::D24, flags)
                 ? bgfx::TextureFormat::D24 : bgfx::TextureFormat::D24S8;
             if (!IsSupported(expectedFormat, flags))

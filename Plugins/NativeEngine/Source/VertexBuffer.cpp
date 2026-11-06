@@ -75,18 +75,16 @@ namespace Babylon
                 // bgfx only supports vertex start index and not arbitrary byte offsets.
                 throw std::runtime_error{"Cannot update dynamic vertex buffer with a byte offset not divisible by its byte stride"};
             }
-
             bgfx::update(m_dynamicHandle, startVertex, bgfx::copy(bytes.data(), static_cast<uint32_t>(bytes.size())));
+            return;
         }
-        else
-        {
-            if (byteOffset + bytes.size() > m_bytes.size())
-            {
-                throw std::runtime_error{"Cannot update vertex buffer due to buffer overflow"};
-            }
 
-            std::memcpy(m_bytes.data() + byteOffset, bytes.data(), bytes.size());
+        if (byteOffset + bytes.size() > m_bytes.size())
+        {
+            throw std::runtime_error{"Cannot update vertex buffer due to buffer overflow"};
         }
+
+        std::memcpy(m_bytes.data() + byteOffset, bytes.data(), bytes.size());
     }
 
     void VertexBuffer::Build(uint32_t byteStride)
@@ -156,7 +154,7 @@ namespace Babylon
         }
     }
 
-    StorageBuffer& VertexBuffer::PromoteToGpuStorage()
+    StorageBuffer& VertexBuffer::PromoteToGpuStorage(uint32_t vertexByteStride)
     {
         if (m_gpuStorage)
         {
@@ -176,9 +174,11 @@ namespace Babylon
             throw std::runtime_error{"Transform feedback vertex buffers must not be empty"};
         }
 
-        // A 4-byte storage stride keeps any float-aligned update offset addressable. The storage
-        // pads byte- and short-component data to whole words.
-        auto storage = std::make_unique<StorageBuffer>(m_deviceContext, static_cast<uint32_t>(m_bytes.size()), static_cast<uint32_t>(sizeof(float)));
+        // The storage pads byte- and short-component data to whole words.
+        constexpr uint32_t kWordSize = sizeof(uint32_t);
+        const bool strideUsable = vertexByteStride != 0 && vertexByteStride % kWordSize == 0 && vertexByteStride <= UINT16_MAX;
+        const uint32_t storageStride = strideUsable ? vertexByteStride : kWordSize;
+        auto storage = std::make_unique<StorageBuffer>(m_deviceContext, static_cast<uint32_t>(m_bytes.size()), storageStride);
         storage->Update(m_bytes, 0);
         m_gpuStorage = std::move(storage);
         m_bytes.clear();
@@ -186,16 +186,25 @@ namespace Babylon
         return *m_gpuStorage;
     }
 
+    void VertexBuffer::ReplaceGpuStorage(std::unique_ptr<StorageBuffer> storage)
+    {
+        if (m_gpuStorage)
+        {
+            m_gpuStorage->Dispose();
+        }
+        m_gpuStorage = std::move(storage);
+    }
+
     uint32_t VertexBuffer::ByteLength() const
     {
         return m_gpuStorage ? m_gpuStorage->ByteLength() : static_cast<uint32_t>(m_bytes.size());
     }
 
-    void VertexBuffer::SetComputeRead(bgfx::Encoder* encoder, uint8_t stage)
+    void VertexBuffer::SetComputeRead(bgfx::Encoder* encoder, uint8_t stage, uint32_t vertexByteStride)
     {
         if (m_gpuStorage || !bgfx::isValid(m_handle))
         {
-            PromoteToGpuStorage().SetCompute(encoder, stage, bgfx::Access::Read);
+            PromoteToGpuStorage(vertexByteStride).SetCompute(encoder, stage, bgfx::Access::Read);
         }
         else if (!m_computeReadable)
         {
@@ -221,14 +230,18 @@ namespace Babylon
         const std::map<uint32_t, uint32_t>& builtInSlots,
         uint32_t maxSlotCount)
     {
-        if (instances.empty())
-        {
-            return {};
-        }
-
         if (builtInSlots.size() > maxSlotCount)
         {
             throw std::runtime_error{"Shader declares more built-in instance-data slots than the device supports."};
+        }
+
+        if (instances.empty())
+        {
+            // No recorded instance attributes, but the shader may still declare built-in per-instance
+            // inputs (see VertexArray::SetVertexBuffers), which then need zeroed slots.
+            InstanceDataLayout layout{};
+            layout.SlotCount = static_cast<uint32_t>(builtInSlots.size());
+            return layout;
         }
 
         std::vector<bool> usedBuiltInSlots(builtInSlots.size());
@@ -270,7 +283,7 @@ namespace Babylon
         const InstanceDataLayout& layout)
     {
         // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
-        static constexpr uint16_t kSlotSize = 16;
+        static constexpr uint16_t SLOT_SIZE = 16;
 
         if (instances.empty())
         {
@@ -299,9 +312,8 @@ namespace Babylon
             throw std::runtime_error{"Instance-data layout does not cover every recorded attribute."};
         }
 
-        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * kSlotSize);
+        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * SLOT_SIZE);
 
-        // Create instance datas. Instance Data Buffer is transient.
         bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
 
         uint8_t* data{instanceDataBuffer.data};
@@ -318,8 +330,8 @@ namespace Babylon
             {
                 throw std::runtime_error{"Instance-data attribute maps outside the allocated buffer."};
             }
-            const uint32_t slotOffset = slot * kSlotSize;
-            assert(element.ElementSize <= kSlotSize);
+            const uint32_t slotOffset = slot * SLOT_SIZE;
+            assert(element.ElementSize <= SLOT_SIZE);
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {

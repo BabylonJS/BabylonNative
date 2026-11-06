@@ -10,7 +10,7 @@ Codec-only builds skip Draco's unused third-party submodules. Setting `DRACO_TRA
 
 ## Limitations
 
-- **glTF bitstream subset.** Draco is built with `DRACO_GLTF_BITSTREAM=ON`. NativeDraco is intended to produce and consume glTF-compatible Draco data (Babylon.js defaults to the glTF-only decoder). The subset still supports mesh encoding, normals, and standard Edgebreaker; it constrains the output rather than disabling encoding, and avoids features outside the glTF profile (e.g. predictive valence at slower speeds) that the default decoder may reject. Attribute deduplication may be compiled out of the subset; `Encode` guards those passes on the feature macros Draco publishes.
+- **Full Draco bitstream.** Draco is built with `DRACO_GLTF_BITSTREAM=OFF`. Babylon.js routes every `DracoDecoder`/`DracoEncoder` through NativeDraco when it is present, including callers that explicitly configure the full `draco_decoder.wasm` to read non-glTF streams such as older `.drc` files; the glTF subset rejects those with `Unsupported major version`. The full build also matches the full `draco_encoder.wasm` Babylon.js uses for encoding. As with that encoder, slower encode speeds may use features outside the glTF profile; use the default speeds when the output is for `KHR_draco_mesh_compression`. `Encode` still guards attribute deduplication on the feature macros Draco publishes, so a glTF-subset build remains valid.
 - **Pinned Babylon.js release.** The repository's stock `babylonjs` 9.21.2 bundle does not probe a native Draco API. NativeDraco's unit tests therefore exercise both export forms directly without replacing or overriding the pinned package.
 
 ## Design

@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -48,8 +50,10 @@ namespace
         }
         std::string str{s};
         char* end = nullptr;
+        errno = 0;
         long v = std::strtol(str.c_str(), &end, 10);
-        if (end == nullptr || *end != '\0')
+        if (end == nullptr || *end != '\0' || errno == ERANGE ||
+            v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max())
         {
             return false;
         }
@@ -143,11 +147,16 @@ namespace
             "                              Columns: index, title, referenceImage,\n"
             "                              exclusionReason, workarounds. exclusionReason\n"
             "                              reflects config state (ignores\n"
-            "                              --include-excluded).\n",
-            [](PlaygroundOptions& o, std::string_view, std::string&) { o.ListTests = true; }},
+            "                              --include-excluded). Implies --headless\n"
+            "                              and, without a script, loads\n"
+            "                              validation_native.js.\n",
+            [](PlaygroundOptions& o, std::string_view, std::string&) {
+                o.ListTests = true;
+                o.Headless = true;
+            }},
 
         FlagSpec{"--headless", "", FlagKind::Boolean, "",
-            "Don't show a window (still creates HWND).",
+            "Don't show a window (keeps a render surface).",
             "                              Disables the JavaScript debugger listener.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.Headless = true; }},
 
@@ -175,7 +184,8 @@ namespace
         FlagSpec{"--include-excluded", "", FlagKind::Boolean, "",
             "Force-run tests that have",
             "                              excludeFromAutomaticTesting / onlyVisual /\n"
-            "                              excludedGraphicsApis set in config.json.\n"
+            "                              excludedGraphicsApis / excludedJavaScriptEngines\n"
+            "                              set in config.json.\n"
             "                              Useful for debugging quarantined tests\n"
             "                              without editing the config.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.IncludeExcluded = true; }},
@@ -225,6 +235,23 @@ namespace
                     return;
                 }
                 o.CaptureFrame = n;
+            }},
+
+        FlagSpec{"--test-timeout", "", FlagKind::ValueRequired, "SECONDS",
+            "Per-test timeout for scene creation and",
+            "                              initial readiness (default 600s / 1200s).\n"
+            "                              Also arms a watchdog that dumps a HANG banner\n"
+            "                              and exits 3 when no console output arrives\n"
+            "                              for 2*SECONDS+60s, so native hangs that\n"
+            "                              JavaScript timers can't see still fail fast.\n",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                int n = 0;
+                if (!ParseIntStrict(value, n) || n < 1 || n > 86400)
+                {
+                    err = "invalid --test-timeout value (expected positive integer): '" + std::string{value} + "'";
+                    return;
+                }
+                o.TestTimeoutSeconds = n;
             }},
 
         FlagSpec{"--test", "-t", FlagKind::ValueRequired, "PATTERN",
@@ -396,6 +423,11 @@ namespace CommandLine
 
             // Positional argument (script path / URL).
             opt.Scripts.emplace_back(arg);
+        }
+
+        if (opt.ListTests && opt.Scripts.empty())
+        {
+            opt.Scripts.emplace_back("app:///Scripts/validation_native.js");
         }
 
         return opt;

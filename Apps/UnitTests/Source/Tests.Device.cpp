@@ -14,7 +14,7 @@
 #endif
 
 #include "Helpers.h"
-#include "../../../Core/Graphics/Source/DeviceImpl.h"
+#include "DeviceImplTestAccess.h"
 
 #include <array>
 #include <chrono>
@@ -23,39 +23,6 @@
 #include <thread>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
-
-namespace Babylon::Graphics
-{
-    struct DeviceImplTestAccess
-    {
-        static void LoseDevice(DeviceImpl& device)
-        {
-            static_cast<bgfx::CallbackI&>(device.m_bgfxCallback).fatal(__FILE__, __LINE__, bgfx::Fatal::DeviceLost, "simulated device loss");
-        }
-
-        static void SubmitScreenshots(DeviceImpl& device)
-        {
-            device.RequestScreenShots();
-        }
-
-        static void FlushViews(DeviceImpl& device)
-        {
-            std::scoped_lock lock{device.m_frameSyncMutex};
-            device.PerformMidFrameViewFlush();
-        }
-
-        static size_t CachedVertexLayouts(DeviceImpl& device)
-        {
-            std::scoped_lock lock{device.m_frameVertexLayoutsMutex};
-            return device.m_frameVertexLayouts.size();
-        }
-
-        static size_t PendingReadbacks(const DeviceImpl& device)
-        {
-            return device.m_readTextureRequests.size();
-        }
-    };
-}
 
 namespace
 {
@@ -72,6 +39,25 @@ namespace
             EXPECT_EQ(canceled.code(), std::errc::operation_canceled);
         }
     }
+}
+
+TEST(Device, ViewReservationsExpireAtFrameAndFlushBoundaries)
+{
+    using namespace Babylon::Graphics;
+    DeviceImpl device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    const auto firstView = device.AcquireNewViewId();
+    const auto firstGeneration = device.ViewIdGeneration();
+    device.FinishRenderingCurrentFrame();
+    device.StartRenderingCurrentFrame();
+    EXPECT_EQ(device.AcquireNewViewId(), firstView);
+    EXPECT_NE(device.ViewIdGeneration(), firstGeneration);
+
+    const auto secondGeneration = device.ViewIdGeneration();
+    DeviceImplTestAccess::FlushViews(device);
+    EXPECT_EQ(device.AcquireNewViewId(), firstView);
+    EXPECT_NE(device.ViewIdGeneration(), secondGeneration);
+    device.FinishRenderingCurrentFrame();
 }
 
 TEST(Device, VertexLayoutsRetireAtFlushFrameAndShutdown)

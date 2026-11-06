@@ -23,22 +23,20 @@ namespace Babylon
         StorageBuffer(Graphics::DeviceContext& deviceContext, uint32_t byteLength, uint32_t byteStride = 16, bool computeWrite = true);
         ~StorageBuffer();
 
-        // No copy or move semantics.
         StorageBuffer(const StorageBuffer&) = delete;
         StorageBuffer(StorageBuffer&&) = delete;
 
         void Dispose();
 
-        // Writes bytes into the CPU shadow and the GPU buffer at byteOffset, which must be a multiple of the stride.
+        // Writes bytes into the CPU shadow and the GPU buffer at byteOffset, which must be a multiple of 4.
         void Update(gsl::span<const uint8_t> bytes, uint32_t byteOffset);
 
-        // Binds the buffer as a compute resource on the given stage.
         void SetCompute(bgfx::Encoder* encoder, uint8_t stage, bgfx::Access::Enum access);
 
-        // Binds the buffer as a vertex stream.
         void SetVertex(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout);
 
         uint32_t ByteLength() const { return m_byteLength; }
+        uint32_t ByteStride() const { return m_byteStride; }
         gsl::span<const uint8_t> ShadowBytes() const { return gsl::make_span(m_shadow.data(), m_shadow.size()); }
         bgfx::DynamicVertexBufferHandle Handle();
 

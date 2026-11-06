@@ -38,6 +38,7 @@ namespace Babylon
     }
 
     class InstanceRepacker;
+    class StorageBufferCopier;
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
@@ -56,8 +57,6 @@ namespace Babylon
 
         void Dispose(const Napi::CallbackInfo& info);
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
-        // Test-only: schedules a tracked threadpool task that signals start, sleeps, then signals
-        // finish, so unit tests can verify Dispose drains in-flight async work. See NativeEngine.cpp.
         void DisposeDrainTestSchedule(const Napi::CallbackInfo& info);
 #endif
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
@@ -130,15 +129,18 @@ namespace Babylon
         Napi::Value ReadTextureImpl(const Napi::CallbackInfo& info, bool preserveFloat);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
-        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, bool autoGenerateMips = true, Graphics::Texture* depthStencilTexture = nullptr);
+        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, uint8_t autoGenerateMipMask = UINT8_MAX, Graphics::Texture* depthStencilTexture = nullptr);
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
+        void GenerateMipMaps(NativeDataStream::Reader& data);
         VertexBuffer::InstanceDataLayout GetInstanceDataLayout() const;
         void DrawIndexed(NativeDataStream::Reader& data);
         void DrawIndexedInstanced(NativeDataStream::Reader& data);
+        void DrawIndexedImpl(NativeDataStream::Reader& data, bool instanced);
         void Draw(NativeDataStream::Reader& data);
         void DrawInstanced(NativeDataStream::Reader& data);
+        void DrawImpl(NativeDataStream::Reader& data, bool instanced);
         void DrawTransformFeedback(NativeDataStream::Reader& data);
         void Clear(NativeDataStream::Reader& data);
         void Clear2(NativeDataStream::Reader& data);
@@ -163,12 +165,13 @@ namespace Babylon
         void EndFrame(const Napi::CallbackInfo&);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout);
 
-        // Dispatches the GPU instance-data repack for a vertex array whose per-instance sources are
-        // GPU storage buffers, returning the dynamic vertex buffer to bind as instance data (or an
-        // invalid handle when there is nothing to repack). Must be called before the draw bindings
-        // are set, since dispatch resets the encoder's pending draw state.
+        // Repack before setting draw bindings because the compute dispatch resets pending state.
         bgfx::DynamicVertexBufferHandle RepackStorageInstances(VertexArray* vertexArray,
             const VertexBuffer::InstanceDataLayout& instanceDataLayout, uint32_t instanceCount);
+
+        // Copies GPU storage whose element stride differs from the stride the vertex array draws
+        // the buffer with into storage with the draw stride. Same call-order rule as above.
+        void MatchStorageVertexStrides(bgfx::Encoder* encoder, VertexArray& vertexArray);
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
@@ -225,7 +228,7 @@ namespace Babylon
         bool m_requestAnimationFrameCallbacksScheduled{};
 
         uint64_t m_engineState{BGFX_STATE_DEFAULT};
-        uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
+        uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(UINT8_MAX) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
         template<int size, typename arrayType>
         void SetTypeArrayN(const UniformInfo& uniformInfo, const uint32_t elementLength, const arrayType& array);
@@ -242,7 +245,7 @@ namespace Babylon
         template<int size>
         void SetMatrixN(NativeDataStream::Reader& data);
 
-        // Scratch vector used for data alignment.
+        // Scratch storage preserves alignment when reading matrix data.
         std::vector<float> m_scratch{};
 
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
@@ -251,6 +254,7 @@ namespace Babylon
         std::unique_ptr<InstanceRepacker> m_instanceRepacker{};
         // Copies a storage buffer into an R32F image for readTransformFeedbackBuffer; created on first use.
         std::shared_ptr<Program> m_bufferReadbackProgram{};
+        std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
@@ -258,12 +262,9 @@ namespace Babylon
         // WebGL resets the drawing buffer's depth and stencil at the start of every frame.
         PerFrameValue<bool> m_defaultFrameBufferNeedsReset;
 
-        // Last material texture binds on the frame encoder. bgfx drops encoder bindings when work
-        // moves to another view (clears, resolves, blits, compute dispatches); WebGL keeps them,
-        // so they are replayed.
+        // Cache texture changes until submission so each sampler uniform is written only once per draw.
         struct BoundTexture
         {
-            bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
             bgfx::TextureHandle Texture{bgfx::kInvalidHandle};
             uint32_t Flags{};
             uint16_t FirstLayer{};
@@ -272,12 +273,12 @@ namespace Babylon
             float PointSampleHeight{};
         };
         std::map<uint8_t, BoundTexture> m_boundTextures{};
-        void RestoreBoundTextures(bgfx::Encoder* encoder);
+        void ApplyBoundTextures(bgfx::Encoder* encoder);
 
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
 
-        // Information from the JS side used for backwards compatibility.
+        // JavaScript feature information used for backwards compatibility.
         struct
         {
             bool NonFloatVertexBuffers{};

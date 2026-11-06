@@ -170,7 +170,7 @@ namespace
         });
 
         Babylon::ScriptLoader loader{runtime};
-        loader.LoadScript("app:///Assets/babylon.max.js");
+        loader.LoadScript("app:///Assets/babylon.es5.js");
 
         const std::string script = R"(
             (function () {
@@ -921,6 +921,233 @@ TEST(NativeEngineViewport, MatchesClipSpaceRegion)
 #endif
 }
 
+TEST(NativeEngineClear, PreservesUnselectedRenderTargetAttachments)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        "precision highp float; void main() { gl_FragColor = vec4(1.0); }", false, R"(
+            globalThis.__prepare = async function () {
+                for (var restartPass of [false, true]) {
+                    for (var scissor of [false, true]) {
+                        var target = engine.createMultipleRenderTarget({ width: 2, height: 2 }, {
+                            textureCount: 2, generateDepthBuffer: false, generateMipMaps: false
+                        });
+                        engine.bindFramebuffer(target);
+                        engine.bindAttachments(engine.buildTextureLayout([true, true]));
+                        engine.clear(new BABYLON.Color4(64 / 255, 128 / 255, 192 / 255, 1), true, false, false);
+                        if (restartPass) {
+                            engine.restoreDefaultFramebuffer();
+                            engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, false, false);
+                            engine.bindFramebuffer(target);
+                        }
+                        if (scissor) engine.enableScissor(0, 0, 1, 2);
+                        engine.bindAttachments(engine.buildTextureLayout([false, true]));
+                        engine.clear(new BABYLON.Color4(32 / 255, 64 / 255, 96 / 255, 1), true, false, false);
+                        engine.bindAttachments(engine.buildTextureLayout([false, false]));
+                        engine.clear(new BABYLON.Color4(1, 0, 1, 1), true, false, false);
+                        if (scissor) engine.disableScissor();
+                        engine.restoreDefaultFramebuffer();
+                        for (var attachment = 0; attachment < 2; ++attachment) {
+                            var actual = await engine._readTexturePixels(target.textures[attachment], 2, 2);
+                            if (actual.length !== 16) throw new Error("Incorrect MRT readback size");
+                            for (var pixel = 0; pixel < 4; ++pixel) {
+                                var expected = attachment === 1 && (!scissor || pixel % 2 === 0)
+                                    ? [32, 64, 96, 255] : [64, 128, 192, 255];
+                                for (var channel = 0; channel < 4; ++channel) {
+                                    if (Math.abs(actual[pixel * 4 + channel] - expected[channel]) > 1) {
+                                        throw new Error("Masked clear changed attachment " + attachment +
+                                            ", restartPass=" + restartPass + ", scissor=" + scissor +
+                                            ", pixel=" + pixel + ", channel=" + channel +
+                                            ": expected " + expected[channel] + ", got " + actual[pixel * 4 + channel]);
+                                    }
+                                }
+                            }
+                        }
+                        target.dispose();
+                    }
+                }
+            };
+        )");
+    EXPECT_EQ(pixels, (std::vector<uint8_t>{255, 255, 255, 255}));
+#endif
+}
+
+TEST(NativeEngineMipmaps, MultiRenderTargetPreservesAuthoredMipLevels)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        "precision highp float; void main() { gl_FragColor = vec4(1.0); }", false, R"(
+            globalThis.__prepare = async function () {
+                var base = [64, 128, 192, 255];
+                for (var flags of [[false, false], [true, true], [false, true], undefined]) {
+                    var target = engine.createMultipleRenderTarget({ width: 4, height: 4 }, {
+                        textureCount: 2, createMipMaps: true, generateMipMaps: false, generateDepthBuffer: false
+                    });
+                    var handles = target.textures.map(function (texture) { return texture._hardwareTexture.underlyingResource; });
+                    target._framebuffer = engine._engine.createMultiFrameBuffer(handles, 4, 4, false, false, 1, undefined, undefined, flags);
+                    for (var attachment = 0; attachment < 2; ++attachment) {
+                        for (var mip = 1; mip <= 2; ++mip) {
+                            var size = 4 >> mip;
+                            var authored = new Uint8Array(size * size * 4);
+                            for (var i = 0; i < authored.length; ++i) {
+                                authored[i] = [16 + mip, 32 + attachment, 48, 255][i % 4];
+                            }
+                            engine.updateTextureData(target.textures[attachment], authored, 0, 0, size, size, 0, mip);
+                        }
+                    }
+                    engine.bindFramebuffer(target);
+                    engine.bindAttachments(engine.buildTextureLayout([true, true]));
+                    engine.clear(new BABYLON.Color4(base[0] / 255, base[1] / 255, base[2] / 255, 1), true, false, false);
+                    engine.restoreDefaultFramebuffer();
+                    // Submit a different framebuffer view so every backend resolves the MRT before readback.
+                    engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, false, false);
+                    for (var attachment = 0; attachment < 2; ++attachment) {
+                        for (var mip = 0; mip <= 2; ++mip) {
+                            var size = 4 >> mip;
+                            var actual = await engine._readTexturePixels(target.textures[attachment], size, size, -1, mip);
+                            var expected = mip === 0 || flags === undefined || flags[attachment]
+                                ? base : [16 + mip, 32 + attachment, 48, 255];
+                            if (actual.length !== size * size * 4) throw new Error("Incorrect MRT mip readback size");
+                            for (var i = 0; i < actual.length; ++i) {
+                                if (Math.abs(actual[i] - expected[i % 4]) > 1) {
+                                    throw new Error("MRT mip generation flags=" + JSON.stringify(flags) +
+                                        ", attachment=" + attachment + ", mip=" + mip + ", byte=" + i +
+                                        ": expected " + expected[i % 4] + ", got " + actual[i]);
+                                }
+                            }
+                        }
+                    }
+                    if (flags && !flags[0]) {
+                        engine._commandBufferEncoder.startEncodingCommand(_native.Engine.COMMAND_GENERATEMIPMAPS);
+                        engine._commandBufferEncoder.encodeCommandArgAsNativeData(handles[0]);
+                        engine._commandBufferEncoder.finishEncodingCommand();
+                        for (var mip = 0; mip <= 2; ++mip) {
+                            var size = 4 >> mip;
+                            var actual = await engine._readTexturePixels(target.textures[0], size, size, -1, mip);
+                            for (var i = 0; i < actual.length; ++i) {
+                                if (Math.abs(actual[i] - base[i % 4]) > 1) {
+                                    throw new Error("Explicit MRT mip generation, mip=" + mip + ", byte=" + i +
+                                        ": expected " + base[i % 4] + ", got " + actual[i]);
+                                }
+                            }
+                        }
+                    }
+                    for (var invalidFlags of [false, [false], [false, 0], [false, false, false]]) {
+                        var rejected = false;
+                        try {
+                            engine._engine.createMultiFrameBuffer(handles, 4, 4, false, false, 1, undefined, undefined, invalidFlags);
+                        } catch (error) {
+                            if (!(error instanceof TypeError) && !(error instanceof RangeError)) throw error;
+                            rejected = true;
+                        }
+                        if (!rejected) throw new Error("Invalid MRT mip generation flags were accepted");
+                    }
+                    target.dispose();
+                }
+            };
+        )");
+    EXPECT_EQ(pixels, (std::vector<uint8_t>{255, 255, 255, 255}));
+#endif
+}
+
+TEST(NativeEngineMipmaps, ExplicitGenerationHonorsTextureLayersAndVolumeSupport)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const auto pixels = RenderFullScreenQuad(1, 1,
+        "attribute vec3 position; void main() { gl_Position = vec4(position, 1.0); }",
+        "precision highp float; void main() { gl_FragColor = vec4(1.0); }", false, R"(
+            globalThis.__prepare = async function () {
+                function generate(texture) {
+                    engine._commandBufferEncoder.startEncodingCommand(_native.Engine.COMMAND_GENERATEMIPMAPS);
+                    engine._commandBufferEncoder.encodeCommandArgAsNativeData(texture._hardwareTexture.underlyingResource);
+                    engine._commandBufferEncoder.finishEncodingCommand();
+                }
+                function authored(size, color) {
+                    var pixels = new Uint8Array(size * size * 4);
+                    for (var i = 0; i < pixels.length; ++i) pixels[i] = color[i % 4];
+                    return pixels;
+                }
+                async function check(texture, layer, mip, color) {
+                    var size = 4 >> mip;
+                    var actual = await engine._readTexturePixels(texture, size, size, layer, mip);
+                    if (actual.length !== size * size * 4) throw new Error("Incorrect layered mip readback size");
+                    for (var i = 0; i < actual.length; ++i) {
+                        if (Math.abs(actual[i] - color[i % 4]) > 1) {
+                            throw new Error("Explicit layered mip generation, layer=" + layer + ", mip=" + mip +
+                                ", byte=" + i + ": expected " + color[i % 4] + ", got " + actual[i]);
+                        }
+                    }
+                }
+                var array = engine.createRenderTargetTexture({ width: 4, height: 4, layers: 3 }, {
+                    createMipMaps: true, generateMipMaps: false, generateDepthBuffer: false
+                });
+                for (var layer = 0; layer < 3; ++layer) {
+                    var base = [64 + 32 * layer, 128, 192, 255];
+                    engine.bindFramebuffer(array, undefined, undefined, undefined, true, 0, layer);
+                    engine.clear(new BABYLON.Color4(base[0] / 255, base[1] / 255, base[2] / 255, 1), true, false, false);
+                    engine.restoreDefaultFramebuffer();
+                    for (var mip = 1; mip <= 2; ++mip) {
+                        var size = 4 >> mip;
+                        var color = [16 + mip, 32 + layer, 48, 255];
+                        engine.updateTextureData(array.texture, authored(size, color), 0, 0, size, size, layer, mip);
+                        await check(array.texture, layer, mip, color);
+                    }
+                }
+                generate(array.texture);
+                for (var layer = 0; layer < 3; ++layer) {
+                    for (var mip = 0; mip <= 2; ++mip) {
+                        await check(array.texture, layer, mip, [64 + 32 * layer, 128, 192, 255]);
+                    }
+                }
+                array.dispose();
+
+                var volume = engine.createRenderTargetTexture({ width: 4, height: 4, depth: 4 }, {
+                    createMipMaps: true, generateMipMaps: false, generateDepthBuffer: false
+                });
+                for (var mip = 0; mip <= 2; ++mip) {
+                    var size = 4 >> mip;
+                    var color = mip === 0 ? [64, 128, 192, 255] : [16 + mip, 32, 48, 255];
+                    for (var layer = 0; layer < (4 >> mip); ++layer) {
+                        engine.bindFramebuffer(volume, undefined, size, size, true, mip, layer);
+                        engine.clear(new BABYLON.Color4(color[0] / 255, color[1] / 255, color[2] / 255, 1), true, false, false);
+                        engine.restoreDefaultFramebuffer();
+                    }
+                    await check(volume.texture, 0, mip, color);
+                }
+                var rejected = false;
+                try {
+                    generate(volume.texture);
+                } catch (error) {
+                    if (globalThis.__supportsExplicitVolumeMipGeneration ||
+                        error.message.indexOf("Explicit 3D mip generation is not supported") < 0) throw error;
+                    rejected = true;
+                }
+                if (rejected === globalThis.__supportsExplicitVolumeMipGeneration) {
+                    throw new Error("Incorrect explicit volume generation support");
+                }
+                for (var mip = 0; mip <= 2; ++mip) {
+                    var color = mip === 0 || !rejected ? [64, 128, 192, 255] : [16 + mip, 32, 48, 255];
+                    await check(volume.texture, 0, mip, color);
+                }
+                volume.dispose();
+            };
+        )", std::chrono::seconds{30}, [](Napi::Env env) {
+            const auto renderer = bgfx::getRendererType();
+            env.Global().Set("__supportsExplicitVolumeMipGeneration",
+                renderer != bgfx::RendererType::Direct3D12 && renderer != bgfx::RendererType::Vulkan);
+        });
+    EXPECT_EQ(pixels, (std::vector<uint8_t>{255, 255, 255, 255}));
+#endif
+}
+
 TEST(NativeEngineClear, PreservesTextureBindings)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
@@ -1080,7 +1307,7 @@ TEST(NativeEngineInstanceData, DynamicVertexBufferUpdateWithEmptyStreamDoesNotWa
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
 
     auto setupDone = std::make_shared<std::promise<void>>();
     auto setupFuture = setupDone->get_future();

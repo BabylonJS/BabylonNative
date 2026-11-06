@@ -120,6 +120,15 @@ namespace Babylon::Graphics
 
     void BgfxCallback::traceVargs(const char* filePath, uint16_t line, const char* format, va_list argList)
     {
+#if BABYLON_NATIVE_BGFX_TRACE
+        output(filePath, line, format, argList);
+#else
+        BX_UNUSED(filePath, line, format, argList);
+#endif
+    }
+
+    void BgfxCallback::output(const char* filePath, uint16_t line, const char* format, va_list argList)
+    {
         char temp[2048];
         char* out = temp;
         va_list argListCopy;
@@ -262,7 +271,7 @@ namespace Babylon::Graphics
         va_list argList;
         va_start(argList, _format);
 
-        traceVargs(_filePath, _line, _format, argList);
+        output(_filePath, _line, _format, argList);
 
         va_end(argList);
     }

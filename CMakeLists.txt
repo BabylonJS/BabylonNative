@@ -10,17 +10,8 @@ include(FetchContent)
 # Declarations
 # --------------------------------------------------
 
-# EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
-# targets to the ALL_BUILD target.  We do this for all dependencies except
-# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
-# that are part of the Babylon Native contract. When adding dependencies using
-# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
-# targets that are part of the Babylon Native contract.
+# EXCLUDE_FROM_ALL keeps externally fetched dependencies out of ALL_BUILD.
 
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 2e85a8d43b89246c460112c9e5546ad54b6e87b4
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG fe41b17dedea47b5dead98f0271ca284e94ac6a8
@@ -33,17 +24,21 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 8fd48e454f624f964ced930af597fa5b4526be18
+FetchContent_Declare(bx
+    GIT_REPOSITORY https://github.com/bkaradzic/bx.git
+    GIT_TAG 0e53661425e9acc38ec924959cd5c6194c12b9d1
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
+FetchContent_Declare(bimg
+    GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
+    GIT_TAG 388a5e637c63e472158c940317c68c735bca4795
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(bgfx
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
+    GIT_TAG 78a1af501a434e5fc1c381d451e1819bcb71fef5
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
+    GIT_TAG f02debc9c37c4026a5ae2f1229e7f08c7df767e4
     EXCLUDE_FROM_ALL)
 # The codec does not use the transcoder's external dependencies.
 set(_draco_submodules "")
@@ -67,9 +62,6 @@ FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.5.0
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 2f8b9be3a4d691d4a76c85c9c856319eb25f744c)
 FetchContent_Declare(metal-cpp
     GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
     GIT_TAG metal-cpp_26
@@ -81,14 +73,15 @@ FetchContent_Declare(SPIRV-Cross
 
 # --------------------------------------------------
 
-FetchContent_MakeAvailable(CMakeExtensions)
+include(Dependencies/CMakeExtensions/CMakeLists.txt)
 
 # BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
 # CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
 # which makes all dependencies to be fetched and packaged.
 # At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
-# and FetchContent_MakeAvailable_With_Message will use provided local folder provided to cmake command line
-# like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
+# and FetchContent uses the provided local source overrides.
+# AndroidExtensions, CMakeExtensions, JsRuntimeHost and UrlLib are maintained
+# in Dependencies/ and added as subdirectories; no _deps/*-src copies are produced.
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
@@ -125,6 +118,7 @@ option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_L
 option(BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS "Enable the opt-in mobile Playground test controller." OFF)
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
+option(BABYLON_NATIVE_BGFX_TRACE "Forward bgfx trace messages (BX_CONFIG_DEBUG builds) to debug output. Debug checks are unaffected." ON)
 
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)

@@ -1,4 +1,5 @@
 #include "Canvas.h"
+#include "CanvasConstants.h"
 #include "Image.h"
 #include "Path2D.h"
 #include "Context.h"
@@ -6,6 +7,7 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/embedded_shader.h>
 #include <napi/pointer.h>
+#include <arcana/threading/task.h>
 #include <array>
 #include <cassert>
 #include <cstring>
@@ -14,7 +16,6 @@
 #include "Colors.h"
 #include "Gradient.h"
 #include "Font.h"
-#include "NativeInstanceRegistry.h"
 #include <basen.hpp>
 #include <bimg/encode.h>
 #include <bx/allocator.h>
@@ -36,6 +37,14 @@
 namespace
 {
     constexpr auto JS_CANVAS_NAME = "_CanvasImpl";
+    constexpr uint8_t FRAME_BUFFER_TEXTURE_COUNT = 2;
+    constexpr uint8_t COLOR_ATTACHMENT_INDEX = 0;
+    constexpr uint8_t DEPTH_STENCIL_ATTACHMENT_INDEX = 1;
+    constexpr uint32_t FULLSCREEN_TRIANGLE_VERTEX_COUNT = 3;
+    constexpr uint8_t POSITION_COMPONENT_COUNT = 3;
+    constexpr uint8_t TEXCOORD_COMPONENT_COUNT = 2;
+    constexpr size_t FULLSCREEN_VERTEX_COMPONENT_COUNT = POSITION_COMPONENT_COUNT + TEXCOORD_COMPONENT_COUNT;
+    constexpr size_t COPY_PARAMETER_COUNT = 4;
     const bgfx::EmbeddedShader CanvasCopyShaders[]{
         BGFX_EMBEDDED_SHADER(vs_fspass),
         BGFX_EMBEDDED_SHADER(fs_canvas_unpremultiply),
@@ -62,6 +71,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("toDataURL", &NativeCanvas::ToDataURL),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
+                // Lets Babylon.js know dispose() defers GPU resource release past already-queued commands.
+                InstanceValue("supportsDeferredDispose", Napi::Boolean::New(env, true)),
                 InstanceMethod("remove", &NativeCanvas::Remove),
                 StaticMethod("parseColor", &NativeCanvas::ParseColor)});
 
@@ -102,7 +113,6 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::Remove(const Napi::CallbackInfo&)
     {
-        // called when removed from document which has no meaning for Native
     }
 
     void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
@@ -117,8 +127,7 @@ namespace Babylon::Polyfills::Internal
             throw Napi::TypeError::New(info.Env(), std::string{methodName} + " expects the font name as a string in argument 1.");
         }
 
-        // don't allow same font to be loaded more than once
-        // why? because Context doesn't update nvgCreateFontMem when old fontBuffer released
+        // NanoVG retains the original font buffer.
         auto fontName = info[0].As<Napi::String>().Utf8Value();
         if (fontsInfos.find(fontName) == fontsInfos.end())
         {
@@ -162,21 +171,7 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto width = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
-        if (!width)
-        {
-            return;
-        }
-
-        if (width == m_width)
-        {
-            m_clear = true;
-        }
-        else
-        {
-            m_width = width;
-            m_dirty = true;
-        }
+        SetDimension(m_width, value);
     }
 
     Napi::Value NativeCanvas::GetHeight(const Napi::CallbackInfo&)
@@ -186,55 +181,56 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto height = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
-        if (!height)
+        SetDimension(m_height, value);
+    }
+
+    void NativeCanvas::SetDimension(uint16_t& dimension, const Napi::Value& value)
+    {
+        const auto newDimension = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
+        if (!newDimension)
         {
             return;
         }
 
-        if (height == m_height)
+        if (newDimension == dimension)
         {
             m_clear = true;
         }
         else
         {
-            m_height = height;
+            dimension = newDimension;
             m_dirty = true;
         }
     }
 
     bool NativeCanvas::UpdateRenderTarget()
     {
-        // in some scenarios (eg. no size change on SetSize/SetHeight) we can re-use framebuffer
         bool needClear = m_clear;
         m_clear = false;
 
         if (m_dirty || !m_frameBuffer)
         {
-            // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-            const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * 4);
+            // WebGL requires new render targets to be initialized to zero.
+            const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * CanvasConstants::RGBA_BYTES_PER_PIXEL);
             std::memset(mem->data, 0, mem->size);
 
-            std::array<bgfx::TextureHandle, 2> textures{
+            std::array<bgfx::TextureHandle, FRAME_BUFFER_TEXTURE_COUNT> textures{
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem),
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
 
-            // See NativeEngine::CreateFrameBuffer: bgfx validation now asserts when BGFX_ATTACHMENT_AUTO_GEN_MIPS is used
-            // with a texture whose format doesn't have BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN. Gate the color attachment
-            // on the capability and pass BGFX_ATTACHMENT_NONE for the depth attachment (depth formats never support autogen).
+            // Only request mip generation for formats that support it; depth never does.
             const bgfx::Caps* caps = bgfx::getCaps();
             const uint8_t colorResolve = 0 != (caps->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
                 ? BGFX_ATTACHMENT_AUTO_GEN_MIPS
                 : BGFX_ATTACHMENT_NONE;
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
-            attachments[0].init(textures[0], bgfx::Access::Write, 0, 1, 0, colorResolve);
-            attachments[1].init(textures[1], bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
+            attachments[COLOR_ATTACHMENT_INDEX].init(textures[COLOR_ATTACHMENT_INDEX], bgfx::Access::Write, 0, 1, 0, colorResolve);
+            attachments[DEPTH_STENCIL_ATTACHMENT_INDEX].init(textures[DEPTH_STENCIL_ATTACHMENT_INDEX], bgfx::Access::Write, 0, 1, 0, BGFX_ATTACHMENT_NONE);
             auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
             if (!bgfx::isValid(handle))
             {
-                // Free any textures we managed to allocate so they don't leak alongside the failed FB.
-                // Guard with isValid: a failed createTexture2D returns an invalid handle that bgfx::destroy would assert on.
+                // Failed texture creation returns an invalid handle that cannot be destroyed.
                 for (auto texture : textures)
                 {
                     if (bgfx::isValid(texture))
@@ -244,7 +240,9 @@ namespace Babylon::Polyfills::Internal
                 }
                 throw std::runtime_error{"bgfx::createFrameBuffer returned invalid handle (framebuffer pool exhausted; raise BGFX_CONFIG_MAX_FRAME_BUFFERS or audit Canvas/Context lifetime)"};
             }
-            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false, -1, false);
+            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(
+                m_graphicsContext, handle, m_width, m_height, false, false, false,
+                CanvasConstants::NO_DEPTH_STENCIL_ATTACHMENT, false);
             m_dirty = false;
 
             if (m_texture)
@@ -271,7 +269,17 @@ namespace Babylon::Polyfills::Internal
     {
         if (!m_frameBuffer)
         {
-            throw Napi::Error::New(info.Env(), "Canvas.getCanvasTexture requires a flushed context.");
+            // Context::FlushCore skips the flush when no frame encoder is active, so the render
+            // target may not exist yet. Hand back the zero-filled target, as WebGL does for an
+            // untouched canvas, and keep any pending clear for the next flush.
+            try
+            {
+                m_clear = UpdateRenderTarget();
+            }
+            catch (const std::exception& ex)
+            {
+                throw Napi::Error::New(info.Env(), ex.what());
+            }
         }
         // Omitted arguments preserve the raw, premultiplied texture used by older engines.
         const bool premulAlpha = info.Length() == 0 || info[0].IsUndefined() || info[0].As<Napi::Boolean>().Value();
@@ -303,7 +311,7 @@ namespace Babylon::Polyfills::Internal
     Graphics::Texture& NativeCanvas::GetConvertedTexture(bool premulAlpha, bool generateMipMaps)
     {
         auto scope = m_graphicsContext.AcquireFrameCompletionScope();
-        m_graphicsContext.FlushViewsIfNeeded();
+        m_graphicsContext.CheckViewBudget();
         auto* encoder = m_graphicsContext.GetActiveEncoder();
         if (encoder == nullptr)
         {
@@ -350,7 +358,10 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{"Canvas mipmaps require RGBA8 automatic mip generation."};
         }
         // Keep representations separate: queued copies retain these Texture pointers.
-        auto& converted = m_convertedTextures[generateMipMaps ? (premulAlpha ? 2 : 1) : 0];
+        const auto kind = generateMipMaps
+            ? (premulAlpha ? ConvertedTextureKind::PremultipliedAlphaMipMaps : ConvertedTextureKind::StraightAlphaMipMaps)
+            : ConvertedTextureKind::NoMipMaps;
+        auto& converted = m_convertedTextures[static_cast<size_t>(kind)];
         if (!converted.FrameBuffer)
         {
             const auto color = bgfx::createTexture2D(m_width, m_height, generateMipMaps, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
@@ -367,7 +378,8 @@ namespace Babylon::Polyfills::Internal
                 throw std::runtime_error{"Cannot allocate Canvas straight-alpha framebuffer."};
             }
             converted.FrameBuffer = std::make_unique<Graphics::FrameBuffer>(
-                m_graphicsContext, frameBuffer, m_width, m_height, false, false, false, -1, false);
+                m_graphicsContext, frameBuffer, m_width, m_height, false, false, false,
+                CanvasConstants::NO_DEPTH_STENCIL_ATTACHMENT, false);
         }
         if (!converted.Texture)
         {
@@ -377,15 +389,15 @@ namespace Babylon::Polyfills::Internal
         }
 
         bgfx::VertexLayout layout{};
-        layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-            .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float).end();
-        if (bgfx::getAvailTransientVertexBuffer(3, layout) != 3)
+        layout.begin().add(bgfx::Attrib::Position, POSITION_COMPONENT_COUNT, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::TexCoord0, TEXCOORD_COMPONENT_COUNT, bgfx::AttribType::Float).end();
+        if (bgfx::getAvailTransientVertexBuffer(FULLSCREEN_TRIANGLE_VERTEX_COUNT, layout) != FULLSCREEN_TRIANGLE_VERTEX_COUNT)
         {
             throw std::runtime_error{"Cannot allocate Canvas alpha conversion vertices."};
         }
         bgfx::TransientVertexBuffer buffer{};
-        bgfx::allocTransientVertexBuffer(&buffer, 3, layout);
-        const std::array<std::array<float, 5>, 3> vertices{{
+        bgfx::allocTransientVertexBuffer(&buffer, FULLSCREEN_TRIANGLE_VERTEX_COUNT, layout);
+        const std::array<std::array<float, FULLSCREEN_VERTEX_COMPONENT_COUNT>, FULLSCREEN_TRIANGLE_VERTEX_COUNT> vertices{{
             {-1.f, 0.f, 0.f, 0.f, 0.f}, {1.f, 0.f, 0.f, 1.f, 0.f}, {1.f, 2.f, 0.f, 1.f, 1.f}}};
         std::memcpy(buffer.data, vertices.data(), sizeof(vertices));
 
@@ -399,7 +411,7 @@ namespace Babylon::Polyfills::Internal
         bgfx::setViewFrameBuffer(conversionView, converted.FrameBuffer->Handle());
         bgfx::setViewRect(conversionView, 0, 0, m_width, m_height);
         bgfx::setViewMode(conversionView, bgfx::ViewMode::Sequential);
-        const std::array<float, 4> parameters{bgfx::getCaps()->originBottomLeft ? 1.f : 0.f, premulAlpha ? 1.f : 0.f, 0.f, 0.f};
+        const std::array<float, COPY_PARAMETER_COUNT> parameters{bgfx::getCaps()->originBottomLeft ? 1.f : 0.f, premulAlpha ? 1.f : 0.f, 0.f, 0.f};
         encoder->discard(BGFX_DISCARD_ALL);
         encoder->setVertexBuffer(0, &buffer);
         encoder->setTexture(0, m_copySampler, bgfx::getTexture(m_frameBuffer->Handle()),
@@ -424,12 +436,11 @@ namespace Babylon::Polyfills::Internal
         // PNG is also the Canvas fallback for empty or unsupported media types.
         const uint32_t width = m_width;
         const uint32_t height = m_height;
-        std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
+        std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * CanvasConstants::RGBA_CHANNEL_COUNT, 0);
         if (m_context != nullptr && width > 0 && height > 0)
         {
             try
             {
-                // GPU readback after flush so NanoVG content (fillRect/text/paths) is included.
                 rgba = m_context->CaptureRGBA();
             }
             catch (const std::exception& ex)
@@ -441,7 +452,7 @@ namespace Babylon::Polyfills::Internal
         bx::MemoryBlock memoryBlock{&Graphics::DeviceContext::GetDefaultAllocator()};
         bx::MemoryWriter writer{&memoryBlock};
         bx::Error err{};
-        bimg::imageWritePng(&writer, width, height, width * 4, rgba.data(), bimg::TextureFormat::RGBA8, false, &err);
+        bimg::imageWritePng(&writer, width, height, width * CanvasConstants::RGBA_CHANNEL_COUNT, rgba.data(), bimg::TextureFormat::RGBA8, false, &err);
         // MemoryBlock reports allocation capacity, not the number of encoded bytes.
         const size_t pngSize = static_cast<size_t>(bx::getSize(&writer));
         if (!err.isOk() || pngSize == 0)
@@ -461,7 +472,14 @@ namespace Babylon::Polyfills::Internal
         const auto colorString = info[0].As<Napi::String>().Utf8Value();
         const auto color = StringToColor(info.Env(), colorString);
 
-        return Napi::Value::From(info.Env(), ((uint32_t(color.a * 255.f) & 0xFF) << 24) + ((uint32_t(color.b * 255.f) & 0xFF) << 16) + ((uint32_t(color.g * 255.f) & 0xFF) << 8) + (uint32_t(color.r * 255.f) & 0xFF));
+        const auto channel = [](float value) {
+            return uint32_t(value * CanvasConstants::COLOR_CHANNEL_MAX) & CanvasConstants::COLOR_CHANNEL_MASK;
+        };
+        return Napi::Value::From(info.Env(),
+            (channel(color.a) << CanvasConstants::ALPHA_CHANNEL_SHIFT) +
+            (channel(color.b) << CanvasConstants::BLUE_CHANNEL_SHIFT) +
+            (channel(color.g) << CanvasConstants::GREEN_CHANNEL_SHIFT) +
+            channel(color.r));
     }
 
     void NativeCanvas::Dispose()
@@ -493,6 +511,21 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
     {
+        // Copy commands already queued by NativeEngine hold raw pointers to the canvas textures and are
+        // consumed when the engine submits its commands later in this frame. Keep those textures and
+        // their framebuffers alive until the frame has been rendered.
+        auto retired = std::make_shared<std::vector<std::shared_ptr<void>>>();
+        for (auto& converted : m_convertedTextures)
+        {
+            retired->emplace_back(std::move(converted.Texture));
+            retired->emplace_back(std::move(converted.FrameBuffer));
+        }
+        retired->emplace_back(std::move(m_texture));
+        retired->emplace_back(std::move(m_frameBuffer));
+        arcana::make_task(m_graphicsContext.BeforeRenderScheduler(), arcana::cancellation::none(), [] {})
+            .then(m_graphicsContext.AfterRenderScheduler(), arcana::cancellation::none(),
+                [retired = std::move(retired)] { (void)retired; });
+
         Dispose();
     }
 }

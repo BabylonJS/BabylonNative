@@ -39,6 +39,7 @@ namespace Babylon::Plugins::Internal
                     ParentT::InstanceMethod("setMSAASamples", &TestUtils::SetMSAASamples),
                     ParentT::InstanceMethod("setTitle", &TestUtils::SetTitle),
                     ParentT::InstanceMethod("getGraphicsApiName", &TestUtils::GetGraphicsApiName),
+                    ParentT::InstanceMethod("getJavaScriptEngineName", &TestUtils::GetJavaScriptEngineName),
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
@@ -74,6 +75,7 @@ namespace Babylon::Plugins::Internal
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info);
 
         Napi::Value GetGraphicsApiName(const Napi::CallbackInfo& info);
+        Napi::Value GetJavaScriptEngineName(const Napi::CallbackInfo& info);
         void WritePNG(const Napi::CallbackInfo& info);
         Napi::Value DecodeImage(const Napi::CallbackInfo& info);
         Napi::Value GetImageData(const Napi::CallbackInfo& info);

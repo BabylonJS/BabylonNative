@@ -44,7 +44,7 @@ namespace
             stagingRegion.init(staging.Handle());
             for (const auto& regions : {std::pair{resolvedRegion, sourceRegion}, std::pair{stagingRegion, resolvedRegion}})
             {
-                context.FlushViewsIfNeeded();
+                context.CheckViewBudget();
                 const auto viewId = context.AcquireNewViewId();
                 bgfx::resetView(viewId);
                 context.GetActiveEncoder()->blit(viewId, regions.first, regions.second);

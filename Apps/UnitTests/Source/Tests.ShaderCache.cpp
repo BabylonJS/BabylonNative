@@ -60,7 +60,7 @@ TEST(ShaderCache, SaveAndLoad)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.LoadScript("app:///Assets/tests.shaderCache.basicScene.js");
     loader.Dispatch([&scriptIsDone](Napi::Env) {
         scriptIsDone.set_value();
