@@ -107,12 +107,27 @@ jobs:
       # Visual validation runs only on JavaScriptCore so results don't depend on
       # engine-specific quirks of Hermes/QuickJS; the other engines still run
       # UnitTests and ModuleLoadTest. Win32 applies the same rule with V8.
+      # Clang and GCC render the same Mesa software output, so only Clang runs it.
+      # --test-timeout fails a stuck test (or a native hang, via the watchdog) in
+      # minutes instead of letting it run into the job timeout.
+      # The console skips bgfx trace lines; the uploaded validation.log has everything.
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'Vulkan' && inputs.js-engine == 'JavaScriptCore' }}
+        if: ${{ inputs.graphics-api != 'Vulkan' && inputs.js-engine == 'JavaScriptCore' && inputs.cc == 'clang' }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
-          xvfb-run ./Playground app:///Scripts/validation_native.js
+          set -o pipefail
+          xvfb-run ./Playground --test-timeout=120 app:///Scripts/validation_native.js 2>&1 \
+            | tee validation.log \
+            | { grep --line-buffered -v -F '): BGFX ' || true; }
+
+      - name: Upload Validation Log
+        if: ${{ inputs.graphics-api != 'Vulkan' && inputs.js-engine == 'JavaScriptCore' && inputs.cc == 'clang' && !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: Linux-${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-validation-log
+          path: build/Linux/Apps/Playground/validation.log
+          if-no-files-found: ignore
 
       # The full Vulkan suite currently has broad reference-image differences and
       # crashes in Glow layer and LODs: https://github.com/BabylonJS/BabylonNative/issues/1878

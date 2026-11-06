@@ -117,8 +117,11 @@
 
     // wait-for-readiness limits.
     const MAX_CONVERGENCE_TICKS = 240;
+    // --test-timeout overrides both scene-creation and readiness timeouts.
+    const testTimeoutMs = (typeof opts.testTimeoutMs === "number" && opts.testTimeoutMs > 0) ? opts.testTimeoutMs : 0;
+    const CREATE_SCENE_TIMEOUT_MS = testTimeoutMs || 10 * 60 * 1000;
     // The Win32 sanitizer job needs ~9.5 min for EXR Loader alone (ASAN-instrumented EXR decode), so keep a wide margin.
-    const INITIAL_READINESS_TIMEOUT_MS = 20 * 60 * 1000;
+    const INITIAL_READINESS_TIMEOUT_MS = testTimeoutMs || 20 * 60 * 1000;
     const READINESS_RECONCILE_INTERVAL_MS = 100;
     // The LTC data is a network download, so bound the wait in time rather than render-loop ticks.
     const AREA_LIGHT_LTC_TIMEOUT_MS = 60 * 1000;
@@ -1670,7 +1673,7 @@
 
                                     if (createdScene && createdScene.then) {
                                         // Bound async creation before scene readiness begins; native blocking needs an external timeout.
-                                        const createSceneTimeoutMs = 10 * 60 * 1000;
+                                        const createSceneTimeoutMs = CREATE_SCENE_TIMEOUT_MS;
                                         let createSceneTimeoutId;
                                         try {
                                             createdScene = await Promise.race([

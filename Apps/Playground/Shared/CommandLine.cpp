@@ -233,6 +233,23 @@ namespace
                 o.CaptureFrame = n;
             }},
 
+        FlagSpec{"--test-timeout", "", FlagKind::ValueRequired, "SECONDS",
+            "Per-test timeout for scene creation and",
+            "                              initial readiness (default 600s / 1200s).\n"
+            "                              Also arms a watchdog that dumps a HANG banner\n"
+            "                              and exits 3 when no console output arrives\n"
+            "                              for 2*SECONDS+60s, so native hangs that\n"
+            "                              JavaScript timers can't see still fail fast.\n",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                int n = 0;
+                if (!ParseIntStrict(value, n) || n < 1 || n > 86400)
+                {
+                    err = "invalid --test-timeout value (expected positive integer): '" + std::string{value} + "'";
+                    return;
+                }
+                o.TestTimeoutSeconds = n;
+            }},
+
         FlagSpec{"--test", "-t", FlagKind::ValueRequired, "PATTERN",
             "Run tests whose title contains PATTERN.",
             "                              May be specified multiple times (OR).\n",

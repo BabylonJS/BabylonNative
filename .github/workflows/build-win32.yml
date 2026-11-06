@@ -160,12 +160,27 @@ jobs:
 
       # Visual validation runs only on V8 so results don't depend on engine-specific
       # quirks of Chakra/JSI/Hermes/QuickJS; the other engines still run UnitTests.
+      # --test-timeout fails a stuck test (or a native hang, via the watchdog) in
+      # minutes instead of letting it run into the job timeout.
+      # The console skips bgfx trace lines; the uploaded validation.log has everything.
       - name: Validation Tests
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' }}
-        shell: cmd
+        shell: pwsh
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground app:///Scripts/validation_native.js
+          .\Playground.exe --test-timeout=120 app:///Scripts/validation_native.js 2>&1 |
+            ForEach-Object { "$_" } |
+            Tee-Object -FilePath validation.log |
+            Where-Object { -not $_.Contains('): BGFX ') }
+          exit $LASTEXITCODE
+
+      - name: Upload Validation Log
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-validation-log
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/validation.log
+          if-no-files-found: ignore
 
       - name: Upload Rendered Pictures
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !cancelled() }}
