@@ -61,6 +61,10 @@ namespace Babylon::Graphics
         void captureFrame(const void* _data, uint32_t _size) override;
 
     private:
+        // Writes to bx::debugOutput and the diagnostic output. BN's own trace()
+        // calls always reach it; bgfx's traceVargs only with BABYLON_NATIVE_BGFX_TRACE.
+        void output(const char* filePath, uint16_t line, const char* format, va_list argList);
+
         std::atomic<bool> m_deviceLost{false};
         std::function<void(const char* output)> m_outputFunction;
 

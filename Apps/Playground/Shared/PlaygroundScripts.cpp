@@ -7,9 +7,100 @@
 
 #include <napi/napi.h>
 
+#include <atomic>
+#include <chrono>
+#include <cstdio>
 #include <cstdlib>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
+
+namespace
+{
+    // Fails the run when the runner stops logging. JavaScript timers can't
+    // catch a native hang (e.g. a busy loop on the render thread), which
+    // otherwise runs until the CI job timeout.
+    class Watchdog
+    {
+    public:
+        static Watchdog& Instance()
+        {
+            // Leaked: the detached thread may outlive static destruction.
+            static Watchdog* instance = new Watchdog{};
+            return *instance;
+        }
+
+        // Called when the host installs MakeLogCallback, the only path that feeds the watchdog.
+        void EnableFeeding()
+        {
+            m_feedable = true;
+        }
+
+        void Start(std::chrono::seconds limit)
+        {
+            if (!m_feedable)
+            {
+                // Hosts that route console output elsewhere (e.g. the windowed
+                // macOS BNRuntime -> os_log) would trip the watchdog while healthy.
+                std::fprintf(stderr, "Playground: --test-timeout hang watchdog disabled; this host does not feed it.\n");
+                return;
+            }
+            bool expected = false;
+            if (!m_started.compare_exchange_strong(expected, true))
+            {
+                return;
+            }
+            m_limit = limit;
+            Feed({});
+            std::thread{[this] { Run(); }}.detach();
+        }
+
+        void Feed(std::string_view line)
+        {
+            std::lock_guard<std::mutex> lock{m_mutex};
+            m_lastProgress = std::chrono::steady_clock::now();
+            m_lastLine.assign(line.substr(0, 512));
+        }
+
+    private:
+        void Run()
+        {
+            for (;;)
+            {
+                std::this_thread::sleep_for(std::chrono::seconds{5});
+                std::string lastLine;
+                std::chrono::steady_clock::duration idle;
+                {
+                    std::lock_guard<std::mutex> lock{m_mutex};
+                    idle = std::chrono::steady_clock::now() - m_lastProgress;
+                    lastLine = m_lastLine;
+                }
+                if (idle >= m_limit)
+                {
+                    Diagnostics::DumpFailure(
+                        "HANG",
+                        nullptr,
+                        0,
+                        0,
+                        "No console output for %llds. Last line: %s",
+                        static_cast<long long>(std::chrono::duration_cast<std::chrono::seconds>(idle).count()),
+                        lastLine.c_str());
+                    Diagnostics::SetExitCode(3);
+                    Diagnostics::PrintFinishLine();
+                    std::_Exit(3);
+                }
+            }
+        }
+
+        std::atomic<bool> m_feedable{false};
+        std::atomic<bool> m_started{false};
+        std::chrono::seconds m_limit{};
+        std::mutex m_mutex;
+        std::chrono::steady_clock::time_point m_lastProgress{};
+        std::string m_lastLine;
+    };
+}
 
 namespace Playground
 {
@@ -30,6 +121,12 @@ namespace Playground
             }
         }
         Babylon::PerfTrace::SetLevel(perfLevel);
+
+        if (options.TestTimeoutSeconds.has_value())
+        {
+            // createScene and initial readiness each get the timeout, back to back.
+            Watchdog::Instance().Start(std::chrono::seconds{2 * *options.TestTimeoutSeconds + 60});
+        }
     }
 
     void QueueOptions(Babylon::Embedding::Runtime& runtime, const PlaygroundOptions& options)
@@ -50,6 +147,10 @@ namespace Playground
             if (options.CaptureFrame.has_value())
             {
                 js.Set("captureFrame", Napi::Number::New(env, *options.CaptureFrame));
+            }
+            if (options.TestTimeoutSeconds.has_value())
+            {
+                js.Set("testTimeoutMs", Napi::Number::New(env, *options.TestTimeoutSeconds * 1000.0));
             }
 
             auto filters = Napi::Array::New(env, options.TestFilters.size());
@@ -95,6 +196,7 @@ namespace Playground
     std::function<void(Babylon::Embedding::LogLevel, std::string_view)>
     MakeLogCallback(std::function<void(std::string_view)> platformSink)
     {
+        Watchdog::Instance().EnableFeeding();
         return [sink = std::move(platformSink)](Babylon::Embedding::LogLevel level, std::string_view message) {
             std::string text{message};
             while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
@@ -105,6 +207,12 @@ namespace Playground
             if (sink)
             {
                 sink(text);
+            }
+
+            // DebugTrace (Verbose) can come from non-JS threads; only runner output counts as progress.
+            if (level != Babylon::Embedding::LogLevel::Verbose)
+            {
+                Watchdog::Instance().Feed(text);
             }
 
             // Babylon.js routes recoverable errors through console.error;
