@@ -77,6 +77,14 @@ namespace Babylon
         constexpr uint16_t HALF_FLOAT_ONE_BITS = 0x3C00;
         constexpr uint32_t FLOAT_ONE_BITS = 0x3F800000;
 
+        // Texture dimensions are uint16_t, but some GPUs (e.g. Mali-G715) report 65536. Clamp to the
+        // largest power of two that fits, so callers that size textures to the limit (e.g. the Gaussian
+        // splatting data atlas width) get a texture as wide as they asked for.
+        uint32_t MaxTextureSize()
+        {
+            return std::min<uint32_t>(bgfx::getCaps()->limits.maxTextureSize, 1u << 15);
+        }
+
         enum class TextureComparisonFunction : uint32_t
         {
             Disabled = 0,
@@ -904,7 +912,7 @@ namespace Babylon
                 // This must match the version in nativeEngine.ts
                 StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, NATIVE_ENGINE_PROTOCOL_VERSION)),
 
-                StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, limits.maxTextureSize)),
+                StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, MaxTextureSize())),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
                 StaticValue("CAPS_ORIGIN_BOTTOM_LEFT", Napi::Boolean::From(env, bgfx::getCaps()->originBottomLeft)),
 
@@ -1526,7 +1534,7 @@ namespace Babylon
         }
 
         const uint32_t height = (count + BUFFER_READBACK_TEXTURE_WIDTH - 1) / BUFFER_READBACK_TEXTURE_WIDTH;
-        if (height > bgfx::getCaps()->limits.maxTextureSize)
+        if (height > MaxTextureSize())
         {
             throw Napi::RangeError::New(info.Env(), "readTransformFeedbackBuffer buffer is too large");
         }
@@ -2039,7 +2047,7 @@ void main() {
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto widthValue = info[1].As<Napi::Number>();
         const auto heightValue = info[2].As<Napi::Number>();
-        const uint32_t maxDimension = std::min<uint32_t>(UINT16_MAX, bgfx::getCaps()->limits.maxTextureSize);
+        const uint32_t maxDimension = MaxTextureSize();
         // Render-target ratios can be fractional; preserve WebGL's integer-size conversion.
         const uint16_t width = static_cast<uint16_t>(ReadUnsignedInteger(widthValue, "Texture width", maxDimension, 1, /*truncate*/ true));
         const uint16_t height = static_cast<uint16_t>(ReadUnsignedInteger(heightValue, "Texture height", maxDimension, 1, /*truncate*/ true));
@@ -2337,7 +2345,10 @@ void main() {
             static_cast<uint32_t>(y) + height > mipHeight ||
             layer >= maxLayers)
         {
-            throw Napi::Error::New(info.Env(), "updateTextureData region is out of bounds");
+            throw Napi::Error::New(info.Env(), "updateTextureData region (x=" + std::to_string(x) + ", y=" + std::to_string(y) +
+                ", " + std::to_string(width) + "x" + std::to_string(height) + ", layer " + std::to_string(layer) +
+                ") is out of bounds for mip " + std::to_string(mip) + " (" + std::to_string(mipWidth) + "x" +
+                std::to_string(mipHeight) + ", " + std::to_string(maxLayers) + " layer(s))");
         }
 
         // Size of the source rectangle in the texture's own format. bgfx is always linked (bimg is not, in
@@ -2481,7 +2492,7 @@ void main() {
         }
 
         // Validate before narrowing so out-of-range JS values cannot wrap into uint16_t.
-        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        const auto maxTextureSize = MaxTextureSize();
         const auto maxTextureLayers = bgfx::getCaps()->limits.maxTextureLayers;
         if (rawWidth == 0 || rawHeight == 0 || rawDepth == 0 ||
             rawWidth > maxTextureSize ||
@@ -2592,7 +2603,7 @@ void main() {
         }
 
         // Validate before narrowing so out-of-range JS values cannot wrap into uint16_t.
-        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        const auto maxTextureSize = MaxTextureSize();
         if (rawWidth == 0 || rawHeight == 0 || rawDepth == 0 ||
             rawWidth > maxTextureSize ||
             rawHeight > maxTextureSize ||
