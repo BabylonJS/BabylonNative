@@ -19,6 +19,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
+        buildConfigField "boolean", "MOBILE_VISUAL_TESTS", project.hasProperty("mobileVisualTests") ? "true" : "false"
         applicationId = "com.android.babylonnative.playground"
         minSdk = platformVersion
         targetSdk = 33
@@ -46,6 +47,12 @@ android {
     }
 
     namespace = 'com.android.babylonnative.playground'
+    buildFeatures {
+        buildConfig = true
+    }
+    if (project.hasProperty("mobileVisualTests")) {
+        sourceSets.main.assets.srcDir layout.buildDirectory.dir("mobile-test-assets").get().asFile
+    }
 }
 
 dependencies {
@@ -130,7 +137,29 @@ tasks.register('copyFiles') {
         copy {
             from '../../Scripts'
             include "*.js"
+            exclude "mobilePlaywright.js"
             into 'src/main/assets/Scripts'
+        }
+        if (project.hasProperty("mobileVisualTests")) {
+            copy {
+                from '../../Scripts'
+                include 'config.json', 'mobilePlaywright.js'
+                into layout.buildDirectory.dir("mobile-test-assets/Scripts")
+            }
+            copy {
+                from '../../../Dependencies'
+                include '*.ttf'
+                into layout.buildDirectory.dir("mobile-test-assets/Scripts")
+            }
+            copy {
+                from '../../../node_modules/@babylonjs/havok/lib/umd'
+                include 'HavokPhysics_umd.js', 'HavokPhysics.wasm'
+                into layout.buildDirectory.dir("mobile-test-assets/Scripts")
+            }
+            copy {
+                from '../../ReferenceImages'
+                into layout.buildDirectory.dir("mobile-test-assets/ReferenceImages")
+            }
         }
     }
 }

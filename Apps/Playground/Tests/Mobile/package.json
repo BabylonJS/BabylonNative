@@ -1,0 +1,18 @@
+{
+  "name": "babylon-native-mobile-tests",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.cjs",
+    "test:shared": "node --test test/shared-suite.cjs",
+    "visual": "node run.cjs"
+  },
+  "dependencies": {
+    "browserstack-local": "1.5.12",
+    "fflate": "0.8.3",
+    "pngjs": "7.0.0"
+  }
+}

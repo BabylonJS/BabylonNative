@@ -29,6 +29,10 @@ target_sources(BabylonNativeEmbedding
             ${PLAYGROUND_DIR}/Shared/Diagnostics.cpp
             ${PLAYGROUND_DIR}/Shared/PlaygroundScripts.cpp)
 
+if(BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS)
+    target_compile_definitions(BabylonNativeEmbedding PRIVATE BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS=1)
+endif()
+
 target_include_directories(BabylonNativeEmbedding
     PRIVATE ${PLAYGROUND_DIR})
 

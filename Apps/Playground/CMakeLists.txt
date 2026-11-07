@@ -33,6 +33,10 @@ set(SCRIPTS
     "Scripts/validation_native.js"
     "Scripts/config.json")
 
+if(BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS)
+    list(APPEND SCRIPTS "Scripts/mobilePlaywright.js")
+endif()
+
 set(SOURCES
     "Shared/CommandLine.cpp"
     "Shared/CommandLine.h"
@@ -44,8 +48,25 @@ set(SOURCES
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     if(IOS)
-        set(PLIST_FILE
-            "${CMAKE_CURRENT_LIST_DIR}/iOS/Info.plist")
+        set(PLAYGROUND_IOS_NETWORK_POLICY "")
+        if(BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS)
+            set(PLAYGROUND_IOS_NETWORK_POLICY [[
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>bs-local.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSIncludesSubdomains</key>
+                <false/>
+            </dict>
+        </dict>
+    </dict>]])
+        endif()
+        set(PLIST_FILE "${CMAKE_CURRENT_BINARY_DIR}/iOS/Info.plist")
+        configure_file("${CMAKE_CURRENT_LIST_DIR}/iOS/Info.plist" "${PLIST_FILE}" @ONLY)
         set(STORYBOARD
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
@@ -149,6 +170,13 @@ else()
 endif()
 
 warnings_as_errors(Playground)
+if(BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS)
+    target_compile_definitions(Playground PRIVATE BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS=1)
+    if(IOS)
+        set_target_properties(Playground PROPERTIES
+            XCODE_ATTRIBUTE_SWIFT_ACTIVE_COMPILATION_CONDITIONS "MOBILE_VISUAL_TESTS")
+    endif()
+endif()
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
 
