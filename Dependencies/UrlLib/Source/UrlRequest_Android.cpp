@@ -166,7 +166,10 @@ namespace UrlLib
                             case UrlResponseType::String:
                             {
                                 // TODO: use the charset from the content type?
-                                m_responseString = byteArrayOutputStream.ToString("UTF-8");
+                                // Copy the raw UTF-8 bytes. Going through a Java String would return JNI
+                                // "modified UTF-8" (NUL as C0 80, 4-byte characters as surrogate pairs).
+                                const std::vector<std::byte> bytes = byteArrayOutputStream.ToByteArray();
+                                m_responseString.assign(reinterpret_cast<const char*>(bytes.data()), bytes.size());
                                 break;
                             }
                             case UrlResponseType::Buffer:
