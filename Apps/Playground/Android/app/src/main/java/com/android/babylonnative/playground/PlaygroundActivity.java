@@ -9,11 +9,13 @@ import com.library.babylonnative.BabylonView;
 
 public class PlaygroundActivity extends Activity {
     /**
-     * Bridges to {@code Apps/Playground/Shared/PlaygroundScripts.cpp},
-     * which holds the bootstrap script list shared with the other
-     * Playground hosts. Implemented in PlaygroundJNI.cpp.
+     * Bridges to {@code Apps/Playground/Shared/{CommandLine,PlaygroundScripts}.cpp},
+     * which hold the command-line parser and bootstrap script list shared
+     * with the other Playground hosts. Implemented in PlaygroundJNI.cpp.
+     *
+     * @return the positional script URLs from {@code args}.
      */
-    private static native void loadBootstrapScripts(long runtimeHandle);
+    private static native String[] loadBootstrapScripts(long runtimeHandle, String[] args);
 
     private long mRuntimeHandle = 0;
     private BabylonView mView;
@@ -34,14 +36,50 @@ public class PlaygroundActivity extends Activity {
         runtimeOptions.enableDebugTrace = true;
         mRuntimeHandle = BabylonNative.runtimeCreate(runtimeOptions);
 
-        // Queue the bootstrap scripts + experience script. They run after
-        // the first View attach completes engine init on the JS thread, in
-        // submission order.
-        loadBootstrapScripts(mRuntimeHandle);
-        BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");
+        // Optional desktop-style command line, e.g.
+        //   adb shell am start -n com.android.babylonnative.playground/.PlaygroundActivity \
+        //     --es args "app:///Scripts/validation_native.js --test-index=5"
+        String argsExtra = getIntent().getStringExtra("args");
+        String[] args = argsExtra == null || argsExtra.trim().isEmpty()
+                ? new String[0]
+                : argsExtra.trim().split("\\s+");
+
+        // Queue the bootstrap scripts + experience (or command-line) scripts.
+        // They run after the first View attach completes engine init on the
+        // JS thread, in submission order.
+        String[] scripts = loadBootstrapScripts(mRuntimeHandle, args);
+        if (scripts.length == 0) {
+            BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");
+        } else {
+            for (String script : scripts) {
+                BabylonNative.runtimeLoadScript(mRuntimeHandle, script);
+            }
+            BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/playground_runner.js");
+        }
 
         mView = new BabylonView(getApplication(), mRuntimeHandle);
+
+        // Optional fixed render size in CSS pixels (e.g. --ei width 600
+        // --ei height 400 for validation tests), applied before the surface
+        // is created so the first frame already has the requested size.
+        int width = getIntent().getIntExtra("width", 0);
+        int height = getIntent().getIntExtra("height", 0);
+        if (width > 0 && height > 0) {
+            applySurfaceSize(width, height);
+        }
+
         setContentView(mView);
+    }
+
+    /** Called from native TestUtils.updateSize (any thread); sizes are in CSS pixels. */
+    public void setSurfaceSize(final int width, final int height) {
+        runOnUiThread(() -> applySurfaceSize(width, height));
+    }
+
+    private void applySurfaceSize(int width, int height) {
+        // Same device pixel ratio as the native Device (densityDpi / 160).
+        float dpr = getResources().getConfiguration().densityDpi / 160.0f;
+        mView.setSurfaceSize(Math.round(width * dpr), Math.round(height * dpr));
     }
 
     @Override
