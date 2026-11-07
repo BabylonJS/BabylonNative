@@ -26,6 +26,7 @@ add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 # can be safely consumed by another.
 target_sources(BabylonNativeEmbedding
     PRIVATE src/main/cpp/PlaygroundJNI.cpp
+            ${PLAYGROUND_DIR}/Shared/CommandLine.cpp
             ${PLAYGROUND_DIR}/Shared/Diagnostics.cpp
             ${PLAYGROUND_DIR}/Shared/PlaygroundScripts.cpp)
 

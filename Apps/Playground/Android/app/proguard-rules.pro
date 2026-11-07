@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Called from native TestUtils.updateSize via JNI.
+-keepclassmembers class com.android.babylonnative.playground.PlaygroundActivity {
+    public void setSurfaceSize(int, int);
+}

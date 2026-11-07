@@ -75,6 +75,15 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     }
 
     /**
+     * Fixes the render surface size in physical pixels, independent of the
+     * view layout (the compositor scales it to fit). Must be called on the
+     * UI thread.
+     */
+    public void setSurfaceSize(int width, int height) {
+        this.primarySurfaceView.getHolder().setFixedSize(width, height);
+    }
+
+    /**
      * This method is part of the SurfaceHolder.Callback interface, and is
      * not normally called or subclassed by clients of BabylonView.
      */

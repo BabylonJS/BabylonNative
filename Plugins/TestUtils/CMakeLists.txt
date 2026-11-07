@@ -33,5 +33,9 @@ if(APPLE)
     enable_objc_arc(TestUtils)
 endif()
 
+if(ANDROID)
+    target_link_libraries(TestUtils PRIVATE AndroidExtensions)
+endif()
+
 set_property(TARGET TestUtils PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
