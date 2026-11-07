@@ -1,5 +1,6 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/JsRuntime.h>
+#include <algorithm>
 #include <array>
 #include <optional>
 
@@ -339,7 +340,10 @@ namespace
             depthFactor = 1.f;
         }
 
-        const auto splatCount = indices.ElementLength();
+        const auto indexCount = indices.ElementLength();
+        // The index buffer may be padded (e.g. to a multiple of 16) past the
+        // splat count, so only sort splats that have a position.
+        const auto splatCount = std::min(indexCount, positions.ElementLength() / 4);
         // High-precision Babylon matrices use ordinary number arrays.
         const auto m2{m.Get(2u)};
         const auto m6{m.Get(6u)};
@@ -368,6 +372,12 @@ namespace
         for (size_t i = 0; i < splatCount; i++)
         {
             indices[i] = depthMix[i * 2 + 0];
+        }
+
+        // Point padding entries at the one-past-the-end sentinel, like the Babylon.js sort worker.
+        for (size_t i = splatCount; i < indexCount; i++)
+        {
+            indices[i] = float(splatCount);
         }
     }
 }
