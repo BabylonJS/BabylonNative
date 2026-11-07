@@ -8,7 +8,7 @@ on:
         options: [both, android, ios]
         default: both
       run-cloud:
-        description: Run paid BrowserStack sessions after building
+        description: Run BrowserStack sessions after building
         type: boolean
         default: false
       android-device:

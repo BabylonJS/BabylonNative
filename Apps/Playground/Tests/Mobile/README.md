@@ -50,7 +50,7 @@ npm run visual -- --workers 2 --retries 1
 npm run visual -- --shard 1/2
 ```
 
-The run starts one cloud device and tunnel per worker slot before launching Playwright. Successful scenes reuse the engine according to the shared suite; native cleanup restores hardware scale 1 so a scene's scaling cannot affect later screenshots. Failed assertions retire the Playwright worker, not its device: the replacement worker acquires the same slot after scene/engine cleanup. An acknowledged scene error is recoverable; a command timeout or failed cleanup poisons that device and fails the run without silently replaying commands or allocating a replacement. Default is one worker with no test retries. Worker counts must be positive integers, not percentages. Increase workers only within available paid capacity, leaving room for other users. Sharding divides the shared Playwright tests, not native-catalog indices. Snapshot updates and replacement projects/configurations are forbidden.
+The run starts one cloud device and tunnel per worker slot before launching Playwright. Successful scenes reuse the engine according to the shared suite; native cleanup restores hardware scale 1 so a scene's scaling cannot affect later screenshots. Failed assertions retire the Playwright worker, not its device: the replacement worker acquires the same slot after scene/engine cleanup. An acknowledged scene error is recoverable; a command timeout or failed cleanup poisons that device and fails the run without silently replaying commands or allocating a replacement. Default is one worker with no test retries. Worker counts must be positive integers, not percentages. Increase workers only within available account capacity, leaving room for other users. Sharding divides the shared Playwright tests, not native-catalog indices. Snapshot updates and replacement projects/configurations are forbidden.
 
 The runner uploads the package once per invocation and shares that exact hash-checked upload across workers and retries. There is no persistent upload cache. Discovery does not upload or allocate a device.
 
@@ -68,7 +68,7 @@ The controller binds to loopback with a random endpoint. BrowserStack Local must
 
 ## Manual continuous integration
 
-`.github/workflows/mobile-visual-tests.yml` is manual and defaults to building APK/IPA artifacts without paid sessions. Existing pull-request checks are unchanged. Optional cloud runs select a full trusted Babylon.js commit SHA containing the shared adapter, then prepare and execute that exact suite. The paired Babylon.js change must be published before such a revision can be selected.
+`.github/workflows/mobile-visual-tests.yml` is manual and defaults to building APK/IPA artifacts without BrowserStack sessions. Existing pull-request checks are unchanged. Optional cloud runs select a full trusted Babylon.js commit SHA containing the shared adapter, then prepare and execute that exact suite. The paired Babylon.js change must be published before such a revision can be selected.
 
 Before enabling `run-cloud`, the account owner must confirm approved credentials, rotation status, plan/cost and permitted devices. Configure required reviewers and allowed branches on the `browserstack-mobile` environment, its two credential secrets, and `MOBILE_TESTING_APPROVED=true`. Both repository selections must be trusted: their code executes while credentials are available. Do not put credentials in inputs, repository files, recovery scripts, URLs or artifacts.
 
