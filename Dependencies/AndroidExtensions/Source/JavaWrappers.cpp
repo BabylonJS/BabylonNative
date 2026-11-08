@@ -153,8 +153,8 @@ namespace java::lang
 
     Object::Object(jobject object)
         : m_env{GetEnvForCurrentThread()}
-        , m_class{m_env->GetObjectClass(object)}
-        , m_object{m_env->NewGlobalRef(object)}
+        , m_class{object != nullptr ? m_env->GetObjectClass(object) : nullptr}
+        , m_object{object != nullptr ? m_env->NewGlobalRef(object) : nullptr}
     {
     }
 

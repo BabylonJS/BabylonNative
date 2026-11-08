@@ -16,28 +16,41 @@
 #include <android/log.h>
 #include <jni.h>
 
+#include <sstream>
 #include <string>
 #include <vector>
+
+namespace
+{
+    constexpr const char* LOG_TAG = "BabylonNative";
+
+    // Parsed by parseCommandLine before the Runtime is created, consumed by
+    // the runtime-option getters and loadBootstrapScripts.
+    PlaygroundOptions g_options{};
+
+    void LogUsage()
+    {
+        // Log line by line; logcat truncates long messages.
+        std::istringstream usage{CommandLine::Usage("PlaygroundActivity")};
+        for (std::string line; std::getline(usage, line);)
+        {
+            __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "%s", line.c_str());
+        }
+    }
+}
 
 extern "C"
 {
 
 // `args` uses the desktop Playground command-line syntax (e.g. --once,
-// --test-index=N). Returns the positional script URLs, which the caller
-// loads after the bootstrap scripts.
-JNIEXPORT jobjectArray JNICALL
-Java_com_android_babylonnative_playground_PlaygroundActivity_loadBootstrapScripts(
-    JNIEnv* env, jclass, jlong runtimeHandle, jobjectArray args)
+// --test-index=N). Returns -1 to continue, or the exit code the activity
+// should finish with: 0 for --help, 2 for a parse error. The exit code is
+// logged as "Playground.exit(N)" for logcat-based drivers.
+JNIEXPORT jint JNICALL
+Java_com_android_babylonnative_playground_PlaygroundActivity_parseCommandLine(
+    JNIEnv* env, jclass, jobjectArray args)
 {
-    jclass stringClass = env->FindClass("java/lang/String");
-
-    auto* runtime = Babylon::Embedding::Android::RuntimeFromHandle(runtimeHandle);
-    if (runtime == nullptr)
-    {
-        return env->NewObjectArray(0, stringClass, nullptr);
-    }
-
-    std::vector<std::string> argStorage{"Playground"};
+    std::vector<std::string> argStorage{"PlaygroundActivity"};
     const jsize argCount = args != nullptr ? env->GetArrayLength(args) : 0;
     for (jsize i = 0; i < argCount; ++i)
     {
@@ -54,25 +67,69 @@ Java_com_android_babylonnative_playground_PlaygroundActivity_loadBootstrapScript
         argv.push_back(arg.c_str());
     }
 
-    PlaygroundOptions options = CommandLine::Parse(static_cast<int>(argv.size()), argv.data());
-    if (options.ParseError)
+    g_options = CommandLine::Parse(static_cast<int>(argv.size()), argv.data());
+
+    int exitCode = -1;
+    if (g_options.ParseError)
     {
-        __android_log_print(ANDROID_LOG_ERROR, "BabylonNative", "%s", options.ErrorMessage.c_str());
-        options = {};
+        __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "Error: %s", g_options.ErrorMessage.c_str());
+        LogUsage();
+        exitCode = 2;
+    }
+    else if (g_options.ShowHelp)
+    {
+        LogUsage();
+        exitCode = 0;
+    }
+
+    if (exitCode >= 0)
+    {
+        __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Playground.exit(%d)", exitCode);
+        g_options = {};
+    }
+    return exitCode;
+}
+
+// Runtime options derived from the parsed command line, matching the desktop hosts.
+JNIEXPORT jboolean JNICALL
+Java_com_android_babylonnative_playground_PlaygroundActivity_enableDebugger(JNIEnv*, jclass)
+{
+    return g_options.Headless ? JNI_FALSE : JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_android_babylonnative_playground_PlaygroundActivity_enableDebugTrace(JNIEnv*, jclass)
+{
+    return g_options.DebugTrace.value_or(true) ? JNI_TRUE : JNI_FALSE;
+}
+
+// Queues the options and bootstrap scripts parsed by parseCommandLine.
+// Returns the positional script URLs, which the caller loads after the
+// bootstrap scripts.
+JNIEXPORT jobjectArray JNICALL
+Java_com_android_babylonnative_playground_PlaygroundActivity_loadBootstrapScripts(
+    JNIEnv* env, jclass, jlong runtimeHandle)
+{
+    jclass stringClass = env->FindClass("java/lang/String");
+
+    auto* runtime = Babylon::Embedding::Android::RuntimeFromHandle(runtimeHandle);
+    if (runtime == nullptr)
+    {
+        return env->NewObjectArray(0, stringClass, nullptr);
     }
 
     // Idempotent process-wide setup (PerfTrace level, etc.).
-    Playground::Initialize(options);
-    Playground::QueueOptions(*runtime, options);
+    Playground::Initialize(g_options);
+    Playground::QueueOptions(*runtime, g_options);
 
     // Queue bootstrap scripts; they run after the first View attach
     // completes engine init on the JS thread.
     Playground::LoadBootstrapScripts(*runtime);
 
-    jobjectArray scripts = env->NewObjectArray(static_cast<jsize>(options.Scripts.size()), stringClass, nullptr);
-    for (size_t i = 0; i < options.Scripts.size(); ++i)
+    jobjectArray scripts = env->NewObjectArray(static_cast<jsize>(g_options.Scripts.size()), stringClass, nullptr);
+    for (size_t i = 0; i < g_options.Scripts.size(); ++i)
     {
-        jstring script = env->NewStringUTF(options.Scripts[i].c_str());
+        jstring script = env->NewStringUTF(g_options.Scripts[i].c_str());
         env->SetObjectArrayElement(scripts, static_cast<jsize>(i), script);
         env->DeleteLocalRef(script);
     }
