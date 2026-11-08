@@ -1023,13 +1023,14 @@ TEST(ShaderCompilation, VulkanVertexInputsUseDenseBgfxLocations)
     }
 
     // Reflection keeps the bgfx::Attrib / i_data locations NativeEngine binds buffers by.
-    for (const char* name : {"world0", "world1", "world2", "world3"})
-    {
-        EXPECT_GE(info.VertexAttributeLocations.at(name), Babylon::Graphics::INSTANCE_DATA_LAST_LOCATION) << name;
-    }
-    for (const char* name : {"position", "uv", "color"})
-    {
-        EXPECT_LT(info.VertexAttributeLocations.at(name), Babylon::Graphics::INSTANCE_DATA_LAST_LOCATION) << name;
-    }
+    // bgfx::Attrib::Position == 0, bgfx::Attrib::Color0 == 4, bgfx::Attrib::TexCoord0 == 10.
+    EXPECT_EQ(info.VertexAttributeLocations.at("position"), 0u);
+    EXPECT_EQ(info.VertexAttributeLocations.at("color"), 4u);
+    EXPECT_EQ(info.VertexAttributeLocations.at("uv"), Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION);
+    // Built-in world rows occupy instance slots 3..0 (i_data3..i_data0).
+    EXPECT_EQ(info.VertexAttributeLocations.at("world0"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3);
+    EXPECT_EQ(info.VertexAttributeLocations.at("world1"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2);
+    EXPECT_EQ(info.VertexAttributeLocations.at("world2"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1);
+    EXPECT_EQ(info.VertexAttributeLocations.at("world3"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION);
 }
 #endif
