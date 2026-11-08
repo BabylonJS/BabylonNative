@@ -10,6 +10,7 @@
 #include <napi/env.h>
 #include <napi/pointer.h>
 
+#include <algorithm>
 #include <chrono>
 #include <array>
 #include <cstdlib>
@@ -247,6 +248,30 @@ TEST(NativeEngineTextureFormats, RejectedDimensionsAndLayersPreserveExistingText
                 }
             }
         }
+    });
+}
+
+TEST(NativeEngineTextureFormats, ReportedMaxTextureSizeMatchesValidation)
+{
+    RunTextureTest([](Napi::Object engine, Napi::Value value) {
+        const auto env = engine.Env();
+        // Texture dimensions are uint16_t, so the reported limit is capped at 32768 (some GPUs report 65536).
+        const uint32_t expected = std::min<uint32_t>(bgfx::getCaps()->limits.maxTextureSize, 1u << 15);
+        const auto reported = env.Global().Get("_native").As<Napi::Object>().Get("Engine").As<Napi::Object>()
+            .Get("CAPS_LIMITS_MAX_TEXTURE_SIZE").As<Napi::Number>().Uint32Value();
+        EXPECT_EQ(reported, expected);
+
+        auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+        const auto initialize = [&](uint32_t width) {
+            engine.Get("initializeTexture").As<Napi::Function>().Call(engine, {
+                value, Napi::Number::New(env, width), Napi::Number::New(env, 1),
+                Napi::Boolean::New(env, false), Napi::Number::New(env, bgfx::TextureFormat::RGBA8),
+                Napi::Boolean::New(env, false), Napi::Boolean::New(env, false), Napi::Number::New(env, 1)});
+        };
+        initialize(reported);
+        EXPECT_EQ(texture->Width(), reported);
+        EXPECT_THROW(initialize(reported + 1), Napi::Error);
+        EXPECT_EQ(texture->Width(), reported);
     });
 }
 
