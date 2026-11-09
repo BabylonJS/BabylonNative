@@ -27,6 +27,7 @@
 #include <jni.h>
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -70,6 +71,10 @@ namespace
     AndroidRuntime* AsAndroidRuntime(jlong handle) { return reinterpret_cast<AndroidRuntime*>(handle); }
     Runtime* AsRuntime(jlong handle) { return AsAndroidRuntime(handle)->runtime.get(); }
     View* AsView(jlong handle) { return reinterpret_cast<View*>(handle); }
+
+    // Set by Babylon::Embedding::Android::SetLogCallback; replaces the
+    // default logcat sink for Runtimes created afterwards.
+    std::function<void(LogLevel, std::string_view)> g_logCallback{};
 
     int LogPriorityFor(LogLevel level)
     {
@@ -213,15 +218,23 @@ namespace
     }
 
     // Shared body for the runtimeCreate JNI overloads. Installs the
-    // default logcat sink, constructs the Runtime, and registers
-    // Activity-lifecycle auto-Suspend/Resume tickets.
+    // log sink (the host's SetLogCallback sink, or logcat by default),
+    // constructs the Runtime, and registers Activity-lifecycle
+    // auto-Suspend/Resume tickets.
     jlong MakeRuntimeHandle(RuntimeOptions options)
     {
-        options.log = [](LogLevel level, std::string_view message) {
-            // logcat needs a NUL-terminated C string.
-            std::string text{message};
-            __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
-        };
+        if (g_logCallback)
+        {
+            options.log = g_logCallback;
+        }
+        else
+        {
+            options.log = [](LogLevel level, std::string_view message) {
+                // logcat needs a NUL-terminated C string.
+                std::string text{message};
+                __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
+            };
+        }
 
         auto runtime = std::make_unique<Runtime>(std::move(options));
         Runtime* runtimePtr = runtime.get();
@@ -257,6 +270,11 @@ namespace Babylon::Embedding::Android
     Runtime* RuntimeFromHandle(jlong handle)
     {
         return handle == 0 ? nullptr : AsRuntime(handle);
+    }
+
+    void SetLogCallback(std::function<void(LogLevel, std::string_view)> callback)
+    {
+        g_logCallback = std::move(callback);
     }
 }
 

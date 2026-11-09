@@ -5,6 +5,8 @@
 #include <arcana/containers/ticketed_collection.h>
 #include "JavaWrappers.h"
 
+#include <optional>
+
 namespace android::global
 {
     void Initialize(JavaVM* javaVM, jobject appContext);
@@ -20,6 +22,8 @@ namespace android::global
     AAssetManager* GetAssetManager();
 
     android::app::Activity GetCurrentActivity();
+    // Returns std::nullopt when no Activity is registered.
+    std::optional<android::app::Activity> TryGetCurrentActivity();
     void SetCurrentActivity(jobject currentActivity);
     using AppStateChangedCallback = std::function<void()>;
     using AppStateChangedCallbackTicket = arcana::ticketed_collection<AppStateChangedCallback>::ticket;

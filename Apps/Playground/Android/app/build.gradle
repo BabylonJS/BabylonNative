@@ -123,14 +123,23 @@ tasks.register('copyFiles') {
             into 'src/main/assets/Scripts'
         }
         copy {
+            from '../../../node_modules/@babylonjs/havok/lib/umd'
+            include "HavokPhysics_umd.js", "HavokPhysics.wasm"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
             from '../../../Dependencies'
-            include "*.js"
+            include "*.js", "*.ttf", "*.txt"
             into 'src/main/assets/Scripts'
         }
         copy {
             from '../../Scripts'
-            include "*.js"
+            include "*.js", "config.json"
             into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../ReferenceImages'
+            into 'src/main/assets/ReferenceImages'
         }
     }
 }
