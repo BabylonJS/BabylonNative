@@ -3139,7 +3139,9 @@ void main() {
             // reads use srcZ = face index on the source region of that blit.
             if (isCubeFace || x != 0 || blitY != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
-                const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+                // Keep the source's sRGB-ness: Metal blits require identical pixel formats. Bytes are copied unconverted.
+                const uint64_t blitTextureFlags{BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK | (texture->Flags() & BGFX_TEXTURE_SRGB)};
+                const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, blitTextureFlags)};
 
                 bgfx::Encoder* encoder = GetEncoder();
                 bgfx::TextureRegion dstRegion{};
