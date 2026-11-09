@@ -616,6 +616,7 @@
             "title": "Gaussian Splatting Projected Size",
             "playgroundId": "#8FOB3C#0",
             "referenceImage": "gsplat-debug-projected-size.png",
+            "workarounds": ["es-module-import"],
             "excludedJavaScriptEngines": ["JavaScriptCore"],
             "reason": "Linux JavaScriptCore: the SPZ loader fails with \"Loading a script as an ES module is not supported in Babylon Native\" (passes on V8)."
         },
@@ -623,6 +624,7 @@
             "title": "Gaussian Splatting Overdraw",
             "playgroundId": "#D4U720#1",
             "referenceImage": "gsplat-debug-overdraw.png",
+            "workarounds": ["es-module-import"],
             "excludedJavaScriptEngines": ["JavaScriptCore"],
             "reason": "Linux JavaScriptCore: the SPZ loader fails with \"Loading a script as an ES module is not supported in Babylon Native\" (passes on V8)."
         },
