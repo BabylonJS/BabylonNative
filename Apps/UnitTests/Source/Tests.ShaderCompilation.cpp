@@ -1034,3 +1034,56 @@ TEST(ShaderCompilation, VulkanVertexInputsUseDenseBgfxLocations)
     EXPECT_EQ(info.VertexAttributeLocations.at("world3"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION);
 }
 #endif
+
+#if defined(HAS_SHADER_COMPILER) && (defined(BABYLON_NATIVE_GRAPHICS_API_D3D11) || defined(BABYLON_NATIVE_GRAPHICS_API_D3D12) || defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN))
+TEST(ShaderCompilation, InstancedVariantKeepsPerVertexAttributeLocations)
+{
+    // NativeEngine binds vertex buffers by the base program's locations, then draws with a
+    // variant whose generic divisor-1 attributes are routed to i_data slots. The remaining
+    // per-vertex generic attributes must not shift, or they read another attribute's stream.
+    constexpr std::string_view vertexSource{R"(#version 300 es
+        precision highp float;
+        in vec3 position;
+        in vec4 color;
+        in float age;
+        in float life;
+        in vec2 size;
+        in float angle;
+        in vec2 offset;
+        out vec4 vColor;
+        void main()
+        {
+            vec2 corner = (offset - 0.5) * size;
+            float s = sin(angle);
+            float c = cos(angle);
+            corner = vec2(corner.x * c - corner.y * s, corner.x * s + corner.y * c);
+            vColor = color * (age / life);
+            gl_Position = vec4(position + vec3(corner, 0.0), 1.0);
+        })"};
+    constexpr std::string_view fragmentSource{R"(#version 300 es
+        precision highp float;
+        in vec4 vColor;
+        out vec4 fragColor;
+        void main() { fragColor = vColor; })"};
+
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto base = compiler.Compile(vertexSource, fragmentSource);
+
+    const std::map<std::string, uint32_t> instanced{
+        {"position", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION},
+        {"age", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1},
+        {"life", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2},
+        {"color", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3},
+        {"size", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 4},
+        {"angle", Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 5},
+    };
+    const auto variant = compiler.Compile(vertexSource, fragmentSource, instanced);
+
+    for (const auto& [name, location] : instanced)
+    {
+        EXPECT_EQ(variant.VertexAttributeLocations.at(name), location) << name;
+    }
+    ASSERT_EQ(base.VertexAttributeLocations.count("offset"), 1u);
+    EXPECT_EQ(variant.VertexAttributeLocations.at("offset"), base.VertexAttributeLocations.at("offset"));
+}
+#endif
