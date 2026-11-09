@@ -19,6 +19,8 @@ file(
 	BIMG_SOURCES
 	${BIMG_DIR}/include/* #
 	${BIMG_DIR}/src/image.* #
+	${BIMG_DIR}/src/image_encode_wic.cpp #
+	${BIMG_DIR}/src/image_wic.h #
 	${BIMG_DIR}/src/image_gnf.cpp #
 	#
 	${ASTC_ENCODER_SOURCES}
