@@ -19,9 +19,9 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #endif
 #include <Babylon/ScriptLoader.h>
-#include <gsl/util>
 #ifdef HAS_NATIVE_IMAGE_LOADING
 #include <UrlLib/UrlLib.h>
+#include <gsl/util>
 #include <memory>
 #include <vector>
 #endif
@@ -53,16 +53,21 @@ namespace
 
 TEST(JavaScript, LoadScriptPreservesSourceAfterEmbeddedNul)
 {
-    static constexpr char source[] = "globalThis.beforeNul = 1;//\0\nglobalThis.afterNul = 2;\n";
+    static constexpr char source[] = "var beforeNul = 1;//\0\nvar afterNul = 2;\n";
     const auto path = std::filesystem::temp_directory_path() / "babylon-native-embedded-nul.js";
     {
         std::ofstream file{path, std::ios::binary};
         file.write(source, sizeof(source) - 1);
     }
-    const auto removeFile = gsl::finally([&path] {
-        std::error_code ignored{};
-        std::filesystem::remove(path, ignored);
-    });
+    struct RemoveOnExit
+    {
+        std::filesystem::path path;
+        ~RemoveOnExit()
+        {
+            std::error_code ignored{};
+            std::filesystem::remove(path, ignored);
+        }
+    } removeFile{path};
 
     const std::string generic = path.generic_string();
     const std::string url = (!generic.empty() && generic.front() == '/') ? "file://" + generic : "file:///" + generic;
@@ -70,7 +75,18 @@ TEST(JavaScript, LoadScriptPreservesSourceAfterEmbeddedNul)
     auto done = std::make_shared<std::promise<int32_t>>();
     auto completion = done->get_future();
 
-    Babylon::AppRuntime runtime{};
+    Babylon::AppRuntime::Options options{};
+    options.UnhandledExceptionHandler = [done](const Napi::Error& error) {
+        try
+        {
+            done->set_exception(std::make_exception_ptr(std::runtime_error{error.Message()}));
+        }
+        catch (const std::future_error&)
+        {
+        }
+    };
+
+    Babylon::AppRuntime runtime{options};
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript(url);
     loader.Dispatch([done](Napi::Env env) {
@@ -85,7 +101,14 @@ TEST(JavaScript, LoadScriptPreservesSourceAfterEmbeddedNul)
     });
 
     ASSERT_EQ(completion.wait_for(std::chrono::seconds{30}), std::future_status::ready);
-    EXPECT_EQ(completion.get(), 2);
+    try
+    {
+        EXPECT_EQ(completion.get(), 2);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << e.what();
+    }
 }
 
 #ifdef HAS_NATIVE_MESHOPT
