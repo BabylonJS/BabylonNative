@@ -2959,6 +2959,15 @@ void main() {
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+
+        // deleteTexture is immediate, but commands already queued may still reference the texture
+        // (e.g. an effect layer composes with its main texture, then recreates it in the same frame).
+        // WebGL keeps a deleted texture alive for previously issued draws, so drain them first.
+        if (m_commandStream)
+        {
+            SubmitCommands(info);
+        }
+
         // Deleting a bound WebGL texture unbinds it.
         for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
         {
