@@ -3431,7 +3431,9 @@
             "title": "SubSurface Scattering",
             "playgroundId": "#FR639I#0",
             "renderCount": 10,
-            "referenceImage": "SubSurface-Scattering.png"
+            "referenceImage": "SubSurface-Scattering.png",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: removes the D3D12 device (DXGI_ERROR_DEVICE_REMOVED) on the CI WARP adapter, then hangs the run. Passes on a hardware GPU."
         },
         {
             "title": "Specular Reflectance with IOR",
