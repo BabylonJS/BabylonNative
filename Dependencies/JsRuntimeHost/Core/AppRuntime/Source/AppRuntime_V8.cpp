@@ -8,6 +8,7 @@
 #include <V8InspectorAgent.h>
 #endif
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -84,7 +85,11 @@ namespace Babylon
             v8::Local<v8::Context> context = v8::Context::New(isolate);
             v8::Context::Scope context_scope{context};
 
-            Napi::Env env = Napi::Attach(context);
+            Napi::Env env = Napi::Attach(context, [this](std::function<void()> task) {
+                Dispatch([task = std::move(task)](Napi::Env) {
+                    task();
+                });
+            });
 
 #ifdef ENABLE_V8_INSPECTOR
             std::optional<V8InspectorAgent> agent;
