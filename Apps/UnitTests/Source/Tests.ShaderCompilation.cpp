@@ -17,6 +17,7 @@
 #include <future>
 #include <iostream>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -962,5 +963,74 @@ TEST(ShaderCompilation, VulkanUsesVertexAndInstanceIndexBuiltins)
     }
     EXPECT_TRUE(vertexIndex);
     EXPECT_TRUE(instanceIndex);
+}
+
+TEST(ShaderCompilation, VulkanVertexInputsUseDenseBgfxLocations)
+{
+    // bgfx's Vulkan backend binds attribute-table entry i at location i and instance-data slot k
+    // at (vertex attribute count + k). Sparse locations leave inputs unbound (wrong colors,
+    // device loss with instancing).
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto info = compiler.Compile(
+        R"(#version 310 es
+            precision highp float;
+            in vec3 position;
+            in vec2 uv;
+            in vec4 color;
+            in vec4 world0;
+            in vec4 world1;
+            in vec4 world2;
+            in vec4 world3;
+            out vec4 vColor;
+            void main()
+            {
+                vColor = color + vec4(uv, 0.0, 0.0);
+                gl_Position = mat4(world0, world1, world2, world3) * vec4(position, 1.0);
+            })",
+        R"(#version 310 es
+            precision highp float;
+            in vec4 vColor;
+            layout(location = 0) out vec4 color;
+            void main() { color = vColor; })");
+
+    constexpr uint32_t vertexAttributeCount{3};
+    constexpr uint32_t instanceSlotCount{4};
+
+    auto vertex = ReadVulkanShader(info.VertexBytes);
+    std::set<uint32_t> locations;
+    for (const auto& input : vertex.get_shader_resources().stage_inputs)
+    {
+        locations.insert(vertex.get_decoration(input.id, spv::DecorationLocation));
+    }
+    std::set<uint32_t> expected;
+    for (uint32_t location = 0; location < vertexAttributeCount + instanceSlotCount; ++location)
+    {
+        expected.insert(location);
+    }
+    EXPECT_EQ(locations, expected);
+
+    // The attribute table follows the code blob and its trailing zero byte.
+    const auto code = ReadFixtureShaderCode(info.VertexBytes);
+    size_t offset = static_cast<size_t>(code.data() + code.size() - info.VertexBytes.data()) + 1;
+    ASSERT_LT(offset, info.VertexBytes.size());
+    ASSERT_EQ(info.VertexBytes[offset], vertexAttributeCount + instanceSlotCount);
+    ++offset;
+    for (uint32_t entry = 0; entry < vertexAttributeCount + instanceSlotCount; ++entry)
+    {
+        uint16_t id{};
+        std::memcpy(&id, info.VertexBytes.data() + offset + entry * sizeof(id), sizeof(id));
+        EXPECT_EQ(id == UINT16_MAX, entry >= vertexAttributeCount) << "entry " << entry;
+    }
+
+    // Reflection keeps the bgfx::Attrib / i_data locations NativeEngine binds buffers by.
+    // bgfx::Attrib::Position == 0, bgfx::Attrib::Color0 == 4, bgfx::Attrib::TexCoord0 == 10.
+    EXPECT_EQ(info.VertexAttributeLocations.at("position"), 0u);
+    EXPECT_EQ(info.VertexAttributeLocations.at("color"), 4u);
+    EXPECT_EQ(info.VertexAttributeLocations.at("uv"), Babylon::Graphics::TEXCOORD0_ATTRIBUTE_LOCATION);
+    // Built-in world rows occupy instance slots 3..0 (i_data3..i_data0).
+    EXPECT_EQ(info.VertexAttributeLocations.at("world0"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 3);
+    EXPECT_EQ(info.VertexAttributeLocations.at("world1"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 2);
+    EXPECT_EQ(info.VertexAttributeLocations.at("world2"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - 1);
+    EXPECT_EQ(info.VertexAttributeLocations.at("world3"), Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION);
 }
 #endif

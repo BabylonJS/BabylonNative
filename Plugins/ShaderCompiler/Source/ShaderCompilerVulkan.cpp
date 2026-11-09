@@ -484,7 +484,8 @@ namespace Babylon::Plugins
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(spirvFS.data()), spirvFS.size() * sizeof(uint32_t)), {}},
             std::move(builtInInstanceDataSlots),
             SamplerResourceSet::SeparateImages,
-            AppendSamplersVulkan);
+            AppendSamplersVulkan,
+            true);
         result.UniformNames = std::move(uniformNames);
         return result;
     }
