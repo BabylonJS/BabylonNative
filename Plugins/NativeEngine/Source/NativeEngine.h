@@ -227,7 +227,10 @@ namespace Babylon
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};
 
-        uint64_t m_engineState{BGFX_STATE_DEFAULT};
+        // Match the initial WebGL state (CULL_FACE disabled, CCW front face): Babylon.js only issues
+        // setState() when binding materials, so draws such as the outline renderer's that run before
+        // any material bind rely on it.
+        uint64_t m_engineState{(BGFX_STATE_DEFAULT & ~BGFX_STATE_CULL_MASK) | BGFX_STATE_FRONT_CCW};
         uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(UINT8_MAX) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
         template<int size, typename arrayType>
