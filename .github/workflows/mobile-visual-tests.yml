@@ -1,0 +1,179 @@
+name: Mobile visual tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        options: [both, android, ios]
+        default: both
+      run-cloud:
+        description: Run BrowserStack sessions after building
+        type: boolean
+        default: false
+      android-device:
+        type: string
+        default: Samsung Galaxy S22
+      android-os:
+        type: string
+        default: '12.0'
+      ios-device:
+        type: string
+        default: iPhone 14
+      ios-os:
+        type: string
+        default: '26'
+      babylonjs-repository:
+        description: Trusted repository containing the shared native Playwright suite
+        type: string
+        default: BabylonJS/Babylon.js
+      babylonjs-ref:
+        description: Full Babylon.js commit SHA with external native transport support
+        type: string
+        default: ''
+      test-grep:
+        description: Optional Playwright test-title expression; empty runs all eligible shared scenes
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-visual-tests
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platform == 'both' && '["android","ios"]' || format('["{0}"]', inputs.platform)) }}
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-26' || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    env:
+      npm_config_fetch_retries: '5'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check portable runner without cloud credentials
+        working-directory: Apps/Playground/Tests/Mobile
+        run: npm ci && npm test
+      - uses: actions/setup-java@v5
+        if: matrix.platform == 'android'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build Android validation APK
+        if: matrix.platform == 'android'
+        working-directory: Apps/Playground/Android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -PjsEngine=V8 -PARM64Only -PNDK_VERSION=28.2.13676358 \
+            -PmobileVisualTests \
+            -PBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+            -PBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON -PSANITIZERS=OFF
+      - name: Build unsigned iOS validation IPA
+        if: matrix.platform == 'ios'
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_26.4.app/Contents/Developer
+          cmake -G Xcode -B Build/Mobile \
+            -D IOS=ON -D DEPLOYMENT_TARGET=15.0 \
+            -D BABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS=ON \
+            -D BABYLON_NATIVE_PLUGIN_TESTUTILS=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON \
+            -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON \
+            -D CMAKE_IOS_INSTALL_COMBINED=NO
+          xcodebuild -project Build/Mobile/BabylonNative.xcodeproj \
+            -scheme Playground -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO
+          mkdir -p Build/Mobile/ipa/Payload
+          ditto Build/Mobile/Apps/Playground/Release-iphoneos/Playground.app \
+            Build/Mobile/ipa/Payload/Playground.app
+          cd Build/Mobile/ipa
+          zip -qr Playground.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-app-${{ matrix.platform }}
+          path: ${{ matrix.platform == 'ios' && 'Build/Mobile/ipa/Playground.ipa' || 'Apps/Playground/Android/app/build/outputs/apk/release/app-release.apk' }}
+          if-no-files-found: error
+          retention-days: 7
+
+  validate:
+    if: inputs.run-cloud
+    needs: build
+    environment: browserstack-mobile
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        platform: ${{ fromJSON(inputs.platform == 'both' && '["android","ios"]' || format('["{0}"]', inputs.platform)) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - name: Require approved cloud configuration
+        env:
+          APPROVED: ${{ vars.MOBILE_TESTING_APPROVED }}
+          BABYLONJS_REF: ${{ inputs.babylonjs-ref }}
+        run: |
+          test "$APPROVED" = true || { echo "Configure and approve the browserstack-mobile environment first"; exit 1; }
+          [[ "$BABYLONJS_REF" =~ ^[a-fA-F0-9]{40}$ ]] || { echo "Select a full trusted Babylon.js commit SHA"; exit 1; }
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: ${{ inputs.babylonjs-repository }}
+          ref: ${{ inputs.babylonjs-ref }}
+          path: Build/BabylonJS
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install the shared-suite package manager
+        run: |
+          npm install --prefix "$RUNNER_TEMP/shared-npm" npm@11.18.0 --no-audit --no-fund
+          echo "$RUNNER_TEMP/shared-npm/node_modules/npm/bin" >> "$GITHUB_PATH"
+      - name: Prepare the shared Babylon.js suite
+        working-directory: Build/BabylonJS
+        run: npm ci --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        with:
+          name: mobile-app-${{ matrix.platform }}
+          path: Build/MobileApp
+      - name: Install portable test runner
+        working-directory: Apps/Playground/Tests/Mobile
+        run: npm ci
+      - name: Run protocol and image controls
+        working-directory: Apps/Playground/Tests/Mobile
+        env:
+          BABYLON_JS_ROOT: ${{ github.workspace }}/Build/BabylonJS
+        run: npm test && npm run test:shared
+      - name: Install BrowserStack Local
+        run: |
+          mkdir -p "$RUNNER_TEMP/browserstack-local"
+          curl --fail --silent --show-error --location \
+            https://local-downloads.browserstack.com/BrowserStackLocal-linux-x64.zip \
+            -o "$RUNNER_TEMP/browserstack-local/local.zip"
+          unzip -q "$RUNNER_TEMP/browserstack-local/local.zip" -d "$RUNNER_TEMP/browserstack-local"
+          chmod +x "$RUNNER_TEMP/browserstack-local/BrowserStackLocal"
+          sha256sum "$RUNNER_TEMP/browserstack-local/BrowserStackLocal"
+          echo "BROWSERSTACK_LOCAL_BINARY=$RUNNER_TEMP/browserstack-local/BrowserStackLocal" >> "$GITHUB_ENV"
+      - name: Run native framebuffer validation
+        working-directory: Apps/Playground/Tests/Mobile
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          MOBILE_PLATFORM: ${{ matrix.platform }}
+          MOBILE_DEVICE: ${{ matrix.platform == 'ios' && inputs.ios-device || inputs.android-device }}
+          MOBILE_OS_VERSION: ${{ matrix.platform == 'ios' && inputs.ios-os || inputs.android-os }}
+          MOBILE_APP: ${{ github.workspace }}/Build/MobileApp/${{ matrix.platform == 'ios' && 'Playground.ipa' || 'app-release.apk' }}
+          BABYLON_JS_ROOT: ${{ github.workspace }}/Build/BabylonJS
+          MOBILE_TEST_GREP: ${{ inputs.test-grep }}
+        run: npm run visual
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-results-${{ matrix.platform }}
+          path: Apps/Playground/Tests/Mobile/mobile-results
+          if-no-files-found: warn
+          retention-days: 7

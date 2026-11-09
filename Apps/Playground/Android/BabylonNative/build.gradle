@@ -25,7 +25,8 @@ def cmakeArguments = [
     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
     "-DBABYLON_NATIVE_BUILD_APPS=ON",
-    "-DBABYLON_DEBUG_TRACE=ON"
+    "-DBABYLON_DEBUG_TRACE=ON",
+    "-DBABYLON_NATIVE_PLAYGROUND_MOBILE_TESTS=${project.hasProperty('mobileVisualTests') ? 'ON' : 'OFF'}"
 ]
 // Hermes for Android needs HOST hermesc/shermes (they emit bytecode at build
 // time and can't run as NDK-cross-compiled binaries). JsRuntimeHost's CMake

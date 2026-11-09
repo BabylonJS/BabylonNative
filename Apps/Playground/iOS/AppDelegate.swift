@@ -10,6 +10,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// this handle to construct its `BNView`.
     var runtime: BNRuntime?
 
+    var mobileVisualTests = false
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         let runtimeOptions = BNRuntimeOptions()
         runtimeOptions.enableDebugger = true
@@ -20,11 +22,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         // Queue the Babylon.js bootstrap scripts (shared with the other
         // Playground hosts via Apps/Playground/Shared/PlaygroundScripts.cpp),
-        // then the playground experience script. They will run after the
+        // then the selected experience script. They will run after the
         // first BNView attach completes engine initialization on the JS
         // thread, in submission order.
         PlaygroundBootstrap.loadScripts(runtime)
-        runtime.loadScript("app:///Scripts/experience.js")
+#if MOBILE_VISUAL_TESTS
+        mobileVisualTests = PlaygroundBootstrap.loadMobileTestScripts(runtime)
+#endif
+        if !mobileVisualTests {
+            runtime.loadScript("app:///Scripts/experience.js")
+        }
 
         self.runtime = runtime
         return true
@@ -42,4 +49,3 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         runtime = nil
     }
 }
-

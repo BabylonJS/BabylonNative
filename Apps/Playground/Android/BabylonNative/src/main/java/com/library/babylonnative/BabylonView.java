@@ -38,6 +38,9 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     /** Native View handle (0 if not attached). Owned by this view. */
     private long mViewHandle = 0;
+    private int mTestWidth = 0;
+    private int mTestHeight = 0;
+    private static native void resizeTestSurface(long viewHandle, int width, int height);
 
     public BabylonView(Context context, long runtimeHandle) {
         super(context);
@@ -74,12 +77,30 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
         setWillNotDraw(false);
     }
 
+    public void setRenderSize(int width, int height) {
+        mTestWidth = width;
+        mTestHeight = height;
+        this.primarySurfaceView.getHolder().setFixedSize(width, height);
+    }
+
+    private void resizeSurface(int width, int height) {
+        if (mTestWidth > 0) {
+            // Reference dimensions are independent of Android display density.
+            resizeTestSurface(mViewHandle, mTestWidth, mTestHeight);
+        } else {
+            BabylonNative.viewResize(mViewHandle, width, height);
+        }
+    }
+
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
         mViewHandle = BabylonNative.viewAttach(mRuntimeHandle, holder.getSurface());
+        if (mTestWidth > 0) {
+            resizeSurface(mTestWidth, mTestHeight);
+        }
     }
 
     /**
@@ -99,7 +120,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         if (mViewHandle != 0) {
-            BabylonNative.viewResize(mViewHandle, w, h);
+            resizeSurface(w, h);
         }
     }
 

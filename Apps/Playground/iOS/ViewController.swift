@@ -15,6 +15,11 @@ class ViewController: UIViewController {
         else { return }
 
         setupViews()
+#if MOBILE_VISUAL_TESTS
+        if appDelegate.mobileVisualTests {
+            view.layoutIfNeeded()
+        }
+#endif
 
         // Hand the runtime a reference to the XR overlay so NativeXr
         // can render its content into a separate transparent layer
@@ -50,6 +55,13 @@ class ViewController: UIViewController {
         // passing logical points; BNView applies the device-pixel-ratio
         // internally.
         guard let mtkView = mtkView, let bnView = bnView else { return }
+#if MOBILE_VISUAL_TESTS
+        if (UIApplication.shared.delegate as? AppDelegate)?.mobileVisualTests == true {
+            mtkView.contentScaleFactor = 1
+            bnView.resize(width: 600, height: 400)
+            return
+        }
+#endif
         let size = mtkView.bounds.size
         if size.width > 0 && size.height > 0 {
             bnView.resize(width: UInt(size.width), height: UInt(size.height))
@@ -60,8 +72,21 @@ class ViewController: UIViewController {
         mtkView = MTKView()
         mtkView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(mtkView)
-        view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[mtkView]|", options: [], metrics: nil, views: ["mtkView" : mtkView]))
-        view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[mtkView]|", options: [], metrics: nil, views: ["mtkView" : mtkView]))
+        let mobileVisualTests = (UIApplication.shared.delegate as? AppDelegate)?.mobileVisualTests == true
+        if mobileVisualTests {
+            // BNView converts logical bounds using the Metal layer's scale.
+            // Use unit scale so the actual framebuffer is exactly 600x400.
+            mtkView.contentScaleFactor = 1
+            NSLayoutConstraint.activate([
+                mtkView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                mtkView.topAnchor.constraint(equalTo: view.topAnchor),
+                mtkView.widthAnchor.constraint(equalToConstant: 600),
+                mtkView.heightAnchor.constraint(equalToConstant: 400)
+            ])
+        } else {
+            view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[mtkView]|", options: [], metrics: nil, views: ["mtkView" : mtkView]))
+            view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[mtkView]|", options: [], metrics: nil, views: ["mtkView" : mtkView]))
+        }
 
         xrView = MTKView()
         xrView.translatesAutoresizingMaskIntoConstraints = false

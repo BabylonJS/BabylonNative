@@ -14,6 +14,7 @@ public class PlaygroundActivity extends Activity {
      * Playground hosts. Implemented in PlaygroundJNI.cpp.
      */
     private static native void loadBootstrapScripts(long runtimeHandle);
+    private static native void loadMobileTestScripts(long runtimeHandle, String endpoint);
 
     private long mRuntimeHandle = 0;
     private BabylonView mView;
@@ -34,13 +35,30 @@ public class PlaygroundActivity extends Activity {
         runtimeOptions.enableDebugTrace = true;
         mRuntimeHandle = BabylonNative.runtimeCreate(runtimeOptions);
 
-        // Queue the bootstrap scripts + experience script. They run after
+        // Queue the bootstrap scripts + selected entry script. They run after
         // the first View attach completes engine init on the JS thread, in
         // submission order.
         loadBootstrapScripts(mRuntimeHandle);
-        BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");
+        String endpoint = BuildConfig.MOBILE_VISUAL_TESTS
+                ? getIntent().getStringExtra("mobileTestUrl") : null;
+        if (endpoint != null) {
+            android.net.Uri uri = android.net.Uri.parse(endpoint);
+            if (!"http".equals(uri.getScheme()) ||
+                    !("bs-local.com".equals(uri.getHost()) || "127.0.0.1".equals(uri.getHost())) ||
+                    uri.getPort() < 1 || uri.getQuery() != null || uri.getUserInfo() != null ||
+                    uri.getFragment() != null || uri.getPath() == null ||
+                    !uri.getPath().matches("/device/[a-f0-9-]{36}")) {
+                throw new IllegalArgumentException("Invalid mobile test controller endpoint");
+            }
+            loadMobileTestScripts(mRuntimeHandle, endpoint);
+        } else {
+            BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");
+        }
 
         mView = new BabylonView(getApplication(), mRuntimeHandle);
+        if (endpoint != null) {
+            mView.setRenderSize(600, 400);
+        }
         setContentView(mView);
     }
 

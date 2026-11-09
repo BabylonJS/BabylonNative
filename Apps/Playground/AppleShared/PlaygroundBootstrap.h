@@ -1,6 +1,6 @@
 // PlaygroundBootstrap.h — Obj-C helper exposed to Swift via the
 // bridging header on iOS, and used directly from Obj-C++ on macOS.
-// Single class method that hands a freshly-created `BNRuntime` to
+// Hands a freshly-created `BNRuntime` to
 // `Apps/Playground/Shared/PlaygroundScripts.cpp`, which loads the
 // Babylon.js bootstrap script list shared with the other Playground
 // hosts (Win32, Android, …).
@@ -19,6 +19,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// queues the Babylon.js bootstrap scripts onto `runtime`. Idempotent;
 /// safe to call multiple times.
 + (void)loadScripts:(BNRuntime*)runtime;
+
+/// Queues the mobile visual-test client when enabled and --mobile-test-url
+/// is supplied. Otherwise returns NO so the host can load its normal experience.
++ (BOOL)loadMobileTestScripts:(BNRuntime*)runtime;
 
 @end
 
