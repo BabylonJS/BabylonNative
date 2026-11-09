@@ -31,7 +31,8 @@ namespace Babylon
                     std::string traceName = (std::ostringstream{} << "Evaluating script at url " << url << " (LoadScript)").str();
                     DEBUG_TRACE("%s", traceName.c_str());
                     arcana::trace_region evalRegion{traceName.c_str()};
-                    Napi::Eval(env, request.ResponseString().data(), url.data());
+                    const std::string_view source{request.ResponseString()};
+                    Napi::Eval(env, source, url.data());
                     taskCompletionSource.complete();
                 });
                 return taskCompletionSource.as_task();
@@ -46,7 +47,7 @@ namespace Babylon
                     dispatchFunction([taskCompletionSource, source = std::move(source), url = std::move(url)](Napi::Env env) mutable {
                         std::string traceName = (std::ostringstream{} << "Evaluating script at url " << url << " (Eval)").str();
                         arcana::trace_region evalRegion{traceName.c_str()};
-                        Napi::Eval(env, source.data(), url.data());
+                        Napi::Eval(env, std::string_view{source}, url.data());
                         taskCompletionSource.complete();
                     });
                     return taskCompletionSource.as_task();

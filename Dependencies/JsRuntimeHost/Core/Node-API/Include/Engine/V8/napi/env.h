@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi/napi.h>
+#include <string_view>
 
 #include <stdint.h>
 
@@ -53,6 +54,7 @@ namespace Napi
   void Detach(Napi::Env);
 
   Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl);
+  Napi::Value Eval(Napi::Env env, std::string_view source, const char* sourceUrl);
 
   v8::Local<v8::Context> GetContext(Napi::Env);
 }

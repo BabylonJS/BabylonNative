@@ -170,12 +170,16 @@ namespace Napi
 
     Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl)
     {
+        return Eval(env, std::string_view{source}, sourceUrl);
+    }
+
+    Napi::Value Eval(Napi::Env env, std::string_view source, const char* sourceUrl)
+    {
         napi_env env_ptr{env};
-        const size_t length = std::strlen(source);
         // hermes_run_script supports a zero-copy fast path when the last byte
-        // of the buffer is `\0` — pass length+1 and include the null
-        // terminator we already have in `source`.
-        const size_t size = length + 1;
+        // of the buffer is `\0` — pass length+1 and append a null terminator
+        // to the copy.  The explicit length keeps sources with embedded NULs intact.
+        const size_t size = source.size() + 1;
 
         hermes_run_script_flags flags{};
         flags.struct_size = sizeof(flags);
@@ -186,7 +190,8 @@ namespace Napi
         // via the finalize callback.  Our `source` is owned by the caller,
         // so we make a copy and let Hermes free it when it's done.
         auto* copy = new uint8_t[size];
-        std::memcpy(copy, source, size);
+        std::memcpy(copy, source.data(), source.size());
+        copy[source.size()] = 0;
         auto finalize = [](const uint8_t* data, size_t /*size*/, void* /*hint*/) {
             delete[] data;
         };

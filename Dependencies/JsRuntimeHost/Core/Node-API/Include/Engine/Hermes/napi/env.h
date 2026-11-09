@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi/napi.h>
+#include <string_view>
 
 namespace Napi
 {
@@ -22,6 +23,7 @@ namespace Napi
     // `source_url` parameter that Hermes doesn't provide.  Instead we call
     // Hermes's `hermes_run_script` directly inside the engine TU.
     Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl);
+    Napi::Value Eval(Napi::Env env, std::string_view source, const char* sourceUrl);
 
     // Pump Hermes's job queue (drains microtasks and pending finalizers).
     // The application runtime must call this once per dispatched callback

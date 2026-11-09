@@ -19,14 +19,17 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #endif
 #include <Babylon/ScriptLoader.h>
+#include <gsl/util>
 #ifdef HAS_NATIVE_IMAGE_LOADING
 #include <UrlLib/UrlLib.h>
-#include <gsl/util>
 #include <memory>
 #include <vector>
 #endif
 
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <future>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -46,6 +49,43 @@ namespace
 
         return "unknown";
     }
+}
+
+TEST(JavaScript, LoadScriptPreservesSourceAfterEmbeddedNul)
+{
+    static constexpr char source[] = "globalThis.beforeNul = 1;//\0\nglobalThis.afterNul = 2;\n";
+    const auto path = std::filesystem::temp_directory_path() / "babylon-native-embedded-nul.js";
+    {
+        std::ofstream file{path, std::ios::binary};
+        file.write(source, sizeof(source) - 1);
+    }
+    const auto removeFile = gsl::finally([&path] {
+        std::error_code ignored{};
+        std::filesystem::remove(path, ignored);
+    });
+
+    const std::string generic = path.generic_string();
+    const std::string url = (!generic.empty() && generic.front() == '/') ? "file://" + generic : "file:///" + generic;
+
+    auto done = std::make_shared<std::promise<int32_t>>();
+    auto completion = done->get_future();
+
+    Babylon::AppRuntime runtime{};
+    Babylon::ScriptLoader loader{runtime};
+    loader.LoadScript(url);
+    loader.Dispatch([done](Napi::Env env) {
+        try
+        {
+            done->set_value(env.Global().Get("afterNul").ToNumber().Int32Value());
+        }
+        catch (...)
+        {
+            done->set_exception(std::current_exception());
+        }
+    });
+
+    ASSERT_EQ(completion.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    EXPECT_EQ(completion.get(), 2);
 }
 
 #ifdef HAS_NATIVE_MESHOPT
