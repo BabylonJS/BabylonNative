@@ -38,6 +38,7 @@ namespace Babylon
     }
 
     class InstanceRepacker;
+    class StorageBufferCopier;
 
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
@@ -128,10 +129,11 @@ namespace Babylon
         Napi::Value ReadTextureImpl(const Napi::CallbackInfo& info, bool preserveFloat);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
-        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, bool autoGenerateMips = true, Graphics::Texture* depthStencilTexture = nullptr);
+        Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, uint8_t autoGenerateMipMask = UINT8_MAX, Graphics::Texture* depthStencilTexture = nullptr);
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
+        void GenerateMipMaps(NativeDataStream::Reader& data);
         VertexBuffer::InstanceDataLayout GetInstanceDataLayout() const;
         void DrawIndexed(NativeDataStream::Reader& data);
         void DrawIndexedInstanced(NativeDataStream::Reader& data);
@@ -166,6 +168,10 @@ namespace Babylon
         // Repack before setting draw bindings because the compute dispatch resets pending state.
         bgfx::DynamicVertexBufferHandle RepackStorageInstances(VertexArray* vertexArray,
             const VertexBuffer::InstanceDataLayout& instanceDataLayout, uint32_t instanceCount);
+
+        // Copies GPU storage whose element stride differs from the stride the vertex array draws
+        // the buffer with into storage with the draw stride. Same call-order rule as above.
+        void MatchStorageVertexStrides(bgfx::Encoder* encoder, VertexArray& vertexArray);
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
@@ -248,6 +254,7 @@ namespace Babylon
         std::unique_ptr<InstanceRepacker> m_instanceRepacker{};
         // Copies a storage buffer into an R32F image for readTransformFeedbackBuffer; created on first use.
         std::shared_ptr<Program> m_bufferReadbackProgram{};
+        std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;

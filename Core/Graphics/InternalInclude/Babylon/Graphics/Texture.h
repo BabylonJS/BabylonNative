@@ -20,6 +20,7 @@ namespace Babylon::Graphics
         void Dispose();
 
         bool IsValid() const;
+        void GenerateMipMaps();
 
         // nativeTextureOwner retains a borrowed native resource through disposal and its destruction frame.
         void Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle = 0, std::shared_ptr<void> nativeTextureOwner = {});

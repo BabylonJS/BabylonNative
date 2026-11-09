@@ -7,6 +7,7 @@
 
 #include "JsConsoleLogger.h"
 #include "InstanceRepacker.h"
+#include "StorageBufferCopier.h"
 #include "StorageBuffer.h"
 
 #include <arcana/threading/task.h>
@@ -1138,6 +1139,7 @@ namespace Babylon
                 StaticValue("COMMAND_SETFLOAT4", Napi::FunctionPointer::Create(env, &NativeEngine::SetFloat4)),
                 StaticValue("COMMAND_BINDFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::BindFrameBuffer)),
                 StaticValue("COMMAND_UNBINDFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::UnbindFrameBuffer)),
+                StaticValue("COMMAND_GENERATEMIPMAPS", Napi::FunctionPointer::Create(env, &NativeEngine::GenerateMipMaps)),
                 StaticValue("COMMAND_DELETEFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::DeleteFrameBuffer)),
                 StaticValue("COMMAND_DRAWINDEXED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexed)),
                 StaticValue("COMMAND_DRAWINDEXEDINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexedInstanced)),
@@ -2183,8 +2185,6 @@ void main() {
 
     void NativeEngine::CopyTexture(NativeDataStream::Reader& data)
     {
-        // Note: GetEncoder may perform a mid-frame view flush, which resets the view counter.
-        // Fetch it before reading the reservation below so the generation check sees that.
         bgfx::Encoder* encoder = GetEncoder();
 
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
@@ -3232,7 +3232,7 @@ void main() {
         const gsl::span<Graphics::Texture* const> colorAttachments{colorTextures, texture != nullptr && !requestDepthStencilTexture ? 1u : 0u};
 
         return CreateFrameBufferImpl(info.Env(), colorAttachments, width, height, generateStencilBuffer, generateDepth, samples, static_cast<uint16_t>(layer), mip, {},
-            nullptr, autoGenerateMips, requestDepthStencilTexture ? texture : nullptr);
+            nullptr, autoGenerateMips ? UINT8_MAX : 0, requestDepthStencilTexture ? texture : nullptr);
     }
 
     Napi::Value NativeEngine::CreateMultiFrameBuffer(const Napi::CallbackInfo& info)
@@ -3277,10 +3277,37 @@ void main() {
             explicitDepthTexture = info[7].As<Napi::Pointer<Graphics::Texture>>().Get();
         }
 
-        return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples, 0, 0, gsl::span<const uint16_t>{perAttachmentLayers.data(), layerCount}, explicitDepthTexture);
+        uint8_t autoGenerateMipMask = UINT8_MAX;
+        if (info.Length() > 8 && !info[8].IsUndefined())
+        {
+            if (!info[8].IsArray())
+            {
+                throw Napi::TypeError::New(info.Env(), "Multi render target mip generation flags must be an array");
+            }
+            const auto mipFlags = info[8].As<Napi::Array>();
+            if (mipFlags.Length() != colorCount)
+            {
+                throw Napi::RangeError::New(info.Env(), "Multi render target mip generation flags must match the color attachment count");
+            }
+            autoGenerateMipMask = 0;
+            for (uint32_t i = 0; i < colorCount; ++i)
+            {
+                const auto flag = mipFlags.Get(i);
+                if (!flag.IsBoolean())
+                {
+                    throw Napi::TypeError::New(info.Env(), "Multi render target mip generation flags must be booleans");
+                }
+                if (flag.As<Napi::Boolean>())
+                {
+                    autoGenerateMipMask |= static_cast<uint8_t>(1 << i);
+                }
+            }
+        }
+
+        return CreateFrameBufferImpl(info.Env(), gsl::span<Graphics::Texture* const>{colorTextures.data(), colorCount}, width, height, generateStencilBuffer, generateDepth, samples, 0, 0, gsl::span<const uint16_t>{perAttachmentLayers.data(), layerCount}, explicitDepthTexture, autoGenerateMipMask);
     }
 
-    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer, uint16_t mip, gsl::span<const uint16_t> perAttachmentLayers, Graphics::Texture* explicitDepthTexture, bool autoGenerateMips, Graphics::Texture* depthStencilTexture)
+    Napi::Value NativeEngine::CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer, uint16_t mip, gsl::span<const uint16_t> perAttachmentLayers, Graphics::Texture* explicitDepthTexture, uint8_t autoGenerateMipMask, Graphics::Texture* depthStencilTexture)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
         if (samples > 1)
@@ -3319,6 +3346,7 @@ void main() {
         for (Graphics::Texture* texture : colorTextures)
         {
             const uint16_t attachmentLayer = (colorIndex < perAttachmentLayers.size()) ? perAttachmentLayers[colorIndex] : layer;
+            const bool autoGenerateMips = 0 != (autoGenerateMipMask & (1 << colorIndex));
             ++colorIndex;
 
             if (texture == nullptr)
@@ -3536,6 +3564,16 @@ void main() {
         m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
+    void NativeEngine::GenerateMipMaps(NativeDataStream::Reader& data)
+    {
+        data.ReadPointer<Graphics::Texture>()->GenerateMipMaps();
+        if (m_boundFrameBuffer != nullptr)
+        {
+            // Subsequent draws must use a later view than the explicit generation pass.
+            m_boundFrameBuffer->Bind();
+        }
+    }
+
     VertexBuffer::InstanceDataLayout NativeEngine::GetInstanceDataLayout() const
     {
         if (m_currentProgram == nullptr || m_boundVertexArray == nullptr)
@@ -3575,6 +3613,7 @@ void main() {
         bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
+            MatchStorageVertexStrides(encoder, *m_boundVertexArray);
             const bgfx::DynamicVertexBufferHandle repacked = instanced
                 ? RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount)
                 : bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
@@ -3633,6 +3672,7 @@ void main() {
         bool shouldDraw = true;
         if (m_boundVertexArray != nullptr)
         {
+            MatchStorageVertexStrides(encoder, *m_boundVertexArray);
             // GPU-written instance sources are repacked by a compute dispatch before draw bindings.
             const bgfx::DynamicVertexBufferHandle repacked = instanced
                 ? RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount)
@@ -4025,6 +4065,7 @@ void main() {
         }
 
         std::vector<VertexBuffer*> inputs;
+        std::vector<uint32_t> inputStrides;
         const uint32_t inputCount = m_currentProgram->TransformFeedbackInputCount();
         std::vector<float> inputLayout(std::max<size_t>(inputCount, 1) * TRANSFORM_FEEDBACK_LAYOUT_COMPONENT_COUNT, 0.0f);
         if (m_boundVertexArray != nullptr)
@@ -4047,6 +4088,7 @@ void main() {
                         throw std::runtime_error{"Transform feedback inputs come from too many vertex buffers"};
                     }
                     found = inputs.insert(inputs.end(), record.Buffer);
+                    inputStrides.push_back(record.ByteStride);
                 }
                 const uint32_t buffer = static_cast<uint32_t>(found - inputs.begin());
                 const size_t layoutOffset = index * TRANSFORM_FEEDBACK_LAYOUT_COMPONENT_COUNT;
@@ -4094,7 +4136,8 @@ void main() {
             }
             else
             {
-                inputs[buffer < inputs.size() ? buffer : 0]->SetComputeRead(encoder, stage);
+                const size_t input = buffer < inputs.size() ? buffer : 0;
+                inputs[input]->SetComputeRead(encoder, stage, inputStrides[input]);
             }
         }
         outputStorage.SetCompute(encoder, static_cast<uint8_t>(Graphics::TRANSFORM_FEEDBACK_OUTPUT_BINDING), bgfx::Access::Write);
@@ -4117,6 +4160,28 @@ void main() {
         }
 
         return m_instanceRepacker->Repack(GetBoundFrameBuffer(), vertexArray, vertexArray->GetInstances(), instanceDataLayout, instanceCount);
+    }
+
+    void NativeEngine::MatchStorageVertexStrides(bgfx::Encoder* encoder, VertexArray& vertexArray)
+    {
+        vertexArray.ForEachVertexBuffer([&](VertexBuffer& vertexBuffer) {
+            StorageBuffer* storage = vertexBuffer.GpuStorage();
+            const uint32_t stride = vertexBuffer.ByteStride();
+            // Raw views address whole words, so only word-aligned strides can back storage.
+            if (storage == nullptr || stride == 0 || stride == storage->ByteStride() || stride % sizeof(uint32_t) != 0 || stride > UINT16_MAX)
+            {
+                return;
+            }
+
+            if (m_storageBufferCopier == nullptr)
+            {
+                m_storageBufferCopier = std::make_unique<StorageBufferCopier>(m_deviceContext);
+            }
+
+            // Transform feedback may have written the contents on the GPU only, so copy there.
+            auto restrided = m_storageBufferCopier->CopyWithStride(*encoder, GetBoundFrameBuffer(), *storage, stride);
+            vertexBuffer.ReplaceGpuStorage(std::move(restrided));
+        });
     }
 
     void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
@@ -4323,8 +4388,8 @@ void main() {
 
     bgfx::Encoder* NativeEngine::GetEncoder()
     {
-        // Flush at this common recording boundary; flushing may replace the active encoder.
-        m_deviceContext.FlushViewsIfNeeded();
+        // Check the view budget at this common recording boundary.
+        m_deviceContext.CheckViewBudget();
 
         bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
         assert(encoder != nullptr);

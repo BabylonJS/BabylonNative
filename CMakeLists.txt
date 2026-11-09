@@ -26,15 +26,15 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bx
     GIT_REPOSITORY https://github.com/bkaradzic/bx.git
-    GIT_TAG 9a8cbb251787d766bb15858cce05aeaa7c12acad
+    GIT_TAG 0e53661425e9acc38ec924959cd5c6194c12b9d1
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bimg
     GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
-    GIT_TAG 64a34f7441af8f06e40ccab08d76bbf5e59e55b1
+    GIT_TAG 388a5e637c63e472158c940317c68c735bca4795
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
-    GIT_TAG 1dfbb5ffb10a8d0df6f52f5f8fc8b69f0367b7d4
+    GIT_TAG 78a1af501a434e5fc1c381d451e1819bcb71fef5
     EXCLUDE_FROM_ALL)
 # Dawn (WebGPU) — only populated + built when BABYLON_NATIVE_PLUGIN_NATIVEDAWN is
 # ON (see the guarded FetchContent_MakeAvailable below). Declaring it here is
@@ -56,7 +56,7 @@ FetchContent_Declare(dawn
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
+    GIT_TAG f02debc9c37c4026a5ae2f1229e7f08c7df767e4
     EXCLUDE_FROM_ALL)
 # The codec does not use the transcoder's external dependencies.
 set(_draco_submodules "")
@@ -135,6 +135,7 @@ set(CMAKE_REQUIRED_QUIET TRUE)
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
+option(BABYLON_NATIVE_BGFX_TRACE "Forward bgfx trace messages (BX_CONFIG_DEBUG builds) to debug output. Debug checks are unaffected." ON)
 
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)

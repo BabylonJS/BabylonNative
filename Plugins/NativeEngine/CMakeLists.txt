@@ -21,20 +21,28 @@ set(SOURCES
     "Source/ShaderProvider.cpp"
     "Source/StorageBuffer.cpp"
     "Source/StorageBuffer.h"
+    "Source/StorageBufferCopier.cpp"
+    "Source/StorageBufferCopier.h"
     "Source/VertexArray.cpp"
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"
     "Source/VertexBuffer.h")
 
-set(SHADERS "Source/Shaders/cs_instance_repack.sc")
-foreach(BACKEND dxbc dxil essl glsl metal spirv)
-    list(APPEND SHADERS "Source/Shaders/${BACKEND}/cs_instance_repack.h")
+set(SHADER_NAMES cs_buffer_copy cs_instance_repack)
+set(SHADERS "")
+foreach(SHADER ${SHADER_NAMES})
+    list(APPEND SHADERS "Source/Shaders/${SHADER}.sc")
+    foreach(BACKEND dxbc dxil essl glsl metal spirv)
+        list(APPEND SHADERS "Source/Shaders/${BACKEND}/${SHADER}.h")
+    endforeach()
 endforeach()
 
 add_library(NativeEngine ${SOURCES} ${SHADERS})
 
 if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
-    add_bgfx_shader("${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/cs_instance_repack.sc" "")
+    foreach(SHADER ${SHADER_NAMES})
+        add_bgfx_shader("${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/${SHADER}.sc" "")
+    endforeach()
 endif()
 
 warnings_as_errors(NativeEngine)

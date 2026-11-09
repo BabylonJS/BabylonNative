@@ -123,6 +123,7 @@ jobs:
             ${{ steps.vars.outputs.js_define }} ^
             ${{ steps.vars.outputs.dawn_flag }} ^
             -D BX_CONFIG_DEBUG=ON ^
+            -D BABYLON_NATIVE_BGFX_TRACE=OFF ^
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
             -D BABYLON_DEBUG_TRACE=ON ^
             -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON ^
@@ -174,12 +175,15 @@ jobs:
 
       # Visual validation runs only on V8 so results don't depend on engine-specific
       # quirks of Chakra/JSI/Hermes/QuickJS; the other engines still run UnitTests.
+      # --test-timeout fails a stuck test (or a native hang, via the watchdog) in
+      # minutes instead of letting it run into the job timeout. Sanitizer builds
+      # keep the default timeouts (ASAN EXR decode alone takes ~9.5 minutes).
       - name: Validation Tests
         if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !inputs.nativedawn }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground app:///Scripts/validation_native.js
+          Playground ${{ !inputs.enable-sanitizers && '--test-timeout=120' || '' }} app:///Scripts/validation_native.js
 
       # ── Babylon-Lite bundle smoke test (NativeDawn / WebGPU only) ──────────
       # Clone Babylon-Lite, build its library, bundle the first scene (scene1 —

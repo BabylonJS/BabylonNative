@@ -34,9 +34,7 @@ env:
 
 jobs:
   build:
-    # Pinned: ubuntu-latest (ubuntu-26.04, Clang 21) fails to build glslang (SpvBuilder.h lacks <cstdint>).
-    # TODO(#1970): return to ubuntu-latest once the glslang pin includes the <cstdint> fix.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     # Ubuntu_Clang_JSC (build + full validation run) takes ~28-29 minutes, so 30 caused spurious cancellations.
     timeout-minutes: 180
     env:
@@ -87,6 +85,7 @@ jobs:
             -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
             -D BX_CONFIG_DEBUG=ON \
+            -D BABYLON_NATIVE_BGFX_TRACE=OFF \
             -D GRAPHICS_API=${{ inputs.graphics-api }} \
             -D OpenGL_GL_PREFERENCE=GLVND \
             -D BABYLON_DEBUG_TRACE=ON \
@@ -133,12 +132,16 @@ jobs:
       # Visual validation runs only on JavaScriptCore so results don't depend on
       # engine-specific quirks of Hermes/QuickJS; the other engines still run
       # UnitTests and ModuleLoadTest. Win32 applies the same rule with V8.
+      # Clang and GCC render the same Mesa software output, so only Clang runs it.
+      # --test-timeout fails a stuck test (or a native hang, via the watchdog) in
+      # minutes instead of letting it run into the job timeout. Sanitizer builds
+      # keep the default timeouts since instrumented decodes run much slower.
       - name: Validation Tests
-        if: ${{ !inputs.nativedawn && inputs.graphics-api != 'Vulkan' && inputs.js-engine == 'JavaScriptCore' }}
+        if: ${{ !inputs.nativedawn && inputs.graphics-api != 'Vulkan' && inputs.js-engine == 'JavaScriptCore' && inputs.cc == 'clang' }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
-          xvfb-run ./Playground app:///Scripts/validation_native.js
+          xvfb-run ./Playground ${{ !inputs.enable-sanitizers && '--test-timeout=120' || '' }} app:///Scripts/validation_native.js
 
       # The full Vulkan suite currently has broad reference-image differences and
       # crashes in Glow layer and LODs: https://github.com/BabylonJS/BabylonNative/issues/1878
@@ -149,7 +152,7 @@ jobs:
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
           printf '%s\n' \
-            'globalThis._playgroundOptions = { saveResults: false, testIndices: [46, 50] };' \
+            'globalThis._playgroundOptions = { saveResults: false, testIndices: [48, 53] };' \
             > Scripts/vulkan_ci_options.js
           set -o pipefail
           xvfb-run --auto-servernum ./Playground \

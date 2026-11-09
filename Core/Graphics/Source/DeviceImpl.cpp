@@ -433,11 +433,10 @@ namespace Babylon::Graphics
         // (meaning all encoder work for this frame is done), then block new acquisitions.
         // After this point, no bgfx encoder calls can be in flight on the JS thread.
         //
-        // While waiting, also service any mid-frame view-flush requests from the JS
-        // thread (see FlushViewsIfNeeded): the JS thread parks itself and we advance a
-        // non-presenting bgfx frame here on the render thread to reset the view counter,
-        // then hand a fresh encoder back so rendering continues within the same logical
-        // frame.
+        // While waiting, also service mid-frame flush requests from the JS thread (see
+        // ForceMidFrameFlush): the JS thread parks itself and we advance a non-presenting
+        // bgfx frame here on the render thread, then hand a fresh encoder back so
+        // rendering continues within the same logical frame.
         {
             std::unique_lock lock{m_frameSyncMutex};
             while (true)
@@ -694,45 +693,22 @@ namespace Babylon::Graphics
         return index;
     }
 
-    void DeviceImpl::FlushViewsIfNeeded()
+    void DeviceImpl::CheckViewBudget()
     {
         // Reserve headroom below the hard cap: a single draw/clear operation can
-        // acquire a couple of views before the next flush check, and one view
+        // acquire a couple of views before the next check, and one view
         // (maxViews - 1) is reserved for readback blits.
-        constexpr bgfx::ViewId kViewFlushMargin = 16;
+        constexpr uint32_t kViewMargin = 16;
 
-        // Maximum mid-frame flushes allowed in one logical frame. Measured: no test in the
-        // validation suite needs any at the real 256-view budget, and the heaviest content
-        // found so far (the excluded "Nested BBG", which renders in a setInterval) peaks at
-        // 5. 64 leaves generous headroom for legitimately heavy content while bounding a
-        // mechanism that is otherwise unlimited: each flush is a blocking round-trip to the
-        // render thread, so an unbounded number of them would degrade into an apparent hang
-        // rather than an error.
-        constexpr uint32_t kMaxMidFrameViewFlushes = 64;
-
-        const bgfx::ViewId maxViews = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews);
-        if (maxViews <= kViewFlushMargin)
+        // Running out is an error rather than a mid-frame flush: the flush needs the host to call
+        // FinishRenderingCurrentFrame, which a host waiting for JavaScript never does.
+        const uint32_t maxViews = bgfx::getCaps()->limits.maxViews;
+        const uint32_t usedViews = m_nextViewId.load();
+        if (maxViews > kViewMargin && usedViews >= maxViews - kViewMargin)
         {
-            return;
+            throw std::runtime_error{"Too many views: this frame used " + std::to_string(usedViews) + " of " +
+                std::to_string(maxViews) + " bgfx views"};
         }
-
-        if (m_nextViewId.load() < static_cast<uint32_t>(maxViews - kViewFlushMargin))
-        {
-            return;
-        }
-
-        // Bound the rescue. Each flush is a blocking round-trip to the render thread, so
-        // content that needs an unbounded number of them (e.g. a snippet that renders in a
-        // setInterval without ever letting the frame present) would appear to hang rather
-        // than fail. Past the budget, stop flushing and let AcquireNewViewId throw
-        // "Too many views" — the pre-existing behaviour, and a far better diagnostic than a
-        // process that makes progress too slowly to ever finish.
-        if (m_midFrameFlushCount.load() >= kMaxMidFrameViewFlushes)
-        {
-            return;
-        }
-
-        ForceMidFrameFlush();
     }
 
     bool DeviceImpl::ForceMidFrameFlush()
@@ -771,7 +747,7 @@ namespace Babylon::Graphics
     }
 
     // Called on the render thread from FinishRenderingCurrentFrame while holding
-    // m_frameSyncMutex, with the requesting JS thread parked in FlushViewsIfNeeded
+    // m_frameSyncMutex, with the requesting JS thread parked in ForceMidFrameFlush
     // (so the frame encoder is idle). End the current encoder, advance a non-presenting
     // bgfx frame to submit the accumulated views and reset the view counter, then begin
     // a fresh encoder for the remainder of the logical frame.
@@ -798,7 +774,6 @@ namespace Babylon::Graphics
 
         ResetClearPalette();
         m_nextViewId.store(0);
-        m_midFrameFlushCount.fetch_add(1);
 
         // Publish a new generation so holders of cached view ids (FrameBuffer's m_viewId, the
         // Canvas blit reservation) can detect that their id predates the reset and re-acquire.
@@ -981,7 +956,7 @@ namespace Babylon::Graphics
 
         ResetClearPalette();
         m_nextViewId.store(0);
-        m_midFrameFlushCount.store(0);
+        m_viewIdGeneration.fetch_add(1);
     }
 
     void DeviceImpl::CompleteReadTextureRequests(uint32_t frameNumber)

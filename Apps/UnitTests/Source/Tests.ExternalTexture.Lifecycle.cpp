@@ -45,7 +45,7 @@ namespace
         });
 
         Babylon::ScriptLoader loader{runtime};
-        loader.LoadScript("app:///Assets/babylon.max.js");
+        loader.LoadScript("app:///Assets/babylon.es5.js");
 
         device.StartRenderingCurrentFrame();
 

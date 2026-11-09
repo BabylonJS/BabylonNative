@@ -5,10 +5,10 @@ endif()
 option(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE "Use a noop Metal device for Apple platforms." OFF)
 
 set(BABYLONJS_ASSETS
-    "../node_modules/babylonjs/babylon.max.js")
+    "../node_modules/babylonjs/babylon.es5.js")
 
 set(BABYLONJS_MATERIALS_ASSETS
-    "../node_modules/babylonjs-materials/babylonjs.materials.js")
+    "../node_modules/babylonjs-materials/babylonjs.materials.es5.js")
 
 set(TEST_ASSETS
     "tests.externalTexture.deviceLoss.js"
@@ -83,6 +83,7 @@ set(SOURCES
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
     "Source/Tests.UniformPadding.cpp"
     "Source/Helpers.h"
+    "Source/DeviceImplTestAccess.h"
     "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")

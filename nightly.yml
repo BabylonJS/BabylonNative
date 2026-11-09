@@ -43,7 +43,7 @@ jobs:
   - checkout: self
 
   - script: |
-      cmake -G "Visual Studio 17 2022" -B build -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D BABYLON_DEBUG_TRACE=ON
+      cmake -G "Visual Studio 17 2022" -B build -A x64 -D NAPI_JAVASCRIPT_ENGINE=V8 -D BX_CONFIG_DEBUG=ON -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -D BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON
     displayName: 'Generate solution'
 
   - script: |
@@ -414,6 +414,37 @@ jobs:
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
     displayName: Build Hermes runtime test artifacts
 
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: test-artifacts/UnitTests-Android-JsRuntimeHost-Hermes
+      artifact: Android-Hermes-runtime-test-packages
+    displayName: Publish Hermes runtime test packages
+
+  - script: |
+      set -euo pipefail
+      du -sh Build/Android Dependencies/JsRuntimeHost/Build/Android "$(CCACHE_DIR)"
+      rm -rf -- Build/Android Dependencies/JsRuntimeHost/Build/Android
+      df -h .
+    displayName: Release completed Android intermediates before cache save
+
+- job: Android_Ubuntu_Hermes_Runtime
+  displayName: Android Hermes runtime tests
+  dependsOn: Android_Ubuntu_Hermes
+  timeoutInMinutes: 40
+  pool:
+    vmImage: 'ubuntu-24.04'
+  steps:
+  - checkout: self
+
+  - pwsh: ./.github/scripts/free-disk-space.ps1
+    displayName: Free disk space
+
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      artifact: Android-Hermes-runtime-test-packages
+      path: test-artifacts/UnitTests-Android-JsRuntimeHost-Hermes
+    displayName: Download Hermes runtime test packages
+
   - script: |
       set -euo pipefail
       mkdir -p test-results
@@ -421,8 +452,15 @@ jobs:
       sudo chmod 0666 /dev/kvm
       export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
       sdkmanager --install emulator 'system-images;android-33;google_apis;x86_64'
-      echo "no" | avdmanager create avd --force --name runtime-tests \
-        --package 'system-images;android-33;google_apis;x86_64'
+      export ANDROID_AVD_HOME="$(Agent.TempDirectory)/runtime-tests-avd"
+      mkdir -p "$ANDROID_AVD_HOME"
+      echo "no" | avdmanager --verbose create avd --force --name runtime-tests \
+        --package 'system-images;android-33;google_apis;x86_64' \
+        --path "$ANDROID_AVD_HOME/runtime-tests.avd"
+      if [[ ! -s "$ANDROID_AVD_HOME/runtime-tests.ini" ]]; then
+        echo "Missing virtual device configuration: $ANDROID_AVD_HOME/runtime-tests.ini" >&2
+        exit 1
+      fi
       export ANDROID_SERIAL=emulator-5554
       emulator -avd runtime-tests -port 5554 -no-window -no-snapshot -no-boot-anim \
         -no-audio -gpu swiftshader_indirect > test-results/emulator.log 2>&1 &

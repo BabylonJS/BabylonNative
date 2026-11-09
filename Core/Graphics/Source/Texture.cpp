@@ -13,7 +13,7 @@ namespace
     // backend leaves that framebuffer. A later readback resolves mip 0 and drops this flag.
     void SubmitResolveSwitch(Babylon::Graphics::DeviceContext& context)
     {
-        context.FlushViewsIfNeeded();
+        context.CheckViewBudget();
         if (bgfx::getStats()->numFrameBuffers == bgfx::getCaps()->limits.maxFrameBuffers &&
             !context.ForceMidFrameFlush())
         {
@@ -80,7 +80,7 @@ namespace
         {
             for (uint8_t mip = 0; mip < info.numMips; ++mip)
             {
-                context.FlushViewsIfNeeded();
+                context.CheckViewBudget();
                 const auto mipWidth = static_cast<uint16_t>(std::max(1, width >> mip));
                 const auto mipHeight = static_cast<uint16_t>(std::max(1, height >> mip));
                 if (resolveMipChain && mip != 0)
@@ -161,6 +161,45 @@ namespace Babylon::Graphics
     bool Texture::IsValid() const
     {
         return bgfx::isValid(m_handle);
+    }
+
+    void Texture::GenerateMipMaps()
+    {
+        if (!IsValid() || !m_hasMips || (m_flags & BGFX_TEXTURE_RT_MASK) == 0)
+        {
+            throw std::runtime_error{"Explicit mip generation requires a render-target texture with mip storage"};
+        }
+        const auto renderer = bgfx::getRendererType();
+        if (m_is3D && (renderer == bgfx::RendererType::Direct3D12 || renderer == bgfx::RendererType::Vulkan))
+        {
+            throw std::runtime_error{"Explicit 3D mip generation is not supported on this backend"};
+        }
+        if ((bgfx::getCaps()->formats[m_format] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) == 0)
+        {
+            throw std::runtime_error{"Explicit mip generation is not supported for this texture format"};
+        }
+
+        auto scope = m_deviceContext.AcquireFrameCompletionScope();
+        m_deviceContext.CheckViewBudget();
+        if (bgfx::getStats()->numFrameBuffers == bgfx::getCaps()->limits.maxFrameBuffers &&
+            !m_deviceContext.ForceMidFrameFlush())
+        {
+            throw std::runtime_error{"No framebuffer available for explicit mip generation"};
+        }
+        bgfx::Attachment attachment{};
+        // Cube resolves cover all faces; array resolves use the attachment's layer count.
+        const uint16_t numLayers = m_isCube ? 1 : std::max<uint16_t>(1, m_numLayers);
+        attachment.init(m_handle, bgfx::Access::Write, 0, numLayers, 0, BGFX_ATTACHMENT_AUTO_GEN_MIPS);
+        const auto handle = bgfx::createFrameBuffer(1, &attachment);
+        if (!bgfx::isValid(handle))
+        {
+            throw std::runtime_error{"Failed to create explicit mip generation framebuffer"};
+        }
+        const bool multisampled = (m_flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
+        FrameBuffer framebuffer{m_deviceContext, handle, m_width, m_height, false, false, false, -1, multisampled};
+        // An empty draw resolves with generation enabled, without clearing or modifying mip 0.
+        framebuffer.Clear(*m_deviceContext.GetActiveEncoder(), BGFX_CLEAR_NONE, 0, 0, 0, 0, 0, 0);
+        SubmitResolveSwitch(m_deviceContext);
     }
 
     void Texture::SetMetadata(

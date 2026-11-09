@@ -15,8 +15,9 @@ namespace Babylon::Embedding
 namespace Playground
 {
     // Apply process-wide settings shared by every Playground host:
-    // currently PerfTrace. Call before queuing scripts and attaching
-    // the first view.
+    // PerfTrace and, with --test-timeout, the hang watchdog. Call before
+    // queuing scripts and attaching the first view. The watchdog only arms
+    // if MakeLogCallback was called first, since that is what feeds it.
     void Initialize(const PlaygroundOptions& options = {});
 
     void QueueOptions(Babylon::Embedding::Runtime& runtime, const PlaygroundOptions& options);
