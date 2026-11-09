@@ -897,6 +897,9 @@
         if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(TestUtils.getJavaScriptEngineName())) {
             return "excludedJavaScriptEngines: " + TestUtils.getJavaScriptEngineName();
         }
+        if (t.excludedPlatforms && t.excludedPlatforms.includes(TestUtils.getPlatformName())) {
+            return "excludedPlatforms: " + TestUtils.getPlatformName();
+        }
         return null;
     }
 
