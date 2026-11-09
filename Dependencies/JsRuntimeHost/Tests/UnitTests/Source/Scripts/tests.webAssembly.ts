@@ -3,11 +3,14 @@ import { expect } from "chai";
 describe("WebAssembly", function () {
     this.timeout(30000);
 
-    // Only the V8 AppRuntime pumps V8's foreground task queue, which is what lets these promises
-    // settle. The other engines' runtimes have the same class of gap and hang here instead of
-    // failing, so scope the suite rather than leave a 30s timeout on every non-V8 leg.
+    // These promises only settle when the AppRuntime pumps the engine's deferred work: V8's
+    // foreground task queue, or the CFRunLoop JavaScriptCore completes them on (Apple only).
+    // The other runtimes have the same class of gap and hang here instead of failing, so scope
+    // the suite rather than leave a 30s timeout on every other leg.
     beforeEach(function () {
-        if (hostEngine !== "V8" || typeof WebAssembly === "undefined") {
+        const settlesAsyncWasm = hostEngine === "V8" ||
+            (hostEngine === "JavaScriptCore" && (hostPlatform === "macOS" || hostPlatform === "iOS"));
+        if (!settlesAsyncWasm || typeof WebAssembly === "undefined") {
             this.skip();
         }
     });
