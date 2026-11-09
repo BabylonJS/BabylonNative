@@ -26,7 +26,7 @@ For pure RenderDoc CLI usage (any app, not BN-specific), see
 | `Apps/Playground/Shared/Diagnostics.{h,cpp}` | Crash handler, `DumpFailure`, finish-line, exit-code tracking. |
 | `Apps/Playground/Win32/App.cpp` (and the other per-host `App.*`) | Wires the `RuntimeOptions::log` callback into `DumpFailure` (`JS CONSOLE ERROR` for `LogLevel::Error`, `UNCAUGHT JS ERROR` for `LogLevel::Fatal`) and injects `_playgroundOptions` into JS via `Runtime::RunOnJsThread`. |
 | `Apps/Playground/Scripts/validation_native.js` | Test runner. Reads `_playgroundOptions`, picks tests, calls `TestUtils.captureNextFrame()`. Reference-image load failures arrive via `BABYLON.Tools.LoadFile`'s `onLoadFileError` and are tagged with `MISSING_REFERENCE_IMAGE:`. |
-| `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`excludedGraphicsApis`/`excludedJavaScriptEngines`/`renderCount`/`capture`/`threshold`/`errorRatio`/`workarounds`. |
+| `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`excludedGraphicsApis`/`excludedJavaScriptEngines`/`excludedPlatforms`/`renderCount`/`capture`/`threshold`/`errorRatio`/`workarounds`. |
 | `Plugins/TestUtils/Source/TestUtils.cpp` | Native side of `TestUtils.captureNextFrame()` -- calls `m_deviceContext.RequestCaptureNextFrame()`. |
 | `Core/Graphics/Source/BgfxCallback.cpp` | bgfx trace/fatal sink. Routes bgfx output to stdout in headless mode and to `OutputDebugString` always. |
 
@@ -130,7 +130,8 @@ per flag** (intentional design -- long-name aliases were removed).
     --once                  Run only the first matching test, then exit
     --include-excluded      Force-run tests with excludeFromAutomaticTesting /
                             onlyVisual / excludedGraphicsApis /
-                            excludedJavaScriptEngines set in config.json
+                            excludedJavaScriptEngines / excludedPlatforms
+                            set in config.json
     --save-results=BOOL     Override saving of result PNGs (default true)
     --debug-trace=BOOL      Enable/disable Babylon::DebugTrace
     --perf-trace=LEVEL      Set Babylon::PerfTrace level (None / Log)
@@ -193,7 +194,7 @@ config.json edits; always re-resolve when the test list changes.
     app:///Scripts/validation_native.js
 ```
 Bypasses `excludeFromAutomaticTesting`, `onlyVisual`,
-`excludedGraphicsApis`, and `excludedJavaScriptEngines` filters. Use this whenever you need to *debug* a
+`excludedGraphicsApis`, `excludedJavaScriptEngines`, and `excludedPlatforms` filters. Use this whenever you need to *debug* a
 quarantined test -- never edit config.json's exclusion flags as part of
 debugging.
 
@@ -305,6 +306,7 @@ the assert.
   categories so future agents find them.
 
 ## Building
+| `excludedPlatforms: ["Unix"]` | Skipped on listed platforms (`BABYLON_NATIVE_PLATFORM`: `Win32`, `WinRT`, `macOS`, `iOS`, `visionOS`, `Android`, `Unix`) unless `--include-excluded` |
 
 The branch builds via the standard CMake setup. After source changes that
 touch `Apps/Playground/Scripts/*.js` or `Apps/Playground/Scripts/config.json`,
