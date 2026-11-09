@@ -12,6 +12,14 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.es5.js"
     "../node_modules/earcut/dist/earcut.min.js")
 
+# The ES5 downlevel bundles miscompile Babylon's WebGPU WGSL texture binding code
+# (a variable collision passes a binding object as the texture dimension, so every
+# cube texture gets a 2d bind group layout). NativeDawn runs the WebGPU engine, so it
+# uses the regular bundles, which the V8/JSC hosts that support Dawn can execute.
+if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+    list(TRANSFORM BABYLON_SCRIPTS REPLACE "babylon\\.es5\\.js$" "babylon.max.js")
+    list(TRANSFORM BABYLON_SCRIPTS REPLACE "\\.es5\\.js$" ".js")
+endif()
 set(DEPENDENCIES
     "../Dependencies/Arimo-Regular.ttf"
     "../Dependencies/Arimo-OFL.txt"
