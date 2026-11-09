@@ -122,6 +122,16 @@ namespace android::global
         return {g_currentActivity};
     }
 
+    std::optional<android::app::Activity> TryGetCurrentActivity()
+    {
+        if (g_currentActivity == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        return android::app::Activity{g_currentActivity};
+    }
+
     void SetCurrentActivity(jobject currentActivity)
     {
         if (g_currentActivity)

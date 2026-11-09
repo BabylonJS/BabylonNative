@@ -18,6 +18,7 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace
@@ -27,6 +28,19 @@ namespace
     // Parsed by parseCommandLine before the Runtime is created, consumed by
     // the runtime-option getters and loadBootstrapScripts.
     PlaygroundOptions g_options{};
+
+    int LogPriorityFor(Babylon::Embedding::LogLevel level)
+    {
+        switch (level)
+        {
+            case Babylon::Embedding::LogLevel::Verbose: return ANDROID_LOG_VERBOSE;
+            case Babylon::Embedding::LogLevel::Log:     return ANDROID_LOG_INFO;
+            case Babylon::Embedding::LogLevel::Warn:    return ANDROID_LOG_WARN;
+            case Babylon::Embedding::LogLevel::Error:   return ANDROID_LOG_ERROR;
+            case Babylon::Embedding::LogLevel::Fatal:   return ANDROID_LOG_FATAL;
+        }
+        return ANDROID_LOG_INFO;
+    }
 
     void LogUsage()
     {
@@ -86,7 +100,19 @@ Java_com_android_babylonnative_playground_PlaygroundActivity_parseCommandLine(
     {
         __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Playground.exit(%d)", exitCode);
         g_options = {};
+        return exitCode;
     }
+
+    // Route Runtime logging through the shared runner callback so console
+    // output feeds the --test-timeout hang watchdog, as on the desktop hosts.
+    Babylon::Embedding::Android::SetLogCallback(
+        [playgroundLog = Playground::MakeLogCallback({})](Babylon::Embedding::LogLevel level, std::string_view message) {
+            // logcat needs a NUL-terminated C string.
+            const std::string text{message};
+            __android_log_write(LogPriorityFor(level), LOG_TAG, text.c_str());
+            playgroundLog(level, message);
+        });
+
     return exitCode;
 }
 

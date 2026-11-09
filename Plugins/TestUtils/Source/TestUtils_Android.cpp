@@ -27,12 +27,12 @@ namespace Babylon::Plugins::Internal
         // The host activity owns the surface; resize it through an optional
         // `void setSurfaceSize(int, int)` method. Hosts without one keep their size.
         // Keep the wrapper alive; it owns the reference that 'activity' borrows.
-        const auto currentActivity = android::global::GetCurrentActivity();
-        jobject activity = currentActivity;
-        if (activity == nullptr)
+        const auto currentActivity = android::global::TryGetCurrentActivity();
+        if (!currentActivity)
         {
             return;
         }
+        jobject activity = *currentActivity;
 
         JNIEnv* env = android::global::GetEnvForCurrentThread();
         jclass activityClass = env->GetObjectClass(activity);

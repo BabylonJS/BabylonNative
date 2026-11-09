@@ -129,7 +129,7 @@ tasks.register('copyFiles') {
         }
         copy {
             from '../../../Dependencies'
-            include "*.js", "*.ttf"
+            include "*.js", "*.ttf", "*.txt"
             into 'src/main/assets/Scripts'
         }
         copy {
