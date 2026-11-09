@@ -108,6 +108,17 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                                         ", rightHanded=" + rightHanded + ", index=" + index);
                                 }
                             }
+                            // Babylon.js pads the index buffer to a multiple of 16; padding must
+                            // point one past the last splat rather than read past the positions.
+                            const padded = new Float32Array(16).fill(-1);
+                            _native.sortSplats(modelView, positions, padded, rightHanded);
+                            for (let index = 0; index < padded.length; ++index) {
+                                const want = index < expected.length ? expected[index] : expected.length;
+                                if (padded[index] !== want) {
+                                    throw new Error("Unexpected padded splat index for typed=" + typed +
+                                        ", rightHanded=" + rightHanded + ", index=" + index + ": " + padded[index]);
+                                }
+                            }
                             const single = new Float32Array([99]);
                             _native.sortSplats(modelView, positions.subarray(0, 4), single, rightHanded);
                             if (single[0] !== 0) {
