@@ -24,6 +24,7 @@
 #include <gsl/gsl>
 
 #include <arcana/threading/cancellation.h>
+#include <array>
 #include <condition_variable>
 #include <map>
 #include <memory>
@@ -175,6 +176,7 @@ namespace Babylon
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
+        void BindWithScissor(Graphics::FrameBuffer& frameBuffer);
         void ResetDefaultFrameBuffer();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
@@ -257,6 +259,8 @@ namespace Babylon
         std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
+        // Last scissor set by JS (x, y, width, height; all zero when disabled), in WebGL's bottom-left origin.
+        std::array<float, 4> m_scissor{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
 
         // WebGL resets the drawing buffer's depth and stencil at the start of every frame.

@@ -232,6 +232,11 @@ namespace Babylon::Graphics
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
     }
 
+    void FrameBuffer::InheritScissor(float x, float y, float width, float height)
+    {
+        m_desiredScissor = GetBgfxScissor(x, y, width, height);
+    }
+
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
