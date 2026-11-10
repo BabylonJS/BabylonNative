@@ -35,7 +35,6 @@ namespace Babylon
             auto env = info.Env();
             auto thisObject = info.This().As<Napi::Object>();
 
-            thisObject.Set("type", info.Length() > 0 && info[0].IsString() ? info[0] : Napi::String::New(env, ""));
             thisObject.Set("pointerId", Napi::Number::New(env, 0));
             thisObject.Set("pointerType", Napi::String::New(env, ""));
             thisObject.Set("button", Napi::Number::New(env, 0));
@@ -54,6 +53,9 @@ namespace Babylon
                 const auto objectCtor = env.Global().Get("Object").As<Napi::Object>();
                 objectCtor.Get("assign").As<Napi::Function>().Call(objectCtor, {thisObject, info[1]});
             }
+
+            // Set after copying the init dictionary so a "type" key in it cannot override the event name.
+            thisObject.Set("type", info.Length() > 0 && info[0].IsString() ? info[0] : Napi::String::New(env, ""));
         }
 
     private:
