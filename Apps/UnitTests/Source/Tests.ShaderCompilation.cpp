@@ -217,6 +217,40 @@ TEST(ShaderCompilation, InterfaceBlocksHaveMatchingD3D11Semantics)
     EXPECT_EQ(outputs, inputs);
 #endif
 }
+
+TEST(ShaderCompilation, VertexOnlyVaryingsAreNotStageOutputs)
+{
+    // DXIL links stage signatures by register, so a varying the fragment shader never reads
+    // ahead of SV_Position makes D3D12 PSO creation fail. The shared traverser demotes such
+    // varyings to private globals for every backend; D3D11 reflection observes that here.
+    Babylon::Plugins::ShaderCompiler compiler;
+    const auto shader = compiler.Compile(R"(
+        precision highp float;
+        in vec3 position;
+        out vec2 vUV;
+        void main() {
+            vUV = position.xy * 0.5 + 0.5;
+            gl_Position = vec4(position + vec3(vUV, 0.0), 1.0);
+        }
+    )", R"(
+        precision highp float;
+        out vec4 color;
+        void main() { color = vec4(gl_FragCoord.xy, 0.0, 1.0); }
+    )");
+    const auto code = ReadFixtureShaderCode(shader.VertexBytes);
+    Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflection;
+    ASSERT_TRUE(SUCCEEDED(D3DReflect(code.data(), code.size(), IID_PPV_ARGS(&reflection))));
+    D3D11_SHADER_DESC description{};
+    ASSERT_TRUE(SUCCEEDED(reflection->GetDesc(&description)));
+    std::vector<std::string> outputs;
+    for (UINT i = 0; i < description.OutputParameters; ++i)
+    {
+        D3D11_SIGNATURE_PARAMETER_DESC parameter{};
+        ASSERT_TRUE(SUCCEEDED(reflection->GetOutputParameterDesc(i, &parameter)));
+        outputs.emplace_back(parameter.SemanticName);
+    }
+    EXPECT_EQ(outputs, std::vector<std::string>{"SV_Position"});
+}
 #endif
 
 #ifdef HAS_SHADER_COMPILER
