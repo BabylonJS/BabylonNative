@@ -1,6 +1,7 @@
 #include "App.h"
 #include <Babylon/DebugTrace.h>
 #include <Windows.h>
+#include <cstdio>
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -32,9 +33,18 @@ int main(int argc, char* argv[])
     constexpr LONG width = 600;
     constexpr LONG height = 400;
     RECT rect{0, 0, width, height};
-    ::AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+    if (!::AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE))
+    {
+        std::fprintf(stderr, "AdjustWindowRect failed (error %lu)\n", ::GetLastError());
+        return 1;
+    }
     HWND hWnd = ::CreateWindow(wc.lpszClassName, "BabylonNative", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
         rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, wc.hInstance, NULL);
+    if (hWnd == NULL)
+    {
+        std::fprintf(stderr, "CreateWindow failed (error %lu)\n", ::GetLastError());
+        return 1;
+    }
 
     Babylon::Graphics::Configuration config{};
     config.Window = hWnd;
