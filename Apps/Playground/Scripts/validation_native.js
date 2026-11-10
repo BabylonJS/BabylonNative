@@ -930,6 +930,10 @@
             useHighPrecisionMatrix: useHighPrecisionMatrices
         });
         nativeEngine.getCaps().parallelShaderCompile = undefined;
+        // Reference images come from browsers reporting 16384. GPUParticleSystem draws
+        // maxTextureSize * 8 Math.random() values for its random textures, so a larger limit
+        // (Vulkan reports up to 32768) changes both the GPU noise and the seeded random stream.
+        nativeEngine.getCaps().maxTextureSize = Math.min(nativeEngine.getCaps().maxTextureSize, 16384);
         nativeEngine.getRenderingCanvas = function () { return window; };
         nativeEngine.getInputElement = function () { return 0; };
         if (!window.screen) {
