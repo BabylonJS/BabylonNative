@@ -31,7 +31,12 @@ namespace Babylon
                     std::string traceName = (std::ostringstream{} << "Evaluating script at url " << url << " (LoadScript)").str();
                     DEBUG_TRACE("%s", traceName.c_str());
                     arcana::trace_region evalRegion{traceName.c_str()};
-                    Napi::Eval(env, request.ResponseString().data(), url.data());
+                    const auto source = request.ResponseString();
+                    if (source.find('\0') != std::string_view::npos)
+                    {
+                        throw Napi::TypeError::New(env, "Script source contains a NUL character: " + url);
+                    }
+                    Napi::Eval(env, source.data(), url.data());
                     taskCompletionSource.complete();
                 });
                 return taskCompletionSource.as_task();
@@ -46,6 +51,10 @@ namespace Babylon
                     dispatchFunction([taskCompletionSource, source = std::move(source), url = std::move(url)](Napi::Env env) mutable {
                         std::string traceName = (std::ostringstream{} << "Evaluating script at url " << url << " (Eval)").str();
                         arcana::trace_region evalRegion{traceName.c_str()};
+                        if (source.find('\0') != std::string::npos)
+                        {
+                            throw Napi::TypeError::New(env, "Script source contains a NUL character: " + url);
+                        }
                         Napi::Eval(env, source.data(), url.data());
                         taskCompletionSource.complete();
                     });

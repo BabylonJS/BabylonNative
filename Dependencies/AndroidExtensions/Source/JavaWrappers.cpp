@@ -44,7 +44,7 @@ namespace java::lang
     ByteArray::operator std::vector<std::byte>() const
     {
         std::vector<std::byte> result{static_cast<size_t>(m_env->GetArrayLength(m_byteArray))};
-        std::memcpy(result.data(), m_env->GetByteArrayElements(m_byteArray, nullptr), result.size());
+        m_env->GetByteArrayRegion(m_byteArray, 0, static_cast<jsize>(result.size()), reinterpret_cast<jbyte*>(result.data()));
         return result;
     }
 
