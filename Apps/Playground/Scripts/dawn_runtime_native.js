@@ -123,7 +123,7 @@
         }
         assert(revoked, "Revoked blob URLs must reject fetch");
 
-        const png = await loadXHR("app:///ReferenceImages/lite-scene1.png");
+        const png = await loadXHR("app:///ReferenceImages/Fresnel.png");
         const imageBlob = new Blob([png], { type: "image/png" });
         const imageURL = URL.createObjectURL(imageBlob);
         try {

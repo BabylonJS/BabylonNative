@@ -3974,7 +3974,7 @@ namespace Babylon::Plugins::NativeDawn
             canvas.Set("clientHeight", Napi::Number::New(env, height));
             canvas.Set("style", Napi::Object::New(env));
             // DOMStringMap stringifies assigned values (dataset.ready = true is
-            // observed as "true"). Babylon-Lite uses this contract for readiness.
+            // observed as "true"). Readiness checks rely on this contract.
             canvas.Set("dataset", MakeDataset(env));
             canvas.Set("__attributes", env.Global().Get("Object").As<Napi::Object>()
                 .Get("create").As<Napi::Function>().Call({env.Null()}));
@@ -4306,7 +4306,7 @@ namespace Babylon::Plugins::NativeDawn
 
             // WebGPU exposes its bitflag namespaces (GPUBufferUsage, GPUTextureUsage,
             // GPUShaderStage, GPUColorWrite, GPUMapMode) as globals in browsers.
-            // Babylon.js carries internal fallbacks, but Babylon-Lite reads them
+            // Babylon.js carries internal fallbacks, but other consumers read them
             // straight off globalThis (e.g. globalThis.GPUShaderStage.VERTEX), so
             // define the standard constant values here if absent.
             {
@@ -4369,7 +4369,7 @@ namespace Babylon::Plugins::NativeDawn
                 SetMethod(document, "removeEventListener", Noop);
                 SetMethod(document, "getElementById", [](const Napi::CallbackInfo& info) -> Napi::Value {
                     // Hand back the single Dawn-surface-wired canvas when a scene
-                    // asks for its render canvas by id (e.g. Babylon-Lite fetches
+                    // asks for its render canvas by id (e.g.
                     // document.getElementById("renderCanvas")). Other ids return
                     // null, matching prior behavior so the validation harness (which
                     // never requests a canvas by id) is unaffected. The canvas is
