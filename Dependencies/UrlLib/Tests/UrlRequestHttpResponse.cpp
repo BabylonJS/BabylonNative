@@ -1,5 +1,6 @@
-// Tests for the status text UrlRequest reports for an HTTP response, against an HTTP/1.1 server on
-// the loopback interface, so they do not depend on a public host.
+// Tests for what UrlRequest reports about an HTTP response -- status text, response URL and the
+// redirected flag -- against an HTTP/1.1 server on the loopback interface, so they do not depend
+// on a public host.
 
 #include <UrlLib/UrlLib.h>
 #include <UrlLib/TestSupport/LoopbackHttpServer.h>
@@ -83,4 +84,56 @@ TEST_F(UrlRequestHttpResponse, StatusTextOfAnErrorStatus)
 #else
     EXPECT_EQ(request.StatusText(), "NOT HERE");
 #endif
+}
+
+TEST_F(UrlRequestHttpResponse, ResponseUrlOfADirectResponseExcludesTheFragment)
+{
+    UrlLib::UrlRequest request{};
+    EXPECT_EQ(request.ResponseUrl(), "");
+
+    request.Open(UrlLib::UrlMethod::Get, Url("/xhr/resources/well-formed.xml#fragment"));
+    EXPECT_EQ(request.ResponseUrl(), "");
+    ASSERT_TRUE(SendAndWait(request));
+
+    EXPECT_EQ(static_cast<int>(request.StatusCode()), 200);
+    EXPECT_EQ(request.ResponseUrl(), Url("/xhr/resources/well-formed.xml"));
+    EXPECT_FALSE(request.Redirected());
+}
+
+TEST_F(UrlRequestHttpResponse, ResponseUrlOfAnErrorStatus)
+{
+    UrlLib::UrlRequest request{};
+    request.Open(UrlLib::UrlMethod::Get, Url("/xhr/resources/foo.html"));
+    ASSERT_TRUE(SendAndWait(request));
+
+    EXPECT_EQ(static_cast<int>(request.StatusCode()), 404);
+    EXPECT_EQ(request.ResponseUrl(), Url("/xhr/resources/foo.html"));
+    EXPECT_FALSE(request.Redirected());
+}
+
+TEST_F(UrlRequestHttpResponse, ResponseUrlAfterRedirects)
+{
+    // redirect.py -> redirect.py -> content.py
+    UrlLib::UrlRequest request{};
+    request.Open(UrlLib::UrlMethod::Get, Url("/xhr/resources/redirect.py?code=301&location=redirect.py%3Flocation%3Dcontent.py"));
+    ASSERT_TRUE(SendAndWait(request));
+
+    EXPECT_EQ(static_cast<int>(request.StatusCode()), 200);
+    EXPECT_EQ(request.ResponseUrl(), Url("/xhr/resources/content.py"));
+    EXPECT_TRUE(request.Redirected());
+}
+
+TEST_F(UrlRequestHttpResponse, ResponseUrlIsEmptyAfterATransportFailure)
+{
+    const std::string closedPort = UrlLib::TestSupport::LoopbackHttpServer::ClosedPortOrigin();
+    ASSERT_FALSE(closedPort.empty());
+
+    UrlLib::UrlRequest request{};
+    request.Open(UrlLib::UrlMethod::Get, closedPort + "/");
+    ASSERT_TRUE(SendAndWait(request));
+
+    EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::None);
+    EXPECT_EQ(request.ResponseUrl(), "");
+    EXPECT_EQ(request.StatusText(), "");
+    EXPECT_FALSE(request.Redirected());
 }

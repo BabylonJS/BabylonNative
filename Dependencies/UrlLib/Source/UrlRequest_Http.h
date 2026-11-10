@@ -150,4 +150,10 @@ namespace UrlLib::Http
 
         return statusLine;
     }
+
+    // A URL without its fragment, as the "response URL" of XMLHttpRequest and fetch is serialized.
+    inline std::string_view WithoutFragment(std::string_view url)
+    {
+        return url.substr(0, url.find('#'));
+    }
 }

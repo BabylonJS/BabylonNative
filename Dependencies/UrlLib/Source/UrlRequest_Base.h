@@ -171,6 +171,13 @@ namespace UrlLib
             return {};
         }
 
+        // Records the URL as it was passed to Open(). It is the response URL of a response that
+        // was not redirected, for the backends and schemes that do not report one themselves.
+        void SetRequestUrl(const std::string& url)
+        {
+            m_requestUrl = url;
+        }
+
         void SetRequestBody(std::string requestBody) {
             m_requestBody = requestBody;
         }
@@ -240,9 +247,21 @@ namespace UrlLib
             return m_errorCode;
         }
 
-        std::string_view ResponseUrl()
+        // Returns the URL of the response, after any redirects and without a fragment, or "" when
+        // there is no response (not sent yet, or a transport failure).
+        std::string_view ResponseUrl() const
         {
-            return m_responseUrl;
+            if (m_statusCode == UrlStatusCode::None)
+            {
+                return {};
+            }
+
+            return Http::WithoutFragment(m_responseUrl.empty() ? m_requestUrl : m_responseUrl);
+        }
+
+        bool Redirected() const
+        {
+            return m_statusCode != UrlStatusCode::None && m_redirected;
         }
 
         std::string_view ResponseString()
@@ -316,6 +335,7 @@ namespace UrlLib
             m_statusText.clear();
             m_reasonPhrase = Http::ReasonPhrase::Unknown;
             m_responseUrl.clear();
+            m_redirected = false;
             m_responseString.clear();
             m_headers.clear();
             m_errorCode = 0;
@@ -336,7 +356,9 @@ namespace UrlLib
         int32_t m_errorCode{};
         std::string m_errorSymbol{};
         std::string m_errorString{};
+        std::string m_requestUrl{};
         std::string m_responseUrl{};
+        bool m_redirected{false};
         std::string m_responseString{};
         std::unordered_map<std::string, std::string> m_headers;
         std::string m_requestBody{};

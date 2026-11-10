@@ -102,3 +102,11 @@ TEST(HttpSemantics, DoesNotTakeAHeaderForAStatusLine)
     EXPECT_EQ(ParseStatusLine("\r\n").majorVersion, 0);
     EXPECT_EQ(ParseStatusLine("").majorVersion, 0);
 }
+
+TEST(HttpSemantics, RemovesTheFragment)
+{
+    EXPECT_EQ(WithoutFragment("http://127.0.0.1/a?b=c#d"), "http://127.0.0.1/a?b=c");
+    EXPECT_EQ(WithoutFragment("http://127.0.0.1/#"), "http://127.0.0.1/");
+    EXPECT_EQ(WithoutFragment("http://127.0.0.1/a"), "http://127.0.0.1/a");
+    EXPECT_EQ(WithoutFragment(""), "");
+}

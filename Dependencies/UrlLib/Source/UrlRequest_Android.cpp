@@ -153,6 +153,12 @@ namespace UrlLib
                             m_headers.insert({lowerCaseKey, headerValue});
                         }
 
+                        // The URL of the final response of a redirect chain. Set here as well as
+                        // after the body, because reading the body of an error status throws.
+                        m_responseUrl = connection.GetURL().ToString();
+                        const std::string requestUrl = url.ToString();
+                        m_redirected = m_responseUrl != requestUrl;
+
                         int contentLength = connection.GetContentLength();
                         if (contentLength < 0)
                         {

@@ -129,7 +129,12 @@ namespace UrlLib
         // emptiness as the failure signal rather than this value.
         int32_t ErrorCode() const;
 
+        // The URL of the response, after any redirects and without a fragment. Empty until there
+        // is a response, and after a transport failure.
         std::string_view ResponseUrl() const;
+
+        // Whether the response was reached through at least one redirect.
+        bool Redirected() const;
 
         std::string_view ResponseString() const;
 

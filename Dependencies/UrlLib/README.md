@@ -57,6 +57,9 @@ API allows:
   do. `NSURLSession` and `HttpURLConnection` (through the wrapper used here) do not, and there it
   is the standard phrase for the status code (`OK`, `Not Found`, ...), as it is for `file://` and
   `app://` responses.
+* `ResponseUrl()` is the URL of the final response after redirects, without a fragment, and
+  `Redirected()` tells whether there was a redirect. Both are empty / false until there is a
+  response and after a transport failure.
 
 | Platform | Reason phrase over HTTP/1.x | Protocol detection |
 |---|---|---|

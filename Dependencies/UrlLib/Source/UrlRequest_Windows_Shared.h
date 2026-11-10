@@ -131,12 +131,14 @@ namespace UrlLib
                             break;
                     }
 
+                    // The URL of the final response of a redirect chain.
+                    m_responseUrl = winrt::to_string(responseMessage.RequestMessage().RequestUri().RawUri());
+                    m_redirected = !responseMessage.RequestMessage().RequestUri().Equals(m_uri);
+
                     if (!responseMessage.IsSuccessStatusCode())
                     {
                         return arcana::task_from_result<std::exception_ptr>();
                     }
-
-                    m_responseUrl = winrt::to_string(responseMessage.RequestMessage().RequestUri().RawUri());
 
                     for (auto&& iter : responseMessage.Headers())
                     {

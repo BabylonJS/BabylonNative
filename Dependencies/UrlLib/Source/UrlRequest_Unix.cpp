@@ -327,6 +327,21 @@ namespace UrlLib
                         else
                         {
                             m_statusCode = static_cast<UrlStatusCode>(codep);
+
+                            // The URL of the final response of a redirect chain. Local file
+                            // responses keep the URL the request was opened with (app:// maps to
+                            // a path next to the executable here).
+                            char* effectiveUrl{};
+                            if (!m_file && curl_easy_getinfo(m_curl, CURLINFO_EFFECTIVE_URL, &effectiveUrl) == CURLE_OK && effectiveUrl != nullptr)
+                            {
+                                m_responseUrl = effectiveUrl;
+                            }
+
+                            long redirectCount{};
+                            if (curl_easy_getinfo(m_curl, CURLINFO_REDIRECT_COUNT, &redirectCount) == CURLE_OK)
+                            {
+                                m_redirected = redirectCount > 0;
+                            }
                         }
                     }
                     catch (const std::exception& e)

@@ -6,17 +6,20 @@
 
 #import <Foundation/Foundation.h>
 
-// Records the protocol the response arrived over. NSURLSession reports it only through task
-// metrics, which reach a delegate before the task's completion handler is called.
+// Records what NSURLSession reports only through task metrics: the protocol the response arrived
+// over and the number of redirects. The metrics reach a delegate before the task's completion
+// handler is called.
 @interface UrlLibTaskMetricsDelegate : NSObject <NSURLSessionTaskDelegate>
 // The ALPN name of the last transaction ("http/1.1", "h2", "h3"), or nil when there was none.
 @property (atomic, copy) NSString* networkProtocolName;
+@property (atomic) NSUInteger redirectCount;
 @end
 
 @implementation UrlLibTaskMetricsDelegate
 - (void)URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task didFinishCollectingMetrics:(NSURLSessionTaskMetrics*)metrics
 {
     self.networkProtocolName = metrics.transactionMetrics.lastObject.networkProtocolName;
+    self.redirectCount = metrics.redirectCount;
 }
 @end
 
@@ -168,7 +171,8 @@ namespace UrlLib
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
             // A per-task delegate needs macOS 12 / iOS 15. On older systems the protocol stays
-            // unknown and the status text is the standard phrase for the status code.
+            // unknown, so the status text is the standard phrase for the status code, and a
+            // redirect is recognized by the URL having changed.
             UrlLibTaskMetricsDelegate* metricsDelegate{nil};
             if (@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *))
             {
@@ -236,6 +240,13 @@ namespace UrlLib
                     {
                         m_reasonPhrase = Http::ReasonPhrase::None;
                     }
+
+                    // The URL of the final response of a redirect chain. Local file responses keep
+                    // the URL the request was opened with (app:// maps to a bundle path here).
+                    m_responseUrl = ToStdString(httpResponse.URL.absoluteString);
+                    m_redirected = metricsDelegate != nil
+                        ? metricsDelegate.redirectCount > 0
+                        : ![httpResponse.URL.absoluteString isEqualToString:request.URL.absoluteString];
 
                     for (id key in httpResponse.allHeaderFields)
                     {
