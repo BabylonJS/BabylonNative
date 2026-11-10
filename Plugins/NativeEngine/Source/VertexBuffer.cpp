@@ -3,10 +3,57 @@
 #include "Babylon/Graphics/DeviceContext.h"
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <string>
 
 namespace Babylon
 {
+    namespace
+    {
+        // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
+        constexpr uint16_t INSTANCE_SLOT_SIZE = 16;
+
+        // Allocates zeroed instance data. Zeroing makes any unused bytes within a slot (when ElementSize < 16),
+        // and any slot the draw supplied no data for at all, read as zero in the shader.
+        const bgfx::Memory* AllocInstanceData(uint32_t instanceCount, uint32_t slotCount, uint16_t& instanceStride)
+        {
+            instanceStride = static_cast<uint16_t>(slotCount * INSTANCE_SLOT_SIZE);
+            if (instanceStride == 0)
+            {
+                throw std::runtime_error{"Instance data layout has no slots"};
+            }
+            if (instanceCount > UINT32_MAX / instanceStride)
+            {
+                throw std::runtime_error{"Instance count is too large"};
+            }
+
+            const bgfx::Memory* memory{bgfx::alloc(static_cast<uint32_t>(instanceStride) * instanceCount)};
+            std::memset(memory->data, 0, memory->size);
+            return memory;
+        }
+
+        // Binds instance data through a per-draw dynamic vertex buffer rather than the transient pool: large
+        // instance counts drawn many times per frame (e.g. Gaussian splat voxelization) exhaust the fixed-size
+        // transient pool, and bgfx silently under-allocates in that case. Dynamic vertex buffers are
+        // sub-allocated from shared blocks that grow on demand, so they cost about the same, and bgfx defers
+        // releasing the allocation until the frame that uses it has been rendered.
+        void SetInstanceData(bgfx::Encoder* encoder, const bgfx::Memory* memory, uint16_t instanceStride, uint32_t instanceCount)
+        {
+            bgfx::VertexLayout instanceLayout{};
+            // skip() takes a uint8_t, which would truncate the 256-byte stride of a full 16-slot layout.
+            instanceLayout.begin();
+            instanceLayout.m_stride = instanceStride;
+            instanceLayout.end();
+            const bgfx::DynamicVertexBufferHandle handle = bgfx::createDynamicVertexBuffer(memory, instanceLayout);
+            if (!bgfx::isValid(handle))
+            {
+                throw std::runtime_error{"Failed to create instance data vertex buffer"};
+            }
+            encoder->setInstanceDataBuffer(handle, 0, instanceCount);
+            bgfx::destroy(handle);
+        }
+    }
+
     VertexBuffer::VertexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, bool dynamic)
         : m_deviceContext{deviceContext}
         , m_deviceId{m_deviceContext.GetDeviceId()}
@@ -282,9 +329,6 @@ namespace Babylon
         uint32_t instanceCount,
         const InstanceDataLayout& layout)
     {
-        // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
-        static constexpr uint16_t SLOT_SIZE = 16;
-
         if (instances.empty())
         {
             return;
@@ -312,43 +356,24 @@ namespace Babylon
             throw std::runtime_error{"Instance-data layout does not cover every recorded attribute."};
         }
 
-        const uint16_t instanceStride = static_cast<uint16_t>(slotCount * SLOT_SIZE);
-        if (instanceCount > UINT32_MAX / instanceStride)
+        // Validate before allocating so a rejected layout does not leak the allocation.
+        for (const auto& [attrib, element] : instances)
         {
-            throw std::runtime_error{"Instance count is too large"};
+            if (layout.Slots.at(attrib) >= layout.SlotCount)
+            {
+                throw std::runtime_error{"Instance-data attribute maps outside the allocated buffer."};
+            }
         }
 
-        // Large instance counts drawn many times per frame (e.g. Gaussian splat voxelization) can exhaust
-        // the transient pool, and bgfx silently under-allocates in that case. Fall back to a per-draw
-        // static vertex buffer; bgfx defers its destruction until the frame has been rendered.
-        const bgfx::Memory* fallbackMemory{};
-        bgfx::InstanceDataBuffer instanceDataBuffer{};
-        uint8_t* data{};
-        if (bgfx::getAvailInstanceDataBuffer(instanceCount, instanceStride) >= instanceCount)
-        {
-            bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
-            data = instanceDataBuffer.data;
-        }
-        else
-        {
-            fallbackMemory = bgfx::alloc(static_cast<uint32_t>(instanceStride) * instanceCount);
-            data = fallbackMemory->data;
-        }
-
-        // Zero the buffer so any unused bytes within a 16-byte slot (when ElementSize < 16), and any
-        // slot the draw supplied no data for at all, read as zero in the shader instead of leaking
-        // transient ring-buffer garbage.
-        std::memset(data, 0, static_cast<size_t>(instanceStride) * instanceCount);
+        uint16_t instanceStride{};
+        const bgfx::Memory* memory{AllocInstanceData(instanceCount, layout.SlotCount, instanceStride)};
+        uint8_t* data{memory->data};
 
         for (const auto& [attrib, element] : instances)
         {
             const uint32_t slot = layout.Slots.at(attrib);
-            if (slot >= layout.SlotCount)
-            {
-                throw std::runtime_error{"Instance-data attribute maps outside the allocated buffer."};
-            }
-            const uint32_t slotOffset = slot * SLOT_SIZE;
-            assert(element.ElementSize <= SLOT_SIZE);
+            const uint32_t slotOffset = slot * INSTANCE_SLOT_SIZE;
+            assert(element.ElementSize <= INSTANCE_SLOT_SIZE);
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {
@@ -356,23 +381,13 @@ namespace Babylon
             }
         }
 
-        if (fallbackMemory == nullptr)
-        {
-            encoder->setInstanceDataBuffer(&instanceDataBuffer);
-            return;
-        }
+        SetInstanceData(encoder, memory, instanceStride, instanceCount);
+    }
 
-        bgfx::VertexLayout fallbackLayout{};
-        // skip() takes a uint8_t, which would truncate the 256-byte stride of a full 16-slot layout.
-        fallbackLayout.begin();
-        fallbackLayout.m_stride = instanceStride;
-        fallbackLayout.end();
-        const bgfx::VertexBufferHandle handle = bgfx::createVertexBuffer(fallbackMemory, fallbackLayout);
-        if (!bgfx::isValid(handle))
-        {
-            throw std::runtime_error{"Failed to create instance data vertex buffer"};
-        }
-        encoder->setInstanceDataBuffer(handle, 0, instanceCount);
-        bgfx::destroy(handle);
+    void VertexBuffer::SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, uint32_t instanceCount, uint32_t slotCount)
+    {
+        uint16_t instanceStride{};
+        const bgfx::Memory* memory{AllocInstanceData(instanceCount, slotCount, instanceStride)};
+        SetInstanceData(encoder, memory, instanceStride, instanceCount);
     }
 }
