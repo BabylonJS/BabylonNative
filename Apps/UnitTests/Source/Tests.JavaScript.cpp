@@ -139,7 +139,7 @@ TEST_P(ScriptLoaderTest, PreservesOrdinaryScriptSemantics)
     EXPECT_EQ(completion.get(), 42);
 }
 
-INSTANTIATE_TEST_SUITE_P(JavaScript, ScriptLoaderTest, testing::Bool());
+INSTANTIATE_TEST_SUITE_P(JavaScript, ScriptLoaderTest, testing::Values(false, true));
 
 #ifdef HAS_NATIVE_MESHOPT
 TEST(NativeMeshopt, LegacyEntryPointMatchesGroupedDecoder)
