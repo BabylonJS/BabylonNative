@@ -28,6 +28,7 @@ namespace Babylon
         ScriptLoader(ScriptLoader&&) noexcept;
         ScriptLoader& operator=(ScriptLoader&&) noexcept;
 
+        // Source containing NUL characters is rejected through the runtime's unhandled exception handler.
         void LoadScript(std::string url);
         void Eval(std::string source, std::string url);
         void Dispatch(std::function<void BABYLON_API (Napi::Env)> callback);

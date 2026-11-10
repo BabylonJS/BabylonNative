@@ -6,7 +6,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
-#include <cwchar>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -69,30 +68,6 @@ JsErrorCode JsCopyStringUtf16(_In_ JsValueRef value, _Out_opt_ char16_t* buffer,
 JsErrorCode JsCreatePropertyId(_In_z_ const char* name, _In_ size_t length, _Out_ JsPropertyIdRef* propertyId) {
   auto str = (length == NAPI_AUTO_LENGTH ? NarrowToWide({ name }) : NarrowToWide({ name, length }));
   return JsGetPropertyIdFromName(str.data(), propertyId);
-}
-
-// JsRunScript only takes a NUL-terminated source, so a script with an
-// embedded NUL would be truncated. Such scripts go through a global
-// (indirect) eval of the length-counted string value instead.
-JsErrorCode JsRunScriptValue(_In_ JsValueRef script, _In_ JsSourceContext sourceContext, _In_z_ const wchar_t* sourceUrl, _Out_ JsValueRef* result) {
-  const wchar_t* scriptStr;
-  size_t scriptStrLen;
-  CHECK_JSRT_ERROR_CODE(JsStringToPointer(script, &scriptStr, &scriptStrLen));
-  if (std::wcslen(scriptStr) == scriptStrLen) {
-    return JsRunScript(scriptStr, sourceContext, sourceUrl, result);
-  }
-
-  JsValueRef global{};
-  CHECK_JSRT_ERROR_CODE(JsGetGlobalObject(&global));
-
-  JsPropertyIdRef evalId{};
-  CHECK_JSRT_ERROR_CODE(JsGetPropertyIdFromName(L"eval", &evalId));
-
-  JsValueRef evalFunction{};
-  CHECK_JSRT_ERROR_CODE(JsGetProperty(global, evalId, &evalFunction));
-
-  std::array<JsValueRef, 2> args{global, script};
-  return JsCallFunction(evalFunction, args.data(), static_cast<unsigned short>(args.size()), result);
 }
 
 JsErrorCode JsCreatePromise(JsValueRef* promise, JsValueRef* resolve, JsValueRef* reject) {
@@ -2504,7 +2479,10 @@ napi_status napi_run_script(napi_env env,
 
   JsValueRef scriptVar = reinterpret_cast<JsValueRef>(script);
 
-  CHECK_JSRT_EXPECTED(env, JsRunScriptValue(scriptVar, ++env->source_context, L"Unknown", reinterpret_cast<JsValueRef*>(result)), napi_string_expected);
+  const wchar_t* scriptStr;
+  size_t scriptStrLen;
+  CHECK_JSRT(env, JsStringToPointer(scriptVar, &scriptStr, &scriptStrLen));
+  CHECK_JSRT_EXPECTED(env, JsRunScript(scriptStr, ++env->source_context, L"Unknown", reinterpret_cast<JsValueRef*>(result)), napi_string_expected);
 
   return napi_ok;
 }
@@ -2518,7 +2496,10 @@ napi_status napi_run_script(napi_env env,
   CHECK_ARG(env, result);
   JsValueRef scriptVar = reinterpret_cast<JsValueRef>(script);
 
-  CHECK_JSRT_EXPECTED(env, JsRunScriptValue(scriptVar, ++env->source_context, NarrowToWide({ source_url }).data(), reinterpret_cast<JsValueRef*>(result)), napi_string_expected);
+  const wchar_t* scriptStr;
+  size_t scriptStrLen;
+  CHECK_JSRT(env, JsStringToPointer(scriptVar, &scriptStr, &scriptStrLen));
+  CHECK_JSRT_EXPECTED(env, JsRunScript(scriptStr, ++env->source_context, NarrowToWide({ source_url }).data(), reinterpret_cast<JsValueRef*>(result)), napi_string_expected);
 
   return napi_ok;
 }
