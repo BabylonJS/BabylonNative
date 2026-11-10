@@ -1,6 +1,6 @@
 import { NativeEngine, Scene, ShaderMaterial, MeshBuilder } from "@babylonjs/core";
 
-declare const setSceneReady: () => void;
+declare const setSceneReady: (compilationError?: string) => void;
 
 // ---------------------------------------------------------------------------
 // Comprehensive WebGL2 GLSL ES 3.00 vertex shader
@@ -1035,6 +1035,9 @@ const mat = new ShaderMaterial("crossTest", scene, shaders, {
         "TransformBlock", "SceneBlock",
     ],
 });
+
+// A failed compilation never makes the scene ready, so report it instead of waiting forever.
+mat.onError = (_effect, errors) => setSceneReady(errors);
 
 sphere.material = mat;
 

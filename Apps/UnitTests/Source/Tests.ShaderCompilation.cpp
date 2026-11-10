@@ -20,6 +20,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
@@ -397,9 +398,10 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
     Babylon::AppRuntime runtime{options};
 
     std::promise<void> scriptIsDone{};
-    std::promise<void> sceneIsReady{};
+    std::promise<std::string> sceneIsReady{};
+    bool sceneReported{false};
 
-    runtime.Dispatch([&device, &sceneIsReady](Napi::Env env) {
+    runtime.Dispatch([&device, &sceneIsReady, &sceneReported](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -408,10 +410,14 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
+        // Called with no argument once the scene is ready, or with the errors if the shader fails to compile.
         env.Global().Set("setSceneReady",
             Napi::Function::New(
-                env, [&sceneIsReady](const Napi::CallbackInfo&) {
-                    sceneIsReady.set_value();
+                env, [&sceneIsReady, &sceneReported](const Napi::CallbackInfo& info) {
+                    if (!std::exchange(sceneReported, true))
+                    {
+                        sceneIsReady.set_value(info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : std::string{});
+                    }
                 },
                 "setSceneReady"));
     });
@@ -433,6 +439,15 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
     }
 
     device.FinishRenderingCurrentFrame();
+
+    const std::string compilationError = sceneIsReadyFuture.get();
+#if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+    // The shader declares 22 samplers across both stages, but bgfx's Vulkan backend shares
+    // 16 texture stages between them, so compilation must fail with that diagnostic.
+    EXPECT_NE(compilationError.find("more than 16 distinct sampler textures"), std::string::npos) << compilationError;
+#else
+    EXPECT_TRUE(compilationError.empty()) << compilationError;
+#endif
 }
 
 TEST(ShaderCompilation, ExistingVec4UniformArrayIsNotReshaped)
