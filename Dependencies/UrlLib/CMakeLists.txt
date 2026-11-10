@@ -114,6 +114,10 @@ else()
     option(URLLIB_TESTS "Build the UrlLib unit tests." OFF)
 endif()
 
+# The loopback HTTP server that the UrlLib and JsRuntimeHost unit tests share. The target is
+# excluded from the default build.
+add_subdirectory(Tests/Support)
+
 if(URLLIB_TESTS)
     enable_testing()
     add_subdirectory(Tests)
