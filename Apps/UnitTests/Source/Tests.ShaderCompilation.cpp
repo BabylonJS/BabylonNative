@@ -416,7 +416,8 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
                 env, [&sceneIsReady, &sceneReported](const Napi::CallbackInfo& info) {
                     if (!std::exchange(sceneReported, true))
                     {
-                        sceneIsReady.set_value(info.Length() > 0 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : std::string{});
+                        const bool hasError = info.Length() > 0 && !info[0].IsUndefined() && !info[0].IsNull();
+                        sceneIsReady.set_value(hasError ? info[0].ToString().Utf8Value() : std::string{});
                     }
                 },
                 "setSceneReady"));

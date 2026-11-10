@@ -1042,4 +1042,4 @@ mat.onError = (_effect, errors) => setSceneReady(errors);
 sphere.material = mat;
 
 scene.createDefaultCameraOrLight(true, true, true);
-scene.executeWhenReady(setSceneReady);
+scene.executeWhenReady(() => setSceneReady());
