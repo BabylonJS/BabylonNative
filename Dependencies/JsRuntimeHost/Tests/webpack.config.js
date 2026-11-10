@@ -14,12 +14,18 @@ module.exports = {
   },
   plugins: [
     new webpack.ProvidePlugin({
-    process: 'process/browser',
+    process: require.resolve('process/browser'),
     Buffer: ['buffer', 'Buffer'],
   }),
     new webpack.optimize.LimitChunkCountPlugin({
       maxChunks: 1, // ensures all code is in a single chunk
     }),
+    new webpack.NormalModuleReplacementPlugin(
+      /^node:(.+)$/,
+      (resource) => {
+        resource.request = resource.request.replace(/^node:/, '');
+      }
+    ),
   ],
   resolve: {
     extensions: ['.ts', '.js'],
@@ -57,7 +63,7 @@ module.exports = {
   module: {
     rules: [
         {
-          test: /\.(js|ts)$/,
+          test: /\.(js|cjs|ts)$/,
           exclude: (modulePath) => {
             return (
               /node_modules/.test(modulePath) &&
