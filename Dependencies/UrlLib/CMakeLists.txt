@@ -97,6 +97,15 @@ endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
+# The Apple and libcurl stacks already use HTTP/3 with origins that advertise it (HTTPS DNS records,
+# Alt-Svc). This makes every https request attempt QUIC first instead. It speeds up first contact
+# with HTTP/3 origins that do not advertise in DNS and slows first contact with HTTP/2-only origins
+# (see README), so it is off unless the embedder knows its origins.
+option(URLLIB_ATTEMPT_HTTP3 "Attempt HTTP/3 (QUIC) first on https requests (Apple, libcurl 8+)." OFF)
+if(URLLIB_ATTEMPT_HTTP3)
+    target_compile_definitions(UrlLib PRIVATE URLLIB_ATTEMPT_HTTP3)
+endif()
+
 # Standalone desktop builds enable tests by default; BabylonNative explicitly
 # enables them for its desktop test configurations.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT IOS AND NOT ANDROID)

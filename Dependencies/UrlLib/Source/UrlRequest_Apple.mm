@@ -132,6 +132,23 @@ namespace UrlLib
                 mutableRequest.HTTPBody = requestBodyData;
             }
 
+#if defined(URLLIB_ATTEMPT_HTTP3) && ( \
+    (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 110300) || \
+    (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 140500) || \
+    (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= 140500))
+            // Race QUIC against TCP for this request instead of waiting to learn HTTP/3 support
+            // from DNS or a previous response. QUIC is TLS-only, so https only (app:// is file://
+            // by now). The SDK check keeps the property out of builds against older SDKs, and
+            // @available keeps it off older systems.
+            if ([m_url.scheme caseInsensitiveCompare:@"https"] == NSOrderedSame)
+            {
+                if (@available(macOS 11.3, iOS 14.5, tvOS 14.5, *))
+                {
+                    mutableRequest.assumesHTTP3Capable = YES;
+                }
+            }
+#endif
+
             request = [mutableRequest copy];
 
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};

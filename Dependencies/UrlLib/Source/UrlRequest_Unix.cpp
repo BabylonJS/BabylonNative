@@ -149,6 +149,21 @@ namespace UrlLib
                 // Request-specific failure detail (host/port/path specifics) lands here during
                 // the transfer; see the error handling in PerformAsync.
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_ERRORBUFFER, m_curlErrorBuffer.data()));
+
+#if defined(URLLIB_ATTEMPT_HTTP3)
+                // Attempt HTTP/3 first on https and let libcurl fall back to HTTP/2 or 1.1. Checked
+                // at run time so one binary follows the system curl: the fallback exists from
+                // 8.0.0 (earlier versions treat CURL_HTTP_VERSION_3 as HTTP/3 or fail), and only
+                // builds with a QUIC backend report CURL_VERSION_HTTP3.
+                if (scheme != nullptr && std::strcmp(scheme, "https") == 0)
+                {
+                    const curl_version_info_data* versionInfo{curl_version_info(CURLVERSION_NOW)};
+                    if ((versionInfo->features & CURL_VERSION_HTTP3) != 0 && versionInfo->version_num >= 0x080000)
+                    {
+                        curl_check(curl_easy_setopt(m_curl, CURLOPT_HTTP_VERSION, static_cast<long>(CURL_HTTP_VERSION_3)));
+                    }
+                }
+#endif
             }
         }
 
