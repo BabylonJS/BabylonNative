@@ -37,8 +37,7 @@ if (project.hasProperty("importHostCompilers")) {
     cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property('importHostCompilers')}")
 }
 
-// NativeDawn (WebGPU/Dawn, Vulkan backend) build: enabling the plugin
-// force-disables NativeEngine. The Android app native lib has no Dawn code
+// NativeDawn (WebGPU/Dawn, Vulkan backend) build. The Android app native lib has no Dawn code
 // path, so restrict the CMake build to the NativeDawn plugin target (see the
 // `targets` call below) to validate it compiles/links.
 def nativeDawn = project.hasProperty("NativeDawn") && project.property("NativeDawn") == "ON"

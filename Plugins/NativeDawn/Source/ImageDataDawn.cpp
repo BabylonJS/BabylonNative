@@ -1,20 +1,6 @@
-#include <map>
-#include <cstring>
 #include <limits>
-#include "CanvasDawn.h"
 #include "ContextDawn.h"
 #include "ImageDataDawn.h"
-
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-#endif
-
-#include "nanovg/nanovg.h"
-
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
 
 namespace Babylon::Plugins::Internal
 {

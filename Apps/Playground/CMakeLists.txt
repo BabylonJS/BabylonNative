@@ -38,7 +38,6 @@ set(SCRIPTS
     "Scripts/native_env.js"
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
-    "Scripts/run_snippet.js"
     "Scripts/validation_native.js"
     "Scripts/dawn_playground.js"
     "Scripts/dawn_playground_native.js"
@@ -163,13 +162,6 @@ endif()
 warnings_as_errors(Playground)
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
-
-# Emit a PDB for Release builds. Without it every frame of a crash callstack
-# resolves to the nearest exported symbol (or "<Unknown?>"), which makes CI
-# crash reports impossible to triage; /DEBUG does not affect code generation.
-if(MSVC)
-    target_link_options(Playground PRIVATE $<$<CONFIG:Release>:/DEBUG>)
-endif()
 
 if(WINDOWS_STORE)
     target_link_libraries(Playground PRIVATE windowsapp)

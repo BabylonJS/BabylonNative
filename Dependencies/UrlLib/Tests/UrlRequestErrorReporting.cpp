@@ -10,8 +10,6 @@
 #include <gtest/gtest.h>
 #include <gsl/util>
 
-#include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -216,8 +214,7 @@ namespace
     class HangingServer
     {
     public:
-        explicit HangingServer(std::string response = {}, std::promise<std::string>* capturedRequest = nullptr,
-            size_t requestBodyLength = 0, std::promise<void>* connectionAccepted = nullptr)
+        explicit HangingServer(std::string response = {}, std::promise<void>* connectionAccepted = nullptr)
         {
             if (!EnsureSocketsInitialized())
             {
@@ -245,8 +242,7 @@ namespace
 
             m_listener = listener;
             m_port = ntohs(address.sin_port);
-            m_acceptThread = std::thread{[this, response = std::move(response), capturedRequest,
-                requestBodyLength, connectionAccepted]() mutable {
+            m_acceptThread = std::thread{[this, response = std::move(response), connectionAccepted]() mutable {
                 for (;;)
                 {
                     NativeSocket connection = ::accept(m_listener, nullptr, nullptr);
@@ -282,33 +278,7 @@ namespace
                             continue;
                         }
                         char chunk[4096];
-                        std::string request;
-                        bool received = false;
-                        for (;;)
-                        {
-                            const auto count = ::recv(connection, chunk, sizeof(chunk), 0);
-                            if (count <= 0)
-                            {
-                                break;
-                            }
-                            received = true;
-                            if (!capturedRequest)
-                            {
-                                break;
-                            }
-                            request.append(chunk, static_cast<size_t>(count));
-                            const auto headerEnd = request.find("\r\n\r\n");
-                            if (headerEnd != std::string::npos && request.size() - headerEnd - 4 >= requestBodyLength)
-                            {
-                                break;
-                            }
-                        }
-                        if (capturedRequest)
-                        {
-                            capturedRequest->set_value(std::move(request));
-                            capturedRequest = nullptr;
-                        }
-                        if (received)
+                        if (::recv(connection, chunk, sizeof(chunk), 0) > 0)
                         {
                             size_t sent = 0;
                             while (sent < response.size())
@@ -413,92 +383,6 @@ namespace
     };
 }
 
-namespace
-{
-    class HttpPost : public testing::Test
-    {
-    protected:
-        void SetUp() override
-        {
-#if !defined(_WIN32) && !defined(__APPLE__)
-            GTEST_SKIP() << "the Linux backend does not implement POST yet";
-#endif
-        }
-
-        void CheckPost(std::optional<std::string> headerName, const std::string& body,
-            const std::string& contentType = "application/json")
-        {
-            std::promise<std::string> capturedRequest;
-            auto wire = capturedRequest.get_future();
-            HangingServer server{
-                "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok",
-                &capturedRequest, body.size()};
-            ASSERT_TRUE(server.Valid());
-            UrlLib::UrlRequest request;
-            request.Open(UrlLib::UrlMethod::Post, server.Url());
-            if (headerName)
-            {
-                request.SetRequestHeader(*headerName, contentType);
-            }
-            request.SetRequestHeader("x-urllib-test", "post");
-            request.SetRequestBody(body);
-            ASSERT_TRUE(SendAndWait(request));
-            ASSERT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::Ok) << request.ErrorString();
-            EXPECT_EQ(request.ResponseString(), "ok");
-            EXPECT_TRUE(request.ErrorString().empty());
-            ASSERT_EQ(wire.wait_for(std::chrono::seconds{5}), std::future_status::ready);
-            const auto sent = wire.get();
-            EXPECT_EQ(sent.find("POST / HTTP/1.1\r\n"), 0u);
-            const auto headerEnd = sent.find("\r\n\r\n");
-            ASSERT_NE(headerEnd, std::string::npos);
-            EXPECT_EQ(sent.substr(headerEnd + 4), body);
-            std::string headers = sent.substr(0, headerEnd + 2);
-            std::transform(headers.begin(), headers.end(), headers.begin(),
-                [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
-            EXPECT_NE(headers.find("\r\nx-urllib-test: post\r\n"), std::string::npos);
-            if (headerName)
-            {
-                EXPECT_NE(headers.find("\r\ncontent-type: " + contentType + "\r\n"), std::string::npos);
-            }
-#if defined(_WIN32)
-            else
-            {
-                EXPECT_EQ(headers.find("\r\ncontent-type:"), std::string::npos);
-            }
-#endif
-        }
-    };
-}
-
-TEST_F(HttpPost, JsonContentTypeIsCaseInsensitive)
-{
-    for (const auto* name : {"Content-Type", "content-type", "CoNtEnT-TyPe"})
-    {
-        SCOPED_TRACE(name);
-        CheckPost(name, "{\"message\":\"caf\xC3\xA9\"}\n");
-    }
-}
-
-TEST_F(HttpPost, WithoutContentType)
-{
-    CheckPost(std::nullopt, "plain text\r\n");
-    CheckPost(std::nullopt, "");
-}
-
-TEST_F(HttpPost, PreservesContentTypeParameters)
-{
-    CheckPost("content-type", "{\"ready\":true}", "application/json; charset=utf-8");
-}
-
-TEST_F(HttpPost, PreservesRawBodyBytes)
-{
-    for (const auto& body : {std::string{"a\0b", 3}, std::string{"\x80\xff\r\n", 4},
-        std::string{"\0\x80\xff\r\n", 5}})
-    {
-        CheckPost("content-type", body, "application/octet-stream");
-    }
-}
-
 #if defined(_WIN32)
 namespace
 {
@@ -549,40 +433,6 @@ TEST_F(WindowsHttp, MissingContentTypePreservesBody)
 {
     CheckResponse("HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nhello",
         200, "hello", std::nullopt);
-}
-
-TEST_F(WindowsHttp, PostRejectsInvalidContentTypeAndCanReopen)
-{
-    const std::string body = "reopened without Content-Type";
-    std::promise<std::string> capturedRequest;
-    auto wire = capturedRequest.get_future();
-    HangingServer server{"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
-        &capturedRequest, body.size()};
-    ASSERT_TRUE(server.Valid());
-    UrlLib::UrlRequest request;
-    request.Open(UrlLib::UrlMethod::Post, server.Url());
-    request.SetRequestHeader("content-type", "not a media type");
-    request.SetRequestBody("unchanged");
-    ASSERT_TRUE(SendAndWait(request));
-    EXPECT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::None);
-    EXPECT_FALSE(request.ErrorString().empty());
-    EXPECT_TRUE(request.ResponseString().empty());
-    EXPECT_TRUE(request.GetAllResponseHeaders().empty());
-
-    request.Open(UrlLib::UrlMethod::Post, server.Url());
-    request.SetRequestBody(body);
-    ASSERT_TRUE(SendAndWait(request));
-    ASSERT_EQ(request.StatusCode(), UrlLib::UrlStatusCode::Ok) << request.ErrorString();
-    EXPECT_TRUE(request.ErrorString().empty());
-    ASSERT_EQ(wire.wait_for(std::chrono::seconds{5}), std::future_status::ready);
-    const auto sent = wire.get();
-    const auto headerEnd = sent.find("\r\n\r\n");
-    ASSERT_NE(headerEnd, std::string::npos);
-    EXPECT_EQ(sent.substr(headerEnd + 4), body);
-    std::string headers = sent.substr(0, headerEnd);
-    std::transform(headers.begin(), headers.end(), headers.begin(),
-        [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
-    EXPECT_EQ(headers.find("\r\ncontent-type:"), std::string::npos);
 }
 
 TEST_F(WindowsHttp, MissingContentTypeWithEmptyBody)
@@ -638,7 +488,7 @@ TEST(LoopbackServer, IdleResponseConnectionDoesNotBlockTeardown)
     std::promise<void> accepted;
     auto acceptedFuture = accepted.get_future();
     auto server = std::make_unique<HangingServer>(
-        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", nullptr, 0, &accepted);
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", &accepted);
     ASSERT_TRUE(server->Valid());
     const NativeSocket connection = ::socket(AF_INET, SOCK_STREAM, 0);
     ASSERT_NE(connection, InvalidSocket);

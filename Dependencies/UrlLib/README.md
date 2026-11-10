@@ -97,20 +97,6 @@ Existing Windows HTTP response behavior is otherwise unchanged: successful 2xx r
 to 200 after body reading; non-success responses retain their wire status and do not read
 their body or publish response headers.
 
-Windows POST matches Content-Type case-insensitively and sets it on the content headers,
-not the request headers. Bodies are sent byte-for-byte without UTF-8 transcoding or an
-automatically added charset. Omitted Content-Type stays absent; supplied MIME parameters
-are preserved, and an invalid supplied MIME type reports a transport error rather than success.
-
-Apple POST also preserves body bytes, using length-aware NSData rather than a
-NUL-terminated UTF-8 string. The shared POST wire tests run on Windows and Apple;
-Linux explicitly skips them because its backend does not implement POST yet.
-
-Android POST writes raw byte-array chunks to the connection's output stream instead of
-converting the body to a Java string. This preserves embedded NULs and UTF-8 bytes while
-keeping Content-Length consistent with the supplied body. Android coverage comes from
-JsRuntimeHost's Fetch/XHR HTTP transport tests.
-
 ## Contributing
 
 Please read [CONTRIBUTING.md](../../CONTRIBUTING.md) for details on our code of conduct, and

@@ -100,13 +100,11 @@ Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
 .\Playground.exe --headless app:///Scripts/validation_native.js
 ```
 
-The standalone runtime and Babylon.js host checks above remain available locally.
-The Windows CI `NativeDawn Runtime Regression Tests` step is disabled while the
-shared URL implementation fails the query-flag regression (`?live`).
-The Win32 WebGPU visualization step still runs in CI, but it uses
-`--generate-references`, so it is only a crash/smoke run without pixel
-comparison; disabling the runtime step does not make that unresolved regression
-a pass.
+The standalone runtime and Babylon.js host checks above are local checks, not CI
+steps. The runtime check currently fails the shared URL query-flag regression
+(`?live`). The Win32 WebGPU validation step runs in CI with
+`--generate-references`, so it is only a crash/smoke run without pixel comparison
+and does not cover that unresolved regression.
 The Dawn validation adapter reports both its graphics API and JavaScript engine
 so the shared catalog applies backend and engine exclusions consistently.
 
@@ -135,17 +133,6 @@ extents for the same loaded face used by drawing, rather than estimated Arial
 widths. Font state is restored together with NanoVG state. The standalone Dawn
 regression uses the existing Droid Sans test fixture copied under `Scripts`,
 so its font checks do not depend on a network download.
-
-Accurate Canvas metrics also expose a Babylon.js headless font-layout difference:
-its canvas-only `getFontOffset` fallback currently prefers `Hg` ink extents,
-whereas its DOM path measures the font line box. The canonical upstream
-correction prefers a complete usable font-bounds pair, with ink bounds and the
-CSS-size estimate retained as fallbacks. A source-generated backport into an
-isolated 9.21.2 consumer passes the original GUI subset; the default bundle and
-dependency pins remain unchanged. Preserve the upstream patch, backport script,
-bundle hash and executable identity when reproducing this experiment. These
-consumer results are not a permanent plugin workaround or evidence that the
-default Babylon.js catalog passes.
 
 NativeDawn's typed `Tick` and `ResizeSurface` APIs drive frames and the presentation
 canvas; they do not look up global `frame` or `__dawnResize` functions. Babylon.js

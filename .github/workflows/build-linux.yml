@@ -222,7 +222,7 @@ jobs:
         if: ${{ always() && !inputs.nativedawn && inputs.graphics-api == 'Vulkan' }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.nativedawn && '-nativedawn' || '' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-test-results
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-test-results
           path: |
             build/Linux/Apps/Playground/vulkan-validation.log
             build/Linux/Apps/UnitTests/vulkan-unit-test-results.xml
@@ -231,7 +231,7 @@ jobs:
         if: ${{ always() && !inputs.nativedawn && inputs.js-engine == 'JavaScriptCore' }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.nativedawn && '-nativedawn' || '' }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/Linux/Apps/Playground/Results
 
       - name: Upload Error Pictures

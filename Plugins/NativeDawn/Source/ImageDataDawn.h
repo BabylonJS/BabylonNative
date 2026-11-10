@@ -2,7 +2,6 @@
 
 #include <Babylon/Polyfills/Canvas.h>
 #include <cstdint>
-#include <vector>
 
 namespace Babylon::Plugins::Internal
 {

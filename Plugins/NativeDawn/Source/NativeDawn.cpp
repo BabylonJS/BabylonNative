@@ -27,7 +27,6 @@
 #endif
 
 #include <bimg/encode.h>
-#include <bx/allocator.h>
 #include <bx/error.h>
 #include <bx/file.h>
 #include <bx/filepath.h>

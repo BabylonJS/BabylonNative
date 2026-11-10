@@ -69,9 +69,6 @@ namespace Babylon::Plugins::Internal
         // Ends and submits the pass opened by BeginFrame.
         void EndFrame(RenderPass& pass);
 
-        // The rendered canvas image. Null until the first BeginFrame.
-        WGPUTexture GetTexture() const { return m_colorTexture; }
-
         // Reads the rendered image back to tightly packed RGBA8 (size
         // width*height*4). Returns false if nothing has been rendered yet.
         bool ReadPixels(std::vector<uint8_t>& out);
@@ -97,8 +94,6 @@ namespace Babylon::Plugins::Internal
         // (Re)creates the colour + depth-stencil textures if the size changed.
         // Returns true when the colour attachment must be cleared this pass.
         bool UpdateRenderTarget();
-
-        Napi::ObjectReference m_contextObject{};
 
         WGPUDevice m_device{};
 

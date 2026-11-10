@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
-#include <Babylon/JsRuntimeScheduler.h>
 #include "Image.h"
 #include "Path2D.h"
 #include "Font.h"
@@ -22,7 +21,6 @@ namespace Babylon::Plugins::Internal
     using Babylon::Polyfills::Internal::NativeCanvasImage;
     using Babylon::Polyfills::Internal::NativeCanvasPath2D;
     using Babylon::Polyfills::Internal::Font;
-    using Babylon::Polyfills::Internal::FontStyle;
 
     class NativeCanvasDawn;
 
@@ -35,10 +33,8 @@ namespace Babylon::Plugins::Internal
         explicit ContextDawn(const Napi::CallbackInfo& info);
         virtual ~ContextDawn();
 
-        NVGcontext* GetNVGContext() const { return *m_nvg.get(); }
-
-        // Copies a region of the CPU-side pixel mirror (populated by DrawImage) into dst (w*h*4 RGBA8 bytes).
-        // Out-of-range pixels are written as zero. Used to implement getImageData without a GPU readback.
+        // Reads a region of the rendered canvas into dst (w*h*4 RGBA8 bytes).
+        // Out-of-range pixels are written as zero.
         void ReadPixels(int32_t sx, int32_t sy, uint32_t w, uint32_t h, uint8_t* dst);
 
     private:
@@ -177,9 +173,6 @@ namespace Babylon::Plugins::Internal
         {
             float left, top, width, height;
         } m_rectangleClipping{};
-
-        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
-        JsRuntimeScheduler m_runtimeScheduler;
 
         struct CachedImage
         {

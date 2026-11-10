@@ -1,4 +1,3 @@
-#include <bx/math.h>
 #include <map>
 #include <algorithm>
 #include <cassert>
@@ -134,8 +133,6 @@ namespace Babylon::Plugins::Internal
         : Napi::ObjectWrap<ContextDawn>{info}
         , m_canvas{NativeCanvasDawn::Unwrap(info[0].As<Napi::Object>())}
         , m_nvg{std::make_shared<NVGcontext*>(NvgCreateDawn(m_canvas->GetDevice(), NativeCanvasDawn::ColorFormat(), 1))}
-        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
-        , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
     {
         // TODO: commented code doesn't compile with napi-jsi. Using non read-only property for now
         //info.This().ToObject().DefineProperty(Napi::PropertyDescriptor::Value("canvas", info[0], napi_enumerable));
@@ -147,7 +144,6 @@ namespace Babylon::Plugins::Internal
     ContextDawn::~ContextDawn()
     {
         Dispose();
-        m_cancellationSource->cancel();
     }
 
     void ContextDawn::Dispose(const Napi::CallbackInfo&)
