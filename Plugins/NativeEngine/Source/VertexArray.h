@@ -30,7 +30,7 @@ namespace Babylon
         const std::map<uint32_t, VertexBuffer::InstanceInfo>& GetInstances() const { return m_vertexBufferInstances; }
 
         // True when any recorded instance source is a GPU storage buffer, in which case the CPU
-        // BuildInstanceDataBuffer path is skipped and NativeEngine binds a GPU-repacked buffer.
+        // SetInstanceDataBuffer path is skipped and NativeEngine binds a GPU-repacked buffer.
         bool HasStorageInstances() const;
 
         template<typename Callback>

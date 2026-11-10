@@ -276,8 +276,8 @@ namespace Babylon
         return layout;
     }
 
-    void VertexBuffer::BuildInstanceDataBuffer(
-        bgfx::InstanceDataBuffer& instanceDataBuffer,
+    void VertexBuffer::SetInstanceDataBuffer(
+        bgfx::Encoder* encoder,
         const std::map<uint32_t, InstanceInfo>& instances,
         uint32_t instanceCount,
         const InstanceDataLayout& layout)
@@ -314,9 +314,22 @@ namespace Babylon
 
         const uint16_t instanceStride = static_cast<uint16_t>(slotCount * SLOT_SIZE);
 
-        bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
-
-        uint8_t* data{instanceDataBuffer.data};
+        // Large instance counts drawn many times per frame (e.g. Gaussian splat voxelization) can exhaust
+        // the transient pool, and bgfx silently under-allocates in that case. Fall back to a per-draw
+        // static vertex buffer; bgfx defers its destruction until the frame has been rendered.
+        const bgfx::Memory* fallbackMemory{};
+        bgfx::InstanceDataBuffer instanceDataBuffer{};
+        uint8_t* data{};
+        if (bgfx::getAvailInstanceDataBuffer(instanceCount, instanceStride) >= instanceCount)
+        {
+            bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
+            data = instanceDataBuffer.data;
+        }
+        else
+        {
+            fallbackMemory = bgfx::alloc(static_cast<uint32_t>(instanceStride) * instanceCount);
+            data = fallbackMemory->data;
+        }
 
         // Zero the buffer so any unused bytes within a 16-byte slot (when ElementSize < 16), and any
         // slot the draw supplied no data for at all, read as zero in the shader instead of leaking
@@ -338,5 +351,21 @@ namespace Babylon
                 std::memcpy(data + instance * instanceStride + slotOffset, source + instance * element.Stride + element.Offset, element.ElementSize);
             }
         }
+
+        if (fallbackMemory == nullptr)
+        {
+            encoder->setInstanceDataBuffer(&instanceDataBuffer);
+            return;
+        }
+
+        bgfx::VertexLayout fallbackLayout{};
+        fallbackLayout.begin().skip(static_cast<uint8_t>(instanceStride)).end();
+        const bgfx::VertexBufferHandle handle = bgfx::createVertexBuffer(fallbackMemory, fallbackLayout);
+        if (!bgfx::isValid(handle))
+        {
+            throw std::runtime_error{"Failed to create instance data vertex buffer"};
+        }
+        encoder->setInstanceDataBuffer(handle, 0, instanceCount);
+        bgfx::destroy(handle);
     }
 }
