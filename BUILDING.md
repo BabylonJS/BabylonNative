@@ -95,16 +95,11 @@ Enable the optional Dawn backend to run Babylon.js WebGPUEngine on Windows:
 cmake -B build\win32_dawn -A x64 -DBABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON -DNAPI_JAVASCRIPT_ENGINE=V8
 cmake --build build\win32_dawn --config RelWithDebInfo --target Playground UnitTests
 Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
-.\Playground.exe --headless app:///Scripts/dawn_runtime_native.js
-.\Playground.exe --headless app:///Scripts/dawn_playground_native.js
 .\Playground.exe --headless app:///Scripts/validation_native.js
 ```
 
-The standalone runtime and Babylon.js host checks above are local checks, not CI
-steps. The runtime check currently fails the shared URL query-flag regression
-(`?live`). The Win32 WebGPU validation step runs in CI with
-`--generate-references`, so it is only a crash/smoke run without pixel comparison
-and does not cover that unresolved regression.
+The Win32 WebGPU validation step runs in CI with `--generate-references`, so it
+is only a crash/smoke run without pixel comparison.
 The Dawn validation adapter reports both its graphics API and JavaScript engine
 so the shared catalog applies backend and engine exclusions consistently.
 
@@ -130,18 +125,12 @@ Canvas gradients interpolate straight RGBA stops, as verified against Chrome;
 premultiplication happens during painting, not while interpolating the ramp.
 Dawn text measurement uses the shared Canvas glyph advances and ink/font
 extents for the same loaded face used by drawing, rather than estimated Arial
-widths. Font state is restored together with NanoVG state. The standalone Dawn
-regression uses the existing Droid Sans test fixture copied under `Scripts`,
-so its font checks do not depend on a network download.
+widths. Font state is restored together with NanoVG state.
 
 NativeDawn's typed `Tick` and `ResizeSurface` APIs drive frames and the presentation
-canvas; they do not look up global `frame` or `__dawnResize` functions. Babylon.js
-engine creation, the Playground's `NativeEngine` alias, and shader-helper script
+canvas. Babylon.js engine creation, the Playground's `NativeEngine` alias, and shader-helper script
 loading live in `Scripts/dawn_playground.js`, explicitly loaded by the Playground
 bootstrap, not in the plugin.
-
-On Windows, running only `dawn_runtime_native.js` skips the Babylon.js bootstrap
-entirely.
 
 The default validation run compares rendered pixels against committed references.
 `--generate-references` only checks scene loading/rendering and writes images; it

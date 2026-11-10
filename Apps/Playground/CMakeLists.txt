@@ -40,8 +40,6 @@ set(SCRIPTS
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
     "Scripts/dawn_playground.js"
-    "Scripts/dawn_playground_native.js"
-    "Scripts/dawn_runtime_native.js"
     "Scripts/config.json")
 
 set(SOURCES

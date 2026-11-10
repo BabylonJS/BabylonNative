@@ -3383,12 +3383,6 @@ namespace Babylon::Plugins::NativeDawn
             SetMethod(o, "createComputePipeline", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return DoCreateComputePipeline(info.Env(), info[0]);
             });
-            SetMethod(o, "createComputePipelineAsync", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                auto d = Napi::Promise::Deferred::New(env);
-                d.Resolve(DoCreateComputePipeline(env, info[0]));
-                return d.Promise();
-            });
             SetMethod(o, "createCommandEncoder", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 WGPUCommandEncoderDescriptor ced{
@@ -3449,54 +3443,6 @@ namespace Babylon::Plugins::NativeDawn
                 };
                 return MakeQuerySet(env, wgpuDeviceCreateQuerySet(g_state.device, &qsd), count);
             });
-            SetMethod(o, "pushErrorScope", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                const auto filter = info[0].ToString().Utf8Value();
-                if (filter != "validation" && filter != "out-of-memory" && filter != "internal")
-                {
-                    throw Napi::TypeError::New(info.Env(), "Invalid GPU error scope filter");
-                }
-                const auto nativeFilter = filter == "validation" ? WGPUErrorFilter_Validation :
-                    filter == "out-of-memory" ? WGPUErrorFilter_OutOfMemory : WGPUErrorFilter_Internal;
-                wgpuDevicePushErrorScope(g_state.device, nativeFilter);
-                return info.Env().Undefined();
-            });
-            SetMethod(o, "popErrorScope", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                auto d = Napi::Promise::Deferred::New(env);
-                struct Result
-                {
-                    bool success{};
-                    WGPUErrorType type{WGPUErrorType_NoError};
-                    std::string message;
-                } result;
-                WGPUPopErrorScopeCallbackInfo callback{
-                    .mode = WGPUCallbackMode_WaitAnyOnly,
-                    .callback = [](WGPUPopErrorScopeStatus status, WGPUErrorType type, WGPUStringView message, void* data, void*) {
-                        auto& result = *static_cast<Result*>(data);
-                        result.success = status == WGPUPopErrorScopeStatus_Success;
-                        result.type = type;
-                        result.message = SvToStr(message);
-                    },
-                    .userdata1 = &result,
-                };
-                WaitFuture(wgpuDevicePopErrorScope(g_state.device, callback));
-                if (!result.success)
-                {
-                    d.Reject(Napi::Error::New(env, "GPU error scope failed: " + result.message).Value());
-                }
-                else if (result.type == WGPUErrorType_NoError)
-                {
-                    d.Resolve(env.Null());
-                }
-                else
-                {
-                    auto error = NewGPUObject(env, result.type == WGPUErrorType_Validation ? "GPUValidationError" :
-                        result.type == WGPUErrorType_OutOfMemory ? "GPUOutOfMemoryError" : "GPUInternalError");
-                    error.Set("message", result.message);
-                    d.Resolve(error);
-                }
-                return d.Promise();
-            });
             SetMethod(o, "destroy", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 // No-op: the shared g_state.device must stay alive.
                 return info.Env().Undefined();
@@ -3548,12 +3494,6 @@ namespace Babylon::Plugins::NativeDawn
                 o.Set("limits", limits);
             }
             o.Set("info", MakeAdapterInfo(env));
-            SetMethod(o, "requestAdapterInfo", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                auto d = Napi::Promise::Deferred::New(env);
-                d.Resolve(MakeAdapterInfo(env));
-                return d.Promise();
-            });
             SetMethod(o, "requestDevice", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 auto d = Napi::Promise::Deferred::New(env);
@@ -3596,18 +3536,6 @@ namespace Babylon::Plugins::NativeDawn
                 g_surfaceConfigured = true;
                 return env.Undefined();
             });
-            SetMethod(o, "unconfigure", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                if (g_surfaceConfigured)
-                {
-                    wgpuSurfaceUnconfigure(g_state.surface);
-                    g_surfaceConfigured = false;
-                    ReleaseSurfaceTexture();
-#if BABYLON_NATIVE_PLUGIN_TESTUTILS
-                    ReleasePresentedTexture();
-#endif
-                }
-                return info.Env().Undefined();
-            });
             SetMethod(o, "getCurrentTexture", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 // Safe point: no texture is outstanding yet this frame, so a
@@ -3626,16 +3554,8 @@ namespace Babylon::Plugins::NativeDawn
                     textureFormatStr(g_state.surfaceFormat),
                     static_cast<uint32_t>(WGPUTextureUsage_RenderAttachment), "2d");
             });
-            SetMethod(o, "getConfiguration", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                Napi::Object c = Napi::Object::New(env);
-                c.Set("format", Napi::String::New(env, textureFormatStr(g_state.surfaceFormat)));
-                return c;
-            });
             return o;
         }
-
-        // __WGPU_BUILDERS__
 
         // ---- top-level installation -----------------------------------------
         void InstallWebGPU(Napi::Env env)
@@ -3671,27 +3591,6 @@ namespace Babylon::Plugins::NativeDawn
             wlf.Set("size", Napi::Number::New(env, 0));
             gpu.Set("wgslLanguageFeatures", wlf);
             navigator.Set("gpu", gpu);
-
-            SetMethod(global, "_nativeDawnGetContext", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                return MakeCanvasContext(info.Env());
-            });
-            SetMethod(global, "_nativeDawnPresent", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                PresentSurface();
-                if (g_state.instance)
-                {
-                    wgpuInstanceProcessEvents(g_state.instance);
-                }
-                return info.Env().Undefined();
-            });
-
-            // Expose the real Dawn surface (drawing buffer) size so the JS canvas
-            // can match it exactly (avoids color/depth attachment size mismatch).
-            SetMethod(global, "_nativeDawnSurfaceSize", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Object size = Napi::Object::New(info.Env());
-                size.Set("width", Napi::Number::New(info.Env(), g_state.width));
-                size.Set("height", Napi::Number::New(info.Env(), g_state.height));
-                return size;
-            });
 
             // ---- Validation-harness support --------------------------------------
             // Read back the most recently acquired surface texture as tightly-packed
@@ -4279,8 +4178,7 @@ namespace Babylon::Plugins::NativeDawn
             return canvas;
         }
 
-        // Install all of the above onto the global object. Replaces the eval of
-        // dawn_bootstrap.js.
+        // Install the browser-like surface onto the global object.
         void InstallBootstrap(Napi::Env env)
         {
             Napi::Object global = env.Global();
