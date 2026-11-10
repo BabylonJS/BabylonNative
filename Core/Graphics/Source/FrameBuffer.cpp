@@ -37,6 +37,7 @@ namespace
             case bgfx::RendererType::OpenGL:
             case bgfx::RendererType::OpenGLES:
             case bgfx::RendererType::Metal:
+            case bgfx::RendererType::Vulkan:
                 return true;
             default:
                 return false;
