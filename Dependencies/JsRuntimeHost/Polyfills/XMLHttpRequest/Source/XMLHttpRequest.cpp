@@ -2,8 +2,10 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <arcana/tracing/trace_region.h>
+#include <algorithm>
 #include <cstring>
 #include <sstream>
+#include <utility>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -59,6 +61,11 @@ namespace Babylon::Polyfills::Internal
             constexpr const char* ReadyStateChange = "readystatechange";
             constexpr const char* LoadEnd = "loadend";
             constexpr const char* Error = "error";
+        }
+
+        char ToUpper(char c)
+        {
+            return (c >= 'a' && c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
         }
     }
 
@@ -198,17 +205,31 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value XMLHttpRequest::GetAllResponseHeaders(const Napi::CallbackInfo&)
     {
-        auto responseHeaders = m_request.GetAllResponseHeaders();
-        Napi::Object responseHeadersObject = Napi::Object::New(Env());
-
-        for (auto& iter : responseHeaders)
+        // The XMLHttpRequest standard returns one "name: value\r\n" line per header, with the
+        // names lower-cased and the lines sorted by the byte order of the upper-cased names (so
+        // "ewok" sorts before "__custom"). UrlLib has already lower-cased the names and combined
+        // the values of a repeated header with ", ".
+        std::string serialized{};
+        const auto& responseHeaders = m_request.GetAllResponseHeaders();
+        std::vector<std::pair<std::string, const std::pair<const std::string, std::string>*>> headers{};
+        headers.reserve(responseHeaders.size());
+        for (const auto& header : responseHeaders)
         {
-            auto key = Napi::String::New(Env(), iter.first);
-            auto value = Napi::String::New(Env(), iter.second);
-            responseHeadersObject.Set(key, value);
+            std::string sortKey{header.first};
+            std::transform(sortKey.begin(), sortKey.end(), sortKey.begin(), ToUpper);
+            headers.emplace_back(std::move(sortKey), &header);
+        }
+        std::sort(headers.begin(), headers.end(), [](const auto& l, const auto& r) { return l.first < r.first; });
+
+        for (const auto& header : headers)
+        {
+            serialized += header.second->first;
+            serialized += ": ";
+            serialized += header.second->second;
+            serialized += "\r\n";
         }
 
-        return responseHeadersObject;
+        return Napi::String::New(Env(), serialized);
     }
 
     void XMLHttpRequest::SetRequestHeader(const Napi::CallbackInfo& info)
