@@ -25,7 +25,7 @@ module.exports = {
   },
   plugins: [
     new webpack.ProvidePlugin({
-      process: 'process/browser',
+      process: require.resolve('process/browser'),
       Buffer: ['buffer', 'Buffer'],
     }),
     new webpack.optimize.LimitChunkCountPlugin({
@@ -74,7 +74,7 @@ module.exports = {
   module: {
     rules: [
         {
-          test: /\.(js|ts)$/,
+          test: /\.(js|cjs|ts)$/,
           exclude: (modulePath) => {
             return (
               /node_modules/.test(modulePath) &&
