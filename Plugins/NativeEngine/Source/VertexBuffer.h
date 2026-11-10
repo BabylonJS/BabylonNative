@@ -72,8 +72,8 @@ namespace Babylon
             const std::map<uint32_t, uint32_t>& builtInSlots,
             uint32_t maxSlotCount);
 
-        static void BuildInstanceDataBuffer(
-            bgfx::InstanceDataBuffer& instanceDataBuffer,
+        static void SetInstanceDataBuffer(
+            bgfx::Encoder* encoder,
             const std::map<uint32_t, InstanceInfo>& instances,
             uint32_t instanceCount,
             const InstanceDataLayout& layout);

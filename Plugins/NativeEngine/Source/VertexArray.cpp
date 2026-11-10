@@ -256,9 +256,7 @@ namespace Babylon
     {
         if (!m_vertexBufferInstances.empty() && !HasStorageInstances())
         {
-            bgfx::InstanceDataBuffer instanceDataBuffer{};
-            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
-            encoder->setInstanceDataBuffer(&instanceDataBuffer);
+            VertexBuffer::SetInstanceDataBuffer(encoder, m_vertexBufferInstances, instanceCount, instanceDataLayout);
         }
         else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
         {

@@ -4265,7 +4265,7 @@ void main() {
             {
                 // bgfx delivers instance slot k at TEXCOORD(31 - k); the highest-location instance
                 // attribute is packed at byte offset 0 (i_data0 == TEXCOORD31 ==
-                // INSTANCE_DATA_FIRST_LOCATION), matching BuildInstanceDataBuffer's reverse packing.
+                // INSTANCE_DATA_FIRST_LOCATION), matching SetInstanceDataBuffer's reverse packing.
                 std::map<std::string, uint32_t> genericInstancedAttributes;
                 const auto& attributeLocations = m_currentProgram->VertexAttributeLocations();
                 for (const auto& instance : instances)
