@@ -141,8 +141,16 @@ namespace UrlLib
 
                             std::string lowerCaseKey = key;
                             ToLower(lowerCaseKey);
+                            std::string headerValue = value;
 
-                            m_headers.insert({lowerCaseKey, value});
+                            // HttpURLConnection reports the protocol it negotiated as a header of
+                            // its own. HTTP/2 and later have no reason phrase.
+                            if (lowerCaseKey == "x-android-selected-protocol" && Http::IsHttp2OrLater(headerValue))
+                            {
+                                m_reasonPhrase = Http::ReasonPhrase::None;
+                            }
+
+                            m_headers.insert({lowerCaseKey, headerValue});
                         }
 
                         int contentLength = connection.GetContentLength();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <UrlLib/UrlLib.h>
+#include "UrlRequest_Http.h"
 #include <arcana/threading/cancellation.h>
 #include <cctype>
 #include <memory>
@@ -210,18 +211,18 @@ namespace UrlLib
             return m_statusCode;
         }
 
-        // Returns the HTTP status reason phrase. Prefers the phrase carried on the wire
-        // (HTTP/1.x status line, captured by the platform backend into `m_statusText`).
-        // When the transport carries no reason phrase (HTTP/2+, or a backend that does not
-        // expose it), falls back to a canonical code->text table. Returns "" for unknown codes.
+        // Returns the status text of the response: the reason phrase of an HTTP/1.x status line
+        // where the backend can read it, "" for HTTP/2 and HTTP/3 (which have none), and the
+        // standard phrase for the status code where the platform does not report the phrase. See
+        // Http::StatusText. Returns "" when there is no response.
         std::string_view StatusText() const
         {
-            if (!m_statusText.empty())
+            if (m_statusCode == UrlStatusCode::None)
             {
-                return m_statusText;
+                return {};
             }
 
-            return ReasonPhraseForStatusCode(static_cast<int>(m_statusCode));
+            return Http::StatusText(m_reasonPhrase, m_statusText, static_cast<int>(m_statusCode));
         }
 
         std::string_view ErrorString() const
@@ -276,63 +277,6 @@ namespace UrlLib
             return scheme;
         }
 
-        // Canonical HTTP reason phrases, used as a fallback when the transport does not carry
-        // a reason phrase on the wire (HTTP/2+ status lines omit it, and some platform HTTP
-        // stacks don't surface it). Returns "" for codes not in the table.
-        static std::string_view ReasonPhraseForStatusCode(int statusCode)
-        {
-            switch (statusCode)
-            {
-                case 100: return "Continue";
-                case 101: return "Switching Protocols";
-                case 200: return "OK";
-                case 201: return "Created";
-                case 202: return "Accepted";
-                case 203: return "Non-Authoritative Information";
-                case 204: return "No Content";
-                case 205: return "Reset Content";
-                case 206: return "Partial Content";
-                case 300: return "Multiple Choices";
-                case 301: return "Moved Permanently";
-                case 302: return "Found";
-                case 303: return "See Other";
-                case 304: return "Not Modified";
-                case 307: return "Temporary Redirect";
-                case 308: return "Permanent Redirect";
-                case 400: return "Bad Request";
-                case 401: return "Unauthorized";
-                case 402: return "Payment Required";
-                case 403: return "Forbidden";
-                case 404: return "Not Found";
-                case 405: return "Method Not Allowed";
-                case 406: return "Not Acceptable";
-                case 407: return "Proxy Authentication Required";
-                case 408: return "Request Timeout";
-                case 409: return "Conflict";
-                case 410: return "Gone";
-                case 411: return "Length Required";
-                case 412: return "Precondition Failed";
-                case 413: return "Payload Too Large";
-                case 414: return "URI Too Long";
-                case 415: return "Unsupported Media Type";
-                case 416: return "Range Not Satisfiable";
-                case 417: return "Expectation Failed";
-                case 426: return "Upgrade Required";
-                case 428: return "Precondition Required";
-                case 429: return "Too Many Requests";
-                case 431: return "Request Header Fields Too Large";
-                case 451: return "Unavailable For Legal Reasons";
-                case 500: return "Internal Server Error";
-                case 501: return "Not Implemented";
-                case 502: return "Bad Gateway";
-                case 503: return "Service Unavailable";
-                case 504: return "Gateway Timeout";
-                case 505: return "HTTP Version Not Supported";
-                case 511: return "Network Authentication Required";
-                default: return "";
-            }
-        }
-
         // Record a transport-level failure in a normalized, grep-friendly shape:
         //   "<domain>:<symbol>(<code>): <detail>"
         // e.g.
@@ -370,6 +314,7 @@ namespace UrlLib
         {
             m_statusCode = UrlStatusCode::None;
             m_statusText.clear();
+            m_reasonPhrase = Http::ReasonPhrase::Unknown;
             m_responseUrl.clear();
             m_responseString.clear();
             m_headers.clear();
@@ -387,6 +332,7 @@ namespace UrlLib
         UrlMethod m_method{UrlMethod::Get};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_statusText{};
+        Http::ReasonPhrase m_reasonPhrase{Http::ReasonPhrase::Unknown};
         int32_t m_errorCode{};
         std::string m_errorSymbol{};
         std::string m_errorString{};

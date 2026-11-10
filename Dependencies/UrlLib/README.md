@@ -46,6 +46,25 @@ Platform support: the Apple (`NSURLSession`) and Linux (`libcurl`) backends popu
 these accessors today; the Windows and Android backends currently always report
 empty/zero (contributions welcome — the plumbing in `UrlRequest_Base.h` is shared).
 
+## Response metadata
+
+`UrlRequest` reports a response the way the Fetch standard defines it, as far as each platform
+API allows:
+
+* `StatusText()` is the reason phrase of the status line. HTTP/2 and HTTP/3 have none, so it is
+  empty for a response that arrived over them. Over HTTP/1.x it is the phrase the server sent,
+  including a non-standard one, where the platform reports it: libcurl and `Windows.Web.Http`
+  do. `NSURLSession` and `HttpURLConnection` (through the wrapper used here) do not, and there it
+  is the standard phrase for the status code (`OK`, `Not Found`, ...), as it is for `file://` and
+  `app://` responses.
+
+| Platform | Reason phrase over HTTP/1.x | Protocol detection |
+|---|---|---|
+| macOS, iOS, visionOS | Standard phrase for the code | `NSURLSessionTaskMetrics` (macOS 12 / iOS 15 and later; earlier systems report the standard phrase for every protocol) |
+| Linux | As sent | Status line written by libcurl |
+| Windows (Win32, UWP) | As sent | `HttpResponseMessage.Version` |
+| Android | Standard phrase for the code | `X-Android-Selected-Protocol` |
+
 ## HTTP versions
 
 Each backend negotiates the newest HTTP version its platform stack offers and falls back

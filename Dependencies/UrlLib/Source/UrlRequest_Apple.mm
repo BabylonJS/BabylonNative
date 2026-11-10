@@ -6,6 +6,20 @@
 
 #import <Foundation/Foundation.h>
 
+// Records the protocol the response arrived over. NSURLSession reports it only through task
+// metrics, which reach a delegate before the task's completion handler is called.
+@interface UrlLibTaskMetricsDelegate : NSObject <NSURLSessionTaskDelegate>
+// The ALPN name of the last transaction ("http/1.1", "h2", "h3"), or nil when there was none.
+@property (atomic, copy) NSString* networkProtocolName;
+@end
+
+@implementation UrlLibTaskMetricsDelegate
+- (void)URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task didFinishCollectingMetrics:(NSURLSessionTaskMetrics*)metrics
+{
+    self.networkProtocolName = metrics.transactionMetrics.lastObject.networkProtocolName;
+}
+@end
+
 namespace
 {
     auto URLAllowedCharacterSet = []()
@@ -153,6 +167,14 @@ namespace UrlLib
 
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
+            // A per-task delegate needs macOS 12 / iOS 15. On older systems the protocol stays
+            // unknown and the status text is the standard phrase for the status code.
+            UrlLibTaskMetricsDelegate* metricsDelegate{nil};
+            if (@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *))
+            {
+                metricsDelegate = [[UrlLibTaskMetricsDelegate alloc] init];
+            }
+
             id completionHandler{^(NSData* data, NSURLResponse* response, NSError* error)
             {
                 if (error != nil)
@@ -206,7 +228,15 @@ namespace UrlLib
                 {
                     NSHTTPURLResponse* httpResponse{(NSHTTPURLResponse*)response};
                     m_statusCode = static_cast<UrlStatusCode>(httpResponse.statusCode);
-                    
+
+                    // NSURLSession does not report the reason phrase of an HTTP/1.x status line,
+                    // so the status text is the standard phrase for the status code, except over
+                    // HTTP/2 and HTTP/3, which have no reason phrase.
+                    if (Http::IsHttp2OrLater(ToStdString(metricsDelegate.networkProtocolName)))
+                    {
+                        m_reasonPhrase = Http::ReasonPhrase::None;
+                    }
+
                     for (id key in httpResponse.allHeaderFields)
                     {
                         id value = [httpResponse.allHeaderFields objectForKey:key];
@@ -243,6 +273,10 @@ namespace UrlLib
             }};
 
             NSURLSessionDataTask* task{[session dataTaskWithRequest:request completionHandler:completionHandler]};
+            if (@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *))
+            {
+                task.delegate = metricsDelegate;
+            }
             [task resume];
 
             // Observe Abort(): NSURLSession runs the request asynchronously and does not watch

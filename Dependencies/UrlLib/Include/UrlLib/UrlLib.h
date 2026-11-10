@@ -100,6 +100,10 @@ namespace UrlLib
         
         UrlStatusCode StatusCode() const;
 
+        // The reason phrase of an HTTP/1.x status line where the platform reports it (libcurl,
+        // Windows). Empty for HTTP/2 and HTTP/3, which have no reason phrase. Where the platform
+        // does not report the phrase (Apple, Android) and for local files, the standard phrase for
+        // the status code.
         std::string_view StatusText() const;
 
         // Transport-level error reporting. ErrorString() and ErrorSymbol() are empty (and

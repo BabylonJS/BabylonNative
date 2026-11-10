@@ -76,6 +76,7 @@ endif()
 set(SOURCES
     "Include/UrlLib/UrlLib.h"
     "Source/UrlRequest_Base.h"
+    "Source/UrlRequest_Http.h"
     "Source/UrlRequest_Shared.h"
     "Source/WebSocket_Base.h"
     "Source/WebSocket_Shared.h"

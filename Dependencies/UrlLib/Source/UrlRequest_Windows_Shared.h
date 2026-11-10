@@ -116,6 +116,21 @@ namespace UrlLib
                 {
                     m_statusCode = static_cast<UrlStatusCode>(responseMessage.StatusCode());
                     m_statusText = winrt::to_string(responseMessage.ReasonPhrase());
+
+                    // An HTTP/1.x status line carries the reason phrase; HTTP/2 and later have none.
+                    switch (responseMessage.Version())
+                    {
+                        case Web::Http::HttpVersion::Http10:
+                        case Web::Http::HttpVersion::Http11:
+                            m_reasonPhrase = Http::ReasonPhrase::OnWire;
+                            break;
+                        case Web::Http::HttpVersion::None:
+                            break;
+                        default:
+                            m_reasonPhrase = Http::ReasonPhrase::None;
+                            break;
+                    }
+
                     if (!responseMessage.IsSuccessStatusCode())
                     {
                         return arcana::task_from_result<std::exception_ptr>();
@@ -140,11 +155,6 @@ namespace UrlLib
                                 .then(arcana::inline_scheduler, m_cancellationSource, [this](winrt::hstring string)
                                 {
                                     m_responseString = winrt::to_string(string);
-                                    // This backend normalizes any successful (2xx) response to Ok once the
-                                    // body has been read. Clear the wire phrase so StatusText() stays
-                                    // consistent with the normalized status code (falls back to "OK").
-                                    m_statusCode = UrlStatusCode::Ok;
-                                    m_statusText.clear();
                                 });
                         }
                         case UrlResponseType::Buffer:
@@ -153,10 +163,6 @@ namespace UrlLib
                                 .then(arcana::inline_scheduler, m_cancellationSource, [this](Storage::Streams::IBuffer buffer)
                                 {
                                     m_responseBuffer = std::move(buffer);
-                                    // See the String case: keep StatusText() consistent with the
-                                    // status code that this backend normalizes to Ok on success.
-                                    m_statusCode = UrlStatusCode::Ok;
-                                    m_statusText.clear();
                                 });
                         }
                         default:

@@ -56,9 +56,11 @@ describe("XMLHTTPRequest", function () {
     });
 
     it("should expose statusText", async function () {
-        const okXhr = await createRequest("GET", "https://github.com/");
+        // The loopback server speaks HTTP/1.1, which has a reason phrase. Over HTTP/2 and HTTP/3
+        // there is none and statusText is "", so this cannot be asserted against a public host.
+        const okXhr = await createRequest("GET", loopbackHttpOrigin + "/xhr/resources/status.py?code=200&text=OK");
         expect(okXhr.statusText).to.equal("OK");
-        const notFoundXhr = await createRequest("GET", "https://github.com/babylonJS/BabylonNative404");
+        const notFoundXhr = await createRequest("GET", loopbackHttpOrigin + "/xhr/resources/status.py?code=404&text=Not%20Found");
         expect(notFoundXhr.statusText).to.equal("Not Found");
     });
 
