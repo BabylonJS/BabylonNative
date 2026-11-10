@@ -4292,8 +4292,7 @@ namespace Babylon::Plugins::NativeDawn
             // it loads) references the `self` global, which browsers/web-workers
             // define but this host does not. Without it `_initGlslangAsync` throws
             // `ReferenceError: self is not defined`, GLSL shaders never transpile,
-            // and their scenes hang forever. Alias `self` (and `window`) to the
-            // global object.
+            // and their scenes hang forever. Alias `self` to the global object.
             if (global.Get("self").IsUndefined())
             {
                 global.Set("self", global);
@@ -4427,8 +4426,8 @@ namespace Babylon::Plugins::NativeDawn
                 document.Set("documentElement", Napi::Object::New(env));
                 global.Set("document", document);
             }
-            // Canvas installs its own document before NativeDawn initializes, so
-            // augment that object even when the no-DOM shim above was not needed.
+            // Augment a host-provided document too, when the no-DOM shim above
+            // was not needed.
             // Preserve its lookup for every id except the render-canvas aliases
             // owned by the single Dawn surface.
             {
@@ -4699,35 +4698,13 @@ namespace Babylon::Plugins::NativeDawn
                 return info.Env().Undefined();
             });
 
-            // Forward timer/animation methods onto `window` (Window polyfill
-            // provides `window` but not these).
-            Napi::Value windowVal = global.Get("window");
-            if (windowVal.IsObject())
+            // JsRuntime aliases window to the global object; timers, animation
+            // callbacks and event constructors are already visible through it.
+            if (!global.Get("dispatchEvent").IsFunction())
             {
-                Napi::Object w = windowVal.As<Napi::Object>();
-                for (const char* name : {"setTimeout", "clearTimeout", "setInterval", "clearInterval",
-                                         "requestAnimationFrame", "cancelAnimationFrame"})
-                {
-                    Napi::Value fn = global.Get(name);
-                    if (!fn.IsUndefined())
-                    {
-                        w.Set(name, fn);
-                    }
-                }
-                if (!w.Get("addEventListener").IsFunction())
-                {
-                    SetMethod(w, "addEventListener", Noop);
-                }
-                if (!w.Get("removeEventListener").IsFunction())
-                {
-                    SetMethod(w, "removeEventListener", Noop);
-                }
-                if (!w.Get("dispatchEvent").IsFunction())
-                {
-                    SetMethod(w, "dispatchEvent", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                        return Napi::Boolean::New(info.Env(), true);
-                    });
-                }
+                SetMethod(global, "dispatchEvent", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    return Napi::Boolean::New(info.Env(), true);
+                });
             }
 
             // ---- inert event constructors ------------------------------------
@@ -4759,18 +4736,6 @@ namespace Babylon::Plugins::NativeDawn
                     global.Set(name, makeEventClass(env));
                 }
             }
-            if (windowVal.IsObject())
-            {
-                Napi::Object w = windowVal.As<Napi::Object>();
-                for (const char* name : {"PointerEvent", "MouseEvent", "WheelEvent"})
-                {
-                    if (w.Get(name).IsUndefined())
-                    {
-                        w.Set(name, global.Get(name));
-                    }
-                }
-            }
-
         }
     } // namespace (bootstrap)
 

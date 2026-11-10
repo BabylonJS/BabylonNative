@@ -51,6 +51,15 @@
     }
 
     try {
+        assert(window === globalThis, "Shared JsRuntime must alias window to the global object");
+        assert(["setTimeout", "clearTimeout", "setInterval", "clearInterval",
+            "requestAnimationFrame", "cancelAnimationFrame", "addEventListener",
+            "removeEventListener", "dispatchEvent"].every(function (name) {
+            return typeof window[name] === "function" && window[name] === globalThis[name];
+        }), "Shared window alias must expose timers, animation callbacks and event methods");
+        assert(["PointerEvent", "MouseEvent", "WheelEvent", "Event"].every(function (name) {
+            return typeof window[name] === "function" && window[name] === globalThis[name];
+        }), "Shared window alias must expose event constructors");
         assert(typeof navigator.gpu === "object", "NativeDawn WebGPU is not installed");
         assert(!TextDecoder.__dawnUtf16, "NativeDawn must not replace the shared TextDecoder");
         assert(!WebAssembly.__dawnSyncInstantiate, "NativeDawn must not replace asynchronous WebAssembly.instantiate");
