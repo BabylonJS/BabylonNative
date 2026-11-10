@@ -313,6 +313,10 @@ namespace Babylon
         }
 
         const uint16_t instanceStride = static_cast<uint16_t>(slotCount * SLOT_SIZE);
+        if (instanceCount > UINT32_MAX / instanceStride)
+        {
+            throw std::runtime_error{"Instance count is too large"};
+        }
 
         // Large instance counts drawn many times per frame (e.g. Gaussian splat voxelization) can exhaust
         // the transient pool, and bgfx silently under-allocates in that case. Fall back to a per-draw
@@ -359,7 +363,10 @@ namespace Babylon
         }
 
         bgfx::VertexLayout fallbackLayout{};
-        fallbackLayout.begin().skip(static_cast<uint8_t>(instanceStride)).end();
+        // skip() takes a uint8_t, which would truncate the 256-byte stride of a full 16-slot layout.
+        fallbackLayout.begin();
+        fallbackLayout.m_stride = instanceStride;
+        fallbackLayout.end();
         const bgfx::VertexBufferHandle handle = bgfx::createVertexBuffer(fallbackMemory, fallbackLayout);
         if (!bgfx::isValid(handle))
         {
