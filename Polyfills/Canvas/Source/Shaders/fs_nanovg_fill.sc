@@ -12,9 +12,11 @@ uniform vec4 u_scissorExtScale;
 uniform vec4 u_extentRadius;
 uniform vec4 u_params;
 uniform vec4 u_sdf;
+uniform vec4 u_clipBounds;
 
 SAMPLER2D(s_tex, 0);
 SAMPLER2D(s_tex2, 1);
+SAMPLER2D(s_clip, 2);
 
 #define u_scissorExt   (u_scissorExtScale.xy)
 #define u_scissorScale (u_scissorExtScale.zw)
@@ -120,5 +122,11 @@ void main()
 		result = color * u_innerCol;
 	}
 
+	if (u_clipBounds.z > 0.0 && u_type != 2.0)
+	{
+		vec2 uv = (v_position - u_clipBounds.xy) / u_clipBounds.zw;
+		float inside = step(0.0, uv.x) * step(0.0, uv.y) * (1.0 - step(1.0, uv.x)) * (1.0 - step(1.0, uv.y));
+		result *= texture2D(s_clip, uv).a * inside;
+	}
 	gl_FragColor = result;
 }

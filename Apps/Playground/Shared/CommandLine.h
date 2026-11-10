@@ -29,6 +29,11 @@ struct PlaygroundOptions
     // `rdc capture --trigger`); bgfx auto-adopts an already-loaded DLL.
     std::optional<int> CaptureFrame;
 
+    // Overrides the runner's per-test scene-creation and readiness timeouts,
+    // and arms a native watchdog that fails the run when the runner stops
+    // logging (see --test-timeout).
+    std::optional<int> TestTimeoutSeconds;
+
     std::vector<std::string> TestFilters;
     std::vector<int> TestIndices;
 
@@ -42,6 +47,9 @@ namespace CommandLine
     // On a parse error, returns an options struct with ParseError == true
     // and ErrorMessage populated.
     PlaygroundOptions Parse(int argc, const char* const* argv);
+
+    // Returns usage / help text. argv0 may be nullptr.
+    std::string Usage(const char* argv0);
 
     // Prints usage / help text to stdout. argv0 may be nullptr.
     void PrintUsage(const char* argv0);

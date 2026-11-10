@@ -3,6 +3,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <gtest/gtest.h>
+#include <string>
 
 #include <future>
 #include <limits>
@@ -107,6 +108,23 @@ TEST(NativeXrImageTracking, RejectsInvalidDimensionsAndPhysicalWidth)
             request.Set("widthInMeters", value);
             EXPECT_THROW(Babylon::Plugins::CreateImageTrackingRequest(request), Napi::Error);
         }
+        // widthInMeters is a WebIDL float: non-finite is a TypeError, negative a RangeError.
+        const auto errorName = [&env](double value) {
+            auto invalid{MakeRequest(env, Napi::Uint8Array::New(env, 16))};
+            invalid.Set("widthInMeters", value);
+            try
+            {
+                Babylon::Plugins::CreateImageTrackingRequest(invalid);
+            }
+            catch (const Napi::Error& error)
+            {
+                return error.Value().Get("name").ToString().Utf8Value();
+            }
+            return std::string{};
+        };
+        EXPECT_EQ(errorName(std::numeric_limits<double>::quiet_NaN()), "TypeError");
+        EXPECT_EQ(errorName(std::numeric_limits<double>::infinity()), "TypeError");
+        EXPECT_EQ(errorName(-1.0), "RangeError");
         auto request{MakeRequest(env, Napi::Uint8Array::New(env, 16))};
         request.Set("widthInMeters", 0);
         EXPECT_EQ(Babylon::Plugins::CreateImageTrackingRequest(request).measuredWidthInMeters, 0);

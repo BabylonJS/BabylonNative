@@ -456,11 +456,10 @@ namespace Babylon::Plugins
                 encoder.SetSpeedOptions(options.Get("encodeSpeed").As<Napi::Number>().Int32Value(), options.Get("decodeSpeed").As<Napi::Number>().Int32Value());
             }
 
-            // Mirror Encoder::EncodeMeshToDracoBuffer. NativeDraco builds Draco with
-            // DRACO_GLTF_BITSTREAM=ON (glTF-compatible output); that subset may compile out
-            // attribute deduplication, so guard those passes on the feature macros Draco
-            // publishes. They only shrink the encoded output; skipping them still produces a
-            // valid stream.
+            // Mirror Encoder::EncodeMeshToDracoBuffer. Attribute deduplication is compiled out
+            // when Draco is built with the glTF bitstream subset (DRACO_GLTF_BITSTREAM=ON), so
+            // guard those passes on the feature macros Draco publishes. They only shrink the
+            // encoded output; skipping them still produces a valid stream.
             if (mesh.GetNamedAttributeId(draco::GeometryAttribute::POSITION) == -1)
             {
                 throw Napi::Error::New(env, "Draco: Missing position attribute for encoding.");
@@ -520,5 +519,9 @@ namespace Babylon::Plugins::NativeDraco
         codec.Set("Encode", Napi::Function::New(env, EncodeDracoMesh, "Encode"));
         codec.Set("Version", Napi::String::New(env, draco::kDracoVersion));
         native.Set("DracoCodec", codec);
+
+        // Compatibility entry points for Babylon.js native codec feature probes.
+        native.Set("decodeDracoMesh", Napi::Function::New(env, DecodeDracoMesh, "decodeDracoMesh"));
+        native.Set("encodeDracoMesh", Napi::Function::New(env, EncodeDracoMesh, "encodeDracoMesh"));
     }
 }

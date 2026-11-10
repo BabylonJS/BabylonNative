@@ -1,8 +1,8 @@
 set(WIN32_EXECUTABLE TRUE)
 
 set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js")
+    "../node_modules/babylonjs/babylon.es5.js"
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.es5.js")
 
 set(SCRIPTS
     "Scripts/index.js")

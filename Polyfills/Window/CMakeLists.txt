@@ -1,3 +1,7 @@
+if(NOT TARGET Scheduling)
+    message(FATAL_ERROR "The Window polyfill requires Scheduling. Enable JSRUNTIMEHOST_POLYFILL_SCHEDULING or disable BABYLON_NATIVE_POLYFILL_WINDOW.")
+endif()
+
 set(SOURCES
     "Include/Babylon/Polyfills/Window.h"
     "Source/Window.h"

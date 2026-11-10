@@ -20,6 +20,7 @@ endfunction()
 function(install_bin)
     foreach(target IN LISTS ARGN)
         install(PROGRAMS "$<TARGET_FILE:${target}>" DESTINATION bin)
+        install(PROGRAMS $<TARGET_RUNTIME_DLLS:${target}> DESTINATION bin)
         install(FILES "$<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_PREFIX:${target}>$<TARGET_FILE_BASE_NAME:${target}>.pdb" DESTINATION bin OPTIONAL)
     endforeach()
 endfunction()
@@ -43,7 +44,7 @@ endfunction()
 install_lib(arcana)
 
 ## bgfx
-install_lib(bimg_encode bimg_decode bgfx bimg bx minz)
+install_lib(bimg_encode bimg_decode bgfx bimg bx)
 
 ## glslang
 install_lib(GenericCodeGen glslang glslang-default-resource-limits MachineIndependent OGLCompiler OSDependent SPIRV)
@@ -187,6 +188,11 @@ if(TARGET ShaderCompiler)
     install_lib(ShaderCompiler)
 endif()
 
+if(TARGET TestUtils)
+    install_lib(TestUtils)
+    install_include(TestUtils)
+endif()
+
 if(TARGET ShaderTool)
     install_bin(ShaderTool)
 endif()
@@ -215,6 +221,16 @@ if(TARGET Console)
     install_include(Console)
 endif()
 
+if(TARGET Fetch)
+    install_lib(Fetch)
+    install_include(Fetch)
+endif()
+
+if(TARGET File)
+    install_lib(File)
+    install_include(File)
+endif()
+
 if(TARGET Performance)
     install_lib(Performance)
     install_include(Performance)
@@ -223,6 +239,11 @@ endif()
 if(TARGET TextDecoder)
     install_lib(TextDecoder)
     install_include(TextDecoder)
+endif()
+
+if(TARGET TextEncoder)
+    install_lib(TextEncoder)
+    install_include(TextEncoder)
 endif()
 
 if(TARGET URL)

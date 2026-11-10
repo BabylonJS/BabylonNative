@@ -30,10 +30,15 @@ namespace Babylon::Plugins
         const auto width{readDimension("width")};
         const auto height{readDimension("height")};
         const auto depth{readDimension("depth")};
+        // widthInMeters is a WebIDL float: a non-finite value is a TypeError, as in a browser.
         const float measuredWidth{request.Get("widthInMeters").ToNumber().FloatValue()};
-        if (!std::isfinite(measuredWidth) || measuredWidth < 0)
+        if (!std::isfinite(measuredWidth))
         {
-            throw Napi::RangeError::New(env, "Tracked image widthInMeters must be a finite non-negative number.");
+            throw Napi::TypeError::New(env, "Tracked image widthInMeters must be a finite number.");
+        }
+        if (measuredWidth < 0)
+        {
+            throw Napi::RangeError::New(env, "Tracked image widthInMeters must not be negative.");
         }
 
         // Property access above may run getters that detach the pixel buffer.

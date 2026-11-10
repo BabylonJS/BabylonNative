@@ -659,10 +659,15 @@ namespace Babylon
 
         Napi::Value XRSession::End(const Napi::CallbackInfo& info)
         {
+            if (!m_endPromise.IsEmpty())
+            {
+                return m_endPromise.Value();
+            }
+
             auto deferred{ Napi::Promise::Deferred::New(info.Env()) };
+            m_endPromise = Napi::Persistent(deferred.Promise().As<Napi::Object>());
             m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
-                [this, deferred, sessionPtr{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(info.This().As<Napi::Object>())) }](const arcana::expected<void, std::exception_ptr>& result) {
-                    (void)sessionPtr;
+                [this, deferred, jsSession{Napi::Persistent(info.This().As<Napi::Object>())}](const arcana::expected<void, std::exception_ptr>& result) {
                     if (result.has_error())
                     {
                         deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
