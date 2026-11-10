@@ -66,7 +66,9 @@ namespace Babylon::Plugins::ShaderCache
     // 10: persist ComputeBytes, append a separately keyed section of transform feedback
     //     compute shaders, and key instanced variants by their routed attributes.
     // 11: Metal renames uniforms named after MSL keywords before compilation.
-    static const uint32_t CACHE_VERSION = 11;
+    // 12: Vulkan vertex inputs use dense locations matching bgfx's attribute-table binding.
+    // 13: D3D/Vulkan instanced variants keep the base program's per-vertex generic locations.
+    static const uint32_t CACHE_VERSION = 13;
 
     void ShaderCacheImpl::Clear()
     {

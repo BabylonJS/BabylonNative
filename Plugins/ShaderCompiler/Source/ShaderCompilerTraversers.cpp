@@ -963,27 +963,68 @@ namespace Babylon::ShaderCompilerTraversers
                     const unsigned int slot = GetBuiltInInstanceSlot(name);
                     return {Babylon::Graphics::INSTANCE_DATA_FIRST_LOCATION - slot, s_attribInstanceName[slot]};
                 }
-#define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
-    if (std::strcmp(name, varyingName) == 0)                 \
-    {                                                        \
-        return {static_cast<unsigned int>(attrib), newName}; \
-    }
-                IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
-                IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
-                IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent, "a_tangent")
-                IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0, "a_texcoord0")
-                IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1, "a_texcoord1")
-                IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2, "a_texcoord2")
-                IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3, "a_texcoord3")
-                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
-                IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
-                IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
-#undef IF_NAME_RETURN_ATTRIB
-                const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
+                if (const NamedAttribute* named = FindNamedAttribute(name))
+                {
+                    return {static_cast<unsigned int>(named->Attrib), named->NewName};
+                }
+                const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount + GetStableGenericIndex(name);
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than " + std::to_string(static_cast<int>(bgfx::Attrib::Count)) + " vertex attributes.");
                 return {attributeLocation, name};
             }
+
+            struct NamedAttribute
+            {
+                const char* Name;
+                bgfx::Attrib::Enum Attrib;
+                const char* NewName;
+            };
+
+            static const NamedAttribute* FindNamedAttribute(const char* name)
+            {
+                static constexpr NamedAttribute s_namedAttributes[] =
+                    {
+                        {"position", bgfx::Attrib::Position, "a_position"},
+                        {"normal", bgfx::Attrib::Normal, "a_normal"},
+                        {"tangent", bgfx::Attrib::Tangent, "a_tangent"},
+                        {"uv", bgfx::Attrib::TexCoord0, "a_texcoord0"},
+                        {"uv2", bgfx::Attrib::TexCoord1, "a_texcoord1"},
+                        {"uv3", bgfx::Attrib::TexCoord2, "a_texcoord2"},
+                        {"uv4", bgfx::Attrib::TexCoord3, "a_texcoord3"},
+                        {"color", bgfx::Attrib::Color0, "a_color0"},
+                        {"matricesIndices", bgfx::Attrib::Indices, "a_indices"},
+                        {"matricesWeights", bgfx::Attrib::Weight, "a_weight"},
+                    };
+                for (const auto& named : s_namedAttributes)
+                {
+                    if (std::strcmp(name, named.Name) == 0)
+                    {
+                        return &named;
+                    }
+                }
+                return nullptr;
+            }
+
+            // Rank of a generic attribute among all generic attributes, counting the ones a
+            // variant routes to i_data. Vertex buffers are bound with the base program's
+            // locations, so a variant must not shift the remaining per-vertex attributes.
+            unsigned int GetStableGenericIndex(const char* name) const
+            {
+                unsigned int index = 0;
+                for (const auto& [entryName, symbol] : m_varyingNameToSymbol)
+                {
+                    if (entryName == name)
+                    {
+                        break;
+                    }
+                    if (!IsBuiltInInstance(entryName.c_str()) && FindNamedAttribute(entryName.c_str()) == nullptr)
+                    {
+                        ++index;
+                    }
+                }
+                return index;
+            }
+
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
         };
 

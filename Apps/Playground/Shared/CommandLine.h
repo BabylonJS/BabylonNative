@@ -48,6 +48,9 @@ namespace CommandLine
     // and ErrorMessage populated.
     PlaygroundOptions Parse(int argc, const char* const* argv);
 
+    // Returns usage / help text. argv0 may be nullptr.
+    std::string Usage(const char* argv0);
+
     // Prints usage / help text to stdout. argv0 may be nullptr.
     void PrintUsage(const char* argv0);
 }

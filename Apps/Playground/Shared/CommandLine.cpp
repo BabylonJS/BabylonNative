@@ -433,12 +433,13 @@ namespace CommandLine
         return opt;
     }
 
-    void PrintUsage(const char* argv0)
+    std::string Usage(const char* argv0)
     {
+        std::ostringstream out;
         const char* prog = (argv0 != nullptr && *argv0 != '\0') ? argv0 : "Playground";
-        std::printf("Usage: %s [options] [script...]\n\n", prog);
-        std::printf("Run Babylon Native Playground / visual tests.\n\n");
-        std::printf("Options:\n");
+        out << "Usage: " << prog << " [options] [script...]\n\n";
+        out << "Run Babylon Native Playground / visual tests.\n\n";
+        out << "Options:\n";
 
         // Render each row of kFlags. The left column is fixed-width so
         // descriptions line up. Continuation strings already include the
@@ -472,21 +473,26 @@ namespace CommandLine
             {
                 left += ' ';
             }
-            std::printf("%s%.*s\n", left.c_str(),
-                static_cast<int>(spec.help.size()), spec.help.data());
+            out << left << spec.help << "\n";
             if (!spec.continuation.empty())
             {
-                std::fwrite(spec.continuation.data(), 1, spec.continuation.size(), stdout);
+                out << spec.continuation;
             }
         }
 
-        std::printf("      --                      End of options; everything after is a script.\n");
-        std::printf("\n");
-        std::printf("Exit codes:\n");
-        std::printf("   0  success / help / list\n");
-        std::printf("   1  uncaught JS exception\n");
-        std::printf("   2  command-line parse error\n");
-        std::printf("   3  hard crash (assert / SIGABRT / unhandled exception)\n");
-        std::printf("  -1  pixel-diff comparison failure\n");
+        out << "      --                      End of options; everything after is a script.\n";
+        out << "\n";
+        out << "Exit codes:\n";
+        out << "   0  success / help / list\n";
+        out << "   1  uncaught JS exception\n";
+        out << "   2  command-line parse error\n";
+        out << "   3  hard crash (assert / SIGABRT / unhandled exception)\n";
+        out << "  -1  pixel-diff comparison failure\n";
+        return out.str();
+    }
+
+    void PrintUsage(const char* argv0)
+    {
+        std::fputs(Usage(argv0).c_str(), stdout);
     }
 }

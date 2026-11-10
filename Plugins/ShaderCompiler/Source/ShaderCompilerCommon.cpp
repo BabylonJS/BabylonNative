@@ -5,6 +5,7 @@
 #include <glslang/Public/ResourceLimits.h>
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <regex>
 #include <set>
 
@@ -979,6 +980,45 @@ namespace Babylon::ShaderCompilerCommon
         return SamplerResourceSet::SeparateSamplers;
 #endif
     }
+
+    // Rewrites the Location decoration of each variable id in `locations`.
+    void PatchSpirvLocations(gsl::span<uint8_t> spirv, const std::map<uint32_t, uint32_t>& locations)
+    {
+        constexpr uint32_t SPIRV_HEADER_WORDS{5};
+        constexpr uint32_t OP_DECORATE{71};
+        constexpr uint32_t DECORATION_LOCATION{30};
+
+        const size_t wordCount = spirv.size() / sizeof(uint32_t);
+        size_t patched{0};
+        for (size_t word = SPIRV_HEADER_WORDS; word < wordCount;)
+        {
+            uint32_t instruction[4]{};
+            std::memcpy(instruction, spirv.data() + word * sizeof(uint32_t), sizeof(uint32_t));
+            const uint32_t opcode = instruction[0] & 0xFFFF;
+            const uint32_t length = instruction[0] >> 16;
+            if (length == 0 || word + length > wordCount)
+            {
+                throw std::runtime_error{"Malformed SPIR-V while remapping vertex input locations."};
+            }
+
+            if (opcode == OP_DECORATE && length >= 4)
+            {
+                std::memcpy(instruction, spirv.data() + word * sizeof(uint32_t), sizeof(instruction));
+                const auto it = locations.find(instruction[1]);
+                if (instruction[2] == DECORATION_LOCATION && it != locations.end())
+                {
+                    std::memcpy(spirv.data() + (word + 3) * sizeof(uint32_t), &it->second, sizeof(uint32_t));
+                    ++patched;
+                }
+            }
+            word += length;
+        }
+
+        if (patched != locations.size())
+        {
+            throw std::runtime_error{"Failed to remap every vertex input location."};
+        }
+    }
 }
 
 Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo, std::map<std::string, uint32_t> builtInInstanceDataSlots)
@@ -996,7 +1036,8 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
     ShaderInfo fragmentShaderInfo,
     std::map<std::string, uint32_t> builtInInstanceDataSlots,
     SamplerResourceSet samplerResources,
-    AppendSamplersFn appendSamplers)
+    AppendSamplersFn appendSamplers,
+    bool compactVertexInputLocations)
 {
     Graphics::BgfxShaderInfo bgfxShaderInfo{};
     bgfxShaderInfo.BuiltInInstanceDataSlots = std::move(builtInInstanceDataSlots);
@@ -1034,39 +1075,102 @@ Graphics::BgfxShaderInfo CreateBgfxShader(
         AppendUniformBuffer(vertexBytes, uniformsInfo, false);
         appendSamplers(vertexBytes, compiler, vertexShaderInfo.Parser->get_parsed_ir(), samplers, bgfxShaderInfo.UniformStages);
 
+        // bgfx's Vulkan backend binds entry i of the attribute table at location i and instance
+        // data slot k at location (vertex attribute count + k), so the sparse bgfx::Attrib /
+        // i_data locations are compacted into that order. The reflected originals (from the
+        // already-parsed IR) still populate VertexAttributeLocations below.
+        std::vector<bgfx::Attrib::Enum> compactAttributes;
+        uint32_t compactInstanceSlotCount{0};
+        if (compactVertexInputLocations)
+        {
+            std::vector<std::pair<uint32_t, uint32_t>> vertexInputs;
+            std::vector<std::pair<uint32_t, uint32_t>> instanceInputs;
+            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+            {
+                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+                {
+                    vertexInputs.emplace_back(location, stageInput.id);
+                }
+                else if (location >= Graphics::INSTANCE_DATA_LAST_LOCATION && location <= Graphics::INSTANCE_DATA_FIRST_LOCATION)
+                {
+                    const uint32_t slot = Graphics::INSTANCE_DATA_FIRST_LOCATION - location;
+                    instanceInputs.emplace_back(slot, stageInput.id);
+                    compactInstanceSlotCount = std::max(compactInstanceSlotCount, slot + 1);
+                }
+                else
+                {
+                    throw std::runtime_error{"Vertex input '" + stageInput.name + "' has unsupported location " + std::to_string(location) + "."};
+                }
+            }
+            std::sort(vertexInputs.begin(), vertexInputs.end());
+
+            std::map<uint32_t, uint32_t> locations;
+            for (const auto& [location, id] : vertexInputs)
+            {
+                locations[id] = static_cast<uint32_t>(compactAttributes.size());
+                compactAttributes.push_back(static_cast<bgfx::Attrib::Enum>(location));
+            }
+            for (const auto& [slot, id] : instanceInputs)
+            {
+                locations[id] = static_cast<uint32_t>(compactAttributes.size()) + slot;
+            }
+            PatchSpirvLocations(vertexShaderInfo.Bytes, locations);
+        }
+
         AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
         AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
         AppendBytes(vertexBytes, static_cast<uint8_t>(0));
 
-        // Per-instance vertex attributes are encoded with synthetic locations at/above
-        // bgfx::Attrib::Count (they occupy the top TEXCOORD semantics that bgfx binds by
-        // semantic rather than via bgfx::Attrib). They must be excluded from the shader's
-        // attribute table: bgfx::attribToId only covers real bgfx::Attrib values, and the
-        // backends resolve instance data from the instance-data buffer independently. This
-        // mirrors bgfx's own reflection, which skips semantics without a bgfx::Attrib mapping.
-        uint8_t numVertexAttributes{0};
-        for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+        if (compactVertexInputLocations)
         {
-            const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-            if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+            // Instance-data entries carry no bgfx::Attrib id; bgfx counts them as m_numInstanceData.
+            AppendBytes(vertexBytes, static_cast<uint8_t>(compactAttributes.size() + compactInstanceSlotCount));
+            for (const bgfx::Attrib::Enum attrib : compactAttributes)
             {
-                ++numVertexAttributes;
+                AppendBytes(vertexBytes, bgfx::attribToId(attrib));
+            }
+            for (uint32_t slot = 0; slot < compactInstanceSlotCount; ++slot)
+            {
+                AppendBytes(vertexBytes, static_cast<uint16_t>(UINT16_MAX));
+            }
+        }
+        else
+        {
+            // Per-instance vertex attributes are encoded with synthetic locations at/above
+            // bgfx::Attrib::Count (they occupy the top TEXCOORD semantics that bgfx binds by
+            // semantic rather than via bgfx::Attrib). They must be excluded from the shader's
+            // attribute table: bgfx::attribToId only covers real bgfx::Attrib values, and the
+            // backends resolve instance data from the instance-data buffer independently. This
+            // mirrors bgfx's own reflection, which skips semantics without a bgfx::Attrib mapping.
+            uint8_t numVertexAttributes{0};
+            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+            {
+                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+                {
+                    ++numVertexAttributes;
+                }
+            }
+
+            AppendBytes(vertexBytes, numVertexAttributes);
+
+            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+            {
+                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
+                {
+                    AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
+                }
             }
         }
 
-        AppendBytes(vertexBytes, numVertexAttributes);
-
         for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
         {
-            const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-            if (location < static_cast<uint32_t>(bgfx::Attrib::Count))
-            {
-                AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
-            }
-
             // Map from symbolName -> originalName to associate babylon.js shader attribute -> Babylon Native attribute location.
             // Instance-data inputs are still exposed here so the consumer can bind their vertex buffers.
-            bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
+            bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] =
+                compiler.get_decoration(stageInput.id, spv::DecorationLocation);
         }
         AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
     }
