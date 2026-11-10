@@ -941,7 +941,13 @@
         if (isDawn && !!nativeEngine.getCreationOptions().useLargeWorldRendering !== useLargeWorldRendering) {
             throw new Error("The Playground WebGPU bootstrap does not support changing large-world rendering between tests");
         }
-        nativeEngine.getCaps().parallelShaderCompile = undefined;
+        const caps = nativeEngine.getCaps();
+        caps.parallelShaderCompile = undefined;
+        // Reference images come from browsers reporting 16384. GPUParticleSystem draws
+        // maxTextureSize * 8 Math.random() values for its random textures, so a larger limit
+        // (Vulkan reports up to 32768) changes both the GPU noise and the seeded random stream.
+        const referenceMaxTextureSize = 16384;
+        caps.maxTextureSize = Math.min(caps.maxTextureSize, referenceMaxTextureSize);
         if (!isDawn) {
             nativeEngine.getRenderingCanvas = function () { return window; };
             nativeEngine.getInputElement = function () { return 0; };
