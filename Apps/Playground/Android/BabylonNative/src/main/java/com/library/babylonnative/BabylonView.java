@@ -39,6 +39,10 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     /** Native View handle (0 if not attached). Owned by this view. */
     private long mViewHandle = 0;
 
+    /** Current surface-buffer size in physical pixels (0 until surfaceChanged). */
+    private int mSurfaceWidth = 0;
+    private int mSurfaceHeight = 0;
+
     public BabylonView(Context context, long runtimeHandle) {
         super(context);
         mRuntimeHandle = runtimeHandle;
@@ -75,6 +79,15 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     }
 
     /**
+     * Fixes the render surface size in physical pixels, independent of the
+     * view layout (the compositor scales it to fit). Must be called on the
+     * UI thread.
+     */
+    public void setSurfaceSize(int width, int height) {
+        this.primarySurfaceView.getHolder().setFixedSize(width, height);
+    }
+
+    /**
      * This method is part of the SurfaceHolder.Callback interface, and is
      * not normally called or subclassed by clients of BabylonView.
      */
@@ -98,6 +111,8 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+        mSurfaceWidth = w;
+        mSurfaceHeight = h;
         if (mViewHandle != 0) {
             BabylonNative.viewResize(mViewHandle, w, h);
         }
@@ -109,9 +124,14 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
             return false;
         }
 
+        // The surface buffer may be a fixed size (setSurfaceSize) scaled to the view's layout
+        // size, so map view coordinates into surface-buffer pixels.
+        float scaleX = mSurfaceWidth > 0 && getWidth() > 0 ? (float) mSurfaceWidth / getWidth() : 1.0f;
+        float scaleY = mSurfaceHeight > 0 && getHeight() > 0 ? (float) mSurfaceHeight / getHeight() : 1.0f;
+
         int pointerId = event.getPointerId(event.getActionIndex());
-        float x = event.getX(event.getActionIndex());
-        float y = event.getY(event.getActionIndex());
+        float x = event.getX(event.getActionIndex()) * scaleX;
+        float y = event.getY(event.getActionIndex()) * scaleY;
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:

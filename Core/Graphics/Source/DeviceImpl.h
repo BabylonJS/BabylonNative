@@ -5,7 +5,6 @@
 #include <Babylon/Graphics/DeviceContext.h>
 
 #include <arcana/containers/ticketed_collection.h>
-#include <arcana/threading/blocking_concurrent_queue.h>
 #include <arcana/threading/dispatcher.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/affinity.h>
@@ -14,11 +13,18 @@
 
 #include <bgfx/bgfx.h>
 
+#include <array>
 #include <atomic>
 #include <condition_variable>
+#include <map>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+#include <winrt/base.h>
+#endif
 
 namespace Babylon::Graphics
 {
@@ -42,6 +48,7 @@ namespace Babylon::Graphics
         void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
+        uint8_t GetMSAASamples() const;
         void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
@@ -57,6 +64,7 @@ namespace Babylon::Graphics
 
         void EnableRendering();
         void DisableRendering();
+        bool IsDeviceLost() const;
 
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
@@ -71,6 +79,7 @@ namespace Babylon::Graphics
         PlatformInfo GetPlatformInfo() const;
 
         uintptr_t GetId() const;
+        bgfx::FrameBufferHandle GetBackBufferHandle() const;
 
         /* ********** END DEVICE CONTRACT ********** */
 
@@ -83,7 +92,7 @@ namespace Babylon::Graphics
         continuation_scheduler<>& AfterRenderScheduler();
         continuation_scheduler<>& FrameStartScheduler();
 
-        void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        void RequestScreenShot(BgfxCallback::ScreenShotCallback callback);
 
         void RequestCaptureNextFrame();
 
@@ -95,17 +104,16 @@ namespace Babylon::Graphics
         bgfx::ViewId AcquireNewViewId();
         bgfx::ViewId PeekNextViewId() const;
         uint32_t ViewIdGeneration() const;
+        bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
+        uint8_t AcquireClearPaletteIndex(const std::array<float, 4>& color);
 
-        // Mid-frame view flush. If the current logical frame has acquired close to
-        // the maximum number of bgfx views, flush the accumulated views via a
-        // cross-thread bgfx::frame() and reset the view counter so rendering can
-        // continue within the same Babylon frame instead of running out of views
-        // (which previously threw "Too many views"). Called from the JS thread at
-        // draw/clear operation boundaries where no encoder work is pending.
-        void FlushViewsIfNeeded();
+        // Throws "Too many views" when the current logical frame has acquired close to
+        // the maximum number of bgfx views. Called from the JS thread at draw/clear
+        // operation boundaries, before views run out mid-operation.
+        void CheckViewBudget();
 
         // Unconditionally request a mid-frame bgfx flush when a FrameCompletionScope
-        // is active (same handshake as FlushViewsIfNeeded). Used by Canvas GPU
+        // is active. Used by Canvas GPU
         // readback so bgfx::readTexture can complete without waiting for the end of
         // the logical frame. Returns false when the render thread cannot service it.
         bool ForceMidFrameFlush();
@@ -128,21 +136,26 @@ namespace Babylon::Graphics
 
     private:
         friend class FrameCompletionScope;
+        friend struct DeviceImplTestAccess;
 
         static const bgfx::RendererType::Enum s_bgfxRenderType;
-        void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
-        static void ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType);
+        void ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window);
+        static void ConfigureBgfxRenderType(bgfx::Init& init);
 
         // Push the render resolution onto the native rendering surface so it
         // matches what bgfx renders into. Implemented per graphics API. The
         // window may be default-constructed (null) before UpdateWindow has run
         // (e.g. during construction), in which case there's nothing to size.
-        static void ResizeRenderSurface(WindowT window, uint32_t width, uint32_t height);
+        void ResizeRenderSurface(WindowT window, uint32_t width, uint32_t height);
 
         void UpdateBgfxState();
         void UpdateBgfxResolution();
-        void RequestScreenShots();
+        void UpdateBackBufferState();
+        void DestroyBackBuffer();
+        bool RequestScreenShots();
         void Frame();
+        void ResetClearPalette();
+        void CompleteReadTextureRequests(uint32_t frameNumber);
         void PerformMidFrameViewFlush();
         void CaptureCallback(const BgfxCallback::CaptureData&);
 
@@ -163,23 +176,53 @@ namespace Babylon::Graphics
         // so it is always safe to narrow back to a bgfx::ViewId.
         std::atomic<uint32_t> m_nextViewId{0};
 
-        // Incremented every time PerformMidFrameViewFlush resets m_nextViewId in the middle of a
-        // logical frame. Anything that caches a view id across draw calls must also cache this
-        // value and re-acquire when it no longer matches, otherwise the cached (high) id would
-        // sort after ids acquired from the reset counter and invert submission order.
+        // Incremented whenever m_nextViewId resets, including ordinary frame completion.
+        // Cached view ids must be reacquired when this changes to preserve submission order
+        // and avoid reusing a view assigned to different work in the next frame.
         std::atomic<uint32_t> m_viewIdGeneration{0};
+        struct LayoutKey
+        {
+            uint16_t Stride{};
+            std::array<uint16_t, bgfx::Attrib::Count> Offsets{};
+            std::array<uint16_t, bgfx::Attrib::Count> Attributes{};
 
-        // Number of mid-frame view flushes performed during the current logical frame; reset
-        // when the frame is actually presented. The flush lets a logical frame exceed bgfx's
-        // per-frame view budget, but each one is a blocking round-trip to the render thread,
-        // so an unbounded number of them turns pathological content into an apparent hang
-        // instead of an error. FlushViewsIfNeeded stops rescuing past kMaxMidFrameViewFlushes
-        // and lets AcquireNewViewId throw, which is the pre-existing behaviour.
-        std::atomic<uint32_t> m_midFrameFlushCount{0};
+            bool operator<(const LayoutKey& other) const
+            {
+                return std::tie(Stride, Offsets, Attributes) < std::tie(other.Stride, other.Offsets, other.Attributes);
+            }
+        };
+
+        void ReleaseFrameVertexLayouts();
+        std::mutex m_frameVertexLayoutsMutex{};
+        std::map<LayoutKey, bgfx::VertexLayoutHandle> m_frameVertexLayouts{};
+
+        std::mutex m_clearPaletteMutex{};
+        std::array<std::array<float, 4>, 16> m_clearPalette{};
+        uint8_t m_clearPaletteSize{};
 
         std::atomic<bool> m_captureNextFrame{false};
 
         std::optional<arcana::cancellation_source> m_cancellationSource{};
+
+        bgfx::FrameBufferHandle m_windowFrameBuffer{bgfx::kInvalidHandle};
+        void* m_windowHandle{};
+        void* m_displayHandle{};
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        void CreateExternalBackBuffer(const bgfx::SwapChain& descriptor);
+        void DestroyExternalBackBuffer();
+        void ReadExternalBackBuffer();
+
+        struct
+        {
+            winrt::com_ptr<ID3D11RenderTargetView> Color;
+            winrt::com_ptr<ID3D11DepthStencilView> Depth;
+            winrt::com_ptr<ID3D11Texture2D> ColorTexture;
+            winrt::com_ptr<ID3D11Texture2D> DepthTexture;
+            bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
+            bgfx::TextureHandle ColorHandle{bgfx::kInvalidHandle};
+            bgfx::TextureHandle DepthHandle{bgfx::kInvalidHandle};
+        } m_externalBackBuffer;
+#endif
 
         struct
         {
@@ -187,11 +230,16 @@ namespace Babylon::Graphics
             mutable std::recursive_mutex Mutex{};
 
             // The native window/surface we render into. Cached as WindowT (the
-            // handle in Bgfx.InitState.platformData is type-erased to void* and
+            // handle in Bgfx.InitState.swapChain is type-erased to void* and
             // can't be cast back to WindowT portably) so ResizeRenderSurface can
             // push the render resolution onto the surface. Null until
             // UpdateWindow.
             WindowT Window{};
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+            winrt::com_ptr<ID3D11RenderTargetView> BackBufferColor;
+            winrt::com_ptr<ID3D11DepthStencilView> BackBufferDepthStencil;
+#endif
 
             struct
             {
@@ -250,7 +298,7 @@ namespace Babylon::Graphics
         int m_pendingFrameScopes{0};
         bool m_frameBlocked{true};
 
-        // Mid-frame view-flush handshake (guarded by m_frameSyncMutex):
+        // Mid-frame flush handshake (guarded by m_frameSyncMutex):
         //   - JS thread sets m_flushRequested and waits on m_flushCompleteCV.
         //   - Render thread (parked in FinishRenderingCurrentFrame) services the
         //     request via PerformMidFrameViewFlush, clears the flag, and notifies.
@@ -260,7 +308,8 @@ namespace Babylon::Graphics
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
 
-        arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
+        std::mutex m_queuedScreenShotCallbacksMutex{};
+        std::queue<BgfxCallback::ScreenShotCallback> m_queuedScreenShotCallbacks{};
 
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
 

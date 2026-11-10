@@ -5,6 +5,7 @@
 #include <X11/Xutil.h>
 #include <unistd.h> // syscall
 #undef None
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <optional>
@@ -12,6 +13,7 @@
 #include <Babylon/Embedding/Runtime.h>
 #include <Babylon/Embedding/View.h>
 #include <Babylon/Plugins/TestUtils.h>
+#include <Shared/CommandLine.h>
 #include <Shared/Diagnostics.h>
 #include <Shared/PlaygroundScripts.h>
 
@@ -31,28 +33,33 @@ namespace
         g_runtime.reset();
     }
 
-    void InitBabylon(Window window, int argc, const char* const* argv)
+    void InitBabylon(Window window, const PlaygroundOptions& options)
     {
         Uninitialize();
 
         Babylon::Embedding::RuntimeOptions runtimeOptions{};
+        if (options.DebugTrace)
+        {
+            runtimeOptions.enableDebugTrace = *options.DebugTrace;
+        }
         runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
             std::cout << text << std::endl;
         });
 
         g_runtime.emplace(std::move(runtimeOptions));
-        Playground::Initialize();
+        Playground::Initialize(options);
+        Playground::QueueOptions(*g_runtime, options);
         Playground::LoadBootstrapScripts(*g_runtime);
 
-        if (argc == 1)
+        if (options.Scripts.empty())
         {
-            g_runtime->LoadScript("app:///Scripts/experience.js");
+            g_runtime->LoadScript(options.ListTests ? "app:///Scripts/validation_native.js" : "app:///Scripts/experience.js");
         }
         else
         {
-            for (int i = 1; i < argc; ++i)
+            for (const auto& script : options.Scripts)
             {
-                g_runtime->LoadScript(argv[i]);
+                g_runtime->LoadScript(script);
             }
 
             g_runtime->LoadScript("app:///Scripts/playground_runner.js");
@@ -75,7 +82,27 @@ namespace
 
 int main(int _argc, const char* const* _argv)
 {
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
     Diagnostics::Initialize();
+    Babylon::Plugins::TestUtils::SetExitCallback([](int code) {
+        Diagnostics::SetExitCode(code);
+        Diagnostics::PrintFinishLine();
+    });
+
+    const auto options = CommandLine::Parse(_argc, _argv);
+    if (options.ParseError)
+    {
+        std::cerr << "Error: " << options.ErrorMessage << "\n\n";
+        CommandLine::PrintUsage(_argv[0]);
+        Diagnostics::SetExitCode(2);
+        return 2;
+    }
+    if (options.ShowHelp)
+    {
+        CommandLine::PrintUsage(_argv[0]);
+        return 0;
+    }
 
     XInitThreads();
     Display* display = XOpenDisplay(NULL);
@@ -122,7 +149,10 @@ int main(int _argc, const char* const* _argv)
     XInternAtoms(display, (char **)&wmDeleteWindowName, 1, False, &wmDeleteWindow);
     XSetWMProtocols(display, window, &wmDeleteWindow, 1);
 
-    XMapWindow(display, window);
+    if (!options.Headless)
+    {
+        XMapWindow(display, window);
+    }
     XStoreName(display, window, s_applicationName);
 
     XClassHint* hint = XAllocClassHint();
@@ -143,7 +173,7 @@ int main(int _argc, const char* const* _argv)
             , NULL
             );
 
-    InitBabylon(window, _argc, _argv);
+    InitBabylon(window, options);
     UpdateWindowSize(width, height);
 
     bool exit{};

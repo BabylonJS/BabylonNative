@@ -1,17 +1,128 @@
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/FrameBuffer.h>
+#include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <utility>
 
 namespace
 {
-    const bgfx::Memory* GetZeroImageMemory(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
+    // Sampled MSAA color lives in a single-sample resolve image. Its mip chain is filled
+    // only when resolve runs with BGFX_ATTACHMENT_AUTO_GEN_MIPS, which happens when the
+    // backend leaves that framebuffer. A later readback resolves mip 0 and drops this flag.
+    void SubmitResolveSwitch(Babylon::Graphics::DeviceContext& context)
     {
+        context.CheckViewBudget();
+        if (bgfx::getStats()->numFrameBuffers == bgfx::getCaps()->limits.maxFrameBuffers &&
+            !context.ForceMidFrameFlush())
+        {
+            throw std::runtime_error{"No framebuffer available for render-target initialization"};
+        }
+
+        const auto texture = bgfx::createTexture2D(
+            1, 1, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_TEXTURE_RT_WRITE_ONLY);
+        if (!bgfx::isValid(texture))
+        {
+            throw std::runtime_error{"Failed to create render-target initialization framebuffer"};
+        }
+
+        bgfx::Attachment attachment{};
+        attachment.init(texture);
+        const auto frameBuffer = bgfx::createFrameBuffer(1, &attachment, true);
+        if (!bgfx::isValid(frameBuffer))
+        {
+            bgfx::destroy(texture);
+            throw std::runtime_error{"Failed to create render-target initialization framebuffer"};
+        }
+
+        const auto viewId = context.AcquireNewViewId();
+        bgfx::resetView(viewId);
+        bgfx::setViewMode(viewId, bgfx::ViewMode::Sequential);
+        bgfx::setViewFrameBuffer(viewId, frameBuffer);
+        bgfx::setViewRect(viewId, 0, 0, 1, 1);
+        bgfx::setViewClear(viewId, BGFX_CLEAR_NONE, 0, 0.0f, 0);
+        constexpr uint8_t discardFlags{BGFX_DISCARD_ALL & ~(BGFX_DISCARD_BINDINGS | BGFX_DISCARD_STATE)};
+        auto* encoder = context.GetActiveEncoder();
+        encoder->discard(discardFlags);
+        encoder->submit(viewId, BGFX_INVALID_HANDLE, 0, discardFlags);
+        bgfx::destroy(frameBuffer);
+    }
+
+    void ClearRenderTarget(Babylon::Graphics::DeviceContext& context, bgfx::TextureHandle handle,
+        uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, bool cubeMap = false)
+    {
+        const bool depthStencil = format > bgfx::TextureFormat::UnknownDepth;
+        const bool multisampled = (flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
+        // bgfx::clear covers sampled color on every backend, including OpenGL, and every cube face.
+        // It does not cover depth, or a sampled MSAA resolve image: D3D12 and Vulkan
+        // clear the multisample image, which has only mip 0.
+        if (!depthStencil && !multisampled)
+        {
+            bgfx::clear(handle);
+            return;
+        }
+
+        const bool depth = depthStencil && format != bgfx::TextureFormat::D0S8;
+        const bool stencil = format == bgfx::TextureFormat::D24S8 ||
+            format == bgfx::TextureFormat::D32FS8 || format == bgfx::TextureFormat::D0S8;
+        const uint16_t clearFlags = depthStencil ?
+            (depth ? BGFX_CLEAR_DEPTH : 0) | (stencil ? BGFX_CLEAR_STENCIL : 0) : BGFX_CLEAR_COLOR;
         bgfx::TextureInfo info{};
         bgfx::calcTextureSize(info, width, height, /*depth*/ 1, /*cubeMap*/ false, hasMips, numLayers, format);
-        const bgfx::Memory* mem = bgfx::alloc(info.storageSize);
-        std::memset(mem->data, 0, mem->size);
-        return mem;
+        // BGFX_TEXTURE_MSAA_SAMPLE keeps the sampled image multisampled, so it has no resolve mip chain.
+        const bool resolveMipChain = multisampled && !depthStencil && info.numMips > 1 &&
+            (flags & BGFX_TEXTURE_MSAA_SAMPLE) == 0;
+        // Cube faces are attached as layer * 6 + face.
+        const uint32_t numSlices = uint32_t{info.numLayers} * (cubeMap ? 6 : 1);
+        auto scope = context.AcquireFrameCompletionScope();
+        for (uint16_t layer = 0; layer < numSlices; ++layer)
+        {
+            for (uint8_t mip = 0; mip < info.numMips; ++mip)
+            {
+                context.CheckViewBudget();
+                const auto mipWidth = static_cast<uint16_t>(std::max(1, width >> mip));
+                const auto mipHeight = static_cast<uint16_t>(std::max(1, height >> mip));
+                if (resolveMipChain && mip != 0)
+                {
+                    continue;
+                }
+                if (multisampled && mip != 0)
+                {
+                    // Depth/stencil has no single-sample resolve image. Only mip 0 has MSAA storage.
+                    bgfx::TextureRegion source{};
+                    source.init(handle, 0, 0, mipWidth, mipHeight);
+                    source.z = layer;
+                    bgfx::TextureRegion destination = source;
+                    destination.mip = mip;
+                    const auto viewId = context.AcquireNewViewId();
+                    bgfx::resetView(viewId);
+                    context.GetActiveEncoder()->blit(viewId, destination, source);
+                    continue;
+                }
+
+                bgfx::Attachment attachment{};
+                attachment.init(handle, bgfx::Access::Write, layer, 1, mip,
+                    resolveMipChain ? BGFX_ATTACHMENT_AUTO_GEN_MIPS : BGFX_ATTACHMENT_NONE);
+                if (bgfx::getStats()->numFrameBuffers == bgfx::getCaps()->limits.maxFrameBuffers &&
+                    !context.ForceMidFrameFlush())
+                {
+                    throw std::runtime_error{"No framebuffer available for render-target initialization"};
+                }
+                const auto frameBufferHandle = bgfx::createFrameBuffer(1, &attachment);
+                if (!bgfx::isValid(frameBufferHandle))
+                {
+                    throw std::runtime_error{"Failed to create render-target initialization framebuffer"};
+                }
+                Babylon::Graphics::FrameBuffer frameBuffer{context, frameBufferHandle, mipWidth, mipHeight, false, depth, stencil, -1, multisampled};
+                frameBuffer.Clear(*context.GetActiveEncoder(), clearFlags, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0);
+            }
+        }
+
+        if (resolveMipChain)
+        {
+            SubmitResolveSwitch(context);
+        }
     }
 }
 
@@ -36,11 +147,59 @@ namespace Babylon::Graphics
             m_handle = BGFX_INVALID_HANDLE;
             m_ownsHandle = false;
         }
+
+        if (m_nativeTextureOwner)
+        {
+            // Cross a full render boundary, even when Dispose is called from AfterRender.
+            // Only the native owner is deferred; the Texture wrapper is never accessed.
+            arcana::make_task(m_deviceContext.BeforeRenderScheduler(), arcana::cancellation::none(), [] {})
+                .then(m_deviceContext.AfterRenderScheduler(), arcana::cancellation::none(),
+                    [owner = std::move(m_nativeTextureOwner)] { (void)owner; });
+        }
     }
 
     bool Texture::IsValid() const
     {
         return bgfx::isValid(m_handle);
+    }
+
+    void Texture::GenerateMipMaps()
+    {
+        if (!IsValid() || !m_hasMips || (m_flags & BGFX_TEXTURE_RT_MASK) == 0)
+        {
+            throw std::runtime_error{"Explicit mip generation requires a render-target texture with mip storage"};
+        }
+        const auto renderer = bgfx::getRendererType();
+        if (m_is3D && (renderer == bgfx::RendererType::Direct3D12 || renderer == bgfx::RendererType::Vulkan))
+        {
+            throw std::runtime_error{"Explicit 3D mip generation is not supported on this backend"};
+        }
+        if ((bgfx::getCaps()->formats[m_format] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) == 0)
+        {
+            throw std::runtime_error{"Explicit mip generation is not supported for this texture format"};
+        }
+
+        auto scope = m_deviceContext.AcquireFrameCompletionScope();
+        m_deviceContext.CheckViewBudget();
+        if (bgfx::getStats()->numFrameBuffers == bgfx::getCaps()->limits.maxFrameBuffers &&
+            !m_deviceContext.ForceMidFrameFlush())
+        {
+            throw std::runtime_error{"No framebuffer available for explicit mip generation"};
+        }
+        bgfx::Attachment attachment{};
+        // Cube resolves cover all faces; array resolves use the attachment's layer count.
+        const uint16_t numLayers = m_isCube ? 1 : std::max<uint16_t>(1, m_numLayers);
+        attachment.init(m_handle, bgfx::Access::Write, 0, numLayers, 0, BGFX_ATTACHMENT_AUTO_GEN_MIPS);
+        const auto handle = bgfx::createFrameBuffer(1, &attachment);
+        if (!bgfx::isValid(handle))
+        {
+            throw std::runtime_error{"Failed to create explicit mip generation framebuffer"};
+        }
+        const bool multisampled = (m_flags & BGFX_TEXTURE_RT_MSAA_MASK) > BGFX_TEXTURE_RT;
+        FrameBuffer framebuffer{m_deviceContext, handle, m_width, m_height, false, false, false, -1, multisampled};
+        // An empty draw resolves with generation enabled, without clearing or modifying mip 0.
+        framebuffer.Clear(*m_deviceContext.GetActiveEncoder(), BGFX_CLEAR_NONE, 0, 0, 0, 0, 0, 0);
+        SubmitResolveSwitch(m_deviceContext);
     }
 
     void Texture::SetMetadata(
@@ -65,24 +224,28 @@ namespace Babylon::Graphics
         m_flags = flags;
     }
 
-    void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle)
+    void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle, std::shared_ptr<void> nativeTextureOwner)
     {
         Dispose();
 
         // Create Babylon-owned textures with BGFX_TEXTURE_BLIT_DST to match web behavior.
         const auto createFlags = nativeTextureHandle == 0 ? flags | BGFX_TEXTURE_BLIT_DST : flags;
 
-        // Make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-        const auto* mem = nativeTextureHandle == 0 && (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
-
-        m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, createFlags, mem, nativeTextureHandle);
+        m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, createFlags, nullptr, nativeTextureHandle);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create texture"};
         }
 
         m_ownsHandle = true;
+        m_nativeTextureOwner = std::move(nativeTextureOwner);
         SetMetadata(width, height, 0, hasMips, false, false, numLayers, format, flags);
+
+        // Make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
+        if (nativeTextureHandle == 0 && (flags & BGFX_TEXTURE_RT_MASK) != 0)
+        {
+            ClearRenderTarget(m_deviceContext, m_handle, width, height, hasMips, numLayers, format, flags);
+        }
     }
 
     void Texture::Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -94,7 +257,15 @@ namespace Babylon::Graphics
     {
         Dispose();
 
-        m_handle = bgfx::createTexture3D(width, height, depth, hasMips, format, flags);
+        // bgfx needs two physical slices for a 3D view; retain the logical depth.
+        const uint16_t physicalDepth = std::max<uint16_t>(2, depth);
+        auto createFlags = flags;
+        if (depth == 1 && (flags & BGFX_TEXTURE_RT_MASK) != 0)
+        {
+            createFlags |= BGFX_TEXTURE_BLIT_DST;
+        }
+
+        m_handle = bgfx::createTexture3D(width, height, physicalDepth, hasMips, format, createFlags);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create 3D texture"};
@@ -102,11 +273,34 @@ namespace Babylon::Graphics
 
         m_ownsHandle = true;
         SetMetadata(width, height, depth, hasMips, false, true, 1, format, flags);
+        if (depth == 1)
+        {
+            bgfx::TextureInfo info{};
+            bgfx::calcTextureSize(info, width, height, physicalDepth, false, hasMips, 1, format);
+            for (uint8_t mip = 0; mip < info.numMips; ++mip)
+            {
+                const auto mipWidth = static_cast<uint16_t>(std::max(1, width >> mip));
+                const auto mipHeight = static_cast<uint16_t>(std::max(1, height >> mip));
+                const auto mipDepth = static_cast<uint16_t>(std::max(1, physicalDepth >> mip));
+                bgfx::TextureInfo mipInfo{};
+                bgfx::calcTextureSize(mipInfo, mipWidth, mipHeight, mipDepth, false, false, 1, format);
+                const auto memory = bgfx::alloc(mipInfo.storageSize);
+                std::memset(memory->data, 0, memory->size);
+                bgfx::updateTexture3D(m_handle, mip, 0, 0, 0, mipWidth, mipHeight, mipDepth, memory);
+            }
+        }
     }
 
     void Texture::Update3D(uint8_t mip, uint16_t x, uint16_t y, uint16_t z, uint16_t width, uint16_t height, uint16_t depth, const bgfx::Memory* mem)
     {
+        // Keep the padding identical, including partial updates, for normalized filtering.
+        const auto padding = m_depth == 1 && mip == 0 && z == 0 && depth == 1
+            ? bgfx::copy(mem->data, mem->size) : nullptr;
         bgfx::updateTexture3D(m_handle, mip, x, y, z, width, height, depth, mem);
+        if (padding)
+        {
+            bgfx::updateTexture3D(m_handle, mip, x, y, 1, width, height, 1, padding);
+        }
     }
 
     void Texture::CreateCube(uint16_t size, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
@@ -121,6 +315,12 @@ namespace Babylon::Graphics
 
         m_ownsHandle = true;
         SetMetadata(size, size, 0, hasMips, true, false, numLayers, format, flags);
+
+        // WebGL texImage2D(..., null) zero-fills every cube face; render targets must match.
+        if ((flags & BGFX_TEXTURE_RT_MASK) != 0)
+        {
+            ClearRenderTarget(m_deviceContext, m_handle, size, size, hasMips, numLayers, format, flags, /*cubeMap*/ true);
+        }
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -128,14 +328,13 @@ namespace Babylon::Graphics
         bgfx::updateTextureCube(m_handle, layer, side, mip, x, y, width, height, mem, pitch);
     }
 
-    void Texture::Attach(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
+    void Texture::Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
 
         assert(bgfx::isValid(handle));
         m_handle = handle;
-
-        m_ownsHandle = false;
+        m_ownsHandle = ownsHandle;
         SetMetadata(width, height, 0, hasMips, false, false, numLayers, format, flags);
     }
 
@@ -197,6 +396,16 @@ namespace Babylon::Graphics
     void Texture::SamplerFlags(uint32_t value)
     {
         m_samplerFlags = value;
+    }
+
+    uint8_t Texture::SamplerMaxLod() const
+    {
+        return m_samplerMaxLod;
+    }
+
+    void Texture::SamplerMaxLod(uint8_t value)
+    {
+        m_samplerMaxLod = value;
     }
 
     uint16_t Texture::ViewFirstLayer() const

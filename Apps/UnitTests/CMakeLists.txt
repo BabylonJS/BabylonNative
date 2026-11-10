@@ -5,33 +5,57 @@ endif()
 option(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE "Use a noop Metal device for Apple platforms." OFF)
 
 set(BABYLONJS_ASSETS
-    "../node_modules/babylonjs/babylon.max.js")
+    "../node_modules/babylonjs/babylon.es5.js")
 
 set(BABYLONJS_MATERIALS_ASSETS
-    "../node_modules/babylonjs-materials/babylonjs.materials.js")
+    "../node_modules/babylonjs-materials/babylonjs.materials.es5.js")
 
 set(TEST_ASSETS
-    "JavaScript/dist/tests.externalTexture.deviceLoss.js"
-    "JavaScript/dist/tests.externalTexture.layerCount.js"
-    "JavaScript/dist/tests.externalTexture.msaa.js"
-    "JavaScript/dist/tests.externalTexture.render.js"
-    "JavaScript/dist/tests.javaScript.all.js"
-    "JavaScript/dist/tests.shaderCache.basicScene.js"
-    "JavaScript/dist/tests.shaderCompilation.comprehensiveGLSL.js")
+    "tests.externalTexture.deviceLoss.js"
+    "tests.externalTexture.layerCount.js"
+    "tests.externalTexture.msaa.js"
+    "tests.externalTexture.render.js"
+    "tests.javaScript.all.js"
+    "tests.shaderCache.basicScene.js"
+    "tests.shaderCompilation.comprehensiveGLSL.js")
+set(TEST_ASSET_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets")
+list(TRANSFORM TEST_ASSETS PREPEND "${TEST_ASSET_DIRECTORY}/")
 
+set(TEST_FONT_ASSETS
+    "../Dependencies/Arimo-Regular.ttf"
+    "../Dependencies/Arimo-OFL.txt"
+    "../Dependencies/Arimo-PROVENANCE.txt")
 set(PACKAGED_TEST_ASSETS
+    "Assets/image-reload.png"
     "Assets/droidsans.ttf"
     "Assets/droidsans.LICENSE.txt")
 
-file(GLOB TEST_SCRIPTS "JavaScript/src/*.ts")
+file(GLOB TEST_SCRIPTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src/*.ts")
 set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
+
+find_program(BABYLON_NATIVE_TESTS_NPM_EXECUTABLE NAMES npm.cmd npm REQUIRED)
+add_custom_command(
+    OUTPUT ${TEST_ASSETS}
+    COMMAND "${BABYLON_NATIVE_TESTS_NPM_EXECUTABLE}" run build -- --output-path "${TEST_ASSET_DIRECTORY}" --no-output-compare-before-emit
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript"
+    MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src/tests.javaScript.all.ts"
+    DEPENDS ${TEST_SCRIPTS}
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/webpack.config.js"
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/.babelrc"
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/babel-plugin-replace-bigint.js"
+        "${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/package.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../package.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../package-lock.json"
+    VERBATIM)
 
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
+    "Source/Tests.BgfxCallback.cpp"
     "Source/Tests.Canvas.TextMetrics.cpp"
     "Source/Tests.Canvas.Readback.cpp"
     "Source/Tests.Device.FrameEncoder.cpp"
+    "Source/Tests.Device.SwapChain.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.Lifecycle.cpp"
     "Source/Tests.ExternalTexture.DeviceLoss.cpp"
@@ -40,12 +64,26 @@ set(SOURCES
     "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
+    "Source/Tests.NativeEngine.ImageFormats.cpp"
+    "Source/Tests.NativeEngine.StorageBuffer.cpp"
+    "Source/Tests.NativeEngine.Compute.cpp"
+    "Source/Tests.NativeEngine.Mipmaps.cpp"
+    "Source/Tests.NativeEngine.PrimitiveModeExpansion.cpp"
+    "Source/Tests.NativeEngine.DepthTextures.cpp"
+    "Source/Tests.NativeEngine.CubeRenderTargets.cpp"
+    "Source/Tests.NativeEngine.Msaa.cpp"
     "Source/Tests.NativeEngine.Teardown.cpp"
+    "Source/Tests.NativeEngine.TransformFeedback.cpp"
+    "Source/Tests.NativeEngine.TextureFormats.cpp"
+    "Source/Tests.NativeOptimizations.cpp"
+    "Source/Tests.NativeEngine.VertexArray.cpp"
     "Source/Tests.ShaderCache.cpp"
+    "Source/Tests.ShaderCache.TransformFeedback.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.ShaderCompilation.FragCoord.cpp"
     "Source/Tests.UniformPadding.cpp"
     "Source/Helpers.h"
+    "Source/DeviceImplTestAccess.h"
     "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
@@ -55,7 +93,8 @@ endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.${GRAPHICS_API}.cpp")
+        "Source/Tests.Device.${GRAPHICS_API}.cpp"
+        "Source/Tests.Device.D3D11.ExternalBackBuffer.cpp")
 endif()
 
 if(APPLE)
@@ -77,7 +116,11 @@ elseif(WIN32)
     set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
-add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_IMAGE_LOADING)
+    target_link_libraries(UnitTests PRIVATE UrlLib)
+endif()
 target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
 target_include_directories(UnitTests PRIVATE "${BGFX_DIR}/3rdparty")
 target_link_libraries(UnitTests
@@ -92,12 +135,34 @@ target_link_libraries(UnitTests
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
+    PRIVATE ShaderCacheInternal
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
+    PRIVATE bimg_decode
+    PRIVATE bimg_encode
+    PRIVATE bimg
     ${ADDITIONAL_LIBRARIES})
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
+
+if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
+    target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal)
+    target_compile_definitions(UnitTests PRIVATE HAS_SHADER_COMPILER)
+    if(BABYLON_NATIVE_DISABLE_WEBMIN)
+        target_compile_definitions(UnitTests PRIVATE HAS_SHADER_INTERFACE_BLOCKS)
+    endif()
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
+    target_link_libraries(UnitTests PRIVATE TestUtils)
+    target_compile_definitions(UnitTests PRIVATE HAS_TEST_UTILS)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
+    target_link_libraries(UnitTests PRIVATE NativeCapture)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_CAPTURE)
+endif()
 
 # NativeDraco and NativeMeshopt default to OFF, so link and exercise them only when the
 # consuming build opted in. CI turns both on for the jobs that run UnitTests.
@@ -111,11 +176,21 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEMESHOPT)
     target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_MESHOPT)
 endif()
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
+    target_link_libraries(UnitTests PRIVATE NativeOptimizations)
+    target_compile_definitions(UnitTests PRIVATE HAS_NATIVE_OPTIMIZATIONS)
+endif()
+
 if(GRAPHICS_API STREQUAL "D3D12")
-    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
+    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS BABYLON_NATIVE_GRAPHICS_API_D3D12)
+endif()
+
+if(GRAPHICS_API STREQUAL "D3D11")
+    target_compile_definitions(UnitTests PRIVATE BABYLON_NATIVE_GRAPHICS_API_D3D11)
 endif()
 
 if(GRAPHICS_API STREQUAL "Vulkan")
+    target_link_libraries(UnitTests PRIVATE ShaderCompilerInternal spirv-cross-core glslang)
     # Vulkan packaging paths (e.g. the >16 sampler rejection) are gated on this define.
     # ExternalTexture / native-texture helpers are not implemented for Vulkan yet, so skip
     # those tests rather than failing at link or runtime.
@@ -135,9 +210,13 @@ if(GRAPHICS_API STREQUAL "OpenGL")
     # OpenGL the "device" is a context bgfx created, and a bare context carries no display or
     # surface, so Helpers::CreateDevice cannot make one current to allocate against.
     # See https://github.com/BabylonJS/BabylonNative/issues/1810.
+    #
+    # Flipped sampling: the sampler and texture row flips these tests cover only run on
+    # top-left-origin backends; GLSL samples in GL's native bottom-left orientation.
     target_compile_definitions(UnitTests PRIVATE
         SKIP_MULTISAMPLE_TESTS
-        SKIP_DEVICE_LOSS_TESTS)
+        SKIP_DEVICE_LOSS_TESTS
+        SKIP_FLIPPED_SAMPLING_TESTS)
 endif()
 
 add_test(NAME UnitTests COMMAND UnitTests)
@@ -155,7 +234,7 @@ if(ANGLE_LIBEGL)
     )
 endif()
 
-foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${PACKAGED_TEST_ASSETS})
+foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_FONT_ASSETS} ${PACKAGED_TEST_ASSETS})
     get_filename_component(ASSET_NAME "${ASSET}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
@@ -168,6 +247,7 @@ set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
+source_group("Assets" FILES ${TEST_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Assets FILES ${TEST_FONT_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Assets PREFIX Assets FILES ${PACKAGED_TEST_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src PREFIX TypeScript FILES ${TEST_SCRIPTS})

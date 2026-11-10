@@ -1,3 +1,5 @@
+npm(install)
+
 if((WIN32 AND NOT WINDOWS_STORE) AND GRAPHICS_API STREQUAL D3D11)
     add_subdirectory(HeadlessScreenshotApp)
     add_subdirectory(StyleTransferApp)
@@ -17,5 +19,3 @@ if((WIN32 AND NOT WINDOWS_STORE AND GRAPHICS_API STREQUAL D3D11) OR (APPLE AND N
         add_subdirectory(PrecompiledShaderTest)
     endif()
 endif()
-
-npm(install)

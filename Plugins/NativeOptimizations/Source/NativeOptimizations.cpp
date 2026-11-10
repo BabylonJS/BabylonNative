@@ -1,11 +1,40 @@
-#include <cstring>
-#include <cstdint>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/JsRuntime.h>
+#include <bx/sort.h>
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <cstring>
+#include <limits>
 #include <optional>
+#include <vector>
 
 namespace
 {
+    // Babylon.js stores matrices in a plain Array when useHighPrecisionMatrix is set.
+    std::array<float, 16> ReadMatrix(const Napi::Object& transform)
+    {
+        const auto value{transform.Get("_m")};
+        std::array<float, 16> m{};
+        if (value.IsArray())
+        {
+            const auto elements{value.As<Napi::Array>()};
+            for (uint32_t i = 0; i < m.size(); ++i)
+            {
+                m[i] = elements.Get(i).As<Napi::Number>().FloatValue();
+            }
+        }
+        else
+        {
+            const auto elements{value.As<Napi::Float32Array>()};
+            for (uint32_t i = 0; i < m.size(); ++i)
+            {
+                m[i] = elements[i];
+            }
+        }
+        return m;
+    }
+
     void MatrixScaleAdd(const float inputMatrix[16], float scale, float outputMatrix[16])
     {
         for (size_t i = 0; i < 16; ++i)
@@ -41,9 +70,10 @@ namespace
     {
         auto coordinates{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
-        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
-        const auto length{info[3].As<Napi::Number>().Uint32Value()};
+        const auto m{ReadMatrix(transform)};
+        // offset and length are optional in Babylon.js, defaulting to the whole array.
+        const auto offset{info[2].IsUndefined() ? 0 : info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].IsUndefined() ? static_cast<uint32_t>(coordinates.ElementLength()) : info[3].As<Napi::Number>().Uint32Value()};
 
         for (size_t index = offset; index < offset + length; index += 3)
         {
@@ -63,9 +93,10 @@ namespace
     {
         auto normals{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
-        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
-        const auto length{info[3].As<Napi::Number>().Uint32Value()};
+        const auto m{ReadMatrix(transform)};
+        // offset and length are optional in Babylon.js, defaulting to the whole array.
+        const auto offset{info[2].IsUndefined() ? 0 : info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].IsUndefined() ? static_cast<uint32_t>(normals.ElementLength()) : info[3].As<Napi::Number>().Uint32Value()};
 
         for (size_t index = offset; index < offset + length; index += 3)
         {
@@ -81,9 +112,10 @@ namespace
     {
         auto normals{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
-        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
-        const auto length{info[3].As<Napi::Number>().Uint32Value()};
+        const auto m{ReadMatrix(transform)};
+        // offset and length are optional in Babylon.js, defaulting to the whole array.
+        const auto offset{info[2].IsUndefined() ? 0 : info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].IsUndefined() ? static_cast<uint32_t>(normals.ElementLength()) : info[3].As<Napi::Number>().Uint32Value()};
 
         for (size_t index = offset; index < offset + length; index += 4)
         {
@@ -109,8 +141,8 @@ namespace
     void FlipFaces(const Napi::CallbackInfo& info)
     {
         auto indices{info[0].As<Napi::TypedArray>()};
-        const auto offset{info[1].As<Napi::Number>().Uint32Value()};
-        const auto length{info[2].As<Napi::Number>().Uint32Value()};
+        const auto offset{info[1].IsUndefined() ? 0 : info[1].As<Napi::Number>().Uint32Value()};
+        const auto length{info[2].IsUndefined() ? static_cast<uint32_t>(indices.ElementLength()) : info[2].As<Napi::Number>().Uint32Value()};
 
         if (indices.TypedArrayType() == napi_typedarray_type::napi_int32_array)
         {
@@ -275,8 +307,9 @@ namespace
             matrixTransform(finalMatrix, data[index], data[index + 1], data[index + 2]);
         }
     }
+
     // Maps an IEEE-754 float to an unsigned key whose integer order matches the float order, so the
-    // depth sort can be a stable LSD radix sort instead of a comparison sort.
+    // depth sort can be a stable radix sort instead of a comparison sort.
     static inline uint32_t FloatToSortableKey(float value)
     {
         uint32_t bits;
@@ -286,33 +319,63 @@ namespace
 
     void sortSplats(const Napi::CallbackInfo& info)
     {
-
         const auto modelView{ info[0].As<Napi::Object>() };
-        const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
+        const auto matrixStorage{ modelView.Get("_m") };
+        if (!matrixStorage.IsArray() &&
+            !(matrixStorage.IsTypedArray() && matrixStorage.As<Napi::TypedArray>().TypedArrayType() == napi_float32_array))
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m to be a Float32Array or Array.");
+        }
+        const auto m{ matrixStorage.As<Napi::Object>() };
 
+        if (!(info[1].IsTypedArray() && info[1].As<Napi::TypedArray>().TypedArrayType() == napi_float32_array) ||
+            !(info[2].IsTypedArray() && info[2].As<Napi::TypedArray>().TypedArrayType() == napi_float32_array))
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires positions and indices to be Float32Arrays.");
+        }
         auto positions{ info[1].As<Napi::Float32Array>() };
 
         auto indices{ info[2].As<Napi::Float32Array>() };
 
         auto rightHand{ info[3].As<Napi::Boolean>() };
 
+
         float depthFactor = -1.f;
         if (rightHand) {
             depthFactor = 1.f;
         }
 
-        const auto splatCount = indices.ElementLength();
-        const float vp[3] = { m[2u], m[6u], m[10u] };
-        const float* positionData = positions.Data();
-        float* indexData = indices.Data();
+        const auto indexCount = indices.ElementLength();
+        // The index buffer may be padded (e.g. to a multiple of 16) past the
+        // splat count, so only sort splats that have a position.
+        const auto splatCount = std::min(indexCount, positions.ElementLength() / 4);
+        // High-precision Babylon matrices use ordinary number arrays.
+        const auto m2{m.Get(2u)};
+        const auto m6{m.Get(6u)};
+        const auto m10{m.Get(10u)};
+        if (!m2.IsNumber() || !m6.IsNumber() || !m10.IsNumber())
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+        }
+        const float vp[3] = {
+            m2.As<Napi::Number>().FloatValue(),
+            m6.As<Napi::Number>().FloatValue(),
+            m10.As<Napi::Number>().FloatValue()
+        };
+        if (splatCount > std::numeric_limits<uint32_t>::max())
+        {
+            throw Napi::RangeError::New(info.Env(), "sortSplats supports at most 2^32 - 1 splats.");
+        }
 
-        // Reused across calls: no per-sort allocation once the splat count is stable.
+        // Reused across calls (no per-sort allocation once the splat count is stable) and per thread,
+        // so runtimes on different threads do not share scratch storage.
         thread_local std::vector<uint32_t> keys, keysScratch, order, orderScratch;
         keys.resize(splatCount);
         keysScratch.resize(splatCount);
         order.resize(splatCount);
         orderScratch.resize(splatCount);
 
+        const float* positionData = positions.Data();
         for (size_t i = 0; i < splatCount; i++)
         {
             const float depth = 10000.f + (vp[0] * positionData[4 * i + 0] + vp[1] * positionData[4 * i + 1] + vp[2] * positionData[4 * i + 2]) * depthFactor;
@@ -320,54 +383,23 @@ namespace
             order[i] = static_cast<uint32_t>(i);
         }
 
-        // Stable LSD radix sort on the 32-bit key, four 8-bit digits: sequential reads, a 256-entry
-        // histogram that stays in L1, and no data-dependent branches. Digits that are identical for
-        // every splat (typically the exponent byte) cost one histogram pass and no scatter.
-        uint32_t* srcKeys = keys.data();
-        uint32_t* dstKeys = keysScratch.data();
-        uint32_t* srcOrder = order.data();
-        uint32_t* dstOrder = orderScratch.data();
-        for (uint32_t shift = 0; shift < 32; shift += 8)
+        // Stable: splats at equal depth keep their index order. bx::radixSort reads the first key
+        // unconditionally, so skip it for an empty buffer.
+        if (splatCount > 0)
         {
-            uint32_t histogram[256] = {};
-            for (size_t i = 0; i < splatCount; i++)
-            {
-                histogram[(srcKeys[i] >> shift) & 0xFFu]++;
-            }
-            bool singleBucket = false;
-            for (uint32_t h : histogram)
-            {
-                if (h == splatCount)
-                {
-                    singleBucket = true;
-                    break;
-                }
-            }
-            if (singleBucket)
-            {
-                continue;
-            }
-            uint32_t sum = 0;
-            for (uint32_t& h : histogram)
-            {
-                const uint32_t count = h;
-                h = sum;
-                sum += count;
-            }
-            for (size_t i = 0; i < splatCount; i++)
-            {
-                const uint32_t digit = (srcKeys[i] >> shift) & 0xFFu;
-                const uint32_t destination = histogram[digit]++;
-                dstKeys[destination] = srcKeys[i];
-                dstOrder[destination] = srcOrder[i];
-            }
-            std::swap(srcKeys, dstKeys);
-            std::swap(srcOrder, dstOrder);
+            bx::radixSort(keys.data(), keysScratch.data(), order.data(), orderScratch.data(), static_cast<uint32_t>(splatCount));
         }
 
+        float* indexData = indices.Data();
         for (size_t i = 0; i < splatCount; i++)
         {
-            indexData[i] = static_cast<float>(srcOrder[i]);
+            indexData[i] = static_cast<float>(order[i]);
+        }
+
+        // Point padding entries at the one-past-the-end sentinel, like the Babylon.js sort worker.
+        for (size_t i = splatCount; i < indexCount; i++)
+        {
+            indices[i] = float(splatCount);
         }
     }
 }
