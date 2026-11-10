@@ -1,4 +1,4 @@
-import * as Mocha from "mocha";
+import Mocha from "mocha";
 import { expect } from "chai";
 import { registerTriangleStripDepthTests } from "./tests.nativeEngine.triangleStripDepth";
 import { registerIblCdfTests } from "./tests.nativeEngine.iblCdf";
