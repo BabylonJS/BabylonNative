@@ -5412,23 +5412,6 @@
             "referenceImage": "msaa-rtt-samples4-magnified.png"
         },
         {
-            "title": "needDepthPrePass material plugin variants",
-            "playgroundId": "#IOPV79#0",
-            "referenceImage": "needDepthPrePassMaterialPluginVariants.png",
-            "renderCount": 2,
-            "errorRatio": 0.1,
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
-        },
-        {
-            "title": "needDepthPrePass extended material families",
-            "playgroundId": "#FKEO7V#1",
-            "referenceImage": "needDepthPrePassExtendedMaterialFamilies.png",
-            "renderCount": 60,
-            "errorRatio": 0.1,
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"],
-            "reason": "bgfx/D3D11 fails; Dawn matches the reference exactly, so WebGPU keeps the coverage"
-        },
-        {
             "title": "3D Procedural Textures",
             "playgroundId": "#AYZY4Q#34",
             "referenceImage": "procedural-textures-3d.png",
@@ -5461,13 +5444,6 @@
             "referenceImage": "pointers.png",
             "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
             "reason": "shared failure, both backends fail but for different reasons: bgfx/D3D11 throws 'ReferenceError: PointerEvent is not defined' -- the PointerEvent constructor is not polyfilled -- while Dawn runs the scene and is 6.350% off the reference (allowed 2.5%)"
-        },
-        {
-            "title": "FAST snapshot CPU particles",
-            "playgroundId": "#AW6Q7E#0",
-            "referenceImage": "fast-snapshot-cpu-particles.png",
-            "renderCount": 30,
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
         },
         {
             "title": "Sponza",
