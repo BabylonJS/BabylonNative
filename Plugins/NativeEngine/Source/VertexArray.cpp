@@ -261,17 +261,7 @@ namespace Babylon
         else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
         {
             // D3D input layouts must cover declared built-in instance inputs even when unused.
-            static constexpr uint16_t SLOT_SIZE = 16;
-            const uint32_t count = std::max(instanceCount, 1u);
-            const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * SLOT_SIZE);
-            if (bgfx::getAvailInstanceDataBuffer(count, stride) < count)
-            {
-                throw std::runtime_error{"Transient instance data buffer exhausted"};
-            }
-            bgfx::InstanceDataBuffer instanceDataBuffer{};
-            bgfx::allocInstanceDataBuffer(&instanceDataBuffer, count, stride);
-            std::memset(instanceDataBuffer.data, 0, static_cast<size_t>(stride) * count);
-            encoder->setInstanceDataBuffer(&instanceDataBuffer);
+            VertexBuffer::SetZeroInstanceDataBuffer(encoder, std::max(instanceCount, 1u), instanceDataLayout.SlotCount);
         }
         else if (instanceCount > 0 && !HasStorageInstances())
         {

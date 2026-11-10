@@ -78,6 +78,9 @@ namespace Babylon
             uint32_t instanceCount,
             const InstanceDataLayout& layout);
 
+        // Binds zeroed instance data for layouts whose declared instance inputs have no data.
+        static void SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, uint32_t instanceCount, uint32_t slotCount);
+
     private:
         Graphics::DeviceContext& m_deviceContext;
         const uintptr_t m_deviceId{};
