@@ -1,4 +1,4 @@
-import * as Mocha from "mocha";
+import Mocha from "mocha";
 
 Mocha.setup('bdd');
 // @ts-ignore
