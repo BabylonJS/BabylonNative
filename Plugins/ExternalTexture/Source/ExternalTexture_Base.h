@@ -44,7 +44,7 @@ namespace Babylon::Plugins
             return mipLevel == static_cast<uint16_t>(std::floor(std::log2(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
         }
 
-        static auto RenderTargetSamplesToBgfxMsaaFlag(uint64_t renderTargetSamples)
+        static auto RenderTargetSamplesToBgfxRtFlag(uint64_t renderTargetSamples)
         {
             switch (renderTargetSamples)
             {
@@ -58,7 +58,7 @@ namespace Babylon::Plugins
                     return BGFX_TEXTURE_RT_MSAA_X16;
             }
 
-            return BGFX_TEXTURE_NONE;
+            return BGFX_TEXTURE_RT;
         }
 
         // Recreates every registered Graphics::Texture with a fresh bgfx handle backed by

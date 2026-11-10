@@ -89,6 +89,7 @@ namespace Babylon
                     assert(m_sessionState == nullptr);
 
                     m_sessionState = std::make_unique<SessionState>(context);
+                    m_sessionEnding = false;
 
                     if (!m_system.IsInitialized() &&
                         !m_system.TryInitialize())
@@ -108,8 +109,18 @@ namespace Babylon
 
         arcana::task<void, std::exception_ptr> NativeXr::Impl::EndSessionAsync()
         {
+            if (m_sessionEnding || !m_beginTask)
+            {
+                return m_endTask;
+            }
+
             assert(m_beginTask);
             assert(m_sessionState != nullptr);
+
+            // Publish the shared task before cancellation can synchronously request another end.
+            arcana::task_completion_source<void, std::exception_ptr> endCompletion{};
+            m_endTask = endCompletion.as_task();
+            m_sessionEnding = true;
 
             m_sessionState->CancellationSource.cancel();
 
@@ -120,7 +131,7 @@ namespace Babylon
             m_sessionState->CreateRenderTexture.Reset();
 
             // Don't try to end the session while it is still starting.
-            m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
+            m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
                                        // Also don't try to end the session while a frame is in progress.
                                        return m_sessionState->FrameTask;
                                    })
@@ -145,6 +156,9 @@ namespace Babylon
                                 m_sessionState.reset();
                                 m_beginTask.reset();
                                 NotifySessionStateChanged(false);
+                            })
+                            .then(arcana::inline_scheduler, arcana::cancellation::none(), [endCompletion](const arcana::expected<void, std::exception_ptr>& result) mutable {
+                                endCompletion.complete(result);
                             });
 
             return m_endTask;
@@ -166,7 +180,7 @@ namespace Babylon
             m_sessionState->FrameTask = arcana::make_task(m_sessionState->GraphicsContext.FrameStartScheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, frameScope{std::make_shared<Graphics::FrameCompletionScope>(m_sessionState->GraphicsContext.AcquireFrameCompletionScope())}, thisRef{shared_from_this()}]() {
+                arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, frameScope{std::make_shared<Graphics::FrameCompletionScope>(m_sessionState->GraphicsContext.AcquireFrameCompletionScope())}, thisRef{shared_from_this()}]() {
                     m_sessionState->FrameScheduled = false;
 
                     BeginUpdate();
@@ -186,7 +200,14 @@ namespace Babylon
                       {
                           Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
                       }
-                  }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                  });
+
+                // Queue EndFrame on this frame's AfterRender tick now, rather than as a continuation of the JS task.
+                // The frame completion scope acquired above keeps that tick from running until the JS task is done,
+                // but arcana releases the scope before running the task's continuations. A continuation could
+                // therefore be queued after the render thread drained AfterRender, and EndFrame would then consume the
+                // next frame and leave that frame's EndFrame without an active frame.
+                return arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
                     EndFrame();
                 });
             });
@@ -249,6 +270,8 @@ namespace Babylon
 
                     // If a texture width or height is 0, bgfx will assert (can't create 0 sized texture). Asserting here instead of deeper in bgfx rendering.
                     // Depth (numLayers) can be 0, bgfx will just reinterpret it as max(numLayers, 1).
+                    assert(view.ColorTexturePointer != nullptr);
+                    assert(view.DepthTexturePointer != nullptr);
                     assert(view.ColorTextureSize.Width != 0);
                     assert(view.ColorTextureSize.Height != 0);
                     assert(view.ColorTextureSize.Width == view.DepthTextureSize.Width);
@@ -259,23 +282,38 @@ namespace Babylon
                     const auto textureHeight = static_cast<uint16_t>(view.ColorTextureSize.Height);
                     const auto textureLayers = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(view.ColorTextureSize.Depth));
 
-                    // Create textures with the desired size. It will be freed and replaced with overrideInternal call
-                    // This is mandatory as overrideInternal do not update texture size.
-                    // And size is used for determining viewport when rendering to texture.
+                    // Create bgfx handles that directly import the runtime-owned XR textures. The declared
+                    // dimensions and layers are used to determine the viewport and per-eye array slices.
                     auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
-                    auto colorTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, colorTextureFormat, BGFX_TEXTURE_RT);
+                    auto colorTexture = bgfx::createTexture2D(
+                        textureWidth,
+                        textureHeight,
+                        false,
+                        textureLayers,
+                        colorTextureFormat,
+                        BGFX_TEXTURE_RT,
+                        nullptr,
+                        reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                     m_sessionState->GraphicsContext.AddTexture(colorTexture, textureWidth, textureHeight, false, textureLayers, colorTextureFormat);
 
                     auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
-                    auto depthTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, depthTextureFormat, BGFX_TEXTURE_RT);
+                    auto depthTexture = bgfx::createTexture2D(
+                        textureWidth,
+                        textureHeight,
+                        false,
+                        textureLayers,
+                        depthTextureFormat,
+                        BGFX_TEXTURE_RT,
+                        nullptr,
+                        reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
                     m_sessionState->GraphicsContext.AddTexture(depthTexture, textureWidth, textureHeight, false, textureLayers, depthTextureFormat);
 
                     auto requiresAppClear = view.RequiresAppClear;
 
-                    arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
-                        bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
-                        bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, colorTextureFormat, requiresAppClear, &viewConfig]() {
+                    // Wait for the current bgfx frame to submit the external texture creation commands
+                    // before publishing framebuffers that reference those handles.
+                    arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [] {})
+                        .then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, colorTextureFormat, requiresAppClear, &viewConfig]() {
                           const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
                           // TODO (rgerd): Remove old framebuffers from resource table?
                           viewConfig.FrameBuffers.resize(eyeCount);
@@ -302,16 +340,16 @@ namespace Babylon
 
                           for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
                           {
-                              // See NativeEngine::CreateFrameBuffer: gate BGFX_RESOLVE_AUTO_GEN_MIPS on format caps and
-                              // always pass BGFX_RESOLVE_NONE for depth (depth formats don't support autogen mips).
+                              // See NativeEngine::CreateFrameBuffer: gate BGFX_ATTACHMENT_AUTO_GEN_MIPS on format caps and
+                              // always pass BGFX_ATTACHMENT_NONE for depth (depth formats don't support autogen mips).
                               const bgfx::Caps* caps = bgfx::getCaps();
-                              const uint8_t colorResolve = 0 != (caps->formats[colorTextureFormat] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
-                                  ? BGFX_RESOLVE_AUTO_GEN_MIPS
-                                  : BGFX_RESOLVE_NONE;
+                              const uint8_t colorAttachmentFlags = 0 != (caps->formats[colorTextureFormat] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
+                                  ? BGFX_ATTACHMENT_AUTO_GEN_MIPS
+                                  : BGFX_ATTACHMENT_NONE;
 
                               std::array<bgfx::Attachment, 2> attachments{};
-                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx, 1, 0, colorResolve);
-                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx, 1, 0, BGFX_RESOLVE_NONE);
+                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx, 1, 0, colorAttachmentFlags);
+                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx, 1, 0, BGFX_ATTACHMENT_NONE);
 
                               auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
@@ -332,7 +370,7 @@ namespace Babylon
                               // bgfx::begin failing); skip the clear rather than dereference it.
                               if (clearEncoder != nullptr)
                               {
-                                  frameBuffer.Clear(*clearEncoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                                  frameBuffer.Clear(*clearEncoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.0f, 0);
                               }
 
                               viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;

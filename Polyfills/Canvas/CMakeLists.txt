@@ -1,8 +1,4 @@
-include(${CMAKE_CURRENT_LIST_DIR}/shaderc.cmake)
-
-if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
-    set(SHADERC_PATH "" CACHE FILEPATH "Optional full path to shaderc built from bgfx.")
-endif()
+include(${CMAKE_CURRENT_LIST_DIR}/../../Dependencies/shaderc.cmake)
 
 set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
@@ -17,16 +13,20 @@ set(SOURCES
     "Source/ImageData.h"
     "Source/Path2D.cpp"
     "Source/Path2D.h"
+    "Source/RoundRectUtils.h"
     "Source/LineCaps.h"
     "Source/Context.cpp"
     "Source/Context.h"
     "Source/MeasureText.cpp"
     "Source/MeasureText.h"
+    "Source/NativeInstanceRegistry.h"
     "Source/Gradient.cpp"
     "Source/Gradient.h"
     "Source/Font.cpp"
     "Source/Font.h"
+    "Source/StbTrueType.cpp"
     "Source/nanosvg.h"
+    "Source/nanosvgrast.h"
     "Source/nanovg/nanovg.cpp"
     "Source/nanovg/nanovg.h"
     "Source/nanovg/nanovg_babylon.cpp"
@@ -52,22 +52,14 @@ target_link_libraries(Canvas
     PRIVATE GraphicsDeviceContext
     PRIVATE UrlLib
     PRIVATE base-n
-    PRIVATE bimg_encode)
+    PRIVATE bimg)
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_compile_definitions(Canvas
         PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
-    target_link_libraries(Canvas
-        PRIVATE bimg)
 endif()
 
 if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
-    if(EXISTS "${SHADERC_PATH}")
-        message(STATUS "Using shaderc from: ${SHADERC_PATH}")
-    else()
-        message(FATAL_ERROR " '${SHADERC_PATH}' does not exist.")
-    endif()
-
     foreach(SHADER ${SHADERS})
         add_bgfx_shader(${SHADER} "")
     endforeach()

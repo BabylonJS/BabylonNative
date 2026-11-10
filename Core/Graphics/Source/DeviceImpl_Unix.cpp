@@ -10,7 +10,7 @@
 
 namespace Babylon::Graphics
 {
-    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
+    void DeviceImpl::ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window)
     {
         if (s_bgfxRenderType == bgfx::RendererType::Vulkan && window != WindowT{} && !m_nativeDisplay)
         {
@@ -23,11 +23,11 @@ namespace Babylon::Graphics
                 XCloseDisplay(static_cast<Display*>(value));
             }};
         }
-        pd.ndt = m_nativeDisplay.get();
-        pd.nwh = reinterpret_cast<void*>(window);
+        swapChain.ndt = m_nativeDisplay.get();
+        swapChain.nwh = reinterpret_cast<void*>(window);
     }
 
-    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::Init& /*init*/)
     {
     }
 

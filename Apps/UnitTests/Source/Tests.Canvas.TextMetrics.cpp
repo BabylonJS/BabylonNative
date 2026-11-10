@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "App.h"
+
 #include "../../../Polyfills/Canvas/Source/nanovg/fontstash.h"
 #include <stb/stb_truetype.h>
 
@@ -11,8 +13,9 @@
 
 TEST(CanvasTextMetrics, ExcludesAtlasBorderAndBlurPaddingFromInkBounds)
 {
-    std::ifstream file{CANVAS_TEST_FONT_PATH, std::ios::binary};
-    ASSERT_TRUE(file.is_open());
+    const auto fontPath = GetExecutableDirectory() / "Assets" / "droidsans.ttf";
+    std::ifstream file{fontPath, std::ios::binary};
+    ASSERT_TRUE(file.is_open()) << "Failed to open packaged test font: " << fontPath.string();
     std::vector<unsigned char> bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     ASSERT_FALSE(bytes.empty());
     stbtt_fontinfo font{};
@@ -67,8 +70,9 @@ TEST(CanvasTextMetrics, ExcludesAtlasBorderAndBlurPaddingFromInkBounds)
 
 TEST(CanvasTextMetrics, WhitespaceAdvancesWithoutContributingInkBounds)
 {
-    std::ifstream file{CANVAS_TEST_FONT_PATH, std::ios::binary};
-    ASSERT_TRUE(file.is_open());
+    const auto fontPath = GetExecutableDirectory() / "Assets" / "droidsans.ttf";
+    std::ifstream file{fontPath, std::ios::binary};
+    ASSERT_TRUE(file.is_open()) << "Failed to open packaged test font: " << fontPath.string();
     std::vector<unsigned char> bytes{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     ASSERT_FALSE(bytes.empty());
 

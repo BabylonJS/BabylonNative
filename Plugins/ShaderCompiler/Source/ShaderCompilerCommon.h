@@ -5,11 +5,32 @@
 #include <gsl/gsl>
 #include <spirv_cross.hpp>
 #include <spirv_parser.hpp>
+#include <glslang/Public/ShaderLang.h>
 #include <map>
 #include <string>
+#include <unordered_set>
 
 namespace Babylon::ShaderCompilerCommon
 {
+    std::string PreprocessShader(EShLanguage stage, std::string_view source);
+
+    struct TransformFeedbackShader
+    {
+        std::string Source{};
+        // Vertex inputs in the order of the generated bnTfInputLayout entries.
+        std::vector<std::string> InputNames{};
+    };
+
+    /// Rewrites a preprocessed GLSL ES 3.00 vertex shader that feeds WebGL2 transform feedback into
+    /// a GLSL ES 3.10 compute shader: one invocation per vertex reads the vertex inputs from a float
+    /// storage buffer (described by bnTfInputLayout) and writes the captured varyings, tightly
+    /// packed in `varyings` order (GL_INTERLEAVED_ATTRIBS), into a second float storage buffer.
+    TransformFeedbackShader GenerateTransformFeedbackShader(std::string_view vertexSource, const std::vector<std::string>& varyings);
+
+    // Returns compiled uniform names mapped to the names supplied by the application.
+    // Uniforms named in reservedNames (e.g. target language keywords) are renamed as well.
+    std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr, const std::unordered_set<std::string>* reservedNames = nullptr);
+
     std::string ProcessShaderCoordinates(std::string_view source);
 
     std::string ProcessSamplerFlip(std::string_view source);
@@ -97,16 +118,30 @@ namespace Babylon::ShaderCompilerCommon
         std::unique_ptr<const spirv_cross::Compiler> Compiler;
         gsl::span<uint8_t> Bytes;
         std::map<std::string, std::string> AttributeRenaming;
+        uint32_t RawSrvMask{};
+        uint32_t RawUavMask{};
     };
 
     // Backend-default packaging (D3D separate_samplers / GL sampled_images / Metal separate_images).
     Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo, std::map<std::string, uint32_t> builtInInstanceDataSlots);
 
     // Explicit sampler resource set + appender (used by Vulkan for separate_images + v12 binding model).
+    // compactVertexInputLocations rewrites vertex input locations to the dense layout bgfx's Vulkan
+    // backend binds (attribute table index, then instance-data slots).
     Graphics::BgfxShaderInfo CreateBgfxShader(
         ShaderInfo vertexShaderInfo,
         ShaderInfo fragmentShaderInfo,
         std::map<std::string, uint32_t> builtInInstanceDataSlots,
         SamplerResourceSet samplerResources,
-        AppendSamplersFn appendSamplers);
+        AppendSamplersFn appendSamplers,
+        bool compactVertexInputLocations = false);
+
+    /// Assembles a bgfx CSH (compute) shader binary from a compiled compute shader. The binary
+    /// layout mirrors the per-shader block of CreateBgfxShader (fourcc 'CSH' + hashes + uniform
+    /// table + samplers + blob) but with zero vertex attributes. Raw-buffer masks select the
+    /// views used when storage buffers are bound at dispatch via bgfx::setBuffer(stage,...).
+    Graphics::BgfxShaderInfo CreateBgfxComputeShader(ShaderInfo computeShaderInfo);
+
+    // Explicit sampler resource set + appender (Vulkan packages split samplers with its binding model).
+    Graphics::BgfxShaderInfo CreateBgfxComputeShader(ShaderInfo computeShaderInfo, SamplerResourceSet samplerResources, AppendSamplersFn appendSamplers);
     }

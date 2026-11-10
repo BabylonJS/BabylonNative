@@ -25,10 +25,16 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
         PRIVATE bimg_decode)
 endif()
 
-target_compile_definitions(TestUtils PRIVATE GRAPHICS_API=${GRAPHICS_API})
+target_compile_definitions(TestUtils PRIVATE
+    GRAPHICS_API=${GRAPHICS_API}
+    NAPI_JAVASCRIPT_ENGINE=${NAPI_JAVASCRIPT_ENGINE})
 
 if(APPLE)
     enable_objc_arc(TestUtils)
+endif()
+
+if(ANDROID)
+    target_link_libraries(TestUtils PRIVATE AndroidExtensions)
 endif()
 
 set_property(TARGET TestUtils PROPERTY FOLDER Plugins)

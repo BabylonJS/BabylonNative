@@ -165,5 +165,10 @@ namespace Babylon::Plugins::NativeMeshopt
         codec.Set("Decode", Napi::Function::New(env, DecodeMeshopt, "Decode"));
         codec.Set("Version", Napi::String::New(env, MeshoptVersionString()));
         native.Set("MeshoptCodec", codec);
+
+        // Compatibility free-function name. The pinned Babylon.js package and the current public
+        // MeshoptCompression implementation do not reference `_native.decodeMeshopt`; both use
+        // the script-based decoder. Keep the export so older callers share MeshoptCodec.Decode.
+        native.Set("decodeMeshopt", Napi::Function::New(env, DecodeMeshopt, "decodeMeshopt"));
     }
 }

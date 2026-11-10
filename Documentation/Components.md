@@ -30,14 +30,39 @@ by Arcana. However, no Arcana types are exposed by Babylon Native's APIs.
 Babylon Native uses the 
 [bgfx](https://bkaradzic.github.io/bgfx/overview.html) family of 
 technologies internally as a graphics abstraction for cross-platform native
-rendering. Babylon Native consumes these dependencies through a 
-[fork](https://github.com/BabylonJS/bgfx.cmake) of the 
-[bgfx.cmake](https://github.com/widberg/bgfx.cmake) project, which provides
+rendering. Babylon Native consumes these dependencies through the tracked
+[wrapper](../Dependencies/bgfx.cmake), imported with full history from the
+[archived BabylonJS fork](https://github.com/BabylonJS/bgfx.cmake) of the
+[bgfx.cmake](https://github.com/bkaradzic/bgfx.cmake) project, which provides
 an easy integration layer by which bgfx can be brought into Babylon 
-Native's CMake-based build system. The bgfx family of technologies are used
+Native's CMake-based build system. The wrapper fetches pinned bgfx, bx and bimg
+sources with CMake instead of Git submodules; their implementations remain
+external in this migration step. The bgfx family of technologies are used
 internally by Babylon Native components that need a cross-platform 
 abstraction for GPU access and rendering work. However, no bgfx types are
 exposed by Babylon Native's APIs. 
+
+The Graphics device owns its window framebuffer separately from the underlying
+bgfx device. Resizing or replacing a window updates that surface without
+invalidating GPU resources. D3D11 caller-provided back-buffer views are imported
+as texture attachments rather than replacing bgfx platform data. Screenshots and
+continuous capture use the active back buffer; multiple requests in one frame
+share a single readback.
+
+Device loss cancels pending texture readbacks and screenshots with
+`std::errc::operation_canceled`. New readbacks are rejected while
+`Device::IsDeviceLost()` is true; failed requests are not replayed after device
+replacement. Offscreen capture stops on a failed readback and must be restarted
+against the replacement device. Hosts still own device recovery.
+
+`TestUtils.getFrameBufferData(onSuccess, onError)` reports screenshot failures
+through the optional `onError` callback. If omitted, failures are raised through
+the runtime's uncaught-exception handler. The Playground validation runner treats
+these errors as test failures rather than waiting for another screenshot.
+
+Only default framebuffer wrappers created without an explicit handle follow the
+device's current window framebuffer. Explicit targets, including XR eye
+framebuffers with default-back-buffer semantics, retain their supplied handles.
 
 ### glslang
 

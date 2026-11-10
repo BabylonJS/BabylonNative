@@ -66,6 +66,11 @@ namespace Babylon::Graphics
         m_impl->DisableRendering();
     }
 
+    bool Device::IsDeviceLost() const
+    {
+        return m_impl->IsDeviceLost();
+    }
+
     void Device::StartRenderingCurrentFrame()
     {
         m_impl->StartRenderingCurrentFrame();

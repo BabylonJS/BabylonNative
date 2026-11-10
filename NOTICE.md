@@ -195,6 +195,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+# bgfx.cmake
+
+The CMake wrapper in `Dependencies/bgfx.cmake` was imported from
+BabylonJS/bgfx.cmake, originally written by Joshua Brookover and contributors.
+Its CC0 Public Domain Dedication is retained in
+[`Dependencies/bgfx.cmake/LICENSE`](Dependencies/bgfx.cmake/LICENSE).
+The bgfx, bx and bimg source licenses below are unchanged.
+
 # bx
 
 ```
