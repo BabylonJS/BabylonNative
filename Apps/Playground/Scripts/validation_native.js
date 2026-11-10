@@ -462,11 +462,11 @@
         };
     }
 
-    // xhr-events: the native XMLHttpRequest raises only readystatechange, error and loadend,
-    // raises error for any non-2xx status, and its open() throws for URLs it cannot open.
-    // Browsers raise load before loadend for every completed response, raise error only for
-    // transport failures, and report open failures asynchronously as a DONE request with
-    // status 0. Native methods are read-only, so each new instance is patched with own properties.
+    // xhr-events: the native XMLHttpRequest's open() throws for URLs it cannot open. Browsers
+    // report open failures asynchronously as a DONE request with status 0, which is what this
+    // wrapper does. It predates the native load / error events and still raises readystatechange,
+    // load, error and loadend itself, from the native readystatechange and loadend events.
+    // Native methods are read-only, so each new instance is patched with own properties.
     let restoreXhrEvents = null;
     function installXhrEvents(test) {
         if (restoreXhrEvents) {
@@ -565,9 +565,8 @@
         }
 
         // All four events are dispatched from JavaScript. The native object clears its handlers
-        // after every request, so these bridges are attached again by each send(). Native raises
-        // error for any non-2xx status; browsers raise error only for transport failures
-        // (status 0) and load for every completed response.
+        // after every request, so these bridges are attached again by each send(). error is
+        // raised only for transport failures (status 0) and load for every completed response.
         const bridges = {
             readystatechange: function () {
                 dispatch("readystatechange");
@@ -1955,7 +1954,8 @@
     xhr.open("GET", "app:///Scripts/config.json", true);
 
     xhr.addEventListener("readystatechange", function () {
-        if (xhr.status === 200) {
+        // readystatechange is also raised for HEADERS_RECEIVED and LOADING, with the status already set.
+        if (xhr.readyState === 4 && xhr.status === 200) {
             config = JSON.parse(xhr.responseText);
 
             const workaroundErrors = validateWorkarounds(config.tests);
