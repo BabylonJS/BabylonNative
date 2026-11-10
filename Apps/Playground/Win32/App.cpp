@@ -1,8 +1,13 @@
 // App.cpp : Defines the entry point for the application.
 //
-// Built on Babylon::Embedding: the cross-platform Runtime + View API
-// handles plugin/polyfill setup, GPU device construction, frame rendering,
-// and input forwarding.
+// Single, backend-agnostic Win32 host built on Babylon::Embedding. The
+// cross-platform Runtime + View API handles plugin/polyfill setup, GPU device
+// construction, frame rendering, resize and input forwarding.
+//
+// The graphics backend is selected at CMake configure time and is invisible
+// here: BABYLON_NATIVE_PLUGIN_NATIVEENGINE (bgfx) or BABYLON_NATIVE_PLUGIN_
+// NATIVEDAWN (WebGPU via Dawn). The only place that differs is the plugin
+// Initialize call inside the Embedding layer's RunFirstAttachInit.
 
 #include "App.h"
 

@@ -24,9 +24,9 @@ namespace UrlLib
 
     void UrlRequest::Open(UrlMethod method, const std::string& url)
     {
-        // Divert URLs whose scheme has a registered resolver (e.g. blob:) away from the platform
+        // Divert URLs whose scheme has a shared resolver (e.g. blob:, data:) away from the platform
         // transport; the resolver supplies the response in SendAsync().
-        if (m_impl->BeginSchemeResolution(url))
+        if (m_impl->BeginSchemeResolution(method, url))
         {
             return;
         }
@@ -76,13 +76,12 @@ namespace UrlLib
 
     arcana::task<void, std::exception_ptr> UrlRequest::SendAsync()
     {
-        // Registered-scheme requests (e.g. blob:) are served synchronously from the resolver; the
+        // Shared-scheme requests (e.g. blob:, data:) are served synchronously from the resolver; the
         // resolution is deferred to here (rather than Open) so a blob: URL revoked between open()
         // and send() is honored.
         if (m_impl->IsSchemeResolution())
         {
-            m_impl->ResolveScheme();
-            return arcana::task_from_result<std::exception_ptr>();
+            return m_impl->ResolveSchemeAsync();
         }
 
         return m_impl->SendAsync();

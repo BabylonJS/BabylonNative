@@ -87,6 +87,58 @@ start build\win32\BabylonNative.sln
 By default, the `Playground` demo app will be set as the Visual Studio start-up
 project.
 
+### NativeDawn WebGPU (experimental)
+
+Enable the optional Dawn backend to run Babylon.js WebGPUEngine on Windows:
+
+```powershell
+cmake -B build\win32_dawn -A x64 -DBABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON -DNAPI_JAVASCRIPT_ENGINE=V8
+cmake --build build\win32_dawn --config RelWithDebInfo --target Playground UnitTests
+Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
+.\Playground.exe --headless app:///Scripts/validation_native.js
+```
+
+The Win32 WebGPU validation step runs in CI with `--generate-references`, so it
+is only a crash/smoke run without pixel comparison.
+The Dawn validation adapter reports both its graphics API and JavaScript engine
+so the shared catalog applies backend and engine exclusions consistently.
+
+The current integration requires the Canvas, Blob and URL polyfills. Embedding
+initializes the shared JsRuntimeHost polyfills before NativeDawn; standalone
+hosts must do the same. UTF-16 decoding, asynchronous WebAssembly compilation,
+and blob URL resolution use JsRuntimeHost's implementations, not Dawn-specific
+replacements. The V8 finalizer-draining compatibility code is still needed until
+the vendored JsRuntimeHost implements deferred-finalizer support.
+
+The shared transport fixes are included in this repository. No external
+transport checkout, source override or separate pull request is required.
+
+NativeDawn Canvas2D uses real NanoVG/Dawn rasterization and straight-RGBA GPU
+readback for getImageData, PNG encoding, and external-image uploads. Backend
+initialization and mapping failures are explicit errors; there is no blit-only
+or fake-image fallback. The WebGPU validation runner initializes unready
+DynamicTexture canvases with an actual texture update before waiting for
+material readiness, avoiding a GUI initialization cycle without forcing ready
+flags or advancing test render frames.
+
+Canvas gradients interpolate straight RGBA stops, as verified against Chrome;
+premultiplication happens during painting, not while interpolating the ramp.
+Dawn text measurement uses the shared Canvas glyph advances and ink/font
+extents for the same loaded face used by drawing, rather than estimated Arial
+widths. Font state is restored together with NanoVG state.
+
+NativeDawn's typed `Tick` and `ResizeSurface` APIs drive frames and the presentation
+canvas. Babylon.js engine creation, the Playground's `NativeEngine` alias, and shader-helper script
+loading live in `Scripts/dawn_playground.js`, explicitly loaded by the Playground
+bootstrap, not in the plugin.
+
+The default validation run compares rendered pixels against committed references.
+`--generate-references` only checks scene loading/rendering and writes images; it
+is not a pixel-regression check. Software-adapter output may differ from
+hardware-generated references, so the CI smoke run uses reference-generation mode.
+
+### Windows Chakra validation
+
 For Win32/x64/D3D11 with Windows Chakra (not ChakraCore), use:
 
 ```powershell

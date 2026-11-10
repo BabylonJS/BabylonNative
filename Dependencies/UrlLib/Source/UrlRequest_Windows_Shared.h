@@ -128,9 +128,11 @@ namespace UrlLib
                         m_headers.insert(std::make_pair(winrt::to_string(iter.Key()), winrt::to_string(iter.Value())));
                     }
                     // process the content type response header
-                    std::string contentTypeValue = winrt::to_string(responseMessage.Content().Headers().ContentType().ToString());
-                    std::string contentTypeKey = "content-type";
-                    m_headers.insert(std::make_pair(contentTypeKey, contentTypeValue));
+                    const auto contentType = responseMessage.Content().Headers().ContentType();
+                    if (contentType)
+                    {
+                        m_headers.emplace("content-type", winrt::to_string(contentType.ToString()));
+                    }
 
                     switch (m_responseType)
                     {

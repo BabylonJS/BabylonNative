@@ -30,17 +30,6 @@ namespace Babylon::Polyfills::Internal
         constexpr int RADIAL_GRADIENT_SAMPLE_COUNT = 512;
         constexpr float MIN_STOP_DISTANCE = 0.00001f;
         constexpr size_t LINEAR_GRADIENT_ARGUMENT_COUNT = 4;
-
-        uint32_t PackColor(NVGcolor color)
-        {
-            const auto channel = [](float value) {
-                return static_cast<uint32_t>(value * CanvasConstants::COLOR_CHANNEL_MAX);
-            };
-            return (channel(color.a) << CanvasConstants::ALPHA_CHANNEL_SHIFT) |
-                (channel(color.b) << CanvasConstants::BLUE_CHANNEL_SHIFT) |
-                (channel(color.g) << CanvasConstants::GREEN_CHANNEL_SHIFT) |
-                channel(color.r);
-        }
     }
 
     struct ColorStop
@@ -50,6 +39,15 @@ namespace Babylon::Polyfills::Internal
     };
 
     float clampf(float a, float mn, float mx) { return a < mn ? mn : (a > mx ? mx : a); }
+
+    uint32_t packColor(NVGcolor color)
+    {
+        const auto channel = [](float value) {
+            return static_cast<uint32_t>(std::lround(clampf(value, 0.f, 1.f) * 255.f));
+        };
+        return (channel(color.a) << 24) | (channel(color.b) << 16) |
+            (channel(color.g) << 8) | channel(color.r);
+    }
 
     void gradientSpan(uint32_t* dst, NVGcolor color0, NVGcolor color1, float offset0, float offset1)
     {
@@ -73,7 +71,7 @@ namespace Babylon::Polyfills::Internal
         float da = (color1.a - a) / (e - s);
         for (unsigned i = s; i < e; i++)
         {
-            dst[i] = PackColor({r, g, b, a});
+            dst[i] = packColor(nvgRGBAf(r, g, b, a));
             r += dr; g += dg; b += db; a += da;
         }
     }
@@ -347,7 +345,8 @@ namespace Babylon::Polyfills::Internal
                     finalcolor = lerpColor(color0, color1, stop0, stop1, g);
                 }
 
-                image[(static_cast<size_t>(y) * static_cast<size_t>(width)) + static_cast<size_t>(x)] = PackColor(finalcolor);
+                image[(static_cast<size_t>(y) * static_cast<size_t>(width)) + static_cast<size_t>(x)] =
+                    packColor(finalcolor);
             }
         }
 
