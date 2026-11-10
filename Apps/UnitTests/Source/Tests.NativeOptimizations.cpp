@@ -175,3 +175,108 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
     EXPECT_NO_THROW(completion.get());
 #endif
 }
+
+TEST(NativeOptimizations, SplatIndexSortingHonorsIntervalsAndParts)
+{
+#ifndef HAS_NATIVE_OPTIMIZATIONS
+    GTEST_SKIP() << "NativeOptimizations is disabled";
+#else
+    std::promise<void> completed;
+    auto completion = completed.get_future();
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&](Napi::Env env) {
+        try
+        {
+            Babylon::Plugins::NativeOptimizations::Initialize(env);
+            Napi::Eval(env, R"(
+                (function() {
+                    const positions = new Float32Array([
+                        0, 0, 1, 1,
+                        0, 0, 3, 1,
+                        0, 0, 2, 1,
+                        0, 0, 4, 1
+                    ]);
+                    const vertexCount = 4;
+                    function matrix(typed, entries) {
+                        const m = typed ? new Float32Array(16) : new Array(16).fill(0);
+                        for (const [index, value] of entries) {
+                            m[index] = value;
+                        }
+                        return { _m: m };
+                    }
+                    const identity = [[0, 1], [5, 1], [10, 1], [15, 1]];
+                    function sort(viewProjection, worlds, indexCount, intervals, partIndices) {
+                        const indices = new Float32Array(indexCount).fill(-1);
+                        const result = _native.sortSplatIndices(viewProjection, worlds, positions, indices, vertexCount, intervals, partIndices);
+                        return { result, indices: Array.from(indices).join(",") };
+                    }
+                    function expectSort(label, actual, result, indices) {
+                        if (actual.result !== result || actual.indices !== indices) {
+                            throw new Error(label + " returned " + actual.result + " with " + actual.indices);
+                        }
+                    }
+                    for (const typed of [true, false]) {
+                        // Perspective: clip w = z sorts back to front; clip z = -z is a decoy that sorts the other way.
+                        const perspective = matrix(typed, [[11, 1], [10, -1]]);
+                        // Orthographic: clip w is constant, so clip z = z orders the splats.
+                        const orthographic = matrix(typed, [[10, 1], [15, 1]]);
+                        const world = matrix(typed, identity);
+                        // The second part moves its splats 10 units farther away.
+                        const farWorld = matrix(typed, [...identity, [14, 10]]);
+                        for (const viewProjection of [perspective, orthographic]) {
+                            expectSort("whole mesh", sort(viewProjection, [world], 6, null, null), true, "3,1,2,0,4,4");
+                            expectSort("one interval", sort(viewProjection, [world], 4, new Uint32Array([1, 2]), null), true, "1,2,4,4");
+                            expectSort("two intervals", sort(viewProjection, [world], 4, new Uint32Array([0, 1, 2, 2]), undefined), true, "3,2,0,4");
+                            expectSort("empty part indices", sort(viewProjection, [world], 4, null, new Uint8Array(0)), true, "3,1,2,0");
+                            expectSort("parts", sort(viewProjection, [world, farWorld], 4, null, new Uint8Array([1, 0, 0, 0])), true, "0,3,1,2");
+                            // A part index without a world matrix leaves the previous order untouched.
+                            expectSort("stale part", sort(viewProjection, [world, farWorld], 4, null, new Uint8Array([0, 2, 0, 0])), false, "-1,-1,-1,-1");
+                        }
+                    }
+                    function expectError(args, message) {
+                        let error;
+                        try {
+                            _native.sortSplatIndices(...args);
+                        } catch (caught) {
+                            error = caught;
+                        }
+                        // JSI wraps exceptions thrown from host functions with this prefix.
+                        if (!(error instanceof Error) ||
+                            (error.message !== message && error.message !== "Exception in HostFunction: " + message)) {
+                            throw new Error("Expected: " + message + "; received: " + String(error));
+                        }
+                    }
+                    const viewProjection = matrix(true, [[11, 1]]);
+                    const world = matrix(true, identity);
+                    expectError([viewProjection, [], positions, new Float32Array(4), vertexCount, null, null],
+                        "sortSplatIndices requires at least one world matrix.");
+                    expectError([viewProjection, [world], positions, new Float32Array(4), 5, null, null],
+                        "sortSplatIndices requires 4 position floats per splat.");
+                    expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, new Uint32Array([3, 2]), null],
+                        "sortSplatIndices requires intervals within vertexCount.");
+                    expectError([viewProjection, [world], positions, new Float32Array(3), vertexCount, null, null],
+                        "sortSplatIndices requires indices to hold every active splat.");
+                    expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, [0, 4], null],
+                        "sortSplatIndices requires intervals to be a Uint32Array or null and partIndices to be a Uint8Array or null.");
+                })();
+            )", "native-splat-index-sorting.js");
+            completed.set_value();
+        }
+        catch (const Napi::Error& error)
+        {
+            completed.set_exception(std::make_exception_ptr(std::runtime_error{Napi::GetErrorString(error)}));
+        }
+        catch (...)
+        {
+            completed.set_exception(std::current_exception());
+        }
+    });
+    if (completion.wait_for(std::chrono::seconds{30}) != std::future_status::ready)
+    {
+        // AppRuntime teardown joins the worker; returning would hang if that worker is stuck.
+        ADD_FAILURE() << "Timed out waiting for NativeOptimizations splat index sorting";
+        std::quick_exit(1);
+    }
+    EXPECT_NO_THROW(completion.get());
+#endif
+}
