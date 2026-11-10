@@ -27,12 +27,19 @@ int main(int argc, char* argv[])
     // Until the fix is done in bgfx, create a window and associate the context with it.
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "BabylonNative", NULL };
     ::RegisterClassEx(&wc);
-    HWND hWnd = ::CreateWindow(wc.lpszClassName, "BabylonNative", WS_OVERLAPPEDWINDOW, -1, -1, -1, -1, NULL, NULL, wc.hInstance, NULL);
+    // The window stays hidden, but its client area must match the back buffer: Vulkan swap chains
+    // follow the surface extent and cannot be created for a window without a client area.
+    constexpr LONG width = 600;
+    constexpr LONG height = 400;
+    RECT rect{0, 0, width, height};
+    ::AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+    HWND hWnd = ::CreateWindow(wc.lpszClassName, "BabylonNative", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+        rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, wc.hInstance, NULL);
 
     Babylon::Graphics::Configuration config{};
     config.Window = hWnd;
-    config.Width = 600;
-    config.Height = 400;
+    config.Width = width;
+    config.Height = height;
 
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
