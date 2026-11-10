@@ -60,7 +60,7 @@ TEST(NativeXrImageTracking, SnapshotOwnsOnlyTheTypedArrayView)
         }
         auto view{Napi::Uint8Array::New(env, 16, bytes.ArrayBuffer(), 4)};
         snapshot = Babylon::Plugins::CreateImageTrackingRequest(MakeRequest(env, view));
-        bytes[4] = 255;
+        bytes[size_t{4}] = 255;
         EXPECT_EQ(snapshot.stride, 8u);
         EXPECT_EQ(snapshot.measuredWidthInMeters, 0.25f);
     });

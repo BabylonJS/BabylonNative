@@ -97,13 +97,13 @@ namespace xr
 
     struct Space
     {
-        Pose Pose;
+        xr::Pose Pose;
     };
 
     using NativeTrackablePtr = void*;
     struct HitResult
     {
-        Pose Pose{};
+        xr::Pose Pose{};
         NativeTrackablePtr NativeTrackable{};
     };
 
@@ -116,7 +116,7 @@ namespace xr
     using NativeAnchorPtr = void*;
     struct Anchor
     {
-        Space Space{};
+        xr::Space Space{};
         NativeAnchorPtr NativeAnchor{};
         bool IsValid{true};
     };
@@ -149,7 +149,7 @@ namespace xr
 
     struct Frustum
     {
-        Pose Pose{};
+        xr::Pose Pose{};
         FieldOfView FOV{};
         float FarDistance;
     };
@@ -237,7 +237,7 @@ namespace xr
 
                 struct View
                 {
-                    Space Space{};
+                    xr::Space Space{};
                     std::array<float, 16> ProjectionMatrix{};
 
                     TextureFormat ColorTextureFormat{};
@@ -299,7 +299,7 @@ namespace xr
                     Pose Center{};
                     std::vector<float> Polygon{};
                     size_t PolygonSize{0};
-                    PolygonFormat PolygonFormat{};
+                    xr::PolygonFormat PolygonFormat{};
                     SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
