@@ -135,19 +135,20 @@ namespace UrlLib
                     m_responseUrl = winrt::to_string(responseMessage.RequestMessage().RequestUri().RawUri());
                     m_redirected = !responseMessage.RequestMessage().RequestUri().Equals(m_uri);
 
+                    for (auto&& iter : responseMessage.Headers())
+                    {
+                        AddResponseHeader(winrt::to_string(iter.Key()), winrt::to_string(iter.Value()));
+                    }
+                    // process the content type response header
+                    if (const auto contentType = responseMessage.Content().Headers().ContentType())
+                    {
+                        AddResponseHeader("content-type", winrt::to_string(contentType.ToString()));
+                    }
+
                     if (!responseMessage.IsSuccessStatusCode())
                     {
                         return arcana::task_from_result<std::exception_ptr>();
                     }
-
-                    for (auto&& iter : responseMessage.Headers())
-                    {
-                        m_headers.insert(std::make_pair(winrt::to_string(iter.Key()), winrt::to_string(iter.Value())));
-                    }
-                    // process the content type response header
-                    std::string contentTypeValue = winrt::to_string(responseMessage.Content().Headers().ContentType().ToString());
-                    std::string contentTypeKey = "content-type";
-                    m_headers.insert(std::make_pair(contentTypeKey, contentTypeValue));
 
                     switch (m_responseType)
                     {

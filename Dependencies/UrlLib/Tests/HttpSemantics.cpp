@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <unordered_map>
 
 using namespace UrlLib::Http;
 
@@ -109,4 +110,21 @@ TEST(HttpSemantics, RemovesTheFragment)
     EXPECT_EQ(WithoutFragment("http://127.0.0.1/#"), "http://127.0.0.1/");
     EXPECT_EQ(WithoutFragment("http://127.0.0.1/a"), "http://127.0.0.1/a");
     EXPECT_EQ(WithoutFragment(""), "");
+}
+
+// xhr/getallresponseheaders.htm and fetch/api/basic/header-value-combining.any.js: names compare
+// case-insensitively and the values of a repeated name are joined with ", " in arrival order.
+TEST(HttpSemantics, CombinesRepeatedHeaders)
+{
+    std::unordered_map<std::string, std::string> headers{};
+    AddHeader(headers, "foo-TEST", "1");
+    AddHeader(headers, "FOO-test", "2");
+    AddHeader(headers, "__Custom", "token");
+    AddHeader(headers, "double-trouble", "");
+    AddHeader(headers, "double-trouble", "");
+
+    ASSERT_EQ(headers.size(), static_cast<size_t>(3));
+    EXPECT_EQ(headers["foo-test"], "1, 2");
+    EXPECT_EQ(headers["__custom"], "token");
+    EXPECT_EQ(headers["double-trouble"], ", ");
 }

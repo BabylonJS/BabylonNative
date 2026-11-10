@@ -152,7 +152,7 @@ namespace UrlLib
             }
             if (!result.contentType.empty())
             {
-                m_headers["content-type"] = result.contentType;
+                AddResponseHeader("content-type", result.contentType);
             }
 
             m_resolvedBuffer = result.body ? result.body : std::make_shared<const std::vector<std::byte>>();
@@ -296,6 +296,13 @@ namespace UrlLib
             return scheme;
         }
 
+        // Adds a response header, lower-casing its name and combining the values of a repeated
+        // name; see Http::AddHeader.
+        void AddResponseHeader(std::string_view name, std::string_view value)
+        {
+            Http::AddHeader(m_headers, name, value);
+        }
+
         // Record a transport-level failure in a normalized, grep-friendly shape:
         //   "<domain>:<symbol>(<code>): <detail>"
         // e.g.
@@ -360,6 +367,7 @@ namespace UrlLib
         std::string m_responseUrl{};
         bool m_redirected{false};
         std::string m_responseString{};
+        // Keyed by lower-cased name; add entries with AddResponseHeader.
         std::unordered_map<std::string, std::string> m_headers;
         std::string m_requestBody{};
         std::unordered_map<std::string, std::string> m_requestHeaders;

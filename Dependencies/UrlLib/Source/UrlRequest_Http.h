@@ -3,8 +3,10 @@
 
 #pragma once
 
+#include <algorithm>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace UrlLib::Http
 {
@@ -155,5 +157,27 @@ namespace UrlLib::Http
     inline std::string_view WithoutFragment(std::string_view url)
     {
         return url.substr(0, url.find('#'));
+    }
+
+    inline std::string ToLower(std::string_view text)
+    {
+        std::string lower{text};
+        std::transform(lower.begin(), lower.end(), lower.begin(), [](char c) {
+            return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+        });
+        return lower;
+    }
+
+    // Adds a response header to `headers`, which is keyed by lower-cased name. A name that is
+    // already present gets the value appended after ", ", in the order the values arrive, which is
+    // how the Fetch standard combines the values of a repeated header.
+    inline void AddHeader(std::unordered_map<std::string, std::string>& headers, std::string_view name, std::string_view value)
+    {
+        const auto [it, inserted] = headers.try_emplace(ToLower(name), value);
+        if (!inserted)
+        {
+            it->second.append(", ");
+            it->second.append(value);
+        }
     }
 }

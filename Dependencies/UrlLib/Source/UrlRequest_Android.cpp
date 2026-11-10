@@ -143,14 +143,20 @@ namespace UrlLib
                             ToLower(lowerCaseKey);
                             std::string headerValue = value;
 
-                            // HttpURLConnection reports the protocol it negotiated as a header of
-                            // its own. HTTP/2 and later have no reason phrase.
-                            if (lowerCaseKey == "x-android-selected-protocol" && Http::IsHttp2OrLater(headerValue))
+                            // HttpURLConnection reports its own bookkeeping as response headers
+                            // (X-Android-Sent-Millis, X-Android-Selected-Protocol, ...). They were
+                            // not sent by the server, so they are not response headers; the
+                            // protocol decides whether the response has a reason phrase.
+                            if (lowerCaseKey.rfind("x-android-", 0) == 0)
                             {
-                                m_reasonPhrase = Http::ReasonPhrase::None;
+                                if (lowerCaseKey == "x-android-selected-protocol" && Http::IsHttp2OrLater(headerValue))
+                                {
+                                    m_reasonPhrase = Http::ReasonPhrase::None;
+                                }
+                                continue;
                             }
 
-                            m_headers.insert({lowerCaseKey, headerValue});
+                            AddResponseHeader(lowerCaseKey, headerValue);
                         }
 
                         // The URL of the final response of a redirect chain. Set here as well as

@@ -370,12 +370,14 @@ namespace UrlLib
                 char* bufferEnd = buffer + length;
 
                 // Status line: "HTTP/<version> <code>[ <reason>]\r\n". HTTP/1.x carries a reason
-                // phrase; HTTP/2+ has none. curl delivers a fresh status line for every response
-                // in the chain (e.g. each redirect hop), so let the final one win.
+                // phrase; HTTP/2+ has none. curl delivers a status line and a set of headers for
+                // every response in the chain (each redirect hop, a 100 Continue), so start over
+                // on each one and let the final response win.
                 const Http::StatusLine statusLine{Http::ParseStatusLine({buffer, length})};
                 if (statusLine.majorVersion != 0)
                 {
                     auto& impl = *static_cast<Impl*>(userdata);
+                    impl.m_headers.clear();
                     impl.m_reasonPhrase = statusLine.reasonPhrase;
                     impl.m_statusText.assign(statusLine.phrase);
 
@@ -397,7 +399,7 @@ namespace UrlLib
                     char* valueStart = keyEnd + 1;
                     for (; valueStart < bufferEnd; ++valueStart)
                     {
-                        if (*valueStart != ' ')
+                        if (*valueStart != ' ' && *valueStart != '\t')
                         {
                             break;
                         }
@@ -407,15 +409,16 @@ namespace UrlLib
                     for (; valueEnd - 1 >= valueStart; --valueEnd)
                     {
                         auto ch = *(valueEnd - 1);
-                        if (ch != '\r' && ch != '\n' && ch != ' ')
+                        if (ch != '\r' && ch != '\n' && ch != ' ' && ch != '\t')
                         {
                             break;
                         }
                     }
 
-                    std::string key{keyStart, keyEnd};
-                    std::string value{valueStart, valueEnd};
-                    static_cast<Impl*>(userdata)->m_headers.insert({std::move(key), std::move(value)});
+                    // Names are stored lower-cased and the values of a repeated name are combined.
+                    const std::string_view key{keyStart, static_cast<size_t>(keyEnd - keyStart)};
+                    const std::string_view value{valueStart, static_cast<size_t>(valueEnd - valueStart)};
+                    static_cast<Impl*>(userdata)->AddResponseHeader(key, value);
                 }
             }
 

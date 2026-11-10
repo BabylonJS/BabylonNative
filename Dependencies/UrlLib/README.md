@@ -60,6 +60,8 @@ API allows:
 * `ResponseUrl()` is the URL of the final response after redirects, without a fragment, and
   `Redirected()` tells whether there was a redirect. Both are empty / false until there is a
   response and after a transport failure.
+* `GetAllResponseHeaders()` is keyed by lower-cased name. The values of a header that the
+  response repeats are combined with `, ` in the order they arrived.
 
 | Platform | Reason phrase over HTTP/1.x | Protocol detection |
 |---|---|---|

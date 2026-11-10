@@ -96,6 +96,8 @@ namespace UrlLib
 
         std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
 
+        // The response headers, keyed by lower-cased name. The values of a header that the
+        // response repeats are combined into one, separated by ", ".
         const std::unordered_map<std::string, std::string>& GetAllResponseHeaders() const;
         
         UrlStatusCode StatusCode() const;

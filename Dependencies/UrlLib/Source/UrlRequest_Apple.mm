@@ -248,10 +248,12 @@ namespace UrlLib
                         ? metricsDelegate.redirectCount > 0
                         : ![httpResponse.URL.absoluteString isEqualToString:request.URL.absoluteString];
 
+                    // allHeaderFields has one entry per name, with the values of a repeated header
+                    // already joined by ", ".
                     for (id key in httpResponse.allHeaderFields)
                     {
                         id value = [httpResponse.allHeaderFields objectForKey:key];
-                        m_headers.insert({ToLower([key UTF8String]), [value UTF8String]});
+                        AddResponseHeader(ToStdString(key), ToStdString(value));
                     }
                 }
                 else

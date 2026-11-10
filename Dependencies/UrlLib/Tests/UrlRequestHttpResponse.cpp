@@ -1,6 +1,6 @@
-// Tests for what UrlRequest reports about an HTTP response -- status text, response URL and the
-// redirected flag -- against an HTTP/1.1 server on the loopback interface, so they do not depend
-// on a public host.
+// Tests for what UrlRequest reports about an HTTP response -- status text, response URL, the
+// redirected flag and headers -- against an HTTP/1.1 server on the loopback interface, so they do
+// not depend on a public host.
 
 #include <UrlLib/UrlLib.h>
 #include <UrlLib/TestSupport/LoopbackHttpServer.h>
@@ -121,6 +121,11 @@ TEST_F(UrlRequestHttpResponse, ResponseUrlAfterRedirects)
     EXPECT_EQ(static_cast<int>(request.StatusCode()), 200);
     EXPECT_EQ(request.ResponseUrl(), Url("/xhr/resources/content.py"));
     EXPECT_TRUE(request.Redirected());
+
+    // The headers are those of the final response, not of the redirects on the way.
+    EXPECT_FALSE(request.GetResponseHeader("location").has_value());
+    ASSERT_TRUE(request.GetResponseHeader("x-request-method").has_value());
+    EXPECT_EQ(*request.GetResponseHeader("x-request-method"), "GET");
 }
 
 TEST_F(UrlRequestHttpResponse, ResponseUrlIsEmptyAfterATransportFailure)
@@ -136,4 +141,55 @@ TEST_F(UrlRequestHttpResponse, ResponseUrlIsEmptyAfterATransportFailure)
     EXPECT_EQ(request.ResponseUrl(), "");
     EXPECT_EQ(request.StatusText(), "");
     EXPECT_FALSE(request.Redirected());
+    EXPECT_TRUE(request.GetAllResponseHeaders().empty());
+}
+
+// The response of headers.asis repeats a header under names that differ only in case.
+TEST_F(UrlRequestHttpResponse, HeaderNamesAreLowerCasedAndRepeatedHeadersCombined)
+{
+    UrlLib::UrlRequest request{};
+    request.Open(UrlLib::UrlMethod::Get, Url("/xhr/resources/headers.asis"));
+    ASSERT_TRUE(SendAndWait(request));
+
+    EXPECT_EQ(static_cast<int>(request.StatusCode()), 200);
+
+    const auto& headers = request.GetAllResponseHeaders();
+    ASSERT_EQ(headers.count("foo-test"), static_cast<size_t>(1));
+    EXPECT_EQ(headers.at("foo-test"), "1, 2");
+    ASSERT_EQ(headers.count("also-here"), static_cast<size_t>(1));
+    EXPECT_EQ(headers.at("also-here"), "Mr. PB");
+    ASSERT_EQ(headers.count("__custom"), static_cast<size_t>(1));
+    EXPECT_EQ(headers.at("__custom"), "token");
+    for (const auto& header : headers)
+    {
+        for (const char c : header.first)
+        {
+            EXPECT_FALSE(c >= 'A' && c <= 'Z') << header.first;
+        }
+    }
+
+    // Lookup is case-insensitive.
+    ASSERT_TRUE(request.GetResponseHeader("FOO-Test").has_value());
+    EXPECT_EQ(*request.GetResponseHeader("FOO-Test"), "1, 2");
+    EXPECT_FALSE(request.GetResponseHeader("no-such-header").has_value());
+}
+
+TEST_F(UrlRequestHttpResponse, ReopenClearsThePreviousResponse)
+{
+    UrlLib::UrlRequest request{};
+    request.Open(UrlLib::UrlMethod::Get, Url("/xhr/resources/redirect.py?location=headers.py"));
+    ASSERT_TRUE(SendAndWait(request));
+    ASSERT_EQ(static_cast<int>(request.StatusCode()), 200);
+    ASSERT_TRUE(request.Redirected());
+    ASSERT_TRUE(request.GetResponseHeader("x-custom-header").has_value());
+
+    request.Open(UrlLib::UrlMethod::Get, Url("/xhr/resources/well-formed.xml"));
+    EXPECT_EQ(request.ResponseUrl(), "");
+    EXPECT_FALSE(request.Redirected());
+    EXPECT_TRUE(request.GetAllResponseHeaders().empty());
+    ASSERT_TRUE(SendAndWait(request));
+
+    EXPECT_EQ(request.ResponseUrl(), Url("/xhr/resources/well-formed.xml"));
+    EXPECT_FALSE(request.Redirected());
+    EXPECT_FALSE(request.GetResponseHeader("x-custom-header").has_value());
 }
