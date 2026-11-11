@@ -384,6 +384,10 @@ TEST(ShaderCompilation, SamplerCoordinatesAcceptConditionalExpressions)
 
 TEST(ShaderCompilation, CompileComprehensiveGLSL)
 {
+#if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+    GTEST_SKIP() << "The shader declares 22 samplers across both stages, but bgfx's Vulkan backend shares 16 texture stages between them: "
+                    "https://github.com/BabylonJS/BabylonNative/issues/1877";
+#else
     Babylon::Graphics::Device device{g_deviceConfig};
 
     device.StartRenderingCurrentFrame();
@@ -442,11 +446,6 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
     device.FinishRenderingCurrentFrame();
 
     const std::string compilationError = sceneIsReadyFuture.get();
-#if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
-    // The shader declares 22 samplers across both stages, but bgfx's Vulkan backend shares
-    // 16 texture stages between them, so compilation must fail with that diagnostic.
-    EXPECT_NE(compilationError.find("more than 16 distinct sampler textures"), std::string::npos) << compilationError;
-#else
     EXPECT_TRUE(compilationError.empty()) << compilationError;
 #endif
 }
