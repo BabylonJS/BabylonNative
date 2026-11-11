@@ -56,7 +56,7 @@ namespace Babylon::Graphics
 
         struct DepthStencilTexture
         {
-            bgfx::TextureHandle Handle{BGFX_INVALID_HANDLE};
+            bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
             bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
             uint64_t Flags{};
             uint16_t NumLayers{1};
