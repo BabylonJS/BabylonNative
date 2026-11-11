@@ -8,6 +8,7 @@
 #include <cstring>
 #include <regex>
 #include <set>
+#include <stdexcept>
 
 #define BGFX_UNIFORM_FRAGMENTBIT UINT8_C(0x10) // Copy-pasta from bgfx_p.h
 #define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20)  // Copy-pasta from bgfx_p.h
@@ -1300,6 +1301,38 @@ Graphics::BgfxShaderInfo CreateBgfxComputeShader(ShaderInfo computeShaderInfo, S
     AppendBytes(computeBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
 
     return bgfxShaderInfo;
+}
+
+void StripRelaxedPrecision(std::vector<uint32_t>& spirv)
+{
+    constexpr size_t headerWords{5};
+    if (spirv.size() <= headerWords)
+    {
+        return;
+    }
+
+    size_t write{headerWords};
+    for (size_t read = headerWords; read < spirv.size();)
+    {
+        const uint32_t wordCount{spirv[read] >> spv::WordCountShift};
+        const auto opcode{static_cast<spv::Op>(spirv[read] & spv::OpCodeMask)};
+        if (wordCount == 0 || read + wordCount > spirv.size())
+        {
+            throw std::runtime_error{"Malformed SPIR-V"};
+        }
+
+        const bool relaxed{
+            (opcode == spv::OpDecorate && wordCount >= 3 && spirv[read + 2] == spv::DecorationRelaxedPrecision) ||
+            (opcode == spv::OpMemberDecorate && wordCount >= 4 && spirv[read + 3] == spv::DecorationRelaxedPrecision)};
+
+        if (!relaxed)
+        {
+            std::copy_n(spirv.begin() + read, wordCount, spirv.begin() + write);
+            write += wordCount;
+        }
+        read += wordCount;
+    }
+    spirv.resize(write);
 }
 }
 
