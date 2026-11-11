@@ -110,6 +110,11 @@ namespace Babylon::Graphics
         }
 
         const bgfx::TextureHandle handle{bgfx::getTexture(m_handle, static_cast<uint8_t>(m_depthStencilAttachmentIndex))};
+        if (!bgfx::isValid(handle))
+        {
+            return {};
+        }
+
         m_depthStencilAttachmentIndex = -1;
         return {handle, m_depthStencilFormat, m_depthStencilFlags, m_depthStencilNumLayers};
     }

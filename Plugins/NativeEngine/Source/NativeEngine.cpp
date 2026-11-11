@@ -1214,7 +1214,7 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
 
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
-            InstanceMethod("shareFrameBufferDepthStencil", &NativeEngine::ShareFrameBufferDepthStencil),
+                InstanceMethod("shareFrameBufferDepthStencil", &NativeEngine::ShareFrameBufferDepthStencil),
                 InstanceMethod("createMultiFrameBuffer", &NativeEngine::CreateMultiFrameBuffer),
 
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
