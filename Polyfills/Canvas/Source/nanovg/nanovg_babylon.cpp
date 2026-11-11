@@ -780,6 +780,8 @@ namespace
         gl->view[1] = height;
     }
 
+    // Binds the path's vertices and fan indices. Indices are 16-bit, so they are relative to the path's first
+    // vertex rather than to the flush, which can hold more than 65536 vertices.
     static void fan(struct GLNVGcontext* gl, uint32_t _start, uint32_t _count)
     {
         uint32_t numTris = _count - TRIANGLE_FAN_BASE_VERTEX_COUNT;
@@ -787,12 +789,13 @@ namespace
         uint16_t* data = (uint16_t*)memory->data;
         for (uint32_t ii = 0; ii < numTris; ++ii)
         {
-            data[ii * TRIANGLE_VERTEX_COUNT + 0] = _start;
-            data[ii * TRIANGLE_VERTEX_COUNT + 1] = _start + ii + 1;
-            data[ii * TRIANGLE_VERTEX_COUNT + 2] = _start + ii + 2;
+            data[ii * TRIANGLE_VERTEX_COUNT + 0] = 0;
+            data[ii * TRIANGLE_VERTEX_COUNT + 1] = uint16_t(ii + 1);
+            data[ii * TRIANGLE_VERTEX_COUNT + 2] = uint16_t(ii + 2);
         }
 
         const auto ib = gl->bufferPool->AllocIndices(memory);
+        gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + _start, _count);
         gl->encoder->setIndexBuffer(ib.Handle, ib.StartIndex, numTris * TRIANGLE_VERTEX_COUNT);
     }
 
@@ -882,7 +885,6 @@ namespace
                         | BGFX_STENCIL_OP_FAIL_Z_KEEP
                         | BGFX_STENCIL_OP_PASS_Z_DECR
                         );
-                    gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart, gl->vbCount);
                     gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                     gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                     gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
@@ -974,7 +976,6 @@ namespace
             {
                 if (paths[i].fillCount == 0) continue;
                 gl->encoder->setState(gl->state);
-                gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart, gl->vbCount);
                 gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                 gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                 gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
