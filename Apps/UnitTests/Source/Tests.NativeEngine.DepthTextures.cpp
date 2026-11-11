@@ -131,3 +131,72 @@ TEST(NativeEngineDepthTextures, ExposesReadableDepthAndPreservesFramebufferOwner
     EXPECT_EQ(future.get(), "");
     device.FinishRenderingCurrentFrame();
 }
+
+TEST(NativeEngineDepthTextures, SharesGeneratedDepthWithoutRebuildingTheFrameBuffer)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    Babylon::AppRuntime runtime{};
+    std::promise<std::string> completed;
+    auto future = completed.get_future();
+    runtime.Dispatch([&](Napi::Env env) {
+        std::string error;
+        try
+        {
+            device.AddToJavaScript(env);
+            Babylon::Plugins::NativeEngine::Initialize(env);
+            auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+            auto frameScope = context.AcquireFrameCompletionScope();
+            auto engine = env.Global().Get("_native").As<Napi::Object>().Get("Engine").As<Napi::Function>().New({});
+            const auto call = [&](const char* name, std::initializer_list<napi_value> args) {
+                return engine.Get(name).As<Napi::Function>().Call(engine, args);
+            };
+
+            auto sourceValue = call("createFrameBuffer", {env.Null(), Napi::Number::New(env, 16), Napi::Number::New(env, 16),
+                Napi::Boolean::New(env, false), Napi::Boolean::New(env, true), Napi::Number::New(env, 1)});
+            auto* source = sourceValue.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();
+            const bgfx::TextureHandle generatedDepth = bgfx::getTexture(source->Handle(), 0);
+
+            auto depthValue = call("createTexture", {});
+            auto* depth = depthValue.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+            EXPECT_TRUE(call("shareFrameBufferDepthStencil", {sourceValue, depthValue}).As<Napi::Boolean>().Value());
+            // The texture aliases the depth the source already renders to, so its contents carry over.
+            EXPECT_EQ(depth->Handle().idx, generatedDepth.idx);
+            EXPECT_EQ(bgfx::getTexture(source->Handle(), 0).idx, generatedDepth.idx);
+            EXPECT_EQ(depth->Width(), 16u);
+            EXPECT_EQ(depth->Height(), 16u);
+            EXPECT_NE(depth->Flags() & BGFX_TEXTURE_RT_WRITE_ONLY, 0u);
+
+            // The depth was handed over once; a second request has nothing to share.
+            auto otherValue = call("createTexture", {});
+            EXPECT_FALSE(call("shareFrameBufferDepthStencil", {sourceValue, otherValue}).As<Napi::Boolean>().Value());
+            EXPECT_FALSE(otherValue.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get()->IsValid());
+
+            auto destinationValue = call("createMultiFrameBuffer", {Napi::Array::New(env), Napi::Number::New(env, 16),
+                Napi::Number::New(env, 16), Napi::Boolean::New(env, false), Napi::Boolean::New(env, true),
+                Napi::Number::New(env, 1), env.Undefined(), depthValue});
+            auto* destination = destinationValue.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();
+            EXPECT_EQ(bgfx::getTexture(destination->Handle(), 0).idx, generatedDepth.idx);
+
+            // The texture now owns the depth, so it outlives the framebuffer that generated it.
+            source->Dispose();
+            EXPECT_TRUE(depth->IsValid());
+            destination->Clear(*context.GetActiveEncoder(), BGFX_CLEAR_DEPTH, 0, 0, 0, 0, 1.0f, 0);
+            destination->Dispose();
+            depth->Dispose();
+            engine.Get("dispose").As<Napi::Function>().Call(engine, {});
+        }
+        catch (const std::exception& ex)
+        {
+            error = ex.what();
+        }
+        completed.set_value(std::move(error));
+    });
+    while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        device.StartRenderingCurrentFrame();
+    }
+    EXPECT_EQ(future.get(), "");
+    device.FinishRenderingCurrentFrame();
+}

@@ -95,6 +95,25 @@ namespace Babylon::Graphics
         m_disposed = true;
     }
 
+    void FrameBuffer::DescribeOwnedDepthStencil(bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers)
+    {
+        m_depthStencilFormat = format;
+        m_depthStencilFlags = flags;
+        m_depthStencilNumLayers = numLayers;
+    }
+
+    FrameBuffer::DepthStencilTexture FrameBuffer::ReleaseDepthStencil()
+    {
+        if (m_disposed || m_depthStencilAttachmentIndex < 0 || m_deviceID != m_deviceContext.GetDeviceId())
+        {
+            return {};
+        }
+
+        const bgfx::TextureHandle handle{bgfx::getTexture(m_handle, static_cast<uint8_t>(m_depthStencilAttachmentIndex))};
+        m_depthStencilAttachmentIndex = -1;
+        return {handle, m_depthStencilFormat, m_depthStencilFlags, m_depthStencilNumLayers};
+    }
+
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
     {
         return m_useDeviceBackBuffer ? m_deviceContext.GetBackBufferHandle() : m_handle;

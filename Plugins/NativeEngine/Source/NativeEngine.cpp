@@ -1214,6 +1214,7 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
 
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
+            InstanceMethod("shareFrameBufferDepthStencil", &NativeEngine::ShareFrameBufferDepthStencil),
                 InstanceMethod("createMultiFrameBuffer", &NativeEngine::CreateMultiFrameBuffer),
 
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
@@ -3526,6 +3527,10 @@ void main() {
 
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, frameBufferDepthOwnerIndex, isMultisampled, depthOneVolumeAttachmentMask);
+        if (frameBufferDepthOwnerIndex >= 0)
+        {
+            frameBuffer->DescribeOwnedDepthStencil(depthStencilTextureFormat, depthStencilTextureFlags, depthStencilNumLayers);
+        }
 
         // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
         // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
@@ -3543,6 +3548,26 @@ void main() {
         }
 
         return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
+    }
+
+    // shareFrameBufferDepthStencil(frameBuffer, texture): boolean
+    // Moves the depth/stencil a framebuffer generated into texture, so other framebuffers can attach it with its
+    // current contents (like sharing a WebGL depth renderbuffer). The framebuffer keeps rendering to it, and the
+    // texture now owns it. A generated depth buffer is write-only, so the texture can be attached but not sampled.
+    // Returns false and leaves texture untouched when the framebuffer has no generated depth/stencil of its own.
+    Napi::Value NativeEngine::ShareFrameBufferDepthStencil(const Napi::CallbackInfo& info)
+    {
+        Graphics::FrameBuffer* frameBuffer = info[0].As<Napi::Pointer<Graphics::FrameBuffer>>().Get();
+        Graphics::Texture* texture = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
+
+        const auto depthStencil{frameBuffer->ReleaseDepthStencil()};
+        if (!bgfx::isValid(depthStencil.Handle))
+        {
+            return Napi::Boolean::New(info.Env(), false);
+        }
+
+        texture->Attach(depthStencil.Handle, true, frameBuffer->Width(), frameBuffer->Height(), false, depthStencil.NumLayers, depthStencil.Format, depthStencil.Flags);
+        return Napi::Boolean::New(info.Env(), true);
     }
 
     // TODO: This doesn't get called when an Engine instance is disposed.

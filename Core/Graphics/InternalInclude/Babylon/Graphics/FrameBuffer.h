@@ -51,6 +51,22 @@ namespace Babylon::Graphics
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
 
+        // Describes the depth/stencil texture this framebuffer created and owns, so it can be handed over later.
+        void DescribeOwnedDepthStencil(bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers);
+
+        struct DepthStencilTexture
+        {
+            bgfx::TextureHandle Handle{BGFX_INVALID_HANDLE};
+            bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
+            uint64_t Flags{};
+            uint16_t NumLayers{1};
+        };
+
+        // Hands over the depth/stencil texture this framebuffer created; the caller becomes responsible for
+        // destroying it. The framebuffer keeps rendering to it. Returns an invalid handle when the framebuffer
+        // does not own its depth/stencil.
+        DepthStencilTexture ReleaseDepthStencil();
+
         // Rendered upside down so rows are stored in GL order on a top-left-origin backend.
         // Viewport and scissor rects are mirrored to match (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME).
         void SetGLRowOrder(bool glRowOrder) { m_glRowOrder = glRowOrder; }
@@ -90,5 +106,8 @@ namespace Babylon::Graphics
         bool m_disposed{};
         bool m_glRowOrder{};
         int8_t m_depthStencilAttachmentIndex{-1};
+        bgfx::TextureFormat::Enum m_depthStencilFormat{bgfx::TextureFormat::Unknown};
+        uint64_t m_depthStencilFlags{};
+        uint16_t m_depthStencilNumLayers{1};
     };
 }
