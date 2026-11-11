@@ -1,6 +1,7 @@
 #include "VertexBuffer.h"
 #include "StorageBuffer.h"
 #include "Babylon/Graphics/DeviceContext.h"
+#include <Babylon/Graphics/DynamicBufferPool.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -32,83 +33,18 @@ namespace Babylon
             return memory;
         }
 
-        // Smallest pool buffer, in instances, so small draws do not cause a series of tiny reallocations.
-        constexpr uint32_t MIN_INSTANCE_POOL_CAPACITY = 1024;
-    }
-
-    InstanceDataBufferPool::InstanceDataBufferPool(Graphics::DeviceContext& deviceContext)
-        : m_deviceContext{deviceContext}
-        , m_deviceId{deviceContext.GetDeviceId()}
-        , m_generation{deviceContext.ViewIdGeneration()}
-    {
-    }
-
-    InstanceDataBufferPool::~InstanceDataBufferPool()
-    {
-        if (m_deviceId != m_deviceContext.GetDeviceId())
+        // Copies instance data into the pool and binds it to the draw.
+        void SetPooledInstanceData(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& pool, const bgfx::Memory* memory, uint16_t instanceStride, uint32_t instanceCount)
         {
-            return;
-        }
-
-        for (const auto& [stride, buffer] : m_buffers)
-        {
-            bgfx::destroy(buffer.Handle);
-        }
-    }
-
-    void InstanceDataBufferPool::Set(bgfx::Encoder* encoder, const bgfx::Memory* memory, uint16_t instanceStride, uint32_t instanceCount)
-    {
-        if (m_deviceId != m_deviceContext.GetDeviceId())
-        {
-            // The handles belonged to the previous device, which already released them.
-            m_buffers.clear();
-            m_deviceId = m_deviceContext.GetDeviceId();
-        }
-
-        // Every bgfx::frame() (including mid-frame flushes) bumps the generation. All updates submitted before
-        // it have then been applied ahead of the draws that read them, so the ranges can be handed out again.
-        const uint32_t generation = m_deviceContext.ViewIdGeneration();
-        if (generation != m_generation)
-        {
-            m_generation = generation;
-            for (auto& [stride, buffer] : m_buffers)
-            {
-                buffer.Used = 0;
-            }
-        }
-
-        Buffer& buffer = m_buffers[instanceStride];
-        if (instanceCount > buffer.Capacity - buffer.Used)
-        {
-            // Draws earlier in this frame still read the old buffer; bgfx defers its destruction until after
-            // the frame has been rendered.
-            const uint64_t capacity = std::max<uint64_t>({instanceCount, uint64_t{buffer.Capacity} * 2, MIN_INSTANCE_POOL_CAPACITY});
-            if (capacity * instanceStride > UINT32_MAX)
-            {
-                throw std::runtime_error{"Instance data is too large"};
-            }
-
             bgfx::VertexLayout instanceLayout{};
             // skip() takes a uint8_t, which would truncate the 256-byte stride of a full 16-slot layout.
             instanceLayout.begin();
             instanceLayout.m_stride = instanceStride;
             instanceLayout.end();
-            const bgfx::DynamicVertexBufferHandle handle = bgfx::createDynamicVertexBuffer(static_cast<uint32_t>(capacity), instanceLayout);
-            if (!bgfx::isValid(handle))
-            {
-                throw std::runtime_error{"Failed to create instance data vertex buffer"};
-            }
 
-            if (bgfx::isValid(buffer.Handle))
-            {
-                bgfx::destroy(buffer.Handle);
-            }
-            buffer = {handle, static_cast<uint32_t>(capacity), 0};
+            const auto range = pool.AllocVertices(instanceLayout, memory);
+            encoder->setInstanceDataBuffer(range.Handle, range.StartVertex, instanceCount);
         }
-
-        bgfx::update(buffer.Handle, buffer.Used, memory);
-        encoder->setInstanceDataBuffer(buffer.Handle, buffer.Used, instanceCount);
-        buffer.Used += instanceCount;
     }
 
     VertexBuffer::VertexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, bool dynamic)
@@ -382,7 +318,7 @@ namespace Babylon
 
     void VertexBuffer::SetInstanceDataBuffer(
         bgfx::Encoder* encoder,
-        InstanceDataBufferPool& pool,
+        Graphics::DynamicBufferPool& pool,
         const std::map<uint32_t, InstanceInfo>& instances,
         uint32_t instanceCount,
         const InstanceDataLayout& layout)
@@ -439,13 +375,13 @@ namespace Babylon
             }
         }
 
-        pool.Set(encoder, memory, instanceStride, instanceCount);
+        SetPooledInstanceData(encoder, pool, memory, instanceStride, instanceCount);
     }
 
-    void VertexBuffer::SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, InstanceDataBufferPool& pool, uint32_t instanceCount, uint32_t slotCount)
+    void VertexBuffer::SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& pool, uint32_t instanceCount, uint32_t slotCount)
     {
         uint16_t instanceStride{};
         const bgfx::Memory* memory{AllocInstanceData(instanceCount, slotCount, instanceStride)};
-        pool.Set(encoder, memory, instanceStride, instanceCount);
+        SetPooledInstanceData(encoder, pool, memory, instanceStride, instanceCount);
     }
 }

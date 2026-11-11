@@ -16,6 +16,11 @@ namespace bx
 
 struct NVGcontext;
 
+namespace Babylon::Graphics
+{
+    class DynamicBufferPool;
+}
+
 NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator);
 
 NVGcontext* nvgCreate(int32_t _edgeaa);
@@ -28,7 +33,7 @@ struct PoolInterface
 };
 
 void nvgSetFrameBufferPool(NVGcontext* _ctx, PoolInterface pool);
-void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
+void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder, Babylon::Graphics::DynamicBufferPool& bufferPool);
 
 void nvgDelete(NVGcontext* _ctx);
 

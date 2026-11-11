@@ -38,6 +38,7 @@
 #include <bx/math.h>
 
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/DynamicBufferPool.h>
 #include <Babylon/Graphics/FrameBuffer.h>
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
@@ -84,57 +85,54 @@ struct PosTexCoord0Vertex
     static inline bgfx::VertexLayout s_layout;
 };
 
-void screenSpaceQuad(bgfx::Encoder* encoder, bool _originBottomLeft, float _width = 1.0f, float _height = 1.0f)
+void screenSpaceQuad(bgfx::Encoder* encoder, Babylon::Graphics::DynamicBufferPool& bufferPool, bool _originBottomLeft, float _width = 1.0f, float _height = 1.0f)
 {
-    if (FULLSCREEN_TRIANGLE_VERTEX_COUNT == bgfx::getAvailTransientVertexBuffer(FULLSCREEN_TRIANGLE_VERTEX_COUNT, PosTexCoord0Vertex::s_layout))
+    const bgfx::Memory* memory = bgfx::alloc(FULLSCREEN_TRIANGLE_VERTEX_COUNT * sizeof(PosTexCoord0Vertex));
+    PosTexCoord0Vertex* vertex = (PosTexCoord0Vertex*)memory->data;
+
+    const float minx = -_width;
+    const float maxx = _width;
+    const float miny = 0.0f;
+    const float maxy = _height * 2.0f;
+
+    const float minu = -1.0f;
+    const float maxu = 1.0f;
+
+    const float zz = 0.0f;
+
+    float minv = 0.0f;
+    float maxv = 2.0f;
+
+    if (_originBottomLeft)
     {
-        bgfx::TransientVertexBuffer vb;
-        bgfx::allocTransientVertexBuffer(&vb, FULLSCREEN_TRIANGLE_VERTEX_COUNT, PosTexCoord0Vertex::s_layout);
-        PosTexCoord0Vertex* vertex = (PosTexCoord0Vertex*)vb.data;
+        float temp = minv;
+        minv = maxv;
+        maxv = temp;
 
-        const float minx = -_width;
-        const float maxx = _width;
-        const float miny = 0.0f;
-        const float maxy = _height * 2.0f;
-
-        const float minu = -1.0f;
-        const float maxu = 1.0f;
-
-        const float zz = 0.0f;
-
-        float minv = 0.0f;
-        float maxv = 2.0f;
-
-        if (_originBottomLeft)
-        {
-            float temp = minv;
-            minv = maxv;
-            maxv = temp;
-
-            minv -= 1.0f;
-            maxv -= 1.0f;
-        }
-
-        vertex[0].m_x = minx;
-        vertex[0].m_y = miny;
-        vertex[0].m_z = zz;
-        vertex[0].m_u = minu;
-        vertex[0].m_v = minv;
-
-        vertex[1].m_x = maxx;
-        vertex[1].m_y = miny;
-        vertex[1].m_z = zz;
-        vertex[1].m_u = maxu;
-        vertex[1].m_v = minv;
-
-        vertex[2].m_x = maxx;
-        vertex[2].m_y = maxy;
-        vertex[2].m_z = zz;
-        vertex[2].m_u = maxu;
-        vertex[2].m_v = maxv;
-
-        encoder->setVertexBuffer(0, &vb);
+        minv -= 1.0f;
+        maxv -= 1.0f;
     }
+
+    vertex[0].m_x = minx;
+    vertex[0].m_y = miny;
+    vertex[0].m_z = zz;
+    vertex[0].m_u = minu;
+    vertex[0].m_v = minv;
+
+    vertex[1].m_x = maxx;
+    vertex[1].m_y = miny;
+    vertex[1].m_z = zz;
+    vertex[1].m_u = maxu;
+    vertex[1].m_v = minv;
+
+    vertex[2].m_x = maxx;
+    vertex[2].m_y = maxy;
+    vertex[2].m_z = zz;
+    vertex[2].m_u = maxu;
+    vertex[2].m_v = maxv;
+
+    const auto vb = bufferPool.AllocVertices(PosTexCoord0Vertex::s_layout, memory);
+    encoder->setVertexBuffer(0, vb.Handle, vb.StartVertex, FULLSCREEN_TRIANGLE_VERTEX_COUNT);
 }
 
 
@@ -298,7 +296,11 @@ namespace
         bgfx::TextureHandle thClip;
         bgfx::TextureHandle texMissing;
 
-        bgfx::TransientVertexBuffer tvb;
+        // Vertices of the current flush, in bufferPool.
+        Babylon::Graphics::DynamicBufferPool* bufferPool;
+        bgfx::DynamicVertexBufferHandle vb;
+        uint32_t vbStart;
+        uint32_t vbCount;
         Babylon::Graphics::FrameBuffer* frameBuffer;
         PoolInterface frameBufferPool;
         bgfx::Encoder* encoder;
@@ -778,12 +780,11 @@ namespace
         gl->view[1] = height;
     }
 
-    static void fan(bgfx::Encoder* encoder, uint32_t _start, uint32_t _count)
+    static void fan(struct GLNVGcontext* gl, uint32_t _start, uint32_t _count)
     {
         uint32_t numTris = _count - TRIANGLE_FAN_BASE_VERTEX_COUNT;
-        bgfx::TransientIndexBuffer tib;
-        bgfx::allocTransientIndexBuffer(&tib, numTris * TRIANGLE_VERTEX_COUNT);
-        uint16_t* data = (uint16_t*)tib.data;
+        const bgfx::Memory* memory = bgfx::alloc(numTris * TRIANGLE_VERTEX_COUNT * sizeof(uint16_t));
+        uint16_t* data = (uint16_t*)memory->data;
         for (uint32_t ii = 0; ii < numTris; ++ii)
         {
             data[ii * TRIANGLE_VERTEX_COUNT + 0] = _start;
@@ -791,7 +792,8 @@ namespace
             data[ii * TRIANGLE_VERTEX_COUNT + 2] = _start + ii + 2;
         }
 
-        encoder->setIndexBuffer(&tib);
+        const auto ib = gl->bufferPool->AllocIndices(memory);
+        gl->encoder->setIndexBuffer(ib.Handle, ib.StartIndex, numTris * TRIANGLE_VERTEX_COUNT);
     }
 
     // Filter passes use higher view IDs, so the next canvas draw must bind a fresh view.
@@ -823,17 +825,11 @@ namespace
     static void glnvg__compositeClippedFilter(GLNVGcontext* gl, GLNVGcall* call,
         Babylon::Graphics::FrameBuffer* input, Babylon::Graphics::FrameBuffer* output)
     {
-        if (bgfx::getAvailTransientVertexBuffer(FULLSCREEN_TRIANGLE_VERTEX_COUNT, s_nvgLayout) != FULLSCREEN_TRIANGLE_VERTEX_COUNT)
-        {
-            throw std::runtime_error("Cannot allocate Canvas clipped-filter vertices.");
-        }
-        bgfx::TransientVertexBuffer vertices;
-        bgfx::allocTransientVertexBuffer(&vertices, FULLSCREEN_TRIANGLE_VERTEX_COUNT, s_nvgLayout);
         const NVGvertex triangle[FULLSCREEN_TRIANGLE_VERTEX_COUNT]{
             {0.f, 0.f, 0.5f, 1.f},
             {gl->view[0] * 2.f, 0.f, 0.5f, 1.f},
             {0.f, gl->view[1] * 2.f, 0.5f, 1.f}};
-        bx::memCopy(vertices.data, triangle, sizeof(triangle));
+        const auto vertices = gl->bufferPool->AllocVertices(s_nvgLayout, bgfx::copy(triangle, sizeof(triangle)));
         gl->deferClip = false;
         auto* frag = nvg__fragUniformPtr(gl, glnvg__paintUniformOffset(gl, call));
         nvgRenderSetClipUniforms(gl, frag);
@@ -849,7 +845,7 @@ namespace
         gl->encoder->setUniform(gl->u_outerCol, frag->outerCol.rgba);
         gl->encoder->setUniform(gl->u_sdf, &frag->sdfMin);
         gl->encoder->setState(gl->state);
-        gl->encoder->setVertexBuffer(0, &vertices);
+        gl->encoder->setVertexBuffer(0, vertices.Handle, vertices.StartVertex, FULLSCREEN_TRIANGLE_VERTEX_COUNT);
         gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(input->Handle()), gl->frameBufferPool.samplerFlags());
         gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->texMissing);
         gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
@@ -886,11 +882,11 @@ namespace
                         | BGFX_STENCIL_OP_FAIL_Z_KEEP
                         | BGFX_STENCIL_OP_PASS_Z_DECR
                         );
-                    gl->encoder->setVertexBuffer(0, &gl->tvb);
+                    gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart, gl->vbCount);
                     gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                     gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                     gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
-                    fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
+                    fan(gl, paths[i].fillOffset, paths[i].fillCount);
                     outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
                 }
             }
@@ -913,7 +909,7 @@ namespace
                         | BGFX_STENCIL_OP_FAIL_Z_KEEP
                         | BGFX_STENCIL_OP_PASS_Z_KEEP
                         );
-                    gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
+                    gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + paths[i].strokeOffset, paths[i].strokeCount);
                     gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                     gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                     gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
@@ -923,7 +919,7 @@ namespace
 
             // Draw fill
             gl->encoder->setState(gl->state);
-            gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+            gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + call->vertexOffset, call->vertexCount);
             gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
             gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
             gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
@@ -940,7 +936,7 @@ namespace
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
             gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
@@ -954,7 +950,7 @@ namespace
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
             gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
@@ -978,11 +974,11 @@ namespace
             {
                 if (paths[i].fillCount == 0) continue;
                 gl->encoder->setState(gl->state);
-                gl->encoder->setVertexBuffer(0, &gl->tvb);
+                gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart, gl->vbCount);
                 gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                 gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                 gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
-                fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
+                fan(gl, paths[i].fillOffset, paths[i].fillCount);
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
             }
 
@@ -994,7 +990,7 @@ namespace
                     gl->encoder->setState(gl->state
                         | BGFX_STATE_PT_TRISTRIP
                         );
-                    gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
+                    gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + paths[i].strokeOffset, paths[i].strokeCount);
                     gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                     gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                     gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
@@ -1006,7 +1002,7 @@ namespace
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
             gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
@@ -1020,7 +1016,7 @@ namespace
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
             gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
@@ -1043,7 +1039,7 @@ namespace
                 nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
                 gl->encoder->setState(gl->state | BGFX_STATE_PT_TRISTRIP );
-                gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
+                gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + paths[i].strokeOffset, paths[i].strokeCount);
                 gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                 gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                 gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
@@ -1054,7 +1050,7 @@ namespace
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
             gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
@@ -1068,7 +1064,7 @@ namespace
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
             gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
@@ -1087,7 +1083,7 @@ namespace
             std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
                 nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
                 gl->encoder->setState(gl->state);
-                gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+                gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + call->vertexOffset, call->vertexCount);
                 gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                 gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                 gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
@@ -1097,7 +1093,7 @@ namespace
                 gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
                 gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
                 bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-                screenSpaceQuad(gl->encoder, s_originBottomLeft);
+                screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
 			};
             std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
@@ -1111,7 +1107,7 @@ namespace
                     | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
                 gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, bgfx::getTexture(inBuffer->Handle()), gl->frameBufferPool.samplerFlags());
                 bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-                screenSpaceQuad(gl->encoder, s_originBottomLeft);
+                screenSpaceQuad(gl->encoder, *gl->bufferPool, s_originBottomLeft);
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
 			};
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = glnvg__beginFinalFrameBuffer(gl, call);
@@ -1180,17 +1176,12 @@ namespace
 
         if (gl->ncalls > 0)
         {
-            // bgfx asserts on oversized transient allocations, and partial geometry cannot
-            // be rendered safely because draw offsets address the complete buffer.
-            const uint32_t availVerts = bgfx::getAvailTransientVertexBuffer(uint32_t(gl->nverts), s_nvgLayout);
-            const bool vertsFit = availVerts >= uint32_t(gl->nverts);
-            BX_WARN(vertsFit, "Canvas draw skipped: transient vertex buffer exhausted (%d requested, %u available)", gl->nverts, availVerts);
-
-            if (vertsFit && gl->nverts > 0)
+            if (gl->nverts > 0)
             {
-                bgfx::allocTransientVertexBuffer(&gl->tvb, uint32_t(gl->nverts), s_nvgLayout);
-
-                bx::memCopy(gl->tvb.data, gl->verts, gl->nverts * sizeof(struct NVGvertex) );
+                const auto vertices = gl->bufferPool->AllocVertices(s_nvgLayout, bgfx::copy(gl->verts, gl->nverts * sizeof(struct NVGvertex)));
+                gl->vb = vertices.Handle;
+                gl->vbStart = vertices.StartVertex;
+                gl->vbCount = uint32_t(gl->nverts);
 
                 for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
                 {
@@ -1604,6 +1595,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     gl->th2 = BGFX_INVALID_HANDLE;
     gl->thClip = BGFX_INVALID_HANDLE;
     gl->texMissing = BGFX_INVALID_HANDLE;
+    gl->vb = BGFX_INVALID_HANDLE;
     gl->textureId = static_cast<int>(bgfx::kInvalidHandle);
 
     bx::memSet(&params, 0, sizeof(params) );
@@ -1645,11 +1637,12 @@ void nvgSetFrameBufferPool(NVGcontext* _ctx, PoolInterface pool)
     gl->frameBufferPool = pool;
 }
 
-void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
+void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder, Babylon::Graphics::DynamicBufferPool& bufferPool)
 {
     struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
     gl->encoder = encoder;
     gl->frameBuffer = &frameBuffer;
+    gl->bufferPool = &bufferPool;
 }
 
 NVGcontext* nvgCreate(int32_t _edgeaa) {

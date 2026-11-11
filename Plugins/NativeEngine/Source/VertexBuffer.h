@@ -12,39 +12,10 @@ namespace Babylon
     namespace Graphics 
     {
         class DeviceContext;
+        class DynamicBufferPool;
     }
 
     class StorageBuffer;
-
-    // Supplies per-draw instance data from dynamic vertex buffers that are kept alive and reused every frame,
-    // rather than the fixed-size transient pool, which large instance counts drawn many times per frame (e.g.
-    // Gaussian splat voxelization) exhaust. Draws within a frame take disjoint ranges of one buffer per stride,
-    // so the draw count is not limited by bgfx's dynamic vertex buffer handles; a buffer that runs out of room
-    // is replaced with a larger one, so allocation settles once the buffer covers a frame's instance data.
-    class InstanceDataBufferPool final
-    {
-    public:
-        explicit InstanceDataBufferPool(Graphics::DeviceContext& deviceContext);
-        ~InstanceDataBufferPool();
-
-        InstanceDataBufferPool(const InstanceDataBufferPool&) = delete;
-        InstanceDataBufferPool& operator=(const InstanceDataBufferPool&) = delete;
-
-        void Set(bgfx::Encoder* encoder, const bgfx::Memory* memory, uint16_t instanceStride, uint32_t instanceCount);
-
-    private:
-        struct Buffer
-        {
-            bgfx::DynamicVertexBufferHandle Handle{bgfx::kInvalidHandle};
-            uint32_t Capacity{};
-            uint32_t Used{};
-        };
-
-        Graphics::DeviceContext& m_deviceContext;
-        uintptr_t m_deviceId{};
-        uint32_t m_generation{};
-        std::map<uint16_t, Buffer> m_buffers{};
-    };
 
     class VertexBuffer final
     {
@@ -104,13 +75,13 @@ namespace Babylon
 
         static void SetInstanceDataBuffer(
             bgfx::Encoder* encoder,
-            InstanceDataBufferPool& pool,
+            Graphics::DynamicBufferPool& pool,
             const std::map<uint32_t, InstanceInfo>& instances,
             uint32_t instanceCount,
             const InstanceDataLayout& layout);
 
         // Binds zeroed instance data for layouts whose declared instance inputs have no data.
-        static void SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, InstanceDataBufferPool& pool, uint32_t instanceCount, uint32_t slotCount);
+        static void SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& pool, uint32_t instanceCount, uint32_t slotCount);
 
     private:
         Graphics::DeviceContext& m_deviceContext;

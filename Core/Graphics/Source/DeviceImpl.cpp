@@ -26,6 +26,9 @@ namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 
+    // bgfx creates its transient buffers unconditionally; keep them as small as possible since they are unused.
+    constexpr uint32_t MIN_TRANSIENT_BUFFER_SIZE = 1024;
+
     bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
     {
         return std::abs(a - b) < epsilon;
@@ -110,15 +113,10 @@ namespace Babylon::Graphics
         init.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
         init.swapChain.maxFrameLatency = 1;
 
-        // bgfx allocates the transient buffers once at init (CPU copies for each in-flight frame plus a GPU buffer).
-        if (config.TransientVertexBufferSize != 0)
-        {
-            init.limits.maxTransientVbSize = config.TransientVertexBufferSize;
-        }
-        if (config.TransientIndexBufferSize != 0)
-        {
-            init.limits.maxTransientIbSize = config.TransientIndexBufferSize;
-        }
+        // Babylon Native draws from dynamic buffers (see DynamicBufferPool) and never allocates transient buffers,
+        // which bgfx would otherwise reserve at init (a GPU buffer plus CPU copies for each in-flight frame).
+        init.limits.maxTransientVbSize = MIN_TRANSIENT_BUFFER_SIZE;
+        init.limits.maxTransientIbSize = MIN_TRANSIENT_BUFFER_SIZE;
 
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);

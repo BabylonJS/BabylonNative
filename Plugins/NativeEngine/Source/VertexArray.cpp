@@ -252,7 +252,7 @@ namespace Babylon
         return std::tie(Mode, VertexCount) < std::tie(other.Mode, other.VertexCount);
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, InstanceDataBufferPool& instanceDataBufferPool, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& instanceDataBufferPool, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
         if (!m_vertexBufferInstances.empty() && !HasStorageInstances())
         {
