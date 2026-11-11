@@ -186,6 +186,7 @@ namespace Babylon
             constexpr uint64_t PREMULTIPLIED_PORTERDUFF = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
             constexpr uint64_t INTERPOLATE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR, BGFX_STATE_BLEND_FACTOR, BGFX_STATE_BLEND_INV_FACTOR);
             constexpr uint64_t SCREENMODE = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_COLOR, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+            constexpr uint64_t REPLACE_COLOR = BGFX_STATE_BLEND_FUNC_SEPARATE(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_ZERO, BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA);
         }
 
         // Matches BABYLON.Constants.ALPHA_EQUATION_* (not bgfx's internal equation indices).
@@ -1064,6 +1065,7 @@ namespace Babylon
                 StaticValue("ALPHA_PREMULTIPLIED_PORTERDUFF", Napi::Number::From(env, AlphaMode::PREMULTIPLIED_PORTERDUFF)),
                 StaticValue("ALPHA_INTERPOLATE", Napi::Number::From(env, AlphaMode::INTERPOLATE)),
                 StaticValue("ALPHA_SCREENMODE", Napi::Number::From(env, AlphaMode::SCREENMODE)),
+                StaticValue("ALPHA_REPLACE_COLOR", Napi::Number::From(env, AlphaMode::REPLACE_COLOR)),
 
                 StaticValue("ALPHA_EQUATION_ADD", Napi::Number::From(env, AlphaEquation::ADD)),
                 StaticValue("ALPHA_EQUATION_SUBTRACT", Napi::Number::From(env, AlphaEquation::SUBTRACT)),
@@ -1141,6 +1143,7 @@ namespace Babylon
                 StaticValue("COMMAND_SETCOLORWRITE", Napi::FunctionPointer::Create(env, &NativeEngine::SetColorWrite)),
                 StaticValue("COMMAND_SETBLENDMODE", Napi::FunctionPointer::Create(env, &NativeEngine::SetBlendMode)),
                 StaticValue("COMMAND_SETBLENDEQUATION", Napi::FunctionPointer::Create(env, &NativeEngine::SetBlendEquation)),
+                StaticValue("COMMAND_SETALPHATOCOVERAGE", Napi::FunctionPointer::Create(env, &NativeEngine::SetAlphaToCoverage)),
                 StaticValue("COMMAND_SETFLOAT", Napi::FunctionPointer::Create(env, &NativeEngine::SetFloat)),
                 StaticValue("COMMAND_SETFLOAT2", Napi::FunctionPointer::Create(env, &NativeEngine::SetFloat2)),
                 StaticValue("COMMAND_SETFLOAT3", Napi::FunctionPointer::Create(env, &NativeEngine::SetFloat3)),
@@ -1867,6 +1870,14 @@ void main() {
             default:
                 break;
         }
+    }
+
+    void NativeEngine::SetAlphaToCoverage(NativeDataStream::Reader& data)
+    {
+        const auto enable = static_cast<bool>(data.ReadUint32());
+
+        m_engineState &= ~BGFX_STATE_BLEND_ALPHA_TO_COVERAGE;
+        m_engineState |= enable ? BGFX_STATE_BLEND_ALPHA_TO_COVERAGE : 0;
     }
 
     void NativeEngine::SetInt(NativeDataStream::Reader& data)
@@ -4297,7 +4308,8 @@ void main() {
 
         auto& boundFrameBuffer = GetBoundFrameBuffer();
         // D3D11 also uses this flag to select its line coverage algorithm on single-sample targets.
-        const uint64_t multisampleMask = boundFrameBuffer.IsMultisampled() ? UINT64_MAX : ~BGFX_STATE_MSAA;
+        // Like WebGL, alpha-to-coverage has no effect without a multisample buffer.
+        const uint64_t multisampleMask = boundFrameBuffer.IsMultisampled() ? UINT64_MAX : ~(BGFX_STATE_MSAA | BGFX_STATE_BLEND_ALPHA_TO_COVERAGE);
         // The vertex Y flip for GL-row-order targets mirrors the winding; bgfx culls relative to the
         // front face, so swapping it keeps both culling and gl_FrontFacing as WebGL defines them.
         const uint64_t engineState = glRowOrder ? (m_engineState ^ BGFX_STATE_FRONT_CCW) : m_engineState;

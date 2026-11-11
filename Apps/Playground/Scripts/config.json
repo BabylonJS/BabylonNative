@@ -927,7 +927,7 @@
             "playgroundId": "#M4GBLK#0",
             "referenceImage": "alpha-to-coverage-transparent-overlap.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 27.212% pixel difference"
+            "reason": "Requires Babylon.js #19148 (alpha-to-coverage on native) to ship in a Babylon.js release"
         },
         {
             "title": "MSDF Screen projected",
@@ -1234,9 +1234,7 @@
             "title": "Node material 1",
             "playgroundId": "#QJ71C6#5",
             "errorRatio": 4,
-            "referenceImage": "node-material1.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI text labels render with red text on red background instead of green (BN GUI color regression affecting many GUI tests)."
+            "referenceImage": "node-material1.png"
         },
         {
             "title": "Node material 2",
