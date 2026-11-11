@@ -3722,8 +3722,6 @@
         {
             "title": "OpenPBR IBL Anisotropy Metal",
             "playgroundId": "#GRQHVV#208",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "OpenPBR-IBL-Anisotropy-Metal.png"
         },
         {
@@ -5269,30 +5267,22 @@
         {
             "title": "PBR Bent Normal Regression Cases",
             "playgroundId": "#R7QHEO#3",
-            "referenceImage": "pbr-bent-normal-regression-cases.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: TypeError: Cannot read properties of undefined (reading 'ownerBlock')"
+            "referenceImage": "pbr-bent-normal-regression-cases.png"
         },
         {
             "title": "PBR Bent Normal Visibility Invariants",
             "playgroundId": "#3PC7QS#0",
-            "referenceImage": "pbr-bent-normal-visibility-invariants.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 33.663% pixel difference"
+            "referenceImage": "pbr-bent-normal-visibility-invariants.png"
         },
         {
             "title": "PBR Bent Normal Mixed UV Frames",
             "playgroundId": "#TWCK59#0",
-            "referenceImage": "pbr-bent-normal-mixed-uv-frames.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 46.250% pixel difference"
+            "referenceImage": "pbr-bent-normal-mixed-uv-frames.png"
         },
         {
             "title": "PBR Bent Normal Nonuniform Scaling",
             "playgroundId": "#HFS4KH#0",
-            "referenceImage": "pbr-bent-normal-nonuniform-scaling.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 33.222% pixel difference"
+            "referenceImage": "pbr-bent-normal-nonuniform-scaling.png"
         },
         {
             "title": "PBR Bent Normal Mediump Precision",
