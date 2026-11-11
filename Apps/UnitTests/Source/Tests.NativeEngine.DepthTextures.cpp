@@ -13,6 +13,7 @@
 #include <future>
 #include <iostream>
 #include <string>
+#include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -148,7 +149,7 @@ TEST(NativeEngineDepthTextures, SharesGeneratedDepthWithoutRebuildingTheFrameBuf
             auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
             auto frameScope = context.AcquireFrameCompletionScope();
             auto engine = env.Global().Get("_native").As<Napi::Object>().Get("Engine").As<Napi::Function>().New({});
-            const auto call = [&](const char* name, std::initializer_list<napi_value> args) {
+            const auto call = [&](const char* name, const std::vector<Napi::Value>& args) {
                 return engine.Get(name).As<Napi::Function>().Call(engine, args);
             };
 
