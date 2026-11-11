@@ -4006,7 +4006,7 @@ void main() {
     void NativeEngine::BindWithScissor(Graphics::FrameBuffer& frameBuffer)
     {
         frameBuffer.Bind();
-        frameBuffer.InheritScissor(m_scissor[0], m_scissor[1], m_scissor[2], m_scissor[3]);
+        frameBuffer.InheritScissor(m_scissor.X, m_scissor.Y, m_scissor.Width, m_scissor.Height);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)

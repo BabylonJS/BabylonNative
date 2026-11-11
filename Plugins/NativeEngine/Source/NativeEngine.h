@@ -24,7 +24,6 @@
 #include <gsl/gsl>
 
 #include <arcana/threading/cancellation.h>
-#include <array>
 #include <condition_variable>
 #include <map>
 #include <memory>
@@ -259,8 +258,15 @@ namespace Babylon
         std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
-        // Last scissor set by JS (x, y, width, height; all zero when disabled), in WebGL's bottom-left origin.
-        std::array<float, 4> m_scissor{};
+        // Last scissor set by JS, in WebGL's bottom-left origin. All zero means disabled, matching COMMAND_SETSCISSOR.
+        struct ScissorRect
+        {
+            float X{};
+            float Y{};
+            float Width{};
+            float Height{};
+        };
+        ScissorRect m_scissor{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
 
         // WebGL resets the drawing buffer's depth and stencil at the start of every frame.
