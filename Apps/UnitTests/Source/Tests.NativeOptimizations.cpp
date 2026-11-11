@@ -152,8 +152,8 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                     for (const matrix of [undefined, null, {}, 42, new Uint8Array(16), new Float64Array(16)]) {
                         expectMatrixError(matrix, "sortSplats requires modelViewProjection._m to be a Float32Array or Array.");
                     }
-                    const componentMessage = "sortSplats requires modelViewProjection._m[2], [3], [6], [7], [10], [11] to be numbers.";
                     for (const component of [2, 3, 6, 7, 10, 11]) {
+                        const componentMessage = "sortSplats requires modelViewProjection._m[" + component + "] to be a number.";
                         const matrix = new Array(16).fill(0);
                         delete matrix[component];
                         expectMatrixError(matrix, componentMessage);
