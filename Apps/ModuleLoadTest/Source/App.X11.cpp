@@ -48,6 +48,8 @@ namespace ModuleLoadTest
         // Seeded from CI on ubuntu-latest (Mesa software renderer via xvfb).
         // Append entries here as new configs surface deltas.
         static const ModuleSnapshot kModules{
+            "libbsd.so.0",
+            "libdisplay-info.so.3",
             "libdrm.so.2",
             "libdrm_intel.so.1",
             "libedit.so.2",
@@ -59,6 +61,7 @@ namespace ModuleLoadTest
             "libicudata.so.74",
             "libicuuc.so.74",
             "liblzma.so.5",
+            "libmd.so.0",
             "libpciaccess.so.0",
             "libsensors.so.5",
             "libtinfo.so.6",
@@ -72,6 +75,7 @@ namespace ModuleLoadTest
             "libxcb-sync.so.1",
             "libxcb-xfixes.so.0",
             "libxml2.so.2",
+            "libxml2.so.16",
             "libxshmfence.so.1",
         };
         return kModules;

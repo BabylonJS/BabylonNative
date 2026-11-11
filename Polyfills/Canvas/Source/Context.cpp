@@ -28,11 +28,10 @@
 #pragma GCC diagnostic pop
 #endif
 
-#define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
-#undef STB_TRUETYPE_IMPLEMENTATION
 
 #include "Canvas.h"
+#include "CanvasConstants.h"
 #include "Context.h"
 #include "MeasureText.h"
 #include "Image.h"
@@ -41,6 +40,7 @@
 #include "Colors.h"
 #include "LineCaps.h"
 #include "Gradient.h"
+#include "RoundRectUtils.h"
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
@@ -50,8 +50,53 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONTEXT_CONSTRUCTOR_NAME = "Context";
 
+    struct Context::ClipMask
+    {
+        NVGclipMask mask;
+        int image{};
+    };
+
     namespace
     {
+        constexpr auto NONZERO_FILL_RULE = "nonzero";
+        constexpr auto EVENODD_FILL_RULE = "evenodd";
+        constexpr size_t PUT_IMAGE_DATA_REQUIRED_ARGUMENT_COUNT = 3;
+        constexpr size_t PUT_IMAGE_DATA_DIRTY_RECT_ARGUMENT_COUNT = 7;
+        constexpr size_t DRAW_IMAGE_POSITION_ARGUMENT_COUNT = 3;
+        constexpr size_t DRAW_IMAGE_SIZE_ARGUMENT_COUNT = 5;
+        constexpr size_t DRAW_IMAGE_CROP_ARGUMENT_COUNT = 9;
+        constexpr size_t DRAW_IMAGE_COORDINATE_COUNT = DRAW_IMAGE_CROP_ARGUMENT_COUNT - 1;
+        constexpr size_t DRAW_IMAGE_POSITION_COORDINATE_COUNT = DRAW_IMAGE_POSITION_ARGUMENT_COUNT - 1;
+        constexpr size_t DRAW_IMAGE_SIZE_COORDINATE_COUNT = DRAW_IMAGE_SIZE_ARGUMENT_COUNT - 1;
+        constexpr size_t ARC_COUNTERCLOCKWISE_ARGUMENT_COUNT = 6;
+        constexpr size_t CREATE_IMAGE_DATA_DIMENSION_ARGUMENT_COUNT = 2;
+        constexpr size_t GET_IMAGE_DATA_REQUIRED_ARGUMENT_COUNT = 4;
+        constexpr size_t TRANSFORM_COMPONENT_COUNT = 6;
+        constexpr uint32_t READBACK_RESERVED_VIEW_COUNT = 1;
+        constexpr float FALLBACK_GLYPH_ADVANCE_EM = 0.55f;
+        constexpr float FALLBACK_ASCENT_EM = 0.75f;
+        constexpr float FALLBACK_DESCENT_EM = 0.25f;
+
+        class ScopedPath
+        {
+        public:
+            explicit ScopedPath(NVGcontext* context) : m_context{context}
+            {
+                nvgSavePath(m_context, m_path);
+                nvgBeginPath(m_context);
+            }
+            ~ScopedPath()
+            {
+                nvgRestorePath(m_context, m_path);
+            }
+            ScopedPath(const ScopedPath&) = delete;
+            ScopedPath& operator=(const ScopedPath&) = delete;
+
+        private:
+            NVGcontext* m_context;
+            NVGsavedPath m_path;
+        };
+
         // True only for a finite, non-negative integer that fits in a uint32_t. Used where a
         // dimension arrives from a duck-typed object and so has not been through WebIDL's
         // unsigned long conversion; Uint32Value() would silently wrap -1 into 4294967295.
@@ -61,6 +106,15 @@ namespace Babylon::Polyfills::Internal
                 value >= 0.0 &&
                 value <= static_cast<double>(std::numeric_limits<uint32_t>::max()) &&
                 value == std::trunc(value);
+        }
+
+        void ValidateFillRule(Napi::Env env, const Napi::Value& value)
+        {
+            const auto fillRule = value.ToString().Utf8Value();
+            if (fillRule != NONZERO_FILL_RULE && fillRule != EVENODD_FILL_RULE)
+            {
+                throw Napi::TypeError::New(env, "Context2D.fill: the fill rule must be \"nonzero\" or \"evenodd\".");
+            }
         }
     }
 
@@ -141,11 +195,7 @@ namespace Babylon::Polyfills::Internal
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        // TODO: commented code doesn't compile with napi-jsi. Using non read-only property for now
-        //info.This().ToObject().DefineProperty(Napi::PropertyDescriptor::Value("canvas", info[0], napi_enumerable));
         info.This().ToObject().Set("canvas", info[0]);
-
-        // Fonts loaded after this Context is created are picked up in Flush().
     }
 
     Context::~Context()
@@ -188,57 +238,73 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
+    void Context::BindStyle(const Napi::CallbackInfo& info, const Style& style, bool stroke)
+    {
+        if (std::holds_alternative<std::string>(style))
+        {
+            const auto& value = std::get<std::string>(style);
+            const auto color = value.empty()
+                ? (stroke
+                    ? nvgRGBA(0, 0, 0, CanvasConstants::COLOR_CHANNEL_MAX)
+                    : nvgRGBA(
+                        CanvasConstants::COLOR_CHANNEL_MAX,
+                        CanvasConstants::COLOR_CHANNEL_MAX,
+                        CanvasConstants::COLOR_CHANNEL_MAX,
+                        CanvasConstants::COLOR_CHANNEL_MAX))
+                : StringToColor(info.Env(), value);
+            if (stroke)
+            {
+                nvgStrokeColor(*m_nvg, color);
+            }
+            else
+            {
+                nvgFillColor(*m_nvg, color);
+            }
+            return;
+        }
+
+        if (std::holds_alternative<GradientStyle>(style))
+        {
+            CanvasGradient* gradient = CanvasGradient::TryUnwrap(info.Env(), std::get<GradientStyle>(style)->Value());
+            if (gradient == nullptr)
+            {
+                throw Napi::TypeError::New(info.Env(), stroke
+                    ? "strokeStyle must be a string or CanvasGradient."
+                    : "fillStyle must be a string or CanvasGradient.");
+            }
+            if (stroke)
+            {
+                nvgStrokePaint(*m_nvg, gradient->Paint());
+            }
+            else
+            {
+                nvgFillPaint(*m_nvg, gradient->Paint());
+            }
+            return;
+        }
+
+        throw Napi::TypeError::New(info.Env(), stroke
+            ? "strokeStyle must be a string or CanvasGradient."
+            : "fillStyle must be a string or CanvasGradient.");
+    }
+
     void Context::BindFillStyle(const Napi::CallbackInfo& info)
     {
-        if (std::holds_alternative<std::string>(m_state.fillStyle))
-        {
-            const auto& str = std::get<std::string>(m_state.fillStyle);
-            // Treat unset/empty fillStyle as opaque white (nvg's default fill color) instead of
-            // the transparent black returned by StringToColor("") — this matches how fillStyle
-            // behaves before any explicit assignment via SetFillStyle.
-            const auto color = str.empty() ? nvgRGBA(255, 255, 255, 255) : StringToColor(info.Env(), str);
-            nvgFillColor(*m_nvg, color);
-        }
-        else if (std::holds_alternative<GradientStyle>(m_state.fillStyle))
-        {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.fillStyle)->Value());
-            nvgFillPaint(*m_nvg, gradient->Paint());
-        }
-        else
-        {
-            throw Napi::Error::New(info.Env(), "Fillstyle is not a color string or a gradient.");
-        }
+        BindStyle(info, m_state.fillStyle, false);
     }
 
     void Context::BindStrokeStyle(const Napi::CallbackInfo& info)
     {
-        if (std::holds_alternative<std::string>(m_state.strokeStyle))
-        {
-            const auto& str = std::get<std::string>(m_state.strokeStyle);
-            // Treat unset/empty strokeStyle as opaque black -- both the Canvas2D default
-            // ("#000000") and nvg's default stroke color -- instead of the transparent black
-            // StringToColor("") would return.
-            const auto color = str.empty() ? nvgRGBA(0, 0, 0, 255) : StringToColor(info.Env(), str);
-            nvgStrokeColor(*m_nvg, color);
-        }
-        else if (std::holds_alternative<GradientStyle>(m_state.strokeStyle))
-        {
-            CanvasGradient* gradient = CanvasGradient::Unwrap(std::get<GradientStyle>(m_state.strokeStyle)->Value());
-            nvgStrokePaint(*m_nvg, gradient->Paint());
-        }
-        else
-        {
-            throw Napi::Error::New(info.Env(), "Strokestyle is not a color string or a gradient.");
-        }
+        BindStyle(info, m_state.strokeStyle, true);
     }
 
     void Context::SetFilterStack()
     {
-        if (m_state.filter.length())
+        if (!m_state.filter.empty())
         {
             nanovg_filterstack filterStack;
             filterStack.ParseString(m_state.filter);
-            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
+            nvgFilterStack(*m_nvg, filterStack);
         }
     }
 
@@ -249,14 +315,7 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        // fillRect neither reads nor modifies the current path per spec, so it
-        // would normally start its own. But Clip() can only express a rectangle
-        // (nvgScissor), so a non-rectangular clip path is emulated by leaving it
-        // in the current path and letting this fill render it. See Clip().
-        if (!m_isClipped)
-        {
-            nvgBeginPath(*m_nvg);
-        }
+        ScopedPath temporaryPath{*m_nvg};
 
         nvgRect(*m_nvg, left, top, width, height);
 
@@ -266,68 +325,55 @@ namespace Babylon::Polyfills::Internal
         nvgFill(*m_nvg);
     }
 
+    Napi::Value Context::GetStyle(const Style& style)
+    {
+        if (std::holds_alternative<std::string>(style))
+        {
+            return Napi::Value::From(Env(), std::get<std::string>(style));
+        }
+        return std::get<GradientStyle>(style)->Value();
+    }
+
+    void Context::SetStyle(const Napi::CallbackInfo& info, const Napi::Value& value, Style& style, bool stroke)
+    {
+        if (value.IsString())
+        {
+            auto string = value.As<Napi::String>().Utf8Value();
+            const auto color = StringToColor(info.Env(), string);
+            style = string;
+            if (stroke)
+            {
+                nvgStrokeColor(*m_nvg, color);
+            }
+            else
+            {
+                nvgFillColor(*m_nvg, color);
+            }
+        }
+        else if (CanvasGradient::IsInstance(info.Env(), value))
+        {
+            style = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
+        }
+    }
+
     Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
     {
-        if (std::holds_alternative<std::string>(m_state.fillStyle))
-        {
-            return Napi::Value::From(Env(), std::get<std::string>(m_state.fillStyle));
-        }
-        else
-        {
-            // Return the gradient object that was assigned, as the spec requires, so that
-            // `otherCtx.fillStyle = ctx.fillStyle` round-trips.
-            return std::get<GradientStyle>(m_state.fillStyle)->Value();
-        }
+        return GetStyle(m_state.fillStyle);
     }
 
     void Context::SetFillStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        // Per spec the setter takes (DOMString or CanvasGradient or CanvasPattern); anything
-        // else stringifies, fails color parsing and is ignored. Test for the gradient rather
-        // than for "is an object", so `ctx.fillStyle = {}` cannot reach Unwrap.
-        if (value.IsString())
-        {
-            auto string = value.As<Napi::String>().Utf8Value();
-            const auto color = StringToColor(info.Env(), string);
-            m_state.fillStyle = string;
-            nvgFillColor(*m_nvg, color);
-        }
-        else if (CanvasGradient::IsInstance(info.Env(), value))
-        {
-            m_state.fillStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
-        }
-        // Anything else leaves fillStyle unchanged, as the spec requires.
+        SetStyle(info, value, m_state.fillStyle, false);
     }
 
     Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
     {
-        if (std::holds_alternative<std::string>(m_state.strokeStyle))
-        {
-            return Napi::Value::From(Env(), std::get<std::string>(m_state.strokeStyle));
-        }
-        else
-        {
-            return std::get<GradientStyle>(m_state.strokeStyle)->Value();
-        }
+        return GetStyle(m_state.strokeStyle);
     }
 
     void Context::SetStrokeStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        // strokeStyle accepts a CanvasGradient just like fillStyle does; GUI controls such as
-        // Line and the border of a Button assign one directly.
-        if (value.IsString())
-        {
-            auto string = value.As<Napi::String>().Utf8Value();
-            const auto color = StringToColor(info.Env(), string);
-            m_state.strokeStyle = string;
-            nvgStrokeColor(*m_nvg, color);
-        }
-        else if (CanvasGradient::IsInstance(info.Env(), value))
-        {
-            m_state.strokeStyle = std::make_shared<Napi::ObjectReference>(Napi::Persistent(value.As<Napi::Object>()));
-        }
-        // Per spec, assigning anything that is neither a color string nor a
-        // gradient/pattern leaves strokeStyle unchanged.
+        SetStyle(info, value, m_state.strokeStyle, true);
     }
 
     Napi::Value Context::GetLineWidth(const Napi::CallbackInfo&)
@@ -345,14 +391,26 @@ namespace Babylon::Polyfills::Internal
     {
         SetFilterStack();
 
-        const NativeCanvasPath2D* path = info.Length() >= 1 && info[0].IsObject()
-            ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
-            : nullptr;
         // TODO: handle fillRule: nonzero, evenodd
+        // fill(path?, fillRule?) — distinguish Path2D from the string-converted enum overload.
+        const NativeCanvasPath2D* path = nullptr;
+        if (info.Length() >= 1 && !info[0].IsUndefined())
+        {
+            path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
+            if (path == nullptr)
+            {
+                ValidateFillRule(info.Env(), info[0]);
+            }
+        }
+        if (path != nullptr && info.Length() >= 2 && !info[1].IsUndefined())
+        {
+            ValidateFillRule(info.Env(), info[1]);
+        }
 
-        // draw Path2D if exists
+        std::optional<ScopedPath> temporaryPath;
         if (path != nullptr)
         {
+            temporaryPath.emplace(*m_nvg);
             PlayPath2D(path);
         }
 
@@ -377,7 +435,6 @@ namespace Babylon::Polyfills::Internal
     void Context::Restore(const Napi::CallbackInfo&)
     {
         nvgRestore(*m_nvg);
-        m_isClipped = false;
         if (!m_savedStates.empty())
         {
             m_state = std::move(m_savedStates.back());
@@ -399,16 +456,13 @@ namespace Babylon::Polyfills::Internal
         nanovg_filterstack clearFilters;
         nvgFilterStack(*m_nvg, clearFilters);
 
-        // See FillRect: clipping is a scissor, so the path must always be reset. Resetting it
-        // invalidates the emulated clip, which points at a path that no longer exists, and the
-        // nvgRestore below only pops ctx->states -- it does not put the old path back.
-        ResetPathState();
+        ScopedPath temporaryPath{*m_nvg};
 
         nvgRect(*m_nvg, x, y, width, height);
 
         nvgClosePath(*m_nvg);
 
-        nvgFillColor(*m_nvg, nvgRGBA(0, 0, 0, 255));
+        nvgFillColor(*m_nvg, nvgRGBA(0, 0, 0, CanvasConstants::COLOR_CHANNEL_MAX));
         nvgFill(*m_nvg);
         nvgRestore(*m_nvg);
     }
@@ -440,8 +494,8 @@ namespace Babylon::Polyfills::Internal
 
     void Context::ResetPathState()
     {
-        m_isClipped = false;
         m_pathHasNonRect = false;
+        m_pathRectangleCount = 0;
         nvgBeginPath(*m_nvg);
     }
 
@@ -459,6 +513,7 @@ namespace Babylon::Polyfills::Internal
 
         nvgRect(*m_nvg, left, top, width, height);
         m_rectangleClipping = {left, top, width, height};
+        ++m_pathRectangleCount;
     }
 
     void Context::RoundRect(const Napi::CallbackInfo& info)
@@ -467,92 +522,79 @@ namespace Babylon::Polyfills::Internal
         const auto y = info[1].As<Napi::Number>().FloatValue();
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
-        const auto radii = info[4];
-        if (radii.IsNumber())
+        const auto radii = ParseRoundRectRadii(info.Env(), info[4]);
+        switch (radii.type)
         {
-            const auto radius = radii.As<Napi::Number>().FloatValue();
-            nvgRoundedRect(*m_nvg, x, y, width, height, radius);
-        }
-        else if (radii.IsArray())
-        {
-            const auto radiiArray = radii.As<Napi::Array>();
-            const auto radiiArrayLength = radiiArray.Length();
-            if (radiiArrayLength == 1)
-            {
-                const auto radius = radiiArray[0u].As<Napi::Number>().FloatValue();
-                nvgRoundedRect(*m_nvg, x, y, width, height, radius);
-            }
-            else if (radiiArrayLength == 2)
-            {
-                const auto topLeftBottomRight = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
-                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeftBottomRight, topRightBottomLeft, topLeftBottomRight, topRightBottomLeft);
-            }
-            else if (radiiArrayLength == 3)
-            {
-                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
-                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRightBottomLeft, bottomRight, topRightBottomLeft);
-            }
-            else if (radiiArrayLength == 4)
-            {
-                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRight = radiiArray[1u].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
-                const auto bottomLeft = radiiArray[3u].As<Napi::Number>().FloatValue();
-                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRight, bottomRight, bottomLeft);
-            }
-            else
-            {
-                throw Napi::Error::New(info.Env(), "Invalid number of parameters for radii");
-            }
-        }
-        // DOMPoint
-        // TODO: move duplicate Path2D & Context args parsing into a utils.cpp
-        else if (radii.IsObject())
-        {
-            const auto dompoint = radii.As<Napi::Object>();
-            const auto dpx = dompoint.Get("x").As<Napi::Number>().FloatValue();
-            const auto dpy = dompoint.Get("y").As<Napi::Number>().FloatValue();
-            nvgRoundedRectElliptic(*m_nvg, x, y, width, height, dpx, dpy, dpx, dpy, dpx, dpy, dpx, dpy);
-        }
-        else
-        {
-            throw Napi::Error::New(info.Env(), "Invalid radii parameter");
+            case RoundRectRadiiType::Uniform:
+                nvgRoundedRect(*m_nvg, x, y, width, height, radii.values[0]);
+                break;
+            case RoundRectRadiiType::Varying:
+                nvgRoundedRectVarying(*m_nvg, x, y, width, height,
+                    radii.values[0], radii.values[1], radii.values[2], radii.values[3]);
+                break;
+            case RoundRectRadiiType::Elliptic:
+                nvgRoundedRectElliptic(*m_nvg, x, y, width, height,
+                    radii.values[0], radii.values[1], radii.values[2], radii.values[3],
+                    radii.values[4], radii.values[5], radii.values[6], radii.values[7]);
+                break;
         }
 
         m_rectangleClipping = {x, y, width, height};
 
-        // Deliberately does not set m_pathHasNonRect, even though rounded corners are not
-        // something nvgScissor can express. Clip()'s emulation for a non-rectangular path is
-        // to leave the path current and let the next fill draw it, and nanovg fills the union
-        // of the subpaths, not their intersection -- so `roundRect(); clip(); fillRect()` would
-        // paint the whole fillRect rather than the rounded region. Measured on the "Native
-        // Canvas" visual test: routing roundRect into the emulation takes the pixel difference
-        // from 1.850% to 20.980%, where the scissor's square bounding box stays at 1.850%.
-        // Dropping the radii is wrong, but it is the far smaller error of the two, and a
-        // correct fix needs real path clipping (a stencil pass in nanovg) rather than this
-        // union trick.
+        m_pathHasNonRect = true;
     }
 
-    void Context::Clip(const Napi::CallbackInfo& /*info*/)
+    void Context::Clip(const Napi::CallbackInfo& info)
     {
-        // A non-rectangular clip path cannot be expressed as a scissor rectangle.
-        // Emulate it by leaving the path current so the next fill draws it, and
-        // leave any enclosing scissor untouched rather than clipping to a
-        // rectangle this path never described.
-        if (m_pathHasNonRect)
+        const auto* path = info.Length() > 0 ? NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]) : nullptr;
+        const auto ruleIndex = path != nullptr ? 1u : 0u;
+        const auto rule = info.Length() > ruleIndex && !info[ruleIndex].IsUndefined() ? info[ruleIndex].ToString().Utf8Value() : NONZERO_FILL_RULE;
+        if (rule != NONZERO_FILL_RULE && rule != EVENODD_FILL_RULE)
         {
-            m_isClipped = true;
+            throw Napi::TypeError::New(info.Env(), "Context2D.clip: expected nonzero or evenodd fill rule.");
+        }
+        std::optional<ScopedPath> temporaryPath;
+        if (path != nullptr)
+        {
+            temporaryPath.emplace(*m_nvg);
+            PlayPath2D(path);
+        }
+        if (path != nullptr || m_pathHasNonRect || m_pathRectangleCount != 1 ||
+            m_rectangleClipping.width == 0 || m_rectangleClipping.height == 0)
+        {
+            auto clip = std::make_shared<ClipMask>();
+            nvgRasterizeClip(*m_nvg, m_canvas->GetWidth(), m_canvas->GetHeight(), rule == EVENODD_FILL_RULE, clip->mask);
+            auto& mask = clip->mask;
+            if (m_state.clipMask)
+            {
+                const auto& parent = m_state.clipMask->mask;
+                for (int y = 0; y < mask.height; ++y)
+                {
+                    for (int x = 0; x < mask.width; ++x)
+                    {
+                        const auto px = mask.x + x - parent.x, py = mask.y + y - parent.y;
+                        const auto alpha = px >= 0 && py >= 0 && px < parent.width && py < parent.height
+                            ? parent.rgba[(size_t(py) * parent.width + px) * CanvasConstants::RGBA_CHANNEL_COUNT + CanvasConstants::ALPHA_CHANNEL_INDEX] : 0;
+                        auto& value = mask.rgba[(size_t(y) * mask.width + x) * CanvasConstants::RGBA_CHANNEL_COUNT + CanvasConstants::ALPHA_CHANNEL_INDEX];
+                        value = static_cast<uint8_t>(
+                            (value * alpha + CanvasConstants::COLOR_CHANNEL_HALF) /
+                            CanvasConstants::COLOR_CHANNEL_MAX);
+                    }
+                }
+            }
+            clip->image = nvgCreateImageRGBA(*m_nvg, mask.width, mask.height, NVG_IMAGE_NEAREST, mask.rgba.data());
+            if (clip->image == 0)
+            {
+                throw Napi::Error::New(info.Env(), "Cannot allocate Canvas clip texture.");
+            }
+            m_clipMasks.push_back(clip);
+            m_state.clipMask = clip;
+            nvgClipImage(*m_nvg, clip->image, mask.x, mask.y, mask.width, mask.height);
             return;
         }
 
-        m_isClipped = false;
-
-        //By default m_rectangleClipping is not set, in this case we use the canvas width and height.
-        auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetWidth();
-        auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
+        const auto w = m_rectangleClipping.width;
+        const auto h = m_rectangleClipping.height;
         // Canvas rectangles can extend left/up; NanoVG scissors require positive extents.
         const auto left = m_rectangleClipping.left + std::min(w, 0.f);
         const auto top = m_rectangleClipping.top + std::min(h, 0.f);
@@ -562,6 +604,18 @@ namespace Babylon::Polyfills::Internal
         nvgIntersectScissor(*m_nvg, left - 1, top - 1, std::abs(w) + 1, std::abs(h) + 1);
     }
 
+    void Context::ReleaseClipMasksAfterFlush()
+    {
+        m_clipMasks.erase(std::remove_if(m_clipMasks.begin(), m_clipMasks.end(), [this](const auto& clip) {
+            if (clip.use_count() != 1)
+            {
+                return false;
+            }
+            nvgDeleteImage(*m_nvg, clip->image);
+            return true;
+        }), m_clipMasks.end());
+    }
+
     void Context::StrokeRect(const Napi::CallbackInfo& info)
     {
         const auto left = info[0].As<Napi::Number>().FloatValue();
@@ -569,6 +623,7 @@ namespace Babylon::Polyfills::Internal
         const auto width = info[2].As<Napi::Number>().FloatValue();
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
+        ScopedPath temporaryPath{*m_nvg};
         nvgRect(*m_nvg, left, top, width, height);
         BindStrokeStyle(info);
         SetFilterStack();
@@ -577,63 +632,61 @@ namespace Babylon::Polyfills::Internal
 
     void Context::PlayPath2D(const NativeCanvasPath2D* path)
     {
-        m_isClipped = false;
-        m_pathHasNonRect = true;
         nvgBeginPath(*m_nvg);
         for (const auto& command : *path)
         {
             const auto args = command.args;
             switch (command.type)
             {
-                case P2D_CLOSE:
+                case Path2DCommandType::Close:
                     nvgClosePath(*m_nvg);
                     break;
-                case P2D_MOVETO:
+                case Path2DCommandType::MoveTo:
                     nvgMoveTo(*m_nvg, args.moveTo.x, args.moveTo.y);
                     break;
-                case P2D_LINETO:
+                case Path2DCommandType::LineTo:
                     nvgLineTo(*m_nvg, args.lineTo.x, args.lineTo.y);
                     break;
-                case P2D_BEZIERTO:
+                case Path2DCommandType::BezierTo:
                     nvgBezierTo(*m_nvg, args.bezierTo.cp1x, args.bezierTo.cp1y,
                         args.bezierTo.cp2x, args.bezierTo.cp2y,
                         args.bezierTo.x, args.bezierTo.y);
                     break;
-                case P2D_QUADTO:
+                case Path2DCommandType::QuadTo:
                     nvgQuadTo(*m_nvg, args.quadTo.cpx, args.quadTo.cpy,
                         args.quadTo.x, args.quadTo.y);
                     break;
-                case P2D_ARC:
+                case Path2DCommandType::Arc:
                     nvgArc(*m_nvg, args.arc.x, args.arc.y, args.arc.radius,
                         args.arc.startAngle, args.arc.endAngle,
                         args.arc.counterclockwise ? NVG_CCW : NVG_CW);
                     break;
-                case P2D_ARCTO:
+                case Path2DCommandType::ArcTo:
                     nvgArcTo(*m_nvg, args.arcTo.x1, args.arcTo.y1,
                         args.arcTo.x2, args.arcTo.y2,
                         args.arcTo.radius);
                     break;
-                case P2D_ELLIPSE:
+                case Path2DCommandType::Ellipse:
                     // TODO: handle clockwise for nvgElipse (args.ellipse.counterclockwise)
                     nvgEllipse(*m_nvg, args.ellipse.x, args.ellipse.y,
                         args.ellipse.radiusX, args.ellipse.radiusY);
                     break;
-                case P2D_RECT:
+                case Path2DCommandType::Rect:
                     nvgRect(*m_nvg, args.rect.x, args.rect.y,
                         args.rect.width, args.rect.height);
                     break;
-                case P2D_ROUNDRECT:
+                case Path2DCommandType::RoundRect:
                     nvgRoundedRect(*m_nvg, args.roundRect.x, args.roundRect.y,
                         args.roundRect.width, args.roundRect.height,
                         args.roundRect.radii);
                     break;
-                case P2D_ROUNDRECTVARYING:
+                case Path2DCommandType::RoundRectVarying:
                     nvgRoundedRectVarying(*m_nvg, args.roundRectVarying.x, args.roundRectVarying.y,
                         args.roundRectVarying.width, args.roundRectVarying.height,
                         args.roundRectVarying.topLeft, args.roundRectVarying.topRight,
                         args.roundRectVarying.bottomRight, args.roundRectVarying.bottomLeft);
                     break;
-                case P2D_ROUNDRECTELLIPTIC:
+                case Path2DCommandType::RoundRectElliptic:
                     nvgRoundedRectElliptic(*m_nvg, args.roundRectElliptic.x, args.roundRectElliptic.y,
                         args.roundRectElliptic.width, args.roundRectElliptic.height,
                         args.roundRectElliptic.topLeftX, args.roundRectElliptic.topLeftY,
@@ -641,7 +694,7 @@ namespace Babylon::Polyfills::Internal
                         args.roundRectElliptic.bottomRightX, args.roundRectElliptic.bottomRightY,
                         args.roundRectElliptic.bottomLeftX, args.roundRectElliptic.bottomLeftY);
                     break;
-                case P2D_TRANSFORM:
+                case Path2DCommandType::Transform:
                     nvgTransform(*m_nvg,
                         args.transform.a, args.transform.b, args.transform.c,
                         args.transform.d, args.transform.e, args.transform.f);
@@ -654,10 +707,21 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Stroke(const Napi::CallbackInfo& info)
     {
-        // draw Path2D if exists
-        const NativeCanvasPath2D* path = info.Length() == 1 ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>()) : nullptr;
+        // stroke(path?) — reject non-Path2D first arg.
+        const NativeCanvasPath2D* path = nullptr;
+        if (info.Length() >= 1 && !info[0].IsUndefined())
+        {
+            path = NativeCanvasPath2D::TryUnwrap(info.Env(), info[0]);
+            if (path == nullptr)
+            {
+                throw Napi::TypeError::New(info.Env(), "Context2D.stroke: the first argument is not a Path2D.");
+            }
+        }
+
+        std::optional<ScopedPath> temporaryPath;
         if (path != nullptr)
         {
+            temporaryPath.emplace(*m_nvg);
             PlayPath2D(path);
         }
 
@@ -699,17 +763,18 @@ namespace Babylon::Polyfills::Internal
     {
         std::string text{info[0].As<Napi::String>()};
 
-        // Measure against the same face FillText will bind.
+        // SetFont records the face but does not bind it; measure with the same face as FillText.
         const bool fontBound = SetFontFaceId();
+
         // No face available: synthesize Arial-ish metrics so callers still get a finite width.
         if (!fontBound && m_state.font.Size() > 0.f)
         {
             // Approximate Arial proportional metrics: average advance ~ 0.55 em.
             const float fontSize = m_state.font.Size();
-            const float advance = fontSize * 0.55f;
+            const float advance = fontSize * FALLBACK_GLYPH_ADVANCE_EM;
             const float width = advance * static_cast<float>(text.length());
-            const float ascent = fontSize * 0.75f;
-            const float descent = fontSize * 0.25f;
+            const float ascent = fontSize * FALLBACK_ASCENT_EM;
+            const float descent = fontSize * FALLBACK_DESCENT_EM;
 
             auto obj{Napi::Object::New(info.Env())};
             obj.Set("width", Napi::Value::From(info.Env(), width));
@@ -733,7 +798,7 @@ namespace Babylon::Polyfills::Internal
         {
             return false;
         }
-        else if (m_state.currentFontId >= 0)
+        if (m_state.currentFontId >= CanvasConstants::MIN_NANOVG_RESOURCE_INDEX)
         {
             nvgFontFaceId(*m_nvg, m_state.currentFontId);
         }
@@ -744,35 +809,43 @@ namespace Babylon::Polyfills::Internal
         return true;
     }
 
-    void Context::FillText(const Napi::CallbackInfo& info)
+    void Context::DrawText(const Napi::CallbackInfo& info, bool stroke)
     {
         std::string text = info[0].As<Napi::String>().Utf8Value();
-        auto x = info[1].As<Napi::Number>().FloatValue();
-        auto y = info[2].As<Napi::Number>().FloatValue();
+        const auto x = info[1].As<Napi::Number>().FloatValue();
+        const auto y = info[2].As<Napi::Number>().FloatValue();
 
         // TODO: support ligatures, etc.
-        if (m_state.direction.compare("rtl") == 0) {
+        if (m_state.direction == "rtl")
+        {
             std::reverse(text.begin(), text.end());
         }
 
-        if (SetFontFaceId())
+        if (!SetFontFaceId())
+        {
+            return;
+        }
+
+        if (stroke)
+        {
+            BindStrokeStyle(info);
+            nvgStrokeText(*m_nvg, x, y, text.c_str(), nullptr);
+        }
+        else
         {
             BindFillStyle(info);
-
-            if (m_state.filter.length())
-            {
-                nanovg_filterstack filterStack;
-                filterStack.ParseString(m_state.filter);
-                nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
-            }
-
+            SetFilterStack();
             nvgText(*m_nvg, x, y, text.c_str(), nullptr);
         }
     }
 
+    void Context::FillText(const Napi::CallbackInfo& info)
+    {
+        DrawText(info, false);
+    }
+
     void Context::EnsureFontsLoaded()
     {
-        // Pick up any fonts that were loaded after this Context was created.
         for (auto& font : NativeCanvas::fontsInfos)
         {
             if (m_fonts.end() == m_fonts.find(font.first))
@@ -802,36 +875,15 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // Pick up any fonts loaded after this Context was created (#1683).
         EnsureFontsLoaded();
 
-        // If called outside the frame cycle (e.g., during initialization/font loading
-        // or async texture load callbacks), acquire a FrameCompletionScope which blocks
-        // until StartRenderingCurrentFrame provides the encoder.
-        std::optional<Graphics::FrameCompletionScope> scope;
-        if (m_graphicsContext.GetActiveEncoder() == nullptr)
-        {
-            scope.emplace(m_graphicsContext.AcquireFrameCompletionScope());
-        }
+        // Encoder presence does not protect its lifetime in timer or image-load callbacks.
+        // Hold our own scope through all encoder work.
+        auto scope = m_graphicsContext.AcquireFrameCompletionScope();
 
-        // A canvas flush is the one stretch of a frame that acquires views without ever
-        // reaching NativeEngine::GetEncoder, so no budget check runs inside it. Its cost is
-        // not bounded either: the pool recycles framebuffers but not view ids (Acquire ->
-        // Bind() drops the cached id, the draw re-acquires, Release -> Clear() acquires
-        // again), so it scales with filter-op count. That means kViewFlushMargin cannot be
-        // sized to cover it, and a frame that is just under the flush threshold on entry
-        // here would run past maxViews and throw "Too many views".
-        //
-        // Check once, here. This is the only safe point in the flush:
-        //   - after the scope above, so m_pendingFrameScopes > 0 and the flush handshake is
-        //     actually serviceable by the parked render thread (it no-ops otherwise);
-        //   - before the encoder is read below, so a flush that swaps the frame encoder
-        //     cannot leave us holding a stale pointer;
-        //   - before nvgBeginFrame, so no nanovg transient buffer exists to be invalidated
-        //     (those are allocated in glnvg__renderFlush during nvgEndFrame).
-        // This does not bound a single canvas' cost, but it reduces the requirement from
-        // "the margin must cover an arbitrary canvas" to "one canvas must fit in maxViews".
-        m_graphicsContext.FlushViewsIfNeeded();
+        // Canvas filtering can consume an unbounded number of views. Check the budget before
+        // reading the encoder or allocating NanoVG transient buffers.
+        m_graphicsContext.CheckViewBudget();
 
         bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
         if (encoder == nullptr)
@@ -839,13 +891,9 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // Discard any residual encoder state from NativeEngine rendering.
-        // In the old model Canvas had its own per-thread encoder with clean state;
-        // now it shares the frame encoder with NativeEngine.
+        // Canvas shares the frame encoder, so discard residual rendering state.
         encoder->discard(BGFX_DISCARD_ALL);
 
-        // bgfx framebuffer pool exhaustion can throw both from UpdateRenderTarget() and
-        // from FrameBufferPool::Acquire() reached via nvgEndFrame() below.
         const bool needClear = m_canvas->UpdateRenderTarget();
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
@@ -853,7 +901,7 @@ namespace Babylon::Polyfills::Internal
         frameBuffer.Bind();
         if (needClear)
         {
-            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.f, 0);
         }
         frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
         const auto width = m_canvas->GetWidth();
@@ -861,7 +909,6 @@ namespace Babylon::Polyfills::Internal
 
         for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
         {
-            // sanity check no buffers should have been acquired yet
             assert(buffer.isAvailable == true);
         }
         std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this]() -> Babylon::Graphics::FrameBuffer* {
@@ -870,17 +917,22 @@ namespace Babylon::Polyfills::Internal
             return frameBuffer;
         };
         std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-            // clear framebuffer when released
-            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0.f, 0.f, 0.f, 0.f, 1.f, 0);
             this->m_canvas->m_frameBufferPool.Release(frameBuffer);
             frameBuffer->Unbind();
         };
 
-        nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
+        nvgSetViewport(*m_nvg, float(width), float(height));
         nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
-        nvgSetFrameBufferPool(*m_nvg, { acquire, release });
+        const auto samplerFlags = [this] {
+            // Border colors share bgfx's palette with framebuffer clears.
+            const auto transparent = m_graphicsContext.AcquireClearPaletteIndex({0.f, 0.f, 0.f, 0.f});
+            return BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(transparent);
+        };
+        nvgSetFrameBufferPool(*m_nvg, { acquire, release, samplerFlags });
         nvgEndFrame(*m_nvg);
         ReleaseImagesAfterFlush();
+        ReleaseClipMasksAfterFlush();
         frameBuffer.Unbind();
 
         // Reserve the view id for the eventual canvas->texture blit NOW, while we are
@@ -894,7 +946,6 @@ namespace Babylon::Polyfills::Internal
 
         for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
         {
-            // sanity check no unreleased buffers
             assert(buffer.isAvailable == true);
         }
     }
@@ -903,18 +954,15 @@ namespace Babylon::Polyfills::Internal
     {
         const uint32_t width = m_canvas != nullptr ? m_canvas->GetWidth() : 0;
         const uint32_t height = m_canvas != nullptr ? m_canvas->GetHeight() : 0;
-        std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
+        std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * CanvasConstants::RGBA_CHANNEL_COUNT, 0);
         if (m_canvas == nullptr || width == 0 || height == 0)
         {
             return rgba;
         }
 
-        // Capture can run with a non-null encoder but no JS-owned scope (notably in
-        // unit-test hosts). Acquire before FlushCore so both NanoVG submission and
-        // the readback remain in a frame the render thread cannot close underneath us.
+        // Keep NanoVG submission and readback in a frame the render thread cannot close.
         auto scope = m_graphicsContext.AcquireFrameCompletionScope();
 
-        // Push pending NanoVG draws into the canvas RT first.
         FlushCore();
         if (!m_canvas->HasFrameBuffer())
         {
@@ -946,8 +994,9 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{"Canvas.CaptureRGBA: failed to create readback texture."};
         }
 
-        // maxViews-1 is reserved for readback blits (see DeviceImpl::FlushViewsIfNeeded).
-        const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(bgfx::getCaps()->limits.maxViews - 1);
+        // maxViews-1 is reserved for readback blits (see DeviceImpl::CheckViewBudget).
+        const bgfx::ViewId blitView = static_cast<bgfx::ViewId>(
+            bgfx::getCaps()->limits.maxViews - READBACK_RESERVED_VIEW_COUNT);
         bgfx::TextureRegion dstRegion{};
         dstRegion.init(blitTexture, 0, 0, static_cast<uint16_t>(width), static_cast<uint16_t>(height));
         bgfx::TextureRegion srcRegion{};
@@ -993,14 +1042,8 @@ namespace Babylon::Polyfills::Internal
                     readback->Cv.notify_one();
                 });
 
-        // Drive mid-frame flushes until the readback completes. Each flush ends the
-        // current encoder, runs bgfx::frame(FLUSH), completes ready readTexture
-        // requests, and opens a fresh encoder for the rest of the logical frame.
-        //
-        // Keep `scope` alive for the whole wait: releasing it while a parent RAF
-        // FrameCompletionScope is still held would leave FinishRendering blocked on
-        // that parent while we block on cv — deadlock. ForceMidFrameFlush is the
-        // path that advances bgfx while any scope remains.
+        // Keep the scope alive while mid-frame flushes advance the asynchronous readback;
+        // releasing it before the wait completes can deadlock with a parent frame scope.
         for (;;)
         {
             {
@@ -1020,8 +1063,7 @@ namespace Babylon::Polyfills::Internal
                 {
                     break;
                 }
-                // Yield briefly so a render thread that is between Finish/Start
-                // (unit-test pump) can enter Finish and service flushRequested.
+                // Let a render thread between Finish/Start service the flush request.
                 readback->Cv.wait_for(lock, std::chrono::milliseconds{1}, [&] { return readback->Done; });
             }
         }
@@ -1034,7 +1076,7 @@ namespace Babylon::Polyfills::Internal
 
         if (bgfx::getCaps()->originBottomLeft && height > 1)
         {
-            const size_t rowPitch = static_cast<size_t>(width) * 4;
+            const size_t rowPitch = static_cast<size_t>(width) * CanvasConstants::RGBA_CHANNEL_COUNT;
             std::vector<uint8_t> row(rowPitch);
             for (uint32_t y = 0; y < height / 2; ++y)
             {
@@ -1050,20 +1092,23 @@ namespace Babylon::Polyfills::Internal
         // (getImageData, toDataURL, drawImage source) expose straight alpha, so undo
         // premultiply before handing the buffer out. Without this, translucent RGB is
         // written into PNG as-is and drawImage(canvas) multiplies by alpha a second time.
-        for (size_t i = 0; i + 3 < rgba.size(); i += 4)
+        for (size_t i = 0; i + CanvasConstants::ALPHA_CHANNEL_INDEX < rgba.size(); i += CanvasConstants::RGBA_CHANNEL_COUNT)
         {
-            const uint8_t a = rgba[i + 3];
+            const uint8_t a = rgba[i + CanvasConstants::ALPHA_CHANNEL_INDEX];
             if (a == 0)
             {
-                rgba[i + 0] = 0;
-                rgba[i + 1] = 0;
-                rgba[i + 2] = 0;
+                rgba[i + CanvasConstants::RED_CHANNEL_INDEX] = 0;
+                rgba[i + CanvasConstants::GREEN_CHANNEL_INDEX] = 0;
+                rgba[i + CanvasConstants::BLUE_CHANNEL_INDEX] = 0;
             }
-            else if (a < 255)
+            else if (a < CanvasConstants::COLOR_CHANNEL_MAX)
             {
-                rgba[i + 0] = static_cast<uint8_t>(std::min(255, (static_cast<int>(rgba[i + 0]) * 255 + a / 2) / a));
-                rgba[i + 1] = static_cast<uint8_t>(std::min(255, (static_cast<int>(rgba[i + 1]) * 255 + a / 2) / a));
-                rgba[i + 2] = static_cast<uint8_t>(std::min(255, (static_cast<int>(rgba[i + 2]) * 255 + a / 2) / a));
+                for (size_t channel = CanvasConstants::RED_CHANNEL_INDEX; channel <= CanvasConstants::BLUE_CHANNEL_INDEX; ++channel)
+                {
+                    rgba[i + channel] = static_cast<uint8_t>(std::min(
+                        CanvasConstants::COLOR_CHANNEL_MAX,
+                        (static_cast<uint32_t>(rgba[i + channel]) * CanvasConstants::COLOR_CHANNEL_MAX + a / 2) / a));
+                }
             }
         }
 
@@ -1074,7 +1119,7 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::Env env = info.Env();
 
-        if (info.Length() < 3 || !info[0].IsObject())
+        if (info.Length() < PUT_IMAGE_DATA_REQUIRED_ARGUMENT_COUNT || !info[0].IsObject())
         {
             throw Napi::TypeError::New(env, "Context2D.putImageData requires at least 3 arguments (imageData, dx, dy).");
         }
@@ -1107,7 +1152,7 @@ namespace Babylon::Polyfills::Internal
         const auto srcHeight = static_cast<uint32_t>(srcHeightInt);
 
         const auto typedArray = dataValue.As<Napi::TypedArray>();
-        const uint64_t requiredBytes = static_cast<uint64_t>(srcWidth) * srcHeight * 4u;
+        const uint64_t requiredBytes = static_cast<uint64_t>(srcWidth) * srcHeight * CanvasConstants::RGBA_CHANNEL_COUNT;
         if (typedArray.ByteLength() < requiredBytes)
         {
             throw Napi::TypeError::New(env, "Context2D.putImageData: the ImageData buffer is smaller than width*height*4.");
@@ -1127,7 +1172,7 @@ namespace Babylon::Polyfills::Internal
         int64_t dirtyY{0};
         int64_t dirtyWidth{srcWidthInt};
         int64_t dirtyHeight{srcHeightInt};
-        if (info.Length() >= 7)
+        if (info.Length() >= PUT_IMAGE_DATA_DIRTY_RECT_ARGUMENT_COUNT)
         {
             dirtyX = info[3].ToNumber().Int32Value();
             dirtyY = info[4].ToNumber().Int32Value();
@@ -1161,13 +1206,13 @@ namespace Babylon::Polyfills::Internal
 
         // nvgImagePattern needs a tightly packed image, so extract the dirty
         // sub-rectangle into its own buffer.
-        std::vector<uint8_t> patch(static_cast<size_t>(copyWidth) * copyHeight * 4u);
+        std::vector<uint8_t> patch(static_cast<size_t>(copyWidth) * copyHeight * CanvasConstants::RGBA_CHANNEL_COUNT);
         for (uint32_t row = 0; row < copyHeight; ++row)
         {
             std::memcpy(
-                patch.data() + static_cast<size_t>(row) * copyWidth * 4u,
-                srcPixels + (static_cast<size_t>(y0 + row) * srcWidth + static_cast<size_t>(x0)) * 4u,
-                static_cast<size_t>(copyWidth) * 4u);
+                patch.data() + static_cast<size_t>(row) * copyWidth * CanvasConstants::RGBA_CHANNEL_COUNT,
+                srcPixels + (static_cast<size_t>(y0 + row) * srcWidth + static_cast<size_t>(x0)) * CanvasConstants::RGBA_CHANNEL_COUNT,
+                static_cast<size_t>(copyWidth) * CanvasConstants::RGBA_CHANNEL_COUNT);
         }
 
         // dx/dy are arbitrary int32s from JS, so offsetting them by the clipped origin is done in
@@ -1200,11 +1245,10 @@ namespace Babylon::Polyfills::Internal
         nvgGlobalCompositeOperation(*m_nvg, NVG_COPY);
 
         NVGpaint imagePaint = nvgImagePattern(*m_nvg, destX, destY, destWidth, destHeight, 0.f, imageIndex, 1.f);
-        ResetPathState();
+        ScopedPath temporaryPath{*m_nvg};
         nvgRect(*m_nvg, destX, destY, destWidth, destHeight);
         nvgFillPaint(*m_nvg, imagePaint);
         nvgFill(*m_nvg);
-
         nvgRestore(*m_nvg);
     }
 
@@ -1215,14 +1259,14 @@ namespace Babylon::Polyfills::Internal
         const auto radius = static_cast<float>(info[2].As<Napi::Number>().DoubleValue());
         const auto startAngle = static_cast<float>(info[3].As<Napi::Number>().DoubleValue());
         const auto endAngle = static_cast<float>(info[4].As<Napi::Number>().DoubleValue());
-        const NVGwinding winding = (info.Length() == 6 && info[5].As<Napi::Boolean>()) ? NVGwinding::NVG_CCW : NVGwinding::NVG_CW;
+        const NVGwinding winding = (info.Length() == ARC_COUNTERCLOCKWISE_ARGUMENT_COUNT && info[5].As<Napi::Boolean>()) ? NVGwinding::NVG_CCW : NVGwinding::NVG_CW;
         m_pathHasNonRect = true;
         nvgArc(*m_nvg, x, y, radius, startAngle, endAngle, winding);
     }
 
     void Context::ReadPixels(int64_t sx, int64_t sy, uint32_t w, uint32_t h, uint8_t* dst)
     {
-        const size_t total = static_cast<size_t>(w) * h * 4;
+        const size_t total = static_cast<size_t>(w) * h * CanvasConstants::RGBA_CHANNEL_COUNT;
         std::memset(dst, 0, total);
         const uint32_t width = m_canvas != nullptr ? m_canvas->GetWidth() : 0;
         const uint32_t height = m_canvas != nullptr ? m_canvas->GetHeight() : 0;
@@ -1236,18 +1280,20 @@ namespace Babylon::Polyfills::Internal
         }
 
         const auto rgba = CaptureRGBA();
-        const size_t rowBytes = static_cast<size_t>(right - left) * 4;
+        const size_t rowBytes = static_cast<size_t>(right - left) * CanvasConstants::RGBA_CHANNEL_COUNT;
         for (int64_t y = top; y < bottom; ++y)
         {
-            const size_t srcIndex = (static_cast<size_t>(y) * width + static_cast<size_t>(left)) * 4;
-            const size_t destIndex = (static_cast<size_t>(y - sy) * w + static_cast<size_t>(left - sx)) * 4;
+            const size_t srcIndex = (static_cast<size_t>(y) * width + static_cast<size_t>(left)) * CanvasConstants::RGBA_CHANNEL_COUNT;
+            const size_t destIndex = (static_cast<size_t>(y - sy) * w + static_cast<size_t>(left - sx)) * CanvasConstants::RGBA_CHANNEL_COUNT;
             std::memcpy(dst + destIndex, rgba.data() + srcIndex, rowBytes);
         }
     }
 
     void Context::DrawImage(const Napi::CallbackInfo& info)
     {
-        if (info.Length() != 3 && info.Length() != 5 && info.Length() != 9)
+        if (info.Length() != DRAW_IMAGE_POSITION_ARGUMENT_COUNT &&
+            info.Length() != DRAW_IMAGE_SIZE_ARGUMENT_COUNT &&
+            info.Length() != DRAW_IMAGE_CROP_ARGUMENT_COUNT)
         {
             throw Napi::Error::New(info.Env(), "Invalid number of parameters for DrawImage");
         }
@@ -1255,15 +1301,19 @@ namespace Babylon::Polyfills::Internal
         Napi::Object imageObj = info[0].As<Napi::Object>();
         // Retain the source kind before coercion can change its prototype or properties.
         // Canvas takes precedence over the structural ImageBitmap shape.
-        const auto canvasCtorVal = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("Canvas");
-        NativeCanvas* const srcCanvas = canvasCtorVal.IsFunction() && imageObj.InstanceOf(canvasCtorVal.As<Napi::Function>())
-            ? NativeCanvas::Unwrap(imageObj)
+        NativeCanvas* const srcCanvas = NativeCanvas::TryUnwrap(info.Env(), imageObj);
+        const NativeCanvasImage* const canvasImage = srcCanvas == nullptr
+            ? NativeCanvasImage::TryUnwrap(info.Env(), imageObj)
             : nullptr;
-        const bool isImageBitmap = srcCanvas == nullptr && imageObj.Has("data") && imageObj.Get("data").IsTypedArray();
+        const bool isImageBitmap = srcCanvas == nullptr && canvasImage == nullptr && imageObj.Has("data") && imageObj.Get("data").IsTypedArray();
+        if (srcCanvas == nullptr && canvasImage == nullptr && !isImageBitmap)
+        {
+            throw Napi::TypeError::New(info.Env(), "drawImage: first argument must be a Canvas, Image, or ImageBitmap-like object.");
+        }
 
         // Coercion can also resize the source. Do it once, before reading dimensions
         // or creating any graphics resources.
-        std::array<double, 8> coordinates{};
+        std::array<double, DRAW_IMAGE_COORDINATE_COUNT> coordinates{};
         for (size_t index = 1; index < info.Length(); ++index)
         {
             coordinates[index - 1] = info[index].ToNumber().DoubleValue();
@@ -1282,7 +1332,7 @@ namespace Babylon::Polyfills::Internal
 
             // GPU readback of the source canvas (flush + RT blit + readTexture) so
             // NanoVG draws (fillRect/text/paths) are included.
-            std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * 4, 0);
+            std::vector<uint8_t> rgba(static_cast<size_t>(width) * height * CanvasConstants::RGBA_CHANNEL_COUNT, 0);
             if (Context* const srcContext = srcCanvas->GetBoundContext(); srcContext != nullptr)
             {
                 try
@@ -1305,12 +1355,7 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        // NativeEngine.createImageBitmap() returns a plain object carrying the raw decoded pixels
-        // ({data, width, height, format}) rather than a wrapped NativeCanvasImage. Because Babylon
-        // Native sets forceBitmapOverHTMLImageElement, LoadImage delivers these bitmaps to drawImage
-        // (e.g. Mesh.applyDisplacementMap, height/flow maps). Unwrapping such a plain object as a
-        // NativeCanvasImage would dereference garbage and crash, so handle it explicitly by
-        // converting the pixels to RGBA8 and drawing them directly.
+        // createImageBitmap returns a plain pixel object, not a NativeCanvasImage wrapper.
         if (isImageBitmap)
         {
             const uint32_t width = imageObj.Get("width").As<Napi::Number>().Uint32Value();
@@ -1329,33 +1374,25 @@ namespace Babylon::Polyfills::Internal
             }
             const auto data = dataValue.As<Napi::Uint8Array>();
             const auto format = static_cast<bimg::TextureFormat::Enum>(imageObj.Get("format").As<Napi::Number>().Uint32Value());
-            // Everything below is caller-supplied. bimg::imageConvert reads the source and writes
-            // width*height*4 bytes to the destination without knowing either buffer's real length,
-            // so validate both before handing it any pointers.
+            // bimg cannot validate the caller-owned source and destination buffer lengths.
             if (format >= bimg::TextureFormat::Count)
             {
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap has an out-of-range pixel format.");
             }
 
             const uint64_t pixelCount = static_cast<uint64_t>(width) * height;
-            if (pixelCount > std::numeric_limits<size_t>::max() / 4)
+            if (pixelCount > std::numeric_limits<size_t>::max() / CanvasConstants::RGBA_CHANNEL_COUNT)
             {
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions are too large.");
             }
 
-            // imageGetSize takes uint16_t extents, so anything above 65535 would be truncated and
-            // produce a size for a much smaller image. A 65537x1 RGBA8 bitmap would come back as
-            // 1x1 (4 bytes), a 4-byte buffer would pass the check below, and the RGBA8 memcpy
-            // would then read width*height*4 bytes from it. Reject what bimg cannot describe.
+            // imageGetSize truncates extents to uint16_t.
             if (width > std::numeric_limits<uint16_t>::max() || height > std::numeric_limits<uint16_t>::max())
             {
                 throw Napi::Error::New(info.Env(), "drawImage: ImageBitmap dimensions exceed the maximum supported size.");
             }
 
-            // Ask bimg for the size rather than computing width*height*bpp/8: block-compressed
-            // formats round up to whole blocks and have a minimum block count, so a 1x1 BC1 image
-            // still occupies one 8-byte block. The naive bits-per-pixel math would accept a
-            // 1-byte buffer for it and imageConvert would then read past the end.
+            // Block-compressed formats require whole blocks, so use bimg's size calculation.
             const uint64_t requiredBytes = bimg::imageGetSize(nullptr, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, false, false, 1, format);
             if (requiredBytes == 0 || data.ByteLength() < requiredBytes)
             {
@@ -1363,7 +1400,7 @@ namespace Babylon::Polyfills::Internal
             }
 
             const uint8_t* srcBytes = data.Data();
-            std::vector<uint8_t> rgba(static_cast<size_t>(pixelCount) * 4);
+            std::vector<uint8_t> rgba(static_cast<size_t>(pixelCount) * CanvasConstants::RGBA_CHANNEL_COUNT);
             if (format == bimg::TextureFormat::RGBA8)
             {
                 std::memcpy(rgba.data(), srcBytes, rgba.size());
@@ -1386,14 +1423,13 @@ namespace Babylon::Polyfills::Internal
 #endif
         }
 
-        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(imageObj);
         const auto rectangles = ParseDrawImageRectangles(arguments, canvasImage->GetWidth(), canvasImage->GetHeight());
         if (!rectangles)
         {
             return;
         }
 
-        int imageIndex{-1};
+        int imageIndex{CanvasConstants::INVALID_NANOVG_IMAGE};
         const uint32_t generation = canvasImage->GetContentGeneration();
         const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
         // SetBuffer keeps this NativeCanvasImage* and only replaces its pixels. A same-size
@@ -1413,7 +1449,7 @@ namespace Babylon::Polyfills::Internal
         {
             imageIndex = nvgImageIter->second.index;
         }
-        assert(imageIndex != -1);
+        assert(imageIndex != CanvasConstants::INVALID_NANOVG_IMAGE);
 
         DrawImageCommon(imageIndex, *rectangles);
     }
@@ -1428,12 +1464,12 @@ namespace Babylon::Polyfills::Internal
         double dy{};
         double dWidth{sWidth};
         double dHeight{sHeight};
-        if (arguments.size() == 2)
+        if (arguments.size() == DRAW_IMAGE_POSITION_COORDINATE_COUNT)
         {
             dx = arguments[0];
             dy = arguments[1];
         }
-        else if (arguments.size() == 4)
+        else if (arguments.size() == DRAW_IMAGE_SIZE_COORDINATE_COUNT)
         {
             dx = arguments[0];
             dy = arguments[1];
@@ -1558,28 +1594,11 @@ namespace Babylon::Polyfills::Internal
             imageIndex,
             1.f);
 
-        if (m_isClipped)
-        {
-            // The current path is the emulated non-rectangular clip. Restrict it to
-            // the destination rectangle with a temporary scissor instead of appending
-            // the rectangle to the path, which would fill and retain their union.
-            nvgSave(*m_nvg);
-            nvgIntersectScissor(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-            nvgRestore(*m_nvg);
-        }
-        else
-        {
-            // Rectangular clips live in NanoVG's scissor state and survive resetting
-            // the temporary draw path. Keep the wrapper's path flags in sync as well.
-            ResetPathState();
-            nvgRect(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
-            nvgFillPaint(*m_nvg, imagePaint);
-            SetFilterStack();
-            nvgFill(*m_nvg);
-        }
+        ScopedPath temporaryPath{*m_nvg};
+        nvgRect(*m_nvg, rectangles.X, rectangles.Y, rectangles.Width, rectangles.Height);
+        nvgFillPaint(*m_nvg, imagePaint);
+        SetFilterStack();
+        nvgFill(*m_nvg);
     }
 
     void Context::RetainImageUntilFlush(int imageIndex)
@@ -1610,7 +1629,7 @@ namespace Babylon::Polyfills::Internal
         // transparent-black buffer -- only the dimensions differ in how they are sourced.
         uint32_t width{}, height{};
 
-        if (info.Length() >= 2 && info[0].IsNumber() && info[1].IsNumber())
+        if (info.Length() >= CREATE_IMAGE_DATA_DIMENSION_ARGUMENT_COUNT && info[0].IsNumber() && info[1].IsNumber())
         {
             const auto wInt = info[0].As<Napi::Number>().Int32Value();
             const auto hInt = info[1].As<Napi::Number>().Int32Value();
@@ -1661,8 +1680,8 @@ namespace Babylon::Polyfills::Internal
             throw Napi::RangeError::New(info.Env(), "Context2D.createImageData: width and height must be non-zero");
         }
 
-        // Backs a width*height*4 allocation, so reject sizes that would overflow size_t.
-        if (static_cast<uint64_t>(width) * height > std::numeric_limits<size_t>::max() / 4)
+        // Backs an RGBA width*height allocation, so reject sizes that would overflow size_t.
+        if (static_cast<uint64_t>(width) * height > std::numeric_limits<size_t>::max() / CanvasConstants::RGBA_CHANNEL_COUNT)
         {
             throw Napi::RangeError::New(info.Env(), "Context2D.createImageData: requested size is too large.");
         }
@@ -1674,7 +1693,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
     {
-        if (info.Length() < 4)
+        if (info.Length() < GET_IMAGE_DATA_REQUIRED_ARGUMENT_COUNT)
         {
             throw Napi::Error::New(info.Env(), "Context2D.getImageData: invalid number of parameters");
         }
@@ -1718,9 +1737,9 @@ namespace Babylon::Polyfills::Internal
             sh = static_cast<uint32_t>(shInt);
         }
 
-        // The region is caller-supplied and backs a width*height*4 allocation, so reject sizes
+        // The region is caller-supplied and backs an RGBA width*height allocation, so reject sizes
         // that would overflow size_t before ImageData tries to allocate them.
-        if (static_cast<uint64_t>(sw) * sh > std::numeric_limits<size_t>::max() / 4)
+        if (static_cast<uint64_t>(sw) * sh > std::numeric_limits<size_t>::max() / CanvasConstants::RGBA_CHANNEL_COUNT)
         {
             throw Napi::RangeError::New(info.Env(), "Context2D.getImageData: requested region is too large.");
         }
@@ -1730,30 +1749,14 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetLineDash(const Napi::CallbackInfo& info)
     {
-        // An empty (or absent) dash list means "solid", which is exactly what we
-        // already draw -- so accept it silently. Babylon GUI's Line and MultiLine
-        // controls call setLineDash(this._dash) unconditionally on every render,
-        // and _dash defaults to [], so throwing here aborted any scene containing
-        // a GUI line even though nothing was actually being asked for.
-        //
-        // A non-empty pattern we genuinely cannot honor: nanovg has no dashed
-        // stroke, and emulating one means splitting every path into segments.
-        // Draw solid and warn once rather than failing the whole scene, and keep
-        // the list so getLineDash() round-trips as the spec requires.
-        //
-        // Parsed into a temporary and committed only once every segment
-        // validates, because the spec keeps the previous list when the argument
-        // is rejected -- clearing m_state.lineDash up front would destroy it first.
+        // NanoVG cannot draw dashed strokes. Retain valid patterns for round-tripping,
+        // but draw solid and leave the previous list unchanged when validation fails.
         std::vector<double> parsed;
 
         if (info.Length() > 0)
         {
             if (!info[0].IsArray())
             {
-                // Present but not a list: the spec rejects the call, which leaves the
-                // previous list in place. Committing the empty temporary here would clear
-                // it instead, so setLineDash("x") would wipe a list that setLineDash([-1])
-                // correctly keeps.
                 return;
             }
 
@@ -1763,9 +1766,6 @@ namespace Babylon::Polyfills::Internal
                 const auto segment = segments.Get(index);
                 if (!segment.IsNumber())
                 {
-                    // Per spec, a list containing a non-finite or negative value
-                    // is ignored entirely and the previous list is retained; a
-                    // non-numeric entry cannot be interpreted, so ignore it too.
                     return;
                 }
 
@@ -1804,20 +1804,7 @@ namespace Babylon::Polyfills::Internal
 
     void Context::StrokeText(const Napi::CallbackInfo& info)
     {
-        std::string text = info[0].As<Napi::String>().Utf8Value();
-        auto x = info[1].As<Napi::Number>().FloatValue();
-        auto y = info[2].As<Napi::Number>().FloatValue();
-
-        // TODO: support ligatures, etc.
-        if (m_state.direction.compare("rtl") == 0) {
-            std::reverse(text.begin(), text.end());
-        }
-
-        if (SetFontFaceId())
-        {
-            BindStrokeStyle(info);
-            nvgStrokeText(*m_nvg, x, y, text.c_str(), nullptr);
-        }
+        DrawText(info, true);
     }
 
     Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo& info)
@@ -1846,10 +1833,9 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetTransform(const Napi::CallbackInfo&)
     {
-        float xform[6];
+        float xform[TRANSFORM_COMPONENT_COUNT];
         nvgCurrentTransform(*m_nvg, xform);
 
-        // set DOMMatrix properties
         Napi::Object obj = Napi::Object::New(Env());
         obj.Set("a", xform[0]);
         obj.Set("b", xform[1]);
@@ -1944,7 +1930,6 @@ namespace Babylon::Polyfills::Internal
     void Context::SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         std::string filterString = value.As<Napi::String>().Utf8Value();
-        // Keep existing filter if the new one is invalid
         if (nanovg_filterstack::ValidString(filterString))
         {
             m_state.filter = filterString;
@@ -1959,8 +1944,7 @@ namespace Babylon::Polyfills::Internal
     void Context::SetDirection(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         std::string direction = value.As<Napi::String>().Utf8Value();
-        const bool valid = !(direction.compare("ltr") && direction.compare("rtl"));
-        if (valid)
+        if (direction == "ltr" || direction == "rtl")
         {
             m_state.direction = direction;
         }
@@ -1989,7 +1973,7 @@ namespace Babylon::Polyfills::Internal
         if (m_fonts.find(font->Familiy()) == m_fonts.end())
         {
             // TODO: handle finding font face for a specific weight and style
-            m_state.currentFontId = -1;
+            m_state.currentFontId = CanvasConstants::INVALID_NANOVG_FONT;
         }
         else
         {
@@ -2011,7 +1995,6 @@ namespace Babylon::Polyfills::Internal
     {
         const std::string letterSpacingOption = value.ToString();
 
-        // regex the letter spacing string
         static const std::regex letterSpacingRegex("(\\d+(\\.\\d+)?)px");
         std::smatch letterSpacingMatch;
         if (std::regex_match(letterSpacingOption, letterSpacingMatch, letterSpacingRegex))
@@ -2048,22 +2031,12 @@ namespace Babylon::Polyfills::Internal
         nvgGlobalAlpha(*m_nvg, m_state.globalAlpha);
     }
 
-    // nanovg has no shadow primitive, so the shadow attributes are stored and
-    // reported back but not rendered. Throwing was the wrong response: these are
-    // ordinary state attributes, and reading one, or writing the default, asks
-    // for nothing at all. Babylon GUI resets shadowBlur/shadowOffsetX/OffsetY to
-    // 0 after drawing a shadowed control, so the throw killed the scene on the
-    // *reset* path as well as the request path, and any control with a drop
-    // shadow aborted outright rather than drawing without one.
-    //
-    // Storing them keeps the spec-required round trip working and lets content
-    // that saves and restores canvas state continue to function; a shadow that
-    // is genuinely requested warns once instead of failing the scene.
+    // NanoVG has no shadow primitive. Store the attributes for spec-compliant
+    // round-tripping and warn once only when a shadow is actually requested.
     void Context::WarnShadowUnsupported()
     {
         if (m_state.shadowBlur == 0.0 && m_state.shadowOffsetX == 0.0 && m_state.shadowOffsetY == 0.0)
         {
-            // Nothing is being asked for: no offset and no blur draws no shadow.
             return;
         }
 

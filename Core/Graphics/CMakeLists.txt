@@ -35,7 +35,8 @@ target_include_directories(Graphics
     PRIVATE "InternalInclude")
 
 target_compile_definitions(Graphics
-    PRIVATE NOMINMAX)
+    PRIVATE NOMINMAX
+    PRIVATE BABYLON_NATIVE_BGFX_TRACE=$<BOOL:${BABYLON_NATIVE_BGFX_TRACE}>)
 
 # TODO: remove this once the #define in GraphicsImpl is removed
 target_compile_definitions(Graphics

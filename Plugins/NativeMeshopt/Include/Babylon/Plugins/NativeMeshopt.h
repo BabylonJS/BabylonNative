@@ -7,7 +7,8 @@ namespace Babylon::Plugins::NativeMeshopt
 {
     // Exposes `_native.decodeMeshopt(source, count, stride, mode, filter?)`, a
     // synchronous native replacement for Babylon's WebAssembly meshopt decoder
-    // (zeux/meshoptimizer). Babylon.js routes its MeshoptCompression to this
-    // function when it is present.
+    // (zeux/meshoptimizer). This is a compatibility export: the pinned package
+    // and the current public MeshoptCompression implementation do not
+    // reference it and use the script-based decoder.
     void BABYLON_API Initialize(Napi::Env env);
 }

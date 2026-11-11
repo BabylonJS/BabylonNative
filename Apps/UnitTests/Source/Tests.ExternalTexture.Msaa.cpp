@@ -58,7 +58,7 @@ namespace
         });
 
         Babylon::ScriptLoader loader{runtime};
-        loader.LoadScript("app:///Assets/babylon.max.js");
+        loader.LoadScript("app:///Assets/babylon.es5.js");
         loader.LoadScript("app:///Assets/tests.externalTexture.msaa.js");
 
         // CreateForJavaScript is synchronous so startup() can run in the same JS task as the

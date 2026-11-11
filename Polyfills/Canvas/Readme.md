@@ -30,6 +30,11 @@ the interpolation border, and fontstash blur padding are excluded from those
 bounds. The no-font fallback exposes the same metric properties, but its values
 are estimates rather than measurements of a loaded face.
 
+`actualBoundingBox*` describes glyph ink. GUI line layout should use
+`fontBoundingBox*`, which preserves browser-compatible integral line metrics.
+Text regressions use the packaged Arimo font; its license and provenance ship
+with the font.
+
 The Canvas pixel regressions in `JavaScript.All` require a rendering GPU backend.
 The test host sets `hasGpuRendering` to false only for the explicit no-op Metal
 test configuration (`BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON`), using the
@@ -75,13 +80,18 @@ A set of precompiled shaders is included, so you don’t need to build shaderc o
 If you modify any shader, you’ll need shaderc — the bgfx shader compiler — to rebuild them. Shaderc can generate shaders targeting MSL, GLSL, HLSL, or SPIR-V.
 
 To obtain shaderc:
-- Clone bgfx.cmake and generate and build the project 
-  Or follow these instructions: https://bkaradzic.github.io/bgfx/build.html
+- Build the tracked wrapper standalone from the BabylonNative root:
+  `cmake -S Dependencies\bgfx.cmake -B build\bgfx-tools -DBGFX_BUILD_EXAMPLES=OFF`,
+  then `cmake --build build\bgfx-tools --config Release --target shaderc`.
+  Alternatively follow https://bkaradzic.github.io/bgfx/build.html.
 - Once built, locate the `shaderc` executable in the output directory.
 - Set the full path to this executable in CMake using the variable `SHADERC_PATH`.
 
 If `SHADERC_PATH` is set but does not point to a valid executable, CMake will display a fatal error during project generation.
 When correctly configured, the BabylonNative project will automatically use shaderc to compile all .sc shader files.
+Canvas and NativeEngine's fixed instance-repacking shaders share the generator in
+`Dependencies/shaderc.cmake`. Commit the regenerated headers alongside their `.sc`
+source; ordinary builds consume those headers without requiring shaderc.
 
 ## Embedding Shaders:
 

@@ -15,6 +15,9 @@
 #ifdef HAS_NATIVE_MESHOPT
 #include <Babylon/Plugins/NativeMeshopt.h>
 #endif
+#ifdef HAS_NATIVE_OPTIMIZATIONS
+#include <Babylon/Plugins/NativeOptimizations.h>
+#endif
 #include <Babylon/ScriptLoader.h>
 #ifdef HAS_NATIVE_IMAGE_LOADING
 #include <UrlLib/UrlLib.h>
@@ -24,6 +27,9 @@
 #endif
 
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <future>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -44,6 +50,96 @@ namespace
         return "unknown";
     }
 }
+
+class ScriptLoaderTest : public testing::TestWithParam<bool>
+{
+protected:
+    void Evaluate(Babylon::ScriptLoader& loader, std::string source)
+    {
+        if (GetParam())
+        {
+            std::ofstream file{m_path, std::ios::binary};
+            ASSERT_TRUE(file.is_open());
+            file.write(source.data(), source.size());
+            file.close();
+            ASSERT_TRUE(file);
+
+            const auto path = m_path.generic_string();
+            loader.LoadScript((path.front() == '/' ? "file://" : "file:///") + path);
+        }
+        else
+        {
+            loader.Eval(std::move(source), "test.js");
+        }
+    }
+
+    void TearDown() override
+    {
+        std::error_code error{};
+        std::filesystem::remove(m_path, error);
+        EXPECT_FALSE(error) << error.message();
+    }
+
+private:
+    const std::filesystem::path m_path = std::filesystem::temp_directory_path() / "babylon-native-scriptloader.js";
+};
+
+TEST_P(ScriptLoaderTest, RejectsEmbeddedNulBeforeExecution)
+{
+    struct Failure
+    {
+        std::string name;
+        std::string message;
+        bool executed;
+    };
+    auto done = std::make_shared<std::promise<Failure>>();
+    auto completion = done->get_future();
+    Babylon::AppRuntime::Options options{};
+    options.UnhandledExceptionHandler = [done](const Napi::Error& error) {
+        const auto global = error.Env().Global();
+        done->set_value({
+            error.Value().Get("name").As<Napi::String>().Utf8Value(),
+            error.Message(),
+            global.Has("beforeNul") || global.Has("afterNul")});
+    };
+
+    Babylon::AppRuntime runtime{options};
+    Babylon::ScriptLoader loader{runtime};
+    static constexpr char source[] = "var beforeNul = 1;//\0\nvar afterNul = 2;";
+    Evaluate(loader, std::string{source, sizeof(source) - 1});
+    loader.Dispatch([done](Napi::Env env) {
+        const auto global = env.Global();
+        done->set_value({"", "", global.Has("beforeNul") || global.Has("afterNul")});
+    });
+
+    ASSERT_EQ(completion.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    const auto failure = completion.get();
+    EXPECT_EQ(failure.name, "TypeError");
+    EXPECT_NE(failure.message.find("Script source contains a NUL character"), std::string::npos);
+    EXPECT_FALSE(failure.executed);
+}
+
+TEST_P(ScriptLoaderTest, PreservesOrdinaryScriptSemantics)
+{
+    auto done = std::make_shared<std::promise<int32_t>>();
+    auto completion = done->get_future();
+    Babylon::AppRuntime::Options options{};
+    options.UnhandledExceptionHandler = [done](const Napi::Error& error) {
+        done->set_exception(std::make_exception_ptr(std::runtime_error{error.Message()}));
+    };
+
+    Babylon::AppRuntime runtime{options};
+    Babylon::ScriptLoader loader{runtime};
+    Evaluate(loader, "let retainedValue = 41;");
+    loader.Dispatch([done](Napi::Env env) {
+        done->set_value(Napi::Eval(env, "retainedValue + 1", "check.js").As<Napi::Number>().Int32Value());
+    });
+
+    ASSERT_EQ(completion.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+    EXPECT_EQ(completion.get(), 42);
+}
+
+INSTANTIATE_TEST_SUITE_P(JavaScript, ScriptLoaderTest, testing::Values(false, true));
 
 #ifdef HAS_NATIVE_MESHOPT
 TEST(NativeMeshopt, LegacyEntryPointMatchesGroupedDecoder)
@@ -154,14 +250,21 @@ TEST(JavaScript, All)
         env.Global().Set("hasNativeImageLoading", false);
 #endif
 #ifdef USE_NOOP_METAL_DEVICE
+        env.Global().Set("hasAttributeLessInstancing", false);
+#else
+        env.Global().Set("hasAttributeLessInstancing", true);
+#endif
+#ifdef USE_NOOP_METAL_DEVICE
         env.Global().Set("hasGpuRendering", false);
 #else
         env.Global().Set("hasGpuRendering", true);
 #endif
 #if defined(SKIP_RENDER_TESTS) || defined(SKIP_EXTERNAL_TEXTURE_TESTS)
         env.Global().Set("skipCanvasGpuTests", true);
+        env.Global().Set("hasGpuRendering", false);
 #else
         env.Global().Set("skipCanvasGpuTests", false);
+        env.Global().Set("hasGpuRendering", true);
 #endif
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -178,6 +281,9 @@ TEST(JavaScript, All)
 #endif
 #ifdef HAS_NATIVE_MESHOPT
         Babylon::Plugins::NativeMeshopt::Initialize(env);
+#endif
+#ifdef HAS_NATIVE_OPTIMIZATIONS
+        Babylon::Plugins::NativeOptimizations::Initialize(env);
 #endif
 
         auto setExitCodeCallback = Napi::Function::New(
@@ -206,8 +312,8 @@ TEST(JavaScript, All)
 
     Babylon::ScriptLoader loader{runtime};
     loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
-    loader.LoadScript("app:///Assets/babylon.max.js");
-    loader.LoadScript("app:///Assets/babylonjs.materials.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
+    loader.LoadScript("app:///Assets/babylonjs.materials.es5.js");
     loader.LoadScript("app:///Assets/tests.javaScript.all.js");
 
     // Pump frames while JS tests run — tests use RAF internally and

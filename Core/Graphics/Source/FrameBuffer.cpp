@@ -3,9 +3,51 @@
 #include <arcana/macros.h>
 #include <cmath>
 
+namespace
+{
+    // setViewClear accepts eight attachment indices.
+    constexpr uint8_t MaxColorAttachments{8};
+
+    std::optional<uint32_t> PackClearColor(const std::array<float, 4>& color)
+    {
+        uint32_t packed{};
+        for (const float component : color)
+        {
+            if (!std::isfinite(component) || component < 0 || component > 1)
+            {
+                return std::nullopt;
+            }
+            const auto byte = static_cast<uint32_t>(std::round(component * 255.f));
+            if (static_cast<float>(byte) / 255.f != component)
+            {
+                return std::nullopt;
+            }
+            packed = (packed << 8) | byte;
+        }
+        return packed;
+    }
+
+    // Backends without bgfx clear-skip support would clamp UINT8_MAX into the palette.
+    bool SupportsClearAttachmentMasking()
+    {
+        switch (bgfx::getRendererType())
+        {
+            case bgfx::RendererType::Direct3D11:
+            case bgfx::RendererType::Direct3D12:
+            case bgfx::RendererType::OpenGL:
+            case bgfx::RendererType::OpenGLES:
+            case bgfx::RendererType::Metal:
+            case bgfx::RendererType::Vulkan:
+                return true;
+            default:
+                return false;
+        }
+    }
+}
+
 namespace Babylon::Graphics
 {
-    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex)
+    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex, bool isMultisampled, uint8_t depthOneVolumeAttachmentMask)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
         , m_handle{handle}
@@ -16,6 +58,8 @@ namespace Babylon::Graphics
         , m_useDeviceBackBuffer{defaultBackBuffer && !bgfx::isValid(handle)}
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
+        , m_isMultisampled{isMultisampled}
+        , m_depthOneVolumeAttachmentMask{depthOneVolumeAttachmentMask}
         , m_disposed{false}
         , m_depthStencilAttachmentIndex{depthStencilAttachmentIndex}
     {
@@ -71,6 +115,12 @@ namespace Babylon::Graphics
         return m_defaultBackBuffer;
     }
 
+    bool FrameBuffer::IsMultisampled() const
+    {
+        // The window's sample count can change without recreating its wrapper.
+        return m_defaultBackBuffer && !bgfx::isValid(m_handle) ? m_deviceContext.GetMSAASamples() > 1 : m_isMultisampled;
+    }
+
     void FrameBuffer::Bind()
     {
         m_viewId.reset();
@@ -78,16 +128,54 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Unbind()
     {
+        if (m_depthOneVolumeAttachmentMask == 0 || !m_viewId.has_value())
+        {
+            return;
+        }
+        const auto view = m_deviceContext.AcquireNewViewId();
+        bgfx::resetView(view);
+        for (uint8_t attachment = 0; attachment < MaxColorAttachments; ++attachment)
+        {
+            if ((m_depthOneVolumeAttachmentMask & (1 << attachment)) != 0)
+            {
+                bgfx::TextureRegion source{};
+                source.init(bgfx::getTexture(m_handle, attachment), 0, 0, Width(), Height());
+                source.depth = 1;
+                auto destination = source;
+                destination.z = 1;
+                m_deviceContext.GetActiveEncoder()->blit(view, destination, source);
+            }
+        }
     }
 
-    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
+    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask, bool ignoreScissor)
     {
+        const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
+        const std::array<float, 4> color{r, g, b, a};
+        const auto packedColor = maskColorAttachments ? std::nullopt : PackClearColor(color);
+        const bool usePalette = (flags & BGFX_CLEAR_COLOR) != 0 && !packedColor.has_value();
+        const auto paletteIndex = usePalette ? m_deviceContext.AcquireClearPaletteIndex(color) : uint8_t{};
+
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
         m_viewId = m_deviceContext.AcquireNewViewId();
         m_viewIdGeneration = m_deviceContext.ViewIdGeneration();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
-        bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
+        // Float palette entries preserve HDR clears and per-attachment masks.
+        if (usePalette)
+        {
+            uint8_t indices[MaxColorAttachments];
+            for (uint8_t attachment = 0; attachment < MaxColorAttachments; ++attachment)
+            {
+                indices[attachment] = !maskColorAttachments || (colorAttachmentMask & (1 << attachment)) != 0 ? paletteIndex : UINT8_MAX;
+            }
+            bgfx::setViewClear(m_viewId.value(), flags, depth, stencil,
+                indices[0], indices[1], indices[2], indices[3], indices[4], indices[5], indices[6], indices[7]);
+        }
+        else
+        {
+            bgfx::setViewClear(m_viewId.value(), flags, packedColor.value_or(0), depth, stencil);
+        }
         bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         // If a scissor is not set, WebGL clears the entire screen, so set the view rect to cover the entire screen
@@ -98,20 +186,22 @@ namespace Babylon::Graphics
         // the view scissor is set.
         //
         // Note that the view rect and view scissor are reset to the desired dimensions before the encoder is submitted.
-        if (m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f)
+        if (ignoreScissor || (m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f))
         {
             bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
             m_bgfxViewPort = {0, 0, 1, 1};
         }
         else
         {
+            const Rect scissor{ToTargetRect(m_desiredScissor, static_cast<float>(Height()))};
             bgfx::setViewRect(
                 m_viewId.value(),
-                static_cast<uint16_t>(m_desiredScissor.X),
-                static_cast<uint16_t>(m_desiredScissor.Y),
-                static_cast<uint16_t>(m_desiredScissor.Width),
-                static_cast<uint16_t>(m_desiredScissor.Height));
+                static_cast<uint16_t>(scissor.X),
+                static_cast<uint16_t>(scissor.Y),
+                static_cast<uint16_t>(scissor.Width),
+                static_cast<uint16_t>(scissor.Height));
 
+            // Kept in the desired (unmirrored) space it is compared against.
             m_bgfxViewPort = {
                 m_desiredScissor.X / Width(),
                 m_desiredScissor.Y / Height(),
@@ -146,6 +236,17 @@ namespace Babylon::Graphics
     {
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
+    }
+
+    void FrameBuffer::Compute(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint32_t numX, uint32_t numY, uint32_t numZ)
+    {
+        // Each dispatch gets its own view, so views run it after earlier work on this frame buffer, and
+        // bgfx unbinds its storage buffers before the next one binds them the other way round (D3D11
+        // drops a read binding of a buffer that is still bound for writing). Taking a view also moves
+        // the next draw on this frame buffer to a later view (see SetBgfxViewPortAndScissor).
+        const bgfx::ViewId viewId = m_deviceContext.AcquireNewViewId();
+        bgfx::resetView(viewId);
+        encoder.dispatch(viewId, programHandle, numX, numY, numZ);
     }
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
@@ -229,19 +330,31 @@ namespace Babylon::Graphics
         bgfx::setViewFrameBuffer(m_viewId.value(), Handle());
 
         m_bgfxViewPort = viewPort;
+        const Rect targetViewPort{ToTargetRect(viewPort, 1.0f)};
         bgfx::setViewRect(m_viewId.value(),
-            static_cast<uint16_t>(m_bgfxViewPort.X * Width()),
-            static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
-            static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
-            static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
+            static_cast<uint16_t>(targetViewPort.X * Width()),
+            static_cast<uint16_t>(targetViewPort.Y * Height()),
+            static_cast<uint16_t>(targetViewPort.Width * Width()),
+            static_cast<uint16_t>(targetViewPort.Height * Height()));
 
         m_bgfxScissor = scissor;
+        const Rect targetScissor{ToTargetRect(scissor, static_cast<float>(Height()))};
         bgfx::setViewScissor(
             m_viewId.value(),
-            static_cast<uint16_t>(m_bgfxScissor.X),
-            static_cast<uint16_t>(m_bgfxScissor.Y),
-            static_cast<uint16_t>(m_bgfxScissor.Width),
-            static_cast<uint16_t>(m_bgfxScissor.Height));
+            static_cast<uint16_t>(targetScissor.X),
+            static_cast<uint16_t>(targetScissor.Y),
+            static_cast<uint16_t>(targetScissor.Width),
+            static_cast<uint16_t>(targetScissor.Height));
+    }
+
+    Rect FrameBuffer::ToTargetRect(const Rect& rect, float height) const
+    {
+        // Rects are kept top-left; GL-row-order targets store GL's bottom row first.
+        if (!m_glRowOrder || (rect.Width == 0.0f && rect.Height == 0.0f))
+        {
+            return rect;
+        }
+        return Rect{rect.X, height - rect.Y - rect.Height, rect.Width, rect.Height};
     }
 
     bool Rect::Equals(const Rect& other) const

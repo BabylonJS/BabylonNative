@@ -32,6 +32,31 @@ file. Essentially, this allows for externally-defined JS files to control
 the behavior of the Playground app as an alternative to experience.js --
 at runtime and without the need to recompile or redeploy.
 
+On Win32 and macOS, `--headless` also disables the JavaScript debugger listener to avoid
+firewall prompts during automated runs. Interactive debugging is unchanged.
+On macOS it renders into an unshown Metal window, driving frames explicitly
+without opening the storyboard window or activating the app. It still requires
+a graphical macOS session and a Metal device.
+
+For example, from the repository root after building Playground:
+
+```sh
+build/macOS/Apps/Playground/RelWithDebInfo/Playground.app/Contents/MacOS/Playground \
+  --headless --test-index=140,159,167 app:///Scripts/validation_native.js
+```
+
+Use `--list` to list tests (it implies `--headless`), or add `--include-excluded` to compare an
+excluded test against its existing reference. The runner exits nonzero on failure;
+omit the test filters to run the automatically selected suite. `--once` runs only
+the first matching runnable test, not the entire selection.
+
+Validation packages its licensed fonts and Havok runtime; tests marked
+`requiresHavok` initialize Havok before scene creation.
+Between scenes, validation resets engine state and Draco configuration/modules
+so tests can switch codecs without inheriting an incompatible decoder.
+GUI image loading shares the initial scene-readiness deadline; it does not
+consume shader-convergence ticks or advance the comparison frame.
+
 The Playground app also features a "hot reload" capability on certain
 platforms (Win32 and UWP, for now). The current implementation is that 
 pressing a button (`R` at present, likely to be remapped to `F5` in the 
