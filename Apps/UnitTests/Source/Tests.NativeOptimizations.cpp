@@ -254,6 +254,8 @@ TEST(NativeOptimizations, SplatIndexSortingHonorsIntervalsAndParts)
                         "sortSplatIndices requires 4 position floats per splat.");
                     expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, new Uint32Array([3, 2]), null],
                         "sortSplatIndices requires intervals within vertexCount.");
+                    expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, new Uint32Array([0, 2, 2]), null],
+                        "sortSplatIndices requires intervals to hold [start, count] pairs.");
                     expectError([viewProjection, [world], positions, new Float32Array(3), vertexCount, null, null],
                         "sortSplatIndices requires indices to hold every active splat.");
                     expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, [0, 4], null],

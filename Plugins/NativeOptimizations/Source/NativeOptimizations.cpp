@@ -463,8 +463,12 @@ namespace
         if (hasIntervals)
         {
             const auto intervals{info[5].As<Napi::Uint32Array>()};
+            intervalWords = intervals.ElementLength();
+            if (intervalWords % 2 != 0)
+            {
+                throw Napi::RangeError::New(env, "sortSplatIndices requires intervals to hold [start, count] pairs.");
+            }
             intervalData = intervals.Data();
-            intervalWords = intervals.ElementLength() & ~size_t{1};
         }
 
         size_t activeCount{0};
@@ -486,8 +490,8 @@ namespace
             float Key;
             uint32_t Index;
         };
-        // This function is not threadsafe because of static
-        static std::vector<SplatKey> keys;
+        // Reused across calls on the same thread to avoid reallocating a key per splat on every sort.
+        thread_local std::vector<SplatKey> keys;
         keys.clear();
         keys.reserve(activeCount);
 
