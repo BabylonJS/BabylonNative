@@ -891,14 +891,17 @@
         if (t.excludeFromAutomaticTesting) {
             return "excludeFromAutomaticTesting" + (t.reason ? ": " + t.reason : "");
         }
-        if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
-            return "excludedGraphicsApis: " + TestUtils.getGraphicsApiName();
+        const graphicsApi = TestUtils.getGraphicsApiName();
+        if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(graphicsApi)) {
+            return "excludedGraphicsApis: " + graphicsApi;
         }
-        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(TestUtils.getJavaScriptEngineName())) {
-            return "excludedJavaScriptEngines: " + TestUtils.getJavaScriptEngineName();
+        const javaScriptEngine = TestUtils.getJavaScriptEngineName();
+        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(javaScriptEngine)) {
+            return "excludedJavaScriptEngines: " + javaScriptEngine;
         }
-        if (t.excludedPlatforms && t.excludedPlatforms.includes(TestUtils.getPlatformName())) {
-            return "excludedPlatforms: " + TestUtils.getPlatformName();
+        const platform = TestUtils.getPlatformName();
+        if (t.excludedPlatforms && t.excludedPlatforms.includes(platform)) {
+            return "excludedPlatforms: " + platform;
         }
         return null;
     }
