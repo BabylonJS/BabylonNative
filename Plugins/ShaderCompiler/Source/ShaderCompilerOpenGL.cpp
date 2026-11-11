@@ -30,6 +30,7 @@ namespace
     {
         std::vector<uint32_t> spirv;
         glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
+        Babylon::ShaderCompilerCommon::StripRelaxedPrecision(spirv);
 
         auto parser = std::make_unique<spirv_cross::Parser>(std::move(spirv));
         parser->parse();
@@ -41,6 +42,10 @@ namespace
         // Compute shaders and storage buffers need GLSL ES 3.10.
         options.version = stage == EShLangCompute ? 310 : 300;
         options.es = true;
+        // Keep full precision to match D3D and WebGL; SPIR-V Cross otherwise defaults fragment
+        // shaders to mediump float, which mobile GPUs evaluate at fp16.
+        options.fragment.default_float_precision = spirv_cross::CompilerGLSL::Options::Highp;
+        options.fragment.default_int_precision = spirv_cross::CompilerGLSL::Options::Highp;
 
         compiler->set_common_options(options);
 
