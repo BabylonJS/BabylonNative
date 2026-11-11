@@ -10,6 +10,7 @@
 
 #include <bgfx/bgfx.h>
 
+#include <array>
 #include <mutex>
 #include <unordered_map>
 
@@ -98,7 +99,9 @@ namespace Babylon::Graphics
         void SetActiveEncoder(bgfx::Encoder* encoder);
         bgfx::Encoder* GetActiveEncoder();
 
-        void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        // Readbacks fail with operation_canceled on device loss; requests are not retried after reset.
+        // The callback runs synchronously if the device is already lost.
+        void RequestScreenShot(BgfxCallback::ScreenShotCallback callback);
         void RequestCaptureNextFrame();
         void SetRenderResetCallback(std::function<void()> callback);
 
@@ -106,6 +109,8 @@ namespace Babylon::Graphics
 
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
+        void UpdateMSAA(uint8_t samples);
+        uint8_t GetMSAASamples() const;
 
         size_t GetWidth() const;
         size_t GetHeight() const;
@@ -113,6 +118,7 @@ namespace Babylon::Graphics
 
         //Note: This is an index that changes when bgfx gets reset. It should be used to validate that resource handles created using bgfx remain valid on destruction.
         uintptr_t GetDeviceId() const;
+        bgfx::FrameBufferHandle GetBackBufferHandle() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
@@ -123,11 +129,16 @@ namespace Babylon::Graphics
         // Bumped whenever a mid-frame flush resets the view counter. Cache this alongside any
         // view id that is retained across draw calls and re-acquire when it changes.
         uint32_t ViewIdGeneration() const;
+        bgfx::VertexLayoutHandle CreateVertexLayout(const bgfx::VertexLayout& layout);
+        uint8_t AcquireClearPaletteIndex(const std::array<float, 4>& color);
 
-        // If the current frame is close to exhausting bgfx views, flush accumulated
-        // views (cross-thread bgfx::frame + view-counter reset) so rendering can
-        // continue within the same logical frame. Call at draw/clear op boundaries.
-        void FlushViewsIfNeeded();
+        // Throws "Too many views" if the current frame is close to exhausting bgfx
+        // views. Call at draw/clear op boundaries.
+        void CheckViewBudget();
+
+        // Flush pending compute writes or readbacks while a FrameCompletionScope is
+        // held. Returns false when the render thread cannot service the request.
+        bool ForceMidFrameFlush();
 
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);

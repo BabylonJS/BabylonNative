@@ -19,6 +19,8 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
 
+        static NativeCanvasImage* TryUnwrap(Napi::Env env, const Napi::Value& value);
+
         explicit NativeCanvasImage(const Napi::CallbackInfo& info);
         virtual ~NativeCanvasImage();
 
@@ -26,9 +28,9 @@ namespace Babylon::Polyfills::Internal
 
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
-
-        // Returns the decoded RGBA8 pixels (width*height*4 bytes), or nullptr if not loaded.
-        const uint8_t* GetPixels() const;
+        // Contexts cache a NanoVG image by this pointer. This changes whenever SetBuffer
+        // replaces the decoded pixels, including a same-size URL or data reload.
+        uint32_t GetContentGeneration() const { return m_contentGeneration; }
 
     private:
         Napi::Value GetWidth(const Napi::CallbackInfo&);
@@ -38,20 +40,18 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetSrc(const Napi::CallbackInfo&);
         Napi::Value GetImageContainer(const Napi::CallbackInfo&);
         void SetSrc(const Napi::CallbackInfo&, const Napi::Value&);
-        void SetOnload(const Napi::CallbackInfo&, const Napi::Value&);
-        void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);
-        void HandleLoadImageError(const Napi::Error& error);
-        bool SetBuffer(gsl::span<const std::byte> buffer);
+        void HandleLoadImageError(const Napi::Object& self, const Napi::Error& error);
+        bool SetBuffer(const Napi::Object& self, gsl::span<const std::byte> buffer);
+        void ReleaseImage();
         void Dispose();
 
         uint32_t m_width{1};
         uint32_t m_height{1};
+        uint32_t m_contentGeneration{0};
 
         std::string m_src{};
 
         JsRuntimeScheduler m_runtimeScheduler;
-        Napi::FunctionReference m_onloadHandlerRef;
-        Napi::FunctionReference m_onerrorHandlerRef;
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         bimg::ImageContainer* m_imageContainer{};

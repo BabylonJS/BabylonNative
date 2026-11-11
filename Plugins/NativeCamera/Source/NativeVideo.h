@@ -20,7 +20,7 @@ namespace Babylon::Plugins
         NativeVideo(const Napi::CallbackInfo& info);
         ~NativeVideo() = default;
 
-        void UpdateTexture(bgfx::TextureHandle textureHandle);
+        void UpdateTexture(Graphics::Texture& texture);
 
     private:
         void AddEventListener(const Napi::CallbackInfo& info);

@@ -47,7 +47,7 @@ TEST(UniformPadding, SubVec4UniformsDoNotOverflow)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
 
     // Disable async shader compilation so shaders are ready immediately.
     // Create a scene with a ShaderMaterial that declares int, float, vec2,

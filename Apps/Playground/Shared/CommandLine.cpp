@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -48,8 +50,10 @@ namespace
         }
         std::string str{s};
         char* end = nullptr;
+        errno = 0;
         long v = std::strtol(str.c_str(), &end, 10);
-        if (end == nullptr || *end != '\0')
+        if (end == nullptr || *end != '\0' || errno == ERANGE ||
+            v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max())
         {
             return false;
         }
@@ -141,12 +145,19 @@ namespace
         FlagSpec{"--list", "-l", FlagKind::Boolean, "",
             "List configured tests as TSV and exit (0).",
             "                              Columns: index, title, referenceImage,\n"
-            "                              exclusionReason. exclusionReason reflects\n"
-            "                              config state (ignores --include-excluded).\n",
-            [](PlaygroundOptions& o, std::string_view, std::string&) { o.ListTests = true; }},
+            "                              exclusionReason, workarounds. exclusionReason\n"
+            "                              reflects config state (ignores\n"
+            "                              --include-excluded). Implies --headless\n"
+            "                              and, without a script, loads\n"
+            "                              validation_native.js.\n",
+            [](PlaygroundOptions& o, std::string_view, std::string&) {
+                o.ListTests = true;
+                o.Headless = true;
+            }},
 
         FlagSpec{"--headless", "", FlagKind::Boolean, "",
-            "Don't show a window (still creates HWND).", "",
+            "Don't show a window (keeps a render surface).",
+            "                              Disables the JavaScript debugger listener.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.Headless = true; }},
 
         FlagSpec{"--break-on-fail", "", FlagKind::Boolean, "",
@@ -173,7 +184,8 @@ namespace
         FlagSpec{"--include-excluded", "", FlagKind::Boolean, "",
             "Force-run tests that have",
             "                              excludeFromAutomaticTesting / onlyVisual /\n"
-            "                              excludedGraphicsApis set in config.json.\n"
+            "                              excludedGraphicsApis / excludedJavaScriptEngines\n"
+            "                              set in config.json.\n"
             "                              Useful for debugging quarantined tests\n"
             "                              without editing the config.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.IncludeExcluded = true; }},
@@ -223,6 +235,23 @@ namespace
                     return;
                 }
                 o.CaptureFrame = n;
+            }},
+
+        FlagSpec{"--test-timeout", "", FlagKind::ValueRequired, "SECONDS",
+            "Per-test timeout for scene creation and",
+            "                              initial readiness (default 600s / 1200s).\n"
+            "                              Also arms a watchdog that dumps a HANG banner\n"
+            "                              and exits 3 when no console output arrives\n"
+            "                              for 2*SECONDS+60s, so native hangs that\n"
+            "                              JavaScript timers can't see still fail fast.\n",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                int n = 0;
+                if (!ParseIntStrict(value, n) || n < 1 || n > 86400)
+                {
+                    err = "invalid --test-timeout value (expected positive integer): '" + std::string{value} + "'";
+                    return;
+                }
+                o.TestTimeoutSeconds = n;
             }},
 
         FlagSpec{"--test", "-t", FlagKind::ValueRequired, "PATTERN",
@@ -396,15 +425,21 @@ namespace CommandLine
             opt.Scripts.emplace_back(arg);
         }
 
+        if (opt.ListTests && opt.Scripts.empty())
+        {
+            opt.Scripts.emplace_back("app:///Scripts/validation_native.js");
+        }
+
         return opt;
     }
 
-    void PrintUsage(const char* argv0)
+    std::string Usage(const char* argv0)
     {
+        std::ostringstream out;
         const char* prog = (argv0 != nullptr && *argv0 != '\0') ? argv0 : "Playground";
-        std::printf("Usage: %s [options] [script...]\n\n", prog);
-        std::printf("Run Babylon Native Playground / visual tests.\n\n");
-        std::printf("Options:\n");
+        out << "Usage: " << prog << " [options] [script...]\n\n";
+        out << "Run Babylon Native Playground / visual tests.\n\n";
+        out << "Options:\n";
 
         // Render each row of kFlags. The left column is fixed-width so
         // descriptions line up. Continuation strings already include the
@@ -438,21 +473,26 @@ namespace CommandLine
             {
                 left += ' ';
             }
-            std::printf("%s%.*s\n", left.c_str(),
-                static_cast<int>(spec.help.size()), spec.help.data());
+            out << left << spec.help << "\n";
             if (!spec.continuation.empty())
             {
-                std::fwrite(spec.continuation.data(), 1, spec.continuation.size(), stdout);
+                out << spec.continuation;
             }
         }
 
-        std::printf("      --                      End of options; everything after is a script.\n");
-        std::printf("\n");
-        std::printf("Exit codes:\n");
-        std::printf("   0  success / help / list\n");
-        std::printf("   1  uncaught JS exception\n");
-        std::printf("   2  command-line parse error\n");
-        std::printf("   3  hard crash (assert / SIGABRT / unhandled exception)\n");
-        std::printf("  -1  pixel-diff comparison failure\n");
+        out << "      --                      End of options; everything after is a script.\n";
+        out << "\n";
+        out << "Exit codes:\n";
+        out << "   0  success / help / list\n";
+        out << "   1  uncaught JS exception\n";
+        out << "   2  command-line parse error\n";
+        out << "   3  hard crash (assert / SIGABRT / unhandled exception)\n";
+        out << "  -1  pixel-diff comparison failure\n";
+        return out.str();
+    }
+
+    void PrintUsage(const char* argv0)
+    {
+        std::fputs(Usage(argv0).c_str(), stdout);
     }
 }

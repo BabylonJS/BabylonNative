@@ -1,21 +1,33 @@
 FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
 
 set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs-addons/babylonjs.addons.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js"
-    "../node_modules/babylonjs-serializers/babylonjs.serializers.js"
-    "../node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.js"
+    "../node_modules/@babylonjs/havok/lib/umd/HavokPhysics_umd.js"
+    "../node_modules/@babylonjs/havok/lib/umd/HavokPhysics.wasm"
+    "../node_modules/babylonjs-addons/babylonjs.addons.es5.js"
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.es5.js"
+    "../node_modules/babylonjs/babylon.es5.js"
+    "../node_modules/babylonjs-materials/babylonjs.materials.es5.js"
+    "../node_modules/babylonjs-gui/babylon.gui.es5.js"
+    "../node_modules/babylonjs-serializers/babylonjs.serializers.es5.js"
+    "../node_modules/babylonjs-procedural-textures/babylonjs.proceduralTextures.es5.js"
     "../node_modules/earcut/dist/earcut.min.js")
 
 set(DEPENDENCIES
+    "../Dependencies/Arimo-Regular.ttf"
+    "../Dependencies/Arimo-OFL.txt"
+    "../Dependencies/Arimo-PROVENANCE.txt"
+    "../Dependencies/DroidSans.ttf"
+    "../Dependencies/DroidSans-APACHE-2.0.txt"
+    "../Dependencies/DroidSans-PROVENANCE.txt"
+    "../Dependencies/Tinos-Regular.ttf"
+    "../Dependencies/Tinos-OFL.txt"
+    "../Dependencies/Tinos-PROVENANCE.txt"
     "../Dependencies/ammo.js"
     "../Dependencies/meshwriter.min.js"
     "../Dependencies/recast.js")
 
 set(SCRIPTS
+    "Scripts/native_env.js"
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"

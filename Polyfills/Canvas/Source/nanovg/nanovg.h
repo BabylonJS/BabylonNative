@@ -19,6 +19,8 @@
 #ifndef NANOVG_H
 #define NANOVG_H
 
+#include <vector>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -438,6 +440,22 @@ void nvgIntersectScissor(NVGcontext* ctx, float x, float y, float w, float h);
 // Reset and disables scissoring.
 void nvgResetScissor(NVGcontext* ctx);
 
+struct NVGclipMask {
+	int x = 0, y = 0, width = 1, height = 1;
+	std::vector<unsigned char> rgba;
+};
+
+struct NVGsavedPath {
+	std::vector<float> commands;
+	float x, y;
+};
+void nvgSavePath(NVGcontext* ctx, NVGsavedPath& path);
+void nvgRestorePath(NVGcontext* ctx, const NVGsavedPath& path);
+void nvgRasterizeClip(NVGcontext* ctx, int width, int height, bool evenOdd, NVGclipMask& mask);
+void nvgClipImage(NVGcontext* ctx, int image, int x, int y, int width, int height);
+// Canvas flushes must not reset the drawing state or its save/restore stack.
+void nvgSetViewport(NVGcontext* ctx, float width, float height);
+
 //
 // Paths
 //
@@ -595,6 +613,10 @@ void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const ch
 // Measured values are returned in local coordinate space.
 float nvgTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds);
 
+// Like nvgTextBounds, but keeps per-glyph ink extents on ymin/ymax instead of replacing
+// them with the full line box (fonsLineBounds). Used by canvas measureText actualBoundingBox*.
+float nvgTextBoundsInk(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds);
+
 // Measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
 // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]
 // Measured values are returned in local coordinate space.
@@ -625,6 +647,8 @@ enum NVGtexture {
 struct NVGscissor {
 	float xform[6];
 	float extent[2];
+	int clipImage;
+	float clipBounds[4];
 };
 typedef struct NVGscissor NVGscissor;
 

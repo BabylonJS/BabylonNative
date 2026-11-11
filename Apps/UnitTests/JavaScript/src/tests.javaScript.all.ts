@@ -1,8 +1,15 @@
-import * as Mocha from "mocha";
+import Mocha from "mocha";
 import { expect } from "chai";
+import { registerTriangleStripDepthTests } from "./tests.nativeEngine.triangleStripDepth";
+import { registerIblCdfTests } from "./tests.nativeEngine.iblCdf";
+import { registerPngTests } from "./tests.nativeEngine.png";
+import { registerCanvasImageTests } from "./tests.nativeEngine.canvasImage";
+import { Buffer } from "buffer";
 import {
   RequestFile,
   NativeEngine,
+  RawTexture,
+  DynamicTexture,
   MeshBuilder,
   DefaultRenderingPipeline,
   RefractionPostProcess,
@@ -20,6 +27,7 @@ import {
   BlurPostProcess
 } from "@babylonjs/core";
 import { GradientMaterial } from "@babylonjs/materials";
+import { registerAttributeLessInstancingTests } from "./tests.nativeEngine.attributeLessInstancing";
 
 declare var describe: typeof Mocha.describe;
 declare var it: typeof Mocha.it;
@@ -29,8 +37,208 @@ Mocha.setup("bdd");
 Mocha.reporter("spec");
 
 declare const hostPlatform: string;
+declare const hasGpuRendering: boolean;
+declare const hasNativeImageLoading: boolean;
+declare const hasAttributeLessInstancing: boolean;
 declare const setExitCode: (code: number) => void;
+declare const setImageReloadTestResponse: (bytes: Uint8Array) => void;
+declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
+
+registerTriangleStripDepthTests(describe, it, skipCanvasGpuTests);
+registerIblCdfTests(describe, it, skipCanvasGpuTests);
+registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
+registerAttributeLessInstancingTests(describe, it, hasAttributeLessInstancing);
+
+describe("Native texture readback", function () {
+  this.timeout(10000);
+  // Native LoadRawTexture is also disabled when native image loading is off.
+  const itWithRawTexture = hasGpuRendering && hasNativeImageLoading ? it : it.skip;
+
+  itWithRawTexture("rejects invalid native buffer and face numbers without modifying the destination", async function () {
+    const engine = new _native.Engine();
+    const texture = engine.createTexture();
+    try {
+      engine.initializeTexture(texture, 4, 4, false, _native.Engine.TEXTURE_FORMAT_RGBA8, false, false, 1);
+      for (const component of [7, 8, 9]) {
+        for (const invalid of [-2, 0.5, NaN, Infinity, 2 ** 32, 2 ** 32 + 1]) {
+          const destination = new Uint8Array(4).fill(91);
+          const request = [texture, 0, 0, 0, 1, 1, destination.buffer, 0, 4, -1];
+          request[component] = invalid;
+          let error: unknown;
+          try {
+            await engine.readTexture(...request);
+          } catch (caught) {
+            error = caught;
+          }
+          if (!(error instanceof Error)) {
+            throw new Error(`Expected native readback component ${component}=${invalid} to reject`);
+          }
+          expect(error.message).to.contain(component === 9 ? "face/layer index" : "buffer offset and length");
+          expect(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);
+        }
+      }
+    } finally {
+      engine.deleteTexture(texture);
+      engine.dispose();
+    }
+  });
+
+  itWithRawTexture("returns bottom-origin RGBA8 crops and preserves destination offsets", async function () {
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      for (const invertY of [false, true]) {
+        const width = 5;
+        const height = 7;
+        const data = new Uint8Array(width * height * 4);
+        for (let y = 0; y < height; ++y) {
+          for (let x = 0; x < width; ++x) {
+            data.set([x * 40, y * 30, 128, 255], (y * width + x) * 4);
+          }
+        }
+        const texture = RawTexture.CreateRGBATexture(data, width, height, scene, false, invertY);
+        try {
+          for (const [x, y, readWidth, readHeight] of [
+            [0, 0, width, height], [0, 0, 1, 1], [4, 6, 1, 1],
+            [1, 0, 3, 2], [1, 2, 2, 3], [0, 5, 5, 2]
+          ]) {
+            const storage = new Uint8Array(readWidth * readHeight * 4 + 12).fill(91);
+            const destination = storage.subarray(4, storage.length - 8);
+            const result = await texture.readPixels(0, 0, destination, true, false, x, y, readWidth, readHeight);
+            expect(result).to.equal(destination);
+            expect(Array.from(storage.subarray(0, 4))).to.deep.equal([91, 91, 91, 91]);
+            expect(Array.from(storage.subarray(storage.length - 8))).to.deep.equal(Array(8).fill(91));
+            for (let row = 0; row < readHeight; ++row) {
+              const sourceY = invertY ? height - 1 - (y + row) : y + row;
+              for (let column = 0; column < readWidth; ++column) {
+                const offset = (row * readWidth + column) * 4;
+                expect(Array.from(destination.subarray(offset, offset + 4)),
+                  `invertY=${invertY}, crop=${x},${y},${readWidth},${readHeight}, pixel=${column},${row}`)
+                  .to.deep.equal([(x + column) * 40, sourceY * 30, 128, 255]);
+              }
+            }
+          }
+        } finally {
+          texture.dispose();
+        }
+      }
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  itWithRawTexture("returns wide odd-height readbacks without changing the middle row", async function () {
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const width = 2049;
+      const height = 3;
+      const rowPitch = width * 4;
+      const data = new Uint8Array(rowPitch * height);
+      for (let y = 0; y < height; ++y) {
+        for (let x = 0; x < width; ++x) {
+          data.set([x % 251, y * 70, Math.floor(x / 256) * 23, 255], y * rowPitch + x * 4);
+        }
+      }
+      for (const invertY of [false, true]) {
+        const texture = RawTexture.CreateRGBATexture(data, width, height, scene, false, invertY);
+        try {
+          const result = await texture.readPixels();
+          if (!(result instanceof Uint8Array)) {
+            throw new Error("Expected RGBA8 wide readback");
+          }
+          expect(result.length).to.equal(data.length);
+          for (let row = 0; row < height; ++row) {
+            const sourceY = invertY ? height - 1 - row : row;
+            expect(Array.from(result.subarray(row * rowPitch, (row + 1) * rowPitch)))
+              .to.deep.equal(Array.from(data.subarray(sourceY * rowPitch, (sourceY + 1) * rowPitch)));
+          }
+        } finally {
+          texture.dispose();
+        }
+      }
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  itWithRawTexture("uses mip extents for cropped readback", async function () {
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const data = new Uint8Array(4 * 8 * 4);
+      for (let y = 0; y < 8; ++y) {
+        for (let x = 0; x < 4; ++x) {
+          data.set([x < 2 ? 255 : 0, y < 4 ? 255 : 0, 0, 255], (y * 4 + x) * 4);
+        }
+      }
+      const texture = RawTexture.CreateRGBATexture(data, 4, 8, scene, true, false);
+      for (const [y, green] of [[0, 255], [3, 0]]) {
+        const result = await texture.readPixels(0, 1, null, true, false, 1, y, 1, 1);
+        if (!(result instanceof Uint8Array)) {
+          throw new Error("Expected RGBA8 mip readback");
+        }
+        expect(result.length).to.equal(4);
+        expect(result[0]).to.equal(0);
+        // Mip generation can round a solid 255 channel down by one.
+        expect(result[1]).to.be.closeTo(green, 1);
+        expect(result[2]).to.equal(0);
+        expect(result[3]).to.equal(255);
+      }
+      const internalTexture = texture.getInternalTexture();
+      if (!internalTexture) {
+        throw new Error("Expected an initialized raw texture");
+      }
+      for (const [x, y, width, height] of [
+        [2, 0, 1, 1], [0, 4, 1, 1], [0, 3, 1, 2], [0, 0, 0, 1],
+        [0, 0, 65535, 65535]
+      ]) {
+        let error: unknown;
+        try {
+          await engine._readTexturePixels(internalTexture, width, height, -1, 1, null, true, false, x, y);
+        } catch (caught) {
+          error = caught;
+        }
+        if (!(error instanceof Error)) {
+          throw new Error("Expected out-of-range mip readback to reject");
+        }
+        expect(error.message).to.contain("rectangle is out of range");
+      }
+      for (const invalid of [65536, 65537, 256, 2 ** 32, 2 ** 32 + 1, -1, 0.5, NaN, Infinity]) {
+        for (const component of [1, 2, 3, 4, 0]) {
+          const request = [0, 0, 0, 1, 1];
+          request[component] = invalid;
+          const [mip, x, y, width, height] = request;
+          const destination = new Uint8Array(4).fill(91);
+          let error: unknown;
+          try {
+            await engine._readTexturePixels(internalTexture, width, height, -1, mip, destination, true, false, x, y);
+          } catch (caught) {
+            error = caught;
+          }
+          if (!(error instanceof Error)) {
+            throw new Error(`Expected invalid readback component ${component}=${invalid} to reject`);
+          }
+          const maximum = component === 0 ? 255 : 65535;
+          if (!Number.isInteger(invalid) || invalid < 0 || invalid > maximum) {
+            const parameter = ["mip level", "x", "y", "width", "height"][component];
+            expect(error.message).to.equal(`readTexture ${parameter} must be a finite integer between 0 and ${maximum}.`);
+          } else {
+            expect(error.message).to.contain("rectangle is out of range");
+          }
+          expect(Array.from(destination)).to.deep.equal([91, 91, 91, 91]);
+        }
+      }
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+});
+registerCanvasImageTests(describe, it, skipCanvasGpuTests);
 
 describe("RequestFile", function () {
   this.timeout(0);
@@ -145,7 +353,26 @@ describe("ColorParsing", function () {
   });
 });
 
+describe("Native splat matrix storage", function () {
+  const test = typeof _native.sortSplats === "function" ? it : it.skip;
+  for (const numberArray of [false, true]) {
+    test(`sorts with ${numberArray ? "number-array" : "Float32Array"} matrices`, function () {
+      const values = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      const matrix = { _m: numberArray ? values : new Float32Array(values) };
+      const positions = new Float32Array([0, 0, 1, 1, 0, 0, 4, 1, 0, 0, 2, 1]);
+      for (const rightHanded of [false, true]) {
+        const indices = new Float32Array(3);
+        _native.sortSplats(matrix, positions, indices, rightHanded);
+        expect(Array.from(indices)).to.deep.equal(rightHanded ? [0, 2, 1] : [1, 2, 0]);
+      }
+    });
+  }
+});
+
 describe("Canvas2D", function () {
+  // No-op renderers accept GPU commands but cannot produce pixels for readback.
+  const itWithGpu = hasGpuRendering ? it : it.skip;
+
   function createContext(): any {
     const canvas = new _native.Canvas();
     canvas.width = 64;
@@ -153,12 +380,824 @@ describe("Canvas2D", function () {
     return canvas.getContext("2d");
   }
 
+  // Font registrations are global; exercise the fallback before loading a face.
+  it("returns ascent and descent in no-font text metrics", function () {
+    const resource = createCanvas(8, 8);
+    try {
+      resource.context.font = "20px MissingFontForCanvasMetrics";
+      const metrics = resource.context.measureText("test");
+      expect(metrics).to.have.property("actualBoundingBoxAscent");
+      expect(metrics).to.have.property("actualBoundingBoxDescent");
+      expect(metrics.actualBoundingBoxAscent).to.equal(15);
+      expect(metrics.actualBoundingBoxDescent).to.equal(5);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  (skipCanvasGpuTests ? it.skip : it)("intersects nested clips and restores parent clips on the GPU", async function () {
+    this.timeout(10000);
+    for (const translated of [false, true]) {
+      const engine = new NativeEngine();
+      const scene = new Scene(engine);
+      try {
+        const texture = new DynamicTexture("nested clips", 64, scene, false);
+        const ctx = texture.getContext();
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(8, 0, 24, 64);
+        ctx.clip();
+
+        ctx.save();
+        if (translated) {
+          ctx.translate(16, 0);
+        }
+        ctx.beginPath();
+        ctx.rect(0, 0, 64, 64);
+        ctx.clip();
+        ctx.fillStyle = "red";
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.restore();
+
+        ctx.fillStyle = "#00ff00";
+        ctx.fillRect(24, 0, 16, 64);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(40, 0, 16, 64);
+        ctx.clip();
+        ctx.fillStyle = "magenta";
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.restore();
+        ctx.restore();
+
+        ctx.fillStyle = "blue";
+        ctx.fillRect(40, 0, 8, 64);
+        texture.update(false);
+        const pixels = await texture.readPixels();
+        if (!(pixels instanceof Uint8Array)) {
+          throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+        }
+        const pixel = (x: number) => Array.from(pixels.subarray((32 * 64 + x) * 4, (32 * 64 + x + 1) * 4));
+        expect(pixel(4), "outside parent").to.deep.equal([255, 255, 255, 255]);
+        expect(pixel(12), "translated child boundary").to.deep.equal(translated ? [255, 255, 255, 255] : [255, 0, 0, 255]);
+        expect(pixel(20), "inside intersection").to.deep.equal([255, 0, 0, 255]);
+        expect(pixel(28), "restored parent").to.deep.equal([0, 255, 0, 255]);
+        expect(pixel(36), "outside restored parent").to.deep.equal([255, 255, 255, 255]);
+        expect(pixel(44), "restored unclipped state").to.deep.equal([0, 0, 255, 255]);
+        expect(pixel(52), "disjoint clip").to.deep.equal([255, 255, 255, 255]);
+        expect(pixel(60), "outside every fill").to.deep.equal([255, 255, 255, 255]);
+      } finally {
+        scene.dispose();
+        engine.dispose();
+      }
+    }
+  });
+
+  (skipCanvasGpuTests ? it.skip : it)("normalizes negative rectangle dimensions before intersecting GPU clips", async function () {
+    this.timeout(10000);
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const texture = new DynamicTexture("signed clips", 64, scene, false);
+      const ctx = texture.getContext();
+      for (const rotated of [false, true]) {
+        let expected: Uint8Array | undefined;
+        for (const [flipX, flipY] of [[false, false], [true, false], [false, true], [true, true]]) {
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(18, 12, 36, 44);
+          ctx.clip();
+          ctx.save();
+          if (rotated) {
+            ctx.translate(32, 32);
+            ctx.rotate(0.3);
+            ctx.translate(-32, -32);
+          }
+          ctx.beginPath();
+          ctx.rect(flipX ? 40 : 16, flipY ? 40 : 20, flipX ? -24 : 24, flipY ? -20 : 20);
+          ctx.clip();
+          ctx.fillStyle = "blue";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.restore();
+          ctx.restore();
+          texture.update(false);
+
+          const pixels = await texture.readPixels();
+          if (!(pixels instanceof Uint8Array)) {
+            throw new Error("Expected RGBA8 GPU readback for signed clips");
+          }
+          const inside = (30 * 64 + 28) * 4;
+          expect(Array.from(pixels.subarray(inside, inside + 4)), `inside clip, rotated=${rotated}, flipX=${flipX}, flipY=${flipY}`).to.deep.equal([0, 0, 255, 255]);
+          expect(Array.from(pixels.subarray(0, 4)), "outside parent clip").to.deep.equal([255, 255, 255, 255]);
+          if (expected) {
+            let changed = 0;
+            for (let index = 0; index < pixels.length; ++index) {
+              if (pixels[index] !== expected[index]) {
+                ++changed;
+              }
+            }
+            expect(changed, `signed clip equivalence, rotated=${rotated}, flipX=${flipX}, flipY=${flipY}`).to.equal(0);
+          } else {
+            expected = pixels.slice();
+          }
+        }
+      }
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  (skipCanvasGpuTests ? it.skip : it)("clips text, fills, strokes and images to saved curved paths on the GPU", async function () {
+    this.timeout(20000);
+    const fontData = await new Promise<ArrayBuffer>((resolve, reject) => {
+      RequestFile("app:///Assets/Arimo-Regular.ttf", data => {
+        if (typeof data === "string") {
+          reject(new Error("Expected binary clip-test font"));
+        } else {
+          resolve(data);
+        }
+      }, undefined, undefined, true, reject);
+    });
+    _native.Canvas.loadTTF("clip-test-font", fontData);
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const texture = new DynamicTexture("curved clips", 64, scene, false);
+      const source = new DynamicTexture("clip image", 64, scene, false);
+      source.getContext().fillStyle = "blue";
+      source.getContext().fillRect(0, 0, 64, 64);
+      const ctx = texture.getContext();
+      const read = async () => {
+        texture.update(false);
+        const pixels = await texture.readPixels();
+        if (!(pixels instanceof Uint8Array)) {
+          throw new Error("Expected RGBA8 GPU readback for curved clips");
+        }
+        // Native readback is bottom-up; assertions below use Canvas coordinates.
+        const topDown = new Uint8Array(pixels.length);
+        for (let y = 0; y < 64; ++y) {
+          topDown.set(pixels.subarray(y * 64 * 4, (y + 1) * 64 * 4), (63 - y) * 64 * 4);
+        }
+        return topDown;
+      };
+      for (const mode of ["text", "fill", "stroke", "image", "clear", "blur(1px)", "blur(3px)"]) {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.save();
+        ctx.translate(32, 32);
+        ctx.rotate(0.2);
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        // A new path and a GPU flush must not erase the saved clipping region.
+        ctx.beginPath();
+        await read();
+        ctx.fillStyle = "blue";
+        ctx.strokeStyle = "blue";
+        if (mode === "text") {
+          ctx.font = "24px clip-test-font";
+          ctx.fillText("MMMM", 0, 24);
+          ctx.fillText("MMMM", 0, 48);
+        } else if (mode === "stroke") {
+          ctx.lineWidth = 12;
+          ctx.moveTo(0, 32);
+          ctx.lineTo(64, 32);
+          ctx.stroke();
+        } else if (mode === "image") {
+          ctx.drawImage(source.getContext().canvas, 0, 0);
+        } else if (mode === "clear") {
+          ctx.clearRect(0, 0, 64, 64);
+        } else {
+          if (mode.startsWith("blur")) {
+            ctx.filter = mode;
+          }
+          ctx.fillRect(0, 0, 64, 64);
+        }
+        const pixels = await read();
+        let changedInside = 0;
+        for (let y = 0; y < 64; ++y) {
+          for (let x = 0; x < 64; ++x) {
+            const offset = (y * 64 + x) * 4;
+            const changed = pixels.subarray(offset, offset + 4).some(value => value !== 255);
+            const distance = Math.hypot(x + 0.5 - 32, y + 0.5 - 32);
+            if (distance > 22) {
+              expect(changed, `${mode} outside curved clip at ${x},${y}`).to.equal(false);
+            } else if (distance < 18 && changed) {
+              ++changedInside;
+            }
+          }
+        }
+        expect(changedInside, `${mode} visible inside clip`).to.be.greaterThan(50);
+        ctx.restore();
+        ctx.fillStyle = "red";
+        ctx.fillRect(0, 0, 4, 4);
+        const restored = await read();
+        expect(Array.from(restored.subarray(0, 4)), `${mode} restore after multiple flushes`).to.deep.equal([255, 0, 0, 255]);
+      }
+
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(8, 8, 48, 48, 16);
+      ctx.clip();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(24, 32, 14, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = "blue";
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.restore();
+      ctx.fillStyle = "#00ff00";
+      ctx.fillRect(40, 8, 16, 48);
+      ctx.restore();
+      const nested = await read();
+      const pixel = (x: number, y: number) => Array.from(nested.subarray((y * 64 + x) * 4, (y * 64 + x + 1) * 4));
+      expect(pixel(24, 32), "nested curved intersection").to.deep.equal([0, 0, 255, 255]);
+      expect(pixel(48, 32), "restored rounded parent").to.deep.equal([0, 255, 0, 255]);
+      expect(pixel(54, 10), "rounded corner stays clipped").to.deep.equal([255, 255, 255, 255]);
+      expect(pixel(32, 12), "outside nested circle").to.deep.equal([255, 255, 255, 255]);
+
+      for (const mode of ["nonzero", "evenodd", "opposite", "empty", "zero", "Path2D"]) {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.save();
+        ctx.beginPath();
+        if (mode === "zero") {
+          ctx.rect(8, 8, 0, 48);
+        } else if (mode !== "empty") {
+          ctx.rect(8, 8, 48, 48);
+          if (mode === "opposite") {
+            ctx.rect(48, 16, -32, 32);
+          } else {
+            ctx.rect(16, 16, 32, 32);
+          }
+        }
+        if (mode === "Path2D") {
+          const path = new _native.Path2D();
+          path.arc(32, 32, 20, 0, Math.PI * 2);
+          ctx.clip(path);
+          path.rect(0, 0, 64, 64);
+        } else {
+          ctx.clip(mode === "evenodd" ? "evenodd" : "nonzero");
+        }
+        // Immediate rectangles must not replace the path captured above.
+        ctx.fillStyle = "blue";
+        ctx.fillRect(0, 0, 64, 64);
+        const result = await read();
+        const center = (32 * 64 + 32) * 4;
+        const filled = mode === "nonzero" || mode === "Path2D";
+        expect(Array.from(result.subarray(center, center + 4)), `${mode} clip center`).to.deep.equal(filled ? [0, 0, 255, 255] : [255, 255, 255, 255]);
+        expect(Array.from(result.subarray(0, 4)), `${mode} clip outside`).to.deep.equal([255, 255, 255, 255]);
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(32, 32, 20, 0, Math.PI * 2);
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.strokeRect(0, 0, 2, 2);
+      ctx.clearRect(0, 0, 2, 2);
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = "blue";
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.restore();
+      const preserved = await read();
+      const outside = (8 * 64 + 8) * 4;
+      expect(Array.from(preserved.subarray(outside, outside + 4)), "immediate operations preserve the curved current path").to.deep.equal([255, 255, 255, 255]);
+      const center = (32 * 64 + 32) * 4;
+      expect(Array.from(preserved.subarray(center, center + 4)), "preserved path interior").to.deep.equal([0, 0, 255, 255]);
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  (skipCanvasGpuTests ? it.skip : it)("clears only the clipped GPU region and ignores globalAlpha and filters", async function () {
+    this.timeout(10000);
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const texture = new DynamicTexture("clipped clear", 64, scene, false);
+      const ctx = texture.getContext();
+      ctx.fillStyle = "red";
+      ctx.fillRect(0, 0, 64, 64);
+      texture.update(false);
+
+      ctx.filter = "blur(2px)";
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(8, 0, 24, 64);
+      ctx.clip();
+      ctx.globalAlpha = 0.25;
+      ctx.clearRect(0, 0, 64, 64);
+      ctx.restore();
+      texture.update(false);
+      const pixels = await texture.readPixels();
+      if (!(pixels instanceof Uint8Array)) {
+        throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+      }
+      const pixel = (x: number) => Array.from(pixels.subarray((32 * 64 + x) * 4, (32 * 64 + x + 1) * 4));
+      expect(pixel(36), "preserved near clip").to.deep.equal([255, 0, 0, 255]);
+      expect(pixel(16), "fully cleared inside clip").to.deep.equal([0, 0, 0, 0]);
+      expect(pixel(44), "preserved after clip").to.deep.equal([255, 0, 0, 255]);
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  (skipCanvasGpuTests ? it.skip : it)("uses the strokeRect geometry after a preceding fillRect", async function () {
+    this.timeout(10000);
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      const texture = new DynamicTexture("fill then inset stroke", 16, scene, false);
+      const ctx = texture.getContext();
+      ctx.fillStyle = "blue";
+      ctx.fillRect(2, 2, 12, 12);
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(2.5, 2.5, 11, 11);
+      texture.update(false);
+
+      const pixels = await texture.readPixels();
+      if (!(pixels instanceof Uint8Array)) {
+        throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+      }
+      const pixel = (x: number, y: number) => Array.from(pixels.subarray((y * 16 + x) * 4, (y * 16 + x + 1) * 4));
+      expect(pixel(8, 1), "outside inset border").to.deep.equal([0, 0, 0, 0]);
+      expect(pixel(8, 2), "pixel-aligned inset border").to.deep.equal([255, 255, 255, 255]);
+      expect(pixel(8, 3), "button fill inside border").to.deep.equal([0, 0, 255, 255]);
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  it("matches browser text layout metrics", async function () {
+    this.timeout(10000);
+    const fontData = await new Promise<ArrayBuffer>((resolve, reject) => {
+      RequestFile(
+        "app:///Assets/Arimo-Regular.ttf",
+        (data) => {
+          if (typeof data === "string") {
+            reject(new Error("Expected binary font data"));
+          } else {
+            resolve(data);
+          }
+        },
+        undefined,
+        undefined,
+        true,
+        (error) => reject(error)
+      );
+    });
+    _native.Canvas.loadTTF("arimo-regular", fontData);
+
+    const ctx = createContext();
+    ctx.font = "18px arimo-regular";
+    expect(ctx.measureText("Home Impulse").width).to.be.closeTo(116.0419921875, 0.0001);
+    expect(ctx.measureText("Far Away Impulse").width).to.be.closeTo(143.71875, 0.0001);
+    expect(ctx.measureText("Move far away").width).to.be.closeTo(117.0439453125, 0.0001);
+    expect(ctx.measureText("Hg").fontBoundingBoxAscent).to.equal(16);
+    expect(ctx.measureText("Hg").fontBoundingBoxDescent).to.equal(5);
+    ctx.letterSpacing = "0.25px";
+    expect(ctx.measureText("Home Impulse").width).to.be.closeTo(118.7919921875, 0.0001);
+  });
+  function createCanvas(width: number, height: number): any {
+    const canvas = new _native.Canvas();
+    canvas.width = width;
+    canvas.height = height;
+    return { canvas, context: canvas.getContext("2d") };
+  }
+
+  function disposeCanvas(resource: any): void {
+    resource.context.dispose();
+    resource.canvas.dispose();
+  }
+
+  function captureGpuPixels(canvas: any): any {
+    return canvas.getContext("2d").getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    ).data;
+  }
+
+  function pixelAt(
+    pixels: any,
+    width: number,
+    x: number,
+    y: number
+  ): number[] {
+    const offset = (y * width + x) * 4;
+    return [
+      pixels[offset],
+      pixels[offset + 1],
+      pixels[offset + 2],
+      pixels[offset + 3],
+    ];
+  }
+
+  itWithGpu("uses strokeRect geometry after a preceding fillRect", function () {
+    const resource = createCanvas(16, 16);
+    try {
+      const ctx = resource.context;
+      ctx.fillStyle = "blue";
+      ctx.fillRect(2, 2, 12, 12);
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(2.5, 2.5, 11, 11);
+
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 16, 8, 1), "outside inset border")
+        .to.deep.equal([0, 0, 0, 0]);
+      expect(pixelAt(pixels, 16, 8, 2), "pixel-aligned inset border")
+        .to.deep.equal([255, 255, 255, 255]);
+      expect(pixelAt(pixels, 16, 8, 3), "fill inside border")
+        .to.deep.equal([0, 0, 255, 255]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("does not restroke earlier rectangles with a later strokeRect", function () {
+    const resource = createCanvas(32, 16);
+    try {
+      const ctx = resource.context;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "red";
+      ctx.strokeRect(2.5, 2.5, 9, 11);
+      ctx.strokeStyle = "blue";
+      ctx.strokeRect(20.5, 2.5, 9, 11);
+
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 32, 2, 8), "first rectangle retains its stroke")
+        .to.deep.equal([255, 0, 0, 255]);
+      expect(pixelAt(pixels, 32, 20, 8), "second rectangle is drawn")
+        .to.deep.equal([0, 0, 255, 255]);
+      expect(pixelAt(pixels, 32, 16, 8), "gap remains untouched")
+        .to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("preserves a rectangular clip while resetting strokeRect geometry", function () {
+    const resource = createCanvas(32, 16);
+    try {
+      const ctx = resource.context;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, 16, 16);
+      ctx.clip();
+      ctx.fillStyle = "blue";
+      ctx.fillRect(0, 0, 32, 16);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "white";
+      ctx.strokeRect(2.5, 2.5, 27, 11);
+      ctx.restore();
+
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 32, 2, 8), "stroke inside clip")
+        .to.deep.equal([255, 255, 255, 255]);
+      expect(pixelAt(pixels, 32, 8, 8), "fill inside clip")
+        .to.deep.equal([0, 0, 255, 255]);
+      expect(pixelAt(pixels, 32, 29, 8), "stroke outside clip")
+        .to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "intersects nested clips and restores parent clips on the GPU",
+    async function () {
+      this.timeout(10000);
+      for (const translated of [false, true]) {
+        const engine = new NativeEngine();
+        const scene = new Scene(engine);
+        try {
+          const texture = new DynamicTexture("nested clips", 64, scene, false);
+          const ctx = texture.getContext();
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(8, 0, 24, 64);
+          ctx.clip();
+
+          ctx.save();
+          if (translated) {
+            ctx.translate(16, 0);
+          }
+          ctx.beginPath();
+          ctx.rect(0, 0, 64, 64);
+          ctx.clip();
+          ctx.fillStyle = "red";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.restore();
+
+          ctx.fillStyle = "#00ff00";
+          ctx.fillRect(24, 0, 16, 64);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(40, 0, 16, 64);
+          ctx.clip();
+          ctx.fillStyle = "magenta";
+          ctx.fillRect(0, 0, 64, 64);
+          ctx.restore();
+          ctx.restore();
+
+          ctx.fillStyle = "blue";
+          ctx.fillRect(40, 0, 8, 64);
+          texture.update(false);
+          const pixels = await texture.readPixels();
+          if (!(pixels instanceof Uint8Array)) {
+            throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+          }
+          const pixel = (x: number) =>
+            Array.from(
+              pixels.subarray(
+                (32 * 64 + x) * 4,
+                (32 * 64 + x + 1) * 4
+              )
+            );
+          expect(pixel(4), "outside parent").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+          expect(pixel(12), "translated child boundary").to.deep.equal(
+            translated ? [255, 255, 255, 255] : [255, 0, 0, 255]
+          );
+          expect(pixel(20), "inside intersection").to.deep.equal([
+            255, 0, 0, 255
+          ]);
+          expect(pixel(28), "restored parent").to.deep.equal([
+            0, 255, 0, 255
+          ]);
+          expect(pixel(36), "outside restored parent").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+          expect(pixel(44), "restored unclipped state").to.deep.equal([
+            0, 0, 255, 255
+          ]);
+          expect(pixel(52), "disjoint clip").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+          expect(pixel(60), "outside every fill").to.deep.equal([
+            255, 255, 255, 255
+          ]);
+        } finally {
+          scene.dispose();
+          engine.dispose();
+        }
+      }
+    }
+  );
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "normalizes negative rectangle dimensions before intersecting GPU clips",
+    async function () {
+      this.timeout(10000);
+      const engine = new NativeEngine();
+      const scene = new Scene(engine);
+      try {
+        const texture = new DynamicTexture("signed clips", 64, scene, false);
+        const ctx = texture.getContext();
+        for (const rotated of [false, true]) {
+          let expected: Uint8Array | undefined;
+          for (const flips of [
+            [false, false], [true, false], [false, true], [true, true]
+          ]) {
+            const flipX = flips[0];
+            const flipY = flips[1];
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(18, 12, 36, 44);
+            ctx.clip();
+            ctx.save();
+            if (rotated) {
+              ctx.translate(32, 32);
+              ctx.rotate(0.3);
+              ctx.translate(-32, -32);
+            }
+            ctx.beginPath();
+            ctx.rect(
+              flipX ? 40 : 16, flipY ? 40 : 20,
+              flipX ? -24 : 24, flipY ? -20 : 20
+            );
+            ctx.clip();
+            ctx.fillStyle = "blue";
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.restore();
+            ctx.restore();
+            texture.update(false);
+
+            const pixels = await texture.readPixels();
+            if (!(pixels instanceof Uint8Array)) {
+              throw new Error("Expected RGBA8 GPU readback for signed clips");
+            }
+            const description =
+              `rotated=${rotated}, flipX=${flipX}, flipY=${flipY}`;
+            expect(pixelAt(pixels, 64, 28, 30), `inside clip, ${description}`)
+              .to.deep.equal([0, 0, 255, 255]);
+            expect(pixelAt(pixels, 64, 0, 0), "outside parent clip")
+              .to.deep.equal([255, 255, 255, 255]);
+            if (expected) {
+              let changed = 0;
+              for (let index = 0; index < pixels.length; ++index) {
+                if (pixels[index] !== expected[index]) {
+                  ++changed;
+                }
+              }
+              expect(changed, `signed clip equivalence, ${description}`)
+                .to.equal(0);
+            } else {
+              expected = pixels.slice();
+            }
+          }
+        }
+      } finally {
+        scene.dispose();
+        engine.dispose();
+      }
+    }
+  );
+
+  (skipCanvasGpuTests ? it.skip : it)(
+    "clears only the clipped GPU region and ignores globalAlpha and filters",
+    async function () {
+      this.timeout(10000);
+      const engine = new NativeEngine();
+      const scene = new Scene(engine);
+      try {
+        const texture = new DynamicTexture("clipped clear", 64, scene, false);
+        const ctx = texture.getContext();
+        ctx.fillStyle = "red";
+        ctx.fillRect(0, 0, 64, 64);
+        texture.update(false);
+
+        ctx.filter = "blur(2px)";
+        ctx.fillRect(0, 0, 64, 64);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(8, 0, 24, 64);
+        ctx.clip();
+        ctx.globalAlpha = 0.25;
+        ctx.clearRect(0, 0, 64, 64);
+        ctx.restore();
+        texture.update(false);
+        const pixels = await texture.readPixels();
+        if (!(pixels instanceof Uint8Array)) {
+          throw new Error("Expected RGBA8 GPU readback for the canvas texture");
+        }
+        const pixel = (x: number) =>
+          Array.from(
+            pixels.subarray((32 * 64 + x) * 4, (32 * 64 + x + 1) * 4)
+          );
+        expect(pixel(36), "preserved near clip").to.deep.equal([
+          255, 0, 0, 255
+        ]);
+        expect(pixel(16), "fully cleared inside clip").to.deep.equal([
+          0, 0, 0, 0
+        ]);
+        expect(pixel(44), "preserved after clip").to.deep.equal([
+          255, 0, 0, 255
+        ]);
+      } finally {
+        scene.dispose();
+        engine.dispose();
+      }
+    }
+  );
+
   it("round-trips a string fillStyle and strokeStyle", function () {
     const ctx = createContext();
     ctx.fillStyle = "#ff0000";
     ctx.strokeStyle = "#00ff00";
     expect(ctx.fillStyle).to.equal("#ff0000");
     expect(ctx.strokeStyle).to.equal("#00ff00");
+  });
+
+  it("rejects a prototype-spoofed object in place of a Path2D", function () {
+    // Prototype spoofing must not let fill() unwrap a foreign or nonexistent native object.
+    const ctx = createContext();
+    const spoofedGradient: any = ctx.createLinearGradient(0, 0, 10, 10);
+    Object.setPrototypeOf(spoofedGradient, Path2D.prototype);
+    expect(spoofedGradient instanceof Path2D).to.equal(true);
+
+    const bare: any = Object.create(Path2D.prototype);
+    expect(bare instanceof Path2D).to.equal(true);
+
+    const realPath = new Path2D();
+    for (const impostor of [spoofedGradient, bare]) {
+      expect(function () { ctx.fill(impostor); }).to.throw();
+      expect(function () { ctx.stroke(impostor); }).to.throw();
+      expect(function () { realPath.addPath(impostor); }).to.throw();
+      // The Path2D() argument is a (Path2D or DOMString) union, so a non-Path2D is string
+      // data rather than an error. It must not be unwrapped on the way there.
+      expect(function () { new Path2D(impostor); }).to.not.throw();
+    }
+  });
+
+  it("ignores a prototype-spoofed object assigned to fillStyle or strokeStyle", function () {
+    // Same defect on the gradient side: the assignment gate accepted anything wearing the
+    // gradient prototype and stored it, and the next fill unwrapped it as a CanvasGradient.
+    const ctx = createContext();
+    const gradient = ctx.createLinearGradient(0, 0, 10, 10);
+    const spoofedPath: any = new Path2D();
+    Object.setPrototypeOf(spoofedPath, Object.getPrototypeOf(gradient));
+
+    ctx.fillStyle = "#ff0000";
+    ctx.strokeStyle = "#00ff00";
+    ctx.fillStyle = spoofedPath;
+    ctx.strokeStyle = spoofedPath;
+
+    // Per spec an unusable assignment leaves the previous value in place.
+    expect(ctx.fillStyle).to.equal("#ff0000");
+    expect(ctx.strokeStyle).to.equal("#00ff00");
+
+    // The drawing path must stay usable rather than unwrapping the impostor.
+    expect(function () { ctx.fillRect(0, 0, 10, 10); }).to.not.throw();
+    expect(function () { ctx.strokeRect(0, 0, 10, 10); }).to.not.throw();
+  });
+
+  it("rejects a non-Path2D argument to fill and stroke", function () {
+    // Assert rejection, not the exception class: QuickJS reports native TypeErrors as InternalErrors.
+    const ctx = createContext();
+    expect(function () { ctx.stroke("x"); }).to.throw();
+    expect(function () { ctx.stroke({}); }).to.throw();
+    expect(function () { ctx.stroke(5); }).to.throw();
+    expect(function () { ctx.fill({}); }).to.throw();
+    expect(function () { ctx.fill(5); }).to.throw();
+  });
+
+  it("still accepts the valid fill and stroke argument forms", function () {
+    const ctx = createContext();
+    const path = new Path2D("M0 0 L10 10");
+    expect(function () { ctx.fill(); }).to.not.throw();
+    expect(function () { ctx.stroke(); }).to.not.throw();
+    // undefined selects the no-argument overload rather than being a bad Path2D.
+    expect(function () { ctx.fill(undefined); }).to.not.throw();
+    expect(function () { ctx.stroke(undefined); }).to.not.throw();
+    // fill() also takes a fill rule string.
+    expect(function () { ctx.fill("evenodd"); }).to.not.throw();
+    expect(function () { ctx.fill(new String("evenodd") as any); }).to.not.throw();
+    expect(function () {
+      ctx.fill({ toString: function () { return "nonzero"; } } as any);
+    }).to.not.throw();
+    expect(function () { ctx.fill(path); }).to.not.throw();
+    expect(function () { ctx.fill(path, "nonzero"); }).to.not.throw();
+    expect(function () { ctx.fill(path, new String("evenodd") as any); }).to.not.throw();
+    expect(function () { ctx.stroke(path); }).to.not.throw();
+    expect(function () { ctx.fill("invalid"); }).to.throw();
+    expect(function () { ctx.fill(path, "invalid"); }).to.throw();
+  });
+
+  it("rejects a non-Path2D argument to Path2D.addPath", function () {
+    // Missing and unrelated arguments must not reach native unwrapping.
+    const path = new Path2D();
+    expect(function () { path.addPath(); }).to.throw();
+    expect(function () { path.addPath("x"); }).to.throw();
+    expect(function () { path.addPath({}); }).to.throw();
+    expect(function () { path.addPath(new Path2D("M0 0 L5 5")); }).to.not.throw();
+  });
+
+  it("rejects an invalid native source argument to drawImage", function () {
+    // Native-looking impostors must throw, not AV via an unchecked Unwrap.
+    const ctx = createContext();
+    const realCanvas = new _native.Canvas();
+    const spoofedCanvas = Object.create(Object.getPrototypeOf(realCanvas));
+    expect(spoofedCanvas instanceof _native.Canvas).to.equal(true);
+    expect(function () { ctx.drawImage({}, 0, 0); }).to.throw();
+    expect(function () { ctx.drawImage(new Path2D(), 0, 0); }).to.throw();
+    expect(function () { ctx.drawImage(spoofedCanvas, 0, 0); }).to.throw();
+    realCanvas.dispose();
+  });
+
+  it("treats a non-Path2D Path2D() argument as path data", function () {
+    // Non-Path2D objects use the DOMString constructor overload.
+    expect(function () { new Path2D({}); }).to.not.throw();
+    expect(function () { new Path2D(5); }).to.not.throw();
+    expect(function () { new Path2D(); }).to.not.throw();
+    const source = new Path2D("M0 0 L10 10");
+    const ctx = createContext();
+    expect(function () { ctx.fill(new Path2D(source)); }).to.not.throw();
+    expect(function () {
+      ctx.fill(new Path2D({ toString: function () { return "M0 0 L10 10"; } }));
+    }).to.not.throw();
   });
 
   it("accepts a CanvasGradient as fillStyle", function () {
@@ -420,8 +1459,7 @@ describe("Canvas2D", function () {
   it("accepts two color stops at the same offset", function () {
     // Only checks that the insertion path accepts the duplicate offset the spec allows;
     // std::map::insert() dropped it by returning {it, false} rather than throwing, so this
-    // does not by itself prove the stop survives. Asserting that needs the rendered ramp,
-    // and gradient fills are not read back by getImageData.
+    // does not by itself prove the stop survives. That needs a separate rendered-ramp assertion.
     const ctx = createContext();
     const gradient = ctx.createLinearGradient(0, 0, 64, 0);
     gradient.addColorStop(0, "red");
@@ -470,6 +1508,12 @@ describe("Canvas2D", function () {
     }).to.not.throw();
   });
 
+  it("keeps every word of an unquoted multi-word font family", function () {
+    const ctx = createContext();
+    ctx.font = "normal normal 18px Times  New Roman";
+    expect(ctx.font).to.equal('18px "Times New Roman"');
+  });
+
   it("rejects a createImageData source whose dimensions are not valid extents", function () {
     const ctx = createContext();
     // The ImageData overload is duck-typed, so these never went through WebIDL's
@@ -495,6 +1539,598 @@ describe("Canvas2D", function () {
     expect(data.width).to.equal(4);
     expect(data.height).to.equal(3);
   });
+
+  itWithGpu("renders a semi-transparent Canvas source through the destination GPU", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "rgba(240, 120, 60, 0.5)";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      const sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      expect(sample[0]).to.be.within(220, 255);
+      expect(sample[1]).to.be.within(100, 140);
+      expect(sample[2]).to.be.within(40, 80);
+      expect(sample[3]).to.be.within(110, 145);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("recognizes a Canvas source before ImageBitmap-shaped own properties", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#20c060";
+      source.context.fillRect(0, 0, 8, 8);
+      Object.defineProperty(source.canvas, "data", {
+        value: new Uint8Array(8 * 8 * 4),
+      });
+
+      destination.context.drawImage(source.canvas, 0, 0);
+
+      const sample = pixelAt(
+        captureGpuPixels(destination.canvas),
+        destination.canvas.width,
+        4,
+        4
+      );
+      expect(sample[0]).to.be.within(15, 50);
+      expect(sample[1]).to.be.within(175, 210);
+      expect(sample[2]).to.be.within(75, 115);
+      expect(sample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("applies fractional source crops and destination rectangles on the GPU", function () {
+    const source = createCanvas(12, 8);
+    const destination = createCanvas(30, 22);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 6, 4);
+      source.context.fillStyle = "#00ff00";
+      source.context.fillRect(6, 0, 6, 4);
+      source.context.fillStyle = "#0000ff";
+      source.context.fillRect(0, 4, 6, 4);
+      source.context.fillStyle = "#ffff00";
+      source.context.fillRect(6, 4, 6, 4);
+
+      // A narrow crop straddling x=6 amplifies fractional-coordinate handling.
+      destination.context.drawImage(
+        source.canvas,
+        5.99,
+        0,
+        1.01,
+        4,
+        2.75,
+        1.25,
+        24.5,
+        8.5
+      );
+      // Do the same across y=4 in a separate destination region.
+      destination.context.drawImage(
+        source.canvas,
+        0,
+        3.99,
+        6,
+        1.01,
+        1.25,
+        11.75,
+        12.5,
+        8.5
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      // Pixel (12,3), sampled at its center (12.5,3.5), maps to source
+      // x = 5.99 + (12.5 - 2.75) * 1.01 / 24.5 = 6.39194.
+      // Between red texel center 5.5 and green center 6.5, ideal bilinear
+      // weights are 10.8% red / 89.2% green (R~28, G~227).
+      // Integer truncation maps x to 5.4375; ignoring the crop maps x to
+      // 5.25. Both negative controls are solid red at this sample.
+      const green = pixelAt(pixels, destination.canvas.width, 12, 3);
+      expect(green[1] - green[0]).to.be.greaterThan(100);
+      expect(green[3]).to.be.greaterThan(200);
+
+      // Pixel (3,14), sampled at (3.5,14.5), maps to source
+      // y = 3.99 + (14.5 - 11.75) * 1.01 / 8.5 = 4.31676.
+      // That is 18.3% top red / 81.7% bottom blue (R~47, B~208).
+      // Integer truncation maps y to 3.4375 and ignoring the crop maps y
+      // to 3.5, both solid red rather than blue.
+      const blue = pixelAt(pixels, destination.canvas.width, 3, 14);
+      expect(blue[2] - blue[0]).to.be.greaterThan(80);
+      expect(blue[3]).to.be.greaterThan(200);
+
+      const fractionalEdge = pixelAt(
+        pixels,
+        destination.canvas.width,
+        26,
+        3
+      );
+      expect(fractionalEdge[0]).to.be.lessThan(80);
+      expect(fractionalEdge[1]).to.be.greaterThan(180);
+      expect(fractionalEdge[2]).to.be.lessThan(50);
+      expect(fractionalEdge[3]).to.be.greaterThan(150);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("normalizes negative source and destination extents", function () {
+    const source = createCanvas(12, 8);
+    const destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 12, 8);
+      source.context.fillStyle = "#ffff00";
+      source.context.fillRect(6, 4, 4, 3);
+
+      destination.context.drawImage(
+        source.canvas,
+        10,
+        7,
+        -4,
+        -3,
+        12,
+        10,
+        -8,
+        -6
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const inside = pixelAt(pixels, destination.canvas.width, 7, 7);
+      expect(inside[0]).to.be.greaterThan(220);
+      expect(inside[1]).to.be.greaterThan(220);
+      expect(inside[2]).to.be.lessThan(30);
+      expect(inside[3]).to.be.greaterThan(220);
+
+      const outside = pixelAt(pixels, destination.canvas.width, 2, 7);
+      expect(outside[3]).to.equal(0);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("clips the source rectangle and adjusts the destination proportionally", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(16, 16);
+    try {
+      source.context.fillStyle = "#00ffff";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(
+        source.canvas,
+        -2,
+        -2,
+        4,
+        4,
+        2,
+        2,
+        12,
+        12
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      expect(pixelAt(pixels, destination.canvas.width, 5, 5)[3]).to.equal(0);
+
+      const inside = pixelAt(pixels, destination.canvas.width, 10, 10);
+      expect(inside[0]).to.be.lessThan(30);
+      expect(inside[1]).to.be.greaterThan(220);
+      expect(inside[2]).to.be.greaterThan(220);
+      expect(inside[3]).to.be.greaterThan(220);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("keeps temporary Canvas images alive until queued draws flush", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(16, 8);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 0, 0, 8, 8);
+
+      source.context.fillStyle = "#0000ff";
+      source.context.fillRect(0, 0, 8, 8);
+      destination.context.drawImage(source.canvas, 8, 0, 8, 8);
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const first = pixelAt(pixels, destination.canvas.width, 4, 4);
+      expect(first[0]).to.be.greaterThan(220);
+      expect(first[1]).to.be.lessThan(30);
+      expect(first[2]).to.be.lessThan(30);
+      expect(first[3]).to.be.greaterThan(220);
+
+      const second = pixelAt(pixels, destination.canvas.width, 12, 4);
+      expect(second[0]).to.be.lessThan(30);
+      expect(second[1]).to.be.lessThan(30);
+      expect(second[2]).to.be.greaterThan(220);
+      expect(second[3]).to.be.greaterThan(220);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("keeps ImageData uploads alive through putImageData and drawImage", function () {
+    const destination = createCanvas(12, 6);
+    try {
+      const putData = destination.context.createImageData(4, 4);
+      const drawData = destination.context.createImageData(4, 4);
+      for (let i = 0; i < putData.data.length; i += 4) {
+        putData.data[i] = 240;
+        putData.data[i + 1] = 96;
+        putData.data[i + 2] = 32;
+        putData.data[i + 3] = 255;
+
+        drawData.data[i] = 96;
+        drawData.data[i + 1] = 48;
+        drawData.data[i + 2] = 240;
+        drawData.data[i + 3] = 255;
+      }
+
+      destination.context.putImageData(putData, 1, 1);
+      destination.context.drawImage(
+        {
+          data: drawData.data,
+          width: drawData.width,
+          height: drawData.height,
+          // NativeEngine image bitmaps expose bimg::TextureFormat::RGBA8.
+          format: 74,
+        },
+        7,
+        1
+      );
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const putSample = pixelAt(pixels, destination.canvas.width, 2, 2);
+      expect(putSample[0]).to.be.greaterThan(220);
+      expect(putSample[1]).to.be.within(75, 115);
+      expect(putSample[2]).to.be.within(15, 50);
+      expect(putSample[3]).to.be.greaterThan(240);
+
+      const drawSample = pixelAt(pixels, destination.canvas.width, 8, 2);
+      expect(drawSample[0]).to.be.within(75, 115);
+      expect(drawSample[1]).to.be.within(30, 70);
+      expect(drawSample[2]).to.be.greaterThan(220);
+      expect(drawSample[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
+  itWithGpu("preserves transform, rectangular clip, and globalAlpha for Canvas crops", function () {
+    const source = createCanvas(20, 8);
+    const destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#00ffff";
+      source.context.fillRect(12, 0, 8, 8);
+
+      destination.context.fillStyle = "#000000";
+      destination.context.fillRect(0, 0, 16, 12);
+      destination.context.beginPath();
+      destination.context.rect(4, 2, 6, 6);
+      destination.context.clip();
+      destination.context.translate(2, 1);
+      destination.context.globalAlpha = 0.5;
+      destination.context.drawImage(
+        source.canvas,
+        12,
+        0,
+        4,
+        8,
+        0,
+        0,
+        8,
+        8
+      );
+
+      expect(destination.context.globalAlpha).to.equal(0.5);
+      const transform = destination.context.getTransform();
+      expect(transform.e).to.equal(2);
+      expect(transform.f).to.equal(1);
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const cropped = pixelAt(pixels, destination.canvas.width, 5, 4);
+      expect(cropped[0]).to.be.lessThan(30);
+      expect(cropped[1]).to.be.within(100, 155);
+      expect(cropped[2]).to.be.within(100, 155);
+      expect(cropped[3]).to.be.greaterThan(240);
+
+      const translatedEdge = pixelAt(
+        pixels,
+        destination.canvas.width,
+        8,
+        4
+      );
+      expect(translatedEdge[0]).to.be.lessThan(30);
+      expect(translatedEdge[1]).to.be.within(100, 155);
+      expect(translatedEdge[2]).to.be.within(100, 155);
+      expect(translatedEdge[3]).to.be.greaterThan(240);
+
+      const clippedOut = pixelAt(pixels, destination.canvas.width, 5, 8);
+      expect(clippedOut[0]).to.be.lessThan(10);
+      expect(clippedOut[1]).to.be.lessThan(10);
+      expect(clippedOut[2]).to.be.lessThan(10);
+      expect(clippedOut[3]).to.be.greaterThan(240);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("intersects repeated Canvas draws with a retained non-rectangular clip", function () {
+    const source = createCanvas(4, 4);
+    const destination = createCanvas(16, 12);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 4, 4);
+
+      destination.context.fillStyle = "#000000";
+      destination.context.fillRect(0, 0, 16, 12);
+      destination.context.beginPath();
+      destination.context.moveTo(1, 1);
+      destination.context.lineTo(13, 1);
+      destination.context.lineTo(1, 11);
+      destination.context.closePath();
+      destination.context.clip();
+      destination.context.drawImage(source.canvas, 2, 2, 4, 4);
+      destination.context.drawImage(source.canvas, 10, 8, 4, 4);
+
+      const pixels = captureGpuPixels(destination.canvas);
+      const firstDraw = pixelAt(pixels, destination.canvas.width, 3, 3);
+      expect(firstDraw[0]).to.be.greaterThan(220);
+      expect(firstDraw[1]).to.be.lessThan(30);
+      expect(firstDraw[2]).to.be.lessThan(30);
+      expect(firstDraw[3]).to.be.greaterThan(240);
+
+      [
+        // Inside the triangle but outside both destination rectangles.
+        pixelAt(pixels, destination.canvas.width, 2, 8),
+        // Inside the second destination rectangle but outside the triangle.
+        pixelAt(pixels, destination.canvas.width, 12, 9),
+      ].forEach(function (outside) {
+        expect(outside[0]).to.be.lessThan(10);
+        expect(outside[1]).to.be.lessThan(10);
+        expect(outside[2]).to.be.lessThan(10);
+        expect(outside[3]).to.be.greaterThan(240);
+      });
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads fractional drawImage edge coverage from the framebuffer", function () {
+    const source = createCanvas(2, 2);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#ffffff";
+      source.context.fillRect(0, 0, 2, 2);
+      destination.context.drawImage(source.canvas, 1.75, 1.75, 2.5, 2.5);
+
+      const pixels = destination.context.getImageData(0, 0, 8, 8).data;
+      expect(pixelAt(pixels, destination.canvas.width, 2, 2)[3]).to.equal(255);
+      [
+        pixelAt(pixels, destination.canvas.width, 1, 2),
+        pixelAt(pixels, destination.canvas.width, 4, 2),
+        pixelAt(pixels, destination.canvas.width, 2, 1),
+        pixelAt(pixels, destination.canvas.width, 2, 4),
+      ].forEach(function (edge) {
+        expect(edge[3]).to.be.within(40, 90);
+      });
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads new NanoVG draws after getImageData and toDataURL snapshots", function () {
+    const resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      expect(pixelAt(captureGpuPixels(resource.canvas), 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+      resource.canvas.toDataURL();
+
+      resource.context.fillStyle = "#0000ff";
+      resource.context.fillRect(0, 0, 4, 8);
+      const pixels = captureGpuPixels(resource.canvas);
+      expect(pixelAt(pixels, 8, 2, 2)).to.deep.equal([0, 0, 255, 255]);
+      expect(pixelAt(pixels, 8, 6, 6)).to.deep.equal([255, 0, 0, 255]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  itWithGpu("reads filtered Canvas draws instead of unfiltered source pixels", function () {
+    const source = createCanvas(16, 16);
+    const destination = createCanvas(16, 16);
+    try {
+      source.context.fillStyle = "#ffffff";
+      source.context.fillRect(4, 4, 8, 8);
+      destination.context.filter = "blur(2px)";
+      destination.context.drawImage(source.canvas, 0, 0);
+      const pixels = captureGpuPixels(destination.canvas);
+      const fringe = pixelAt(pixels, 16, 3, 8);
+      const center = pixelAt(pixels, 16, 8, 8);
+      // The unfiltered CPU copy has zero alpha outside the source ink.
+      expect(fringe[0]).to.equal(fringe[1]);
+      expect(fringe[1]).to.equal(fringe[2]);
+      expect(fringe[3]).to.be.greaterThan(0);
+      expect(center[3]).to.be.greaterThan(fringe[3]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("reads source dimensions after coercing drawImage coordinates once", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      let conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          return 0;
+        },
+      }, 0);
+      expect(conversions).to.equal(1);
+      const pixels = captureGpuPixels(destination.canvas);
+      expect(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      expect(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  itWithGpu("retains the Canvas source kind across coordinate coercion", function () {
+    const source = createCanvas(8, 8);
+    const destination = createCanvas(8, 8);
+    const prototype = Object.getPrototypeOf(source.canvas);
+    try {
+      source.context.fillStyle = "#ff0000";
+      source.context.fillRect(0, 0, 8, 8);
+      let conversions = 0;
+      destination.context.drawImage(source.canvas, {
+        valueOf() {
+          ++conversions;
+          source.canvas.width = 4;
+          Object.setPrototypeOf(source.canvas, null);
+          source.canvas.data = new Uint8Array(0);
+          return 0;
+        },
+      }, 0);
+      expect(conversions).to.equal(1);
+      const pixels = captureGpuPixels(destination.canvas);
+      expect(pixelAt(pixels, 8, 2, 2)).to.deep.equal([255, 0, 0, 255]);
+      expect(pixelAt(pixels, 8, 6, 2)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      Object.setPrototypeOf(source.canvas, prototype);
+      disposeCanvas(destination);
+      disposeCanvas(source);
+    }
+  });
+
+  it("retains the ImageBitmap source kind when coercion removes its data", function () {
+    const destination = createCanvas(8, 8);
+    try {
+      [false, true].forEach(function (noOp) {
+        const bitmap = {
+          width: 8,
+          height: 8,
+          format: 74,
+          data: new Uint8Array(8 * 8 * 4),
+        };
+        let conversions = 0;
+        const draw = function () {
+          destination.context.drawImage(bitmap, {
+            valueOf() {
+              ++conversions;
+              delete bitmap.data;
+              return 0;
+            },
+          }, 0, noOp ? 0 : 8, 8);
+        };
+        if (noOp) {
+          expect(draw).not.to.throw();
+        } else {
+          expect(draw).to.throw("drawImage: ImageBitmap data must be a typed array.");
+        }
+        expect(conversions).to.equal(1);
+      });
+    } finally {
+      disposeCanvas(destination);
+    }
+  });
+
+  itWithGpu("clips framebuffer readback and normalizes negative region extents", function () {
+    const resource = createCanvas(8, 8);
+    try {
+      resource.context.fillStyle = "#ff0000";
+      resource.context.fillRect(0, 0, 8, 8);
+      const positive = resource.context.getImageData(-1, -1, 3, 3);
+      const negative = resource.context.getImageData(2, 2, -3, -3);
+      expect(Array.from(negative.data)).to.deep.equal(Array.from(positive.data));
+      expect(pixelAt(positive.data, 3, 0, 0)).to.deep.equal([0, 0, 0, 0]);
+      expect(pixelAt(positive.data, 3, 1, 1)).to.deep.equal([255, 0, 0, 255]);
+
+      const outside = resource.context.getImageData(-2147483648, 0, -2, 1);
+      expect(Array.from(outside.data)).to.deep.equal([0, 0, 0, 0, 0, 0, 0, 0]);
+      resource.canvas.width = 4;
+      expect(Array.from(resource.context.getImageData(0, 0, 1, 1).data)).to.deep.equal([0, 0, 0, 0]);
+    } finally {
+      disposeCanvas(resource);
+    }
+  });
+
+  it("falls back to PNG for default, empty, case-variant, and unsupported MIME types", function () {
+    const canvas = new _native.Canvas();
+    canvas.width = 2;
+    canvas.height = 2;
+    try {
+      [
+        canvas.toDataURL(),
+        canvas.toDataURL(""),
+        canvas.toDataURL("image/png"),
+        canvas.toDataURL("IMAGE/PNG"),
+        canvas.toDataURL("image/jpeg"),
+      ].forEach(function (url) {
+        expect(url.indexOf("data:image/png;base64,")).to.equal(0);
+        expect(url.length).to.be.greaterThan(32);
+      });
+    } finally {
+      canvas.dispose();
+    }
+  });
+
+  it("ends PNG data URLs at IEND without trailing allocation bytes", function () {
+    [1, 2, 64].forEach(function (size) {
+      const canvas = new _native.Canvas();
+      canvas.width = size;
+      canvas.height = size;
+      try {
+        const url = canvas.toDataURL();
+        const png = Buffer.from(url.substring("data:image/png;base64,".length), "base64");
+        expect(Array.from(png.subarray(0, 8))).to.deep.equal([137, 80, 78, 71, 13, 10, 26, 10]);
+        let offset = 8;
+        let foundEnd = false;
+        while (offset + 12 <= png.length) {
+          const length = png.readUInt32BE(offset);
+          const type = png.toString("ascii", offset + 4, offset + 8);
+          offset += length + 12;
+          expect(offset).to.be.at.most(png.length);
+          if (type === "IEND") {
+            expect(length).to.equal(0);
+            foundEnd = true;
+            break;
+          }
+        }
+        expect(foundEnd).to.equal(true);
+        expect(offset).to.equal(png.length);
+      } finally {
+        canvas.dispose();
+      }
+    });
+  });
+
 });
 
 function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {
@@ -506,6 +2142,32 @@ function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => vo
     done();
   });
 }
+
+describe("NativeTextureFormats", function () {
+  it("creates a D24 render target with compatible backing storage", function () {
+    const engine = new _native.Engine();
+    const texture = engine.createTexture();
+    try {
+      engine.initializeTexture(texture, 16, 16, false, _native.Engine.TEXTURE_FORMAT_D24, true, false, 1);
+      expect(engine.getTextureWidth(texture)).to.equal(16);
+      expect(engine.getTextureHeight(texture)).to.equal(16);
+    } finally {
+      engine.deleteTexture(texture);
+      engine.dispose();
+    }
+  });
+
+  it("rejects an invalid format without entering bgfx texture creation", function () {
+    const engine = new _native.Engine();
+    const texture = engine.createTexture();
+    try {
+      expect(() => engine.initializeTexture(texture, 16, 16, false, 0xffffffff, true, false, 1)).to.throw("Invalid texture format");
+    } finally {
+      engine.deleteTexture(texture);
+      engine.dispose();
+    }
+  });
+});
 
 describe("Materials", function () {
   this.timeout(0);
@@ -754,9 +2416,73 @@ function hexToBytes(hex: string): Uint8Array {
   const SPHERE_VERTICES = 62;
   const SPHERE_INDICES = 273;
 
+  function expectDecodedQuad(decoded: any) {
+    expect(decoded.totalVertices).to.equal(positions.length / 3);
+    expect(decoded.indices.length).to.equal(indices.length);
+
+    const attribute = decoded.attributes.find((a: any) => a.kind === "position");
+    expect(attribute, "decoded position attribute").to.not.equal(undefined);
+
+    const corner = (buffer: any, i: number) =>
+      [buffer[i * 3], buffer[i * 3 + 1], buffer[i * 3 + 2]]
+        .map((v: number) => v.toFixed(2))
+        .join(",");
+
+    const expectedCorners: string[] = [];
+    const actualCorners: string[] = [];
+    for (let i = 0; i < indices.length; ++i) {
+      expectedCorners.push(corner(positions, indices[i]));
+      actualCorners.push(corner(attribute.data, decoded.indices[i]));
+    }
+    expect(actualCorners.sort()).to.deep.equal(expectedCorners.sort());
+  }
+
+  function captureError(callback: () => unknown): string {
+    try {
+      callback();
+    } catch (error) {
+      if (error instanceof Error) {
+        return `${error.name}: ${error.message}`;
+      }
+      throw new Error(`Expected an Error object, received ${String(error)}`);
+    }
+    throw new Error("Expected callback to throw");
+  }
+
   it("publishes the codec version it was built against", function () {
     expect(_native.DracoCodec.Version).to.be.a("string");
     expect(_native.DracoCodec.Version).to.match(/^\d+\.\d+\.\d+$/);
+  });
+
+  it("keeps the compatibility entry points interoperable with DracoCodec", function () {
+    expect(_native.decodeDracoMesh).to.be.a("function");
+    expect(_native.encodeDracoMesh).to.be.a("function");
+
+    const compatibilityEncoded = _native.encodeDracoMesh(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices,
+      {});
+    expectDecodedQuad(_native.DracoCodec.Decode(
+      compatibilityEncoded.data,
+      { position: compatibilityEncoded.attributeIds.position }));
+
+    const groupedEncoded = _native.DracoCodec.Encode(
+      [{ kind: "position", dracoName: "POSITION", size: 3, data: positions }],
+      indices,
+      {});
+    expectDecodedQuad(_native.decodeDracoMesh(
+      groupedEncoded.data,
+      { position: groupedEncoded.attributeIds.position }));
+  });
+
+  it("propagates compatibility entry point errors", function () {
+    const emptyData = new Uint8Array(0);
+    expect(captureError(() => _native.decodeDracoMesh(emptyData)))
+      .to.equal(captureError(() => _native.DracoCodec.Decode(emptyData)));
+
+    const noAttributes: any[] = [];
+    expect(captureError(() => _native.encodeDracoMesh(noAttributes, null, {})))
+      .to.equal(captureError(() => _native.DracoCodec.Encode(noAttributes, null, {})));
   });
 
   it("decodes a mesh produced by the reference glTF encoder", function () {
@@ -1043,6 +2769,138 @@ function hexToBytes(hex: string): Uint8Array {
 
   it("rejects a non-typed-array source", function () {
     expect(() => _native.MeshoptCodec.Decode(null, COUNT, STRIDE, "ATTRIBUTES")).to.throw();
+  });
+});
+
+describe("Canvas image reloads", function () {
+  this.timeout(5000);
+  const test = hasNativeImageLoading ? it : it.skip;
+  const url = "app:///Assets/image-reload.png";
+  const dataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAABCAAAAAA+i0toAAAADElEQVR42mNgqP8PAAIBAX+LG2RhAAAAAElFTkSuQmCC";
+
+  for (const sources of [[url, url], [url, dataUrl], [dataUrl, url], [dataUrl, dataUrl]]) {
+    test(`loads the same image again (${sources.map(source => source === url ? "URL" : "data").join(" to ")})`, async function () {
+      const image = new _native.Image();
+      for (const source of sources) {
+        await new Promise<void>((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = source;
+        });
+        expect(image.width).to.equal(source === url ? 2 : 3);
+        expect(image.naturalWidth).to.equal(image.width);
+        expect(image.height).to.equal(1);
+        expect(image.naturalHeight).to.equal(1);
+      }
+    });
+  }
+
+  test("reflects the assigned src immediately", async function () {
+    const image = new _native.Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = dataUrl;
+      expect(image.src).to.equal(dataUrl);
+    });
+    expect(image.src).to.equal(dataUrl);
+  });
+
+  for (const fromUrl of [true, false]) {
+    test(`only delivers the latest assignment after a pending ${fromUrl ? "URL" : "data"} load`, async function () {
+      setImageReloadTestResponse(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=", "base64"));
+      const image = new _native.Image();
+      const barrier = new _native.Image();
+      const loaded: number[] = [];
+      const errors: unknown[] = [];
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => { loaded.push(image.width); };
+        image.onerror = (error: unknown) => { errors.push(error); reject(error); };
+        barrier.onload = resolve;
+        barrier.onerror = reject;
+        // The in-memory URL resolver queues completion synchronously. The final data load
+        // is a runtime-queue barrier after both candidate callbacks, not a timing estimate.
+        image.src = fromUrl ? "image-reload-test:///image.png" : dataUrl;
+        image.src = dataUrl;
+        barrier.src = dataUrl;
+      });
+      expect(image.src).to.equal(dataUrl);
+      expect(loaded).to.deep.equal([3]);
+      expect(errors).to.deep.equal([]);
+      expect(image.width).to.equal(3);
+      expect(barrier.width).to.equal(3);
+    });
+  }
+
+  const pixelTest = hasNativeImageLoading && hasGpuRendering && !skipCanvasGpuTests ? it : it.skip;
+  const redPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR42mP4z8DwH4QBEfcD/f6tu5kAAAAASUVORK5CYII=";
+  const greenPng = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADElEQVR42mNg+A+BAA/5A/3mxKLtAAAAAElFTkSuQmCC";
+  for (const toData of [false, true]) {
+    pixelTest(`draws reloaded pixels instead of the cached texture (URL to ${toData ? "data" : "URL"})`, async function () {
+      const canvas = new _native.Canvas();
+      canvas.width = 4;
+      canvas.height = 4;
+      const context = canvas.getContext("2d");
+      try {
+        const image = new _native.Image();
+        const load = (assign: () => void) => new Promise<void>((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          assign();
+        });
+        const sample = () => context.getImageData(1, 1, 1, 1).data;
+        const expectChannel = (data: any, channel: number) => {
+          expect(data[channel]).to.be.greaterThan(240);
+          expect(data[1 - channel]).to.be.lessThan(20);
+          expect(data[2]).to.be.lessThan(20);
+          expect(data[3]).to.be.greaterThan(240);
+        };
+
+        setImageReloadTestResponse(Buffer.from(redPng, "base64"));
+        await load(() => {
+          image.src = "image-reload-test:///red.png";
+        });
+        context.drawImage(image, 0, 0, 4, 4);
+        expectChannel(sample(), 0);
+
+        if (toData) {
+          await load(() => {
+            image.src = "data:image/png;base64," + greenPng;
+          });
+        } else {
+          setImageReloadTestResponse(Buffer.from(greenPng, "base64"));
+          await load(() => {
+            image.src = "image-reload-test:///green.png";
+          });
+        }
+        context.clearRect(0, 0, 4, 4);
+        context.drawImage(image, 0, 0, 4, 4);
+        expectChannel(sample(), 1);
+      } finally {
+        context.dispose();
+        canvas.dispose();
+      }
+    });
+  }
+
+  test("reports load errors and can recover with data and URL loads", async function () {
+    const image = new _native.Image();
+    let errorCount = 0;
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => reject(new Error("A missing file unexpectedly loaded"));
+      image.onerror = () => { ++errorCount; resolve(); };
+      image.src = "app:///Assets/nonexistent-image-reload.png";
+    });
+    expect(errorCount).to.equal(1);
+    for (const source of [dataUrl, url]) {
+      await new Promise<void>((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = source;
+      });
+      expect(image.src).to.equal(source);
+      expect(image.width).to.equal(source === url ? 2 : 3);
+    }
   });
 });
 

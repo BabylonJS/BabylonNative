@@ -107,7 +107,7 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Assets/babylon.max.js");
+    loader.LoadScript("app:///Assets/babylon.es5.js");
     loader.LoadScript("app:///Assets/tests.externalTexture.deviceLoss.js");
 
     // CreateForJavaScript is synchronous so startup() runs in the same JS task as the texture wrap.
