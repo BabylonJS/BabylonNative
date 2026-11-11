@@ -335,6 +335,18 @@ TEST(Device, HeadlessNoopDoesNotReportDeviceLoss)
     EXPECT_FALSE(device.IsDeviceLost());
 }
 
+TEST(Device, TransientBufferSizesComeFromConfiguration)
+{
+    auto config = g_deviceConfig;
+    config.TransientVertexBufferSize = 4096;
+    config.TransientIndexBufferSize = 1024;
+    Babylon::Graphics::Device device{config};
+    device.StartRenderingCurrentFrame();
+    EXPECT_EQ(bgfx::getCaps()->limits.maxTransientVbSize, 4096u);
+    EXPECT_EQ(bgfx::getCaps()->limits.maxTransientIbSize, 1024u);
+    device.FinishRenderingCurrentFrame();
+}
+
 // Verifies UpdateDevice replaces the active graphics device after a DisableRendering / EnableRendering cycle.
 TEST(Device, UpdateDevice)
 {

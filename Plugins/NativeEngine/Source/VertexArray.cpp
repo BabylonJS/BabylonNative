@@ -252,16 +252,16 @@ namespace Babylon
         return std::tie(Mode, VertexCount) < std::tie(other.Mode, other.VertexCount);
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, InstanceDataBufferPool& instanceDataBufferPool, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
         if (!m_vertexBufferInstances.empty() && !HasStorageInstances())
         {
-            VertexBuffer::SetInstanceDataBuffer(encoder, m_vertexBufferInstances, instanceCount, instanceDataLayout);
+            VertexBuffer::SetInstanceDataBuffer(encoder, instanceDataBufferPool, m_vertexBufferInstances, instanceCount, instanceDataLayout);
         }
         else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
         {
             // D3D input layouts must cover declared built-in instance inputs even when unused.
-            VertexBuffer::SetZeroInstanceDataBuffer(encoder, std::max(instanceCount, 1u), instanceDataLayout.SlotCount);
+            VertexBuffer::SetZeroInstanceDataBuffer(encoder, instanceDataBufferPool, std::max(instanceCount, 1u), instanceDataLayout.SlotCount);
         }
         else if (instanceCount > 0 && !HasStorageInstances())
         {

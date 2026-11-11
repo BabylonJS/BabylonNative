@@ -89,6 +89,48 @@ TEST(NativeEngineInstanceData, BuiltInsKeepAssignedSlotsAtRealLocations)
     EXPECT_EQ(layout.Slots.at(static_cast<uint32_t>(bgfx::Attrib::Position)), 3u);
 }
 
+TEST(NativeEngineInstanceData, PoolBindsMoreDrawsPerFrameThanDynamicBufferHandles)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    {
+        Babylon::AppRuntime runtime;
+        std::promise<void> completed;
+        auto completion = completed.get_future();
+        runtime.Dispatch([&](Napi::Env env) {
+            try
+            {
+                device.AddToJavaScript(env);
+                auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+                auto scope = context.AcquireFrameCompletionScope();
+                Babylon::InstanceDataBufferPool pool{context};
+                bgfx::Encoder* encoder = context.GetActiveEncoder();
+                // More draws than bgfx's default 4096 dynamic vertex buffer handles, so a buffer per draw would run out.
+                constexpr uint32_t drawCount = 5000;
+                constexpr uint16_t instanceStride = 64;
+                constexpr uint32_t instanceCount = 4;
+                for (uint32_t draw = 0; draw < drawCount; ++draw)
+                {
+                    pool.Set(encoder, bgfx::alloc(instanceStride * instanceCount), instanceStride, instanceCount);
+                }
+                encoder->discard();
+                completed.set_value();
+            }
+            catch (...)
+            {
+                completed.set_exception(std::current_exception());
+            }
+        });
+        while (completion.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready)
+        {
+            device.FinishRenderingCurrentFrame();
+            device.StartRenderingCurrentFrame();
+        }
+        ASSERT_NO_THROW(completion.get());
+    }
+    device.FinishRenderingCurrentFrame();
+}
+
 // Instances sourced from a buffer promoted to GPU storage (transform feedback output) are repacked by compute
 // into the shader's layout slots. Each repack in a frame keeps its own parameters.
 TEST(NativeEngineInstanceData, EmbeddedShaderRepacksStridedInstances)

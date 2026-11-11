@@ -57,6 +57,12 @@ namespace Babylon::Graphics
         // Format to use when creating the depth/stencil texture for the back buffer.
         // Specify DepthStencilFormat::None to not create a depth/stencil texture.
         DepthStencilFormat BackBufferDepthStencilFormat{DepthStencilFormat::Depth24Stencil8};
+
+        // Sizes in bytes of the per-frame transient vertex and index buffers. Only the Canvas polyfill uses them;
+        // apps that do not use Canvas can set small values (e.g. 1024) to save memory.
+        // Zero keeps the defaults (6 MiB of vertices and 2 MiB of indices).
+        uint32_t TransientVertexBufferSize{};
+        uint32_t TransientIndexBufferSize{};
     };
 
     class DeviceImpl;

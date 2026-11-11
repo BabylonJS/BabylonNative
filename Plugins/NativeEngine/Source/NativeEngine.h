@@ -251,6 +251,7 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         VertexArray* m_boundVertexArray{};
+        InstanceDataBufferPool m_instanceDataBufferPool;
         std::unique_ptr<InstanceRepacker> m_instanceRepacker{};
         // Copies a storage buffer into an R32F image for readTransformFeedbackBuffer; created on first use.
         std::shared_ptr<Program> m_bufferReadbackProgram{};

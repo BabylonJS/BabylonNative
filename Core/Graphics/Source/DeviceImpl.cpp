@@ -110,6 +110,16 @@ namespace Babylon::Graphics
         init.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
         init.swapChain.maxFrameLatency = 1;
 
+        // bgfx allocates the transient buffers once at init (CPU copies for each in-flight frame plus a GPU buffer).
+        if (config.TransientVertexBufferSize != 0)
+        {
+            init.limits.maxTransientVbSize = config.TransientVertexBufferSize;
+        }
+        if (config.TransientIndexBufferSize != 0)
+        {
+            init.limits.maxTransientIbSize = config.TransientIndexBufferSize;
+        }
+
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);
         UpdateAlphaPremultiplied(config.AlphaPremultiplied);

@@ -1249,6 +1249,7 @@ namespace Babylon
         , m_runtime{runtime}
         , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
+        , m_instanceDataBufferPool{m_deviceContext}
         , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
         , m_boundFrameBufferNeedsRebinding{m_deviceContext, m_cancellationSource, true}
@@ -3637,7 +3638,7 @@ void main() {
             {
                 m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
             }
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount, instanceDataLayout);
+            m_boundVertexArray->SetVertexBuffers(encoder, m_instanceDataBufferPool, 0, std::numeric_limits<uint32_t>::max(), instanceCount, instanceDataLayout);
             if (bgfx::isValid(repacked))
             {
                 encoder->setInstanceDataBuffer(repacked, 0, instanceCount);
@@ -3688,7 +3689,7 @@ void main() {
             const bgfx::DynamicVertexBufferHandle repacked = instanced
                 ? RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount)
                 : bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, instanceDataLayout);
+            m_boundVertexArray->SetVertexBuffers(encoder, m_instanceDataBufferPool, verticesStart, verticesCount, instanceCount, instanceDataLayout);
             if (RequiresPrimitiveExpansion(fillMode))
             {
                 shouldDraw = m_boundVertexArray->SetExpandedUnindexedBuffer(
