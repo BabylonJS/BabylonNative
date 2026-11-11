@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <optional>
+#include <string>
 
 namespace
 {
@@ -345,7 +346,7 @@ namespace
             const auto value{ m.Get(elements[i]) };
             if (!value.IsNumber())
             {
-                throw Napi::TypeError::New(info.Env(), "sortSplats requires modelViewProjection._m[2], [3], [6], [7], [10], [11] to be numbers.");
+                throw Napi::TypeError::New(info.Env(), "sortSplats requires modelViewProjection._m[" + std::to_string(elements[i]) + "] to be a number.");
             }
             column[i] = value.As<Napi::Number>().FloatValue();
         }
