@@ -915,6 +915,8 @@ namespace Babylon
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, MaxTextureSize())),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
                 StaticValue("CAPS_ORIGIN_BOTTOM_LEFT", Napi::Boolean::From(env, bgfx::getCaps()->originBottomLeft)),
+                // Renderers known to clear integer color attachments with integer values and never blend them.
+                StaticValue("CAPS_INTEGER_COLOR_ATTACHMENTS", Napi::Boolean::From(env, bgfx::getRendererType() == bgfx::RendererType::Metal)),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),

@@ -76,6 +76,8 @@
         // Example reaches code that uses the browser/worker global `self` (e.g. GUI InputText
         // focus registers clipboard listeners on self); the native host does not define it.
         "global-self": "define the global self as window while the test runs",
+        // Example builds HTML controls next to the canvas; the native host has no DOM.
+        "dom-controls": "give the example inert HTML elements and a canvas parent element while the test runs",
         // Example loads Basis textures; the Basis transcoder runs in a Web Worker created from a
         // Blob URL, and the native host has no Worker.
         "basis-worker": "run Blob URL worker scripts (the Basis transcoder) in-process while the test runs",
@@ -299,6 +301,59 @@
             }
             delete globalThis.self;
             restoreGlobalSelf = null;
+        };
+    }
+
+    // dom-controls: examples that build HTML control panels need document.getElementById,
+    // elements from document.createElement, and canvas.parentElement to attach them to. Give
+    // them inert elements; nothing is displayed and their controls keep their default values.
+    let restoreDomControls = null;
+    function createInertElement(tagName) {
+        return {
+            tagName: String(tagName).toUpperCase(),
+            style: {},
+            children: [],
+            parentElement: null,
+            appendChild: function (child) {
+                this.children.push(child);
+                child.parentElement = this;
+                return child;
+            },
+            remove: function () {
+                if (this.parentElement) {
+                    const siblings = this.parentElement.children;
+                    siblings.splice(siblings.indexOf(this), 1);
+                    this.parentElement = null;
+                }
+            },
+            addEventListener: function () { },
+            removeEventListener: function () { },
+            setAttribute: function () { },
+        };
+    }
+    function installDomControls(test) {
+        if (restoreDomControls) {
+            return;
+        }
+        const createElement = document.createElement;
+        const getElementById = document.getElementById;
+        document.createElement = function (type) {
+            return type === "canvas" ? createElement.call(this, type) : createInertElement(type);
+        };
+        document.getElementById = function () {
+            return null;
+        };
+        canvas.parentElement = createInertElement("div");
+        noteWorkaround(test, "dom-controls");
+        restoreDomControls = function () {
+            document.createElement = createElement;
+            if (getElementById === undefined) {
+                delete document.getElementById;
+            } else {
+                document.getElementById = getElementById;
+            }
+            delete canvas.parentElement;
+            restoreDomControls = null;
         };
     }
 
@@ -792,6 +847,9 @@
         }
         if (restoreGlobalSelf) {
             restoreGlobalSelf();
+        }
+        if (restoreDomControls) {
+            restoreDomControls();
         }
         if (restoreBasisWorker) {
             restoreBasisWorker();
@@ -1666,6 +1724,9 @@
                                     }
                                     if (hasWorkaround(test, "global-self")) {
                                         installGlobalSelf(test);
+                                    }
+                                    if (hasWorkaround(test, "dom-controls")) {
+                                        installDomControls(test);
                                     }
                                     if (hasWorkaround(test, "basis-worker")) {
                                         installBasisWorker(test);
