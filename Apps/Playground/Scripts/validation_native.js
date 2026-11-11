@@ -1130,11 +1130,12 @@
             if (alpha === 255) {
                 continue;
             }
-            const src = alpha / 255;
-            const dst = 1 - src;
-            data[index] = Math.round(data[index] * src + background[0] * dst);
-            data[index + 1] = Math.round(data[index + 1] * src + background[1] * dst);
-            data[index + 2] = Math.round(data[index + 2] * src + background[2] * dst);
+            // WebGL canvases default to premultipliedAlpha, so the browser composites
+            // the raw color over the background as premultiplied (source-over).
+            const dst = 1 - alpha / 255;
+            data[index] = Math.min(255, Math.round(data[index] + background[0] * dst));
+            data[index + 1] = Math.min(255, Math.round(data[index + 1] + background[1] * dst));
+            data[index + 2] = Math.min(255, Math.round(data[index + 2] + background[2] * dst));
             data[index + 3] = 255;
         }
         return data;
