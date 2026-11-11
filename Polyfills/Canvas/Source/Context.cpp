@@ -882,7 +882,7 @@ namespace Babylon::Polyfills::Internal
         auto scope = m_graphicsContext.AcquireFrameCompletionScope();
 
         // Canvas filtering can consume an unbounded number of views. Check the budget before
-        // reading the encoder or allocating NanoVG transient buffers.
+        // reading the encoder or allocating NanoVG vertex buffers.
         m_graphicsContext.CheckViewBudget();
 
         bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
@@ -923,7 +923,7 @@ namespace Babylon::Polyfills::Internal
         };
 
         nvgSetViewport(*m_nvg, float(width), float(height));
-        nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
+        nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder, m_canvas->GetBufferPool());
         const auto samplerFlags = [this] {
             // Border colors share bgfx's palette with framebuffer clears.
             const auto transparent = m_graphicsContext.AcquireClearPaletteIndex({0.f, 0.f, 0.f, 0.f});

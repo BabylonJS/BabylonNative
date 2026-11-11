@@ -111,6 +111,15 @@ namespace Babylon::Polyfills::Internal
         Dispose();
     }
 
+    Graphics::DynamicBufferPool& NativeCanvas::GetBufferPool()
+    {
+        if (!m_bufferPool)
+        {
+            m_bufferPool = std::make_unique<Graphics::DynamicBufferPool>(m_graphicsContext);
+        }
+        return *m_bufferPool;
+    }
+
     void NativeCanvas::Remove(const Napi::CallbackInfo&)
     {
     }
@@ -391,15 +400,9 @@ namespace Babylon::Polyfills::Internal
         bgfx::VertexLayout layout{};
         layout.begin().add(bgfx::Attrib::Position, POSITION_COMPONENT_COUNT, bgfx::AttribType::Float)
             .add(bgfx::Attrib::TexCoord0, TEXCOORD_COMPONENT_COUNT, bgfx::AttribType::Float).end();
-        if (bgfx::getAvailTransientVertexBuffer(FULLSCREEN_TRIANGLE_VERTEX_COUNT, layout) != FULLSCREEN_TRIANGLE_VERTEX_COUNT)
-        {
-            throw std::runtime_error{"Cannot allocate Canvas alpha conversion vertices."};
-        }
-        bgfx::TransientVertexBuffer buffer{};
-        bgfx::allocTransientVertexBuffer(&buffer, FULLSCREEN_TRIANGLE_VERTEX_COUNT, layout);
         const std::array<std::array<float, FULLSCREEN_VERTEX_COMPONENT_COUNT>, FULLSCREEN_TRIANGLE_VERTEX_COUNT> vertices{{
             {-1.f, 0.f, 0.f, 0.f, 0.f}, {1.f, 0.f, 0.f, 1.f, 0.f}, {1.f, 2.f, 0.f, 1.f, 1.f}}};
-        std::memcpy(buffer.data, vertices.data(), sizeof(vertices));
+        const auto buffer = GetBufferPool().AllocVertices(layout, bgfx::copy(vertices.data(), sizeof(vertices)));
 
         // Use the canvas reservation for conversion, then reserve the following blit
         // before NativeEngine records the scene that samples the dynamic texture.
@@ -413,7 +416,7 @@ namespace Babylon::Polyfills::Internal
         bgfx::setViewMode(conversionView, bgfx::ViewMode::Sequential);
         const std::array<float, COPY_PARAMETER_COUNT> parameters{bgfx::getCaps()->originBottomLeft ? 1.f : 0.f, premulAlpha ? 1.f : 0.f, 0.f, 0.f};
         encoder->discard(BGFX_DISCARD_ALL);
-        encoder->setVertexBuffer(0, &buffer);
+        encoder->setVertexBuffer(0, buffer.Handle, buffer.StartVertex, FULLSCREEN_TRIANGLE_VERTEX_COUNT);
         encoder->setTexture(0, m_copySampler, bgfx::getTexture(m_frameBuffer->Handle()),
             BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
         encoder->setUniform(m_copyParams, parameters.data());
@@ -507,6 +510,7 @@ namespace Babylon::Polyfills::Internal
         m_frameBuffer.reset();
         m_texture.reset();
         m_frameBufferPool.Clear();
+        m_bufferPool.reset();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
