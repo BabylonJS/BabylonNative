@@ -283,7 +283,7 @@ the assert.
 | `onlyVisual: true` | Render but skip pixel comparison (use `--include-excluded` to force pixel compare path; result is still saved) |
 | `excludedGraphicsApis: ["D3D11"]` | Skipped on listed APIs unless `--include-excluded` |
 | `excludedJavaScriptEngines: ["Hermes"]` | Skipped on listed JS engines (`NAPI_JAVASCRIPT_ENGINE`: `Chakra`, `V8`, `JavaScriptCore`, `Hermes`, `QuickJS`, `JSI`) unless `--include-excluded` |
-| `excludedPlatforms: ["Unix"]` | Skipped on listed platforms (`BABYLON_NATIVE_PLATFORM`: `Win32`, `WinRT`, `macOS`, `iOS`, `visionOS`, `Android`, `Unix`) unless `--include-excluded` |
+| `excludedPlatforms: ["Unix", "Android/JavaScriptCore"]` | Skipped on listed platforms (`BABYLON_NATIVE_PLATFORM`: `Win32`, `WinRT`, `macOS`, `iOS`, `visionOS`, `Android`, `Unix`), or only on one engine of a platform with `Platform/Engine`, unless `--include-excluded` |
 | `renderCount: N` | Run scene N frames before pixel comparison (default 1) |
 | `capture: true` | Call `TestUtils.captureNextFrame()` once (when `renderCount === 1`) -- triggers bgfx's RenderDoc capture. **Prefer the `--capture=N` CLI flag** for ad-hoc capture; this config knob is kept for legacy tests that hard-pin a per-test capture. |
 | `threshold: N` | Per-channel tolerance for pixel comparison (default 25) |
