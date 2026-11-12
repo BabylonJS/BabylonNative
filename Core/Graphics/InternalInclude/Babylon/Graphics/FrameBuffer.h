@@ -43,6 +43,9 @@ namespace Babylon::Graphics
         void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX, bool ignoreScissor = false);
         void SetViewPort(float x, float y, float width, float height);
         void SetScissor(float x, float y, float width, float height);
+        // Adopts a scissor without starting a view, for the next draw after Bind. WebGL scissor state is
+        // global rather than per framebuffer, so a newly bound framebuffer inherits the current one.
+        void InheritScissor(float x, float y, float width, float height);
         void Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
         void Compute(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint32_t numX, uint32_t numY, uint32_t numZ);
         void SetStencil(bgfx::Encoder& encoder, uint32_t stencilState);

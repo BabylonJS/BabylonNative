@@ -3559,7 +3559,7 @@ void main() {
             m_boundFrameBuffer->Unbind();
         }
         m_boundFrameBuffer = frameBuffer;
-        m_boundFrameBuffer->Bind();
+        BindWithScissor(*m_boundFrameBuffer);
         m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
@@ -3999,7 +3999,14 @@ void main() {
         const float width{data.ReadFloat32()};
         const float height{data.ReadFloat32()};
 
+        m_scissor = {x, y, width, height};
         GetBoundFrameBuffer().SetScissor(x, y, width, height);
+    }
+
+    void NativeEngine::BindWithScissor(Graphics::FrameBuffer& frameBuffer)
+    {
+        frameBuffer.Bind();
+        frameBuffer.InheritScissor(m_scissor.X, m_scissor.Y, m_scissor.Width, m_scissor.Height);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
@@ -4315,7 +4322,7 @@ void main() {
         if (m_boundFrameBuffer == nullptr)
         {
             m_boundFrameBuffer = &m_defaultFrameBuffer;
-            m_defaultFrameBuffer.Bind();
+            BindWithScissor(m_defaultFrameBuffer);
         }
         else if (m_boundFrameBufferNeedsRebinding.Get())
         {

@@ -150,6 +150,14 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask, bool ignoreScissor)
     {
+        // An enabled scissor that covers nothing (see GetBgfxScissor) clears nothing. bgfx would
+        // raise its zero-size view rect to 1x1, outside the target, so skip the clear instead.
+        if (!ignoreScissor && (m_desiredScissor.Width == 0.0f || m_desiredScissor.Height == 0.0f) &&
+            !(m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f))
+        {
+            return;
+        }
+
         const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
         const std::array<float, 4> color{r, g, b, a};
         const auto packedColor = maskColorAttachments ? std::nullopt : PackClearColor(color);
@@ -232,6 +240,11 @@ namespace Babylon::Graphics
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
     }
 
+    void FrameBuffer::InheritScissor(float x, float y, float width, float height)
+    {
+        m_desiredScissor = GetBgfxScissor(x, y, width, height);
+    }
+
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
@@ -305,6 +318,13 @@ namespace Babylon::Graphics
         if (Height() < y + height)
         {
             height = Height() - y;
+        }
+
+        // Covers nothing. Use an empty rect at the far corner: an all-zero rect would disable
+        // the scissor, and a negative size would wrap to the full target when cast to uint16_t.
+        if (width <= 0.0f || height <= 0.0f)
+        {
+            return Rect{static_cast<float>(Width()), static_cast<float>(Height()), 0.0f, 0.0f};
         }
 
         y = (Height() - y) - height;

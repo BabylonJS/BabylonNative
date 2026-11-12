@@ -175,6 +175,7 @@ namespace Babylon
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
+        void BindWithScissor(Graphics::FrameBuffer& frameBuffer);
         void ResetDefaultFrameBuffer();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
@@ -257,6 +258,15 @@ namespace Babylon
         std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
+        // Last scissor set by JS, in WebGL's bottom-left origin. All zero means disabled, matching COMMAND_SETSCISSOR.
+        struct ScissorRect
+        {
+            float X{};
+            float Y{};
+            float Width{};
+            float Height{};
+        };
+        ScissorRect m_scissor{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
 
         // WebGL resets the drawing buffer's depth and stencil at the start of every frame.
