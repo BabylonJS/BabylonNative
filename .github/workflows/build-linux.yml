@@ -144,10 +144,7 @@ jobs:
           cd build/Linux/Apps/UnitTests
           ulimit -c unlimited
           if [ "${{ inputs.graphics-api }}" = "Vulkan" ]; then
-            # CompileComprehensiveGLSL currently hangs after its Vulkan shader
-            # compilation fails: https://github.com/BabylonJS/BabylonNative/issues/1877
             xvfb-run --auto-servernum ./UnitTests \
-              --gtest_filter=-ShaderCompilation.CompileComprehensiveGLSL \
               --gtest_output=xml:vulkan-unit-test-results.xml
           else
             xvfb-run ./UnitTests

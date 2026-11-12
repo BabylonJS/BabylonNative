@@ -20,6 +20,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
@@ -383,6 +384,10 @@ TEST(ShaderCompilation, SamplerCoordinatesAcceptConditionalExpressions)
 
 TEST(ShaderCompilation, CompileComprehensiveGLSL)
 {
+#if defined(BABYLON_NATIVE_GRAPHICS_API_VULKAN)
+    GTEST_SKIP() << "The shader declares 22 samplers across both stages, but bgfx's Vulkan backend shares 16 texture stages between them: "
+                    "https://github.com/BabylonJS/BabylonNative/issues/1877";
+#else
     Babylon::Graphics::Device device{g_deviceConfig};
 
     device.StartRenderingCurrentFrame();
@@ -397,9 +402,10 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
     Babylon::AppRuntime runtime{options};
 
     std::promise<void> scriptIsDone{};
-    std::promise<void> sceneIsReady{};
+    std::promise<std::string> sceneIsReady{};
+    bool sceneReported{false};
 
-    runtime.Dispatch([&device, &sceneIsReady](Napi::Env env) {
+    runtime.Dispatch([&device, &sceneIsReady, &sceneReported](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -408,10 +414,15 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
+        // Called with no argument once the scene is ready, or with the errors if the shader fails to compile.
         env.Global().Set("setSceneReady",
             Napi::Function::New(
-                env, [&sceneIsReady](const Napi::CallbackInfo&) {
-                    sceneIsReady.set_value();
+                env, [&sceneIsReady, &sceneReported](const Napi::CallbackInfo& info) {
+                    if (!std::exchange(sceneReported, true))
+                    {
+                        const bool hasError = info.Length() > 0 && !info[0].IsUndefined() && !info[0].IsNull();
+                        sceneIsReady.set_value(hasError ? info[0].ToString().Utf8Value() : std::string{});
+                    }
                 },
                 "setSceneReady"));
     });
@@ -433,6 +444,10 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
     }
 
     device.FinishRenderingCurrentFrame();
+
+    const std::string compilationError = sceneIsReadyFuture.get();
+    EXPECT_TRUE(compilationError.empty()) << compilationError;
+#endif
 }
 
 TEST(ShaderCompilation, ExistingVec4UniformArrayIsNotReshaped)
