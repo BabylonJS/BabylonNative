@@ -13,6 +13,7 @@ target_include_directories(NativeOptimizations PUBLIC "Include")
 
 target_link_libraries(NativeOptimizations
     PUBLIC napi
+    PRIVATE bx
     PRIVATE JsRuntimeInternal)
 
 set_property(TARGET NativeOptimizations PROPERTY FOLDER Plugins)
