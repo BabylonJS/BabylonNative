@@ -921,8 +921,11 @@ namespace Babylon
                 StaticValue("CAPS_INTEGER_COLOR_ATTACHMENTS", Napi::Boolean::From(env, [] {
                     switch (bgfx::getRendererType())
                     {
-                        case bgfx::RendererType::Metal:
                         case bgfx::RendererType::Vulkan:
+                            // bgfx disables blending only on the integer attachments, so the attachment blend
+                            // states differ, which Vulkan allows only with the independentBlend feature.
+                            return 0 != (bgfx::getCaps()->supported & BGFX_CAPS_BLEND_INDEPENDENT);
+                        case bgfx::RendererType::Metal:
                         case bgfx::RendererType::OpenGL:
                         case bgfx::RendererType::OpenGLES:
                             return true;
