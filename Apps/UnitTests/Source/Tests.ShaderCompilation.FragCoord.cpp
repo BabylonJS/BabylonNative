@@ -1193,6 +1193,37 @@ TEST(NativeEngineClear, PreservesTextureBindings)
 #endif
 }
 
+TEST(NativeEngineScissor, OutsideTargetClipsDrawAndClear)
+{
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    const std::string vertexShader =
+        "precision highp float;\n"
+        "attribute vec3 position;\n"
+        "void main(void) { gl_Position = vec4(position, 1.0); }\n";
+    const std::string fragmentShader =
+        "precision highp float;\n"
+        "void main(void) { gl_FragColor = vec4(1.0); }\n";
+    // Wholly outside on one axis, with the clamped origin still inside the target, and
+    // wholly outside both axes before the origin.
+    for (const char* rect : {"-8, 0, 4, 2", "0, 8, 2, 1", "-8, -8, 4, 4"})
+    {
+        SCOPED_TRACE(rect);
+        const std::string setupScript = std::string{R"(
+            material.onBindObservable.add(function () {
+                engine.enableScissor()"} + rect + R"();
+                engine.clear(new BABYLON.Color4(1, 0, 0, 1), true, false, false);
+            });
+        )";
+        const auto pixels = RenderFullScreenQuad(2, 2, vertexShader, fragmentShader, false, setupScript);
+        EXPECT_EQ(pixels, (std::vector<uint8_t>{
+            0, 0, 0, 255, 0, 0, 0, 255,
+            0, 0, 0, 255, 0, 0, 0, 255}));
+    }
+#endif
+}
+
 TEST(NativeEngineClear, ProceduralTextureRetainsBothInputs)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
