@@ -5,18 +5,14 @@ if(POLICY CMP0135)
 endif()
 
 include(FetchContent)
+include("${CMAKE_CURRENT_LIST_DIR}/../../Dependencies/CMakeExtensions/CMakeLists.txt")
 
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
-FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz")
 # --------------------------------------------------
-
-FetchContent_MakeAvailable(CMakeExtensions)
 
 project(TestInstall)
 
@@ -88,8 +84,8 @@ foreach(LIB_NAME ${INSTALL_LIB_NAMES})
 endforeach()
 
 if(WIN32 AND NOT WINDOWS_STORE)
-    target_link_libraries(TestInstall
-        ${INSTALL_LIB_NAMES}
+    set(INSTALL_TEST_LIBS
+        ${INSTALL_LIBS}
         gtest_main
         chakrart
         d3d11
@@ -105,7 +101,7 @@ else()
     # The installed tree is plain archives with no CMake targets describing how they depend on
     # each other, so link them as a group and let the linker resolve the cycles rather than
     # depending on glob order.
-    target_link_libraries(TestInstall
+    set(INSTALL_TEST_LIBS
         -Wl,--start-group ${INSTALL_LIBS} -Wl,--end-group
         gtest_main
         ${JAVASCRIPTCORE_LIBRARY}
@@ -116,6 +112,14 @@ else()
         wayland-egl
         rt
         dl)
+endif()
+
+target_link_libraries(TestInstall ${INSTALL_TEST_LIBS})
+
+if(EXISTS "${INSTALL_LIBS_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}Embedding${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    add_executable(TestInstallEmbedding Embedding.cpp)
+    target_include_directories(TestInstallEmbedding PRIVATE "${INSTALL_DIR}/include")
+    target_link_libraries(TestInstallEmbedding PRIVATE ${INSTALL_TEST_LIBS})
 endif()
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543

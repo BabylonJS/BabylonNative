@@ -1,8 +1,6 @@
 FetchContent_Declare(DirectXTK
     GIT_REPOSITORY https://github.com/microsoft/DirectXTK.git
-    GIT_TAG e7d9b64ca6bb8977d4e3006727deaf57a7c1de84)
-
-FetchContent_MakeAvailable(CMakeExtensions)
+    GIT_TAG d57b857efbb47af07d725b6c11c3ed8d723490eb)
 
 set(BUILD_TESTING OFF)
 set(BUILD_TOOLS OFF)
@@ -14,8 +12,8 @@ FetchContent_MakeAvailable_With_Message(DirectXTK)
 set_property(TARGET DirectXTK PROPERTY FOLDER Apps/Dependencies)
 
 set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js")
+    "../node_modules/babylonjs/babylon.es5.js"
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.es5.js")
 
 set(SCRIPTS
     "Scripts/index.js")

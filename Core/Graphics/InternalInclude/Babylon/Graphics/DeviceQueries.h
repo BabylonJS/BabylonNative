@@ -1,6 +1,12 @@
 #pragma once
 
 #include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/RendererType.h>
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+#include <bgfx/bgfx.h>
+#include <optional>
+#endif
 
 namespace Babylon::Graphics
 {
@@ -15,4 +21,17 @@ namespace Babylon::Graphics
     // Lives in InternalInclude/ to keep it off the public surface;
     // reachable to in-tree consumers via the GraphicsDeviceContext target.
     float GetDevicePixelRatio(WindowT window);
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+    namespace D3D11TextureFormats
+    {
+        struct BgfxTextureFormat
+        {
+            bgfx::TextureFormat::Enum Format;
+            bool Srgb;
+        };
+
+        std::optional<BgfxTextureFormat> TryGetBgfxTextureFormat(DXGI_FORMAT format);
+    }
+#endif
 }

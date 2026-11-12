@@ -7,6 +7,8 @@
 #include <Babylon/Graphics/Texture.h>
 
 #include "FrameBufferPool.h"
+#include "CanvasConstants.h"
+#include <array>
 
 namespace Babylon::Polyfills
 {
@@ -16,6 +18,14 @@ namespace Babylon::Polyfills
         explicit Impl(Napi::Env);
 
         void FlushGraphicResources();
+
+        struct WeakIdentity
+        {
+            Napi::ObjectReference Receivers;
+            Napi::FunctionReference Has;
+        };
+
+        WeakIdentity CreateWeakIdentity(const Napi::Object& value);
 
         static Canvas::Impl& GetFromJavaScript(Napi::Env env);
 
@@ -34,11 +44,14 @@ namespace Babylon::Polyfills
             virtual void FlushGraphicResources() = 0;
 
         private:
-            // context is a monitoredResource managed by the GC while Canvas::Impl is managed by the app. Make sure the canvas impl is destroyed after all monitoredResources are.
+            // Keep the app-owned implementation alive until its GC-owned resources are gone.
             std::shared_ptr<Canvas::Impl> m_impl;
         };
 
     private:
+        struct JavaScriptData;
+        static JavaScriptData& GetJavaScriptData(Napi::Env env);
+
         Napi::Env m_env;
 
         void AddToJavaScript(Napi::Env env);
@@ -54,10 +67,14 @@ namespace Babylon::Polyfills
 
 namespace Babylon::Polyfills::Internal
 {
+    class Context;
+
     class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
         static void Initialize(Napi::Env env);
+
+        static NativeCanvas* TryUnwrap(Napi::Env env, const Napi::Value& value);
 
         explicit NativeCanvas(const Napi::CallbackInfo& info);
         virtual ~NativeCanvas();
@@ -65,19 +82,23 @@ namespace Babylon::Polyfills::Internal
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
 
+        // Bound 2D context, if getContext("2d") has been called; nullptr otherwise.
+        Context* GetBoundContext() const { return m_context; }
+        void SetBoundContext(Context* context) { m_context = context; }
+
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
 
         bool UpdateRenderTarget();
+        bool HasFrameBuffer() const { return m_frameBuffer != nullptr; }
         Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
         FrameBufferPool m_frameBufferPool;
 
-        // View id reserved by Context::Flush (right after this canvas' draws) for the
-        // canvas->texture blit issued from NativeEngine::CopyTexture, plus the view-id
-        // generation it was reserved in so a mid-frame flush can invalidate it. See Context::Flush.
+        // Blit view reserved by Context::Flush for CopyTexture ordering.
         void SetBlitViewId(bgfx::ViewId viewId, uint32_t generation)
         {
             m_blitViewId = viewId;
             m_blitViewIdGeneration = generation;
+            m_blitViewUsedForConversion = false;
         }
 
         Graphics::DeviceContext& GetGraphicsContext()
@@ -86,23 +107,32 @@ namespace Babylon::Polyfills::Internal
         }
 
     private:
+        enum class ConvertedTextureKind : size_t
+        {
+            NoMipMaps,
+            StraightAlphaMipMaps,
+            PremultipliedAlphaMipMaps,
+            Count,
+        };
+
         Napi::Value GetContext(const Napi::CallbackInfo&);
         Napi::Value GetWidth(const Napi::CallbackInfo&);
         void SetWidth(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetHeight(const Napi::CallbackInfo&);
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
+        void SetDimension(uint16_t& dimension, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
+        Graphics::Texture& GetConvertedTexture(bool premulAlpha, bool generateMipMaps);
+        Napi::Value ToDataURL(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
-        // Both entry points share this; each passes its own name so the diagnostics name the
-        // method the caller actually invoked rather than the one it happens to delegate to.
         static void LoadTTFCore(const Napi::CallbackInfo& info, const char* methodName);
         static Napi::Value ParseColor(const Napi::CallbackInfo& info);
         void Remove(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
 
-        Napi::ObjectReference m_contextObject{};
+        Context* m_context{nullptr};
 
         uint16_t m_width{1};
         uint16_t m_height{1};
@@ -111,8 +141,18 @@ namespace Babylon::Polyfills::Internal
 
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
         std::unique_ptr<Graphics::Texture> m_texture{};
+        struct ConvertedTexture
+        {
+            std::unique_ptr<Graphics::FrameBuffer> FrameBuffer{};
+            std::unique_ptr<Graphics::Texture> Texture{};
+        };
+        std::array<ConvertedTexture, static_cast<size_t>(ConvertedTextureKind::Count)> m_convertedTextures{};
+        bgfx::ProgramHandle m_unpremultiplyProgram{BGFX_INVALID_HANDLE};
+        bgfx::UniformHandle m_copySampler{BGFX_INVALID_HANDLE};
+        bgfx::UniformHandle m_copyParams{BGFX_INVALID_HANDLE};
         bgfx::ViewId m_blitViewId{UINT16_MAX};
         uint32_t m_blitViewIdGeneration{0};
+        bool m_blitViewUsedForConversion{};
         bool m_dirty{};
         bool m_clear{};
 

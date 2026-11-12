@@ -84,32 +84,37 @@ tasks.register('copyFiles') {
     doLast {
         copy {
             from '../../../node_modules/babylonjs'
-            include "babylon.max.js"
+            include "babylon.es5.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../../node_modules/babylonjs-addons'
+            include "babylonjs.addons.es5.js"
             into 'src/main/assets/Scripts'
         }
         copy {
             from '../../../node_modules/babylonjs-loaders'
-            include "babylonjs.loaders.js"
+            include "babylonjs.loaders.es5.js"
             into 'src/main/assets/Scripts'
         }
         copy {
             from '../../../node_modules/babylonjs-materials'
-            include "babylonjs.materials.js"
+            include "babylonjs.materials.es5.js"
             into 'src/main/assets/Scripts'
         }
         copy {
             from '../../../node_modules/babylonjs-gui'
-            include "babylon.gui.js"
+            include "babylon.gui.es5.js"
             into 'src/main/assets/Scripts'
         }
         copy {
             from '../../../node_modules/babylonjs-serializers'
-            include "babylonjs.serializers.js"
+            include "babylonjs.serializers.es5.js"
             into 'src/main/assets/Scripts'
         }
         copy {
             from '../../../node_modules/babylonjs-procedural-textures'
-            include "babylonjs.proceduralTextures.js"
+            include "babylonjs.proceduralTextures.es5.js"
             into 'src/main/assets/Scripts'
         }
         copy {
@@ -118,17 +123,25 @@ tasks.register('copyFiles') {
             into 'src/main/assets/Scripts'
         }
         copy {
+            from '../../../node_modules/@babylonjs/havok/lib/umd'
+            include "HavokPhysics_umd.js", "HavokPhysics.wasm"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
             from '../../../Dependencies'
-            include "*.js"
+            include "*.js", "*.ttf", "*.txt"
             into 'src/main/assets/Scripts'
         }
         copy {
             from '../../Scripts'
-            include "*.js"
+            include "*.js", "config.json"
             into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../ReferenceImages'
+            into 'src/main/assets/ReferenceImages'
         }
     }
 }
 
 tasks.named('preBuild').configure { dependsOn 'copyFiles' }
-

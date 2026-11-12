@@ -7,6 +7,11 @@
 #include <gsl/gsl>
 #include "Capability.h"
 
+namespace Babylon::Graphics
+{
+    class Texture;
+}
+
 namespace Babylon::Plugins
 {
     enum class RedEyeReduction
@@ -94,7 +99,8 @@ namespace Babylon::Plugins
 
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
-        CameraDimensions UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+        // Access to the supplied Texture wrapper must complete before this call returns.
+        CameraDimensions UpdateCameraTexture(Graphics::Texture& texture);
         TakePhotoTask TakePhotoAsync(PhotoSettings photoSettings);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;

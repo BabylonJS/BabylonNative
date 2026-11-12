@@ -6,15 +6,28 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <stdexcept>
 
 namespace Babylon::Graphics
 {
-    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
+    void DeviceImpl::ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window)
     {
-        pd.nwh = reinterpret_cast<void*>(window);
+        if (s_bgfxRenderType == bgfx::RendererType::Vulkan && window != WindowT{} && !m_nativeDisplay)
+        {
+            auto* display = XOpenDisplay(nullptr);
+            if (display == nullptr)
+            {
+                throw std::runtime_error{"Failed to open X11 display for Vulkan."};
+            }
+            m_nativeDisplay = {display, [](void* value) {
+                XCloseDisplay(static_cast<Display*>(value));
+            }};
+        }
+        swapChain.ndt = m_nativeDisplay.get();
+        swapChain.nwh = reinterpret_cast<void*>(window);
     }
 
-    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::Init& /*init*/)
     {
     }
 

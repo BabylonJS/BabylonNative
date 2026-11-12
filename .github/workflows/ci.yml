@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [master]
 
+# Supersede in-flight PR runs when a new commit is pushed. Pushes to master are never cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Hermes and macOS-hosted Android builds run in the Azure pipeline nightly.yml; sanitizer builds run
+# in the Azure pipeline nightly-extended.yml.
 jobs:
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
@@ -21,20 +28,7 @@ jobs:
       xcode-version: "26.4"
       runs-on: macos-26
 
-  MacOS_Sanitizers:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      enable-sanitizers: true
-      xcode-version: "26.4"
-      runs-on: macos-26
-
-  # ── Apple: Xcode 26 ──────────────────────────────────────────
-  MacOS_Xcode26:
-    uses: ./.github/workflows/build-macos.yml
-    with:
-      xcode-version: "26.4"
-      runs-on: macos-26
-
+  # ── Apple: iOS ───────────────────────────────────────────────
   iOS_Xcode26:
     uses: ./.github/workflows/build-ios.yml
     with:
@@ -50,6 +44,11 @@ jobs:
       js-engine: QuickJS
 
   # ── Win32─────────────────────────────────────────────────────
+  Win32_x86_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: Win32
+
   Win32_x64_D3D11:
     uses: ./.github/workflows/build-win32.yml
     with:
@@ -67,24 +66,12 @@ jobs:
       platform: x64
       napi-type: V8
 
-  Win32_x64_Hermes_D3D11:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      napi-type: Hermes
-
   Win32_x64_QuickJS_D3D11:
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
       napi-type: QuickJS
       graphics-api: D3D11
-
-  Win32_x64_D3D11_Sanitizers:
-    uses: ./.github/workflows/build-win32.yml
-    with:
-      platform: x64
-      enable-sanitizers: true
 
   Win32_x64_D3D12:
     uses: ./.github/workflows/build-win32.yml
@@ -100,6 +87,18 @@ jobs:
     uses: ./.github/workflows/build-uwp.yml
     with:
       platform: x64
+
+  UWP_x64_JSI:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+      napi-type: jsi
+
+  UWP_x64_V8:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+      napi-type: V8
 
   UWP_arm64:
     uses: ./.github/workflows/build-uwp.yml
@@ -120,13 +119,6 @@ jobs:
       cxx: clang++
       js-engine: JavaScriptCore
 
-  Ubuntu_Clang_Hermes:
-    uses: ./.github/workflows/build-linux.yml
-    with:
-      cc: clang
-      cxx: clang++
-      js-engine: Hermes
-
   Ubuntu_GCC_JSC:
     uses: ./.github/workflows/build-linux.yml
     with:
@@ -141,48 +133,42 @@ jobs:
       cxx: clang++
       js-engine: QuickJS
 
+  # Exercise Vulkan validation, unit, and module-load coverage using lavapipe
+  # under Xvfb.
+  Ubuntu_Clang_Vulkan:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      js-engine: JavaScriptCore
+      graphics-api: Vulkan
+
   # ── Android ───────────────────────────────────────────────────
   Android_Ubuntu_JSC:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       js-engine: JavaScriptCore
 
   Android_Ubuntu_V8:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       js-engine: V8
-
-  Android_Ubuntu_Hermes:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: ubuntu-latest
-      js-engine: Hermes
 
   Android_Ubuntu_QuickJS:
     uses: ./.github/workflows/build-android.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       js-engine: QuickJS
 
-  Android_MacOS_JSC:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: JavaScriptCore
+  AndroidTests:
+    needs: [Android_Ubuntu_JSC, Android_Ubuntu_V8, Android_Ubuntu_QuickJS]
+    uses: ./.github/workflows/test-android.yml
 
-  Android_MacOS_V8:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: V8
-
-  Android_MacOS_QuickJS:
-    uses: ./.github/workflows/build-android.yml
-    with:
-      runs-on: macos-26
-      js-engine: QuickJS
+  iOSTests:
+    needs: [iOS_Xcode26]
+    uses: ./.github/workflows/test-ios.yml
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
@@ -198,3 +184,46 @@ jobs:
 
   Win32_Installation:
     uses: ./.github/workflows/test-install-win32.yml
+
+  ci-complete:
+    name: ci-complete
+    # Run after unsuccessful dependencies too, but allow superseded runs to cancel.
+    if: ${{ !cancelled() }}
+    needs:
+      - MacOS
+      - MacOS_Ninja
+      - MacOS_QuickJS
+      - Win32_x86_D3D11
+      - Win32_x64_D3D11
+      - Win32_x64_JSI_D3D11
+      - Win32_x64_V8_D3D11
+      - Win32_x64_QuickJS_D3D11
+      - Win32_x64_D3D12
+      - Win32_x64_D3D11_PrecompiledShaderTest
+      - UWP_x64
+      - UWP_x64_JSI
+      - UWP_x64_V8
+      - UWP_arm64
+      - UWP_arm64_JSI
+      - Ubuntu_Clang_JSC
+      - Ubuntu_GCC_JSC
+      - Ubuntu_Clang_QuickJS
+      - Ubuntu_Clang_Vulkan
+      - Android_Ubuntu_JSC
+      - Android_Ubuntu_V8
+      - Android_Ubuntu_QuickJS
+      - AndroidTests
+      - iOSTests
+      - iOS_Installation
+      - Linux_Installation
+      - MacOS_Installation
+      - Win32_Installation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify all jobs succeeded
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS_JSON" | jq -e 'to_entries | map(select(.value.result != "success")) |
+            if length == 0 then true else error("CI did not succeed: \(.)") end'

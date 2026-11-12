@@ -118,8 +118,8 @@ int main()
 
     // Load the scripts for Babylon.js core and loaders plus this app's index.js.
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
+    loader.LoadScript("app:///Scripts/babylon.es5.js");
+    loader.LoadScript("app:///Scripts/babylonjs.loaders.es5.js");
     loader.LoadScript("app:///Scripts/index.js");
 
     // Create a render target texture for the output.
