@@ -30,7 +30,7 @@ FetchContent_Declare(bx
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bimg
     GIT_REPOSITORY https://github.com/bkaradzic/bimg.git
-    GIT_TAG 77bebb28e12956bfced82bb2cf7c19ac5735b6c8
+    GIT_TAG 22177183239e18d7af603e6915156371cc38d18d
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
