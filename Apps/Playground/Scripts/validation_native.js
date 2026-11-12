@@ -899,9 +899,14 @@
         if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(javaScriptEngine)) {
             return "excludedJavaScriptEngines: " + javaScriptEngine;
         }
+        // Entries are a platform ("Unix") or a platform/engine pair ("Android/JavaScriptCore").
         const platform = TestUtils.getPlatformName();
+        const platformEngine = platform + "/" + javaScriptEngine;
         if (t.excludedPlatforms && t.excludedPlatforms.includes(platform)) {
             return "excludedPlatforms: " + platform;
+        }
+        if (t.excludedPlatforms && t.excludedPlatforms.includes(platformEngine)) {
+            return "excludedPlatforms: " + platformEngine;
         }
         return null;
     }
