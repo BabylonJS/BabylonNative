@@ -2960,6 +2960,17 @@ void main() {
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
 
+        // Release the texture even if draining the queued commands throws.
+        const auto releaseTexture = gsl::finally([this, texture] {
+            // Deleting a bound WebGL texture unbinds it.
+            for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
+            {
+                it = it->second.Texture.idx == texture->Handle().idx ? m_boundTextures.erase(it) : std::next(it);
+            }
+            m_deviceContext.RemoveTexture(texture->Handle());
+            texture->Dispose();
+        });
+
         // deleteTexture is immediate, but commands already queued may still reference the texture
         // (e.g. an effect layer composes with its main texture, then recreates it in the same frame).
         // WebGL keeps a deleted texture alive for previously issued draws, so drain them first.
@@ -2967,14 +2978,6 @@ void main() {
         {
             SubmitCommands(info);
         }
-
-        // Deleting a bound WebGL texture unbinds it.
-        for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
-        {
-            it = it->second.Texture.idx == texture->Handle().idx ? m_boundTextures.erase(it) : std::next(it);
-        }
-        m_deviceContext.RemoveTexture(texture->Handle());
-        texture->Dispose();
     }
 
     Napi::Value NativeEngine::ReadTexture(const Napi::CallbackInfo& info)
