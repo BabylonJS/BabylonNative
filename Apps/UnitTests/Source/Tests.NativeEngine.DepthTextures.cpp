@@ -201,3 +201,112 @@ TEST(NativeEngineDepthTextures, SharesGeneratedDepthWithoutRebuildingTheFrameBuf
     EXPECT_EQ(future.get(), "");
     device.FinishRenderingCurrentFrame();
 }
+
+TEST(NativeEngineDepthTextures, SharesOneGeneratedDepthAcrossCubeFacesAndArrayLayers)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    Babylon::AppRuntime runtime{};
+    std::promise<std::string> completed;
+    auto future = completed.get_future();
+    runtime.Dispatch([&](Napi::Env env) {
+        std::string error;
+        try
+        {
+            device.AddToJavaScript(env);
+            Babylon::Plugins::NativeEngine::Initialize(env);
+            auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+            auto frameScope = context.AcquireFrameCompletionScope();
+            auto engine = env.Global().Get("_native").As<Napi::Object>().Get("Engine").As<Napi::Function>().New({});
+            const auto call = [&](const char* name, const std::vector<Napi::Value>& args) {
+                return engine.Get(name).As<Napi::Function>().Call(engine, args);
+            };
+
+            constexpr uint16_t size{16};
+            const auto createTarget = [&](bool cube) {
+                auto value = call("createTexture", {});
+                auto* texture = value.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+                if (cube)
+                {
+                    texture->CreateCube(size, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+                }
+                else
+                {
+                    texture->Create2D(size, size, false, 3, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+                }
+                return value;
+            };
+            const auto createLayerFrameBuffers = [&](Napi::Value texture, uint32_t count) {
+                std::vector<Napi::Value> frameBuffers;
+                for (uint32_t layer = 0; layer < count; ++layer)
+                {
+                    frameBuffers.push_back(call("createFrameBuffer", {texture, Napi::Number::New(env, size), Napi::Number::New(env, size),
+                        Napi::Boolean::New(env, false), Napi::Boolean::New(env, true), Napi::Number::New(env, 1), Napi::Number::New(env, layer)}));
+                }
+                return frameBuffers;
+            };
+            const auto frameBufferOf = [](Napi::Value value) {
+                return value.As<Napi::Pointer<Babylon::Graphics::FrameBuffer>>().Get();
+            };
+            // The color texture is attachment 0 and the generated depth attachment 1.
+            const auto depthOf = [&](Napi::Value value) {
+                return bgfx::getTexture(frameBufferOf(value)->Handle(), 1);
+            };
+
+            for (const bool cube : {true, false})
+            {
+                SCOPED_TRACE(cube ? "cube" : "array");
+                const uint32_t count = cube ? 6u : 3u;
+                auto colorValue = createTarget(cube);
+                auto frameBuffers = createLayerFrameBuffers(colorValue, count);
+                const bgfx::TextureHandle generatedDepth = depthOf(frameBuffers[0]);
+                ASSERT_TRUE(bgfx::isValid(generatedDepth));
+                for (const auto& frameBuffer : frameBuffers)
+                {
+                    EXPECT_EQ(depthOf(frameBuffer).idx, generatedDepth.idx);
+                }
+
+                // Another render target gets a depth of its own.
+                auto otherColorValue = createTarget(cube);
+                auto otherFrameBuffers = createLayerFrameBuffers(otherColorValue, 1);
+                EXPECT_NE(depthOf(otherFrameBuffers[0]).idx, generatedDepth.idx);
+
+                // Sharing from any face or layer hands over the depth of the whole render target, once.
+                auto depthValue = call("createTexture", {});
+                auto* depth = depthValue.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+                EXPECT_TRUE(call("shareFrameBufferDepthStencil", {frameBuffers[1], depthValue}).As<Napi::Boolean>().Value());
+                EXPECT_EQ(depth->Handle().idx, generatedDepth.idx);
+                auto secondValue = call("createTexture", {});
+                EXPECT_FALSE(call("shareFrameBufferDepthStencil", {frameBuffers[0], secondValue}).As<Napi::Boolean>().Value());
+
+                // A handed-over depth is owned by the texture and is not attached by framebuffers created later.
+                auto laterFrameBuffers = createLayerFrameBuffers(colorValue, 1);
+                EXPECT_NE(depthOf(laterFrameBuffers[0]).idx, generatedDepth.idx);
+
+                // The texture now owns the depth, so it outlives every framebuffer that attached it.
+                for (auto& frameBuffer : frameBuffers)
+                {
+                    frameBufferOf(frameBuffer)->Clear(*context.GetActiveEncoder(), BGFX_CLEAR_DEPTH, 0, 0, 0, 0, 1.0f, 0);
+                    frameBufferOf(frameBuffer)->Dispose();
+                }
+                EXPECT_TRUE(depth->IsValid());
+                frameBufferOf(laterFrameBuffers[0])->Dispose();
+                frameBufferOf(otherFrameBuffers[0])->Dispose();
+                depth->Dispose();
+            }
+            engine.Get("dispose").As<Napi::Function>().Call(engine, {});
+        }
+        catch (const std::exception& ex)
+        {
+            error = ex.what();
+        }
+        completed.set_value(std::move(error));
+    });
+    while (future.wait_for(std::chrono::milliseconds{16}) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        device.StartRenderingCurrentFrame();
+    }
+    EXPECT_EQ(future.get(), "");
+    device.FinishRenderingCurrentFrame();
+}

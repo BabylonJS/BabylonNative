@@ -3418,6 +3418,8 @@ void main() {
         bgfx::TextureFormat::Enum depthStencilTextureFormat = bgfx::TextureFormat::Unknown;
         uint64_t depthStencilTextureFlags = 0;
         uint16_t depthStencilNumLayers = 1;
+        std::shared_ptr<Graphics::GeneratedDepthStencil> generatedDepthStencil{};
+        bool createdDepthStencil = false;
         if ((generateStencilBuffer || generateDepth) && !borrowedExplicitDepth)
         {
             if (generateStencilBuffer && !generateDepth)
@@ -3481,7 +3483,32 @@ void main() {
             {
                 throw Napi::Error::New(env, "No supported depth/stencil texture format for frame buffer");
             }
-            depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, depthStencilNumLayers, depthStencilFormat, flags);
+
+            // Like WebGL, the framebuffers for the faces or layers of one render target share a single depth/stencil.
+            Graphics::Texture* const layeredColorTexture = !requestDepthStencilTexture && colorTextures.size() == 1 && perAttachmentLayers.empty() &&
+                                                                   colorTextures[0] != nullptr && bgfx::isValid(colorTextures[0]->Handle()) &&
+                                                                   (colorTextures[0]->IsCube() || colorTextures[0]->Is3D() || colorTextures[0]->NumLayers() > 1)
+                ? colorTextures[0]
+                : nullptr;
+            if (layeredColorTexture != nullptr)
+            {
+                generatedDepthStencil = layeredColorTexture->FindLayerDepthStencil(width, height, depthStencilFormat, flags, depthStencilNumLayers);
+            }
+
+            if (generatedDepthStencil)
+            {
+                depthStencilTextureHandle = generatedDepthStencil->Handle();
+            }
+            else
+            {
+                depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, depthStencilNumLayers, depthStencilFormat, flags);
+                createdDepthStencil = true;
+                if (layeredColorTexture != nullptr)
+                {
+                    generatedDepthStencil = std::make_shared<Graphics::GeneratedDepthStencil>(m_deviceContext, depthStencilTextureHandle, width, height, depthStencilFormat, flags, depthStencilNumLayers);
+                    layeredColorTexture->AddLayerDepthStencil(generatedDepthStencil);
+                }
+            }
             depthStencilTextureFormat = depthStencilFormat;
             depthStencilTextureFlags = flags;
 
@@ -3494,7 +3521,7 @@ void main() {
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
         if (!bgfx::isValid(frameBufferHandle))
         {
-            if (bgfx::isValid(depthStencilTextureHandle))
+            if (createdDepthStencil && !generatedDepthStencil)
             {
                 bgfx::destroy(depthStencilTextureHandle);
             }
@@ -3513,7 +3540,7 @@ void main() {
         const bool hasDepthAttachment = generateDepth || generateStencilBuffer || borrowedExplicitDepth;
 
         // Shared depth is texture-owned; standalone aliases borrow framebuffer-owned depth.
-        int8_t frameBufferDepthOwnerIndex = depthStencilAttachmentIndex;
+        bool frameBufferOwnsDepth = depthStencilAttachmentIndex >= 0;
         if (depthStencilTextureRequest != nullptr && depthStencilAttachmentIndex >= 0)
         {
             const bool textureOwnsDepth = depthStencilTexture == nullptr;
@@ -3521,16 +3548,17 @@ void main() {
                 textureOwnsDepth, width, height, false, depthStencilNumLayers, depthStencilTextureFormat, depthStencilTextureFlags);
             if (textureOwnsDepth)
             {
-                frameBufferDepthOwnerIndex = -1;
+                frameBufferOwnsDepth = false;
             }
+        }
+        if (frameBufferOwnsDepth && !generatedDepthStencil)
+        {
+            generatedDepthStencil = std::make_shared<Graphics::GeneratedDepthStencil>(m_deviceContext, depthStencilTextureHandle, width, height, depthStencilTextureFormat, depthStencilTextureFlags, depthStencilNumLayers);
         }
 
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, frameBufferDepthOwnerIndex, isMultisampled, depthOneVolumeAttachmentMask);
-        if (frameBufferDepthOwnerIndex >= 0)
-        {
-            frameBuffer->DescribeOwnedDepthStencil(depthStencilTextureFormat, depthStencilTextureFlags, depthStencilNumLayers);
-        }
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, -1, isMultisampled, depthOneVolumeAttachmentMask);
+        frameBuffer->SetGeneratedDepthStencil(std::move(generatedDepthStencil));
 
         // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
         // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
@@ -3554,6 +3582,8 @@ void main() {
     // Moves the depth/stencil a framebuffer generated into texture, so other framebuffers can attach it with its
     // current contents (like sharing a WebGL depth renderbuffer). The framebuffer keeps rendering to it, and the
     // texture now owns it. A generated depth buffer is write-only, so the texture can be attached but not sampled.
+    // The framebuffers of all faces or layers of a cube or array render target attach one generated depth/stencil,
+    // so sharing it from any of them shares the depth of the whole render target.
     // Returns false and leaves texture untouched when the framebuffer has no generated depth/stencil of its own.
     Napi::Value NativeEngine::ShareFrameBufferDepthStencil(const Napi::CallbackInfo& info)
     {
