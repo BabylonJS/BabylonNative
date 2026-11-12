@@ -32,6 +32,11 @@ namespace Babylon::Plugins::Internal
         return Napi::Value::From(info.Env(), STRINGIZE(NAPI_JAVASCRIPT_ENGINE));
     }
 
+    Napi::Value TestUtils::GetPlatformName(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), STRINGIZE(BABYLON_NATIVE_PLATFORM));
+    }
+
     void TestUtils::SetMSAASamples(const Napi::CallbackInfo& info)
     {
         if (info.Length() == 0 || !info[0].IsNumber())

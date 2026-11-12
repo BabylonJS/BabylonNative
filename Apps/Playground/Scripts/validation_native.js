@@ -891,11 +891,22 @@
         if (t.excludeFromAutomaticTesting) {
             return "excludeFromAutomaticTesting" + (t.reason ? ": " + t.reason : "");
         }
-        if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
-            return "excludedGraphicsApis: " + TestUtils.getGraphicsApiName();
+        const graphicsApi = TestUtils.getGraphicsApiName();
+        if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(graphicsApi)) {
+            return "excludedGraphicsApis: " + graphicsApi;
         }
-        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(TestUtils.getJavaScriptEngineName())) {
-            return "excludedJavaScriptEngines: " + TestUtils.getJavaScriptEngineName();
+        const javaScriptEngine = TestUtils.getJavaScriptEngineName();
+        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(javaScriptEngine)) {
+            return "excludedJavaScriptEngines: " + javaScriptEngine;
+        }
+        // Entries are a platform ("Unix") or a platform/engine pair ("Android/JavaScriptCore").
+        const platform = TestUtils.getPlatformName();
+        const platformEngine = platform + "/" + javaScriptEngine;
+        if (t.excludedPlatforms && t.excludedPlatforms.includes(platform)) {
+            return "excludedPlatforms: " + platform;
+        }
+        if (t.excludedPlatforms && t.excludedPlatforms.includes(platformEngine)) {
+            return "excludedPlatforms: " + platformEngine;
         }
         return null;
     }
