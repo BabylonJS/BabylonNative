@@ -1234,9 +1234,7 @@
             "title": "Node material 1",
             "playgroundId": "#QJ71C6#5",
             "errorRatio": 4,
-            "referenceImage": "node-material1.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "GUI text labels render with red text on red background instead of green (BN GUI color regression affecting many GUI tests)."
+            "referenceImage": "node-material1.png"
         },
         {
             "title": "Node material 2",
@@ -1960,14 +1958,14 @@
             "playgroundId": "#O0BI9B#0",
             "referenceImage": "object-id-texture-geometry-buffer.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Object ID and mesh tag - FrameGraph object ID first",
             "playgroundId": "#XKTMFR#0",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Object ID and mesh tag - FrameGraph mesh tag first",
@@ -1975,15 +1973,16 @@
             "replace": "const meshTagFirst = false;, const meshTagFirst = true;",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - coastal cliff scenery",
             "playgroundId": "#BJBKKU#12",
             "replace": "const showControls = true;, const showControls = false;, const showGpuTime = true;, const showGpuTime = false;",
             "referenceImage": "mesh-blending-coastal-cliff.png",
+            "workarounds": ["dom-controls"],
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: document.getElementsByTagName is not a function"
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) and #19151 (KTX2 MSC transcoder without a DOM) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - FrameGraph alpha cutoff coverage",
@@ -1991,7 +1990,7 @@
             "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
             "referenceImage": "mesh-blending-alpha-cutoff.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - viewport-edge continuation",
@@ -1999,7 +1998,7 @@
             "replace": "const scenario = \"all\";, const scenario = \"viewportEdges\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Low",
             "referenceImage": "mesh-blending-phase4-low.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - mixed radius continuation",
@@ -2007,14 +2006,14 @@
             "replace": "const scenario = \"all\";, const scenario = \"mixedRadius\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Cinematic",
             "referenceImage": "mesh-blending-phase4-cinematic.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - shadow attenuation enabled",
             "playgroundId": "#CYSYH2#7",
             "referenceImage": "mesh-blending-phase5-target-shadow-seam.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - shadow attenuation disabled",
@@ -2022,14 +2021,14 @@
             "replace": "const useShadowAttenuation = true;, const useShadowAttenuation = false;",
             "referenceImage": "mesh-blending-phase5-shadow-attenuation-disabled.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - HDR SceneColor",
             "playgroundId": "#GC20U3#0",
             "referenceImage": "mesh-blending-phase5-hdr-scene-color.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - classic parity reference",
@@ -2037,7 +2036,7 @@
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - FrameGraph parity",
@@ -2046,7 +2045,7 @@
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Mesh blending - NRGE without albedo",
@@ -2055,7 +2054,7 @@
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "Shadows and LODs",
@@ -3307,7 +3306,7 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-beauty.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "FrameGraph object renderer - Beauty reference",
@@ -3323,7 +3322,7 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-normals.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "FrameGraph geometry renderer - Geometry only",
@@ -3331,7 +3330,7 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-geometry-only.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "FrameGraph geometry renderer - NRGE",
@@ -3339,7 +3338,7 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-nrge.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "FrameGraph geometry renderer - Gaussian mesh",
@@ -3348,7 +3347,7 @@
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
             "workarounds": ["es-module-import"],
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: mesh blending is not supported (the mesh-blending tag textures check rejects the native engine)."
+            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
         },
         {
             "title": "FrameGraph object renderer - Gaussian mesh reference",
