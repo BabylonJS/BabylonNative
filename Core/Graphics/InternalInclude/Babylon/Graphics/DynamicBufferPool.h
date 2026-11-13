@@ -2,6 +2,7 @@
 
 #include <bgfx/bgfx.h>
 #include <cstdint>
+#include <functional>
 #include <unordered_map>
 
 namespace Babylon::Graphics
@@ -17,7 +18,13 @@ namespace Babylon::Graphics
     class DynamicBufferPool final
     {
     public:
-        explicit DynamicBufferPool(DeviceContext& deviceContext);
+        struct CreationFunctions
+        {
+            std::function<bgfx::DynamicVertexBufferHandle(uint32_t, const bgfx::VertexLayout&)> CreateVertexBuffer;
+            std::function<bgfx::DynamicIndexBufferHandle(uint32_t)> CreateIndexBuffer;
+        };
+
+        explicit DynamicBufferPool(DeviceContext& deviceContext, CreationFunctions creationFunctions = {});
         ~DynamicBufferPool();
 
         DynamicBufferPool(const DynamicBufferPool&) = delete;
@@ -35,11 +42,11 @@ namespace Babylon::Graphics
             uint32_t StartIndex{};
         };
 
-        // Copies vertices (memory->size must be a multiple of the layout's stride) into the pool.
-        VertexRange AllocVertices(const bgfx::VertexLayout& layout, const bgfx::Memory* memory);
+        // Copies vertices (size must be a multiple of the layout's stride) into the pool.
+        VertexRange AllocVertices(const bgfx::VertexLayout& layout, const void* data, uint32_t size);
 
         // Copies 16-bit indices into the pool.
-        IndexRange AllocIndices(const bgfx::Memory* memory);
+        IndexRange AllocIndices(const void* data, uint32_t size);
 
     private:
         template<typename HandleT>
@@ -55,6 +62,7 @@ namespace Babylon::Graphics
         DeviceContext& m_deviceContext;
         uintptr_t m_deviceId{};
         uint32_t m_generation{};
+        CreationFunctions m_creationFunctions;
         std::unordered_map<uint64_t, Buffer<bgfx::DynamicVertexBufferHandle>> m_vertexBuffers{};
         Buffer<bgfx::DynamicIndexBufferHandle> m_indexBuffer{};
     };

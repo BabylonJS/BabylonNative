@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdexcept>
+#include <vector>
 #include "nanovg.h"
 
 #include <bgfx/bgfx.h>
@@ -87,8 +88,7 @@ struct PosTexCoord0Vertex
 
 void screenSpaceQuad(bgfx::Encoder* encoder, Babylon::Graphics::DynamicBufferPool& bufferPool, bool _originBottomLeft, float _width = 1.0f, float _height = 1.0f)
 {
-    const bgfx::Memory* memory = bgfx::alloc(FULLSCREEN_TRIANGLE_VERTEX_COUNT * sizeof(PosTexCoord0Vertex));
-    PosTexCoord0Vertex* vertex = (PosTexCoord0Vertex*)memory->data;
+    PosTexCoord0Vertex vertex[FULLSCREEN_TRIANGLE_VERTEX_COUNT];
 
     const float minx = -_width;
     const float maxx = _width;
@@ -131,7 +131,7 @@ void screenSpaceQuad(bgfx::Encoder* encoder, Babylon::Graphics::DynamicBufferPoo
     vertex[2].m_u = maxu;
     vertex[2].m_v = maxv;
 
-    const auto vb = bufferPool.AllocVertices(PosTexCoord0Vertex::s_layout, memory);
+    const auto vb = bufferPool.AllocVertices(PosTexCoord0Vertex::s_layout, vertex, sizeof(vertex));
     encoder->setVertexBuffer(0, vb.Handle, vb.StartVertex, FULLSCREEN_TRIANGLE_VERTEX_COUNT);
 }
 
@@ -785,8 +785,7 @@ namespace
     static void fan(struct GLNVGcontext* gl, uint32_t _start, uint32_t _count)
     {
         uint32_t numTris = _count - TRIANGLE_FAN_BASE_VERTEX_COUNT;
-        const bgfx::Memory* memory = bgfx::alloc(numTris * TRIANGLE_VERTEX_COUNT * sizeof(uint16_t));
-        uint16_t* data = (uint16_t*)memory->data;
+        std::vector<uint16_t> data(numTris * TRIANGLE_VERTEX_COUNT);
         for (uint32_t ii = 0; ii < numTris; ++ii)
         {
             data[ii * TRIANGLE_VERTEX_COUNT + 0] = 0;
@@ -794,7 +793,7 @@ namespace
             data[ii * TRIANGLE_VERTEX_COUNT + 2] = uint16_t(ii + 2);
         }
 
-        const auto ib = gl->bufferPool->AllocIndices(memory);
+        const auto ib = gl->bufferPool->AllocIndices(data.data(), static_cast<uint32_t>(data.size() * sizeof(uint16_t)));
         gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + _start, _count);
         gl->encoder->setIndexBuffer(ib.Handle, ib.StartIndex, numTris * TRIANGLE_VERTEX_COUNT);
     }
@@ -832,7 +831,7 @@ namespace
             {0.f, 0.f, 0.5f, 1.f},
             {gl->view[0] * 2.f, 0.f, 0.5f, 1.f},
             {0.f, gl->view[1] * 2.f, 0.5f, 1.f}};
-        const auto vertices = gl->bufferPool->AllocVertices(s_nvgLayout, bgfx::copy(triangle, sizeof(triangle)));
+        const auto vertices = gl->bufferPool->AllocVertices(s_nvgLayout, triangle, sizeof(triangle));
         gl->deferClip = false;
         auto* frag = nvg__fragUniformPtr(gl, glnvg__paintUniformOffset(gl, call));
         nvgRenderSetClipUniforms(gl, frag);
@@ -1179,7 +1178,7 @@ namespace
         {
             if (gl->nverts > 0)
             {
-                const auto vertices = gl->bufferPool->AllocVertices(s_nvgLayout, bgfx::copy(gl->verts, gl->nverts * sizeof(struct NVGvertex)));
+                const auto vertices = gl->bufferPool->AllocVertices(s_nvgLayout, gl->verts, gl->nverts * sizeof(struct NVGvertex));
                 gl->vb = vertices.Handle;
                 gl->vbStart = vertices.StartVertex;
                 gl->vbCount = uint32_t(gl->nverts);

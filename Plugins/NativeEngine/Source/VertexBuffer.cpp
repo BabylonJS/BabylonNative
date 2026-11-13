@@ -16,7 +16,7 @@ namespace Babylon
 
         // Allocates zeroed instance data. Zeroing makes any unused bytes within a slot (when ElementSize < 16),
         // and any slot the draw supplied no data for at all, read as zero in the shader.
-        const bgfx::Memory* AllocInstanceData(uint32_t instanceCount, uint32_t slotCount, uint16_t& instanceStride)
+        std::vector<uint8_t> AllocInstanceData(uint32_t instanceCount, uint32_t slotCount, uint16_t& instanceStride)
         {
             instanceStride = static_cast<uint16_t>(slotCount * INSTANCE_SLOT_SIZE);
             if (instanceStride == 0)
@@ -28,13 +28,11 @@ namespace Babylon
                 throw std::runtime_error{"Instance count is too large"};
             }
 
-            const bgfx::Memory* memory{bgfx::alloc(static_cast<uint32_t>(instanceStride) * instanceCount)};
-            std::memset(memory->data, 0, memory->size);
-            return memory;
+            return std::vector<uint8_t>(static_cast<uint32_t>(instanceStride) * instanceCount);
         }
 
         // Copies instance data into the pool and binds it to the draw.
-        void SetPooledInstanceData(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& pool, const bgfx::Memory* memory, uint16_t instanceStride, uint32_t instanceCount)
+        void SetPooledInstanceData(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& pool, const std::vector<uint8_t>& data, uint16_t instanceStride, uint32_t instanceCount)
         {
             bgfx::VertexLayout instanceLayout{};
             // skip() takes a uint8_t, which would truncate the 256-byte stride of a full 16-slot layout.
@@ -42,7 +40,7 @@ namespace Babylon
             instanceLayout.m_stride = instanceStride;
             instanceLayout.end();
 
-            const auto range = pool.AllocVertices(instanceLayout, memory);
+            const auto range = pool.AllocVertices(instanceLayout, data.data(), static_cast<uint32_t>(data.size()));
             encoder->setInstanceDataBuffer(range.Handle, range.StartVertex, instanceCount);
         }
     }
@@ -360,8 +358,7 @@ namespace Babylon
         }
 
         uint16_t instanceStride{};
-        const bgfx::Memory* memory{AllocInstanceData(instanceCount, layout.SlotCount, instanceStride)};
-        uint8_t* data{memory->data};
+        auto data{AllocInstanceData(instanceCount, layout.SlotCount, instanceStride)};
 
         for (const auto& [attrib, element] : instances)
         {
@@ -371,17 +368,17 @@ namespace Babylon
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {
-                std::memcpy(data + instance * instanceStride + slotOffset, source + instance * element.Stride + element.Offset, element.ElementSize);
+                std::memcpy(data.data() + instance * instanceStride + slotOffset, source + instance * element.Stride + element.Offset, element.ElementSize);
             }
         }
 
-        SetPooledInstanceData(encoder, pool, memory, instanceStride, instanceCount);
+        SetPooledInstanceData(encoder, pool, data, instanceStride, instanceCount);
     }
 
     void VertexBuffer::SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& pool, uint32_t instanceCount, uint32_t slotCount)
     {
         uint16_t instanceStride{};
-        const bgfx::Memory* memory{AllocInstanceData(instanceCount, slotCount, instanceStride)};
-        SetPooledInstanceData(encoder, pool, memory, instanceStride, instanceCount);
+        const auto data{AllocInstanceData(instanceCount, slotCount, instanceStride)};
+        SetPooledInstanceData(encoder, pool, data, instanceStride, instanceCount);
     }
 }
