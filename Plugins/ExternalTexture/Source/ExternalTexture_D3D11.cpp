@@ -59,6 +59,18 @@ namespace Babylon::Plugins
             }
 
             DXGI_FORMAT targetFormat = overrideFormat.has_value() ? overrideFormat.value() : desc.Format;
+            // Without an override, a typeless color resource holds linear data.
+            switch (targetFormat)
+            {
+                case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+                    targetFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+                    break;
+                case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+                    targetFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+                    break;
+                default:
+                    break;
+            }
             if (const auto format = Graphics::D3D11TextureFormats::TryGetBgfxTextureFormat(targetFormat))
             {
                 info.Format = format->Format;
