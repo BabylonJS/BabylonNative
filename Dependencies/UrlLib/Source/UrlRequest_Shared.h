@@ -24,6 +24,8 @@ namespace UrlLib
 
     void UrlRequest::Open(UrlMethod method, const std::string& url)
     {
+        m_impl->SetRequestUrl(url);
+
         // Divert URLs whose scheme has a registered resolver (e.g. blob:) away from the platform
         // transport; the resolver supplies the response in SendAsync().
         if (m_impl->BeginSchemeResolution(url))
@@ -116,6 +118,11 @@ namespace UrlLib
     std::string_view UrlRequest::ResponseUrl() const
     {
         return m_impl->ResponseUrl();
+    }
+
+    bool UrlRequest::Redirected() const
+    {
+        return m_impl->Redirected();
     }
 
     std::string_view UrlRequest::ResponseString() const

@@ -141,9 +141,29 @@ namespace UrlLib
 
                             std::string lowerCaseKey = key;
                             ToLower(lowerCaseKey);
+                            std::string headerValue = value;
 
-                            m_headers.insert({lowerCaseKey, value});
+                            // HttpURLConnection reports its own bookkeeping as response headers
+                            // (X-Android-Sent-Millis, X-Android-Selected-Protocol, ...). They were
+                            // not sent by the server, so they are not response headers; the
+                            // protocol decides whether the response has a reason phrase.
+                            if (lowerCaseKey.rfind("x-android-", 0) == 0)
+                            {
+                                if (lowerCaseKey == "x-android-selected-protocol" && Http::IsHttp2OrLater(headerValue))
+                                {
+                                    m_reasonPhrase = Http::ReasonPhrase::None;
+                                }
+                                continue;
+                            }
+
+                            AddResponseHeader(lowerCaseKey, headerValue);
                         }
+
+                        // The URL of the final response of a redirect chain. Set here as well as
+                        // after the body, because reading the body of an error status throws.
+                        m_responseUrl = connection.GetURL().ToString();
+                        const std::string requestUrl = url.ToString();
+                        m_redirected = m_responseUrl != requestUrl;
 
                         int contentLength = connection.GetContentLength();
                         if (contentLength < 0)
