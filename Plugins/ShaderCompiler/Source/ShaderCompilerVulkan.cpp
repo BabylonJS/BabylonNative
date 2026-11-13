@@ -397,6 +397,7 @@ namespace
         spvOptions.validate = true;
         spvOptions.disableOptimizer = true;
         glslang::GlslangToSpv(*program.getIntermediate(stage), spirv, &logger, &spvOptions);
+        Babylon::ShaderCompilerCommon::StripRelaxedPrecision(spirv);
 
         auto parser = std::make_unique<spirv_cross::Parser>(spirv);
         parser->parse();
