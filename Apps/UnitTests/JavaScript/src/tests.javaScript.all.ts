@@ -1,6 +1,7 @@
 import Mocha from "mocha";
 import { expect } from "chai";
 import { registerTriangleStripDepthTests } from "./tests.nativeEngine.triangleStripDepth";
+import { registerDefaultCullingTests } from "./tests.nativeEngine.defaultCulling";
 import { registerIblCdfTests } from "./tests.nativeEngine.iblCdf";
 import { registerPngTests } from "./tests.nativeEngine.png";
 import { registerCanvasImageTests } from "./tests.nativeEngine.canvasImage";
@@ -46,6 +47,7 @@ declare const skipCanvasGpuTests: boolean;
 declare const _native: any;
 
 registerTriangleStripDepthTests(describe, it, skipCanvasGpuTests);
+registerDefaultCullingTests(describe, it, hasGpuRendering);
 registerIblCdfTests(describe, it, skipCanvasGpuTests);
 registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
 registerAttributeLessInstancingTests(describe, it, hasAttributeLessInstancing);
