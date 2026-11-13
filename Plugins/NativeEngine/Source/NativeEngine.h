@@ -228,7 +228,12 @@ namespace Babylon
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};
 
-        uint64_t m_engineState{BGFX_STATE_DEFAULT};
+        // Match Babylon.js NativeEngine's cached initial state: culling enabled, back faces culled,
+        // and the front face counter-clockwise. setStateCullFaceType() replays that cache before the
+        // first material bind, so the native state must start from the same values.
+        uint64_t m_engineState{
+            (BGFX_STATE_DEFAULT & ~(BGFX_STATE_CULL_MASK | BGFX_STATE_FRONT_CCW)) |
+            BGFX_STATE_CULL_CCW | BGFX_STATE_FRONT_CCW};
         uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(UINT8_MAX) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
         template<int size, typename arrayType>
