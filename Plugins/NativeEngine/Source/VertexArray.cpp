@@ -252,28 +252,16 @@ namespace Babylon
         return std::tie(Mode, VertexCount) < std::tie(other.Mode, other.VertexCount);
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& instanceDataBufferPool, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount, const VertexBuffer::InstanceDataLayout& instanceDataLayout)
     {
         if (!m_vertexBufferInstances.empty() && !HasStorageInstances())
         {
-            bgfx::InstanceDataBuffer instanceDataBuffer{};
-            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount, instanceDataLayout);
-            encoder->setInstanceDataBuffer(&instanceDataBuffer);
+            VertexBuffer::SetInstanceDataBuffer(encoder, instanceDataBufferPool, m_vertexBufferInstances, instanceCount, instanceDataLayout);
         }
         else if (m_vertexBufferInstances.empty() && instanceDataLayout.SlotCount > 0)
         {
             // D3D input layouts must cover declared built-in instance inputs even when unused.
-            static constexpr uint16_t SLOT_SIZE = 16;
-            const uint32_t count = std::max(instanceCount, 1u);
-            const uint16_t stride = static_cast<uint16_t>(instanceDataLayout.SlotCount * SLOT_SIZE);
-            if (bgfx::getAvailInstanceDataBuffer(count, stride) < count)
-            {
-                throw std::runtime_error{"Transient instance data buffer exhausted"};
-            }
-            bgfx::InstanceDataBuffer instanceDataBuffer{};
-            bgfx::allocInstanceDataBuffer(&instanceDataBuffer, count, stride);
-            std::memset(instanceDataBuffer.data, 0, static_cast<size_t>(stride) * count);
-            encoder->setInstanceDataBuffer(&instanceDataBuffer);
+            VertexBuffer::SetZeroInstanceDataBuffer(encoder, instanceDataBufferPool, std::max(instanceCount, 1u), instanceDataLayout.SlotCount);
         }
         else if (instanceCount > 0 && !HasStorageInstances())
         {

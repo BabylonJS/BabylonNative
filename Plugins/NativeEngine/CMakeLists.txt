@@ -98,7 +98,7 @@ if(WIN32)
         PRIVATE _WIN32_WINNT=0x0A00 WINVER=0x0A00)
 endif()
 
-# Required by VertexBuffer::BuildInstanceDataBuffer. Remove once we have a better solution for that method.
+# Required by VertexBuffer::SetInstanceDataBuffer. Remove once we have a better solution for that method.
 target_compile_definitions(NativeEngine
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 

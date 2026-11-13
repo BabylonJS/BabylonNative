@@ -12,6 +12,7 @@ namespace Babylon
     namespace Graphics 
     {
         class DeviceContext;
+        class DynamicBufferPool;
     }
 
     class StorageBuffer;
@@ -72,11 +73,15 @@ namespace Babylon
             const std::map<uint32_t, uint32_t>& builtInSlots,
             uint32_t maxSlotCount);
 
-        static void BuildInstanceDataBuffer(
-            bgfx::InstanceDataBuffer& instanceDataBuffer,
+        static void SetInstanceDataBuffer(
+            bgfx::Encoder* encoder,
+            Graphics::DynamicBufferPool& pool,
             const std::map<uint32_t, InstanceInfo>& instances,
             uint32_t instanceCount,
             const InstanceDataLayout& layout);
+
+        // Binds zeroed instance data for layouts whose declared instance inputs have no data.
+        static void SetZeroInstanceDataBuffer(bgfx::Encoder* encoder, Graphics::DynamicBufferPool& pool, uint32_t instanceCount, uint32_t slotCount);
 
     private:
         Graphics::DeviceContext& m_deviceContext;
