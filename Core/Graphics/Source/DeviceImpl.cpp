@@ -151,6 +151,17 @@ namespace Babylon::Graphics
         return m_windowFrameBuffer;
     }
 
+    bool DeviceImpl::IsBackBufferMultisampled() const
+    {
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        if (m_externalBackBuffer.Color || m_externalBackBuffer.Depth)
+        {
+            return m_externalBackBuffer.SampleCount > 1;
+        }
+#endif
+        return GetMSAASamples() > 1;
+    }
+
     void DeviceImpl::UpdateWindow(WindowT window)
     {
         std::scoped_lock lock{m_state.Mutex};

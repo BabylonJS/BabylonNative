@@ -80,6 +80,7 @@ namespace Babylon::Graphics
 
         uintptr_t GetId() const;
         bgfx::FrameBufferHandle GetBackBufferHandle() const;
+        bool IsBackBufferMultisampled() const;
 
         /* ********** END DEVICE CONTRACT ********** */
 
@@ -221,6 +222,7 @@ namespace Babylon::Graphics
             bgfx::FrameBufferHandle FrameBuffer{bgfx::kInvalidHandle};
             bgfx::TextureHandle ColorHandle{bgfx::kInvalidHandle};
             bgfx::TextureHandle DepthHandle{bgfx::kInvalidHandle};
+            uint32_t SampleCount{1};
         } m_externalBackBuffer;
 #endif
 
