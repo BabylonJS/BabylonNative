@@ -237,6 +237,7 @@ namespace
         int fillCount;
         int strokeOffset;
         int strokeCount;
+        uint32_t fanIndexOffset;
     };
 
     struct GLNVGfragUniforms
@@ -301,6 +302,8 @@ namespace
         bgfx::DynamicVertexBufferHandle vb;
         uint32_t vbStart;
         uint32_t vbCount;
+        bgfx::DynamicIndexBufferHandle ib;
+        uint32_t ibStart;
         Babylon::Graphics::FrameBuffer* frameBuffer;
         PoolInterface frameBufferPool;
         bgfx::Encoder* encoder;
@@ -780,22 +783,69 @@ namespace
         gl->view[1] = height;
     }
 
-    // Binds the path's vertices and fan indices. Indices are 16-bit, so they are relative to the path's first
-    // vertex rather than to the flush, which can hold more than 65536 vertices.
-    static void fan(struct GLNVGcontext* gl, uint32_t _start, uint32_t _count)
+    static bool glnvg__hasFan(const struct GLNVGpath& path)
     {
-        uint32_t numTris = _count - TRIANGLE_FAN_BASE_VERTEX_COUNT;
-        std::vector<uint16_t> data(numTris * TRIANGLE_VERTEX_COUNT);
-        for (uint32_t ii = 0; ii < numTris; ++ii)
+        return path.fillCount >= int(MIN_TRIANGLE_VERTEX_COUNT);
+    }
+
+    static uint32_t glnvg__fanIndexCount(const struct GLNVGpath& path)
+    {
+        return (uint32_t(path.fillCount) - TRIANGLE_FAN_BASE_VERTEX_COUNT) * TRIANGLE_VERTEX_COUNT;
+    }
+
+    // Upload all fan indices in one update. Indices remain relative to each path's first vertex because a flush
+    // can contain more than 65536 vertices.
+    static void glnvg__uploadFanIndices(struct GLNVGcontext* gl)
+    {
+        gl->ib = BGFX_INVALID_HANDLE;
+        gl->ibStart = 0;
+
+        std::vector<uint16_t> indices;
+        for (int ii = 0; ii < gl->ncalls; ++ii)
         {
-            data[ii * TRIANGLE_VERTEX_COUNT + 0] = 0;
-            data[ii * TRIANGLE_VERTEX_COUNT + 1] = uint16_t(ii + 1);
-            data[ii * TRIANGLE_VERTEX_COUNT + 2] = uint16_t(ii + 2);
+            const struct GLNVGcall& call = gl->calls[ii];
+            if (call.type != GLNVG_FILL && call.type != GLNVG_CONVEXFILL)
+            {
+                continue;
+            }
+
+            for (int jj = 0; jj < call.pathCount; ++jj)
+            {
+                struct GLNVGpath& path = gl->paths[call.pathOffset + jj];
+                if (!glnvg__hasFan(path))
+                {
+                    continue;
+                }
+
+                path.fanIndexOffset = uint32_t(indices.size());
+                const uint32_t numTris = uint32_t(path.fillCount) - TRIANGLE_FAN_BASE_VERTEX_COUNT;
+                for (uint32_t tri = 0; tri < numTris; ++tri)
+                {
+                    indices.push_back(0);
+                    indices.push_back(uint16_t(tri + 1));
+                    indices.push_back(uint16_t(tri + 2));
+                }
+            }
         }
 
-        const auto ib = gl->bufferPool->AllocIndices(data.data(), static_cast<uint32_t>(data.size() * sizeof(uint16_t)));
-        gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + _start, _count);
-        gl->encoder->setIndexBuffer(ib.Handle, ib.StartIndex, numTris * TRIANGLE_VERTEX_COUNT);
+        if (!indices.empty())
+        {
+            const auto ib = gl->bufferPool->AllocIndices(indices.data(), static_cast<uint32_t>(indices.size() * sizeof(uint16_t)));
+            gl->ib = ib.Handle;
+            gl->ibStart = ib.StartIndex;
+        }
+    }
+
+    static bool fan(struct GLNVGcontext* gl, const struct GLNVGpath& path)
+    {
+        if (!glnvg__hasFan(path))
+        {
+            return false;
+        }
+
+        gl->encoder->setVertexBuffer(0, gl->vb, gl->vbStart + path.fillOffset, path.fillCount);
+        gl->encoder->setIndexBuffer(gl->ib, gl->ibStart + path.fanIndexOffset, glnvg__fanIndexCount(path));
+        return true;
     }
 
     // Filter passes use higher view IDs, so the next canvas draw must bind a fresh view.
@@ -887,8 +937,10 @@ namespace
                     gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                     gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                     gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
-                    fan(gl, paths[i].fillOffset, paths[i].fillCount);
-                    outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+                    if (fan(gl, paths[i]))
+                    {
+                        outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+                    }
                 }
             }
 
@@ -973,13 +1025,14 @@ namespace
 
             for (i = 0; i < npaths; i++)
             {
-                if (paths[i].fillCount == 0) continue;
                 gl->encoder->setState(gl->state);
                 gl->encoder->setTexture(PRIMARY_TEXTURE_STAGE, gl->s_tex, gl->th);
                 gl->encoder->setTexture(SECONDARY_TEXTURE_STAGE, gl->s_tex2, gl->th2);
                 gl->encoder->setTexture(CLIP_TEXTURE_STAGE, gl->s_clip, gl->thClip);
-                fan(gl, paths[i].fillOffset, paths[i].fillCount);
-                outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+                if (fan(gl, paths[i]))
+                {
+                    outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+                }
             }
 
             if (gl->edgeAntiAlias)
@@ -1182,6 +1235,7 @@ namespace
                 gl->vb = vertices.Handle;
                 gl->vbStart = vertices.StartVertex;
                 gl->vbCount = uint32_t(gl->nverts);
+                glnvg__uploadFanIndices(gl);
 
                 for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
                 {
@@ -1596,6 +1650,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     gl->thClip = BGFX_INVALID_HANDLE;
     gl->texMissing = BGFX_INVALID_HANDLE;
     gl->vb = BGFX_INVALID_HANDLE;
+    gl->ib = BGFX_INVALID_HANDLE;
     gl->textureId = static_cast<int>(bgfx::kInvalidHandle);
 
     bx::memSet(&params, 0, sizeof(params) );
