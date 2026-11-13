@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bgfx/bgfx.h>
+#include <memory>
 #include <optional>
 
 namespace Babylon::Graphics
@@ -15,6 +16,43 @@ namespace Babylon::Graphics
         float Height{};
 
         bool Equals(const Rect& other) const;
+    };
+
+    struct DepthStencilTexture
+    {
+        bgfx::TextureHandle Handle{bgfx::kInvalidHandle};
+        bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
+        uint64_t Flags{};
+        uint16_t NumLayers{1};
+    };
+
+    // Depth/stencil generated for a render target. Every framebuffer of the target (one per cube face or array
+    // layer) attaches the same one, like WebGL attaches a single depth renderbuffer to all faces of a target.
+    // It is destroyed with the last framebuffer that references it, unless it was released.
+    class GeneratedDepthStencil final
+    {
+    public:
+        GeneratedDepthStencil(DeviceContext& deviceContext, bgfx::TextureHandle handle, uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers);
+        ~GeneratedDepthStencil();
+
+        GeneratedDepthStencil(const GeneratedDepthStencil&) = delete;
+        GeneratedDepthStencil& operator=(const GeneratedDepthStencil&) = delete;
+
+        bgfx::TextureHandle Handle() const { return m_texture.Handle; }
+
+        // Whether a framebuffer of the given size and depth/stencil description can attach this one.
+        bool Matches(uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers) const;
+
+        // Hands the texture over; the caller becomes responsible for destroying it. Framebuffers keep rendering to it.
+        DepthStencilTexture Release();
+
+    private:
+        DeviceContext& m_deviceContext;
+        const uintptr_t m_deviceID{};
+        const DepthStencilTexture m_texture{};
+        const uint16_t m_width{};
+        const uint16_t m_height{};
+        bool m_released{};
     };
 
     class FrameBuffer final
@@ -53,6 +91,15 @@ namespace Babylon::Graphics
 
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
+
+        // The generated depth/stencil this framebuffer attaches, possibly together with the other faces or layers
+        // of its render target.
+        void SetGeneratedDepthStencil(std::shared_ptr<GeneratedDepthStencil> depthStencil);
+
+        // Hands over the generated depth/stencil this framebuffer attaches; the caller becomes responsible for
+        // destroying it. This and the other framebuffers of the render target keep rendering to it. Returns an
+        // invalid handle when the framebuffer has no generated depth/stencil or it was already handed over.
+        DepthStencilTexture ReleaseDepthStencil();
 
         // Rendered upside down so rows are stored in GL order on a top-left-origin backend.
         // Viewport and scissor rects are mirrored to match (see RENDER_TARGET_TRANSFORM_UNIFORM_NAME).
@@ -93,5 +140,6 @@ namespace Babylon::Graphics
         bool m_disposed{};
         bool m_glRowOrder{};
         int8_t m_depthStencilAttachmentIndex{-1};
+        std::shared_ptr<GeneratedDepthStencil> m_generatedDepthStencil{};
     };
 }

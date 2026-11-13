@@ -92,7 +92,59 @@ namespace Babylon::Graphics
             }
         }
 
+        m_generatedDepthStencil.reset();
         m_disposed = true;
+    }
+
+    void FrameBuffer::SetGeneratedDepthStencil(std::shared_ptr<GeneratedDepthStencil> depthStencil)
+    {
+        m_generatedDepthStencil = std::move(depthStencil);
+    }
+
+    DepthStencilTexture FrameBuffer::ReleaseDepthStencil()
+    {
+        if (m_disposed || !m_generatedDepthStencil)
+        {
+            return {};
+        }
+
+        return m_generatedDepthStencil->Release();
+    }
+
+    GeneratedDepthStencil::GeneratedDepthStencil(DeviceContext& deviceContext, bgfx::TextureHandle handle, uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers)
+        : m_deviceContext{deviceContext}
+        , m_deviceID{deviceContext.GetDeviceId()}
+        , m_texture{handle, format, flags, numLayers}
+        , m_width{width}
+        , m_height{height}
+    {
+    }
+
+    GeneratedDepthStencil::~GeneratedDepthStencil()
+    {
+        // Framebuffers hold their own bgfx references, so destroying this one never frees a texture still attached.
+        if (!m_released && m_deviceID == m_deviceContext.GetDeviceId() && bgfx::isValid(m_texture.Handle))
+        {
+            bgfx::destroy(m_texture.Handle);
+        }
+    }
+
+    bool GeneratedDepthStencil::Matches(uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers) const
+    {
+        // A released texture is destroyed by its new owner, possibly while framebuffers still reference it.
+        return !m_released && m_deviceID == m_deviceContext.GetDeviceId() && m_width == width && m_height == height &&
+               m_texture.Format == format && m_texture.Flags == flags && m_texture.NumLayers == numLayers;
+    }
+
+    DepthStencilTexture GeneratedDepthStencil::Release()
+    {
+        if (m_released || m_deviceID != m_deviceContext.GetDeviceId() || !bgfx::isValid(m_texture.Handle))
+        {
+            return {};
+        }
+
+        m_released = true;
+        return m_texture;
     }
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const

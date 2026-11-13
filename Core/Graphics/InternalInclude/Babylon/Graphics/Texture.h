@@ -2,10 +2,12 @@
 
 #include <bgfx/bgfx.h>
 #include <memory>
+#include <vector>
 
 namespace Babylon::Graphics
 {
     class DeviceContext;
+    class GeneratedDepthStencil;
 
     // This class is not thread-safe. Callers must serialize all access.
     class Texture final
@@ -71,6 +73,11 @@ namespace Babylon::Graphics
             m_blitViewIdGeneration = generation;
         }
 
+        // Generated depth/stencil shared by the framebuffers that render into this texture's faces or layers.
+        // Held weakly, so it lives exactly as long as one of those framebuffers.
+        std::shared_ptr<GeneratedDepthStencil> FindLayerDepthStencil(uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers);
+        void AddLayerDepthStencil(const std::shared_ptr<GeneratedDepthStencil>& depthStencil);
+
     private:
         void SetMetadata(
             uint16_t width,
@@ -101,6 +108,7 @@ namespace Babylon::Graphics
         uint16_t m_viewNumLayers{0};
         bgfx::ViewId m_blitViewId{UINT16_MAX};
         uint32_t m_blitViewIdGeneration{0};
+        std::vector<std::weak_ptr<GeneratedDepthStencil>> m_layerDepthStencils{};
         uintptr_t m_deviceID;
         DeviceContext& m_deviceContext;
     };
