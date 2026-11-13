@@ -381,22 +381,21 @@ namespace
         }
     }
 
-    // Coefficients of the sort key for splats transformed by one world matrix: key = dot([x y z 1], coefficients).
-    // Babylon matrices use row vectors, so clip = [x y z 1] * world * viewProjection and the key is one clip column.
-    std::array<float, 4> SplatKeyCoefficients(const std::array<float, 16>& world, const std::array<float, 16>& viewProjection, uint32_t column)
+    // Coefficients of view-space z for splats transformed by one world matrix.
+    std::array<float, 4> SplatDepthCoefficients(const std::array<float, 16>& world, const std::array<float, 16>& view)
     {
         std::array<float, 4> coefficients{};
         for (uint32_t row = 0; row < 4; ++row)
         {
             for (uint32_t k = 0; k < 4; ++k)
             {
-                coefficients[row] += world[row * 4 + k] * viewProjection[k * 4 + column];
+                coefficients[row] += world[row * 4 + k] * view[k * 4 + 2];
             }
         }
         return coefficients;
     }
 
-    // sortSplatIndices(viewProjection, worldMatrices, positions, indices, vertexCount, intervals, partIndices): boolean
+    // sortSplatIndices(view, worldMatrices, positions, indices, vertexCount, intervals, partIndices, rightHanded): boolean
     // Mirrors the Babylon.js sort worker. Writes the active source splats (every splat below vertexCount, or the
     // [start, count] pairs of intervals) to indices sorted back to front, and points the remaining entries at the
     // empty slot at vertexCount. worldMatrices holds the mesh world matrix, or one world matrix per part when
@@ -409,9 +408,10 @@ namespace
         };
 
         if (!info[0].IsObject() || !info[1].IsArray() || !isTypedArray(info[2], napi_float32_array) ||
-            !isTypedArray(info[3], napi_float32_array) || !info[4].IsNumber())
+            !isTypedArray(info[3], napi_float32_array) || !info[4].IsNumber() || !info[7].IsBoolean())
         {
-            throw Napi::TypeError::New(env, "sortSplatIndices requires (Matrix, Matrix[], Float32Array, Float32Array, number, Uint32Array | null, Uint8Array | null).");
+            throw Napi::TypeError::New(
+                env, "sortSplatIndices requires (Matrix, Matrix[], Float32Array, Float32Array, number, Uint32Array | null, Uint8Array | null, boolean).");
         }
         const bool hasIntervals = isTypedArray(info[5], napi_uint32_array);
         const bool hasPartIndices = isTypedArray(info[6], napi_uint8_array);
@@ -420,7 +420,7 @@ namespace
             throw Napi::TypeError::New(env, "sortSplatIndices requires intervals to be a Uint32Array or null and partIndices to be a Uint8Array or null.");
         }
 
-        const auto viewProjection{ReadMatrix(info[0].As<Napi::Object>())};
+        const auto view{ReadMatrix(info[0].As<Napi::Object>())};
         const auto worldMatrices{info[1].As<Napi::Array>()};
         const auto positions{info[2].As<Napi::Float32Array>()};
         auto indices{info[3].As<Napi::Float32Array>()};
@@ -436,10 +436,7 @@ namespace
             throw Napi::RangeError::New(env, "sortSplatIndices requires 4 position floats per splat.");
         }
 
-        // Sort by distance from the camera: clip w with a perspective projection (for either handedness and for
-        // reversed depth), and clip z with an orthographic one, whose clip w is constant.
-        const bool perspective = viewProjection[3] != 0.f || viewProjection[7] != 0.f || viewProjection[11] != 0.f;
-        const uint32_t keyColumn = perspective ? 3 : 2;
+        const float depthSign = info[7].As<Napi::Boolean>() ? -1.f : 1.f;
         std::vector<std::array<float, 4>> coefficients(partCount);
         for (uint32_t part = 0; part < partCount; ++part)
         {
@@ -448,7 +445,11 @@ namespace
             {
                 throw Napi::TypeError::New(env, "sortSplatIndices requires worldMatrices to contain matrices.");
             }
-            coefficients[part] = SplatKeyCoefficients(ReadMatrix(world.As<Napi::Object>()), viewProjection, keyColumn);
+            coefficients[part] = SplatDepthCoefficients(ReadMatrix(world.As<Napi::Object>()), view);
+            for (float& coefficient : coefficients[part])
+            {
+                coefficient *= depthSign;
+            }
         }
 
         std::optional<Napi::Uint8Array> partIndices;

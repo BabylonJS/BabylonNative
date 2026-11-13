@@ -205,9 +205,10 @@ TEST(NativeOptimizations, SplatIndexSortingHonorsIntervalsAndParts)
                         return { _m: m };
                     }
                     const identity = [[0, 1], [5, 1], [10, 1], [15, 1]];
-                    function sort(viewProjection, worlds, indexCount, intervals, partIndices) {
+                    function sort(view, worlds, indexCount, intervals, partIndices, rightHanded, sourcePositions) {
                         const indices = new Float32Array(indexCount).fill(-1);
-                        const result = _native.sortSplatIndices(viewProjection, worlds, positions, indices, vertexCount, intervals, partIndices);
+                        const result = _native.sortSplatIndices(
+                            view, worlds, sourcePositions || positions, indices, vertexCount, intervals, partIndices, !!rightHanded);
                         return { result, indices: Array.from(indices).join(",") };
                     }
                     function expectSort(label, actual, result, indices) {
@@ -216,22 +217,41 @@ TEST(NativeOptimizations, SplatIndexSortingHonorsIntervalsAndParts)
                         }
                     }
                     for (const typed of [true, false]) {
-                        // Perspective: clip w = z sorts back to front; clip z = -z is a decoy that sorts the other way.
-                        const perspective = matrix(typed, [[11, 1], [10, -1]]);
-                        // Orthographic: clip w is constant, so clip z = z orders the splats.
-                        const orthographic = matrix(typed, [[10, 1], [15, 1]]);
+                        const view = matrix(typed, identity);
                         const world = matrix(typed, identity);
                         // The second part moves its splats 10 units farther away.
                         const farWorld = matrix(typed, [...identity, [14, 10]]);
-                        for (const viewProjection of [perspective, orthographic]) {
-                            expectSort("whole mesh", sort(viewProjection, [world], 6, null, null), true, "3,1,2,0,4,4");
-                            expectSort("one interval", sort(viewProjection, [world], 4, new Uint32Array([1, 2]), null), true, "1,2,4,4");
-                            expectSort("two intervals", sort(viewProjection, [world], 4, new Uint32Array([0, 1, 2, 2]), undefined), true, "3,2,0,4");
-                            expectSort("empty part indices", sort(viewProjection, [world], 4, null, new Uint8Array(0)), true, "3,1,2,0");
-                            expectSort("parts", sort(viewProjection, [world, farWorld], 4, null, new Uint8Array([1, 0, 0, 0])), true, "0,3,1,2");
-                            // A part index without a world matrix leaves the previous order untouched.
-                            expectSort("stale part", sort(viewProjection, [world, farWorld], 4, null, new Uint8Array([0, 2, 0, 0])), false, "-1,-1,-1,-1");
+                        expectSort("whole mesh", sort(view, [world], 6, null, null), true, "3,1,2,0,4,4");
+                        expectSort("one interval", sort(view, [world], 4, new Uint32Array([1, 2]), null), true, "1,2,4,4");
+                        expectSort("two intervals", sort(view, [world], 4, new Uint32Array([0, 1, 2, 2]), undefined), true, "3,2,0,4");
+                        expectSort("empty part indices", sort(view, [world], 4, null, new Uint8Array(0)), true, "3,1,2,0");
+                        expectSort("parts", sort(view, [world, farWorld], 4, null, new Uint8Array([1, 0, 0, 0])), true, "0,3,1,2");
+                        // A part index without a world matrix leaves the previous order untouched.
+                        expectSort("stale part", sort(view, [world, farWorld], 4, null, new Uint8Array([0, 2, 0, 0])), false, "-1,-1,-1,-1");
+
+                        // With projectionPlaneTilt=0.1, clip w puts the nearer splat first. View-space z does not.
+                        const tiltedPositions = new Float32Array([
+                            0, -0.1, 5, 1,
+                            0,  0.1, 4.99, 1,
+                            0,    0, 1, 1,
+                            0,    0, 2, 1
+                        ]);
+                        const fartherClipW = tiltedPositions[2] + 0.1 * tiltedPositions[1];
+                        const nearerClipW = tiltedPositions[6] + 0.1 * tiltedPositions[5];
+                        if (!(fartherClipW < nearerClipW)) {
+                            throw new Error("Tilted projection must reverse clip-w and view-depth order");
                         }
+                        expectSort("tilted perspective", sort(view, [world], 4, null, null, false, tiltedPositions), true, "0,1,3,2");
+
+                        // Reversed-depth orthographic projection is deliberately absent from the sort input.
+                        const rightHandedPositions = new Float32Array([
+                            0, 0, -5, 1,
+                            0, 0, -4, 1,
+                            0, 0, -2, 1,
+                            0, 0, -1, 1
+                        ]);
+                        expectSort("right-handed reverse-depth orthographic",
+                            sort(view, [world], 4, null, null, true, rightHandedPositions), true, "0,1,2,3");
                     }
                     function expectError(args, message) {
                         let error;
@@ -246,19 +266,19 @@ TEST(NativeOptimizations, SplatIndexSortingHonorsIntervalsAndParts)
                             throw new Error("Expected: " + message + "; received: " + String(error));
                         }
                     }
-                    const viewProjection = matrix(true, [[11, 1]]);
+                    const view = matrix(true, identity);
                     const world = matrix(true, identity);
-                    expectError([viewProjection, [], positions, new Float32Array(4), vertexCount, null, null],
+                    expectError([view, [], positions, new Float32Array(4), vertexCount, null, null, false],
                         "sortSplatIndices requires at least one world matrix.");
-                    expectError([viewProjection, [world], positions, new Float32Array(4), 5, null, null],
+                    expectError([view, [world], positions, new Float32Array(4), 5, null, null, false],
                         "sortSplatIndices requires 4 position floats per splat.");
-                    expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, new Uint32Array([3, 2]), null],
+                    expectError([view, [world], positions, new Float32Array(4), vertexCount, new Uint32Array([3, 2]), null, false],
                         "sortSplatIndices requires intervals within vertexCount.");
-                    expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, new Uint32Array([0, 2, 2]), null],
+                    expectError([view, [world], positions, new Float32Array(4), vertexCount, new Uint32Array([0, 2, 2]), null, false],
                         "sortSplatIndices requires intervals to hold [start, count] pairs.");
-                    expectError([viewProjection, [world], positions, new Float32Array(3), vertexCount, null, null],
+                    expectError([view, [world], positions, new Float32Array(3), vertexCount, null, null, false],
                         "sortSplatIndices requires indices to hold every active splat.");
-                    expectError([viewProjection, [world], positions, new Float32Array(4), vertexCount, [0, 4], null],
+                    expectError([view, [world], positions, new Float32Array(4), vertexCount, [0, 4], null, false],
                         "sortSplatIndices requires intervals to be a Uint32Array or null and partIndices to be a Uint8Array or null.");
                 })();
             )", "native-splat-index-sorting.js");
