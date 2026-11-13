@@ -35,6 +35,7 @@ if(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER)
 endif()
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.V8.cpp)
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.V8ForegroundTaskRunner.cpp)
     target_link_libraries(UnitTestsJNI PRIVATE AppRuntimeInternal)
 endif()

@@ -2,6 +2,7 @@
 
 #include <napi/napi.h>
 
+#include <functional>
 #include <stdint.h>
 
 #if INTPTR_MAX == INT64_MAX
@@ -48,7 +49,12 @@
 
 namespace Napi
 {
-  Napi::Env Attach(v8::Local<v8::Context>);
+  // Garbage collection queues finalizers rather than running them. When a finalizer is queued and no
+  // drain is pending, postTask receives a task that runs the queue. postTask may be called during
+  // garbage collection, so it must only queue the task. The task must run on the JavaScript thread
+  // with the context entered, and never after Detach, which runs whatever is still queued. Without
+  // postTask, queued finalizers run only at Detach.
+  Napi::Env Attach(v8::Local<v8::Context>, std::function<void(std::function<void()>)> postTask = {});
 
   void Detach(Napi::Env);
 

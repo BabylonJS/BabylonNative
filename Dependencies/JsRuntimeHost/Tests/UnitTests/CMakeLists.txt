@@ -69,6 +69,8 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
     set(SOURCES ${SOURCES} "Source/Tests.NodeApi.Hermes.cpp")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
     set(SOURCES ${SOURCES} "Source/Tests.NodeApi.JavaScriptCore.cpp")
+elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    set(SOURCES ${SOURCES} "Source/Tests.NodeApi.V8.cpp")
 endif()
 
 # BabylonNative also defines UnitTests; standalone builds retain the original name.
