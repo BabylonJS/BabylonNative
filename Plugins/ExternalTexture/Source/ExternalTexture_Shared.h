@@ -5,6 +5,10 @@ namespace Babylon::Plugins
     ExternalTexture::Impl::Impl(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
         GetInfo(ptr, overrideFormat, m_info);
+        Info nativeInfo{};
+        GetInfo(ptr, std::nullopt, nativeInfo);
+        m_info.BlitFormat = nativeInfo.Format;
+        m_info.BlitFlags = nativeInfo.Flags;
 
         if (m_info.MipLevels != 1 && m_info.MipLevels != 0 && !IsFullMipChain(m_info.MipLevels, m_info.Width, m_info.Height))
         {
@@ -18,6 +22,10 @@ namespace Babylon::Plugins
     {
         Info info;
         GetInfo(ptr, overrideFormat, info);
+        Info nativeInfo{};
+        GetInfo(ptr, std::nullopt, nativeInfo);
+        info.BlitFormat = nativeInfo.Format;
+        info.BlitFlags = nativeInfo.Flags;
 
         DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips %d layers",
             this, int(info.Width), int(info.Height), int(info.MipLevels), int(info.NumLayers));
@@ -44,7 +52,10 @@ namespace Babylon::Plugins
             m_info.NumLayers,
             m_info.Format,
             m_info.Flags,
-            NativeTextureHandle(static_cast<Impl*>(this)->Get()));
+            NativeTextureHandle(static_cast<Impl*>(this)->Get()),
+            {},
+            m_info.BlitFormat,
+            m_info.BlitFlags);
 
         DEBUG_TRACE("ExternalTexture [0x%p] CreateForJavaScript %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
             this, int(m_info.Width), int(m_info.Height), int(HasMips()), int(m_info.NumLayers), int(m_info.Format), int(m_info.Flags), int(texture->Handle().idx));

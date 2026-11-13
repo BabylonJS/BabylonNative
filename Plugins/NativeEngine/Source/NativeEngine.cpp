@@ -3042,6 +3042,7 @@ void main() {
         const uint16_t height{static_cast<uint16_t>(requestedHeight)};
 
         const auto sourceTextureFormat{texture->Format()};
+        const auto sourceBlitFormat{texture->BlitFormat()};
         // The face/layer index is JS-controlled and is forwarded to encoder->blit as srcZ, so validate it
         // before it can drive an out-of-bounds read inside bgfx. Babylon.js passes this argument for both
         // cube maps (face 0-5, six consecutive faces per array layer) and 2D arrays (slice index, which can
@@ -3139,7 +3140,10 @@ void main() {
             // reads use srcZ = face index on the source region of that blit.
             if (isCubeFace || x != 0 || blitY != 0 || width != mipWidth || height != mipHeight || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
-                const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+                // Metal requires identical source and destination pixel formats. External textures can
+                // override their sampling format, so use the imported native texture's format here.
+                const uint64_t blitTextureFlags{BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK | (texture->BlitFlags() & BGFX_TEXTURE_SRGB)};
+                const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceBlitFormat, blitTextureFlags)};
 
                 bgfx::Encoder* encoder = GetEncoder();
                 bgfx::TextureRegion dstRegion{};
