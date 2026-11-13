@@ -200,4 +200,9 @@ namespace Babylon::Graphics
     {
         return m_graphicsImpl.GetBackBufferHandle();
     }
+
+    bool DeviceContext::IsBackBufferMultisampled() const
+    {
+        return m_graphicsImpl.IsBackBufferMultisampled();
+    }
 }
