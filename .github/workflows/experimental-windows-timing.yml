@@ -1,0 +1,142 @@
+name: Experimental Windows visual timing
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/experimental-windows-timing.yml"
+      - "Apps/scripts/windowsSharedTiming/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    runs-on: windows-2022
+    timeout-minutes: 180
+    env:
+      npm_config_fetch_retries: "5"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Checkout exact native prototype
+        uses: actions/checkout@v5
+        with:
+          repository: bghgary/BabylonNative
+          ref: 8be7cacaca510d8b16bc9c44500516e82abb86ec
+          path: Build/TimingSource
+          persist-credentials: false
+
+      - name: Checkout exact shared suite and references
+        uses: actions/checkout@v5
+        with:
+          repository: bghgary/Babylon.js
+          ref: 345ce53604cb74d27f164a9b3b6604e26fb6adb4
+          path: Build/TimingSuite
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install the shared-suite package manager
+        shell: pwsh
+        run: |
+          npm install --prefix "$env:RUNNER_TEMP\shared-npm" npm@11.18.0 --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'Package-manager setup failed.' }
+          "$env:RUNNER_TEMP\shared-npm\node_modules\.bin" >> $env:GITHUB_PATH
+
+      - name: Prepare the real shared suite
+        working-directory: Build/TimingSuite
+        run: npm ci --no-audit --no-fund
+
+      - name: Check timing report validation
+        run: node --test Apps/scripts/windowsSharedTiming/run.test.cjs
+
+      - name: Configure and build pinned Release V8 D3D11 Playground
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $watch = [Diagnostics.Stopwatch]::StartNew()
+          cmake -S Build\TimingSource -B Build\WindowsTiming -G "Visual Studio 17 2022" -A x64 `
+            -DNAPI_JAVASCRIPT_ENGINE=V8 -DGRAPHICS_API=D3D11 `
+            -DBABYLON_NATIVE_PLUGIN_NATIVEDRACO=ON -DBABYLON_NATIVE_PLUGIN_NATIVEMESHOPT=ON `
+            -DBX_CONFIG_DEBUG=OFF -DBABYLON_DEBUG_TRACE=OFF
+          if ($LASTEXITCODE -ne 0) { throw 'Configure failed.' }
+          $configureMs = $watch.Elapsed.TotalMilliseconds
+          $watch.Restart()
+          cmake --build Build\WindowsTiming --config Release --target Playground -- /m
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+          New-Item -ItemType Directory -Force Build\timing-artifacts | Out-Null
+          @{
+            configureMs = $configureMs
+            buildMs = $watch.Elapsed.TotalMilliseconds
+            nativeHead = (git -C Build\TimingSource rev-parse HEAD)
+            suiteHead = (git -C Build\TimingSuite rev-parse HEAD)
+            v8Packages = @(Get-ChildItem Build\WindowsTiming\NuGet\packages -Directory |
+              Where-Object Name -Like 'v8-*' | Select-Object -ExpandProperty Name)
+          } | ConvertTo-Json | Set-Content Build\timing-artifacts\build.json
+
+      - name: Verify runtime package pins
+        shell: pwsh
+        run: |
+          $versions = @{}
+          foreach ($name in @('babylonjs', 'babylonjs-addons', 'babylonjs-loaders')) {
+            $package = Get-Content "Build\TimingSource\Apps\node_modules\$name\package.json" -Raw | ConvertFrom-Json
+            $versions[$name] = $package.version
+            if ($package.version -ne '9.29.0') { throw "Unexpected $name version." }
+          }
+          $versions | ConvertTo-Json | Set-Content Build\timing-artifacts\packages.json
+          $files = @{
+            'babylonjs' = 'babylon.max.js'
+            'babylonjs-addons' = 'babylonjs.addons.js'
+            'babylonjs-loaders' = 'babylonjs.loaders.js'
+          }
+          foreach ($name in $files.Keys) {
+            $source = Get-FileHash "Build\TimingSource\Apps\node_modules\$name\$($files[$name])"
+            $runtime = Get-FileHash "Build\WindowsTiming\Apps\Playground\Release\Scripts\$($files[$name])"
+            if ($source.Hash -ne $runtime.Hash) { throw "Runtime bundle differs: $name" }
+          }
+
+      - name: Run exact mobile workloads through per-scene Playwright
+        timeout-minutes: 120
+        shell: pwsh
+        env:
+          TIMING_SUITE_ROOT: ${{ github.workspace }}\Build\TimingSuite
+          BABYLON_NATIVE_PLAYGROUND: ${{ github.workspace }}\Build\WindowsTiming\Apps\Playground\Release\Playground.exe
+          TIMING_ARTIFACTS: ${{ github.workspace }}\Build\timing-artifacts
+        run: |
+          @{
+            processor = @(Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors)
+            graphics = @(Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, AdapterRAM)
+            os = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber
+            runnerImage = $env:ImageVersion
+            configuration = 'Release'
+            engine = 'V8'
+            graphicsApi = 'D3D11'
+          } | ConvertTo-Json -Depth 10 | Set-Content Build\timing-artifacts\machine.json
+          node Apps\scripts\windowsSharedTiming\run.cjs
+
+      - name: Summarize actual timing and coverage
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          "## Experimental Windows timing (not a migration gate)" >> $env:GITHUB_STEP_SUMMARY
+          $file = 'Build\timing-artifacts\summary.json'
+          if (Test-Path $file) {
+            $summary = Get-Content $file -Raw | ConvertFrom-Json
+            foreach ($phase in $summary.phases) {
+              "$($phase.mode): selected=$($phase.selected), executed=$($phase.executed), passed=$($phase.passed), failed=$($phase.failed), completed=$($phase.completed), process=$([math]::Round($phase.processWallMs / 1000, 3))s." >> $env:GITHUB_STEP_SUMMARY
+            }
+          } else {
+            "No complete timing report. This run establishes no Windows execution timing." >> $env:GITHUB_STEP_SUMMARY
+          }
+
+      - name: Upload timing reports and image differences
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: experimental-windows-shared-scenes
+          path: Build/timing-artifacts/
+          if-no-files-found: warn
