@@ -27,9 +27,11 @@ namespace Babylon::Plugins
         uint16_t Width() const { return m_info.Width; }
         uint16_t Height() const { return m_info.Height; }
         bgfx::TextureFormat::Enum Format() const { return m_info.Format; }
+        bgfx::TextureFormat::Enum BlitFormat() const { return m_info.BlitFormat; }
         bool HasMips() const { return m_info.MipLevels != 1; }
         uint16_t NumLayers() const { return m_info.NumLayers; }
         uint64_t Flags() const { return m_info.Flags; }
+        uint64_t BlitFlags() const { return m_info.BlitFlags; }
 
         // JS-thread entry points. These lock internally to read graphics-thread-written
         // state (m_info, derived m_ptr, m_textures) consistently and to mutate m_textures.
@@ -81,7 +83,10 @@ namespace Babylon::Plugins
                     NumLayers(),
                     Format(),
                     Flags(),
-                    NativeTextureHandle(ptr));
+                    NativeTextureHandle(ptr),
+                    {},
+                    BlitFormat(),
+                    BlitFlags());
                 texture->ViewFirstLayer(layerIndex.value_or(0));
                 texture->ViewNumLayers(layerIndex.has_value() ? 1 : 0);
                 ++it;
@@ -96,6 +101,8 @@ namespace Babylon::Plugins
             uint16_t NumLayers{};
             bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
             uint64_t Flags{};
+            bgfx::TextureFormat::Enum BlitFormat{bgfx::TextureFormat::Unknown};
+            uint64_t BlitFlags{};
         };
 
         Info m_info{};
