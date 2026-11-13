@@ -573,6 +573,8 @@ namespace Babylon::Graphics
             throw std::runtime_error{"D3D11 external color and depth back buffer views do not match."};
         }
 
+        m_externalBackBuffer.SampleCount = colorInfo ? colorInfo->TextureDesc.SampleDesc.Count : depthInfo->TextureDesc.SampleDesc.Count;
+
         if (colorInfo && !depthInfo && descriptor.formatDepthStencil != bgfx::TextureFormat::Count)
         {
             depthInfo = CreateDepthInfo(

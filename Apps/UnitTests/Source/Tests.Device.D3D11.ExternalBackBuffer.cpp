@@ -365,7 +365,30 @@ TEST(Device, BackBufferMsaaCaptureUsesActualViewSampleCount)
     Babylon::Graphics::Device device{config};
     Babylon::AppRuntime runtime{};
     auto& context = GetContext(device, runtime);
+    ApplyPendingBackBufferUpdate(device);
+    Babylon::Graphics::FrameBuffer backBuffer{context, BGFX_INVALID_HANDLE, 0, 0, true, true, true};
+    EXPECT_TRUE(backBuffer.IsMultisampled());
     ExpectSolidColor(ClearAndCapture(device, context, 0x4080c0ff), 32, 24, 0x4080c0ff);
+}
+
+TEST(Device, ExternalBackBufferMultisamplingIgnoresConfiguredSampleCount)
+{
+    auto d3dDevice = CreateDevice();
+    auto color = CreateTestRenderTargetTexture(d3dDevice.get(), 32, 24);
+
+    Babylon::Graphics::Configuration config{};
+    config.Device = d3dDevice.get();
+    config.BackBufferColor = color.View.get();
+    config.Width = 32;
+    config.Height = 24;
+    config.MSAASamples = 4;
+
+    Babylon::Graphics::Device device{config};
+    Babylon::AppRuntime runtime{};
+    auto& context = GetContext(device, runtime);
+    ApplyPendingBackBufferUpdate(device);
+    Babylon::Graphics::FrameBuffer backBuffer{context, BGFX_INVALID_HANDLE, 0, 0, true, true, true};
+    EXPECT_FALSE(backBuffer.IsMultisampled());
 }
 
 TEST(Device, WindowDepthBackBufferRejectsReadOnlyViews)

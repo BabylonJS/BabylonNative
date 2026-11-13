@@ -118,7 +118,7 @@ namespace Babylon::Graphics
     bool FrameBuffer::IsMultisampled() const
     {
         // The window's sample count can change without recreating its wrapper.
-        return m_defaultBackBuffer && !bgfx::isValid(m_handle) ? m_deviceContext.GetMSAASamples() > 1 : m_isMultisampled;
+        return m_defaultBackBuffer && !bgfx::isValid(m_handle) ? m_deviceContext.IsBackBufferMultisampled() : m_isMultisampled;
     }
 
     void FrameBuffer::Bind()
