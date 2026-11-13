@@ -402,7 +402,7 @@ namespace Babylon::Polyfills::Internal
             .add(bgfx::Attrib::TexCoord0, TEXCOORD_COMPONENT_COUNT, bgfx::AttribType::Float).end();
         const std::array<std::array<float, FULLSCREEN_VERTEX_COMPONENT_COUNT>, FULLSCREEN_TRIANGLE_VERTEX_COUNT> vertices{{
             {-1.f, 0.f, 0.f, 0.f, 0.f}, {1.f, 0.f, 0.f, 1.f, 0.f}, {1.f, 2.f, 0.f, 1.f, 1.f}}};
-        const auto buffer = GetBufferPool().AllocVertices(layout, bgfx::copy(vertices.data(), sizeof(vertices)));
+        const auto buffer = GetBufferPool().AllocVertices(layout, vertices.data(), sizeof(vertices));
 
         // Use the canvas reservation for conversion, then reserve the following blit
         // before NativeEngine records the scene that samples the dynamic texture.

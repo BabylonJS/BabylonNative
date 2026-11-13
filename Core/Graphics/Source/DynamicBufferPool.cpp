@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <utility>
 
 namespace Babylon::Graphics
 {
@@ -44,11 +45,24 @@ namespace Babylon::Graphics
         }
     }
 
-    DynamicBufferPool::DynamicBufferPool(DeviceContext& deviceContext)
+    DynamicBufferPool::DynamicBufferPool(DeviceContext& deviceContext, CreationFunctions creationFunctions)
         : m_deviceContext{deviceContext}
         , m_deviceId{deviceContext.GetDeviceId()}
         , m_generation{deviceContext.ViewIdGeneration()}
+        , m_creationFunctions{std::move(creationFunctions)}
     {
+        if (!m_creationFunctions.CreateVertexBuffer)
+        {
+            m_creationFunctions.CreateVertexBuffer = [](uint32_t capacity, const bgfx::VertexLayout& layout) {
+                return bgfx::createDynamicVertexBuffer(capacity, layout);
+            };
+        }
+        if (!m_creationFunctions.CreateIndexBuffer)
+        {
+            m_creationFunctions.CreateIndexBuffer = [](uint32_t capacity) {
+                return bgfx::createDynamicIndexBuffer(capacity);
+            };
+        }
     }
 
     DynamicBufferPool::~DynamicBufferPool()
@@ -60,7 +74,10 @@ namespace Babylon::Graphics
 
         for (const auto& [key, buffer] : m_vertexBuffers)
         {
-            bgfx::destroy(buffer.Handle);
+            if (bgfx::isValid(buffer.Handle))
+            {
+                bgfx::destroy(buffer.Handle);
+            }
         }
         if (bgfx::isValid(m_indexBuffer.Handle))
         {
@@ -68,40 +85,57 @@ namespace Babylon::Graphics
         }
     }
 
-    DynamicBufferPool::VertexRange DynamicBufferPool::AllocVertices(const bgfx::VertexLayout& layout, const bgfx::Memory* memory)
+    DynamicBufferPool::VertexRange DynamicBufferPool::AllocVertices(const bgfx::VertexLayout& layout, const void* data, uint32_t size)
     {
         const uint16_t stride = layout.getStride();
-        if (stride == 0 || memory->size % stride != 0)
+        if (stride == 0 || size % stride != 0)
         {
             throw std::runtime_error{"Vertex data does not match the vertex layout"};
         }
 
         BeginAllocation();
 
-        const uint32_t count = memory->size / stride;
-        auto& buffer = m_vertexBuffers[(uint64_t{layout.m_hash} << 16) | stride];
-        Reserve(buffer, count, stride, [&layout](uint32_t capacity) { return bgfx::createDynamicVertexBuffer(capacity, layout); });
+        const uint32_t count = size / stride;
+        const uint64_t key = (uint64_t{layout.m_hash} << 16) | stride;
+        auto [it, inserted] = m_vertexBuffers.try_emplace(key);
+        try
+        {
+            Reserve(it->second, count, stride, [this, &layout](uint32_t capacity) {
+                return m_creationFunctions.CreateVertexBuffer(capacity, layout);
+            });
+        }
+        catch (...)
+        {
+            if (inserted)
+            {
+                m_vertexBuffers.erase(it);
+            }
+            throw;
+        }
 
+        auto& buffer = it->second;
         const VertexRange range{buffer.Handle, buffer.Used};
-        bgfx::update(buffer.Handle, buffer.Used, memory);
+        bgfx::update(buffer.Handle, buffer.Used, bgfx::copy(data, size));
         buffer.Used += count;
         return range;
     }
 
-    DynamicBufferPool::IndexRange DynamicBufferPool::AllocIndices(const bgfx::Memory* memory)
+    DynamicBufferPool::IndexRange DynamicBufferPool::AllocIndices(const void* data, uint32_t size)
     {
-        if (memory->size % INDEX_SIZE != 0)
+        if (size % INDEX_SIZE != 0)
         {
             throw std::runtime_error{"Index data must hold 16-bit indices"};
         }
 
         BeginAllocation();
 
-        const uint32_t count = memory->size / INDEX_SIZE;
-        Reserve(m_indexBuffer, count, INDEX_SIZE, [](uint32_t capacity) { return bgfx::createDynamicIndexBuffer(capacity); });
+        const uint32_t count = size / INDEX_SIZE;
+        Reserve(m_indexBuffer, count, INDEX_SIZE, [this](uint32_t capacity) {
+            return m_creationFunctions.CreateIndexBuffer(capacity);
+        });
 
         const IndexRange range{m_indexBuffer.Handle, m_indexBuffer.Used};
-        bgfx::update(m_indexBuffer.Handle, m_indexBuffer.Used, memory);
+        bgfx::update(m_indexBuffer.Handle, m_indexBuffer.Used, bgfx::copy(data, size));
         m_indexBuffer.Used += count;
         return range;
     }
