@@ -91,49 +91,60 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                          1, 1,  1, 1,
                         -1, 0, -1, 1
                     ]);
-                    // Without a perspective w row, splats sort back to front by clip z; with one, by clip w. Either
-                    // way the handedness flag is ignored. Distinct depths [2, -3, 5, 4, -7] give an
-                    // algorithm-independent ordering, and negating them reverses it.
-                    const cases = [
-                        { first: 2, sign: 1, expected: [2, 3, 0, 1, 4] },
-                        { first: 3, sign: 1, expected: [2, 3, 0, 1, 4] },
-                        { first: 3, sign: -1, expected: [4, 1, 0, 3, 2] },
-                    ];
                     for (const typed of [true, false]) {
-                        for (const { first, sign, expected } of cases) {
-                            const matrix = typed ? new Float32Array(16) : new Array(16).fill(0);
-                            matrix[first] = 2 * sign;
-                            matrix[first + 4] = -3 * sign;
-                            matrix[first + 8] = 5 * sign;
-                            const modelViewProjection = { _m: matrix };
-                            for (const rightHanded of [false, true]) {
-                                const indices = new Float32Array(5);
-                                _native.sortSplats(modelViewProjection, positions, indices, rightHanded);
-                                for (let index = 0; index < indices.length; ++index) {
-                                    if (indices[index] !== expected[index]) {
-                                        throw new Error("Unexpected splat order for typed=" + typed + ", w=" + (first === 3) + ", sign=" + sign +
-                                            ", rightHanded=" + rightHanded + ", index=" + index);
-                                    }
+                        const matrix = typed ? new Float32Array(16) : new Array(16).fill(0);
+                        matrix[2] = 2;
+                        matrix[6] = -3;
+                        matrix[10] = 5;
+                        const modelView = { _m: matrix };
+                        for (const [rightHanded, expected] of [[false, [2, 3, 0, 1, 4]], [true, [4, 1, 0, 3, 2]]]) {
+                            const indices = new Float32Array(5);
+                            _native.sortSplats(modelView, positions, indices, rightHanded);
+                            for (let index = 0; index < indices.length; ++index) {
+                                if (indices[index] !== expected[index]) {
+                                    throw new Error("Unexpected splat order for typed=" + typed +
+                                        ", rightHanded=" + rightHanded + ", index=" + index);
                                 }
-                                // Babylon.js pads the index buffer to a multiple of 16; padding must
-                                // point one past the last splat rather than read past the positions.
-                                const padded = new Float32Array(16).fill(-1);
-                                _native.sortSplats(modelViewProjection, positions, padded, rightHanded);
-                                for (let index = 0; index < padded.length; ++index) {
-                                    const want = index < expected.length ? expected[index] : expected.length;
-                                    if (padded[index] !== want) {
-                                        throw new Error("Unexpected padded splat index for typed=" + typed +
-                                            ", rightHanded=" + rightHanded + ", index=" + index + ": " + padded[index]);
-                                    }
-                                }
-                                const single = new Float32Array([99]);
-                                _native.sortSplats(modelViewProjection, positions.subarray(0, 4), single, rightHanded);
-                                if (single[0] !== 0) {
-                                    throw new Error("Unexpected single-splat index");
-                                }
-                                _native.sortSplats(modelViewProjection, new Float32Array(0), new Float32Array(0), rightHanded);
                             }
+                            // Babylon.js pads the index buffer to a multiple of 16; padding must
+                            // point one past the last splat rather than read past the positions.
+                            const padded = new Float32Array(16).fill(-1);
+                            _native.sortSplats(modelView, positions, padded, rightHanded);
+                            for (let index = 0; index < padded.length; ++index) {
+                                const want = index < expected.length ? expected[index] : expected.length;
+                                if (padded[index] !== want) {
+                                    throw new Error("Unexpected padded splat index for typed=" + typed +
+                                        ", rightHanded=" + rightHanded + ", index=" + index + ": " + padded[index]);
+                                }
+                            }
+                            const single = new Float32Array([99]);
+                            _native.sortSplats(modelView, positions.subarray(0, 4), single, rightHanded);
+                            if (single[0] !== 0) {
+                                throw new Error("Unexpected single-splat index");
+                            }
+                            _native.sortSplats(modelView, new Float32Array(0), new Float32Array(0), rightHanded);
                         }
+                    }
+                    // Projection must not affect sorting. In this tilted perspective example clip w puts the
+                    // nearer splat first, while view-space z correctly puts the farther splat first.
+                    const tiltedPositions = new Float32Array([0, -0.1, 5, 1, 0, 0.1, 4.99, 1]);
+                    const fartherClipW = tiltedPositions[2] + 0.1 * tiltedPositions[1];
+                    const nearerClipW = tiltedPositions[6] + 0.1 * tiltedPositions[5];
+                    if (!(fartherClipW < nearerClipW)) {
+                        throw new Error("Tilted projection must reverse clip-w and view-depth order");
+                    }
+                    const identityView = { _m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] };
+                    const tiltedIndices = new Float32Array(2);
+                    _native.sortSplats(identityView, tiltedPositions, tiltedIndices, false);
+                    if (tiltedIndices[0] !== 0 || tiltedIndices[1] !== 1) {
+                        throw new Error("Tilted perspective must sort by view-space depth");
+                    }
+                    // A right-handed orthographic camera with reversed depth still sorts by view-space distance.
+                    const rightHandedPositions = new Float32Array([0, 0, -5, 1, 0, 0, -4, 1]);
+                    const reverseDepthIndices = new Float32Array(2);
+                    _native.sortSplats(identityView, rightHandedPositions, reverseDepthIndices, true);
+                    if (reverseDepthIndices[0] !== 0 || reverseDepthIndices[1] !== 1) {
+                        throw new Error("Right-handed reverse-depth orthographic must sort back to front");
                     }
                     function expectMatrixError(matrix, message) {
                         let error;
@@ -150,10 +161,10 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                         }
                     }
                     for (const matrix of [undefined, null, {}, 42, new Uint8Array(16), new Float64Array(16)]) {
-                        expectMatrixError(matrix, "sortSplats requires modelViewProjection._m to be a Float32Array or Array.");
+                        expectMatrixError(matrix, "sortSplats requires modelView._m to be a Float32Array or Array.");
                     }
-                    for (const component of [2, 3, 6, 7, 10, 11]) {
-                        const componentMessage = "sortSplats requires modelViewProjection._m[" + component + "] to be a number.";
+                    for (const component of [2, 6, 10]) {
+                        const componentMessage = "sortSplats requires modelView._m[" + component + "] to be a number.";
                         const matrix = new Array(16).fill(0);
                         delete matrix[component];
                         expectMatrixError(matrix, componentMessage);

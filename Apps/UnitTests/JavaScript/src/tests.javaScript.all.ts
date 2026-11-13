@@ -358,19 +358,12 @@ describe("Native splat matrix storage", function () {
   for (const numberArray of [false, true]) {
     test(`sorts with ${numberArray ? "number-array" : "Float32Array"} matrices`, function () {
       const positions = new Float32Array([0, 0, 1, 1, 0, 0, 4, 1, 0, 0, 2, 1]);
-      // Splats sort back to front by clip w (or clip z without perspective), whatever the handedness flag.
-      const cases = [
-        { values: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], expected: [1, 2, 0] },
-        { values: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0], expected: [1, 2, 0] },
-        { values: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, -1, 0, 0, 0, 0], expected: [0, 2, 1] },
-      ];
-      for (const { values, expected } of cases) {
-        const matrix = { _m: numberArray ? values : new Float32Array(values) };
-        for (const rightHanded of [false, true]) {
-          const indices = new Float32Array(3);
-          _native.sortSplats(matrix, positions, indices, rightHanded);
-          expect(Array.from(indices)).to.deep.equal(expected);
-        }
+      const values = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      const matrix = { _m: numberArray ? values : new Float32Array(values) };
+      for (const [rightHanded, expected] of [[false, [1, 2, 0]], [true, [0, 2, 1]]] as const) {
+        const indices = new Float32Array(3);
+        _native.sortSplats(matrix, positions, indices, rightHanded);
+        expect(Array.from(indices)).to.deep.equal(expected);
       }
     });
   }

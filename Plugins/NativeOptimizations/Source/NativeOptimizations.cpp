@@ -320,12 +320,12 @@ namespace
     // This function is not threadsafe because of static
     void sortSplats(const Napi::CallbackInfo& info)
     {
-        const auto modelViewProjection{ info[0].As<Napi::Object>() };
-        const auto matrixStorage{ modelViewProjection.Get("_m") };
+        const auto modelView{ info[0].As<Napi::Object>() };
+        const auto matrixStorage{ modelView.Get("_m") };
         if (!matrixStorage.IsArray() &&
             !(matrixStorage.IsTypedArray() && matrixStorage.As<Napi::TypedArray>().TypedArrayType() == napi_float32_array))
         {
-            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelViewProjection._m to be a Float32Array or Array.");
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m to be a Float32Array or Array.");
         }
         const auto m{ matrixStorage.As<Napi::Object>() };
 
@@ -338,24 +338,19 @@ namespace
         // splat count, so only sort splats that have a position.
         const auto splatCount = std::min(indexCount, positions.ElementLength() / 4);
         // High-precision Babylon matrices use ordinary number arrays.
-        // Elements 2, 6, 10 produce clip z; elements 3, 7, 11 produce clip w.
-        float column[6];
-        const uint32_t elements[6]{ 2u, 6u, 10u, 3u, 7u, 11u };
-        for (size_t i = 0; i < 6; ++i)
+        float depthColumn[3];
+        const uint32_t elements[3]{ 2u, 6u, 10u };
+        for (size_t i = 0; i < 3; ++i)
         {
             const auto value{ m.Get(elements[i]) };
             if (!value.IsNumber())
             {
-                throw Napi::TypeError::New(info.Env(), "sortSplats requires modelViewProjection._m[" + std::to_string(elements[i]) + "] to be a number.");
+                throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m[" + std::to_string(elements[i]) + "] to be a number.");
             }
-            column[i] = value.As<Napi::Number>().FloatValue();
+            depthColumn[i] = value.As<Napi::Number>().FloatValue();
         }
 
-        // Sort back to front by view distance. With a perspective projection, clip w is the distance along the
-        // view direction for either handedness and for reversed depth, so the right-handed flag (info[3]) is not
-        // needed. An orthographic projection has a constant w, so use clip z, which grows with distance there.
-        const bool perspective = column[3] != 0.f || column[4] != 0.f || column[5] != 0.f;
-        const float* vp = perspective ? &column[3] : &column[0];
+        const float depthFactor = info[3].As<Napi::Boolean>() ? 1.f : -1.f;
         static std::vector<float> depthMix;
 
         depthMix.resize(splatCount * 2);
@@ -363,7 +358,8 @@ namespace
         for (size_t i = 0; i < splatCount; i++)
         {
             depthMix[i * 2 + 0] = float(i);
-            depthMix[i * 2 + 1] = -(vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]);
+            depthMix[i * 2 + 1] =
+                (depthColumn[0] * positions[4 * i + 0] + depthColumn[1] * positions[4 * i + 1] + depthColumn[2] * positions[4 * i + 2]) * depthFactor;
         }
 
         qsort(depthMix.data(), splatCount, 2 * sizeof(float), sortSplatQSort);

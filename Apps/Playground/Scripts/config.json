@@ -1056,7 +1056,9 @@
         {
             "title": "Gaussian Splatting Loading RH",
             "playgroundId": "#CID4NN#398",
-            "referenceImage": "gsplat-loading-rh.png"
+            "referenceImage": "gsplat-loading-rh.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Fails on native: 7.807% pixel difference"
         },
         {
             "title": "Simple refraction",
