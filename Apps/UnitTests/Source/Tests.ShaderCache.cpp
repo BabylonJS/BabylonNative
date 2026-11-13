@@ -87,6 +87,10 @@ TEST(ShaderCache, SaveAndLoad)
     {
         std::ifstream stream(shaderCachePath, std::ios::binary);
         ASSERT_TRUE(stream.is_open()) << "Failed to open for read: " << shaderCachePath;
+        uint32_t cacheVersion{};
+        stream.read(reinterpret_cast<char*>(&cacheVersion), sizeof(cacheVersion));
+        EXPECT_EQ(cacheVersion, 14);
+        stream.seekg(0);
         auto deserializedCount = Babylon::Plugins::ShaderCache::Load(stream);
         EXPECT_EQ(deserializedCount, shaderCount);
     }
