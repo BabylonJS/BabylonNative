@@ -26,6 +26,8 @@
 #include "nanovg/nanovg_babylon.h"
 
 #include <stdlib.h>
+#include <algorithm>
+#include <cmath>
 #include <math.h>
 #include <stdexcept>
 #include <vector>
@@ -45,16 +47,28 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 
 #include "Shaders/dxbc/vs_nanovg_fill.h"
 #include "Shaders/dxbc/fs_nanovg_fill.h"
+#include "Shaders/dxbc/vs_nanovg_solid.h"
+#include "Shaders/dxbc/fs_nanovg_solid.h"
 #include "Shaders/dxil/vs_nanovg_fill.h"
 #include "Shaders/dxil/fs_nanovg_fill.h"
+#include "Shaders/dxil/vs_nanovg_solid.h"
+#include "Shaders/dxil/fs_nanovg_solid.h"
 #include "Shaders/metal/vs_nanovg_fill.h"
 #include "Shaders/metal/fs_nanovg_fill.h"
+#include "Shaders/metal/vs_nanovg_solid.h"
+#include "Shaders/metal/fs_nanovg_solid.h"
 #include "Shaders/glsl/vs_nanovg_fill.h"
 #include "Shaders/glsl/fs_nanovg_fill.h"
+#include "Shaders/glsl/vs_nanovg_solid.h"
+#include "Shaders/glsl/fs_nanovg_solid.h"
 #include "Shaders/essl/vs_nanovg_fill.h"
 #include "Shaders/essl/fs_nanovg_fill.h"
+#include "Shaders/essl/vs_nanovg_solid.h"
+#include "Shaders/essl/fs_nanovg_solid.h"
 #include "Shaders/spirv/vs_nanovg_fill.h"
 #include "Shaders/spirv/fs_nanovg_fill.h"
+#include "Shaders/spirv/vs_nanovg_solid.h"
+#include "Shaders/spirv/fs_nanovg_solid.h"
 
 #include "nanovg_filterstack.h"
 #include "../CanvasConstants.h"
@@ -84,6 +98,18 @@ struct PosTexCoord0Vertex
     }
 
     static inline bgfx::VertexLayout s_layout;
+};
+
+struct SolidVertex
+{
+    float m_x;
+    float m_y;
+    float m_u;
+    float m_v;
+    uint8_t m_r;
+    uint8_t m_g;
+    uint8_t m_b;
+    uint8_t m_a;
 };
 
 void screenSpaceQuad(bgfx::Encoder* encoder, Babylon::Graphics::DynamicBufferPool& bufferPool, bool _originBottomLeft, float _width = 1.0f, float _height = 1.0f)
@@ -140,6 +166,8 @@ static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
 {
     BGFX_EMBEDDED_SHADER(vs_nanovg_fill),
     BGFX_EMBEDDED_SHADER(fs_nanovg_fill),
+    BGFX_EMBEDDED_SHADER(vs_nanovg_solid),
+    BGFX_EMBEDDED_SHADER(fs_nanovg_solid),
 
     BGFX_EMBEDDED_SHADER_END()
 };
@@ -147,6 +175,7 @@ static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
 namespace
 {
     static bgfx::VertexLayout s_nvgLayout;
+    static bgfx::VertexLayout s_solidLayout;
     constexpr size_t TRANSFORM_COMPONENT_COUNT = 6;
     constexpr size_t MAT3X4_COMPONENT_COUNT = 12;
     constexpr size_t MAT3_COMPONENT_COUNT = 9;
@@ -170,6 +199,7 @@ namespace
     constexpr uint32_t TRIANGLE_FAN_BASE_VERTEX_COUNT = 2;
     constexpr int QUAD_VERTEX_COUNT = 6;
     constexpr int FILL_UNIFORM_COUNT = 2;
+    constexpr uint32_t MAX_BATCH_VERTEX_COUNT = UINT16_MAX;
 
     enum class TextureSampleType : uint32_t
     {
@@ -275,6 +305,7 @@ namespace
         bx::AllocatorI* allocator;
 
         bgfx::ProgramHandle prog;
+        bgfx::ProgramHandle solidProg;
         bgfx::UniformHandle u_scissorMat;
         bgfx::UniformHandle u_paintMat;
         bgfx::UniformHandle u_innerCol;
@@ -437,6 +468,12 @@ namespace
             .begin()
             .add(bgfx::Attrib::Position,  TEXCOORD_COMPONENT_COUNT, bgfx::AttribType::Float)
             .add(bgfx::Attrib::TexCoord0, TEXCOORD_COMPONENT_COUNT, bgfx::AttribType::Float)
+            .end();
+        s_solidLayout
+            .begin()
+            .add(bgfx::Attrib::Position,  TEXCOORD_COMPONENT_COUNT, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::TexCoord0, TEXCOORD_COMPONENT_COUNT, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
             .end();
 
         gl->fragSize = sizeof(struct GLNVGfragUniforms) + FRAGMENT_UNIFORM_ALIGNMENT -
@@ -788,6 +825,178 @@ namespace
         return path.fillCount >= int(MIN_TRIANGLE_VERTEX_COUNT);
     }
 
+    static bool glnvg__sameBlend(const GLNVGblend& left, const GLNVGblend& right)
+    {
+        return left.srcRGB == right.srcRGB
+            && left.dstRGB == right.dstRGB
+            && left.srcAlpha == right.srcAlpha
+            && left.dstAlpha == right.dstAlpha;
+    }
+
+    static bool glnvg__isByteColor(float value)
+    {
+        const float scaled = value * 255.0f;
+        return value >= 0.0f && value <= 1.0f && std::abs(scaled - std::round(scaled)) < 0.001f;
+    }
+
+    static bool glnvg__isBatchableSolidFill(GLNVGcontext* gl, const GLNVGcall& call)
+    {
+        // Packed vertex colors exactly preserve opaque CSS byte colors. Other paints keep the uniform shader path.
+        if (call.type != GLNVG_CONVEXFILL
+            || call.image != 0
+            || call.image2 != 0
+            || call.pathCount != 1
+            || call.filterStack.HasFilters())
+        {
+            return false;
+        }
+
+        const GLNVGpath& path = gl->paths[call.pathOffset];
+        const uint32_t vertexCount = uint32_t(path.fillCount + (gl->edgeAntiAlias ? path.strokeCount : 0));
+        if (!glnvg__hasFan(path) || vertexCount > MAX_BATCH_VERTEX_COUNT)
+        {
+            return false;
+        }
+
+        const GLNVGfragUniforms* frag = nvg__fragUniformPtr(gl, call.uniformOffset);
+        if (frag->type != static_cast<float>(NSVG_SHADER_FILLGRAD)
+            || frag->clipImage != 0
+            || frag->innerCol.r != frag->outerCol.r
+            || frag->innerCol.g != frag->outerCol.g
+            || frag->innerCol.b != frag->outerCol.b
+            || frag->innerCol.a != 1.0f
+            || frag->outerCol.a != 1.0f
+            || !glnvg__isByteColor(frag->innerCol.r)
+            || !glnvg__isByteColor(frag->innerCol.g)
+            || !glnvg__isByteColor(frag->innerCol.b))
+        {
+            return false;
+        }
+
+        for (float component : frag->scissorMat)
+        {
+            if (component != 0.0f)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    static uint8_t glnvg__colorByte(float value)
+    {
+        return static_cast<uint8_t>(std::round(value * 255.0f));
+    }
+
+    static void glnvg__appendSolidVertex(std::vector<SolidVertex>& vertices, const NVGvertex& vertex, const NVGcolor& color)
+    {
+        vertices.push_back({
+            vertex.x,
+            vertex.y,
+            vertex.u,
+            vertex.v,
+            glnvg__colorByte(color.r),
+            glnvg__colorByte(color.g),
+            glnvg__colorByte(color.b),
+            UINT8_MAX});
+    }
+
+    static void glnvg__appendTriangleStripIndices(std::vector<uint16_t>& indices, uint16_t base, uint32_t count)
+    {
+        for (uint32_t ii = 2; ii < count; ++ii)
+        {
+            if ((ii & 1) == 0)
+            {
+                indices.push_back(uint16_t(base + ii - 2));
+                indices.push_back(uint16_t(base + ii - 1));
+            }
+            else
+            {
+                indices.push_back(uint16_t(base + ii - 1));
+                indices.push_back(uint16_t(base + ii - 2));
+            }
+            indices.push_back(uint16_t(base + ii));
+        }
+    }
+
+    static uint32_t glnvg__renderSolidFillBatch(GLNVGcontext* gl, uint32_t begin, uint32_t numCalls)
+    {
+        const GLNVGblend blend = gl->calls[begin].blendFunc;
+        uint32_t end = begin;
+        while (end < numCalls
+            && glnvg__isBatchableSolidFill(gl, gl->calls[end])
+            && glnvg__sameBlend(blend, gl->calls[end].blendFunc))
+        {
+            ++end;
+        }
+
+        if (gl->canvasViewNeedsRefresh)
+        {
+            gl->frameBuffer->Bind();
+        }
+
+        std::vector<SolidVertex> vertices;
+        std::vector<uint16_t> indices;
+        vertices.reserve(MAX_BATCH_VERTEX_COUNT);
+        indices.reserve(MAX_BATCH_VERTEX_COUNT * TRIANGLE_VERTEX_COUNT);
+        const auto submit = [&] {
+            if (indices.empty())
+            {
+                return;
+            }
+
+            const auto vb = gl->bufferPool->AllocVertices(
+                s_solidLayout, vertices.data(), static_cast<uint32_t>(vertices.size() * sizeof(SolidVertex)));
+            const auto ib = gl->bufferPool->AllocIndices(
+                indices.data(), static_cast<uint32_t>(indices.size() * sizeof(uint16_t)));
+            gl->encoder->setState(gl->state);
+            gl->encoder->setVertexBuffer(0, vb.Handle, vb.StartVertex, static_cast<uint32_t>(vertices.size()));
+            gl->encoder->setIndexBuffer(ib.Handle, ib.StartIndex, static_cast<uint32_t>(indices.size()));
+            gl->frameBuffer->Submit(*gl->encoder, gl->solidProg, BGFX_DISCARD_ALL);
+            vertices.clear();
+            indices.clear();
+        };
+
+        for (uint32_t ii = begin; ii < end; ++ii)
+        {
+            const GLNVGcall& call = gl->calls[ii];
+            const GLNVGpath& path = gl->paths[call.pathOffset];
+            const uint32_t callVertexCount = uint32_t(path.fillCount + (gl->edgeAntiAlias ? path.strokeCount : 0));
+            if (vertices.size() + callVertexCount > MAX_BATCH_VERTEX_COUNT)
+            {
+                submit();
+            }
+
+            const NVGcolor color = nvg__fragUniformPtr(gl, call.uniformOffset)->innerCol;
+            const uint16_t fillBase = static_cast<uint16_t>(vertices.size());
+            for (int jj = 0; jj < path.fillCount; ++jj)
+            {
+                glnvg__appendSolidVertex(vertices, gl->verts[path.fillOffset + jj], color);
+            }
+            for (uint32_t jj = 0, numTris = uint32_t(path.fillCount) - TRIANGLE_FAN_BASE_VERTEX_COUNT; jj < numTris; ++jj)
+            {
+                indices.push_back(fillBase);
+                indices.push_back(uint16_t(fillBase + jj + 1));
+                indices.push_back(uint16_t(fillBase + jj + 2));
+            }
+
+            if (gl->edgeAntiAlias && path.strokeCount >= int(MIN_TRIANGLE_VERTEX_COUNT))
+            {
+                const uint16_t strokeBase = static_cast<uint16_t>(vertices.size());
+                for (int jj = 0; jj < path.strokeCount; ++jj)
+                {
+                    glnvg__appendSolidVertex(vertices, gl->verts[path.strokeOffset + jj], color);
+                }
+                glnvg__appendTriangleStripIndices(indices, strokeBase, uint32_t(path.strokeCount));
+            }
+        }
+
+        submit();
+        gl->canvasViewNeedsRefresh = false;
+        return end;
+    }
+
     static uint32_t glnvg__fanIndexCount(const struct GLNVGpath& path)
     {
         return (uint32_t(path.fillCount) - TRIANGLE_FAN_BASE_VERTEX_COUNT) * TRIANGLE_VERTEX_COUNT;
@@ -805,6 +1014,10 @@ namespace
         {
             const struct GLNVGcall& call = gl->calls[ii];
             if (call.type != GLNVG_FILL && call.type != GLNVG_CONVEXFILL)
+            {
+                continue;
+            }
+            if (bgfx::isValid(gl->solidProg) && glnvg__isBatchableSolidFill(gl, call))
             {
                 continue;
             }
@@ -1222,6 +1435,11 @@ namespace
                 , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_nanovg_fill")
                 , true
             );
+            gl->solidProg = bgfx::createProgram(
+                  bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "vs_nanovg_solid")
+                , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_nanovg_solid")
+                , true
+            );
 
             // Vertex layout
             PosTexCoord0Vertex::init();
@@ -1237,7 +1455,7 @@ namespace
                 gl->vbCount = uint32_t(gl->nverts);
                 glnvg__uploadFanIndices(gl);
 
-                for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
+                for (uint32_t ii = 0, num = gl->ncalls; ii < num;)
                 {
                     struct GLNVGcall* call = &gl->calls[ii];
                     // Canvas clipping is applied after filtering, not to its source.
@@ -1248,6 +1466,12 @@ namespace
                         | BGFX_STATE_WRITE_RGB
                         | BGFX_STATE_WRITE_A
                         ;
+                    if (bgfx::isValid(gl->solidProg) && glnvg__isBatchableSolidFill(gl, *call))
+                    {
+                        ii = glnvg__renderSolidFillBatch(gl, ii, num);
+                        continue;
+                    }
+
                     switch (call->type)
                     {
                     case GLNVG_FILL:
@@ -1266,6 +1490,7 @@ namespace
                         glnvg__triangles(gl, call);
                         break;
                     }
+                    ++ii;
                 }
             }
         }
@@ -1534,6 +1759,10 @@ namespace
         {
             bgfx::destroy(gl->prog);
         }
+        if (bgfx::isValid(gl->solidProg))
+        {
+            bgfx::destroy(gl->solidProg);
+        }
         if (bgfx::isValid(gl->texMissing))
         {
             bgfx::destroy(gl->texMissing);
@@ -1632,6 +1861,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     // memSet leaves handle idx at 0; bgfx treats 0 as a valid first handle, so mark
     // resources invalid until create* runs (prog is also lazy-created on first flush).
     gl->prog = BGFX_INVALID_HANDLE;
+    gl->solidProg = BGFX_INVALID_HANDLE;
     gl->u_scissorMat = BGFX_INVALID_HANDLE;
     gl->u_paintMat = BGFX_INVALID_HANDLE;
     gl->u_innerCol = BGFX_INVALID_HANDLE;
