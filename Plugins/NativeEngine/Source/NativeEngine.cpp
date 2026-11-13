@@ -1132,6 +1132,7 @@ namespace Babylon
                 StaticValue("COMMAND_SETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::SetTexture)),
                 StaticValue("COMMAND_UNSETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::UnsetTexture)),
                 StaticValue("COMMAND_DISCARDALLTEXTURES", Napi::FunctionPointer::Create(env, &NativeEngine::DiscardAllTextures)),
+                StaticValue("COMMAND_DELETETEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::DeleteTexture)),
                 StaticValue("COMMAND_BINDVERTEXARRAY", Napi::FunctionPointer::Create(env, &NativeEngine::BindVertexArray)),
                 StaticValue("COMMAND_SETSTATE", Napi::FunctionPointer::Create(env, &NativeEngine::SetState)),
                 StaticValue("COMMAND_SETZOFFSET", Napi::FunctionPointer::Create(env, &NativeEngine::SetZOffset)),
@@ -1206,7 +1207,7 @@ namespace Babylon
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
                 InstanceMethod("setTextureComparisonFunction", &NativeEngine::SetTextureComparisonFunction),
-                InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
+                InstanceMethod("deleteTexture", &NativeEngine::DeleteTextureImmediate),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
                 InstanceMethod("readTexture2", &NativeEngine::ReadTexture2),
 
@@ -2956,28 +2957,25 @@ void main() {
         }
     }
 
-    void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteTexture(NativeDataStream::Reader& data)
     {
-        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        ReleaseTexture(data.ReadPointer<Graphics::Texture>());
+    }
 
-        // Release the texture even if draining the queued commands throws.
-        const auto releaseTexture = gsl::finally([this, texture] {
-            // Deleting a bound WebGL texture unbinds it.
-            for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
-            {
-                it = it->second.Texture.idx == texture->Handle().idx ? m_boundTextures.erase(it) : std::next(it);
-            }
-            m_deviceContext.RemoveTexture(texture->Handle());
-            texture->Dispose();
-        });
+    void NativeEngine::DeleteTextureImmediate(const Napi::CallbackInfo& info)
+    {
+        ReleaseTexture(info[0].As<Napi::Pointer<Graphics::Texture>>().Get());
+    }
 
-        // deleteTexture is immediate, but commands already queued may still reference the texture
-        // (e.g. an effect layer composes with its main texture, then recreates it in the same frame).
-        // WebGL keeps a deleted texture alive for previously issued draws, so drain them first.
-        if (m_commandStream)
+    void NativeEngine::ReleaseTexture(Graphics::Texture* texture)
+    {
+        // Deleting a bound WebGL texture unbinds it.
+        for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
         {
-            SubmitCommands(info);
+            it = it->second.Texture.idx == texture->Handle().idx ? m_boundTextures.erase(it) : std::next(it);
         }
+        m_deviceContext.RemoveTexture(texture->Handle());
+        texture->Dispose();
     }
 
     Napi::Value NativeEngine::ReadTexture(const Napi::CallbackInfo& info)
