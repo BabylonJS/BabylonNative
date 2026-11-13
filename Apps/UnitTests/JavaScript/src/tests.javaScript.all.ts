@@ -357,13 +357,13 @@ describe("Native splat matrix storage", function () {
   const test = typeof _native.sortSplats === "function" ? it : it.skip;
   for (const numberArray of [false, true]) {
     test(`sorts with ${numberArray ? "number-array" : "Float32Array"} matrices`, function () {
+      const positions = new Float32Array([0, 0, 1, 1, 0, 0, 4, 1, 0, 0, 2, 1]);
       const values = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
       const matrix = { _m: numberArray ? values : new Float32Array(values) };
-      const positions = new Float32Array([0, 0, 1, 1, 0, 0, 4, 1, 0, 0, 2, 1]);
-      for (const rightHanded of [false, true]) {
+      for (const [rightHanded, expected] of [[false, [1, 2, 0]], [true, [0, 2, 1]]] as const) {
         const indices = new Float32Array(3);
         _native.sortSplats(matrix, positions, indices, rightHanded);
-        expect(Array.from(indices)).to.deep.equal(rightHanded ? [0, 2, 1] : [1, 2, 0]);
+        expect(Array.from(indices)).to.deep.equal(expected);
       }
     });
   }

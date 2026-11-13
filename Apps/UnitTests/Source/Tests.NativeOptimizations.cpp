@@ -97,11 +97,9 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                         matrix[6] = -3;
                         matrix[10] = 5;
                         const modelView = { _m: matrix };
-                        for (const rightHanded of [false, true]) {
+                        for (const [rightHanded, expected] of [[false, [2, 3, 0, 1, 4]], [true, [4, 1, 0, 3, 2]]]) {
                             const indices = new Float32Array(5);
                             _native.sortSplats(modelView, positions, indices, rightHanded);
-                            // Distinct depths [2, -3, 5, 4, -7] give an algorithm-independent ordering.
-                            const expected = rightHanded ? [4, 1, 0, 3, 2] : [2, 3, 0, 1, 4];
                             for (let index = 0; index < indices.length; ++index) {
                                 if (indices[index] !== expected[index]) {
                                     throw new Error("Unexpected splat order for typed=" + typed +
@@ -127,6 +125,27 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                             _native.sortSplats(modelView, new Float32Array(0), new Float32Array(0), rightHanded);
                         }
                     }
+                    // Projection must not affect sorting. In this tilted perspective example clip w puts the
+                    // nearer splat first, while view-space z correctly puts the farther splat first.
+                    const tiltedPositions = new Float32Array([0, -0.1, 5, 1, 0, 0.1, 4.99, 1]);
+                    const fartherClipW = tiltedPositions[2] + 0.1 * tiltedPositions[1];
+                    const nearerClipW = tiltedPositions[6] + 0.1 * tiltedPositions[5];
+                    if (!(fartherClipW < nearerClipW)) {
+                        throw new Error("Tilted projection must reverse clip-w and view-depth order");
+                    }
+                    const identityView = { _m: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] };
+                    const tiltedIndices = new Float32Array(2);
+                    _native.sortSplats(identityView, tiltedPositions, tiltedIndices, false);
+                    if (tiltedIndices[0] !== 0 || tiltedIndices[1] !== 1) {
+                        throw new Error("Tilted perspective must sort by view-space depth");
+                    }
+                    // A right-handed orthographic camera with reversed depth still sorts by view-space distance.
+                    const rightHandedPositions = new Float32Array([0, 0, -5, 1, 0, 0, -4, 1]);
+                    const reverseDepthIndices = new Float32Array(2);
+                    _native.sortSplats(identityView, rightHandedPositions, reverseDepthIndices, true);
+                    if (reverseDepthIndices[0] !== 0 || reverseDepthIndices[1] !== 1) {
+                        throw new Error("Right-handed reverse-depth orthographic must sort back to front");
+                    }
                     function expectMatrixError(matrix, message) {
                         let error;
                         try {
@@ -145,12 +164,13 @@ TEST(NativeOptimizations, SplatSortingAcceptsTypedAndNumberArrayMatrices)
                         expectMatrixError(matrix, "sortSplats requires modelView._m to be a Float32Array or Array.");
                     }
                     for (const component of [2, 6, 10]) {
+                        const componentMessage = "sortSplats requires modelView._m[" + component + "] to be a number.";
                         const matrix = new Array(16).fill(0);
                         delete matrix[component];
-                        expectMatrixError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+                        expectMatrixError(matrix, componentMessage);
                         for (const value of [undefined, null, "2", false, {}]) {
                             matrix[component] = value;
-                            expectMatrixError(matrix, "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+                            expectMatrixError(matrix, componentMessage);
                         }
                     }
                 })();

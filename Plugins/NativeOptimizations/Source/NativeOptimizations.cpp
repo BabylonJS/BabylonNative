@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <optional>
+#include <string>
 
 namespace
 {
@@ -332,31 +333,24 @@ namespace
 
         auto indices{ info[2].As<Napi::Float32Array>() };
 
-        auto rightHand{ info[3].As<Napi::Boolean>() };
-
-
-        float depthFactor = -1.f;
-        if (rightHand) {
-            depthFactor = 1.f;
-        }
-
         const auto indexCount = indices.ElementLength();
         // The index buffer may be padded (e.g. to a multiple of 16) past the
         // splat count, so only sort splats that have a position.
         const auto splatCount = std::min(indexCount, positions.ElementLength() / 4);
         // High-precision Babylon matrices use ordinary number arrays.
-        const auto m2{m.Get(2u)};
-        const auto m6{m.Get(6u)};
-        const auto m10{m.Get(10u)};
-        if (!m2.IsNumber() || !m6.IsNumber() || !m10.IsNumber())
+        float depthColumn[3];
+        const uint32_t elements[3]{ 2u, 6u, 10u };
+        for (size_t i = 0; i < 3; ++i)
         {
-            throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
+            const auto value{ m.Get(elements[i]) };
+            if (!value.IsNumber())
+            {
+                throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m[" + std::to_string(elements[i]) + "] to be a number.");
+            }
+            depthColumn[i] = value.As<Napi::Number>().FloatValue();
         }
-        float vp[3] = {
-            m2.As<Napi::Number>().FloatValue(),
-            m6.As<Napi::Number>().FloatValue(),
-            m10.As<Napi::Number>().FloatValue()
-        };
+
+        const float depthFactor = info[3].As<Napi::Boolean>() ? 1.f : -1.f;
         static std::vector<float> depthMix;
 
         depthMix.resize(splatCount * 2);
@@ -364,7 +358,8 @@ namespace
         for (size_t i = 0; i < splatCount; i++)
         {
             depthMix[i * 2 + 0] = float(i);
-            depthMix[i * 2 + 1] = 10000.f + (vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]) * depthFactor;
+            depthMix[i * 2 + 1] =
+                (depthColumn[0] * positions[4 * i + 0] + depthColumn[1] * positions[4 * i + 1] + depthColumn[2] * positions[4 * i + 2]) * depthFactor;
         }
 
         qsort(depthMix.data(), splatCount, 2 * sizeof(float), sortSplatQSort);
