@@ -2,10 +2,12 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/Texture.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/ExternalTexture.h>
+#include <napi/pointer.h>
 
 #include "Helpers.h"
 
@@ -72,6 +74,40 @@ TEST(ExternalTexture, CreateForJavaScript)
     device.FinishRenderingCurrentFrame();
 #endif
 }
+
+#if defined(BABYLON_NATIVE_GRAPHICS_API_D3D11)
+TEST(ExternalTexture, PreservesNativeFormatForBlits)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+
+    device.StartRenderingCurrentFrame();
+
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB};
+    Helpers::DestroyTexture(nativeTexture);
+
+    std::promise<void> done{};
+
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&device, &done, externalTexture](Napi::Env env) {
+        device.AddToJavaScript(env);
+
+        auto jsTexture = externalTexture.CreateForJavaScript(env);
+        auto* texture = jsTexture.As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+
+        EXPECT_EQ(texture->Format(), bgfx::TextureFormat::RGBA8);
+        EXPECT_NE(texture->Flags() & BGFX_TEXTURE_SRGB, 0u);
+        EXPECT_EQ(texture->BlitFormat(), bgfx::TextureFormat::RGBA8);
+        EXPECT_EQ(texture->BlitFlags() & BGFX_TEXTURE_SRGB, 0u);
+
+        done.set_value();
+    });
+
+    done.get_future().wait();
+
+    device.FinishRenderingCurrentFrame();
+}
+#endif
 
 TEST(ExternalTexture, Update)
 {

@@ -23,7 +23,17 @@ namespace Babylon::Graphics
         void GenerateMipMaps();
 
         // nativeTextureOwner retains a borrowed native resource through disposal and its destruction frame.
-        void Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle = 0, std::shared_ptr<void> nativeTextureOwner = {});
+        void Create2D(
+            uint16_t width,
+            uint16_t height,
+            bool hasMips,
+            uint16_t numLayers,
+            bgfx::TextureFormat::Enum format,
+            uint64_t flags,
+            uintptr_t nativeTextureHandle = 0,
+            std::shared_ptr<void> nativeTextureOwner = {},
+            bgfx::TextureFormat::Enum blitFormat = bgfx::TextureFormat::Unknown,
+            uint64_t blitFlags = BGFX_TEXTURE_NONE);
         void Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch = UINT16_MAX);
 
         void Create3D(uint16_t width, uint16_t height, uint16_t depth, bool hasMips, bgfx::TextureFormat::Enum format, uint64_t flags);
@@ -46,6 +56,8 @@ namespace Babylon::Graphics
         uint16_t Depth() const;
         bgfx::TextureFormat::Enum Format() const;
         uint64_t Flags() const;
+        bgfx::TextureFormat::Enum BlitFormat() const;
+        uint64_t BlitFlags() const;
         uint32_t SamplerFlags() const;
         void SamplerFlags(uint32_t);
         uint8_t SamplerMaxLod() const;
@@ -95,6 +107,8 @@ namespace Babylon::Graphics
         uint16_t m_depth{0};
         bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Enum::Unknown};
         uint64_t m_flags{BGFX_TEXTURE_NONE};
+        bgfx::TextureFormat::Enum m_blitFormat{bgfx::TextureFormat::Enum::Unknown};
+        uint64_t m_blitFlags{BGFX_TEXTURE_NONE};
         uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
         uint8_t m_samplerMaxLod{UINT8_MAX};
         uint16_t m_viewFirstLayer{0};

@@ -222,9 +222,21 @@ namespace Babylon::Graphics
         m_numLayers = numLayers;
         m_format = format;
         m_flags = flags;
+        m_blitFormat = format;
+        m_blitFlags = flags;
     }
 
-    void Texture::Create2D(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags, uintptr_t nativeTextureHandle, std::shared_ptr<void> nativeTextureOwner)
+    void Texture::Create2D(
+        uint16_t width,
+        uint16_t height,
+        bool hasMips,
+        uint16_t numLayers,
+        bgfx::TextureFormat::Enum format,
+        uint64_t flags,
+        uintptr_t nativeTextureHandle,
+        std::shared_ptr<void> nativeTextureOwner,
+        bgfx::TextureFormat::Enum blitFormat,
+        uint64_t blitFlags)
     {
         Dispose();
 
@@ -240,6 +252,8 @@ namespace Babylon::Graphics
         m_ownsHandle = true;
         m_nativeTextureOwner = std::move(nativeTextureOwner);
         SetMetadata(width, height, 0, hasMips, false, false, numLayers, format, flags);
+        m_blitFormat = blitFormat == bgfx::TextureFormat::Unknown ? format : blitFormat;
+        m_blitFlags = blitFormat == bgfx::TextureFormat::Unknown ? flags : blitFlags;
 
         // Make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
         if (nativeTextureHandle == 0 && (flags & BGFX_TEXTURE_RT_MASK) != 0)
@@ -386,6 +400,16 @@ namespace Babylon::Graphics
     uint64_t Texture::Flags() const
     {
         return m_flags;
+    }
+
+    bgfx::TextureFormat::Enum Texture::BlitFormat() const
+    {
+        return m_blitFormat;
+    }
+
+    uint64_t Texture::BlitFlags() const
+    {
+        return m_blitFlags;
     }
 
     uint32_t Texture::SamplerFlags() const
