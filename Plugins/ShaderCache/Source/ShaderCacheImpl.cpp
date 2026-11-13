@@ -72,7 +72,8 @@ namespace Babylon::Plugins::ShaderCache
     //     globals on D3D/Metal; version-13 D3D12 entries fail PSO creation from the signature mismatch.
     // 15: Vulkan and OpenGL ES output drops RelaxedPrecision, and OpenGL ES defaults to highp, so
     //     version-14 entries would keep the old fp16 precision.
-    static const uint32_t CACHE_VERSION = 15;
+    // 16: Metal vertex shaders mark the position output invariant.
+    static const uint32_t CACHE_VERSION = 16;
 
     void ShaderCacheImpl::Clear()
     {
