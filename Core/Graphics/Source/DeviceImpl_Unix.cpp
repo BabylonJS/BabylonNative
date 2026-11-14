@@ -12,12 +12,14 @@ namespace Babylon::Graphics
 {
     void DeviceImpl::ConfigureBgfxSwapChain(bgfx::SwapChain& swapChain, WindowT window)
     {
-        if (s_bgfxRenderType == bgfx::RendererType::Vulkan && window != WindowT{} && !m_nativeDisplay)
+        // Give bgfx the X display the window belongs to. With a null display, bgfx's EGL context
+        // falls back to EGL_DEFAULT_DISPLAY, which NVIDIA's EGL does not support on X11.
+        if (window != WindowT{} && !m_nativeDisplay)
         {
             auto* display = XOpenDisplay(nullptr);
             if (display == nullptr)
             {
-                throw std::runtime_error{"Failed to open X11 display for Vulkan."};
+                throw std::runtime_error{"Failed to open X11 display."};
             }
             m_nativeDisplay = {display, [](void* value) {
                 XCloseDisplay(static_cast<Display*>(value));
