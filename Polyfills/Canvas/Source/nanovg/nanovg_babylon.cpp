@@ -39,6 +39,7 @@
 #include <bx/bx.h>
 #include <bx/allocator.h>
 #include <bx/math.h>
+#include <gsl/util>
 
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/DynamicBufferPool.h>
@@ -1424,6 +1425,12 @@ namespace
     static void nvgRenderFlush(void* _userPtr)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
+        const auto reset = gsl::finally([gl] {
+            gl->nverts    = 0;
+            gl->npaths    = 0;
+            gl->ncalls    = 0;
+            gl->nuniforms = 0;
+        });
         // The canvas framebuffer is bound with a fresh view by Context::Flush before this
         // flush runs, so the first draw call can reuse that view without re-binding.
         gl->canvasViewNeedsRefresh = false;
@@ -1494,12 +1501,6 @@ namespace
                 }
             }
         }
-
-        // Reset calls
-        gl->nverts    = 0;
-        gl->npaths    = 0;
-        gl->ncalls    = 0;
-        gl->nuniforms = 0;
     }
 
     static int glnvg__maxVertCount(const struct NVGpath* paths, int npaths)
