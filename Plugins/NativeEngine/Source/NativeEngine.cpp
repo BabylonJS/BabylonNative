@@ -915,6 +915,24 @@ namespace Babylon
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, MaxTextureSize())),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
                 StaticValue("CAPS_ORIGIN_BOTTOM_LEFT", Napi::Boolean::From(env, bgfx::getCaps()->originBottomLeft)),
+                // Renderers known to clear integer color attachments with integer values and never blend them.
+                // D3D11/D3D12 are excluded: bgfx keeps blending enabled on integer render targets there, which
+                // D3D11 treats as invalid (the draw is dropped) and D3D12 rejects at pipeline state creation.
+                StaticValue("CAPS_INTEGER_COLOR_ATTACHMENTS", Napi::Boolean::From(env, [] {
+                    switch (bgfx::getRendererType())
+                    {
+                        case bgfx::RendererType::Vulkan:
+                            // bgfx disables blending only on the integer attachments, so the attachment blend
+                            // states differ, which Vulkan allows only with the independentBlend feature.
+                            return 0 != (bgfx::getCaps()->supported & BGFX_CAPS_BLEND_INDEPENDENT);
+                        case bgfx::RendererType::Metal:
+                        case bgfx::RendererType::OpenGL:
+                        case bgfx::RendererType::OpenGLES:
+                            return true;
+                        default:
+                            return false;
+                    }
+                }())),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),

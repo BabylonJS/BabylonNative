@@ -65,6 +65,7 @@ set(SOURCES
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
     "Source/Tests.NativeEngine.ImageFormats.cpp"
+    "Source/Tests.NativeEngine.IntegerClear.cpp"
     "Source/Tests.NativeEngine.StorageBuffer.cpp"
     "Source/Tests.NativeEngine.Compute.cpp"
     "Source/Tests.NativeEngine.Mipmaps.cpp"
