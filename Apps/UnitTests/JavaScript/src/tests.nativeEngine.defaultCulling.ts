@@ -19,10 +19,9 @@ export function registerDefaultCullingTests(
 ): void {
     describe("NativeEngine default culling", function () {
         this.timeout(10000);
-        (enabled ? it : it.skip)("culls one winding before any culling state is set", async function () {
+        (enabled ? it : it.skip)("starts with WebGL's culling and front-face defaults", async function () {
             const engine = new NativeEngine();
             engine.setState = () => {};
-            engine.setStateCullFaceType = () => {};
 
             const scene = new Scene(engine);
             try {
@@ -38,7 +37,11 @@ export function registerDefaultCullingTests(
                         void main() { gl_Position = vec4(position, 1.0); }`,
                     fragmentSource: `
                         precision highp float;
-                        void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }`,
+                        void main() {
+                            gl_FragColor = gl_FrontFacing
+                                ? vec4(0.0, 1.0, 0.0, 1.0)
+                                : vec4(1.0, 0.0, 0.0, 1.0);
+                        }`,
                 }, { attributes: ["position"], uniforms: [] });
 
                 const mesh = new Mesh("oppositeWindings", scene);
@@ -55,19 +58,29 @@ export function registerDefaultCullingTests(
 
                 await material.forceCompilationAsync(mesh);
                 await scene.whenReadyAsync();
-                target.render();
-                const pixels = await target.readPixels();
-                if (!(pixels instanceof Uint8Array)) {
-                    throw new Error("Expected RGBA8 default-culling readback");
-                }
 
-                const sample = (x: number): number[] => {
-                    const offset = (32 * 64 + x) * 4;
-                    return Array.from(pixels.subarray(offset, offset + 4));
+                const renderAndSample = async (): Promise<number[][]> => {
+                    target.render();
+                    const pixels = await target.readPixels();
+                    if (!(pixels instanceof Uint8Array)) {
+                        throw new Error("Expected RGBA8 default-culling readback");
+                    }
+
+                    const sample = (x: number): number[] => {
+                        const offset = (32 * 64 + x) * 4;
+                        return Array.from(pixels.subarray(offset, offset + 4));
+                    };
+                    return [sample(16), sample(48)];
                 };
-                const samples = [sample(16), sample(48)];
-                expect(samples.filter(pixel => pixel[0] === 255), "rendered winding").to.have.length(1);
-                expect(samples.filter(pixel => pixel[0] === 0), "culled winding").to.have.length(1);
+
+                const before = await renderAndSample();
+                expect(before[0], "CCW before cull-face selection").to.deep.equal([0, 255, 0, 255]);
+                expect(before[1], "CW before cull-face selection").to.deep.equal([255, 0, 0, 255]);
+
+                engine.setStateCullFaceType(false, true);
+                const after = await renderAndSample();
+                expect(after[0], "CCW after selecting front-face culling").to.deep.equal([0, 0, 0, 255]);
+                expect(after[1], "CW after selecting front-face culling").to.deep.equal([255, 0, 0, 255]);
             } finally {
                 scene.dispose();
                 engine.dispose();
