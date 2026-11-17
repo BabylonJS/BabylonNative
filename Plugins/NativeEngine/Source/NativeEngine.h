@@ -125,7 +125,7 @@ namespace Babylon
         void UnsetTexture(NativeDataStream::Reader& data);
         void DiscardAllTextures(NativeDataStream::Reader& data);
         void DeleteTexture(NativeDataStream::Reader& data);
-        void DeleteTextureImmediate(const Napi::CallbackInfo& info);
+        void DeleteTextureOld(const Napi::CallbackInfo& info);
         void ReleaseTexture(Graphics::Texture* texture);
         Napi::Value ReadTexture(const Napi::CallbackInfo& info);
         Napi::Value ReadTexture2(const Napi::CallbackInfo& info);

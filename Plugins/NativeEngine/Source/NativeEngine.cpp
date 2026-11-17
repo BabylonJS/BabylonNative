@@ -1225,7 +1225,7 @@ namespace Babylon
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
                 InstanceMethod("setTextureComparisonFunction", &NativeEngine::SetTextureComparisonFunction),
-                InstanceMethod("deleteTexture", &NativeEngine::DeleteTextureImmediate),
+                InstanceMethod("deleteTexture", &NativeEngine::DeleteTextureOld),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
                 InstanceMethod("readTexture2", &NativeEngine::ReadTexture2),
 
@@ -2982,7 +2982,7 @@ void main() {
         ReleaseTexture(data.ReadPointer<Graphics::Texture>());
     }
 
-    void NativeEngine::DeleteTextureImmediate(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteTextureOld(const Napi::CallbackInfo& info)
     {
         ReleaseTexture(info[0].As<Napi::Pointer<Graphics::Texture>>().Get());
     }
