@@ -1150,6 +1150,7 @@ namespace Babylon
                 StaticValue("COMMAND_SETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::SetTexture)),
                 StaticValue("COMMAND_UNSETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::UnsetTexture)),
                 StaticValue("COMMAND_DISCARDALLTEXTURES", Napi::FunctionPointer::Create(env, &NativeEngine::DiscardAllTextures)),
+                StaticValue("COMMAND_DELETETEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::DeleteTexture)),
                 StaticValue("COMMAND_BINDVERTEXARRAY", Napi::FunctionPointer::Create(env, &NativeEngine::BindVertexArray)),
                 StaticValue("COMMAND_SETSTATE", Napi::FunctionPointer::Create(env, &NativeEngine::SetState)),
                 StaticValue("COMMAND_SETZOFFSET", Napi::FunctionPointer::Create(env, &NativeEngine::SetZOffset)),
@@ -1224,7 +1225,7 @@ namespace Babylon
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
                 InstanceMethod("setTextureComparisonFunction", &NativeEngine::SetTextureComparisonFunction),
-                InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
+                InstanceMethod("deleteTexture", &NativeEngine::DeleteTextureOld),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
                 InstanceMethod("readTexture2", &NativeEngine::ReadTexture2),
 
@@ -2976,9 +2977,18 @@ void main() {
         }
     }
 
-    void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteTexture(NativeDataStream::Reader& data)
     {
-        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        ReleaseTexture(data.ReadPointer<Graphics::Texture>());
+    }
+
+    void NativeEngine::DeleteTextureOld(const Napi::CallbackInfo& info)
+    {
+        ReleaseTexture(info[0].As<Napi::Pointer<Graphics::Texture>>().Get());
+    }
+
+    void NativeEngine::ReleaseTexture(Graphics::Texture* texture)
+    {
         // Deleting a bound WebGL texture unbinds it.
         for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
         {
