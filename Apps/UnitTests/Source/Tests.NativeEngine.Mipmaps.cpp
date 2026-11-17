@@ -52,6 +52,54 @@ TEST(NativeEngineMipmaps, SRGBAndLinearMipChains)
     }
 }
 
+TEST(NativeEngineMipmaps, NonSquareMipChains)
+{
+    bx::DefaultAllocator allocator;
+    for (const auto [width, height] : {std::array<uint16_t, 2>{4, 1}, std::array<uint16_t, 2>{1, 4}})
+    {
+        std::array<uint8_t, 4 * 4> pixels{};
+        for (size_t pixel = 0; pixel < 4; ++pixel)
+        {
+            for (size_t channel = 0; channel < 4; ++channel)
+            {
+                pixels[pixel * 4 + channel] = pixel % 2 == 0 ? 0 : 255;
+            }
+        }
+        Image source{bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, width, height, 0, 1, false, false, pixels.data()), bimg::imageFree};
+        ASSERT_NE(source, nullptr);
+        Image output{bimg::imageGenerateMips(&allocator, *source, false), bimg::imageFree};
+        ASSERT_NE(output, nullptr);
+        ASSERT_EQ(output->m_numMips, 3);
+        for (uint8_t level = 1; level < output->m_numMips; ++level)
+        {
+            bimg::ImageMip mip{};
+            ASSERT_TRUE(bimg::imageGetRawData(*output, 0, level, output->m_data, output->m_size, mip));
+            for (uint32_t i = 0; i < mip.m_size; ++i)
+            {
+                EXPECT_EQ(mip.m_data[i], 128) << width << "x" << height << ", level " << int(level) << ", byte " << i;
+            }
+        }
+    }
+
+    std::array<float, 4 * 4> floats{};
+    floats.fill(0.25f);
+    Image source{bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA32F, 4, 1, 0, 1, false, false, floats.data()), bimg::imageFree};
+    ASSERT_NE(source, nullptr);
+    Image output{bimg::imageGenerateMips(&allocator, *source), bimg::imageFree};
+    ASSERT_NE(output, nullptr);
+    ASSERT_EQ(output->m_numMips, 3);
+    for (uint8_t level = 1; level < output->m_numMips; ++level)
+    {
+        bimg::ImageMip mip{};
+        ASSERT_TRUE(bimg::imageGetRawData(*output, 0, level, output->m_data, output->m_size, mip));
+        const auto* values = reinterpret_cast<const float*>(mip.m_data);
+        for (uint32_t i = 0; i < mip.m_size / sizeof(float); ++i)
+        {
+            EXPECT_NEAR(values[i], 0.25f, 1e-5f) << "RGBA32F level " << int(level) << ", float " << i;
+        }
+    }
+}
+
 TEST(NativeEngineMipmaps, ByteRangeAndTransferFunction)
 {
     for (bool srgb : {false, true})

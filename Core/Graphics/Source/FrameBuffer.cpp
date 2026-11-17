@@ -92,7 +92,59 @@ namespace Babylon::Graphics
             }
         }
 
+        m_generatedDepthStencil.reset();
         m_disposed = true;
+    }
+
+    void FrameBuffer::SetGeneratedDepthStencil(std::shared_ptr<GeneratedDepthStencil> depthStencil)
+    {
+        m_generatedDepthStencil = std::move(depthStencil);
+    }
+
+    DepthStencilTexture FrameBuffer::ReleaseDepthStencil()
+    {
+        if (m_disposed || !m_generatedDepthStencil)
+        {
+            return {};
+        }
+
+        return m_generatedDepthStencil->Release();
+    }
+
+    GeneratedDepthStencil::GeneratedDepthStencil(DeviceContext& deviceContext, bgfx::TextureHandle handle, uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers)
+        : m_deviceContext{deviceContext}
+        , m_deviceID{deviceContext.GetDeviceId()}
+        , m_texture{handle, format, flags, numLayers}
+        , m_width{width}
+        , m_height{height}
+    {
+    }
+
+    GeneratedDepthStencil::~GeneratedDepthStencil()
+    {
+        // Framebuffers hold their own bgfx references, so destroying this one never frees a texture still attached.
+        if (!m_released && m_deviceID == m_deviceContext.GetDeviceId() && bgfx::isValid(m_texture.Handle))
+        {
+            bgfx::destroy(m_texture.Handle);
+        }
+    }
+
+    bool GeneratedDepthStencil::Matches(uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers) const
+    {
+        // A released texture is destroyed by its new owner, possibly while framebuffers still reference it.
+        return !m_released && m_deviceID == m_deviceContext.GetDeviceId() && m_width == width && m_height == height &&
+               m_texture.Format == format && m_texture.Flags == flags && m_texture.NumLayers == numLayers;
+    }
+
+    DepthStencilTexture GeneratedDepthStencil::Release()
+    {
+        if (m_released || m_deviceID != m_deviceContext.GetDeviceId() || !bgfx::isValid(m_texture.Handle))
+        {
+            return {};
+        }
+
+        m_released = true;
+        return m_texture;
     }
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
@@ -150,6 +202,14 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask, bool ignoreScissor)
     {
+        // An enabled scissor that covers nothing (see GetBgfxScissor) clears nothing. bgfx would
+        // raise its zero-size view rect to 1x1, outside the target, so skip the clear instead.
+        if (!ignoreScissor && (m_desiredScissor.Width == 0.0f || m_desiredScissor.Height == 0.0f) &&
+            !(m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f))
+        {
+            return;
+        }
+
         const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
         const std::array<float, 4> color{r, g, b, a};
         const auto packedColor = maskColorAttachments ? std::nullopt : PackClearColor(color);
@@ -232,6 +292,11 @@ namespace Babylon::Graphics
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
     }
 
+    void FrameBuffer::InheritScissor(float x, float y, float width, float height)
+    {
+        m_desiredScissor = GetBgfxScissor(x, y, width, height);
+    }
+
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
         SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
@@ -305,6 +370,13 @@ namespace Babylon::Graphics
         if (Height() < y + height)
         {
             height = Height() - y;
+        }
+
+        // Covers nothing. Use an empty rect at the far corner: an all-zero rect would disable
+        // the scissor, and a negative size would wrap to the full target when cast to uint16_t.
+        if (width <= 0.0f || height <= 0.0f)
+        {
+            return Rect{static_cast<float>(Width()), static_cast<float>(Height()), 0.0f, 0.0f};
         }
 
         y = (Height() - y) - height;

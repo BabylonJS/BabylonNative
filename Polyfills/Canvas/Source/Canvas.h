@@ -3,6 +3,7 @@
 #include <Babylon/Polyfills/Canvas.h>
 
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/DynamicBufferPool.h>
 #include <Babylon/Graphics/FrameBuffer.h>
 #include <Babylon/Graphics/Texture.h>
 
@@ -106,6 +107,9 @@ namespace Babylon::Polyfills::Internal
             return m_graphicsContext;
         }
 
+        // Per-frame vertex and index data for this canvas' draws.
+        Graphics::DynamicBufferPool& GetBufferPool();
+
     private:
         enum class ConvertedTextureKind : size_t
         {
@@ -140,6 +144,7 @@ namespace Babylon::Polyfills::Internal
         Graphics::DeviceContext& m_graphicsContext;
 
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
+        std::unique_ptr<Graphics::DynamicBufferPool> m_bufferPool{};
         std::unique_ptr<Graphics::Texture> m_texture{};
         struct ConvertedTexture
         {

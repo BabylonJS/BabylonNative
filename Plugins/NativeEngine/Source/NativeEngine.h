@@ -11,6 +11,7 @@
 
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/BgfxCallback.h>
+#include <Babylon/Graphics/DynamicBufferPool.h>
 #include <Babylon/Graphics/FrameBuffer.h>
 
 #include <napi/napi.h>
@@ -123,11 +124,14 @@ namespace Babylon
         void SetTexture(NativeDataStream::Reader& data);
         void UnsetTexture(NativeDataStream::Reader& data);
         void DiscardAllTextures(NativeDataStream::Reader& data);
-        void DeleteTexture(const Napi::CallbackInfo& info);
+        void DeleteTexture(NativeDataStream::Reader& data);
+        void DeleteTextureOld(const Napi::CallbackInfo& info);
+        void ReleaseTexture(Graphics::Texture* texture);
         Napi::Value ReadTexture(const Napi::CallbackInfo& info);
         Napi::Value ReadTexture2(const Napi::CallbackInfo& info);
         Napi::Value ReadTextureImpl(const Napi::CallbackInfo& info, bool preserveFloat);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
+        Napi::Value ShareFrameBufferDepthStencil(const Napi::CallbackInfo& info);
         Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBufferImpl(Napi::Env env, gsl::span<Graphics::Texture* const> colorTextures, uint16_t width, uint16_t height, bool generateStencilBuffer, bool generateDepth, uint32_t samples, uint16_t layer = 0, uint16_t mip = 0, gsl::span<const uint16_t> perAttachmentLayers = {}, Graphics::Texture* explicitDepthTexture = nullptr, uint8_t autoGenerateMipMask = UINT8_MAX, Graphics::Texture* depthStencilTexture = nullptr);
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
@@ -175,6 +179,7 @@ namespace Babylon
 
         bgfx::Encoder* GetEncoder();
         Graphics::FrameBuffer& GetBoundFrameBuffer();
+        void BindWithScissor(Graphics::FrameBuffer& frameBuffer);
         void ResetDefaultFrameBuffer();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
@@ -251,12 +256,22 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         VertexArray* m_boundVertexArray{};
+        Graphics::DynamicBufferPool m_instanceDataBufferPool;
         std::unique_ptr<InstanceRepacker> m_instanceRepacker{};
         // Copies a storage buffer into an R32F image for readTransformFeedbackBuffer; created on first use.
         std::shared_ptr<Program> m_bufferReadbackProgram{};
         std::unique_ptr<StorageBufferCopier> m_storageBufferCopier{};
         Graphics::FrameBuffer m_defaultFrameBuffer;
         Graphics::FrameBuffer* m_boundFrameBuffer{};
+        // Last scissor set by JS, in WebGL's bottom-left origin. All zero means disabled, matching COMMAND_SETSCISSOR.
+        struct ScissorRect
+        {
+            float X{};
+            float Y{};
+            float Width{};
+            float Height{};
+        };
+        ScissorRect m_scissor{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
 
         // WebGL resets the drawing buffer's depth and stencil at the start of every frame.

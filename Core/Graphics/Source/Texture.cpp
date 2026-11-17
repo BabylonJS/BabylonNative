@@ -156,6 +156,8 @@ namespace Babylon::Graphics
                 .then(m_deviceContext.AfterRenderScheduler(), arcana::cancellation::none(),
                     [owner = std::move(m_nativeTextureOwner)] { (void)owner; });
         }
+
+        m_layerDepthStencils.clear();
     }
 
     bool Texture::IsValid() const
@@ -426,5 +428,24 @@ namespace Babylon::Graphics
     void Texture::ViewNumLayers(uint16_t value)
     {
         m_viewNumLayers = value;
+    }
+
+    std::shared_ptr<GeneratedDepthStencil> Texture::FindLayerDepthStencil(uint16_t width, uint16_t height, bgfx::TextureFormat::Enum format, uint64_t flags, uint16_t numLayers)
+    {
+        m_layerDepthStencils.erase(std::remove_if(m_layerDepthStencils.begin(), m_layerDepthStencils.end(), [](const auto& entry) { return entry.expired(); }), m_layerDepthStencils.end());
+        for (const auto& entry : m_layerDepthStencils)
+        {
+            auto depthStencil = entry.lock();
+            if (depthStencil && depthStencil->Matches(width, height, format, flags, numLayers))
+            {
+                return depthStencil;
+            }
+        }
+        return {};
+    }
+
+    void Texture::AddLayerDepthStencil(const std::shared_ptr<GeneratedDepthStencil>& depthStencil)
+    {
+        m_layerDepthStencils.push_back(depthStencil);
     }
 }

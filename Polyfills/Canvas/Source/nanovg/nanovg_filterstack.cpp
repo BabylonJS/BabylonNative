@@ -5,6 +5,7 @@
 
 #include <bgfx/bgfx.h>
 #include <bgfx/embedded_shader.h>
+#include <gsl/util>
 
 const std::regex blurRegex(R"(blur\((\d*\.?\d+)(px|rem)?\)|blur\(\))");
 const std::regex noneRegex(R"(^\s*none\s*$)");
@@ -200,6 +201,16 @@ void nanovg_filterstack::Render(
 
     Babylon::Graphics::FrameBuffer* prevBuf = acquire();
     Babylon::Graphics::FrameBuffer* nextBuf = nullptr;
+    const auto releaseBuffers = gsl::finally([&] {
+        if (prevBuf != nullptr)
+        {
+            release(prevBuf);
+        }
+        if (nextBuf != nullptr)
+        {
+            release(nextBuf);
+        }
+    });
     bgfx::ProgramHandle lastProg = firstProg;
     firstPass(firstProg, prevBuf);
 
@@ -280,5 +291,4 @@ void nanovg_filterstack::Render(
     assert(prevBuf != nullptr);
     assert(nextBuf == nullptr);
     finalPass(lastProg, prevBuf, finalFrameBuffer);
-    release(prevBuf);
 }

@@ -29,6 +29,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -373,6 +374,38 @@ TEST(CanvasReadback, GaussianBlurPadsUniformUploads)
             [frameBuffer] { return frameBuffer; },
             [](Babylon::Graphics::FrameBuffer*) {});
         EXPECT_EQ(uploads, 2u);
+    });
+}
+
+TEST(CanvasReadback, BlurReleasesIntermediateBuffersOnFailure)
+{
+    RunCanvasTest([](Napi::Env env) {
+        const auto constructor = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>();
+        auto canvas = constructor.New({});
+        canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")});
+        auto* nativeCanvas = Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas);
+        nativeCanvas->UpdateRenderTarget();
+        auto* frameBuffer = &nativeCanvas->GetFrameBuffer();
+        nanovg_filterstack filters;
+        filters.ParseString("blur(1px)");
+        size_t acquired{};
+        size_t released{};
+        EXPECT_THROW(filters.Render(BGFX_INVALID_HANDLE,
+            [](bgfx::UniformHandle, const void*, uint16_t) {},
+            [](bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*) {},
+            [](bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*) {
+                throw std::runtime_error{"allocation failure"};
+            },
+            [](bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*) {},
+            frameBuffer,
+            [&] {
+                ++acquired;
+                return frameBuffer;
+            },
+            [&](Babylon::Graphics::FrameBuffer*) { ++released; }),
+            std::runtime_error);
+        EXPECT_EQ(acquired, 2u);
+        EXPECT_EQ(released, acquired);
     });
 }
 

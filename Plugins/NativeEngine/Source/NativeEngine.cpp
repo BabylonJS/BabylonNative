@@ -915,6 +915,24 @@ namespace Babylon
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, MaxTextureSize())),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
                 StaticValue("CAPS_ORIGIN_BOTTOM_LEFT", Napi::Boolean::From(env, bgfx::getCaps()->originBottomLeft)),
+                // Renderers known to clear integer color attachments with integer values and never blend them.
+                // D3D11/D3D12 are excluded: bgfx keeps blending enabled on integer render targets there, which
+                // D3D11 treats as invalid (the draw is dropped) and D3D12 rejects at pipeline state creation.
+                StaticValue("CAPS_INTEGER_COLOR_ATTACHMENTS", Napi::Boolean::From(env, [] {
+                    switch (bgfx::getRendererType())
+                    {
+                        case bgfx::RendererType::Vulkan:
+                            // bgfx disables blending only on the integer attachments, so the attachment blend
+                            // states differ, which Vulkan allows only with the independentBlend feature.
+                            return 0 != (bgfx::getCaps()->supported & BGFX_CAPS_BLEND_INDEPENDENT);
+                        case bgfx::RendererType::Metal:
+                        case bgfx::RendererType::OpenGL:
+                        case bgfx::RendererType::OpenGLES:
+                            return true;
+                        default:
+                            return false;
+                    }
+                }())),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -1132,6 +1150,7 @@ namespace Babylon
                 StaticValue("COMMAND_SETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::SetTexture)),
                 StaticValue("COMMAND_UNSETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::UnsetTexture)),
                 StaticValue("COMMAND_DISCARDALLTEXTURES", Napi::FunctionPointer::Create(env, &NativeEngine::DiscardAllTextures)),
+                StaticValue("COMMAND_DELETETEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::DeleteTexture)),
                 StaticValue("COMMAND_BINDVERTEXARRAY", Napi::FunctionPointer::Create(env, &NativeEngine::BindVertexArray)),
                 StaticValue("COMMAND_SETSTATE", Napi::FunctionPointer::Create(env, &NativeEngine::SetState)),
                 StaticValue("COMMAND_SETZOFFSET", Napi::FunctionPointer::Create(env, &NativeEngine::SetZOffset)),
@@ -1206,7 +1225,7 @@ namespace Babylon
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
                 InstanceMethod("setTextureComparisonFunction", &NativeEngine::SetTextureComparisonFunction),
-                InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
+                InstanceMethod("deleteTexture", &NativeEngine::DeleteTextureOld),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
                 InstanceMethod("readTexture2", &NativeEngine::ReadTexture2),
 
@@ -1214,6 +1233,7 @@ namespace Babylon
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
 
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
+                InstanceMethod("shareFrameBufferDepthStencil", &NativeEngine::ShareFrameBufferDepthStencil),
                 InstanceMethod("createMultiFrameBuffer", &NativeEngine::CreateMultiFrameBuffer),
 
                 InstanceMethod("getRenderWidth", &NativeEngine::GetRenderWidth),
@@ -1249,6 +1269,7 @@ namespace Babylon
         , m_runtime{runtime}
         , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
         , m_runtimeScheduler{runtime}
+        , m_instanceDataBufferPool{m_deviceContext}
         , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
         , m_boundFrameBufferNeedsRebinding{m_deviceContext, m_cancellationSource, true}
@@ -2956,9 +2977,18 @@ void main() {
         }
     }
 
-    void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
+    void NativeEngine::DeleteTexture(NativeDataStream::Reader& data)
     {
-        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        ReleaseTexture(data.ReadPointer<Graphics::Texture>());
+    }
+
+    void NativeEngine::DeleteTextureOld(const Napi::CallbackInfo& info)
+    {
+        ReleaseTexture(info[0].As<Napi::Pointer<Graphics::Texture>>().Get());
+    }
+
+    void NativeEngine::ReleaseTexture(Graphics::Texture* texture)
+    {
         // Deleting a bound WebGL texture unbinds it.
         for (auto it = m_boundTextures.begin(); it != m_boundTextures.end();)
         {
@@ -3417,6 +3447,8 @@ void main() {
         bgfx::TextureFormat::Enum depthStencilTextureFormat = bgfx::TextureFormat::Unknown;
         uint64_t depthStencilTextureFlags = 0;
         uint16_t depthStencilNumLayers = 1;
+        std::shared_ptr<Graphics::GeneratedDepthStencil> generatedDepthStencil{};
+        bool createdDepthStencil = false;
         if ((generateStencilBuffer || generateDepth) && !borrowedExplicitDepth)
         {
             if (generateStencilBuffer && !generateDepth)
@@ -3480,7 +3512,32 @@ void main() {
             {
                 throw Napi::Error::New(env, "No supported depth/stencil texture format for frame buffer");
             }
-            depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, depthStencilNumLayers, depthStencilFormat, flags);
+
+            // Like WebGL, the framebuffers for the faces or layers of one render target share a single depth/stencil.
+            Graphics::Texture* const layeredColorTexture = !requestDepthStencilTexture && colorTextures.size() == 1 && perAttachmentLayers.empty() &&
+                                                                   colorTextures[0] != nullptr && bgfx::isValid(colorTextures[0]->Handle()) &&
+                                                                   (colorTextures[0]->IsCube() || colorTextures[0]->Is3D() || colorTextures[0]->NumLayers() > 1)
+                ? colorTextures[0]
+                : nullptr;
+            if (layeredColorTexture != nullptr)
+            {
+                generatedDepthStencil = layeredColorTexture->FindLayerDepthStencil(width, height, depthStencilFormat, flags, depthStencilNumLayers);
+            }
+
+            if (generatedDepthStencil)
+            {
+                depthStencilTextureHandle = generatedDepthStencil->Handle();
+            }
+            else
+            {
+                depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, depthStencilNumLayers, depthStencilFormat, flags);
+                createdDepthStencil = true;
+                if (layeredColorTexture != nullptr)
+                {
+                    generatedDepthStencil = std::make_shared<Graphics::GeneratedDepthStencil>(m_deviceContext, depthStencilTextureHandle, width, height, depthStencilFormat, flags, depthStencilNumLayers);
+                    layeredColorTexture->AddLayerDepthStencil(generatedDepthStencil);
+                }
+            }
             depthStencilTextureFormat = depthStencilFormat;
             depthStencilTextureFlags = flags;
 
@@ -3493,7 +3550,7 @@ void main() {
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
         if (!bgfx::isValid(frameBufferHandle))
         {
-            if (bgfx::isValid(depthStencilTextureHandle))
+            if (createdDepthStencil && !generatedDepthStencil)
             {
                 bgfx::destroy(depthStencilTextureHandle);
             }
@@ -3512,7 +3569,7 @@ void main() {
         const bool hasDepthAttachment = generateDepth || generateStencilBuffer || borrowedExplicitDepth;
 
         // Shared depth is texture-owned; standalone aliases borrow framebuffer-owned depth.
-        int8_t frameBufferDepthOwnerIndex = depthStencilAttachmentIndex;
+        bool frameBufferOwnsDepth = depthStencilAttachmentIndex >= 0;
         if (depthStencilTextureRequest != nullptr && depthStencilAttachmentIndex >= 0)
         {
             const bool textureOwnsDepth = depthStencilTexture == nullptr;
@@ -3520,12 +3577,17 @@ void main() {
                 textureOwnsDepth, width, height, false, depthStencilNumLayers, depthStencilTextureFormat, depthStencilTextureFlags);
             if (textureOwnsDepth)
             {
-                frameBufferDepthOwnerIndex = -1;
+                frameBufferOwnsDepth = false;
             }
+        }
+        if (frameBufferOwnsDepth && !generatedDepthStencil)
+        {
+            generatedDepthStencil = std::make_shared<Graphics::GeneratedDepthStencil>(m_deviceContext, depthStencilTextureHandle, width, height, depthStencilTextureFormat, depthStencilTextureFlags, depthStencilNumLayers);
         }
 
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, frameBufferDepthOwnerIndex, isMultisampled, depthOneVolumeAttachmentMask);
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, -1, isMultisampled, depthOneVolumeAttachmentMask);
+        frameBuffer->SetGeneratedDepthStencil(std::move(generatedDepthStencil));
 
         // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
         // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
@@ -3545,6 +3607,28 @@ void main() {
         return Napi::Pointer<Graphics::FrameBuffer>::Create(env, frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
+    // shareFrameBufferDepthStencil(frameBuffer, texture): boolean
+    // Moves the depth/stencil a framebuffer generated into texture, so other framebuffers can attach it with its
+    // current contents (like sharing a WebGL depth renderbuffer). The framebuffer keeps rendering to it, and the
+    // texture now owns it. A generated depth buffer is write-only, so the texture can be attached but not sampled.
+    // The framebuffers of all faces or layers of a cube or array render target attach one generated depth/stencil,
+    // so sharing it from any of them shares the depth of the whole render target.
+    // Returns false and leaves texture untouched when the framebuffer has no generated depth/stencil of its own.
+    Napi::Value NativeEngine::ShareFrameBufferDepthStencil(const Napi::CallbackInfo& info)
+    {
+        Graphics::FrameBuffer* frameBuffer = info[0].As<Napi::Pointer<Graphics::FrameBuffer>>().Get();
+        Graphics::Texture* texture = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
+
+        const auto depthStencil{frameBuffer->ReleaseDepthStencil()};
+        if (!bgfx::isValid(depthStencil.Handle))
+        {
+            return Napi::Boolean::New(info.Env(), false);
+        }
+
+        texture->Attach(depthStencil.Handle, true, frameBuffer->Width(), frameBuffer->Height(), false, depthStencil.NumLayers, depthStencil.Format, depthStencil.Flags);
+        return Napi::Boolean::New(info.Env(), true);
+    }
+
     // TODO: This doesn't get called when an Engine instance is disposed.
     void NativeEngine::DeleteFrameBuffer(NativeDataStream::Reader& data)
     {
@@ -3559,7 +3643,7 @@ void main() {
             m_boundFrameBuffer->Unbind();
         }
         m_boundFrameBuffer = frameBuffer;
-        m_boundFrameBuffer->Bind();
+        BindWithScissor(*m_boundFrameBuffer);
         m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
@@ -3637,7 +3721,7 @@ void main() {
             {
                 m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
             }
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount, instanceDataLayout);
+            m_boundVertexArray->SetVertexBuffers(encoder, m_instanceDataBufferPool, 0, std::numeric_limits<uint32_t>::max(), instanceCount, instanceDataLayout);
             if (bgfx::isValid(repacked))
             {
                 encoder->setInstanceDataBuffer(repacked, 0, instanceCount);
@@ -3688,7 +3772,7 @@ void main() {
             const bgfx::DynamicVertexBufferHandle repacked = instanced
                 ? RepackStorageInstances(m_boundVertexArray, instanceDataLayout, instanceCount)
                 : bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount, instanceDataLayout);
+            m_boundVertexArray->SetVertexBuffers(encoder, m_instanceDataBufferPool, verticesStart, verticesCount, instanceCount, instanceDataLayout);
             if (RequiresPrimitiveExpansion(fillMode))
             {
                 shouldDraw = m_boundVertexArray->SetExpandedUnindexedBuffer(
@@ -3999,7 +4083,14 @@ void main() {
         const float width{data.ReadFloat32()};
         const float height{data.ReadFloat32()};
 
+        m_scissor = {x, y, width, height};
         GetBoundFrameBuffer().SetScissor(x, y, width, height);
+    }
+
+    void NativeEngine::BindWithScissor(Graphics::FrameBuffer& frameBuffer)
+    {
+        frameBuffer.Bind();
+        frameBuffer.InheritScissor(m_scissor.X, m_scissor.Y, m_scissor.Width, m_scissor.Height);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
@@ -4265,7 +4356,7 @@ void main() {
             {
                 // bgfx delivers instance slot k at TEXCOORD(31 - k); the highest-location instance
                 // attribute is packed at byte offset 0 (i_data0 == TEXCOORD31 ==
-                // INSTANCE_DATA_FIRST_LOCATION), matching BuildInstanceDataBuffer's reverse packing.
+                // INSTANCE_DATA_FIRST_LOCATION), matching SetInstanceDataBuffer's reverse packing.
                 std::map<std::string, uint32_t> genericInstancedAttributes;
                 const auto& attributeLocations = m_currentProgram->VertexAttributeLocations();
                 for (const auto& instance : instances)
@@ -4315,7 +4406,7 @@ void main() {
         if (m_boundFrameBuffer == nullptr)
         {
             m_boundFrameBuffer = &m_defaultFrameBuffer;
-            m_defaultFrameBuffer.Bind();
+            BindWithScissor(m_defaultFrameBuffer);
         }
         else if (m_boundFrameBufferNeedsRebinding.Get())
         {
