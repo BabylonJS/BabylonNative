@@ -103,6 +103,7 @@ namespace Babylon::Plugins
             uint64_t Flags{};
             bgfx::TextureFormat::Enum BlitFormat{bgfx::TextureFormat::Unknown};
             uint64_t BlitFlags{};
+            bgfx::TextureFormat::Enum ImportedFormat{bgfx::TextureFormat::Unknown};
         };
 
         Info m_info{};

@@ -6,6 +6,7 @@ namespace Babylon::Plugins
     {
         GetInfo(ptr, overrideFormat, m_info);
         Info nativeInfo{};
+        nativeInfo.ImportedFormat = m_info.Format;
         GetInfo(ptr, std::nullopt, nativeInfo);
         m_info.BlitFormat = nativeInfo.Format;
         m_info.BlitFlags = nativeInfo.Flags;
@@ -23,6 +24,7 @@ namespace Babylon::Plugins
         Info info;
         GetInfo(ptr, overrideFormat, info);
         Info nativeInfo{};
+        nativeInfo.ImportedFormat = info.Format;
         GetInfo(ptr, std::nullopt, nativeInfo);
         info.BlitFormat = nativeInfo.Format;
         info.BlitFlags = nativeInfo.Flags;
