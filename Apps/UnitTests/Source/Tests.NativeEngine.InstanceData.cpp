@@ -8,6 +8,7 @@
 #include <Babylon/Graphics/BgfxShaderInfo.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/DynamicBufferPool.h>
 #include <Babylon/Graphics/FrameBuffer.h>
 #include <Babylon/Graphics/Texture.h>
 
@@ -18,6 +19,7 @@
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -87,6 +89,159 @@ TEST(NativeEngineInstanceData, BuiltInsKeepAssignedSlotsAtRealLocations)
     EXPECT_EQ(layout.Slots.at(static_cast<uint32_t>(bgfx::Attrib::TexCoord0)), 0u);
     EXPECT_EQ(layout.Slots.at(static_cast<uint32_t>(bgfx::Attrib::TexCoord3)), 2u);
     EXPECT_EQ(layout.Slots.at(static_cast<uint32_t>(bgfx::Attrib::Position)), 3u);
+}
+
+TEST(NativeEngineInstanceData, PoolSuppliesMoreDrawsPerFrameThanDynamicBufferHandles)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    {
+        Babylon::AppRuntime runtime;
+        std::promise<void> completed;
+        auto completion = completed.get_future();
+        runtime.Dispatch([&](Napi::Env env) {
+            try
+            {
+                device.AddToJavaScript(env);
+                auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+                auto scope = context.AcquireFrameCompletionScope();
+                Babylon::Graphics::DynamicBufferPool pool{context};
+                bgfx::Encoder* encoder = context.GetActiveEncoder();
+                // More draws than bgfx's default 4096 dynamic vertex and index buffer handles, so a buffer per draw would run out.
+                constexpr uint32_t drawCount = 5000;
+                constexpr uint16_t instanceStride = 64;
+                constexpr uint32_t instanceCount = 4;
+                bgfx::VertexLayout instanceLayout{};
+                instanceLayout.begin();
+                instanceLayout.m_stride = instanceStride;
+                instanceLayout.end();
+                Babylon::Graphics::DynamicBufferPool::VertexRange previousVertices{};
+                Babylon::Graphics::DynamicBufferPool::IndexRange previousIndices{};
+                for (uint32_t draw = 0; draw < drawCount; ++draw)
+                {
+                    std::array<uint8_t, instanceStride * instanceCount> instanceData{};
+                    std::array<uint16_t, 3> indexData{};
+                    const auto range = pool.AllocVertices(instanceLayout, instanceData.data(), sizeof(instanceData));
+                    const auto indices = pool.AllocIndices(indexData.data(), sizeof(indexData));
+                    // Within a frame, each allocation follows the previous one unless the buffer was replaced by a larger one.
+                    if (range.StartVertex != (range.Handle.idx == previousVertices.Handle.idx ? previousVertices.StartVertex + instanceCount : 0u) ||
+                        indices.StartIndex != (indices.Handle.idx == previousIndices.Handle.idx ? previousIndices.StartIndex + 3 : 0u))
+                    {
+                        throw std::runtime_error{"Pool ranges overlap within a frame"};
+                    }
+                    previousVertices = range;
+                    previousIndices = indices;
+                    encoder->setInstanceDataBuffer(range.Handle, range.StartVertex, instanceCount);
+                    encoder->setIndexBuffer(indices.Handle, indices.StartIndex, 3);
+                    encoder->discard();
+                }
+                encoder->discard();
+                completed.set_value();
+            }
+            catch (...)
+            {
+                completed.set_exception(std::current_exception());
+            }
+        });
+        while (completion.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready)
+        {
+            device.FinishRenderingCurrentFrame();
+            device.StartRenderingCurrentFrame();
+        }
+        ASSERT_NO_THROW(completion.get());
+    }
+    device.FinishRenderingCurrentFrame();
+}
+
+TEST(NativeEngineInstanceData, PoolCreationFailureLeavesNoInvalidHandleOrPendingUpload)
+{
+    Babylon::Graphics::Device device{g_deviceConfig};
+    device.StartRenderingCurrentFrame();
+    {
+        Babylon::AppRuntime runtime;
+        std::promise<void> completed;
+        auto completion = completed.get_future();
+        runtime.Dispatch([&](Napi::Env env) {
+            try
+            {
+                device.AddToJavaScript(env);
+                auto& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+                auto scope = context.AcquireFrameCompletionScope();
+                uint32_t vertexCreateCount{};
+                uint32_t indexCreateCount{};
+                Babylon::Graphics::DynamicBufferPool::CreationFunctions creationFunctions;
+                creationFunctions.CreateVertexBuffer = [&vertexCreateCount](uint32_t capacity, const bgfx::VertexLayout& layout) {
+                    if (vertexCreateCount++ == 0)
+                    {
+                        return bgfx::DynamicVertexBufferHandle{bgfx::kInvalidHandle};
+                    }
+                    return bgfx::createDynamicVertexBuffer(capacity, layout);
+                };
+                creationFunctions.CreateIndexBuffer = [&indexCreateCount](uint32_t capacity) {
+                    if (indexCreateCount++ == 0)
+                    {
+                        return bgfx::DynamicIndexBufferHandle{bgfx::kInvalidHandle};
+                    }
+                    return bgfx::createDynamicIndexBuffer(capacity);
+                };
+
+                Babylon::Graphics::DynamicBufferPool pool{context, std::move(creationFunctions)};
+                bgfx::VertexLayout layout{};
+                layout.begin().add(bgfx::Attrib::Position, 4, bgfx::AttribType::Float).end();
+                std::array<float, 4> vertexData{};
+                std::array<uint16_t, 3> indexData{};
+
+                bool vertexFailed{};
+                try
+                {
+                    pool.AllocVertices(layout, vertexData.data(), sizeof(vertexData));
+                }
+                catch (const std::runtime_error&)
+                {
+                    vertexFailed = true;
+                }
+                if (!vertexFailed)
+                {
+                    throw std::runtime_error{"Vertex buffer creation failure was not reported"};
+                }
+
+                bool indexFailed{};
+                try
+                {
+                    pool.AllocIndices(indexData.data(), sizeof(indexData));
+                }
+                catch (const std::runtime_error&)
+                {
+                    indexFailed = true;
+                }
+                if (!indexFailed)
+                {
+                    throw std::runtime_error{"Index buffer creation failure was not reported"};
+                }
+
+                const auto vertices = pool.AllocVertices(layout, vertexData.data(), sizeof(vertexData));
+                const auto indices = pool.AllocIndices(indexData.data(), sizeof(indexData));
+                if (!bgfx::isValid(vertices.Handle) || vertices.StartVertex != 0 ||
+                    !bgfx::isValid(indices.Handle) || indices.StartIndex != 0 ||
+                    vertexCreateCount != 2 || indexCreateCount != 2)
+                {
+                    throw std::runtime_error{"Failed reservation changed pool state"};
+                }
+                completed.set_value();
+            }
+            catch (...)
+            {
+                completed.set_exception(std::current_exception());
+            }
+        });
+        while (completion.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready)
+        {
+            device.FinishRenderingCurrentFrame();
+            device.StartRenderingCurrentFrame();
+        }
+        ASSERT_NO_THROW(completion.get());
+    }
+    device.FinishRenderingCurrentFrame();
 }
 
 // Instances sourced from a buffer promoted to GPU storage (transform feedback output) are repacked by compute
