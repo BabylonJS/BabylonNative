@@ -87,12 +87,12 @@ start build\win32\BabylonNative.sln
 By default, the `Playground` demo app will be set as the Visual Studio start-up
 project.
 
-### NativeDawn WebGPU (experimental)
+### NativeWebGPU WebGPU (experimental)
 
 Enable the optional Dawn backend to run Babylon.js WebGPUEngine on Windows:
 
 ```powershell
-cmake -B build\win32_dawn -A x64 -DBABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON -DNAPI_JAVASCRIPT_ENGINE=V8
+cmake -B build\win32_dawn -A x64 -DBABYLON_NATIVE_PLUGIN_NATIVEWEBGPU=ON -DNAPI_JAVASCRIPT_ENGINE=V8
 cmake --build build\win32_dawn --config RelWithDebInfo --target Playground UnitTests
 Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
 .\Playground.exe --headless app:///Scripts/validation_native.js
@@ -104,7 +104,7 @@ The Dawn validation adapter reports both its graphics API and JavaScript engine
 so the shared catalog applies backend and engine exclusions consistently.
 
 The current integration requires the Canvas, Blob and URL polyfills. Embedding
-initializes the shared JsRuntimeHost polyfills before NativeDawn; standalone
+initializes the shared JsRuntimeHost polyfills before NativeWebGPU; standalone
 hosts must do the same. UTF-16 decoding, asynchronous WebAssembly compilation,
 and blob URL resolution use JsRuntimeHost's implementations, not Dawn-specific
 replacements. The V8 finalizer-draining compatibility code is still needed until
@@ -113,7 +113,7 @@ the vendored JsRuntimeHost implements deferred-finalizer support.
 The shared transport fixes are included in this repository. No external
 transport checkout, source override or separate pull request is required.
 
-NativeDawn Canvas2D uses real NanoVG/Dawn rasterization and straight-RGBA GPU
+NativeWebGPU Canvas2D uses real NanoVG/Dawn rasterization and straight-RGBA GPU
 readback for getImageData, PNG encoding, and external-image uploads. Backend
 initialization and mapping failures are explicit errors; there is no blit-only
 or fake-image fallback. The WebGPU validation runner initializes unready
@@ -127,7 +127,7 @@ Dawn text measurement uses the shared Canvas glyph advances and ink/font
 extents for the same loaded face used by drawing, rather than estimated Arial
 widths. Font state is restored together with NanoVG state.
 
-NativeDawn's typed `Tick` and `ResizeSurface` APIs drive frames and the presentation
+NativeWebGPU's typed `Tick` and `ResizeSurface` APIs drive frames and the presentation
 canvas. Babylon.js engine creation, the Playground's `NativeEngine` alias, and shader-helper script
 loading live in `Scripts/dawn_playground.js`, explicitly loaded by the Playground
 bootstrap, not in the plugin.

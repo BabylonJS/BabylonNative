@@ -6,7 +6,7 @@
 //
 // The graphics backend is selected at CMake configure time and is invisible
 // here: BABYLON_NATIVE_PLUGIN_NATIVEENGINE (bgfx) or BABYLON_NATIVE_PLUGIN_
-// NATIVEDAWN (WebGPU via Dawn). The only place that differs is the plugin
+// NATIVEWEBGPU (WebGPU via Dawn). The only place that differs is the plugin
 // Initialize call inside the Embedding layer's RunFirstAttachInit.
 
 #include "App.h"

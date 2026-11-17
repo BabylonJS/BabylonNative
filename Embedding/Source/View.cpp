@@ -46,7 +46,7 @@ namespace Babylon::Embedding
         }
 
         // Current device-pixel ratio: the bgfx Graphics::Device's stored value
-        // when present, otherwise the window's (the NativeDawn backend has no
+        // when present, otherwise the window's (the NativeWebGPU backend has no
         // Graphics::Device, so input/coordinate conversion falls back to the
         // window DPR). Only referenced by the NativeInput forwarding methods.
         [[maybe_unused]] float CurrentDpr(RuntimeImpl& impl, Babylon::Graphics::WindowT window)
@@ -78,8 +78,8 @@ namespace Babylon::Embedding
 
     ViewImpl::~ViewImpl()
     {
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-        // NativeDawn presents each frame inside its per-frame Tick, so there is
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+        // NativeWebGPU presents each frame inside its per-frame Tick, so there is
         // no host-held in-flight frame to close on teardown.
 #else
         // Close the in-flight frame iff one is currently open: i.e. the
@@ -107,7 +107,7 @@ namespace Babylon::Embedding
         {
             return;
         }
-#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if !BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
         m_runtime.m_device->FinishRenderingCurrentFrame();
 #endif
     }
@@ -121,7 +121,7 @@ namespace Babylon::Embedding
             InitializeIfReady();
             return;
         }
-#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if !BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
         m_runtime.m_device->StartRenderingCurrentFrame();
 #endif
     }
@@ -142,8 +142,8 @@ namespace Babylon::Embedding
         }
 
         const auto [lw, lh] = *m_size;
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-        // NativeDawn owns the device/surface lifecycle; there is no bgfx
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+        // NativeWebGPU owns the device/surface lifecycle; there is no bgfx
         // Graphics::Device to construct here. The plugin's Initialize (creating
         // the Dawn device + surface bound to m_window at the current size) runs
         // inside RunFirstAttachInit on the JS thread.
@@ -154,7 +154,7 @@ namespace Babylon::Embedding
             // window at the current size on the JS thread (where the Dawn device lives).
             void* window = m_window;
             m_runtime.m_appRuntime->Dispatch([window, lw, lh](Napi::Env env) {
-                Babylon::Plugins::NativeDawn::RebindSurface(env, window, lw, lh);
+                Babylon::Plugins::NativeWebGPU::RebindSurface(env, window, lw, lh);
             });
         }
         m_initialized = true;
@@ -218,7 +218,7 @@ namespace Babylon::Embedding
             return;
         }
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
         // Dispatch one frame at a time so the host cannot flood the JS queue.
         if (!impl.m_dawnFrameInFlight.exchange(true))
         {
@@ -233,7 +233,7 @@ namespace Babylon::Embedding
                 const auto resetInFlight = gsl::finally([implPtr] {
                     implPtr->m_dawnFrameInFlight.store(false, std::memory_order_relaxed);
                 });
-                Babylon::Plugins::NativeDawn::Tick(env);
+                Babylon::Plugins::NativeWebGPU::Tick(env);
             });
             dispatched = true;
         }
@@ -257,7 +257,7 @@ namespace Babylon::Embedding
 
         // DPR source: before init, query the window directly (Device
         // doesn't exist or is still bound to the previous attach). After
-        // init, the Device's stored DPR is authoritative (bgfx). NativeDawn
+        // init, the Device's stored DPR is authoritative (bgfx). NativeWebGPU
         // has no Device, so keep querying the window.
         float dpr;
         if (!m_impl->m_initialized)
@@ -266,7 +266,7 @@ namespace Babylon::Embedding
         }
         else
         {
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
             dpr = Babylon::Graphics::GetDevicePixelRatio(m_impl->m_window);
 #else
             dpr = impl.m_device->GetDevicePixelRatio();
@@ -279,10 +279,10 @@ namespace Babylon::Embedding
 
         if (m_impl->m_initialized)
         {
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
             // Reconfigure the surface and presentation canvas on the JS thread.
             impl.m_appRuntime->Dispatch([lw, lh](Napi::Env env) {
-                Babylon::Plugins::NativeDawn::ResizeSurface(env, lw, lh);
+                Babylon::Plugins::NativeWebGPU::ResizeSurface(env, lw, lh);
             });
 #else
             impl.m_device->UpdateSize(lw, lh);

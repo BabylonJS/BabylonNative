@@ -2059,7 +2059,7 @@
     }
 
     // Only define no-op DOM stubs if the host hasn't already provided functional
-    // ones. The NativeDawn (WebGPU) backend installs a real 2D canvas + document
+    // ones. The NativeWebGPU (WebGPU) backend installs a real 2D canvas + document
     // (needed for WebGPU texture upload); the bgfx backend provides neither, so
     // these fallbacks apply there.
     if (typeof OffscreenCanvas === "undefined") {

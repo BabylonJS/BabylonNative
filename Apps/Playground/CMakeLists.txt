@@ -14,9 +14,9 @@ set(BABYLON_SCRIPTS
 
 # The ES5 downlevel bundles miscompile Babylon's WebGPU WGSL texture binding code
 # (a variable collision passes a binding object as the texture dimension, so every
-# cube texture gets a 2d bind group layout). NativeDawn runs the WebGPU engine, so it
+# cube texture gets a 2d bind group layout). NativeWebGPU runs the WebGPU engine, so it
 # uses the regular bundles, which the V8/JSC hosts that support Dawn can execute.
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+if(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU)
     list(TRANSFORM BABYLON_SCRIPTS REPLACE "babylon\\.es5\\.js$" "babylon.max.js")
     list(TRANSFORM BABYLON_SCRIPTS REPLACE "\\.es5\\.js$" ".js")
 endif()
@@ -169,7 +169,7 @@ target_include_directories(Playground PRIVATE ".")
 
 # The Embedding layer links and initializes the full canonical set of
 # polyfills/plugins (Blob, Canvas, Console, File, GraphicsDevice, the
-# Native* plugins — including NativeDawn when BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+# Native* plugins — including NativeWebGPU when BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
 # is ON — ScriptLoader, ShaderCache, the polyfills, etc.) and forwards them
 # transitively, so the Playground only needs to list the libraries it consumes
 # directly:
@@ -188,7 +188,7 @@ target_link_libraries(Playground
 add_custom_command(TARGET Playground POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:Playground>>,copy,true> $<TARGET_RUNTIME_DLLS:Playground> $<TARGET_FILE_DIR:Playground> COMMAND_EXPAND_LISTS)
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN AND WIN32 AND EXISTS "$ENV{SystemRoot}/System32/d3dcompiler_47.dll")
+if(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU AND WIN32 AND EXISTS "$ENV{SystemRoot}/System32/d3dcompiler_47.dll")
     # Dawn's D3D12 backend dynamically loads d3dcompiler_47.dll (FXC). The
     # Windows SDK ships a stub placeholder on PATH, so copy the real System32 DLL
     # beside the exe to guarantee RequestDevice succeeds.

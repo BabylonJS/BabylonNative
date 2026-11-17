@@ -1,4 +1,4 @@
-#include <Babylon/Plugins/NativeDawn.h>
+#include <Babylon/Plugins/NativeWebGPU.h>
 
 #if BABYLON_NATIVE_PLUGIN_TESTUTILS
 #include <Babylon/Plugins/TestUtils.h>
@@ -16,13 +16,13 @@
 
 // jsruntimehost's V8 N-API enqueues GC finalizers into napi_env__::pending_finalizers
 // but, unlike real Node's event-loop-backed env, never drains that queue at runtime.
-// NativeDawn creates many short-lived N-API wrappers per frame (one per WebGPU object:
+// NativeWebGPU creates many short-lived N-API wrappers per frame (one per WebGPU object:
 // command encoders, passes, views, bind groups...), so their finalizers — and the
 // wgpu handles they would release — accumulate unbounded until the process OOMs.
 // When built against V8 we reach into the internal env to nudge GC and drain the queue
-// (see PumpJsFinalizers). NATIVEDAWN_V8_FINALIZER_DRAIN is defined by CMake only when
+// (see PumpJsFinalizers). NATIVEWEBGPU_V8_FINALIZER_DRAIN is defined by CMake only when
 // NAPI_JAVASCRIPT_ENGINE == V8; other engines finalize through their own mechanisms.
-#if defined(NATIVEDAWN_V8_FINALIZER_DRAIN)
+#if defined(NATIVEWEBGPU_V8_FINALIZER_DRAIN)
 #include "js_native_api_v8.h"
 #endif
 
@@ -52,7 +52,7 @@
 #include "CanvasDawn.h"
 #include "CanvasEncoding.h"
 
-namespace Babylon::Plugins::NativeDawn
+namespace Babylon::Plugins::NativeWebGPU
 {
     // Defined in ImageDecode.cpp (bimg): encoded image bytes -> RGBA8.
     bool DecodeRGBA(const uint8_t* data, size_t size, std::vector<uint8_t>& out, int& width, int& height);
@@ -87,7 +87,7 @@ namespace Babylon::Plugins::NativeDawn
         }
 
         // ---- Diagnostics -----------------------------------------------------
-        // Everything NativeDawn reports -- Dawn validation/device errors included
+        // Everything NativeWebGPU reports -- Dawn validation/device errors included
         // -- goes through here so it lands in the same place as the rest of
         // Babylon Native's diagnostics: the JS console. Hosts already install a
         // Babylon::Polyfills::Console callback to capture engine output, so
@@ -114,7 +114,7 @@ namespace Babylon::Plugins::NativeDawn
         void LogToStderr(LogLevel level, const char* msg)
         {
             const char* tag = level == LogLevel::Error ? "error" : (level == LogLevel::Warn ? "warning" : "info");
-            std::fprintf(stderr, "[NativeDawn] %s: %s\n", tag, msg);
+            std::fprintf(stderr, "[NativeWebGPU] %s: %s\n", tag, msg);
             std::fflush(stderr);
         }
 
@@ -143,7 +143,7 @@ namespace Babylon::Plugins::NativeDawn
                         Napi::Value fnV = consoleV.As<Napi::Object>().Get(method);
                         if (fnV.IsFunction())
                         {
-                            fnV.As<Napi::Function>().Call(consoleV, {Napi::String::New(env, "[NativeDawn] " + message)});
+                            fnV.As<Napi::Function>().Call(consoleV, {Napi::String::New(env, "[NativeWebGPU] " + message)});
                             delivered = true;
                         }
                     }
@@ -583,7 +583,7 @@ namespace Babylon::Plugins::NativeDawn
         // native render loop.
         uint64_t g_wrappersCreated = 0;
 
-#if defined(NATIVEDAWN_V8_FINALIZER_DRAIN)
+#if defined(NATIVEWEBGPU_V8_FINALIZER_DRAIN)
         uint64_t g_wrappersAtLastPump = 0;
         // Force a GC (so dead wrappers' finalizers get enqueued) then drain the
         // napi finalizer queue (which this host otherwise never drains at
@@ -625,7 +625,7 @@ namespace Babylon::Plugins::NativeDawn
         template <typename T>
         struct WgpuOps;
 
-#define NATIVEDAWN_WGPU_OPS(Type)                                              \
+#define NATIVEWEBGPU_WGPU_OPS(Type)                                              \
     template <>                                                                \
     struct WgpuOps<WGPU##Type>                                                 \
     {                                                                          \
@@ -633,30 +633,30 @@ namespace Babylon::Plugins::NativeDawn
         static void Release(WGPU##Type h) { if (h) wgpu##Type##Release(h); }   \
     };
 
-        NATIVEDAWN_WGPU_OPS(Adapter)
-        NATIVEDAWN_WGPU_OPS(BindGroup)
-        NATIVEDAWN_WGPU_OPS(BindGroupLayout)
-        NATIVEDAWN_WGPU_OPS(Buffer)
-        NATIVEDAWN_WGPU_OPS(CommandBuffer)
-        NATIVEDAWN_WGPU_OPS(CommandEncoder)
-        NATIVEDAWN_WGPU_OPS(ComputePassEncoder)
-        NATIVEDAWN_WGPU_OPS(ComputePipeline)
-        NATIVEDAWN_WGPU_OPS(Device)
-        NATIVEDAWN_WGPU_OPS(Instance)
-        NATIVEDAWN_WGPU_OPS(PipelineLayout)
-        NATIVEDAWN_WGPU_OPS(QuerySet)
-        NATIVEDAWN_WGPU_OPS(Queue)
-        NATIVEDAWN_WGPU_OPS(RenderBundle)
-        NATIVEDAWN_WGPU_OPS(RenderBundleEncoder)
-        NATIVEDAWN_WGPU_OPS(RenderPassEncoder)
-        NATIVEDAWN_WGPU_OPS(RenderPipeline)
-        NATIVEDAWN_WGPU_OPS(Sampler)
-        NATIVEDAWN_WGPU_OPS(ShaderModule)
-        NATIVEDAWN_WGPU_OPS(Surface)
-        NATIVEDAWN_WGPU_OPS(Texture)
-        NATIVEDAWN_WGPU_OPS(TextureView)
+        NATIVEWEBGPU_WGPU_OPS(Adapter)
+        NATIVEWEBGPU_WGPU_OPS(BindGroup)
+        NATIVEWEBGPU_WGPU_OPS(BindGroupLayout)
+        NATIVEWEBGPU_WGPU_OPS(Buffer)
+        NATIVEWEBGPU_WGPU_OPS(CommandBuffer)
+        NATIVEWEBGPU_WGPU_OPS(CommandEncoder)
+        NATIVEWEBGPU_WGPU_OPS(ComputePassEncoder)
+        NATIVEWEBGPU_WGPU_OPS(ComputePipeline)
+        NATIVEWEBGPU_WGPU_OPS(Device)
+        NATIVEWEBGPU_WGPU_OPS(Instance)
+        NATIVEWEBGPU_WGPU_OPS(PipelineLayout)
+        NATIVEWEBGPU_WGPU_OPS(QuerySet)
+        NATIVEWEBGPU_WGPU_OPS(Queue)
+        NATIVEWEBGPU_WGPU_OPS(RenderBundle)
+        NATIVEWEBGPU_WGPU_OPS(RenderBundleEncoder)
+        NATIVEWEBGPU_WGPU_OPS(RenderPassEncoder)
+        NATIVEWEBGPU_WGPU_OPS(RenderPipeline)
+        NATIVEWEBGPU_WGPU_OPS(Sampler)
+        NATIVEWEBGPU_WGPU_OPS(ShaderModule)
+        NATIVEWEBGPU_WGPU_OPS(Surface)
+        NATIVEWEBGPU_WGPU_OPS(Texture)
+        NATIVEWEBGPU_WGPU_OPS(TextureView)
 
-#undef NATIVEDAWN_WGPU_OPS
+#undef NATIVEWEBGPU_WGPU_OPS
 
         // Takes ownership of one reference to `h` and releases it when the JS
         // wrapper is finalized. WebGPU C creation functions return a handle the
@@ -691,22 +691,22 @@ namespace Babylon::Plugins::NativeDawn
 
         template <typename T>
         struct HandleTag;
-#define NATIVEDAWN_HANDLE_TAG(Type, Tag) \
+#define NATIVEWEBGPU_HANDLE_TAG(Type, Tag) \
         template <> struct HandleTag<Type> { static constexpr const char* value = Tag; };
-        NATIVEDAWN_HANDLE_TAG(WGPUBuffer, "GPUBuffer")
-        NATIVEDAWN_HANDLE_TAG(WGPUTextureView, "GPUTextureView")
-        NATIVEDAWN_HANDLE_TAG(WGPUTexture, "GPUTexture")
-        NATIVEDAWN_HANDLE_TAG(WGPUSampler, "GPUSampler")
-        NATIVEDAWN_HANDLE_TAG(WGPUBindGroupLayout, "GPUBindGroupLayout")
-        NATIVEDAWN_HANDLE_TAG(WGPUBindGroup, "GPUBindGroup")
-        NATIVEDAWN_HANDLE_TAG(WGPUPipelineLayout, "GPUPipelineLayout")
-        NATIVEDAWN_HANDLE_TAG(WGPUShaderModule, "GPUShaderModule")
-        NATIVEDAWN_HANDLE_TAG(WGPUQuerySet, "GPUQuerySet")
-        NATIVEDAWN_HANDLE_TAG(WGPUCommandBuffer, "GPUCommandBuffer")
-        NATIVEDAWN_HANDLE_TAG(WGPURenderPipeline, "GPURenderPipeline")
-        NATIVEDAWN_HANDLE_TAG(WGPUComputePipeline, "GPUComputePipeline")
-        NATIVEDAWN_HANDLE_TAG(WGPURenderBundle, "GPURenderBundle")
-#undef NATIVEDAWN_HANDLE_TAG
+        NATIVEWEBGPU_HANDLE_TAG(WGPUBuffer, "GPUBuffer")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUTextureView, "GPUTextureView")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUTexture, "GPUTexture")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUSampler, "GPUSampler")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUBindGroupLayout, "GPUBindGroupLayout")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUBindGroup, "GPUBindGroup")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUPipelineLayout, "GPUPipelineLayout")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUShaderModule, "GPUShaderModule")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUQuerySet, "GPUQuerySet")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUCommandBuffer, "GPUCommandBuffer")
+        NATIVEWEBGPU_HANDLE_TAG(WGPURenderPipeline, "GPURenderPipeline")
+        NATIVEWEBGPU_HANDLE_TAG(WGPUComputePipeline, "GPUComputePipeline")
+        NATIVEWEBGPU_HANDLE_TAG(WGPURenderBundle, "GPURenderBundle")
+#undef NATIVEWEBGPU_HANDLE_TAG
 
         template <typename T>
         T* GetH(Napi::Value v)
@@ -985,7 +985,7 @@ namespace Babylon::Plugins::NativeDawn
         // Defines `Enum fn(std::string_view)` backed by a sorted table.
         // The table is passed as the trailing arguments so its internal commas
         // survive macro expansion.
-#define NATIVEDAWN_ENUM_MAP(fn, Enum, fallback, ...)                           \
+#define NATIVEWEBGPU_ENUM_MAP(fn, Enum, fallback, ...)                           \
     constexpr EnumMapping k##fn##Table[] = __VA_ARGS__;                        \
     static_assert(IsSortedByName(k##fn##Table, std::size(k##fn##Table)),       \
         #fn " mapping table must be sorted by name");                          \
@@ -997,7 +997,7 @@ namespace Babylon::Plugins::NativeDawn
     }
 
 
-        NATIVEDAWN_ENUM_MAP(textureFormat, WGPUTextureFormat, WGPUTextureFormat_Undefined,
+        NATIVEWEBGPU_ENUM_MAP(textureFormat, WGPUTextureFormat, WGPUTextureFormat_Undefined,
         {
             {"bc1-rgba-unorm",        WGPUTextureFormat_BC1RGBAUnorm},
             {"bc1-rgba-unorm-srgb",   WGPUTextureFormat_BC1RGBAUnormSrgb},
@@ -1058,7 +1058,7 @@ namespace Babylon::Plugins::NativeDawn
             {"stencil8",              WGPUTextureFormat_Stencil8}
         })
 
-        NATIVEDAWN_ENUM_MAP(vertexFormat, WGPUVertexFormat, WGPUVertexFormat_Float32,
+        NATIVEWEBGPU_ENUM_MAP(vertexFormat, WGPUVertexFormat, WGPUVertexFormat_Float32,
         {
             {"float16x2", WGPUVertexFormat_Float16x2},
             {"float16x4", WGPUVertexFormat_Float16x4},
@@ -1092,13 +1092,13 @@ namespace Babylon::Plugins::NativeDawn
             {"unorm8x4",  WGPUVertexFormat_Unorm8x4}
         })
 
-        NATIVEDAWN_ENUM_MAP(indexFormat, WGPUIndexFormat, WGPUIndexFormat_Undefined,
+        NATIVEWEBGPU_ENUM_MAP(indexFormat, WGPUIndexFormat, WGPUIndexFormat_Undefined,
         {
             {"uint16", WGPUIndexFormat_Uint16},
             {"uint32", WGPUIndexFormat_Uint32}
         })
 
-        NATIVEDAWN_ENUM_MAP(primitiveTopology, WGPUPrimitiveTopology, WGPUPrimitiveTopology_TriangleList,
+        NATIVEWEBGPU_ENUM_MAP(primitiveTopology, WGPUPrimitiveTopology, WGPUPrimitiveTopology_TriangleList,
         {
             {"line-list",      WGPUPrimitiveTopology_LineList},
             {"line-strip",     WGPUPrimitiveTopology_LineStrip},
@@ -1107,20 +1107,20 @@ namespace Babylon::Plugins::NativeDawn
             {"triangle-strip", WGPUPrimitiveTopology_TriangleStrip}
         })
 
-        NATIVEDAWN_ENUM_MAP(cullMode, WGPUCullMode, WGPUCullMode_None,
+        NATIVEWEBGPU_ENUM_MAP(cullMode, WGPUCullMode, WGPUCullMode_None,
         {
             {"back",  WGPUCullMode_Back},
             {"front", WGPUCullMode_Front},
             {"none",  WGPUCullMode_None}
         })
 
-        NATIVEDAWN_ENUM_MAP(frontFace, WGPUFrontFace, WGPUFrontFace_CCW,
+        NATIVEWEBGPU_ENUM_MAP(frontFace, WGPUFrontFace, WGPUFrontFace_CCW,
         {
             {"ccw", WGPUFrontFace_CCW},
             {"cw",  WGPUFrontFace_CW}
         })
 
-        NATIVEDAWN_ENUM_MAP(compareFunction, WGPUCompareFunction, WGPUCompareFunction_Undefined,
+        NATIVEWEBGPU_ENUM_MAP(compareFunction, WGPUCompareFunction, WGPUCompareFunction_Undefined,
         {
             {"always",        WGPUCompareFunction_Always},
             {"equal",         WGPUCompareFunction_Equal},
@@ -1132,7 +1132,7 @@ namespace Babylon::Plugins::NativeDawn
             {"not-equal",     WGPUCompareFunction_NotEqual}
         })
 
-        NATIVEDAWN_ENUM_MAP(stencilOperation, WGPUStencilOperation, WGPUStencilOperation_Keep,
+        NATIVEWEBGPU_ENUM_MAP(stencilOperation, WGPUStencilOperation, WGPUStencilOperation_Keep,
         {
             {"decrement-clamp", WGPUStencilOperation_DecrementClamp},
             {"decrement-wrap",  WGPUStencilOperation_DecrementWrap},
@@ -1144,7 +1144,7 @@ namespace Babylon::Plugins::NativeDawn
             {"zero",            WGPUStencilOperation_Zero}
         })
 
-        NATIVEDAWN_ENUM_MAP(blendFactor, WGPUBlendFactor, WGPUBlendFactor_One,
+        NATIVEWEBGPU_ENUM_MAP(blendFactor, WGPUBlendFactor, WGPUBlendFactor_One,
         {
             {"constant",            WGPUBlendFactor_Constant},
             {"dst",                 WGPUBlendFactor_Dst},
@@ -1161,7 +1161,7 @@ namespace Babylon::Plugins::NativeDawn
             {"zero",                WGPUBlendFactor_Zero}
         })
 
-        NATIVEDAWN_ENUM_MAP(blendOperation, WGPUBlendOperation, WGPUBlendOperation_Add,
+        NATIVEWEBGPU_ENUM_MAP(blendOperation, WGPUBlendOperation, WGPUBlendOperation_Add,
         {
             {"add",              WGPUBlendOperation_Add},
             {"max",              WGPUBlendOperation_Max},
@@ -1170,26 +1170,26 @@ namespace Babylon::Plugins::NativeDawn
             {"subtract",         WGPUBlendOperation_Subtract}
         })
 
-        NATIVEDAWN_ENUM_MAP(addressMode, WGPUAddressMode, WGPUAddressMode_ClampToEdge,
+        NATIVEWEBGPU_ENUM_MAP(addressMode, WGPUAddressMode, WGPUAddressMode_ClampToEdge,
         {
             {"clamp-to-edge", WGPUAddressMode_ClampToEdge},
             {"mirror-repeat", WGPUAddressMode_MirrorRepeat},
             {"repeat",        WGPUAddressMode_Repeat}
         })
 
-        NATIVEDAWN_ENUM_MAP(filterMode, WGPUFilterMode, WGPUFilterMode_Nearest,
+        NATIVEWEBGPU_ENUM_MAP(filterMode, WGPUFilterMode, WGPUFilterMode_Nearest,
         {
             {"linear",  WGPUFilterMode_Linear},
             {"nearest", WGPUFilterMode_Nearest}
         })
 
-        NATIVEDAWN_ENUM_MAP(mipmapFilterMode, WGPUMipmapFilterMode, WGPUMipmapFilterMode_Nearest,
+        NATIVEWEBGPU_ENUM_MAP(mipmapFilterMode, WGPUMipmapFilterMode, WGPUMipmapFilterMode_Nearest,
         {
             {"linear",  WGPUMipmapFilterMode_Linear},
             {"nearest", WGPUMipmapFilterMode_Nearest}
         })
 
-        NATIVEDAWN_ENUM_MAP(textureViewDimension, WGPUTextureViewDimension, WGPUTextureViewDimension_Undefined,
+        NATIVEWEBGPU_ENUM_MAP(textureViewDimension, WGPUTextureViewDimension, WGPUTextureViewDimension_Undefined,
         {
             {"1d",         WGPUTextureViewDimension_1D},
             {"2d",         WGPUTextureViewDimension_2D},
@@ -1199,14 +1199,14 @@ namespace Babylon::Plugins::NativeDawn
             {"cube-array", WGPUTextureViewDimension_CubeArray}
         })
 
-        NATIVEDAWN_ENUM_MAP(textureDimension, WGPUTextureDimension, WGPUTextureDimension_2D,
+        NATIVEWEBGPU_ENUM_MAP(textureDimension, WGPUTextureDimension, WGPUTextureDimension_2D,
         {
             {"1d", WGPUTextureDimension_1D},
             {"2d", WGPUTextureDimension_2D},
             {"3d", WGPUTextureDimension_3D}
         })
 
-        NATIVEDAWN_ENUM_MAP(textureSampleType, WGPUTextureSampleType, WGPUTextureSampleType_Float,
+        NATIVEWEBGPU_ENUM_MAP(textureSampleType, WGPUTextureSampleType, WGPUTextureSampleType_Float,
         {
             {"depth",              WGPUTextureSampleType_Depth},
             {"float",              WGPUTextureSampleType_Float},
@@ -1215,46 +1215,46 @@ namespace Babylon::Plugins::NativeDawn
             {"unfilterable-float", WGPUTextureSampleType_UnfilterableFloat}
         })
 
-        NATIVEDAWN_ENUM_MAP(storageTextureAccess, WGPUStorageTextureAccess, WGPUStorageTextureAccess_Undefined,
+        NATIVEWEBGPU_ENUM_MAP(storageTextureAccess, WGPUStorageTextureAccess, WGPUStorageTextureAccess_Undefined,
         {
             {"read-only",  WGPUStorageTextureAccess_ReadOnly},
             {"read-write", WGPUStorageTextureAccess_ReadWrite},
             {"write-only", WGPUStorageTextureAccess_WriteOnly}
         })
 
-        NATIVEDAWN_ENUM_MAP(samplerBindingType, WGPUSamplerBindingType, WGPUSamplerBindingType_Filtering,
+        NATIVEWEBGPU_ENUM_MAP(samplerBindingType, WGPUSamplerBindingType, WGPUSamplerBindingType_Filtering,
         {
             {"comparison",    WGPUSamplerBindingType_Comparison},
             {"filtering",     WGPUSamplerBindingType_Filtering},
             {"non-filtering", WGPUSamplerBindingType_NonFiltering}
         })
 
-        NATIVEDAWN_ENUM_MAP(bufferBindingType, WGPUBufferBindingType, WGPUBufferBindingType_Uniform,
+        NATIVEWEBGPU_ENUM_MAP(bufferBindingType, WGPUBufferBindingType, WGPUBufferBindingType_Uniform,
         {
             {"read-only-storage", WGPUBufferBindingType_ReadOnlyStorage},
             {"storage",           WGPUBufferBindingType_Storage},
             {"uniform",           WGPUBufferBindingType_Uniform}
         })
 
-        NATIVEDAWN_ENUM_MAP(loadOp, WGPULoadOp, WGPULoadOp_Load,
+        NATIVEWEBGPU_ENUM_MAP(loadOp, WGPULoadOp, WGPULoadOp_Load,
         {
             {"clear", WGPULoadOp_Clear},
             {"load",  WGPULoadOp_Load}
         })
 
-        NATIVEDAWN_ENUM_MAP(storeOp, WGPUStoreOp, WGPUStoreOp_Store,
+        NATIVEWEBGPU_ENUM_MAP(storeOp, WGPUStoreOp, WGPUStoreOp_Store,
         {
             {"discard", WGPUStoreOp_Discard},
             {"store",   WGPUStoreOp_Store}
         })
 
-        NATIVEDAWN_ENUM_MAP(vertexStepMode, WGPUVertexStepMode, WGPUVertexStepMode_Vertex,
+        NATIVEWEBGPU_ENUM_MAP(vertexStepMode, WGPUVertexStepMode, WGPUVertexStepMode_Vertex,
         {
             {"instance", WGPUVertexStepMode_Instance},
             {"vertex",   WGPUVertexStepMode_Vertex}
         })
 
-        NATIVEDAWN_ENUM_MAP(featureName, WGPUFeatureName, WGPUFeatureName(0),
+        NATIVEWEBGPU_ENUM_MAP(featureName, WGPUFeatureName, WGPUFeatureName(0),
         {
             {"bgra8unorm-storage",       WGPUFeatureName_BGRA8UnormStorage},
             {"depth-clip-control",       WGPUFeatureName_DepthClipControl},
@@ -1270,20 +1270,20 @@ namespace Babylon::Plugins::NativeDawn
             {"timestamp-query",          WGPUFeatureName_TimestampQuery}
         })
 
-        NATIVEDAWN_ENUM_MAP(queryType, WGPUQueryType, WGPUQueryType_Occlusion,
+        NATIVEWEBGPU_ENUM_MAP(queryType, WGPUQueryType, WGPUQueryType_Occlusion,
         {
             {"occlusion", WGPUQueryType_Occlusion},
             {"timestamp", WGPUQueryType_Timestamp}
         })
 
-        NATIVEDAWN_ENUM_MAP(powerPreference, WGPUPowerPreference, WGPUPowerPreference_Undefined,
+        NATIVEWEBGPU_ENUM_MAP(powerPreference, WGPUPowerPreference, WGPUPowerPreference_Undefined,
         {
             {"high-performance", WGPUPowerPreference_HighPerformance},
             {"low-power",        WGPUPowerPreference_LowPower}
         })
 
 
-#undef NATIVEDAWN_ENUM_MAP
+#undef NATIVEWEBGPU_ENUM_MAP
 
         // Reverse lookup. Rare (only when reporting a texture's format back to
         // JS), so a linear scan over the forward table keeps one source of truth
@@ -1423,7 +1423,7 @@ namespace Babylon::Plugins::NativeDawn
             if (!g_lastPresentedTexture)
             {
                 WGPUTextureDescriptor descriptor{
-                    .label = {"NativeDawn.lastPresentedFrame", WGPU_STRLEN},
+                    .label = {"NativeWebGPU.lastPresentedFrame", WGPU_STRLEN},
                     .usage = WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst,
                     .dimension = WGPUTextureDimension_2D,
                     .size = {g_state.width, g_state.height, 1},
@@ -1434,7 +1434,7 @@ namespace Babylon::Plugins::NativeDawn
                 g_lastPresentedTexture = wgpuDeviceCreateTexture(g_state.device, &descriptor);
                 if (!g_lastPresentedTexture)
                 {
-                    throw std::runtime_error{"NativeDawn: failed to preserve the presented frame"};
+                    throw std::runtime_error{"NativeWebGPU: failed to preserve the presented frame"};
                 }
             }
             const WGPUTexelCopyTextureInfo source{
@@ -1966,7 +1966,7 @@ namespace Babylon::Plugins::NativeDawn
         {
             if (!descVal.IsObject())
             {
-                throw Napi::Error::New(env, "NativeDawn: createRenderPipeline requires a descriptor");
+                throw Napi::Error::New(env, "NativeWebGPU: createRenderPipeline requires a descriptor");
             }
             Napi::Object desc = descVal.As<Napi::Object>();
 
@@ -2008,7 +2008,7 @@ namespace Babylon::Plugins::NativeDawn
                 Napi::Value vtxV = desc.Get("vertex");
                 if (!vtxV.IsObject())
                 {
-                    throw Napi::Error::New(env, "NativeDawn: createRenderPipeline requires vertex stage");
+                    throw Napi::Error::New(env, "NativeWebGPU: createRenderPipeline requires vertex stage");
                 }
                 Napi::Object vtx = vtxV.As<Napi::Object>();
                 WGPUShaderModule* mod = GetH<WGPUShaderModule>(vtx.Get("module"));
@@ -2218,7 +2218,7 @@ namespace Babylon::Plugins::NativeDawn
         {
             if (!descVal.IsObject())
             {
-                throw Napi::Error::New(env, "NativeDawn: createComputePipeline requires a descriptor");
+                throw Napi::Error::New(env, "NativeWebGPU: createComputePipeline requires a descriptor");
             }
             Napi::Object desc = descVal.As<Napi::Object>();
 
@@ -2242,7 +2242,7 @@ namespace Babylon::Plugins::NativeDawn
             Napi::Value coV = desc.Get("compute");
             if (!coV.IsObject())
             {
-                throw Napi::Error::New(env, "NativeDawn: createComputePipeline requires compute stage");
+                throw Napi::Error::New(env, "NativeWebGPU: createComputePipeline requires compute stage");
             }
             Napi::Object co = coV.As<Napi::Object>();
             WGPUShaderModule* mod = GetH<WGPUShaderModule>(co.Get("module"));
@@ -2628,7 +2628,7 @@ namespace Babylon::Plugins::NativeDawn
                 Napi::Env env = info.Env();
                 if (info.Length() == 0 || !info[0].IsObject())
                 {
-                    throw Napi::Error::New(env, "NativeDawn: beginRenderPass requires a descriptor");
+                    throw Napi::Error::New(env, "NativeWebGPU: beginRenderPass requires a descriptor");
                 }
                 Napi::Object desc = info[0].As<Napi::Object>();
                 WGPURenderPassDescriptor rpd{
@@ -3146,7 +3146,7 @@ namespace Babylon::Plugins::NativeDawn
                 std::string label = PropStr(desc, "label");
                 if (!label.empty()) bd.label = StrView(label);
                 WGPUBuffer buf = wgpuDeviceCreateBuffer(g_state.device, &bd);
-                if (!buf) throw Napi::Error::New(env, "NativeDawn: createBuffer failed");
+                if (!buf) throw Napi::Error::New(env, "NativeWebGPU: createBuffer failed");
                 return MakeBuffer(env, buf, bd.size, usage);
             });
             SetMethod(o, "createTexture", [](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -3183,7 +3183,7 @@ namespace Babylon::Plugins::NativeDawn
                 std::string label = PropStr(desc, "label");
                 if (!label.empty()) td.label = StrView(label);
                 WGPUTexture tex = wgpuDeviceCreateTexture(g_state.device, &td);
-                if (!tex) throw Napi::Error::New(env, "NativeDawn: createTexture failed");
+                if (!tex) throw Napi::Error::New(env, "NativeWebGPU: createTexture failed");
                 return MakeTexture(env, tex, td.size.width, td.size.height, td.size.depthOrArrayLayers,
                     td.mipLevelCount, td.sampleCount, fmt, usage, dim);
             });
@@ -3295,7 +3295,7 @@ namespace Babylon::Plugins::NativeDawn
                 Napi::Env env = info.Env();
                 Napi::Object desc = info[0].As<Napi::Object>();
                 WGPUBindGroupLayout* layout = GetH<WGPUBindGroupLayout>(desc.Get("layout"));
-                if (layout == nullptr) throw Napi::Error::New(env, "NativeDawn: createBindGroup missing layout");
+                if (layout == nullptr) throw Napi::Error::New(env, "NativeWebGPU: createBindGroup missing layout");
                 Napi::Value entriesV = desc.Get("entries");
                 std::vector<WGPUBindGroupEntry> entries;
                 if (entriesV.IsArray())
@@ -3545,7 +3545,7 @@ namespace Babylon::Plugins::NativeDawn
                     .nextInChain = nullptr,
                 };
                 wgpuSurfaceGetCurrentTexture(g_state.surface, &st);
-                if (!st.texture) throw Napi::Error::New(env, "NativeDawn: getCurrentTexture returned null");
+                if (!st.texture) throw Napi::Error::New(env, "NativeWebGPU: getCurrentTexture returned null");
                 g_currentTextureAcquired = true;
                 if (g_state.currentSurfaceTexture) wgpuTextureRelease(g_state.currentSurfaceTexture);
                 wgpuTextureAddRef(st.texture);
@@ -3596,7 +3596,7 @@ namespace Babylon::Plugins::NativeDawn
             // Read back the most recently acquired surface texture as tightly-packed
             // top-down RGBA8. Returns {width,height,data(ArrayBuffer)}. Used by the
             // Dawn test shim's TestUtils.getFrameBufferData for pixel comparison.
-            SetMethod(global, "_nativeDawnReadPixels", [](const Napi::CallbackInfo& info) -> Napi::Value {
+            SetMethod(global, "_nativeWebGPUReadPixels", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 WGPUTexture source = g_currentTextureAcquired && !g_surfaceWorkPending ?
                     g_state.currentSurfaceTexture : nullptr;
@@ -3608,7 +3608,7 @@ namespace Babylon::Plugins::NativeDawn
 #endif
                 if (!source)
                 {
-                    throw Napi::Error::New(env, "_nativeDawnReadPixels: no completed framebuffer is available");
+                    throw Napi::Error::New(env, "_nativeWebGPUReadPixels: no completed framebuffer is available");
                 }
                 const uint32_t w = wgpuTextureGetWidth(source);
                 const uint32_t h = wgpuTextureGetHeight(source);
@@ -3664,7 +3664,7 @@ namespace Babylon::Plugins::NativeDawn
                     wgpuCommandBufferRelease(cmd);
                     wgpuCommandEncoderRelease(enc);
                     wgpuBufferRelease(buf);
-                    throw Napi::Error::New(env, "NativeDawn framebuffer readback failed: " + result.message);
+                    throw Napi::Error::New(env, "NativeWebGPU framebuffer readback failed: " + result.message);
                 }
                 const size_t outSize = static_cast<size_t>(unpadded) * h;
                 Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, outSize);
@@ -3710,7 +3710,7 @@ namespace Babylon::Plugins::NativeDawn
             });
 
             // Set the window title (TestUtils.setTitle).
-            SetMethod(global, "_nativeDawnSetTitle", [](const Napi::CallbackInfo& info) -> Napi::Value {
+            SetMethod(global, "_nativeWebGPUSetTitle", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
 #if defined(_WIN32)
                 if (g_state.hwnd != nullptr && info.Length() > 0 && info[0].IsString())
@@ -3725,19 +3725,19 @@ namespace Babylon::Plugins::NativeDawn
             // ImageBitmap-like object {width,height,__pixels(ArrayBuffer RGBA8)}.
             // Backs the JS createImageBitmap / Image shims so glTF textures work
             // in this no-DOM environment.
-            SetMethod(global, "_nativeDawnDecodeImage", [](const Napi::CallbackInfo& info) -> Napi::Value {
+            SetMethod(global, "_nativeWebGPUDecodeImage", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
                 Bytes in = GetBytes(info.Length() > 0 ? info[0] : env.Undefined());
                 if (in.data == nullptr || in.size == 0)
                 {
-                    throw Napi::Error::New(env, "_nativeDawnDecodeImage: no input bytes");
+                    throw Napi::Error::New(env, "_nativeWebGPUDecodeImage: no input bytes");
                 }
                 int w = 0;
                 int h = 0;
                 std::vector<uint8_t> rgba;
                 if (!DecodeRGBA(in.data, in.size, rgba, w, h))
                 {
-                    throw Napi::Error::New(env, "_nativeDawnDecodeImage: decode failed");
+                    throw Napi::Error::New(env, "_nativeWebGPUDecodeImage: decode failed");
                 }
                 Napi::ArrayBuffer ab = Napi::ArrayBuffer::New(env, rgba.size());
                 std::memcpy(ab.Data(), rgba.data(), rgba.size());
@@ -3759,7 +3759,7 @@ namespace Babylon::Plugins::NativeDawn
         //   * no-DOM canvas / document / window / location shims,
         //   * image decoding shims (createImageBitmap / Image)
         //     backed by the native bimg decoder,
-        //   * requestAnimationFrame callbacks driven by NativeDawn::Tick.
+        //   * requestAnimationFrame callbacks driven by NativeWebGPU::Tick.
         // Input is NOT handled here (it flows through NativeInput, like bgfx).
         //
         // All state is JS-thread-only (the plugin only ever runs on the JS thread).
@@ -3942,7 +3942,7 @@ namespace Babylon::Plugins::NativeDawn
                     const auto c = Babylon::Plugins::Internal::AttachDawn2DContext(env, self);
                     if (!c.IsObject())
                     {
-                        throw Napi::Error::New(env, "NativeDawn Canvas2D backend is not initialized");
+                        throw Napi::Error::New(env, "NativeWebGPU Canvas2D backend is not initialized");
                     }
                     self.Set("__ctx2d", c);
                     return c;
@@ -4333,7 +4333,7 @@ namespace Babylon::Plugins::NativeDawn
                 if (documentValue.IsObject())
                 {
                     Napi::Object document = documentValue.As<Napi::Object>();
-                    constexpr auto OriginalLookup = "__nativeDawnOriginalGetElementById";
+                    constexpr auto OriginalLookup = "__nativeWebGPUOriginalGetElementById";
                     if (document.Get(OriginalLookup).IsUndefined())
                     {
                         Napi::Value originalLookup = document.Get("getElementById");
@@ -4352,7 +4352,7 @@ namespace Babylon::Plugins::NativeDawn
                             }
 
                             Napi::Object document = info.This().As<Napi::Object>();
-                            Napi::Value originalLookup = document.Get("__nativeDawnOriginalGetElementById");
+                            Napi::Value originalLookup = document.Get("__nativeWebGPUOriginalGetElementById");
                             if (originalLookup.IsFunction())
                             {
                                 Napi::Function lookup = originalLookup.As<Napi::Function>();
@@ -4364,7 +4364,7 @@ namespace Babylon::Plugins::NativeDawn
                         });
                     }
 
-                    constexpr auto OriginalQuerySelector = "__nativeDawnOriginalQuerySelector";
+                    constexpr auto OriginalQuerySelector = "__nativeWebGPUOriginalQuerySelector";
                     if (document.Get(OriginalQuerySelector).IsUndefined())
                     {
                         Napi::Value originalQuerySelector = document.Get("querySelector");
@@ -4384,7 +4384,7 @@ namespace Babylon::Plugins::NativeDawn
                             }
 
                             Napi::Object document = info.This().As<Napi::Object>();
-                            Napi::Value originalQuerySelector = document.Get("__nativeDawnOriginalQuerySelector");
+                            Napi::Value originalQuerySelector = document.Get("__nativeWebGPUOriginalQuerySelector");
                             if (originalQuerySelector.IsFunction())
                             {
                                 Napi::Function querySelector = originalQuerySelector.As<Napi::Function>();
@@ -4654,7 +4654,7 @@ namespace Babylon::Plugins::NativeDawn
 
         // Install a Dawn-compatible `TestUtils` global so validation_native.js runs
         // on the WebGPU backend. Mirrors the bgfx TestUtils plugin's JS surface but
-        // is backed by the NativeDawn native functions (surface readback, image
+        // is backed by the NativeWebGPU native functions (surface readback, image
         // decode) instead of the bgfx Graphics::DeviceContext.
         void InstallTestUtils(Napi::Env env)
         {
@@ -4665,13 +4665,13 @@ namespace Babylon::Plugins::NativeDawn
                 return Napi::String::New(info.Env(), "WebGPU");
             });
             SetMethod(tu, "getJavaScriptEngineName", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                return Napi::String::New(info.Env(), NATIVEDAWN_JAVASCRIPT_ENGINE);
+                return Napi::String::New(info.Env(), NATIVEWEBGPU_JAVASCRIPT_ENGINE);
             });
             SetMethod(tu, "getOutputDirectory", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return Napi::String::New(info.Env(), ExeDir().string());
             });
             SetMethod(tu, "setTitle", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Value fn = info.Env().Global().Get("_nativeDawnSetTitle");
+                Napi::Value fn = info.Env().Global().Get("_nativeWebGPUSetTitle");
                 if (fn.IsFunction())
                 {
                     fn.As<Napi::Function>().Call({info.Length() > 0 ? info[0] : info.Env().Undefined()});
@@ -4701,7 +4701,7 @@ namespace Babylon::Plugins::NativeDawn
 
             // Reference-image decode: returns {width,height,__pixels(ArrayBuffer RGBA8)}.
             SetMethod(tu, "decodeImage", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Value fn = info.Env().Global().Get("_nativeDawnDecodeImage");
+                Napi::Value fn = info.Env().Global().Get("_nativeWebGPUDecodeImage");
                 return fn.As<Napi::Function>().Call({info.Length() > 0 ? info[0] : info.Env().Undefined()});
             });
             SetMethod(tu, "getImageData", [](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -4829,7 +4829,7 @@ namespace Babylon::Plugins::NativeDawn
 
         g_state = {};
         g_wrappersCreated = 0;
-#if defined(NATIVEDAWN_V8_FINALIZER_DRAIN)
+#if defined(NATIVEWEBGPU_V8_FINALIZER_DRAIN)
         g_wrappersAtLastPump = 0;
 #endif
 
@@ -4895,7 +4895,7 @@ namespace Babylon::Plugins::NativeDawn
             Napi::Value readResult;
             try
             {
-                readResult = env.Global().Get("_nativeDawnReadPixels").As<Napi::Function>().Call({});
+                readResult = env.Global().Get("_nativeWebGPUReadPixels").As<Napi::Function>().Call({});
             }
             catch (const Napi::Error& e)
             {

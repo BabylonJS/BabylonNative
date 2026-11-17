@@ -180,7 +180,7 @@ namespace Playground
         // PolygonMeshBuilder resolves `earcut` as a global at triangulation time, so without this
         // any polygon scene fails with `ReferenceError: earcut is not defined`.
         runtime.LoadScript("app:///Scripts/earcut.min.js");
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
         // See Apps/Playground/CMakeLists.txt: the ES5 bundles break Babylon's WGSL texture bindings.
 #define BABYLON_BUNDLE(name) "app:///Scripts/" name ".js"
 #define BABYLON_CORE_BUNDLE "app:///Scripts/babylon.max.js"
@@ -189,7 +189,7 @@ namespace Playground
 #define BABYLON_CORE_BUNDLE "app:///Scripts/babylon.es5.js"
 #endif
         runtime.LoadScript(BABYLON_CORE_BUNDLE);
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
         runtime.LoadScript("app:///Scripts/dawn_playground.js");
 #endif
         // Load addons right after babylon so addons init sees a fully

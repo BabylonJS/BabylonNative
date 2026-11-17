@@ -23,7 +23,7 @@ on:
         required: false
         type: string
         default: ''
-      nativedawn:
+      nativewebgpu:
         required: false
         type: boolean
         default: false
@@ -51,7 +51,7 @@ jobs:
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
 
       - name: Generate macOS solution
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: |
           cmake -G "${{ inputs.generator }}" -B build/macOS \
             ${{ inputs.js-engine != '' && format('-D NAPI_JAVASCRIPT_ENGINE={0}', inputs.js-engine) || '' }} \
@@ -62,43 +62,43 @@ jobs:
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
 
       - name: Build Playground macOS
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: cmake --build build/macOS --target Playground --config RelWithDebInfo
 
       - name: Build UnitTests macOS
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
 
       - name: Build ModuleLoadTest macOS
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
 
-      # NativeDawn (WebGPU/Dawn, Metal backend) build. The macOS Playground host
-      # has no Dawn code path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
+      # NativeWebGPU (WebGPU/Dawn, Metal backend) build. The macOS Playground host
+      # has no Dawn code path, so build the NativeWebGPU plugin target (plugin + Dawn) to validate it
       # compiles/links; the bgfx unit tests don't apply.
-      - name: Build NativeDawn macOS
-        if: ${{ inputs.nativedawn }}
+      - name: Build NativeWebGPU macOS
+        if: ${{ inputs.nativewebgpu }}
         run: |
           cmake -G "${{ inputs.generator }}" -B build/macOS \
             -D BABYLON_DEBUG_TRACE=ON \
-            -D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON
-          cmake --build build/macOS --target NativeDawn --config RelWithDebInfo
+            -D BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU=ON
+          cmake --build build/macOS --target NativeWebGPU --config RelWithDebInfo
       - name: Build component unit tests
         run: cmake --build build/macOS --target JsRuntimeHostUnitTests UrlLibTests --config RelWithDebInfo
 
       - name: Enable Core Dump
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: sudo sysctl -w kern.corefile=%N.core.%P
 
       - name: Run UnitTests macOS
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: |
           cd build/macOS/Apps/UnitTests/RelWithDebInfo
           ulimit -c unlimited
           ./UnitTests
 
       - name: Run ModuleLoadTest macOS
-        if: ${{ !inputs.enable-sanitizers && !inputs.nativedawn }}
+        if: ${{ !inputs.enable-sanitizers && !inputs.nativewebgpu }}
         run: |
           cd build/macOS/Apps/ModuleLoadTest/RelWithDebInfo
           ulimit -c unlimited

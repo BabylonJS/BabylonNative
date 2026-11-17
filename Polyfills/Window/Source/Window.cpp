@@ -98,7 +98,7 @@ namespace Babylon::Polyfills::Internal
         }
         catch (const Napi::Error&)
         {
-            // No graphics device context is registered (e.g. the NativeDawn /
+            // No graphics device context is registered (e.g. the NativeWebGPU /
             // WebGPU backend, which does not create a bgfx Graphics device).
             // Default to a 1.0 device-pixel ratio so windowing consumers — e.g.
             // WebGPUEngine's constructor, which reads devicePixelRatio — work

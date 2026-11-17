@@ -3268,7 +3268,7 @@
             "renderCount": 10,
             "referenceImage": "FrameGraph-motion-blur-screen-based.png",
             "excludedGraphicsApis": ["WebGPU"],
-            "reason": "Motion-blur FrameGraph test (temporal, needs previous-frame velocity); passes in isolation but corrupted in-process by global FrameGraph/NodeRenderGraph state leaked by several earlier FrameGraph tests. Excluded to keep the single-process NativeDawn run green."
+            "reason": "Motion-blur FrameGraph test (temporal, needs previous-frame velocity); passes in isolation but corrupted in-process by global FrameGraph/NodeRenderGraph state leaked by several earlier FrameGraph tests. Excluded to keep the single-process NativeWebGPU run green."
         },
         {
             "title": "FrameGraph motion blur object based",
@@ -3276,7 +3276,7 @@
             "renderCount": 10,
             "referenceImage": "FrameGraph-motion-blur-object-based.png",
             "excludedGraphicsApis": ["WebGPU"],
-            "reason": "Motion-blur FrameGraph test (temporal, needs previous-frame velocity); passes in isolation but corrupted in-process by global FrameGraph/NodeRenderGraph state leaked by several earlier FrameGraph tests. Excluded to keep the single-process NativeDawn run green."
+            "reason": "Motion-blur FrameGraph test (temporal, needs previous-frame velocity); passes in isolation but corrupted in-process by global FrameGraph/NodeRenderGraph state leaked by several earlier FrameGraph tests. Excluded to keep the single-process NativeWebGPU run green."
         },
         {
             "title": "FrameGraph motion blur skinned",
@@ -5377,7 +5377,7 @@
             "renderCount": 15,
             "referenceImage": "gsplat-lod.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 27.099% pixel difference | WebGPU: shared failure, not Dawn-specific: bgfx/D3D11 fails too, with 'Error compiling effect' followed by runaway memory growth. Dawn renders but selects a lower LOD than the reference (29.2% pixel diff). Previously failed outright with 'Error: Invalid argument' because NativeDawn requested a device with WebGPU default limits, so this scene's G-buffer exceeded maxColorAttachmentBytesPerSample (40 needed vs 32 default); that is fixed, the remaining diff is LOD selection/streaming",
+            "reason": "Fails on native: 27.099% pixel difference | WebGPU: shared failure, not Dawn-specific: bgfx/D3D11 fails too, with 'Error compiling effect' followed by runaway memory growth. Dawn renders but selects a lower LOD than the reference (29.2% pixel diff). Previously failed outright with 'Error: Invalid argument' because NativeWebGPU requested a device with WebGPU default limits, so this scene's G-buffer exceeded maxColorAttachmentBytesPerSample (40 needed vs 32 default); that is fixed, the remaining diff is LOD selection/streaming",
             "excludedGraphicsApis": ["WebGPU"]
         },
         {

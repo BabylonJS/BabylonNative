@@ -1,4 +1,4 @@
-// Native image decoder for NativeDawn, backed by bimg (bgfx's image library).
+// Native image decoder for NativeWebGPU, backed by bimg (bgfx's image library).
 // Decodes PNG/JPEG/etc. encoded bytes to tightly packed 32bpp RGBA so glTF
 // embedded textures work in this headless (no-DOM) environment. bimg is the
 // same decoder the bgfx-based NativeEngine uses, so behaviour matches the rest
@@ -14,7 +14,7 @@
 #include <cstring>
 #include <vector>
 
-namespace Babylon::Plugins::NativeDawn
+namespace Babylon::Plugins::NativeWebGPU
 {
     namespace
     {
@@ -63,7 +63,7 @@ namespace Babylon::Plugins::NativeDawn
             &Allocator(), data, static_cast<uint32_t>(size), bimg::TextureFormat::Count, &err);
         if (image == nullptr)
         {
-            std::fprintf(stderr, "[NativeDawn][bimg] imageParse failed\n");
+            std::fprintf(stderr, "[NativeWebGPU][bimg] imageParse failed\n");
             return false;
         }
 
@@ -89,7 +89,7 @@ namespace Babylon::Plugins::NativeDawn
                     &Allocator(), bimg::TextureFormat::RGBA8, *image, false);
                 if (rgba == nullptr)
                 {
-                    std::fprintf(stderr, "[NativeDawn][bimg] imageConvert to RGBA8 failed (format=%d)\n",
+                    std::fprintf(stderr, "[NativeWebGPU][bimg] imageConvert to RGBA8 failed (format=%d)\n",
                         static_cast<int>(image->m_format));
                     ok = false;
                 }

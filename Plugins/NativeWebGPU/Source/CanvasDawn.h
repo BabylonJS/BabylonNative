@@ -113,7 +113,7 @@ namespace Babylon::Plugins::Internal
     };
 
     // Attaches a real NanoVG-backed 2D context to a DOM-style canvas object
-    // (the plain JS objects NativeDawn's document.createElement("canvas")
+    // (the plain JS objects NativeWebGPU's document.createElement("canvas")
     // returns). The returned context's `canvas` property is the DOM object, so
     // Babylon's width/height reads keep working.
     Napi::Value AttachDawn2DContext(Napi::Env env, Napi::Object domCanvas);

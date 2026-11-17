@@ -10,8 +10,8 @@ if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
     add_subdirectory(NativeCapture)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
-    add_subdirectory(NativeDawn)
+if(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU)
+    add_subdirectory(NativeWebGPU)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEDRACO)

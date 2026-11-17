@@ -14,7 +14,7 @@ on:
         required: false
         type: string
         default: macos-latest
-      nativedawn:
+      nativewebgpu:
         required: false
         type: boolean
         default: false
@@ -36,7 +36,7 @@ jobs:
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
 
       - name: Generate iOS solution
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: |
           cmake -G Xcode -B build/iOS \
             -D IOS=ON \
@@ -47,7 +47,7 @@ jobs:
             -D CMAKE_IOS_INSTALL_COMBINED=NO
 
       - name: Build Playground iOS
-        if: ${{ !inputs.nativedawn }}
+        if: ${{ !inputs.nativewebgpu }}
         run: |
           xcodebuild \
             -project build/iOS/BabylonNative.xcodeproj \
@@ -56,25 +56,25 @@ jobs:
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO
 
-      # NativeDawn (WebGPU/Dawn, Metal backend) build. The iOS Playground host
-      # has no Dawn code path, so build the NativeDawn plugin target (plugin + Dawn) to validate it
+      # NativeWebGPU (WebGPU/Dawn, Metal backend) build. The iOS Playground host
+      # has no Dawn code path, so build the NativeWebGPU plugin target (plugin + Dawn) to validate it
       # compiles/links.
-      - name: Generate iOS solution (NativeDawn)
-        if: ${{ inputs.nativedawn }}
+      - name: Generate iOS solution (NativeWebGPU)
+        if: ${{ inputs.nativewebgpu }}
         run: |
           cmake -G Xcode -B build/iOS \
             -D IOS=ON \
             -D DEPLOYMENT_TARGET=${{ inputs.deployment-target }} \
             -D BABYLON_DEBUG_TRACE=ON \
             -D CMAKE_IOS_INSTALL_COMBINED=NO \
-            -D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON
+            -D BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU=ON
 
-      - name: Build NativeDawn iOS
-        if: ${{ inputs.nativedawn }}
+      - name: Build NativeWebGPU iOS
+        if: ${{ inputs.nativewebgpu }}
         run: |
           xcodebuild \
             -project build/iOS/BabylonNative.xcodeproj \
-            -scheme NativeDawn \
+            -scheme NativeWebGPU \
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO

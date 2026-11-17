@@ -40,7 +40,7 @@ set(SOURCES
 # The Dawn/WebGPU NanoVG backend. It is a peer of nanovg_babylon.cpp (the bgfx
 # backend) and reuses the same nanovg core, so it is added to this target rather
 # than a separate library to avoid duplicate nanovg symbols at link time.
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+if(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU)
     list(APPEND SOURCES
         "Source/nanovg/nanovg_dawn.cpp"
         "Source/nanovg/nanovg_dawn.h"
@@ -71,7 +71,7 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
         PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+if(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU)
     target_link_libraries(Canvas
         PRIVATE webgpu_dawn)
 endif()

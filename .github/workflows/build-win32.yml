@@ -18,7 +18,7 @@ on:
         required: false
         type: boolean
         default: false
-      nativedawn:
+      nativewebgpu:
         required: false
         type: boolean
         default: false
@@ -67,10 +67,10 @@ jobs:
           echo "js_define=$JS_DEFINE" >> "$GITHUB_OUTPUT"
           echo "solution_name=Win32_${{ inputs.platform }}${SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "sanitizer_flag=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}" >> "$GITHUB_OUTPUT"
-          # NativeDawn drives the Playground while NativeEngine remains built for
+          # NativeWebGPU drives the Playground while NativeEngine remains built for
           # its standalone tools and unit tests.
-          if [ "${{ inputs.nativedawn }}" = "true" ]; then
-            echo "dawn_flag=-D BABYLON_NATIVE_PLUGIN_NATIVEDAWN=ON" >> "$GITHUB_OUTPUT"
+          if [ "${{ inputs.nativewebgpu }}" = "true" ]; then
+            echo "dawn_flag=-D BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU=ON" >> "$GITHUB_OUTPUT"
             echo "build_target=--target Playground UnitTests JsRuntimeHostUnitTests UrlLibTests" >> "$GITHUB_OUTPUT"
           else
             echo "dawn_flag=" >> "$GITHUB_OUTPUT"
@@ -179,13 +179,13 @@ jobs:
       # minutes instead of letting it run into the job timeout. Sanitizer builds
       # keep the default timeouts (ASAN EXR decode alone takes ~9.5 minutes).
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !inputs.nativedawn }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !inputs.nativewebgpu }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground ${{ !inputs.enable-sanitizers && '--test-timeout=120' || '' }} app:///Scripts/validation_native.js
 
-      # NativeDawn (WebGPU) validation. CI uses the Microsoft software adapter,
+      # NativeWebGPU (WebGPU) validation. CI uses the Microsoft software adapter,
       # whose raster output differs substantially from the hardware-generated
       # references. Generate result images instead of comparing across adapters;
       # this still gates scene loading/rendering failures for the full WebGPU
@@ -193,30 +193,30 @@ jobs:
       # The default 20-minute readiness wait is sized for the ASAN job; scenes
       # that never become ready on WARP would otherwise exhaust the job timeout.
       - name: Validation Tests
-        if: ${{ inputs.nativedawn }}
+        if: ${{ inputs.nativewebgpu }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground --headless --generate-references --test-timeout=300 app:///Scripts/validation_native.js
 
-      - name: Upload Rendered Pictures (NativeDawn)
-        if: ${{ inputs.nativedawn && !cancelled() }}
+      - name: Upload Rendered Pictures (NativeWebGPU)
+        if: ${{ inputs.nativewebgpu && !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-rendered-pictures
+          name: ${{ steps.vars.outputs.solution_name }}-NativeWebGPU-rendered-pictures
           path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Results
           if-no-files-found: ignore
 
-      - name: Upload Error Pictures (NativeDawn)
-        if: ${{ inputs.nativedawn && failure() }}
+      - name: Upload Error Pictures (NativeWebGPU)
+        if: ${{ inputs.nativewebgpu && failure() }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ steps.vars.outputs.solution_name }}-NativeDawn-error-pictures
+          name: ${{ steps.vars.outputs.solution_name }}-NativeWebGPU-error-pictures
           path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/RelWithDebInfo/Errors
           if-no-files-found: ignore
 
       - name: Upload Rendered Pictures
-        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !inputs.nativedawn && !cancelled() }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type == 'V8' && !inputs.nativewebgpu && !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
@@ -246,7 +246,7 @@ jobs:
           UnitTests
 
       - name: Module Load Test
-        if: ${{ !inputs.enable-sanitizers && !inputs.nativedawn }}
+        if: ${{ !inputs.enable-sanitizers && !inputs.nativewebgpu }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo

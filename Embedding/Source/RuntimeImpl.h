@@ -19,8 +19,8 @@
 #include <Babylon/Plugins/NativeXr.h>
 #endif
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-#include <Babylon/Plugins/NativeDawn.h>
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+#include <Babylon/Plugins/NativeWebGPU.h>
 #endif
 
 #include <arcana/threading/task.h>
@@ -54,12 +54,12 @@ namespace Babylon::Embedding
         std::optional<Babylon::Graphics::Device> m_device;
         std::optional<Babylon::Graphics::DeviceUpdate> m_deviceUpdate;
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-        // NativeDawn (WebGPU) backend state. The bgfx Graphics::Device above is
-        // never constructed in this configuration; the NativeDawn plugin owns
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+        // NativeWebGPU (WebGPU) backend state. The bgfx Graphics::Device above is
+        // never constructed in this configuration; the NativeWebGPU plugin owns
         // the device/surface/present lifecycle instead. m_dawnInitialized latches
         // the first-attach init; m_dawnFrameInFlight throttles the per-frame
-        // JS-thread dispatch (host RenderFrame -> NativeDawn::Tick).
+        // JS-thread dispatch (host RenderFrame -> NativeWebGPU::Tick).
         bool m_dawnInitialized{false};
         std::atomic<bool> m_dawnFrameInFlight{false};
 #endif
@@ -110,7 +110,7 @@ namespace Babylon::Embedding
         // Dispatched onto the JS thread by the very first View attach.
         // Runs all plugin/polyfill Initialize calls, wires NativeXr
         // callbacks, and completes m_initTcs. `window` is forwarded to
-        // TestUtils::Initialize (and, for NativeDawn, to the plugin's
+        // TestUtils::Initialize (and, for NativeWebGPU, to the plugin's
         // Initialize along with the initial surface `width`/`height`);
         // ignored by the bgfx backend otherwise.
         void RunFirstAttachInit(Babylon::Graphics::WindowT window, uint32_t width, uint32_t height);

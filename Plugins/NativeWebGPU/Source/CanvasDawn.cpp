@@ -26,7 +26,7 @@ namespace Babylon::Plugins::Internal
     {
         constexpr auto JS_CONSTRUCTOR_NAME = "Canvas";
 
-        // The one Dawn device/instance NativeDawn created. Every canvas in this
+        // The one Dawn device/instance NativeWebGPU created. Every canvas in this
         // environment renders on it.
         WGPUDevice s_device{};
         WGPUInstance s_instance{};

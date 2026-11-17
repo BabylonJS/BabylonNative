@@ -4,9 +4,9 @@
 
 #include <cstdint>
 
-namespace Babylon::Plugins::NativeDawn
+namespace Babylon::Plugins::NativeWebGPU
 {
-    // Initializes the NativeDawn plugin: creates a Dawn (WebGPU) instance,
+    // Initializes the NativeWebGPU plugin: creates a Dawn (WebGPU) instance,
     // adapter, device and a surface bound to the given native window, then
     // installs `navigator.gpu` and the WebGPU global objects into `env`.
     //

@@ -5,8 +5,8 @@
 #if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
 #include <Babylon/Plugins/NativeEngine.h>
 #endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-#include <Babylon/Plugins/NativeDawn.h>
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+#include <Babylon/Plugins/NativeWebGPU.h>
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEDRACO
 #include <Babylon/Plugins/NativeDraco.h>
@@ -139,7 +139,7 @@ namespace Babylon::Embedding
         //   2. ~ScriptLoader before ~AppRuntime (dispatcher captures it).
         //   3. Canvas / NativeInput / NativeXr hold JS-thread-bound state;
         //      drop them before joining the JS thread.
-        //   4. NativeDawn drops its persistent N-API references and Dawn state
+        //   4. NativeWebGPU drops its persistent N-API references and Dawn state
         //      on the JS thread.
         //   5. ~AppRuntime joins the JS thread.
         //   6. ShaderCache::Disable balances first-attach Enable.
@@ -165,10 +165,10 @@ namespace Babylon::Embedding
         m_nativeXr.reset();
 #endif
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
         if (m_dawnInitialized)
         {
-            // NativeDawn owns persistent N-API references. Destroy them on the
+            // NativeWebGPU owns persistent N-API references. Destroy them on the
             // JS thread before AppRuntime detaches the environment; their
             // process-exit static destructors otherwise call
             // napi_delete_reference through a dangling napi_env.
@@ -182,7 +182,7 @@ namespace Babylon::Embedding
             m_appRuntime->Dispatch([done](Napi::Env env) {
                 try
                 {
-                    Babylon::Plugins::NativeDawn::Deinitialize(env);
+                    Babylon::Plugins::NativeWebGPU::Deinitialize(env);
                     done->set_value();
                 }
                 catch (...)
@@ -232,7 +232,7 @@ namespace Babylon::Embedding
             env.Global().Set("globalThis", env.Global());
 
             // 1. Make the Device available to JS.
-#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if !BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
             implPtr->m_device->AddToJavaScript(env);
 #endif
 
@@ -313,12 +313,12 @@ namespace Babylon::Embedding
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
             Babylon::Plugins::NativeEngine::Initialize(env);
-#elif BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-            // NativeDawn replaces the bgfx NativeEngine: it creates the Dawn
+#elif BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+            // NativeWebGPU replaces the bgfx NativeEngine: it creates the Dawn
             // (WebGPU) device + surface bound to `window`, installs navigator.gpu
             // and the WebGPU globals. Engine creation belongs to the host.
             // `width`/`height` are the initial surface size.
-            Babylon::Plugins::NativeDawn::Initialize(env, window, width, height);
+            Babylon::Plugins::NativeWebGPU::Initialize(env, window, width, height);
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEDRACO
             Babylon::Plugins::NativeDraco::Initialize(env);
@@ -354,18 +354,18 @@ namespace Babylon::Embedding
                     });
             }
 #endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEDAWN
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
             // TestUtils is bgfx-only (its constructor acquires the bgfx
-            // Graphics::DeviceContext, which the NativeDawn backend does not
+            // Graphics::DeviceContext, which the NativeWebGPU backend does not
             // create). `window`/`width`/`height` are consumed by
-            // NativeDawn::Initialize above.
+            // NativeWebGPU::Initialize above.
 #elif BABYLON_NATIVE_PLUGIN_TESTUTILS
             Babylon::Plugins::TestUtils::Initialize(env, window);
 #else
             (void)window;
 #endif
-#if !BABYLON_NATIVE_PLUGIN_NATIVEDAWN
-            // Initial surface size is only consumed by the NativeDawn plugin init.
+#if !BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+            // Initial surface size is only consumed by the NativeWebGPU plugin init.
             (void)width;
             (void)height;
 #endif

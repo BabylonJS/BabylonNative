@@ -36,7 +36,7 @@ FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
     GIT_TAG 6d878f169eb8a2261a468b3a487df28034ca7041
     EXCLUDE_FROM_ALL)
-# Dawn (WebGPU) — only populated + built when BABYLON_NATIVE_PLUGIN_NATIVEDAWN is
+# Dawn (WebGPU) — only populated + built when BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU is
 # ON (see the guarded FetchContent_MakeAvailable below). Declaring it here is
 # free; no clone happens unless the plugin is enabled. Pinned to a Dawn dated
 # tag (a branch tip) so GIT_SHALLOW works: a raw commit SHA cannot be shallow-
@@ -144,7 +144,7 @@ option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphic
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
-option(BABYLON_NATIVE_PLUGIN_NATIVEDAWN "Include experimental Babylon Native Plugin NativeDawn (WebGPU via Dawn)." OFF)
+option(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU "Include experimental Babylon Native Plugin NativeWebGPU (WebGPU via Dawn)." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEDRACO "Include Babylon Native Plugin NativeDraco." OFF)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin NativeEncoding." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
@@ -169,25 +169,25 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 
-# NativeDawn and NativeEngine may both be built so NativeEngine-dependent tools
-# and tests remain available. The Embedding target selects NativeDawn when it is
+# NativeWebGPU and NativeEngine may both be built so NativeEngine-dependent tools
+# and tests remain available. The Embedding target selects NativeWebGPU when it is
 # enabled, ensuring the Playground installs only one graphics backend.
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+if(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU)
     if(NOT BABYLON_NATIVE_POLYFILL_CANVAS)
-        message(FATAL_ERROR "NativeDawn currently requires BABYLON_NATIVE_POLYFILL_CANVAS=ON.")
+        message(FATAL_ERROR "NativeWebGPU currently requires BABYLON_NATIVE_POLYFILL_CANVAS=ON.")
     endif()
-    # NativeDawn's WebGPU shader pipeline transpiles GLSL -> SPIR-V -> WGSL at
+    # NativeWebGPU's WebGPU shader pipeline transpiles GLSL -> SPIR-V -> WGSL at
     # runtime through Babylon's glslang and twgsl WebAssembly modules. Windows'
     # in-box Chakra engine (the Node-API default here) has a WASM compiler limit
     # that rejects glslang.wasm ("Maximum supported nested blocks reached"), so
     # every GLSL-authored shader (NodeMaterial GLSL mode, ShaderMaterial,
     # ProceduralTexture, custom post-processes, ...) fails to compile and its
     # scene hangs forever on executeWhenReady. V8 runs the exact same modules the
-    # browser uses, so default Node-API to V8 whenever NativeDawn is enabled
+    # browser uses, so default Node-API to V8 whenever NativeWebGPU is enabled
     # (unless the caller explicitly picked an engine via -D NAPI_JAVASCRIPT_ENGINE).
     if(WIN32 AND NOT WINDOWS_STORE AND NOT DEFINED NAPI_JAVASCRIPT_ENGINE)
         set(NAPI_JAVASCRIPT_ENGINE "V8" CACHE STRING "JavaScript engine for Node-API")
-        message(STATUS "BABYLON_NATIVE_PLUGIN_NATIVEDAWN is ON: defaulting NAPI_JAVASCRIPT_ENGINE to V8 (Chakra cannot compile the glslang/twgsl WASM modules).")
+        message(STATUS "BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU is ON: defaulting NAPI_JAVASCRIPT_ENGINE to V8 (Chakra cannot compile the glslang/twgsl WASM modules).")
     endif()
 endif()
 
@@ -461,16 +461,16 @@ endif()
 
 add_subdirectory(Dependencies)
 
-# ---- Experimental NativeDawn plugin: pull in Dawn (WebGPU) ----
-# Dawn is a large dependency, so it is only fetched + built when NativeDawn is
+# ---- Experimental NativeWebGPU plugin: pull in Dawn (WebGPU) ----
+# Dawn is a large dependency, so it is only fetched + built when NativeWebGPU is
 # enabled. It is declared (git) alongside the other dependencies above but only
 # populated here, inside this guard, so builds without
-# BABYLON_NATIVE_PLUGIN_NATIVEDAWN never clone Dawn.
-if(BABYLON_NATIVE_PLUGIN_NATIVEDAWN)
+# BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU never clone Dawn.
+if(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU)
     set(DAWN_FETCH_DEPENDENCIES ON CACHE BOOL "" FORCE)
     set(DAWN_BUILD_SAMPLES   OFF CACHE BOOL "" FORCE)
     set(DAWN_BUILD_TESTS     OFF CACHE BOOL "" FORCE)
-    # No windowing/surface toolkit is needed: the NativeDawn plugin creates its
+    # No windowing/surface toolkit is needed: the NativeWebGPU plugin creates its
     # own surface (Win32-only) and builds surfaceless elsewhere. Disabling GLFW
     # (and X11/Wayland) avoids Dawn configuring GLFW, which otherwise requires
     # X11 dev packages (libxrandr-dev etc.) on Linux CI runners.
