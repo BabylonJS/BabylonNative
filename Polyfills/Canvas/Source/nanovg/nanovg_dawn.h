@@ -1,5 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
 //
 // NanoVG render backend for Dawn / WebGPU.
 //

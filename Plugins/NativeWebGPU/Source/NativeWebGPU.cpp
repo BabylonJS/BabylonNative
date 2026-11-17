@@ -1,3 +1,5 @@
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
 #include <Babylon/Plugins/NativeWebGPU.h>
 
 #if BABYLON_NATIVE_PLUGIN_TESTUTILS
@@ -36,6 +38,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <algorithm>
 #include <cctype>
@@ -78,6 +81,7 @@ namespace Babylon::Plugins::NativeWebGPU
         };
 
         State g_state;
+        std::atomic<uint64_t> g_uncapturedErrorCount{};
 
         std::string SvToStr(const WGPUStringView& sv)
         {
@@ -203,6 +207,7 @@ namespace Babylon::Plugins::NativeWebGPU
 
         void LogDeviceError(WGPUDevice const*, WGPUErrorType type, WGPUStringView message, void*, void*)
         {
+            ++g_uncapturedErrorCount;
             const char* kind = "device error";
             switch (type)
             {
@@ -762,6 +767,34 @@ namespace Babylon::Plugins::NativeWebGPU
             Napi::Value v = o.Get(k);
             if (!v.IsNumber()) return def;
             return v.As<Napi::Number>().Uint32Value();
+        }
+        // Validates GPUPassTimestampWrites: a real query set is required and each
+        // supplied index must be an integer inside the set. Only an omitted index
+        // maps to WGPU_QUERY_SET_INDEX_UNDEFINED.
+        WGPUPassTimestampWrites ParseTimestampWrites(Napi::Env env, Napi::Object writes)
+        {
+            Napi::Value qsV = writes.Get("querySet");
+            WGPUQuerySet* querySet = GetH<WGPUQuerySet>(qsV);
+            if (querySet == nullptr)
+            {
+                throw Napi::TypeError::New(env, "timestampWrites.querySet must be a GPUQuerySet");
+            }
+            const double count = qsV.As<Napi::Object>().Get("count").As<Napi::Number>().DoubleValue();
+            auto readIndex = [&](const char* key) -> uint32_t {
+                Napi::Value v = writes.Get(key);
+                if (v.IsUndefined()) return WGPU_QUERY_SET_INDEX_UNDEFINED;
+                const double d = v.ToNumber().DoubleValue();
+                if (!(d >= 0) || d != std::floor(d) || d >= count)
+                {
+                    throw Napi::RangeError::New(env, std::string("timestampWrites.") + key + " is outside the query set");
+                }
+                return static_cast<uint32_t>(d);
+            };
+            WGPUPassTimestampWrites result{};
+            result.querySet = *querySet;
+            result.beginningOfPassWriteIndex = readIndex("beginningOfPassWriteIndex");
+            result.endOfPassWriteIndex = readIndex("endOfPassWriteIndex");
+            return result;
         }
         uint64_t PropU64(Napi::Object o, const char* k, uint64_t def)
         {
@@ -2723,6 +2756,16 @@ namespace Babylon::Plugins::NativeWebGPU
                     rpd.depthStencilAttachment = &dsa;
                 }
 
+                if (auto* querySet = GetH<WGPUQuerySet>(desc.Get("occlusionQuerySet")))
+                {
+                    rpd.occlusionQuerySet = *querySet;
+                }
+                WGPUPassTimestampWrites timestampWrites{};
+                if (desc.Get("timestampWrites").IsObject())
+                {
+                    timestampWrites = ParseTimestampWrites(env, desc.Get("timestampWrites").As<Napi::Object>());
+                    rpd.timestampWrites = &timestampWrites;
+                }
                 return MakeRenderPassEncoder(env, wgpuCommandEncoderBeginRenderPass(h, &rpd), rtWidth, rtHeight);
             });
             SetMethod(o, "beginComputePass", [h](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -2732,10 +2775,17 @@ namespace Babylon::Plugins::NativeWebGPU
                     .label = EmptyStringView(),
                 };
                 std::string label;
+                WGPUPassTimestampWrites timestampWrites{};
                 if (info.Length() > 0 && info[0].IsObject())
                 {
-                    label = PropStr(info[0].As<Napi::Object>(), "label");
+                    auto desc = info[0].As<Napi::Object>();
+                    label = PropStr(desc, "label");
                     if (!label.empty()) d.label = StrView(label);
+                    if (desc.Get("timestampWrites").IsObject())
+                    {
+                        timestampWrites = ParseTimestampWrites(env, desc.Get("timestampWrites").As<Napi::Object>());
+                        d.timestampWrites = &timestampWrites;
+                    }
                 }
                 return MakeComputePassEncoder(env, wgpuCommandEncoderBeginComputePass(h, &d));
             });
@@ -3044,6 +3094,22 @@ namespace Babylon::Plugins::NativeWebGPU
                     tbl.bytesPerRow = w * 16u;
                     wgpuQueueWriteTexture(g_state.queue, &tci, f.data(),
                         static_cast<size_t>(w) * h * 16u, &tbl, &ext);
+                }
+                else if (fmt == "r8unorm" || fmt == "rg8unorm")
+                {
+                    const uint32_t channels = fmt == "r8unorm" ? 1u : 2u;
+                    std::vector<uint8_t> packed(static_cast<size_t>(w) * h * channels);
+                    for (uint32_t y = 0; y < h; ++y)
+                    {
+                        const uint8_t* row = srcRow(y);
+                        uint8_t* dst = packed.data() + static_cast<size_t>(y) * w * channels;
+                        for (uint32_t x = 0; x < w; ++x)
+                        {
+                            std::copy_n(row + x * 4u, channels, dst + x * channels);
+                        }
+                    }
+                    tbl.bytesPerRow = w * channels;
+                    wgpuQueueWriteTexture(g_state.queue, &tci, packed.data(), packed.size(), &tbl, &ext);
                 }
                 else if (fmt == "bgra8unorm" || fmt == "bgra8unorm-srgb")
                 {
@@ -4664,6 +4730,10 @@ namespace Babylon::Plugins::NativeWebGPU
             SetMethod(tu, "getGraphicsApiName", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return Napi::String::New(info.Env(), "WebGPU");
             });
+            SetMethod(tu, "getUncapturedErrorCount", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                wgpuInstanceProcessEvents(g_state.instance);
+                return Napi::Number::New(info.Env(), static_cast<double>(g_uncapturedErrorCount.load()));
+            });
             SetMethod(tu, "getJavaScriptEngineName", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return Napi::String::New(info.Env(), NATIVEWEBGPU_JAVASCRIPT_ENGINE);
             });
@@ -4690,7 +4760,12 @@ namespace Babylon::Plugins::NativeWebGPU
                 return env.Undefined();
             });
             SetMethod(tu, "exit", [](const Napi::CallbackInfo& info) -> Napi::Value {
-                const int code = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 0;
+                wgpuInstanceProcessEvents(g_state.instance);
+                int code = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 0;
+                if (code == 0 && g_uncapturedErrorCount != 0)
+                {
+                    code = -1;
+                }
                 Babylon::Plugins::TestUtils::NotifyExit(code);
                 std::fflush(stdout);
                 std::fflush(stderr);
@@ -4761,6 +4836,7 @@ namespace Babylon::Plugins::NativeWebGPU
         // already reach the JS console rather than the stderr fallback.
         g_logEnv = env;
         g_jsThreadId = std::this_thread::get_id();
+        g_uncapturedErrorCount = 0;
 
         if (!CreateDeviceAndSurface(window, width, height))
         {
@@ -4797,6 +4873,7 @@ namespace Babylon::Plugins::NativeWebGPU
         g_rafQueue.clear();
         g_rafRunning.clear();
         g_presentationCanvas.Reset();
+        Babylon::Plugins::Internal::NativeCanvasDawn::Deinitialize();
 
         // Drain deferred wrapper finalizers while both the N-API environment and
         // the Dawn device are valid.

@@ -1,5 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
 //
 // See CanvasDawn.h for why the Dawn path needs its own canvas implementation.
 
@@ -83,6 +86,13 @@ namespace Babylon::Plugins::Internal
     Napi::Object NativeCanvasDawn::CreateInstance(Napi::Env env)
     {
         return s_constructor.New({});
+    }
+
+    void NativeCanvasDawn::Deinitialize()
+    {
+        s_constructor.Reset();
+        s_device = nullptr;
+        s_instance = nullptr;
     }
 
     NativeCanvasDawn::NativeCanvasDawn(const Napi::CallbackInfo& info)

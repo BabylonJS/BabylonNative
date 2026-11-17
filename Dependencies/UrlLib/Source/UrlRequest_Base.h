@@ -1,7 +1,6 @@
 #pragma once
 
 #include <UrlLib/UrlLib.h>
-#include "DataUrl.h"
 #include <arcana/threading/cancellation.h>
 #include <cctype>
 #include <memory>
@@ -65,8 +64,8 @@ namespace UrlLib
         }
 
         // Returns true (and defers the actual work to ResolveScheme()) when `url`'s scheme has a
-        // registered or built-in resolver, in which case the platform transport is bypassed.
-        bool BeginSchemeResolution(UrlMethod method, const std::string& url)
+        // registered resolver, in which case the caller must not touch the platform transport.
+        bool BeginSchemeResolution(const std::string& url)
         {
             const std::string scheme = SchemeOf(url);
             if (scheme.empty())
@@ -79,20 +78,15 @@ namespace UrlLib
                 auto& registry = Registry();
                 const std::lock_guard<std::mutex> lock{registry.mutex};
                 const auto it = registry.resolvers.find(scheme);
-                if (it != registry.resolvers.end())
-                {
-                    resolver = it->second;
-                }
-                else if (scheme != "data")
+                if (it == registry.resolvers.end())
                 {
                     return false;
                 }
+                resolver = it->second;
             }
 
             ResetForOpen();
-            m_method = method;
-            m_builtinData = !resolver && scheme == "data";
-            m_pendingResolver = resolver ? std::move(resolver) : Detail::ResolveDataUrl;
+            m_pendingResolver = std::move(resolver);
             m_pendingResolverUrl = url;
             m_usingSchemeResolver = true;
             return true;
@@ -101,13 +95,6 @@ namespace UrlLib
         bool IsSchemeResolution() const
         {
             return m_usingSchemeResolver;
-        }
-
-        arcana::task<void, std::exception_ptr> ResolveSchemeAsync()
-        {
-            return arcana::make_task(arcana::inline_scheduler, m_cancellationSource, [this] {
-                ResolveScheme();
-            });
         }
 
         // Invokes the registered resolver and populates the response state. A resolver that reports
@@ -126,29 +113,11 @@ namespace UrlLib
 
             // Move the resolver/url out and clear them before invoking, so this runs exactly once.
             const UrlSchemeResolver resolver = std::move(m_pendingResolver);
-            std::string url = std::move(m_pendingResolverUrl);
+            const std::string url = std::move(m_pendingResolverUrl);
             m_pendingResolver = nullptr;
             m_pendingResolverUrl.clear();
 
-            if (m_builtinData)
-            {
-                m_responseUrl = std::move(url);
-                const auto fragment = m_responseUrl.find('#');
-                if (fragment != std::string::npos)
-                {
-                    m_responseUrl.erase(fragment);
-                }
-            }
-            else
-            {
-                m_responseUrl = url;
-            }
-            const std::string& resolverUrl = m_builtinData ? m_responseUrl : url;
-            if (m_builtinData && m_method != UrlMethod::Get)
-            {
-                SetError("urllib", "DataUrlUnsupportedMethod", 0, "data URLs support GET only");
-                return;
-            }
+            m_responseUrl = url;
 
             // A throwing resolver is contained here and reported through the same error surface as
             // any other failure, so it cannot escape SendAsync() synchronously -- callers observe a
@@ -156,16 +125,11 @@ namespace UrlLib
             UrlSchemeResolverResult result{};
             try
             {
-                result = resolver(resolverUrl);
-            }
-            catch (const std::invalid_argument& e)
-            {
-                SetError("urllib", m_builtinData ? "DataUrlInvalid" : "SchemeResolverThrew", 0, e.what());
-                return;
+                result = resolver(url);
             }
             catch (const std::exception& e)
             {
-                SetError("urllib", m_builtinData ? "DataUrlFailed" : "SchemeResolverThrew", 0, e.what());
+                SetError("urllib", "SchemeResolverThrew", 0, e.what());
                 return;
             }
             catch (...)
@@ -176,7 +140,7 @@ namespace UrlLib
 
             if (!result.handled)
             {
-                SetError("urllib", "SchemeResolverNotFound", 0, "no live entry for '" + resolverUrl + "'");
+                SetError("urllib", "SchemeResolverNotFound", 0, "no live entry for '" + url + "'");
                 return;
             }
 
@@ -191,7 +155,7 @@ namespace UrlLib
             }
 
             m_resolvedBuffer = result.body ? result.body : std::make_shared<const std::vector<std::byte>>();
-            if (m_responseType == UrlResponseType::String && !m_resolvedBuffer->empty())
+            if (m_responseType == UrlResponseType::String)
             {
                 m_responseString.assign(reinterpret_cast<const char*>(m_resolvedBuffer->data()), m_resolvedBuffer->size());
             }
@@ -413,7 +377,6 @@ namespace UrlLib
             m_errorSymbol.clear();
             m_errorString.clear();
             m_usingSchemeResolver = false;
-            m_builtinData = false;
             m_pendingResolver = nullptr;
             m_pendingResolverUrl.clear();
             m_resolvedBuffer.reset();
@@ -436,7 +399,6 @@ namespace UrlLib
         // Custom-scheme (e.g. blob:) resolution state. Populated by BeginSchemeResolution() /
         // ResolveScheme(); inert for ordinary transport requests.
         bool m_usingSchemeResolver{false};
-        bool m_builtinData{false};
         UrlSchemeResolver m_pendingResolver{};
         std::string m_pendingResolverUrl{};
         std::shared_ptr<const std::vector<std::byte>> m_resolvedBuffer{};

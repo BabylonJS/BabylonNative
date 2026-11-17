@@ -1,3 +1,6 @@
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
+//
 // Native image decoder for NativeWebGPU, backed by bimg (bgfx's image library).
 // Decodes PNG/JPEG/etc. encoded bytes to tightly packed 32bpp RGBA so glTF
 // embedded textures work in this headless (no-DOM) environment. bimg is the

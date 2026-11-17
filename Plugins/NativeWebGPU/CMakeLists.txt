@@ -1,3 +1,5 @@
+# NOTE: NativeWebGPU is transient and will be replaced in the near future.
+# Do not base any development on this feature.
 if(NOT TARGET Blob OR NOT TARGET URL)
     message(FATAL_ERROR "NativeWebGPU requires the JsRuntimeHost Blob and URL polyfills.")
 endif()

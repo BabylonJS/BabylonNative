@@ -2538,7 +2538,8 @@
             "playgroundId": "#PCMH7A#2",
             "renderCount": 120,
             "replace": "this._makeGUI();,",
-            "reason": "The demo settings panel uses lil-gui, which needs a DOM the native host does not have; it throws before the fluid simulation is attached, so the panel is not built.",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "The demo settings panel uses lil-gui, which needs a DOM the native host does not have; it throws before the fluid simulation is attached, so the panel is not built. WebGPU: the fluid depth pass creates a depth32float view of a depth24plus-stencil8 texture, producing uncaptured Dawn validation errors.",
             "referenceImage": "fluidBoxSphere.png"
         },
         {
@@ -3086,6 +3087,8 @@
         {
             "title": "Normed 16 bits texture formats",
             "playgroundId": "#SOCPNB#10",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU: Babylon.js supplies integer RGBA descriptors/data layouts incompatible with the normalized 16-bit formats, producing uncaptured Dawn validation errors",
             "referenceImage": "Normed-16-bits-texture-formats.png"
         },
         {

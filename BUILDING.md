@@ -99,7 +99,8 @@ Set-Location build\win32_dawn\Apps\Playground\RelWithDebInfo
 ```
 
 The Win32 WebGPU validation step runs in CI with `--generate-references`, so it
-is only a crash/smoke run without pixel comparison.
+is a crash/smoke run without pixel comparison. Uncaptured Dawn GPU errors fail
+the current test and force a nonzero process exit, including in this mode.
 The Dawn validation adapter reports both its graphics API and JavaScript engine
 so the shared catalog applies backend and engine exclusions consistently.
 
@@ -110,7 +111,7 @@ and blob URL resolution use JsRuntimeHost's implementations, not Dawn-specific
 replacements. The V8 finalizer-draining compatibility code is still needed until
 the vendored JsRuntimeHost implements deferred-finalizer support.
 
-The shared transport fixes are included in this repository. No external
+The plugin uses the existing shared URL transport unchanged. No external
 transport checkout, source override or separate pull request is required.
 
 NativeWebGPU Canvas2D uses real NanoVG/Dawn rasterization and straight-RGBA GPU
@@ -133,8 +134,8 @@ loading live in `Scripts/dawn_playground.js`, explicitly loaded by the Playgroun
 bootstrap, not in the plugin.
 
 The default validation run compares rendered pixels against committed references.
-`--generate-references` only checks scene loading/rendering and writes images; it
-is not a pixel-regression check. Software-adapter output may differ from
+`--generate-references` checks scene loading/rendering and uncaptured GPU errors,
+and writes images; it is not a pixel-regression check. Software-adapter output may differ from
 hardware-generated references, so the CI smoke run uses reference-generation mode.
 
 ### Windows Chakra validation

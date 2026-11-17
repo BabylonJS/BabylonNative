@@ -1,3 +1,5 @@
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
 (function () {
     "use strict";
 

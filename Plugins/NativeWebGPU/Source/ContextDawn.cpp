@@ -1,3 +1,5 @@
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
 #include <map>
 #include <algorithm>
 #include <cassert>
@@ -759,7 +761,7 @@ namespace Babylon::Plugins::Internal
             }
 
             NvgSetDawnRenderPass(*m_nvg, pass.encoder);
-            nvgBeginFrame(*m_nvg, static_cast<float>(width), static_cast<float>(height), 1.0f);
+            nvgSetViewport(*m_nvg, static_cast<float>(width), static_cast<float>(height));
             nvgEndFrame(*m_nvg);
             NvgSetDawnRenderPass(*m_nvg, nullptr);
 

@@ -900,6 +900,11 @@
         BABYLON.SceneLoader.OnPluginActivatedObservable.clear();
     }
 
+    let uncapturedErrorsAtTestStart = 0;
+    function getUncapturedErrorCount() {
+        return TestUtils.getUncapturedErrorCount ? TestUtils.getUncapturedErrorCount() : 0;
+    }
+
     // Every completion path must stop rendering and clean up exactly once.
     function makeTestDone(outerDone, test) {
         let finished = false;
@@ -916,6 +921,10 @@
                 console.error(e);
             }
             cleanupAfterTest(test);
+            if (getUncapturedErrorCount() > uncapturedErrorsAtTestStart) {
+                console.error("Test '" + test.title + "' failed (uncaptured GPU errors)");
+                status = false;
+            }
             outerDone(status);
         };
     }
@@ -1258,6 +1267,8 @@
                 testRes = false;
                 console.log("Test '" + (test.title || "(unnamed)") + "' failed (pixel comparison)");
                 logFailureDiagnostics(test);
+            } else if (getUncapturedErrorCount() > uncapturedErrorsAtTestStart) {
+                testRes = false;
             } else {
                 testRes = true;
                 console.log("Test '" + (test.title || "(unnamed)") + "' validated");
@@ -1925,6 +1936,7 @@
     }
     function runTest(index, outerDone) {
         const test = config.tests[index];
+        uncapturedErrorsAtTestStart = getUncapturedErrorCount();
         const done = makeTestDone(outerDone, test);
         appliedWorkarounds = [];
         if (index >= config.tests.length) {

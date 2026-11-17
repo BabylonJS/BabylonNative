@@ -1,5 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
 //
 // WGSL port of the bgfx NanoVG shaders (vs_nanovg_fill.sc / fs_nanovg_fill.sc)
 // used by the Canvas polyfill. WGSL is compiled by Dawn at runtime, so unlike

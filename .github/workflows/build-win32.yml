@@ -188,8 +188,9 @@ jobs:
       # NativeWebGPU (WebGPU) validation. CI uses the Microsoft software adapter,
       # whose raster output differs substantially from the hardware-generated
       # references. Generate result images instead of comparing across adapters;
-      # this still gates scene loading/rendering failures for the full WebGPU
-      # subset. --headless routes all logs to stdout for CI diagnostics.
+      # this still gates scene loading/rendering failures and uncaptured Dawn
+      # errors for the full WebGPU subset. The NativeWebGPU TestUtils adapter
+      # enforces a failing exit. --headless routes all logs to stdout.
       # The default 20-minute readiness wait is sized for the ASAN job; scenes
       # that never become ready on WARP would otherwise exhaust the job timeout.
       - name: Validation Tests

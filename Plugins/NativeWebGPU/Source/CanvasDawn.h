@@ -1,5 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
+// NOTE: NativeWebGPU is transient and will be replaced in the near future.
+// Do not base any development on this feature.
 //
 // NativeCanvasDawn — the WebGPU-backed counterpart of the Canvas polyfill's
 // NativeCanvas.
@@ -33,6 +36,7 @@ namespace Babylon::Plugins::Internal
         // bgfx one installed earlier by Polyfills::Canvas::Initialize. `device`
         // and `instance` must outlive the JS environment.
         static void Initialize(Napi::Env env, WGPUDevice device, WGPUInstance instance);
+        static void Deinitialize();
 
         explicit NativeCanvasDawn(const Napi::CallbackInfo& info);
         virtual ~NativeCanvasDawn();
