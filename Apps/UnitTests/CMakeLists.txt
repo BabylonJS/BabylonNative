@@ -100,6 +100,11 @@ if(GRAPHICS_API STREQUAL "D3D11")
         "Source/Tests.ExternalTexture.BlitFormat.D3D11.cpp")
 endif()
 
+if(GRAPHICS_API STREQUAL "D3D12")
+    set(SOURCES ${SOURCES}
+        "Source/Tests.ExternalTexture.BlitFormat.D3D12.cpp")
+endif()
+
 if(APPLE)
     set(SOURCES ${SOURCES} "Source/App.Apple.mm")
     if(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE)

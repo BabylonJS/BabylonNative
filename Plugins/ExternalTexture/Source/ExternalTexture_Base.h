@@ -103,6 +103,8 @@ namespace Babylon::Plugins
             uint64_t Flags{};
             bgfx::TextureFormat::Enum BlitFormat{bgfx::TextureFormat::Unknown};
             uint64_t BlitFlags{};
+            // The format bgfx uses to track an imported handle. Native probes may need
+            // this to avoid selecting a different bgfx format family for the same resource.
             bgfx::TextureFormat::Enum ImportedFormat{bgfx::TextureFormat::Unknown};
         };
 
