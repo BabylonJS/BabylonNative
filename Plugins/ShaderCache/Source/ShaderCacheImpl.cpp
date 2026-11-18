@@ -68,7 +68,9 @@ namespace Babylon::Plugins::ShaderCache
     // 11: Metal renames uniforms named after MSL keywords before compilation.
     // 12: Vulkan vertex inputs use dense locations matching bgfx's attribute-table binding.
     // 13: D3D/Vulkan instanced variants keep the base program's per-vertex generic locations.
-    static const uint32_t CACHE_VERSION = 13;
+    // 14: vertex-only varyings (written by the VS, never read by the FS) are demoted to private
+    //     globals on D3D/Metal; version-13 D3D12 entries fail PSO creation from the signature mismatch.
+    static const uint32_t CACHE_VERSION = 14;
 
     void ShaderCacheImpl::Clear()
     {
