@@ -26,6 +26,10 @@ target_include_directories(AppRuntime
     PRIVATE "Include/Babylon"
     INTERFACE "Include")
 
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    target_include_directories(AppRuntime PRIVATE "../Node-API/Source")
+endif()
+
 target_link_libraries(AppRuntime
     PRIVATE FoundationInternal
     PRIVATE arcana
