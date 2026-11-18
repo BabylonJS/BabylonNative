@@ -5,6 +5,7 @@
 #include <future>
 #include <memory>
 #include <thread>
+#include <string_view>
 
 TEST(AppRuntime, DestroyDoesNotDeadlock)
 {
@@ -42,8 +43,8 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
     //            join() returns <----- thread exits
     //   5. destroy completes -> PASS
 
-    [[maybe_unused]] bool hookSignaled{false};
-    [[maybe_unused]] std::promise<void> workerInHook;
+    bool hookSignaled{false};
+    std::promise<void> workerInHook;
     std::promise<void> testDone;
 
     // Run the full lifecycle on a separate thread so the gtest thread
@@ -60,9 +61,14 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
         });
         ready.get_future().wait();
 
-        // On Apple platforms the worker waits in its CFRunLoop instead of blocking_tick, so the
-        // queue hook never fires there; the destructor must still wake the run loop.
-#ifndef __APPLE__
+        // JavaScriptCore on Apple platforms waits in the thread's CFRunLoop instead of blocking_tick,
+        // so the queue hook never fires there; the destructor must still wake the run loop.
+#ifdef __APPLE__
+        constexpr bool waitsInDispatcherQueue{std::string_view{NAPI_JAVASCRIPT_ENGINE} != "JavaScriptCore"};
+#else
+        constexpr bool waitsInDispatcherQueue{true};
+#endif
+        if (waitsInDispatcherQueue)
         {
             // Install the hook and dispatch a no-op to wake the worker,
             // ensuring it cycles through the hook on its way back to idle.
@@ -88,7 +94,6 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
             // Wait for the worker to be in the hook (holding mutex, sleeping)
             workerInHook.get_future().wait();
         }
-#endif
 
         // Destroy — if the fix works, the destructor completes.
         // If broken, it deadlocks and the timeout detects it.

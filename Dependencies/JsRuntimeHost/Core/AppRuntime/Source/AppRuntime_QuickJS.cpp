@@ -68,4 +68,9 @@ namespace Babylon
         {
         }
     }
+
+    void AppRuntime::RunDispatchLoop()
+    {
+        RunDispatcher();
+    }
 }

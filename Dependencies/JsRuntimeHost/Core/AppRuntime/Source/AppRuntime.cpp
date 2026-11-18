@@ -11,10 +11,6 @@
 #include <thread>
 #include <type_traits>
 
-#ifdef __APPLE__
-#include <CoreFoundation/CoreFoundation.h>
-#endif
-
 namespace Babylon
 {
     class AppRuntime::Impl
@@ -36,28 +32,15 @@ namespace Babylon
                 });
             }
 
-#ifdef __APPLE__
-            WakeRunLoop();
-#endif
-        }
-
-        void RunDispatchLoop();
-
-#ifdef __APPLE__
-        void WakeRunLoop()
-        {
-            std::scoped_lock lock{m_runLoopMutex};
-            if (m_runLoopSource != nullptr)
+            std::scoped_lock lock{m_dispatchLoopWakerMutex};
+            if (m_dispatchLoopWaker)
             {
-                CFRunLoopSourceSignal(m_runLoopSource);
-                CFRunLoopWakeUp(m_runLoop);
+                m_dispatchLoopWaker();
             }
         }
 
-        std::mutex m_runLoopMutex{};
-        CFRunLoopRef m_runLoop{};
-        CFRunLoopSourceRef m_runLoopSource{};
-#endif
+        std::mutex m_dispatchLoopWakerMutex{};
+        std::function<void()> m_dispatchLoopWaker{};
 
         std::optional<Napi::Env> m_env{};
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
@@ -68,56 +51,29 @@ namespace Babylon
         std::thread m_thread;
     };
 
-#ifdef __APPLE__
-    // JavaScriptCore schedules some engine work on the CFRunLoop of the thread that created its
-    // VM, notably settling asynchronous WebAssembly compile/instantiate promises (its
-    // DeferredWorkTimer). Run this thread's CFRunLoop so that work executes, and wake it through
-    // a run loop source whenever work is dispatched.
-    void AppRuntime::Impl::RunDispatchLoop()
+    void AppRuntime::RunDispatcher()
     {
-        CFRunLoopSourceContext context{};
-        context.info = this;
-        context.perform = [](void* info) {
-            auto& impl = *static_cast<Impl*>(info);
-            impl.m_dispatcher.tick(impl.m_cancelSource);
-        };
-
-        CFRunLoopRef runLoop = CFRunLoopGetCurrent();
-        CFRunLoopSourceRef source = CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
-        CFRunLoopAddSource(runLoop, source, kCFRunLoopDefaultMode);
-
+        while (!m_impl->m_cancelSource.cancelled())
         {
-            std::scoped_lock lock{m_runLoopMutex};
-            m_runLoop = runLoop;
-            m_runLoopSource = source;
-        }
-
-        // Drain work queued before the source was published.
-        CFRunLoopSourceSignal(source);
-
-        while (!m_cancelSource.cancelled())
-        {
-            CFRunLoopRunInMode(kCFRunLoopDefaultMode, 1.0e10, true);
-        }
-
-        {
-            std::scoped_lock lock{m_runLoopMutex};
-            m_runLoop = nullptr;
-            m_runLoopSource = nullptr;
-        }
-
-        CFRunLoopSourceInvalidate(source);
-        CFRelease(source);
-    }
-#else
-    void AppRuntime::Impl::RunDispatchLoop()
-    {
-        while (!m_cancelSource.cancelled())
-        {
-            m_dispatcher.blocking_tick(m_cancelSource);
+            m_impl->m_dispatcher.blocking_tick(m_impl->m_cancelSource);
         }
     }
-#endif
+
+    void AppRuntime::TickDispatcher()
+    {
+        m_impl->m_dispatcher.tick(m_impl->m_cancelSource);
+    }
+
+    bool AppRuntime::IsDispatchLoopCancelled() const
+    {
+        return m_impl->m_cancelSource.cancelled();
+    }
+
+    void AppRuntime::SetDispatchLoopWaker(std::function<void()> waker)
+    {
+        std::scoped_lock lock{m_impl->m_dispatchLoopWakerMutex};
+        m_impl->m_dispatchLoopWaker = std::move(waker);
+    }
 
     AppRuntime::AppRuntime() :
         AppRuntime{{}}
@@ -165,7 +121,7 @@ namespace Babylon
 
         m_impl->m_dispatcher.set_affinity(std::this_thread::get_id());
 
-        m_impl->RunDispatchLoop();
+        RunDispatchLoop();
 
         Napi::HandleScope scope{env};
         ShutdownEnvironment(env);
