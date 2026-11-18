@@ -925,9 +925,7 @@
         {
             "title": "Alpha-to-coverage transparent overlap",
             "playgroundId": "#M4GBLK#0",
-            "referenceImage": "alpha-to-coverage-transparent-overlap.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19148 (alpha-to-coverage on native) to ship in a Babylon.js release"
+            "referenceImage": "alpha-to-coverage-transparent-overlap.png"
         },
         {
             "title": "MSDF Screen projected",
