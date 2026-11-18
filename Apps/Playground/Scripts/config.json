@@ -927,7 +927,7 @@
             "playgroundId": "#M4GBLK#0",
             "referenceImage": "alpha-to-coverage-transparent-overlap.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 27.212% pixel difference"
+            "reason": "Requires Babylon.js #19148 (alpha-to-coverage on native) to ship in a Babylon.js release"
         },
         {
             "title": "MSDF Screen projected",
