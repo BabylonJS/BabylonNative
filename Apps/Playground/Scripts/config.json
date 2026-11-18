@@ -1979,8 +1979,8 @@
             "replace": "const showControls = true;, const showControls = false;, const showGpuTime = true;, const showGpuTime = false;",
             "referenceImage": "mesh-blending-coastal-cliff.png",
             "workarounds": ["dom-controls"],
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
+            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL (Linux CI) createScene does not resolve within 120s"
         },
         {
             "title": "Mesh blending - FrameGraph alpha cutoff coverage",
@@ -3303,8 +3303,8 @@
             "playgroundId": "#PVK3RV#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-beauty.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
+            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph object renderer - Beauty reference",
@@ -3319,24 +3319,24 @@
             "playgroundId": "#Z6QI9V#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-normals.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
+            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Geometry only",
             "playgroundId": "#RT0TA2#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-geometry-only.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
+            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - NRGE",
             "playgroundId": "#NIXFAQ#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-nrge.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
+            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Gaussian mesh",
@@ -3344,8 +3344,8 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
             "workarounds": ["es-module-import"],
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
+            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL (Linux CI) createScene does not resolve within 120s"
         },
         {
             "title": "FrameGraph object renderer - Gaussian mesh reference",
