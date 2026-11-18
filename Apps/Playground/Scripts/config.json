@@ -1953,23 +1953,20 @@
             "title": "Object ID and mesh tag - Geometry buffer renderer",
             "playgroundId": "#O0BI9B#0",
             "referenceImage": "object-id-texture-geometry-buffer.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Object ID and mesh tag - FrameGraph object ID first",
             "playgroundId": "#XKTMFR#0",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Object ID and mesh tag - FrameGraph mesh tag first",
             "playgroundId": "#XKTMFR#0",
             "replace": "const meshTagFirst = false;, const meshTagFirst = true;",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - coastal cliff scenery",
@@ -1977,62 +1974,58 @@
             "replace": "const showControls = true;, const showControls = false;, const showGpuTime = true;, const showGpuTime = false;",
             "referenceImage": "mesh-blending-coastal-cliff.png",
             "workarounds": ["dom-controls"],
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL (Linux CI) createScene does not resolve within 120s"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL (Linux CI) createScene does not resolve within 120s"
         },
         {
             "title": "Mesh blending - FrameGraph alpha cutoff coverage",
             "playgroundId": "#OGVQ6C#0",
             "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
             "referenceImage": "mesh-blending-alpha-cutoff.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - viewport-edge continuation",
             "playgroundId": "#Q46SI1#2",
             "replace": "const scenario = \"all\";, const scenario = \"viewportEdges\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Low",
             "referenceImage": "mesh-blending-phase4-low.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - mixed radius continuation",
             "playgroundId": "#Q46SI1#2",
             "replace": "const scenario = \"all\";, const scenario = \"mixedRadius\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Cinematic",
             "referenceImage": "mesh-blending-phase4-cinematic.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - shadow attenuation enabled",
             "playgroundId": "#CYSYH2#7",
             "referenceImage": "mesh-blending-phase5-target-shadow-seam.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "errorRatio": 0.5,
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - shadow attenuation disabled",
             "playgroundId": "#CYSYH2#7",
             "replace": "const useShadowAttenuation = true;, const useShadowAttenuation = false;",
             "referenceImage": "mesh-blending-phase5-shadow-attenuation-disabled.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "errorRatio": 0.5,
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - HDR SceneColor",
             "playgroundId": "#GC20U3#0",
             "referenceImage": "mesh-blending-phase5-hdr-scene-color.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - classic parity reference",
             "playgroundId": "#O05LI8#6",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - FrameGraph parity",
@@ -2040,8 +2033,7 @@
             "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - NRGE without albedo",
@@ -2049,8 +2041,7 @@
             "replace": "const useNRGE = false;, const useNRGE = true;",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Shadows and LODs",
@@ -3301,8 +3292,9 @@
             "playgroundId": "#PVK3RV#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-beauty.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph object renderer - Beauty reference",
@@ -3317,24 +3309,27 @@
             "playgroundId": "#Z6QI9V#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-normals.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Geometry only",
             "playgroundId": "#RT0TA2#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-geometry-only.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - NRGE",
             "playgroundId": "#NIXFAQ#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-nrge.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL the GPU particle update effect fails to compile"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Gaussian mesh",
@@ -3342,8 +3337,9 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
             "workarounds": ["es-module-import"],
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL"],
-            "reason": "Requires integer color attachments, which D3D11 and D3D12 do not expose; on OpenGL (Linux CI) createScene does not resolve within 120s"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL (Linux CI) createScene does not resolve within 120s"
         },
         {
             "title": "FrameGraph object renderer - Gaussian mesh reference",

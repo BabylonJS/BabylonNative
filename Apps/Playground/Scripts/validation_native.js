@@ -973,6 +973,12 @@
         if (t.excludedPlatforms && t.excludedPlatforms.includes(platformEngine)) {
             return "excludedPlatforms: " + platformEngine;
         }
+        if (t.requiredNativeCaps) {
+            const missingCaps = t.requiredNativeCaps.filter((cap) => !_native.Engine[cap]);
+            if (missingCaps.length > 0) {
+                return "requiredNativeCaps: " + missingCaps.join(", ") + " not supported";
+            }
+        }
         return null;
     }
 
