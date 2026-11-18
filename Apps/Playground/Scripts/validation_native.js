@@ -25,6 +25,13 @@
     define(Array.prototype, "flatMap", function (cb, thisArg) {
         return Array.prototype.map.call(this, cb, thisArg).flat();
     });
+    define(Object, "fromEntries", function (entries) {
+        const obj = {};
+        for (const entry of entries) {
+            obj[entry[0]] = entry[1];
+        }
+        return obj;
+    });
 })();
 
 (function () {

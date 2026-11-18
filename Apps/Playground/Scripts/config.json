@@ -5082,30 +5082,22 @@
         {
             "title": "FBX loader - node animation",
             "playgroundId": "#DZBTQU#10",
-            "referenceImage": "fbx-m11-node-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "ChakraCore does not support Object.fromEntries, which the FBX loader requires."
+            "referenceImage": "fbx-m11-node-anim.png"
         },
         {
             "title": "FBX loader - skeletal animation",
             "playgroundId": "#DZBTQU#11",
-            "referenceImage": "fbx-m12-skeletal-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "ChakraCore does not support Object.fromEntries, which the FBX loader requires."
+            "referenceImage": "fbx-m12-skeletal-anim.png"
         },
         {
             "title": "FBX loader - morph animation",
             "playgroundId": "#DZBTQU#12",
-            "referenceImage": "fbx-m13-morph-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "ChakraCore does not support Object.fromEntries, which the FBX loader requires."
+            "referenceImage": "fbx-m13-morph-anim.png"
         },
         {
             "title": "FBX loader - multiple animation clips",
             "playgroundId": "#DZBTQU#13",
-            "referenceImage": "fbx-m14-multiclip.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "ChakraCore does not support Object.fromEntries, which the FBX loader requires."
+            "referenceImage": "fbx-m14-multiclip.png"
         },
         {
             "title": "FBX loader - cameras and lights",
