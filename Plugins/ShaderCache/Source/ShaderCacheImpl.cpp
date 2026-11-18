@@ -70,7 +70,9 @@ namespace Babylon::Plugins::ShaderCache
     // 13: D3D/Vulkan instanced variants keep the base program's per-vertex generic locations.
     // 14: vertex-only varyings (written by the VS, never read by the FS) are demoted to private
     //     globals on D3D/Metal; version-13 D3D12 entries fail PSO creation from the signature mismatch.
-    static const uint32_t CACHE_VERSION = 14;
+    // 15: Vulkan and OpenGL ES output drops RelaxedPrecision, and OpenGL ES defaults to highp, so
+    //     version-14 entries would keep the old fp16 precision.
+    static const uint32_t CACHE_VERSION = 15;
 
     void ShaderCacheImpl::Clear()
     {
