@@ -59,13 +59,137 @@ class NodeApiTestFixture : public TestFixtureBase {
     ASSERT_TRUE(static_cast<bool>(config.run_script))
         << "Node-API test runner is not configured.";
 
-    // Retain the inherited skip: V8 aborts while wrapping this plain object.
-    static constexpr const char* kQuarantined[] = {
-        "test_reference_double_free/test_wrap.js",
+    struct Exclusion {
+      const char* script;
+      bool applies;
+      const char* reason;
     };
-    for (const char* quarantined : kQuarantined) {
-      if (m_jsFilePath.generic_string().find(quarantined) != std::string::npos) {
-        GTEST_SKIP() << "Inherited skip (V8 object-wrap abort): " << quarantined;
+#if defined(JSR_NAPI_ENGINE_V8)
+    constexpr bool kV8 = true;
+#else
+    constexpr bool kV8 = false;
+#endif
+#if defined(JSR_NAPI_ENGINE_HERMES)
+    constexpr bool kHermes = true;
+#else
+    constexpr bool kHermes = false;
+#endif
+#if defined(JSR_NAPI_ENGINE_CHAKRA)
+    constexpr bool kChakra = true;
+#else
+    constexpr bool kChakra = false;
+#endif
+#if defined(JSR_NAPI_ENGINE_QUICKJS)
+    constexpr bool kQuickJS = true;
+#else
+    constexpr bool kQuickJS = false;
+#endif
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE)
+    constexpr bool kJavaScriptCore = true;
+#else
+    constexpr bool kJavaScriptCore = false;
+#endif
+#if defined(__ANDROID__)
+    constexpr bool kAndroid = true;
+#else
+    constexpr bool kAndroid = false;
+#endif
+    static constexpr const char* kNoSpawnSync =
+        "the in-process Android runner cannot spawn the child process this "
+        "test runs";
+    static constexpr const char* kV8WrapAbort =
+        "V8 napi_wrap aborts on objects not created by napi_define_class";
+    static constexpr const char* kDefineClassNullProperties =
+        "napi_define_class dereferences a NULL properties array (crash)";
+    static constexpr const char* kInt64Overflow =
+        "napi_get_value_int64 casts out-of-range doubles instead of saturating";
+    static constexpr Exclusion kExclusions[] = {
+        {"test_general/test.js", true,
+         "asserts napi_get_version() == 8; JsRuntimeHost targets Node-API 5"},
+        {"test_function/test.js", kV8, kV8WrapAbort},
+        {"test_general/testEnvCleanup.js", kV8, kV8WrapAbort},
+        {"test_general/testFinalizer.js", kV8, kV8WrapAbort},
+        {"test_reference_double_free/test_wrap.js", kV8, kV8WrapAbort},
+        {"test_general/testNapiRun.js", kV8,
+         "V8 napi_run_script aborts on a non-string script instead of returning "
+         "napi_string_expected"},
+        {"test_general/testNapiRun.js", kHermes,
+         "Hermes exports the 3-argument napi_run_script, but the shared header "
+         "declares the 4-argument variant"},
+        {"test_constructor/test.js", kChakra || kQuickJS,
+         "napi_define_class dereferences a NULL properties array (crash); "
+         "read-only assignment errors also use non-V8 message text"},
+        {"test_constructor/test_null.js", kChakra || kQuickJS || kJavaScriptCore,
+         kDefineClassNullProperties},
+        {"test_number/test.js", kChakra || kQuickJS, kInt64Overflow},
+        {"test_conversions/test.js", kChakra,
+         "Chakra does not clear the last error on success, and string getters "
+         "check the length pointer before the value type"},
+        {"test_dataview/test.js", kChakra,
+         "Chakra napi_get_dataview_info only accepts DataViews created by "
+         "napi_create_dataview"},
+        {"test_function/test.js", kChakra,
+         "Chakra napi_create_function accepts a NULL callback, and returning "
+         "from a callback with an exception pending crashes"},
+        {"test_general/testFinalizer.js", kChakra,
+         "Chakra napi_add_finalizer is not implemented"},
+        {"test_general/testInstanceOf.js", kChakra,
+         "Chakra napi_instanceof ignores Symbol.hasInstance"},
+        {"test_general/testNapiRun.js", kChakra,
+         "Chakra napi_run_script returns napi_invalid_arg instead of "
+         "napi_string_expected for a non-string script"},
+        {"test_conversions/test.js", kQuickJS,
+         "QuickJS number getters coerce non-numbers instead of returning "
+         "napi_number_expected, and string getters accept NULL buf and result"},
+        {"test_new_target/test.js", kQuickJS,
+         "QuickJS constructs from the called function's prototype instead of "
+         "new.target's, so subclass instances lose their methods"},
+        {"test_constructor/test.js", kJavaScriptCore,
+         "napi_define_class dereferences a NULL properties array (crash); "
+         "napi_define_properties takes enumerable from napi_configurable, and "
+         "read-only assignment errors use non-V8 message text"},
+        {"test_constructor/test2.js", kJavaScriptCore,
+         "JavaScriptCore napi_define_class does not set the constructor's name"},
+        {"test_conversions/test.js", kJavaScriptCore,
+         "JavaScriptCore value getters coerce instead of returning "
+         "napi_*_expected, and string getters write through a NULL result "
+         "when buf is NULL (crash)"},
+        {"test_exception/testFinalizerException.js", kJavaScriptCore,
+         "JavaScriptCore runs the external's finalizer only at context "
+         "teardown, where napi_throw_error allocates during garbage "
+         "collection and aborts"},
+        {"test_function/test.js", kJavaScriptCore,
+         "JavaScriptCore napi_create_function ignores the name length and "
+         "accepts a NULL callback"},
+        {"test_general/testFinalizer.js", kJavaScriptCore,
+         "JavaScriptCore does not call napi_add_finalizer callbacks before "
+         "exit (0 of 2 expected calls)"},
+        {"test_general/testNapiRun.js", kJavaScriptCore,
+         "JavaScriptCore napi_run_script converts a non-string script to a "
+         "string instead of returning napi_string_expected"},
+        {"test_general/testNapiStatus.js", kJavaScriptCore,
+         "JavaScriptCore napi_get_value_double coerces a string instead of "
+         "returning napi_number_expected"},
+        {"test_general/testV8Instanceof.js", kJavaScriptCore,
+         "JavaScriptCore napi_instanceof passes a non-object constructor to "
+         "JSValueIsInstanceOfConstructor (crash)"},
+        {"test_number/test.js", kJavaScriptCore,
+         "JavaScriptCore integer getters cast out-of-range doubles instead of "
+         "wrapping (int32/uint32) or saturating (int64)"},
+        {"test_reference_double_free/test_wrap.js", kJavaScriptCore,
+         "JavaScriptCore napi_remove_wrap rejects an object wrapped with a "
+         "NULL native pointer"},
+        {"test_exception/testFinalizerException.js", kAndroid, kNoSpawnSync},
+        {"test_general/testEnvCleanup.js", kAndroid, kNoSpawnSync},
+        {"test_new_target/test.js", kAndroid && kJavaScriptCore,
+         "jsc-android (WebKit r250231) predates WebKit's 2020 fix that gives "
+         "JSObjectMakeConstructor instances new.target's prototype, so "
+         "subclass instances lose their methods"},
+    };
+    const std::string path = m_jsFilePath.generic_string();
+    for (const Exclusion& exclusion : kExclusions) {
+      if (exclusion.applies && path.find(exclusion.script) != std::string::npos) {
+        GTEST_SKIP() << exclusion.reason;
       }
     }
 

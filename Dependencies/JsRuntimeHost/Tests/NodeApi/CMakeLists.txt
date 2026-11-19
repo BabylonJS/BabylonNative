@@ -7,8 +7,33 @@ set(JSR_NODE_API_NATIVE_TEST_DIRS
     3_callbacks
     4_object_factory
     5_function_factory
+    7_factory_wrap
+    8_passing_wrapped
+    test_array
+    test_constructor
+    test_conversions
+    test_dataview
+    test_date
+    test_exception
+    test_function
+    test_general
+    test_handle_scope
+    test_new_target
+    test_number
+    test_promise
     test_reference_double_free
+    test_symbol
 )
+
+# An addon cannot load on an engine that lacks an API it imports.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra" OR NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
+    # No napi_create_date, napi_is_date or napi_get_date_value.
+    list(REMOVE_ITEM JSR_NODE_API_NATIVE_TEST_DIRS test_date)
+elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
+    # No napi_add_finalizer or napi_adjust_external_memory.
+    list(REMOVE_ITEM JSR_NODE_API_NATIVE_TEST_DIRS test_general)
+endif()
+
 if(NOT JSR_NODE_API_BUILD_NATIVE_TESTS)
     set(JSR_NODE_API_NATIVE_TEST_DIRS "")
 endif()
@@ -102,6 +127,7 @@ if(NOT ANDROID)
         PRIVATE
             ${NODE_API_TEST_ROOT}
             ${NODE_API_TEST_ROOT}/include)
+    target_compile_definitions(NodeApiTests PRIVATE JSR_NAPI_ENGINE_${NODE_API_ENGINE_UPPER})
     target_link_libraries(NodeApiTests PRIVATE gtest_main)
     add_dependencies(NodeApiTests node_lite)
 
