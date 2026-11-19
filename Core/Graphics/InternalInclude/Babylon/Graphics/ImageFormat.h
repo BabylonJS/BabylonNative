@@ -22,6 +22,7 @@ namespace Babylon::Graphics
 
         using Image = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
         Image source{image, bimg::imageFree};
+        // bimg expands grayscale (R) and grayscale-alpha (RG) PNGs to (L, L, L, A) when converting.
         // Match the RGBA_F16 intermediate used by browser high-bit-depth PNG decoding.
         // Direct UNORM16-to-8 conversion gives different normal vectors.
         Image half{nullptr, bimg::imageFree};
@@ -40,16 +41,6 @@ namespace Babylon::Graphics
         }
         output->m_hasAlpha = source->m_hasAlpha;
         output->m_srgb = source->m_srgb;
-        if (format == bimg::TextureFormat::R8 || format == bimg::TextureFormat::RG8 ||
-            format == bimg::TextureFormat::R16 || format == bimg::TextureFormat::RG16)
-        {
-            auto* pixels = static_cast<uint8_t*>(output->m_data);
-            for (uint32_t offset = 0; offset < output->m_size; offset += 4)
-            {
-                pixels[offset + 3] = format == bimg::TextureFormat::RG8 || format == bimg::TextureFormat::RG16 ? pixels[offset + 1] : 255;
-                pixels[offset + 1] = pixels[offset + 2] = pixels[offset];
-            }
-        }
         return output.release();
     }
 }
