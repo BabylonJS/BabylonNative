@@ -61,9 +61,10 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
         });
         ready.get_future().wait();
 
-        // JavaScriptCore on Apple platforms waits in the thread's CFRunLoop instead of blocking_tick,
-        // so the queue hook never fires there; the destructor must still wake the run loop.
-#ifdef __APPLE__
+        // JavaScriptCore on Apple and Linux waits in the thread's run loop (CFRunLoop or a GLib main
+        // context) instead of blocking_tick, so the queue hook never fires there; the destructor
+        // must still wake the run loop.
+#if defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__))
         constexpr bool waitsInDispatcherQueue{std::string_view{NAPI_JAVASCRIPT_ENGINE} != "JavaScriptCore"};
 #else
         constexpr bool waitsInDispatcherQueue{true};
