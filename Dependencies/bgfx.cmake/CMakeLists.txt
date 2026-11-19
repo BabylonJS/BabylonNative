@@ -114,8 +114,8 @@ bgfx_config_option(BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE "Specify uni
 bgfx_config_option(BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE "Specify uniform buffer resize increment size")
 bgfx_config_option(BGFX_CONFIG_DYNAMIC_VERTEX_BUFFER_SIZE "Specify dynamic vertex buffer block size in bytes")
 bgfx_config_option(BGFX_CONFIG_DYNAMIC_INDEX_BUFFER_SIZE "Specify dynamic index buffer block size in bytes")
-bgfx_config_option(BGFX_CONFIG_MAX_TRANSIENT_VERTEX_BUFFER_SIZE "Specify maximum transient vertex buffer size in bytes")
-bgfx_config_option(BGFX_CONFIG_MAX_TRANSIENT_INDEX_BUFFER_SIZE "Specify maximum transient index buffer size in bytes")
+bgfx_config_option(BGFX_CONFIG_MIN_TRANSIENT_VERTEX_BUFFER_SIZE "Specify minimum transient vertex buffer size in bytes")
+bgfx_config_option(BGFX_CONFIG_MIN_TRANSIENT_INDEX_BUFFER_SIZE "Specify minimum transient index buffer size in bytes")
 bgfx_config_option(BGFX_CONFIG_DEBUG_UNIFORM "Specify whether uniform debug checks are enabled (0 or 1)")
 bgfx_config_option(BGFX_CONFIG_C99_API "Specify whether the C99 API is built (0 or 1)")
 
