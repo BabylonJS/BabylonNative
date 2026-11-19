@@ -31,7 +31,16 @@ namespace Babylon
                     (*callablePtr)(m_env.value());
                 });
             }
+
+            std::scoped_lock lock{m_dispatchLoopWakerMutex};
+            if (m_dispatchLoopWaker)
+            {
+                m_dispatchLoopWaker();
+            }
         }
+
+        std::mutex m_dispatchLoopWakerMutex{};
+        std::function<void()> m_dispatchLoopWaker{};
 
         std::optional<Napi::Env> m_env{};
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
@@ -41,6 +50,30 @@ namespace Babylon
         bool m_delayedTaskSchedulerRegistered{};
         std::thread m_thread;
     };
+
+    void AppRuntime::RunDispatcher()
+    {
+        while (!m_impl->m_cancelSource.cancelled())
+        {
+            m_impl->m_dispatcher.blocking_tick(m_impl->m_cancelSource);
+        }
+    }
+
+    void AppRuntime::TickDispatcher()
+    {
+        m_impl->m_dispatcher.tick(m_impl->m_cancelSource);
+    }
+
+    bool AppRuntime::IsDispatchLoopCancelled() const
+    {
+        return m_impl->m_cancelSource.cancelled();
+    }
+
+    void AppRuntime::SetDispatchLoopWaker(std::function<void()> waker)
+    {
+        std::scoped_lock lock{m_impl->m_dispatchLoopWakerMutex};
+        m_impl->m_dispatchLoopWaker = std::move(waker);
+    }
 
     AppRuntime::AppRuntime() :
         AppRuntime{{}}
@@ -88,10 +121,7 @@ namespace Babylon
 
         m_impl->m_dispatcher.set_affinity(std::this_thread::get_id());
 
-        while (!m_impl->m_cancelSource.cancelled())
-        {
-            m_impl->m_dispatcher.blocking_tick(m_impl->m_cancelSource);
-        }
+        RunDispatchLoop();
 
         Napi::HandleScope scope{env};
         ShutdownEnvironment(env);

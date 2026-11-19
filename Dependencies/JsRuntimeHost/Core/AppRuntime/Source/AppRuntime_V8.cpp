@@ -126,4 +126,9 @@ namespace Babylon
     {
         // V8 auto-drains microtasks. Foreground tasks run on AppRuntime's dispatcher.
     }
+
+    void AppRuntime::RunDispatchLoop()
+    {
+        RunDispatcher();
+    }
 }

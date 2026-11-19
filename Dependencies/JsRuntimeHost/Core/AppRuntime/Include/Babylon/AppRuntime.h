@@ -85,6 +85,20 @@ namespace Babylon
         // queue explicitly (Napi::DrainJobs / JS_ExecutePendingJob).
         void DrainMicrotasks(Napi::Env env);
 
+        // Engine-specific hook that runs the JavaScript thread's dispatch loop until the runtime
+        // is destroyed. Most engines call RunDispatcher, which blocks on the dispatcher queue.
+        // JavaScriptCore on Apple platforms runs the thread's CFRunLoop instead, because
+        // JavaScriptCore completes some engine work there (notably async WebAssembly promises).
+        void RunDispatchLoop();
+
+        // Helpers for RunDispatchLoop implementations. RunDispatcher blocks on the dispatcher
+        // queue until cancelled. A loop that waits on something else instead calls TickDispatcher
+        // to run queued work, and registers a waker that Dispatch calls after queueing work.
+        void RunDispatcher();
+        void TickDispatcher();
+        bool IsDispatchLoopCancelled() const;
+        void SetDispatchLoopWaker(std::function<void()> waker);
+
         Internal::DelayedTaskScheduler& GetDelayedTaskScheduler();
 
         Options m_options;
