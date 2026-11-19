@@ -5,11 +5,43 @@
 #include <CoreFoundation/CoreFoundation.h>
 #elif defined(JSRUNTIMEHOST_JAVASCRIPTCORE_GLIB)
 #include <glib.h>
+#include <future>
+#include <mutex>
+#include <thread>
 
 namespace WTF
 {
     // Exported by libjavascriptcoregtk but not declared in its public headers.
     void initializeMainThread();
+}
+
+namespace
+{
+    // JavaScriptCore's full collection timer uses WTF::MemoryPressureHandler, which on Linux
+    // needs WTF's main RunLoop. WebKit creates it in WTF::initializeMainThread, which the
+    // JavaScriptCore C API never calls, so the first timer-driven collection would crash.
+    // initializeMainThread only has an effect once per process and binds the main RunLoop to
+    // the calling thread, so it can't run on an AppRuntime thread that may exit while later
+    // runtimes still use the RunLoop. Give it a dedicated thread that lives for the rest of
+    // the process and keeps the RunLoop's GLib context pumped.
+    void EnsureWtfMainRunLoop()
+    {
+        static std::once_flag once;
+        std::call_once(once, [] {
+            std::promise<void> initialized;
+            std::thread{[&initialized] {
+                // WTF's RunLoop adopts the thread-default context; use a private one rather
+                // than the process-wide default context, which belongs to the application.
+                GMainContext* context = g_main_context_new();
+                g_main_context_push_thread_default(context);
+                WTF::initializeMainThread();
+                GMainLoop* loop = g_main_loop_new(context, FALSE);
+                initialized.set_value();
+                g_main_loop_run(loop);
+            }}.detach();
+            initialized.get_future().wait();
+        });
+    }
 }
 #endif
 
@@ -18,17 +50,12 @@ namespace Babylon
     void AppRuntime::RunEnvironmentTier(const char*)
     {
 #ifdef JSRUNTIMEHOST_JAVASCRIPTCORE_GLIB
+        EnsureWtfMainRunLoop();
+
         // The VM binds to this thread's WTF RunLoop, which adopts the thread-default GLib main
         // context when it is first created. Make that a context RunDispatchLoop can iterate.
         GMainContext* mainContext = g_main_context_new();
         g_main_context_push_thread_default(mainContext);
-
-        // Iterating that context also fires JavaScriptCore's GC timers. The full collection timer
-        // uses WTF::MemoryPressureHandler, which on Linux needs WTF's main RunLoop. WebKit creates
-        // it in WTF::initializeMainThread, which the JavaScriptCore C API never calls, so the
-        // first collection would crash. Call it here; only the first call in the process has an
-        // effect, binding WTF's main thread and RunLoop to this thread and its pushed context.
-        WTF::initializeMainThread();
 #endif
 
         auto globalContext = JSGlobalContextCreateInGroup(nullptr, nullptr);
