@@ -132,8 +132,8 @@ struct napi_env__ {
   // terminatedOrTerminating() before actually handle the exception
   template <typename T, typename U = decltype(HandleThrow)>
   inline void CallIntoModule(T&& call, U&& handle_exception = HandleThrow) {
-    int open_handle_scopes_before = open_handle_scopes;
-    int open_callback_scopes_before = open_callback_scopes;
+    [[maybe_unused]] int open_handle_scopes_before = open_handle_scopes;
+    [[maybe_unused]] int open_callback_scopes_before = open_callback_scopes;
     napi_clear_last_error(this);
     call(this);
     CHECK_EQ(open_handle_scopes, open_handle_scopes_before);

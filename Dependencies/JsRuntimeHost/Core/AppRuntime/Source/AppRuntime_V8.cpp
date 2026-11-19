@@ -1,6 +1,7 @@
 #include "AppRuntime.h"
 #include "V8Platform.h"
 #include <napi/env.h>
+#include "js_native_api_v8.h"
 
 #include <libplatform/libplatform.h>
 
@@ -16,6 +17,51 @@ namespace Babylon
 {
     namespace
     {
+        struct RuntimeNapiEnv final : napi_env__
+        {
+            RuntimeNapiEnv(v8::Local<v8::Context> context, AppRuntime& runtime)
+                : napi_env__{context, NAPI_VERSION}
+                , m_runtime{runtime}
+            {
+            }
+
+            void EnqueueFinalizer(v8impl::RefTracker* finalizer) override
+            {
+                napi_env__::EnqueueFinalizer(finalizer);
+                if (!m_finalizationScheduled && !m_destructing)
+                {
+                    m_finalizationScheduled = true;
+                    m_runtime.Dispatch([this](Napi::Env) {
+                        m_finalizationScheduled = false;
+                        DrainFinalizerQueue();
+                    });
+                }
+            }
+
+            void DeleteMe() override
+            {
+                m_destructing = true;
+                DrainFinalizerQueue();
+                napi_env__::DeleteMe();
+            }
+
+        private:
+            void DrainFinalizerQueue()
+            {
+                // Finalizers can enqueue or delete other finalizers.
+                while (!pending_finalizers.empty())
+                {
+                    auto* finalizer = *pending_finalizers.begin();
+                    pending_finalizers.erase(finalizer);
+                    finalizer->Finalize();
+                }
+            }
+
+            AppRuntime& m_runtime;
+            bool m_finalizationScheduled = false;
+            bool m_destructing = false;
+        };
+
         class Module final
         {
         public:
@@ -84,7 +130,7 @@ namespace Babylon
             v8::Local<v8::Context> context = v8::Context::New(isolate);
             v8::Context::Scope context_scope{context};
 
-            Napi::Env env = Napi::Attach(context);
+            Napi::Env env{new RuntimeNapiEnv{context, *this}};
 
 #ifdef ENABLE_V8_INSPECTOR
             std::optional<V8InspectorAgent> agent;
