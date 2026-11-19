@@ -5321,6 +5321,8 @@
         {
             "title": "PBR Bent Normal Visibility Invariants",
             "playgroundId": "#3PC7QS#0",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs",
             "referenceImage": "pbr-bent-normal-visibility-invariants.png"
         },
         {
