@@ -5314,7 +5314,9 @@
         {
             "title": "PBR Bent Normal Regression Cases",
             "playgroundId": "#R7QHEO#3",
-            "referenceImage": "pbr-bent-normal-regression-cases.png"
+            "referenceImage": "pbr-bent-normal-regression-cases.png",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs"
         },
         {
             "title": "PBR Bent Normal Visibility Invariants",
