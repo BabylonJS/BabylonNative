@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "App.h"
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
@@ -26,6 +27,55 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 #if !defined(USE_NOOP_METAL_DEVICE)
 namespace
 {
+#ifdef _WIN32
+    class TestDevice final : public Babylon::Graphics::Device
+    {
+    public:
+        explicit TestDevice(const Babylon::Graphics::Configuration& config)
+            : Babylon::Graphics::Device{ResizeWindow(config)}
+            , m_window{config.Window}
+        {
+        }
+
+        void UpdateWindow(Babylon::Graphics::WindowT window)
+        {
+            m_window = window;
+            Babylon::Graphics::Device::UpdateWindow(window);
+        }
+
+        void UpdateSize(size_t width, size_t height)
+        {
+            if (!ResizeWindowClientArea(m_window, width, height))
+            {
+                throw std::runtime_error{"Failed to resize the UnitTests window."};
+            }
+            Babylon::Graphics::Device::UpdateSize(width, height);
+        }
+
+    private:
+        static const Babylon::Graphics::Configuration& ResizeWindow(const Babylon::Graphics::Configuration& config)
+        {
+            if (!ResizeWindowClientArea(config.Window, config.Width, config.Height))
+            {
+                throw std::runtime_error{"Failed to resize the UnitTests window."};
+            }
+            return config;
+        }
+
+        Babylon::Graphics::WindowT m_window;
+    };
+
+    void ExpectWindowClientArea(HWND window, LONG width, LONG height)
+    {
+        RECT rect{};
+        ASSERT_TRUE(GetClientRect(window, &rect));
+        EXPECT_EQ(rect.right - rect.left, width);
+        EXPECT_EQ(rect.bottom - rect.top, height);
+    }
+#else
+    using TestDevice = Babylon::Graphics::Device;
+#endif
+
     Babylon::Graphics::DeviceContext& GetContext(Babylon::Graphics::Device& device, Babylon::AppRuntime& runtime)
     {
         std::promise<Babylon::Graphics::DeviceContext*> result;
@@ -89,7 +139,7 @@ TEST(Device, ExplicitDefaultFrameBufferPreservesTarget)
     auto config = g_deviceConfig;
     config.Width = 32;
     config.Height = 24;
-    Babylon::Graphics::Device device{config};
+    TestDevice device{config};
     Babylon::AppRuntime runtime{};
     auto& context = GetContext(device, runtime);
     Babylon::Graphics::FrameBuffer window{context, BGFX_INVALID_HANDLE, 0, 0, true, true, true};
@@ -124,7 +174,10 @@ TEST(Device, SwapChainResizeAndMsaaPreserveCapture)
         config.Width = 64;
         config.Height = 48;
         config.BackBufferDepthStencilFormat = depth;
-        Babylon::Graphics::Device device{config};
+        TestDevice device{config};
+#ifdef _WIN32
+        ExpectWindowClientArea(config.Window, 64, 48);
+#endif
         Babylon::AppRuntime runtime{};
         auto& context = GetContext(device, runtime);
         ExpectSolidColor(ClearAndCapture(device, context, 0x2050a0ff), 64, 48, 0x2050a0ff);
@@ -134,6 +187,9 @@ TEST(Device, SwapChainResizeAndMsaaPreserveCapture)
         for (uint8_t samples : std::array<uint8_t, 4>{1, 2, 4, 1})
         {
             device.UpdateSize(32, 24);
+#ifdef _WIN32
+            ExpectWindowClientArea(config.Window, 32, 24);
+#endif
             device.UpdateMSAA(samples);
             device.StartRenderingCurrentFrame();
             device.FinishRenderingCurrentFrame();
@@ -148,7 +204,7 @@ TEST(Device, SwapChainIsRecreatedAfterRenderingIsReenabled)
     auto config = g_deviceConfig;
     config.Width = 32;
     config.Height = 24;
-    Babylon::Graphics::Device device{config};
+    TestDevice device{config};
     Babylon::AppRuntime runtime{};
     auto& context = GetContext(device, runtime);
     ExpectSolidColor(ClearAndCapture(device, context, 0xff0000ff), 32, 24, 0xff0000ff);
@@ -177,7 +233,7 @@ TEST(Device, SwapChainMsaaUsesValidResourceStates)
     config.Width = 32;
     config.Height = 24;
     config.MSAASamples = 1;
-    Babylon::Graphics::Device device{config};
+    TestDevice device{config};
     Babylon::AppRuntime runtime{};
     auto& context = GetContext(device, runtime);
     ExpectSolidColor(ClearAndCapture(device, context, 0x4080c0ff), 32, 24, 0x4080c0ff);
@@ -227,7 +283,7 @@ TEST(Device, ReplacingWindowPreservesDeviceAndTargetsNewSurface)
     config.Window = first;
     config.Width = 32;
     config.Height = 24;
-    Babylon::Graphics::Device device{config};
+    TestDevice device{config};
     Babylon::AppRuntime runtime{};
     auto& context = GetContext(device, runtime);
     ExpectSolidColor(ClearAndCapture(device, context, 0xff0000ff), 32, 24, 0xff0000ff);

@@ -4737,6 +4737,9 @@ namespace Babylon::Plugins::NativeWebGPU
             SetMethod(tu, "getJavaScriptEngineName", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return Napi::String::New(info.Env(), NATIVEWEBGPU_JAVASCRIPT_ENGINE);
             });
+            SetMethod(tu, "getPlatformName", [](const Napi::CallbackInfo& info) -> Napi::Value {
+                return Napi::String::New(info.Env(), NATIVEWEBGPU_PLATFORM);
+            });
             SetMethod(tu, "getOutputDirectory", [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return Napi::String::New(info.Env(), ExeDir().string());
             });

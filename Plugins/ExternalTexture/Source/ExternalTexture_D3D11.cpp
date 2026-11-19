@@ -30,6 +30,16 @@ namespace Babylon::Plugins
     private:
         static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
+            // bgfx tracks an imported D3D11 texture using the override/view format. During
+            // the native blit probe, retain that format so typeless resources do not
+            // resolve to an unrelated bgfx family (for example R32_TYPELESS to D16F).
+            const bool preserveImportedFormat{
+                !overrideFormat.has_value() && info.ImportedFormat != bgfx::TextureFormat::Unknown};
+            if (preserveImportedFormat)
+            {
+                info.Format = info.ImportedFormat;
+            }
+
             winrt::com_ptr<ID3D11Resource> resource;
             resource.copy_from(ptr);
 
@@ -59,9 +69,24 @@ namespace Babylon::Plugins
             }
 
             DXGI_FORMAT targetFormat = overrideFormat.has_value() ? overrideFormat.value() : desc.Format;
+            // Without an override, a typeless color resource holds linear data.
+            switch (targetFormat)
+            {
+                case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+                    targetFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+                    break;
+                case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+                    targetFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+                    break;
+                default:
+                    break;
+            }
             if (const auto format = Graphics::D3D11TextureFormats::TryGetBgfxTextureFormat(targetFormat))
             {
-                info.Format = format->Format;
+                if (!preserveImportedFormat)
+                {
+                    info.Format = format->Format;
+                }
                 if (format->Srgb)
                 {
                     info.Flags |= BGFX_TEXTURE_SRGB;

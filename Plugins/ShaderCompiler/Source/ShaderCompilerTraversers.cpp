@@ -2747,6 +2747,24 @@ namespace Babylon::ShaderCompilerTraversers
                     }
                 }
 
+                // Demote vertex-only outputs to private globals. Nothing reads them, and in the VS output they sit between the shared
+                // varyings and SV_Position, so a fragment shader reading gl_FragCoord fails D3D12 PSO signature linkage.
+                for (TIntermSymbol* symbol : vsCollector.m_symbols)
+                {
+                    if (symbol->getType().getBasicType() != EbtBlock && vsOnlyNameToType.count(InterfaceName(*symbol).c_str()) != 0)
+                    {
+                        auto& qualifier = symbol->getWritableType().getQualifier();
+                        qualifier.storage = EvqGlobal;
+                        qualifier.invariant = false;
+                        qualifier.clearInterstage();
+                        qualifier.clearLayout();
+                    }
+                }
+                for (auto it = vsOnlyNameToType.begin(); it != vsOnlyNameToType.end();)
+                {
+                    it = it->second->getBasicType() == EbtBlock ? std::next(it) : vsOnlyNameToType.erase(it);
+                }
+
                 if (sharedNameToType.empty() && vsOnlyNameToType.empty())
                 {
                     return;

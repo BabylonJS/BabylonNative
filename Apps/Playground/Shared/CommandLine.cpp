@@ -184,8 +184,9 @@ namespace
         FlagSpec{"--include-excluded", "", FlagKind::Boolean, "",
             "Force-run tests that have",
             "                              excludeFromAutomaticTesting / onlyVisual /\n"
-            "                              excludedGraphicsApis / excludedJavaScriptEngines\n"
-            "                              set in config.json.\n"
+            "                              excludedGraphicsApis / excludedJavaScriptEngines /\n"
+            "                              excludedPlatforms / requiredNativeCaps set in\n"
+            "                              config.json.\n"
             "                              Useful for debugging quarantined tests\n"
             "                              without editing the config.\n",
             [](PlaygroundOptions& o, std::string_view, std::string&) { o.IncludeExcluded = true; }},

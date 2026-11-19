@@ -47,9 +47,44 @@ namespace
         // Enable decoration for texture binding
         spirv_cross::CompilerMSL::Options opts{};
         opts.enable_decoration_binding = true;
-        compiler->set_msl_options(opts);
 
         auto resources = compiler->get_shader_resources();
+
+        if (stage == EShLangVertex)
+        {
+            // Babylon.js draws the same geometry with different programs across passes (depth prepass,
+            // geometry renderer, main pass) and depth tests them against each other. D3D and GL give
+            // matching positions for matching math, but Metal's fast-math may not, causing z-fighting.
+            // Mark the position invariant ([[position, invariant]], MSL 2.1+), which bgfx compiles with
+            // preserveInvariance.
+            opts.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(2, 1);
+            for (const auto& builtin : resources.builtin_outputs)
+            {
+                if (builtin.builtin != spv::BuiltInPosition)
+                {
+                    continue;
+                }
+
+                const auto& type = compiler->get_type(builtin.resource.base_type_id);
+                if (type.basetype == spirv_cross::SPIRType::Struct)
+                {
+                    for (uint32_t i = 0; i < static_cast<uint32_t>(type.member_types.size()); ++i)
+                    {
+                        if (compiler->has_member_decoration(type.self, i, spv::DecorationBuiltIn) &&
+                            compiler->get_member_decoration(type.self, i, spv::DecorationBuiltIn) == spv::BuiltInPosition)
+                        {
+                            compiler->set_member_decoration(type.self, i, spv::DecorationInvariant);
+                        }
+                    }
+                }
+                else
+                {
+                    compiler->set_decoration(builtin.resource.id, spv::DecorationInvariant);
+                }
+            }
+        }
+
+        compiler->set_msl_options(opts);
         for (auto& resource : resources.uniform_buffers)
         {
             compiler->set_name(resource.id, "_mtl_u");

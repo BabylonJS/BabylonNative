@@ -9,6 +9,7 @@
 #include <map>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace Babylon::ShaderCompilerCommon
 {
@@ -30,6 +31,13 @@ namespace Babylon::ShaderCompilerCommon
     // Returns compiled uniform names mapped to the names supplied by the application.
     // Uniforms named in reservedNames (e.g. target language keywords) are renamed as well.
     std::map<std::string, std::string> RenameShaderUniforms(std::string& source, std::string* pairedSource = nullptr, const std::unordered_set<std::string>* reservedNames = nullptr);
+
+    // Babylon's GLSL is parsed as ESSL, where samplers default to lowp and mediump is common, so
+    // glslang decorates much of the module RelaxedPrecision. Drivers that honor it (NVIDIA desktop,
+    // mobile GPUs) then evaluate texture fetches and math at fp16, overflowing values such as the
+    // 1e6 depth sentinel used by fluid rendering to Inf. D3D and desktop GL ignore precision
+    // qualifiers, so drop the decorations to get matching full-precision results.
+    void StripRelaxedPrecision(std::vector<uint32_t>& spirv);
 
     std::string ProcessShaderCoordinates(std::string_view source);
 

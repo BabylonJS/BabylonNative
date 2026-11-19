@@ -380,6 +380,157 @@ namespace
             indices[i] = float(splatCount);
         }
     }
+
+    // Coefficients of view-space z for splats transformed by one world matrix.
+    std::array<float, 4> SplatDepthCoefficients(const std::array<float, 16>& world, const std::array<float, 16>& view)
+    {
+        std::array<float, 4> coefficients{};
+        for (uint32_t row = 0; row < 4; ++row)
+        {
+            for (uint32_t k = 0; k < 4; ++k)
+            {
+                coefficients[row] += world[row * 4 + k] * view[k * 4 + 2];
+            }
+        }
+        return coefficients;
+    }
+
+    // sortSplatIndices(view, worldMatrices, positions, indices, vertexCount, intervals, partIndices, rightHanded): boolean
+    // Mirrors the Babylon.js sort worker. Writes the active source splats (every splat below vertexCount, or the
+    // [start, count] pairs of intervals) to indices sorted back to front, and points the remaining entries at the
+    // empty slot at vertexCount. worldMatrices holds the mesh world matrix, or one world matrix per part when
+    // partIndices is set. Returns false and leaves indices untouched when a part index has no world matrix.
+    Napi::Value SortSplatIndices(const Napi::CallbackInfo& info)
+    {
+        const auto env{info.Env()};
+        const auto isTypedArray = [](const Napi::Value& value, napi_typedarray_type type) {
+            return value.IsTypedArray() && value.As<Napi::TypedArray>().TypedArrayType() == type;
+        };
+
+        if (!info[0].IsObject() || !info[1].IsArray() || !isTypedArray(info[2], napi_float32_array) ||
+            !isTypedArray(info[3], napi_float32_array) || !info[4].IsNumber() || !info[7].IsBoolean())
+        {
+            throw Napi::TypeError::New(
+                env, "sortSplatIndices requires (Matrix, Matrix[], Float32Array, Float32Array, number, Uint32Array | null, Uint8Array | null, boolean).");
+        }
+        const bool hasIntervals = isTypedArray(info[5], napi_uint32_array);
+        const bool hasPartIndices = isTypedArray(info[6], napi_uint8_array);
+        if ((!hasIntervals && !info[5].IsNull() && !info[5].IsUndefined()) || (!hasPartIndices && !info[6].IsNull() && !info[6].IsUndefined()))
+        {
+            throw Napi::TypeError::New(env, "sortSplatIndices requires intervals to be a Uint32Array or null and partIndices to be a Uint8Array or null.");
+        }
+
+        const auto view{ReadMatrix(info[0].As<Napi::Object>())};
+        const auto worldMatrices{info[1].As<Napi::Array>()};
+        const auto positions{info[2].As<Napi::Float32Array>()};
+        auto indices{info[3].As<Napi::Float32Array>()};
+        const uint32_t vertexCount{info[4].As<Napi::Number>().Uint32Value()};
+
+        const uint32_t partCount{worldMatrices.Length()};
+        if (partCount == 0)
+        {
+            throw Napi::RangeError::New(env, "sortSplatIndices requires at least one world matrix.");
+        }
+        if (positions.ElementLength() / 4 < vertexCount)
+        {
+            throw Napi::RangeError::New(env, "sortSplatIndices requires 4 position floats per splat.");
+        }
+
+        const float depthSign = info[7].As<Napi::Boolean>() ? -1.f : 1.f;
+        std::vector<std::array<float, 4>> coefficients(partCount);
+        for (uint32_t part = 0; part < partCount; ++part)
+        {
+            const auto world{worldMatrices.Get(part)};
+            if (!world.IsObject())
+            {
+                throw Napi::TypeError::New(env, "sortSplatIndices requires worldMatrices to contain matrices.");
+            }
+            coefficients[part] = SplatDepthCoefficients(ReadMatrix(world.As<Napi::Object>()), view);
+            for (float& coefficient : coefficients[part])
+            {
+                coefficient *= depthSign;
+            }
+        }
+
+        std::optional<Napi::Uint8Array> partIndices;
+        if (hasPartIndices && info[6].As<Napi::Uint8Array>().ElementLength() > 0)
+        {
+            partIndices = info[6].As<Napi::Uint8Array>();
+        }
+
+        const uint32_t defaultInterval[2]{0, vertexCount};
+        const uint32_t* intervalData{defaultInterval};
+        size_t intervalWords{2};
+        if (hasIntervals)
+        {
+            const auto intervals{info[5].As<Napi::Uint32Array>()};
+            intervalWords = intervals.ElementLength();
+            if (intervalWords % 2 != 0)
+            {
+                throw Napi::RangeError::New(env, "sortSplatIndices requires intervals to hold [start, count] pairs.");
+            }
+            intervalData = intervals.Data();
+        }
+
+        size_t activeCount{0};
+        for (size_t word = 0; word < intervalWords; word += 2)
+        {
+            if (intervalData[word] > vertexCount || intervalData[word + 1] > vertexCount - intervalData[word])
+            {
+                throw Napi::RangeError::New(env, "sortSplatIndices requires intervals within vertexCount.");
+            }
+            activeCount += intervalData[word + 1];
+        }
+        if (activeCount > indices.ElementLength())
+        {
+            throw Napi::RangeError::New(env, "sortSplatIndices requires indices to hold every active splat.");
+        }
+
+        struct SplatKey
+        {
+            float Key;
+            uint32_t Index;
+        };
+        // Reused across calls on the same thread to avoid reallocating a key per splat on every sort.
+        thread_local std::vector<SplatKey> keys;
+        keys.clear();
+        keys.reserve(activeCount);
+
+        const float* position{positions.Data()};
+        for (size_t word = 0; word < intervalWords; word += 2)
+        {
+            const uint32_t end{intervalData[word] + intervalData[word + 1]};
+            for (uint32_t index = intervalData[word]; index < end; ++index)
+            {
+                uint32_t part{0};
+                if (partIndices.has_value())
+                {
+                    const auto& parts{partIndices.value()};
+                    part = parts[std::min<size_t>(index, parts.ElementLength() - 1)];
+                    if (part >= partCount)
+                    {
+                        // Part indices and matrices disagree mid-rebuild: keep the last good order.
+                        return Napi::Boolean::New(env, false);
+                    }
+                }
+                const auto& c{coefficients[part]};
+                const float* p{position + 4 * size_t{index}};
+                // Negate the distance so the ascending sort puts the farthest splat first.
+                keys.push_back({-(c[0] * p[0] + c[1] * p[1] + c[2] * p[2] + c[3]), index});
+            }
+        }
+
+        std::stable_sort(keys.begin(), keys.end(), [](const SplatKey& a, const SplatKey& b) { return a.Key < b.Key; });
+
+        float* indexData{indices.Data()};
+        for (size_t i = 0; i < activeCount; ++i)
+        {
+            indexData[i] = float(keys[i].Index);
+        }
+        std::fill(indexData + activeCount, indexData + indices.ElementLength(), float(vertexCount));
+
+        return Napi::Boolean::New(env, true);
+    }
 }
 
 namespace Babylon::Plugins::NativeOptimizations
@@ -395,5 +546,6 @@ namespace Babylon::Plugins::NativeOptimizations
         nativeObject.Set("extractMinAndMaxIndexed", Napi::Function::New(env, ExtractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
         nativeObject.Set("extractMinAndMax", Napi::Function::New(env, ExtractMinAndMax, "extractMinAndMax"));
         nativeObject.Set("sortSplats", Napi::Function::New(env, sortSplats, "sortSplats"));
+        nativeObject.Set("sortSplatIndices", Napi::Function::New(env, SortSplatIndices, "sortSplatIndices"));
     }
 }

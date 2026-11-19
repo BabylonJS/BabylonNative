@@ -5,6 +5,7 @@
 #include <future>
 #include <memory>
 #include <thread>
+#include <string_view>
 
 TEST(AppRuntime, DestroyDoesNotDeadlock)
 {
@@ -60,29 +61,39 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
         });
         ready.get_future().wait();
 
-        // Install the hook and dispatch a no-op to wake the worker,
-        // ensuring it cycles through the hook on its way back to idle.
-        arcana::test_hooks::blocking_concurrent_queue::set_before_wait_callback([&]() {
-            if (hookSignaled)
-            {
-                return;
-            }
-            hookSignaled = true;
-            workerInHook.set_value();
-            // This sleep is not truly deterministic. Its purpose is to hold the
-            // mutex long enough for runtime.reset() (called by the test thread
-            // after workerInHook signals) to reach push() while the mutex is
-            // still held. When the sleep ends, the worker enters wait() which
-            // releases the mutex, allowing push() to acquire it and deliver the
-            // wake-up notification. If runtime.reset() hasn't reached push()
-            // by the time the sleep ends, the test still passes but doesn't
-            // exercise the intended contention window.
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        });
-        runtime->Dispatch([](Napi::Env) {});
+        // JavaScriptCore on Apple platforms waits in the thread's CFRunLoop instead of blocking_tick,
+        // so the queue hook never fires there; the destructor must still wake the run loop.
+#ifdef __APPLE__
+        constexpr bool waitsInDispatcherQueue{std::string_view{NAPI_JAVASCRIPT_ENGINE} != "JavaScriptCore"};
+#else
+        constexpr bool waitsInDispatcherQueue{true};
+#endif
+        if (waitsInDispatcherQueue)
+        {
+            // Install the hook and dispatch a no-op to wake the worker,
+            // ensuring it cycles through the hook on its way back to idle.
+            arcana::test_hooks::blocking_concurrent_queue::set_before_wait_callback([&]() {
+                if (hookSignaled)
+                {
+                    return;
+                }
+                hookSignaled = true;
+                workerInHook.set_value();
+                // This sleep is not truly deterministic. Its purpose is to hold the
+                // mutex long enough for runtime.reset() (called by the test thread
+                // after workerInHook signals) to reach push() while the mutex is
+                // still held. When the sleep ends, the worker enters wait() which
+                // releases the mutex, allowing push() to acquire it and deliver the
+                // wake-up notification. If runtime.reset() hasn't reached push()
+                // by the time the sleep ends, the test still passes but doesn't
+                // exercise the intended contention window.
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            });
+            runtime->Dispatch([](Napi::Env) {});
 
-        // Wait for the worker to be in the hook (holding mutex, sleeping)
-        workerInHook.get_future().wait();
+            // Wait for the worker to be in the hook (holding mutex, sleeping)
+            workerInHook.get_future().wait();
+        }
 
         // Destroy — if the fix works, the destructor completes.
         // If broken, it deadlocks and the timeout detects it.

@@ -183,6 +183,16 @@ namespace Babylon::Plugins
     private:
         static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
+            // bgfx tracks an imported D3D12 texture using the override/view format. During
+            // the native blit probe, retain that format so typeless resources do not
+            // resolve to an unrelated bgfx family (for example R32_TYPELESS to D16F).
+            const bool preserveImportedFormat{
+                !overrideFormat.has_value() && info.ImportedFormat != bgfx::TextureFormat::Unknown};
+            if (preserveImportedFormat)
+            {
+                info.Format = info.ImportedFormat;
+            }
+
             D3D12_RESOURCE_DESC desc = ptr->GetDesc();
 
             if (desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D)
@@ -211,7 +221,10 @@ namespace Babylon::Plugins
                 const auto& format = s_textureFormat[i];
                 if (format.m_fmt == targetFormat || format.m_fmtSrgb == targetFormat)
                 {
-                    info.Format = static_cast<bgfx::TextureFormat::Enum>(i);
+                    if (!preserveImportedFormat)
+                    {
+                        info.Format = static_cast<bgfx::TextureFormat::Enum>(i);
+                    }
                     if (format.m_fmtSrgb == targetFormat)
                     {
                         info.Flags |= BGFX_TEXTURE_SRGB;

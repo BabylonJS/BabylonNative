@@ -25,6 +25,13 @@
     define(Array.prototype, "flatMap", function (cb, thisArg) {
         return Array.prototype.map.call(this, cb, thisArg).flat();
     });
+    define(Object, "fromEntries", function (entries) {
+        const obj = {};
+        for (const entry of entries) {
+            obj[entry[0]] = entry[1];
+        }
+        return obj;
+    });
 })();
 
 (function () {
@@ -963,11 +970,29 @@
         if (t.excludeFromAutomaticTesting) {
             return "excludeFromAutomaticTesting" + (t.reason ? ": " + t.reason : "");
         }
-        if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
-            return "excludedGraphicsApis: " + TestUtils.getGraphicsApiName();
+        const graphicsApi = TestUtils.getGraphicsApiName();
+        if (t.excludedGraphicsApis && t.excludedGraphicsApis.includes(graphicsApi)) {
+            return "excludedGraphicsApis: " + graphicsApi;
         }
-        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(TestUtils.getJavaScriptEngineName())) {
-            return "excludedJavaScriptEngines: " + TestUtils.getJavaScriptEngineName();
+        const javaScriptEngine = TestUtils.getJavaScriptEngineName();
+        if (t.excludedJavaScriptEngines && t.excludedJavaScriptEngines.includes(javaScriptEngine)) {
+            return "excludedJavaScriptEngines: " + javaScriptEngine;
+        }
+        // Entries are a platform ("Unix") or a platform/engine pair ("Android/JavaScriptCore").
+        const platform = TestUtils.getPlatformName();
+        const platformEngine = platform + "/" + javaScriptEngine;
+        if (t.excludedPlatforms && t.excludedPlatforms.includes(platform)) {
+            return "excludedPlatforms: " + platform;
+        }
+        if (t.excludedPlatforms && t.excludedPlatforms.includes(platformEngine)) {
+            return "excludedPlatforms: " + platformEngine;
+        }
+        // requiredNativeCaps are NativeEngine (bgfx) caps; NativeWebGPU has no _native.Engine.
+        if (t.requiredNativeCaps && !isDawn) {
+            const missingCaps = t.requiredNativeCaps.filter((cap) => !_native.Engine[cap]);
+            if (missingCaps.length > 0) {
+                return "requiredNativeCaps: " + missingCaps.join(", ") + " not supported";
+            }
         }
         return null;
     }

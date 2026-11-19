@@ -616,24 +616,24 @@
             "renderCount": 15,
             "referenceImage": "gsplat-spz-sh.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out after 600s (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Projected Size",
             "playgroundId": "#8FOB3C#0",
             "referenceImage": "gsplat-debug-projected-size.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ loader fails with \"Loading a script as an ES module is not supported in Babylon Native\" (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Overdraw",
             "playgroundId": "#D4U720#1",
             "referenceImage": "gsplat-debug-overdraw.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ loader fails with \"Loading a script as an ES module is not supported in Babylon Native\" (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting SPZ SH No WASM",
@@ -647,16 +647,16 @@
             "playgroundId": "#XSNFXP#8",
             "referenceImage": "gsplat-spz-extensions.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting SPZ V4 Extensions",
             "playgroundId": "#XSNFXP#25",
             "referenceImage": "gsplat-spz-v4-extensions.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting glTF SPZ Compression",
@@ -678,8 +678,8 @@
             "playgroundId": "#XSNFXP#5",
             "referenceImage": "gsplat-spz-sh-order-4.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4 No WASM",
@@ -694,8 +694,8 @@
             "playgroundId": "#XSNFXP#6",
             "referenceImage": "gsplat-spz-detailed-splat.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat No WASM",
@@ -732,56 +732,56 @@
             "playgroundId": "#XSNFXP#16",
             "referenceImage": "gsplat-debug-opacity-scale.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Debug Opacity Saturate",
             "playgroundId": "#XSNFXP#17",
             "referenceImage": "gsplat-debug-opacity-saturate.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Debug Size Culling",
             "playgroundId": "#XSNFXP#19",
             "referenceImage": "gsplat-debug-size-culling.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Debug Opacity Culling",
             "playgroundId": "#XSNFXP#20",
             "referenceImage": "gsplat-debug-opacity-culling.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Debug Clipping Box",
             "playgroundId": "#XSNFXP#21",
             "referenceImage": "gsplat-debug-clipping-box.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Debug Diffuse Only",
             "playgroundId": "#XSNFXP#22",
             "referenceImage": "gsplat-debug-diffuse-only.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Debug SH4 Only",
             "playgroundId": "#XSNFXP#24",
             "referenceImage": "gsplat-debug-sh4-only.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Compound Incremental Update",
@@ -877,8 +877,8 @@
             "playgroundId": "#V7CV8W#4",
             "referenceImage": "gsplat-spz-v3.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out after 600s (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "SOGS with SH",
@@ -939,9 +939,7 @@
         {
             "title": "Alpha-to-coverage transparent overlap",
             "playgroundId": "#M4GBLK#0",
-            "referenceImage": "alpha-to-coverage-transparent-overlap.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 27.212% pixel difference"
+            "referenceImage": "alpha-to-coverage-transparent-overlap.png"
         },
         {
             "title": "MSDF Screen projected",
@@ -1070,10 +1068,7 @@
         {
             "title": "Gaussian Splatting Loading RH",
             "playgroundId": "#CID4NN#398",
-            "referenceImage": "gsplat-loading-rh.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 7.807% pixel difference | WebGPU: shared failure, both backends fail but for different reasons: bgfx/D3D11 throws 'Reference data length (720000) must match render data length (960000)' -- the reference PNG decodes to 3 channels there while the readback is 4, so no comparison ever runs. Dawn compares normally and is 7.797% off the reference",
-            "excludedGraphicsApis": ["WebGPU"]
+            "referenceImage": "gsplat-loading-rh.png"
         },
         {
             "title": "Simple refraction",
@@ -1229,8 +1224,8 @@
         {
             "title": "CSGVertColor",
             "playgroundId": "#R0H1IX#4",
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the Manifold (CSG2) WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, which CSG2 requires. Passes on V8 and Apple JavaScriptCore.",
             "referenceImage": "csgVertColor.png",
             "workarounds": ["es-module-import"]
         },
@@ -1407,8 +1402,8 @@
         {
             "title": "CSG",
             "playgroundId": "#R0H1IX#8",
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore/OpenGL CI: createScene does not resolve within 600s",
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the Manifold (CSG2) WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, which CSG2 requires. Passes on V8 and Apple JavaScriptCore.",
             "referenceImage": "csg.png",
             "workarounds": ["es-module-import"]
         },
@@ -1974,23 +1969,20 @@
             "title": "Object ID and mesh tag - Geometry buffer renderer",
             "playgroundId": "#O0BI9B#0",
             "referenceImage": "object-id-texture-geometry-buffer.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Object ID and mesh tag - FrameGraph object ID first",
             "playgroundId": "#XKTMFR#0",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Object ID and mesh tag - FrameGraph mesh tag first",
             "playgroundId": "#XKTMFR#0",
             "replace": "const meshTagFirst = false;, const meshTagFirst = true;",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - coastal cliff scenery",
@@ -1998,62 +1990,58 @@
             "replace": "const showControls = true;, const showControls = false;, const showGpuTime = true;, const showGpuTime = false;",
             "referenceImage": "mesh-blending-coastal-cliff.png",
             "workarounds": ["dom-controls"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) and #19151 (KTX2 MSC transcoder without a DOM) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL", "WebGPU"],
+            "reason": "On OpenGL (Linux CI) and WebGPU (Dawn) createScene does not resolve within 120s"
         },
         {
             "title": "Mesh blending - FrameGraph alpha cutoff coverage",
             "playgroundId": "#OGVQ6C#0",
             "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
             "referenceImage": "mesh-blending-alpha-cutoff.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - viewport-edge continuation",
             "playgroundId": "#Q46SI1#2",
             "replace": "const scenario = \"all\";, const scenario = \"viewportEdges\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Low",
             "referenceImage": "mesh-blending-phase4-low.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - mixed radius continuation",
             "playgroundId": "#Q46SI1#2",
             "replace": "const scenario = \"all\";, const scenario = \"mixedRadius\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Cinematic",
             "referenceImage": "mesh-blending-phase4-cinematic.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - shadow attenuation enabled",
             "playgroundId": "#CYSYH2#7",
             "referenceImage": "mesh-blending-phase5-target-shadow-seam.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "errorRatio": 0.5,
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - shadow attenuation disabled",
             "playgroundId": "#CYSYH2#7",
             "replace": "const useShadowAttenuation = true;, const useShadowAttenuation = false;",
             "referenceImage": "mesh-blending-phase5-shadow-attenuation-disabled.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "errorRatio": 0.5,
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - HDR SceneColor",
             "playgroundId": "#GC20U3#0",
             "referenceImage": "mesh-blending-phase5-hdr-scene-color.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - classic parity reference",
             "playgroundId": "#O05LI8#6",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - FrameGraph parity",
@@ -2061,8 +2049,7 @@
             "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - NRGE without albedo",
@@ -2070,8 +2057,7 @@
             "replace": "const useNRGE = false;, const useNRGE = true;",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Shadows and LODs",
@@ -3333,8 +3319,9 @@
             "playgroundId": "#PVK3RV#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-beauty.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph object renderer - Beauty reference",
@@ -3349,24 +3336,27 @@
             "playgroundId": "#Z6QI9V#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-normals.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Geometry only",
             "playgroundId": "#RT0TA2#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-geometry-only.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - NRGE",
             "playgroundId": "#NIXFAQ#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-nrge.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Gaussian mesh",
@@ -3374,8 +3364,9 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL (Linux CI) createScene does not resolve within 120s"
         },
         {
             "title": "FrameGraph object renderer - Gaussian mesh reference",
@@ -3383,8 +3374,8 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
             "workarounds": ["es-module-import"],
-            "excludedJavaScriptEngines": ["JavaScriptCore"],
-            "reason": "Linux JavaScriptCore: the SPZ decoder module never finishes loading, so createScene times out (passes on V8)."
+            "excludedPlatforms": ["Unix", "Android/JavaScriptCore"],
+            "reason": "Linux JavaScriptCore: async WebAssembly.instantiate never settles (the JS thread does not pump the run loop JSC uses to complete it), so the SPZ decoder WebAssembly module never loads and createScene times out. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and Apple JavaScriptCore."
         },
         {
             "title": "FrameGraph selection outline",
@@ -5151,30 +5142,22 @@
         {
             "title": "FBX loader - node animation",
             "playgroundId": "#DZBTQU#10",
-            "referenceImage": "fbx-m11-node-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m11-node-anim.png"
         },
         {
             "title": "FBX loader - skeletal animation",
             "playgroundId": "#DZBTQU#11",
-            "referenceImage": "fbx-m12-skeletal-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m12-skeletal-anim.png"
         },
         {
             "title": "FBX loader - morph animation",
             "playgroundId": "#DZBTQU#12",
-            "referenceImage": "fbx-m13-morph-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m13-morph-anim.png"
         },
         {
             "title": "FBX loader - multiple animation clips",
             "playgroundId": "#DZBTQU#13",
-            "referenceImage": "fbx-m14-multiclip.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m14-multiclip.png"
         },
         {
             "title": "FBX loader - cameras and lights",
@@ -5378,10 +5361,7 @@
             "title": "Gaussian Splatting LOD",
             "playgroundId": "#418POI#12",
             "renderCount": 15,
-            "referenceImage": "gsplat-lod.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 27.099% pixel difference | WebGPU: shared failure, not Dawn-specific: bgfx/D3D11 fails too, with 'Error compiling effect' followed by runaway memory growth. Dawn renders but selects a lower LOD than the reference (29.2% pixel diff). Previously failed outright with 'Error: Invalid argument' because NativeWebGPU requested a device with WebGPU default limits, so this scene's G-buffer exceeded maxColorAttachmentBytesPerSample (40 needed vs 32 default); that is fixed, the remaining diff is LOD selection/streaming",
-            "excludedGraphicsApis": ["WebGPU"]
+            "referenceImage": "gsplat-lod.png"
         },
         {
             "title": "Gaussian Splatting Ranged Source Row Boundary",

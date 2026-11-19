@@ -180,30 +180,20 @@ namespace Playground
         // PolygonMeshBuilder resolves `earcut` as a global at triangulation time, so without this
         // any polygon scene fails with `ReferenceError: earcut is not defined`.
         runtime.LoadScript("app:///Scripts/earcut.min.js");
-#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
-        // See Apps/Playground/CMakeLists.txt: the ES5 bundles break Babylon's WGSL texture bindings.
-#define BABYLON_BUNDLE(name) "app:///Scripts/" name ".js"
-#define BABYLON_CORE_BUNDLE "app:///Scripts/babylon.max.js"
-#else
-#define BABYLON_BUNDLE(name) "app:///Scripts/" name ".es5.js"
-#define BABYLON_CORE_BUNDLE "app:///Scripts/babylon.es5.js"
-#endif
-        runtime.LoadScript(BABYLON_CORE_BUNDLE);
+        runtime.LoadScript("app:///Scripts/babylon.es5.js");
 #if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
         runtime.LoadScript("app:///Scripts/dawn_playground.js");
 #endif
-        // Load addons right after babylon so addons init sees a fully
+        // Load addons right after babylon.es5.js so addons init sees a fully
         // constructed BABYLON global.
-        runtime.LoadScript(BABYLON_BUNDLE("babylonjs.addons"));
-        runtime.LoadScript(BABYLON_BUNDLE("babylonjs.loaders"));
-        runtime.LoadScript(BABYLON_BUNDLE("babylonjs.materials"));
+        runtime.LoadScript("app:///Scripts/babylonjs.addons.es5.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.loaders.es5.js");
+        runtime.LoadScript("app:///Scripts/babylonjs.materials.es5.js");
         // Procedural-textures library (Fire/Wood/Marble/... ProceduralTexture).
-        runtime.LoadScript(BABYLON_BUNDLE("babylonjs.proceduralTextures"));
-        runtime.LoadScript(BABYLON_BUNDLE("babylon.gui"));
+        runtime.LoadScript("app:///Scripts/babylonjs.proceduralTextures.es5.js");
+        runtime.LoadScript("app:///Scripts/babylon.gui.es5.js");
         runtime.LoadScript("app:///Scripts/meshwriter.min.js");
-        runtime.LoadScript(BABYLON_BUNDLE("babylonjs.serializers"));
-#undef BABYLON_BUNDLE
-#undef BABYLON_CORE_BUNDLE
+        runtime.LoadScript("app:///Scripts/babylonjs.serializers.es5.js");
     }
 
     std::function<void(Babylon::Embedding::LogLevel, std::string_view)>
