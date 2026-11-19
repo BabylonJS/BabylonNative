@@ -925,9 +925,7 @@
         {
             "title": "Alpha-to-coverage transparent overlap",
             "playgroundId": "#M4GBLK#0",
-            "referenceImage": "alpha-to-coverage-transparent-overlap.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19148 (alpha-to-coverage on native) to ship in a Babylon.js release"
+            "referenceImage": "alpha-to-coverage-transparent-overlap.png"
         },
         {
             "title": "MSDF Screen projected",
@@ -1056,9 +1054,7 @@
         {
             "title": "Gaussian Splatting Loading RH",
             "playgroundId": "#CID4NN#398",
-            "referenceImage": "gsplat-loading-rh.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 7.807% pixel difference"
+            "referenceImage": "gsplat-loading-rh.png"
         },
         {
             "title": "Simple refraction",
@@ -1957,23 +1953,20 @@
             "title": "Object ID and mesh tag - Geometry buffer renderer",
             "playgroundId": "#O0BI9B#0",
             "referenceImage": "object-id-texture-geometry-buffer.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Object ID and mesh tag - FrameGraph object ID first",
             "playgroundId": "#XKTMFR#0",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Object ID and mesh tag - FrameGraph mesh tag first",
             "playgroundId": "#XKTMFR#0",
             "replace": "const meshTagFirst = false;, const meshTagFirst = true;",
             "referenceImage": "object-id-mesh-tag-framegraph.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - coastal cliff scenery",
@@ -1981,62 +1974,58 @@
             "replace": "const showControls = true;, const showControls = false;, const showGpuTime = true;, const showGpuTime = false;",
             "referenceImage": "mesh-blending-coastal-cliff.png",
             "workarounds": ["dom-controls"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) and #19151 (KTX2 MSC transcoder without a DOM) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL (Linux CI) createScene does not resolve within 120s"
         },
         {
             "title": "Mesh blending - FrameGraph alpha cutoff coverage",
             "playgroundId": "#OGVQ6C#0",
             "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
             "referenceImage": "mesh-blending-alpha-cutoff.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - viewport-edge continuation",
             "playgroundId": "#Q46SI1#2",
             "replace": "const scenario = \"all\";, const scenario = \"viewportEdges\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Low",
             "referenceImage": "mesh-blending-phase4-low.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - mixed radius continuation",
             "playgroundId": "#Q46SI1#2",
             "replace": "const scenario = \"all\";, const scenario = \"mixedRadius\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Cinematic",
             "referenceImage": "mesh-blending-phase4-cinematic.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - shadow attenuation enabled",
             "playgroundId": "#CYSYH2#7",
             "referenceImage": "mesh-blending-phase5-target-shadow-seam.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "errorRatio": 0.5,
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - shadow attenuation disabled",
             "playgroundId": "#CYSYH2#7",
             "replace": "const useShadowAttenuation = true;, const useShadowAttenuation = false;",
             "referenceImage": "mesh-blending-phase5-shadow-attenuation-disabled.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "errorRatio": 0.5,
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - HDR SceneColor",
             "playgroundId": "#GC20U3#0",
             "referenceImage": "mesh-blending-phase5-hdr-scene-color.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - classic parity reference",
             "playgroundId": "#O05LI8#6",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - FrameGraph parity",
@@ -2044,8 +2033,7 @@
             "replace": "const useFrameGraph = false;, const useFrameGraph = true;",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - NRGE without albedo",
@@ -2053,8 +2041,7 @@
             "replace": "const useNRGE = false;, const useNRGE = true;",
             "errorRatio": 0.1,
             "referenceImage": "mesh-blending-classic-framegraph-parity.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Shadows and LODs",
@@ -3305,8 +3292,9 @@
             "playgroundId": "#PVK3RV#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-beauty.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph object renderer - Beauty reference",
@@ -3321,24 +3309,27 @@
             "playgroundId": "#Z6QI9V#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-normals.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Geometry only",
             "playgroundId": "#RT0TA2#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-geometry-only.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - NRGE",
             "playgroundId": "#NIXFAQ#2",
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-renderers-nrge.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL the GPU particle update effect fails to compile"
         },
         {
             "title": "FrameGraph geometry renderer - Gaussian mesh",
@@ -3346,8 +3337,9 @@
             "errorRatio": 0.5,
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires Babylon.js #19150 (Native mesh blending) to ship in a Babylon.js release; then passes on renderers reporting CAPS_INTEGER_COLOR_ATTACHMENTS (Metal, Vulkan, OpenGL/OpenGL ES; not D3D11/D3D12)"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "On OpenGL (Linux CI) createScene does not resolve within 120s"
         },
         {
             "title": "FrameGraph object renderer - Gaussian mesh reference",
@@ -5084,30 +5076,22 @@
         {
             "title": "FBX loader - node animation",
             "playgroundId": "#DZBTQU#10",
-            "referenceImage": "fbx-m11-node-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m11-node-anim.png"
         },
         {
             "title": "FBX loader - skeletal animation",
             "playgroundId": "#DZBTQU#11",
-            "referenceImage": "fbx-m12-skeletal-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m12-skeletal-anim.png"
         },
         {
             "title": "FBX loader - morph animation",
             "playgroundId": "#DZBTQU#12",
-            "referenceImage": "fbx-m13-morph-anim.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m13-morph-anim.png"
         },
         {
             "title": "FBX loader - multiple animation clips",
             "playgroundId": "#DZBTQU#13",
-            "referenceImage": "fbx-m14-multiclip.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Babylon.js ES5 bundle bug: babylonjs.loaders.es5.js reuses one temporary name for the curve-node array and a for-of iterator, so FBX animation import throws '_4.push is not a function'. Re-enable once BabylonJS/Babylon.js#19125 ships."
+            "referenceImage": "fbx-m14-multiclip.png"
         },
         {
             "title": "FBX loader - cameras and lights",
@@ -5313,9 +5297,7 @@
             "title": "Gaussian Splatting LOD",
             "playgroundId": "#418POI#12",
             "renderCount": 15,
-            "referenceImage": "gsplat-lod.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 27.099% pixel difference"
+            "referenceImage": "gsplat-lod.png"
         },
         {
             "title": "Gaussian Splatting Ranged Source Row Boundary",
