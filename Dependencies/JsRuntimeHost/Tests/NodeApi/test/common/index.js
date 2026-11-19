@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 //
 // The JavaScript code in this file is adopted from the Node.js project.
-// See the src\napi\Readme.md about the Node.js copyright notice.
+// See ../../LICENSE for the Node.js copyright and permission notices.
 "use strict";
 
 const { mustCall, mustCallAtLeast, mustNotCall } = require("assert");

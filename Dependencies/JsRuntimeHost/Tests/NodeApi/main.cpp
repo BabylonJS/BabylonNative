@@ -9,6 +9,10 @@
 
 #include "child_process.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 namespace fs = std::filesystem;
 
 namespace {
@@ -49,6 +53,10 @@ std::unordered_set<std::string> ParseEnabledNativeSuites() {
 }  // namespace
 
 int main(int argc, char** argv) {
+#if defined(_WIN32)
+  ::SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+#endif
+
   fs::path exe_path = fs::canonical(argv[0]);
   fs::path js_root = ResolveTestsRoot(exe_path);
   if (!fs::exists(js_root)) {

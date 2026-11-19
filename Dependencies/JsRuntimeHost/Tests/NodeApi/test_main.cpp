@@ -11,7 +11,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <vector>
 #include "string_utils.h"
 
 namespace fs = std::filesystem;
@@ -60,18 +59,13 @@ class NodeApiTestFixture : public TestFixtureBase {
     ASSERT_TRUE(static_cast<bool>(config.run_script))
         << "Node-API test runner is not configured.";
 
-    // Quarantined conformance cases: known-failing against the current v5 surface. Kept registered
-    // (and skipped, so they stay visible) rather than silently dropped. Each needs a separate fix or
-    // a NAPI_VERSION bump and must not block the v5 suite.
+    // Retain the inherited skip: V8 aborts while wrapping this plain object.
     static constexpr const char* kQuarantined[] = {
-        // JSC napi_remove_wrap on an object that was never wrapped returns napi_invalid_arg, which the
-        // runner surfaces as a failure. The consecutive remove_wrap+delete_reference path itself does
-        // not crash. Tracked separately as a JSC remove_wrap fix.
         "test_reference_double_free/test_wrap.js",
     };
     for (const char* quarantined : kQuarantined) {
       if (m_jsFilePath.generic_string().find(quarantined) != std::string::npos) {
-        GTEST_SKIP() << "Quarantined (known-failing on the v5 surface): " << quarantined;
+        GTEST_SKIP() << "Inherited skip (V8 object-wrap abort): " << quarantined;
       }
     }
 
@@ -111,7 +105,9 @@ class NodeApiTestFixture : public TestFixtureBase {
       }
     }
 
-    ASSERT_EQ(result.status, 0);
+    ADD_FAILURE() << "node_lite exited with status " << result.status
+                  << "\nstdout:\n" << result.std_output
+                  << "\nstderr:\n" << result.std_error;
   }
 
   static void Register() {

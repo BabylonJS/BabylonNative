@@ -63,6 +63,7 @@ class NodeLiteTaskRunner {
   uint32_t PostTask(std::function<void()>&& task) noexcept;
   void RemoveTask(uint32_t task_id) noexcept;
   void DrainTaskQueue() noexcept;
+  bool HasPendingTasks() const noexcept;
 
   static void PostTaskCallback(void* task_runner_data,
                                void* task_data,

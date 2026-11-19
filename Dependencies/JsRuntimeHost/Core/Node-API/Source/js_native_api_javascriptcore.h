@@ -22,13 +22,12 @@ struct napi_env__ {
   napi_shared::PropertyNameIntrinsics property_name_intrinsics{};
   std::shared_ptr<napi_reference_tracking_state> reference_tracking_state{std::make_shared<napi_reference_tracking_state>()};
   std::list<napi_ref> strong_refs{};
-  bool shutting_down{false};
 
   JSValueRef constructor_info_symbol{};
   JSValueRef function_info_symbol{};
   JSValueRef reference_info_symbol{};
   JSValueRef wrapper_info_symbol{};
-  JSValueRef function_prototype_call{};
+  JSObjectRef function_prototype_call{};
 
   // Escapable scope bookkeeping: token -> whether that scope has escaped. Values
   // are rooted by the engine rather than by a scope here, so this exists only to
@@ -51,7 +50,6 @@ struct napi_env__ {
   }
 
   ~napi_env__() {
-    shutting_down = true;
     deinit_refs();
     deinit_symbol(function_prototype_call);
     deinit_symbol(wrapper_info_symbol);

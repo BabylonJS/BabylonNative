@@ -7,124 +7,141 @@ set(JSR_NODE_API_NATIVE_TEST_DIRS
     3_callbacks
     4_object_factory
     5_function_factory
-    # v5-clean reference coverage. The rest of the reference/finalizer/wrap suite targets newer
-    # Node-API and is staged for the NAPI_VERSION bump:
-    #   test_reference      -> node_api_symbol_for (v9)
-    #   test_finalizer/     -> napi_get_instance_data (v6), node_api_basic_env / node_api_post_finalizer (v9)
-    #   6_object_wrap       -> napi_get_instance_data (v6), node_api_basic_env (v9)
-    # (test_reference_double_free/test_wrap.js is quarantined in test_main.cpp -- a JSC remove_wrap
-    #  edge case that returns napi_invalid_arg; tracked as a separate fix, not a v5 blocker.)
     test_reference_double_free
 )
+if(NOT JSR_NODE_API_BUILD_NATIVE_TESTS)
+    set(JSR_NODE_API_NATIVE_TEST_DIRS "")
+endif()
 
 function(node_api_copy_test_sources TARGET_NAME)
-    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    add_custom_target(${TARGET_NAME}Assets
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${NODE_API_TEST_ROOT}/test
             $<TARGET_FILE_DIR:${TARGET_NAME}>/test
         COMMENT "Copying Node-API test assets for ${TARGET_NAME}"
     )
+    add_dependencies(${TARGET_NAME} ${TARGET_NAME}Assets)
 endfunction()
 
-if(ANDROID)
-    set(NODE_LITE_PLATFORM_SRC node_lite_posix.cpp)
-    set(NODE_LITE_CHILD_PROCESS_SRC child_process_posix.cpp)
-elseif(APPLE)
-    set(NODE_LITE_PLATFORM_SRC node_lite_posix.cpp)
-    set(NODE_LITE_CHILD_PROCESS_SRC child_process_posix.cpp)
-elseif(WIN32)
-    set(NODE_LITE_PLATFORM_SRC node_lite_windows.cpp)
-    set(NODE_LITE_CHILD_PROCESS_SRC child_process.cpp)
-else()
-    set(NODE_LITE_PLATFORM_SRC node_lite_posix.cpp)
-    set(NODE_LITE_CHILD_PROCESS_SRC child_process_posix.cpp)
-    message(WARNING "Node-API node_lite platform not yet customized for ${CMAKE_SYSTEM_NAME}; using POSIX defaults.")
-endif()
+if(NOT ANDROID)
+    if(WIN32)
+        set(NODE_LITE_PLATFORM_SRC node_lite_windows.cpp)
+        set(NODE_LITE_CHILD_PROCESS_SRC child_process.cpp)
+    else()
+        set(NODE_LITE_PLATFORM_SRC node_lite_posix.cpp)
+        set(NODE_LITE_CHILD_PROCESS_SRC child_process_posix.cpp)
+    endif()
 
-add_executable(node_lite
-    ${NODE_LITE_CHILD_PROCESS_SRC}
-    child_process.h
-    compat.h
-    js_runtime_api.cpp
-    js_runtime_api.h
-    node_lite.cpp
-    node_lite.h
-    node_lite_jsruntimehost.cpp
-    ${NODE_LITE_PLATFORM_SRC}
-    string_utils.cpp
-    string_utils.h
-)
+    add_executable(node_lite
+        ${NODE_LITE_CHILD_PROCESS_SRC}
+        child_process.h
+        compat.h
+        js_runtime_api.cpp
+        js_runtime_api.h
+        node_lite.cpp
+        node_lite.h
+        node_lite_jsruntimehost.cpp
+        ${NODE_LITE_PLATFORM_SRC}
+        string_utils.cpp
+        string_utils.h)
 
-target_include_directories(node_lite
-    PRIVATE
-        ${NODE_API_TEST_ROOT}
-        ${NODE_API_TEST_ROOT}/include
-        ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Shared
-        ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}
-        ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Source
-)
+    target_include_directories(node_lite
+        PRIVATE
+            ${NODE_API_TEST_ROOT}
+            ${NODE_API_TEST_ROOT}/include
+            ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Shared
+            ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}
+            ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Source)
 
-target_compile_definitions(node_lite
-    PRIVATE
-        NODE_API_EXPERIMENTAL_NO_WARNING
-)
-
-target_link_libraries(node_lite
-    PRIVATE
-        napi
-)
-
-node_api_copy_test_sources(node_lite)
-
-add_executable(NodeApiTests
-  ${NODE_LITE_CHILD_PROCESS_SRC}
-  child_process.h
-  string_utils.cpp
-  string_utils.h
-  test_basics.cpp
-  test_main.cpp
-  main.cpp
-  test_main.h
-)
-
-target_include_directories(NodeApiTests
-    PRIVATE
-        ${NODE_API_TEST_ROOT}
-        ${NODE_API_TEST_ROOT}/include
-)
-
-target_link_libraries(NodeApiTests
-    PRIVATE
-        gtest_main
-)
-
-node_api_copy_test_sources(NodeApiTests)
-
-add_dependencies(NodeApiTests node_lite)
-
-add_custom_target(NodeApiModules)
-
-# Always define which tests are available, regardless of whether we build the native modules
-list(JOIN JSR_NODE_API_NATIVE_TEST_DIRS "," NODE_API_NATIVE_TESTS_STRING)
-target_compile_definitions(node_lite
-    PRIVATE
-        NODE_API_AVAILABLE_NATIVE_TESTS=\"${NODE_API_NATIVE_TESTS_STRING}\"
-)
-target_compile_definitions(NodeApiTests
-    PRIVATE
-        NODE_API_AVAILABLE_NATIVE_TESTS=\"${NODE_API_NATIVE_TESTS_STRING}\"
-)
-
-# Only define NODE_API_TESTS_HAVE_NATIVE_MODULES when actually building native modules
-if(JSR_NODE_API_BUILD_NATIVE_TESTS)
+    string(TOUPPER "${NAPI_JAVASCRIPT_ENGINE}" NODE_API_ENGINE_UPPER)
     target_compile_definitions(node_lite
         PRIVATE
-            NODE_API_TESTS_HAVE_NATIVE_MODULES=1
-    )
-    target_compile_definitions(NodeApiTests
+            JSR_NAPI_ENGINE_${NODE_API_ENGINE_UPPER}
+            NODE_API_EXPERIMENTAL_NO_WARNING
+            NODE_API_BUILD_TYPE="$<IF:$<CONFIG:Debug>,Debug,Release>")
+    target_link_libraries(node_lite PRIVATE napi)
+
+    get_target_property(NAPI_LIBRARY_TYPE napi TYPE)
+    if(WIN32)
+        if(NAPI_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
+            set_target_properties(node_lite PROPERTIES ENABLE_EXPORTS ON)
+            target_link_options(node_lite PRIVATE "/WHOLEARCHIVE:$<TARGET_FILE:napi>")
+            if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+                target_link_options(node_lite PRIVATE "/WHOLEARCHIVE:$<TARGET_FILE:hermesNapi>")
+            endif()
+        endif()
+        add_custom_command(TARGET node_lite POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E
+                $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:node_lite>>,copy,true>
+                $<TARGET_RUNTIME_DLLS:node_lite>
+                $<TARGET_FILE_DIR:node_lite>
+            COMMAND_EXPAND_LISTS)
+    elseif(UNIX AND NOT APPLE)
+        set_target_properties(node_lite PROPERTIES ENABLE_EXPORTS ON)
+        if(NAPI_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY"
+                AND NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
+            target_link_options(node_lite
+                PRIVATE
+                    "LINKER:--whole-archive"
+                    "$<TARGET_FILE:hermesNapi>"
+                    "LINKER:--no-whole-archive")
+        endif()
+    endif()
+
+    node_api_copy_test_sources(node_lite)
+    add_executable(NodeApiTests
+        ${NODE_LITE_CHILD_PROCESS_SRC}
+        child_process.h
+        string_utils.cpp
+        string_utils.h
+        test_basics.cpp
+        test_main.cpp
+        main.cpp
+        test_main.h)
+    target_include_directories(NodeApiTests
         PRIVATE
-            NODE_API_TESTS_HAVE_NATIVE_MODULES=1
-    )
+            ${NODE_API_TEST_ROOT}
+            ${NODE_API_TEST_ROOT}/include)
+    target_link_libraries(NodeApiTests PRIVATE gtest_main)
+    add_dependencies(NodeApiTests node_lite)
+
+    add_custom_target(NodeApiModules)
+    list(JOIN JSR_NODE_API_NATIVE_TEST_DIRS "," NODE_API_NATIVE_TESTS_STRING)
+    foreach(TARGET_NAME node_lite NodeApiTests)
+        target_compile_definitions(${TARGET_NAME}
+            PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="${NODE_API_NATIVE_TESTS_STRING}")
+        if(JSR_NODE_API_BUILD_NATIVE_TESTS)
+            target_compile_definitions(${TARGET_NAME} PRIVATE NODE_API_TESTS_HAVE_NATIVE_MODULES=1)
+        endif()
+    endforeach()
+else()
+    # Object files retain the statically registered Google Test basics.
+    add_library(NodeApiTestHarness OBJECT
+        android_tests.cpp
+        child_process_android.cpp
+        js_runtime_api.cpp
+        node_lite.cpp
+        node_lite_android.cpp
+        node_lite_jsruntimehost.cpp
+        string_utils.cpp
+        test_basics.cpp
+        test_main.cpp)
+    target_include_directories(NodeApiTestHarness
+        PUBLIC "${NODE_API_TEST_ROOT}"
+        PRIVATE "${NODE_API_TEST_ROOT}/include"
+            "${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Source")
+    string(TOUPPER "${NAPI_JAVASCRIPT_ENGINE}" NODE_API_ENGINE_UPPER)
+    list(JOIN JSR_NODE_API_NATIVE_TEST_DIRS "," NODE_API_NATIVE_TESTS_STRING)
+    target_compile_definitions(NodeApiTestHarness
+        PUBLIC NODE_API_AVAILABLE_NATIVE_TESTS="${NODE_API_NATIVE_TESTS_STRING}"
+        PRIVATE JSR_NAPI_ENGINE_${NODE_API_ENGINE_UPPER}
+            NODE_API_BUILD_TYPE="$<IF:$<CONFIG:Debug>,Debug,Release>"
+            NODE_API_EXPERIMENTAL_NO_WARNING)
+    if(JSR_NODE_API_BUILD_NATIVE_TESTS)
+        target_compile_definitions(NodeApiTestHarness PRIVATE NODE_API_TESTS_HAVE_NATIVE_MODULES=1)
+    endif()
+    target_link_libraries(NodeApiTestHarness PRIVATE napi AppRuntime gtest android log dl)
+    add_custom_target(NodeApiModules)
 endif()
 
 function(add_node_api_module MODULE_TARGET)
@@ -173,11 +190,15 @@ function(add_node_api_module MODULE_TARGET)
         # DT_NEEDED -- the same libnapi.so the host depends on, so there is a single napi instance.
         target_link_libraries(${MODULE_TARGET} PRIVATE napi)
     elseif(WIN32)
-        # MSVC binds a DLL's imports at link time (there's no node.exe-style host export / delay-load
-        # wired up here), so the .node addon must resolve its napi_* against the napi library directly.
-        # napi is static on Windows, so the references bind into the addon; node_lite isn't executed by
-        # the Windows/UWP CI (build-only), so a single shared napi instance isn't required there.
-        target_link_libraries(${MODULE_TARGET} PRIVATE napi)
+        target_compile_definitions(${MODULE_TARGET}
+            PRIVATE
+                "NAPI_EXTERN=__declspec(dllimport)"
+        )
+        if(NAPI_LIBRARY_TYPE STREQUAL "SHARED_LIBRARY")
+            target_link_libraries(${MODULE_TARGET} PRIVATE napi)
+        else()
+            target_link_libraries(${MODULE_TARGET} PRIVATE node_lite)
+        endif()
     endif()
 
     if(ANDROID)
@@ -237,6 +258,12 @@ function(add_node_api_module MODULE_TARGET)
     endif()
 endfunction()
 
-add_dependencies(NodeApiTests NodeApiModules)
-
-add_subdirectory(test)
+if(ANDROID)
+    add_dependencies(NodeApiTestHarness NodeApiModules)
+    if(JSR_NODE_API_BUILD_NATIVE_TESTS)
+        add_subdirectory(test/js-native-api)
+    endif()
+else()
+    add_dependencies(NodeApiTests NodeApiModules)
+    add_subdirectory(test)
+endif()

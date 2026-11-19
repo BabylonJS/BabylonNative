@@ -190,6 +190,10 @@ jobs:
         working-directory: build/Linux/Dependencies/UrlLib/Tests
         run: ./UrlLibTests
 
+      - name: Node-API Conformance Tests
+        working-directory: build/Linux/Dependencies/JsRuntimeHost/Tests/NodeApi
+        run: ./NodeApiTests
+
       - name: Upload Vulkan Test Results
         if: ${{ always() && inputs.graphics-api == 'Vulkan' }}
         uses: actions/upload-artifact@v6

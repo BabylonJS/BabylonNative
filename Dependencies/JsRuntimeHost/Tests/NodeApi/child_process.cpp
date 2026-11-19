@@ -107,7 +107,7 @@ ProcessResult SpawnSync(std::string_view command,
                      nullptr,  // process security attributes
                      nullptr,  // primary thread security attributes
                      TRUE,     // handles are inherited
-                     CREATE_DEFAULT_ERROR_MODE,  // creation flags
+                     0,                          // inherit non-interactive error mode
                      nullptr,                    // use parent's environment
                      nullptr,          // use parent's current directory
                      &startup_info,    // STARTUPINFO pointer
@@ -154,7 +154,9 @@ std::string ReadFromPipe(HANDLE pipeHandle) {
     DWORD bytesRead;
     BOOL isSuccess =
         ::ReadFile(pipeHandle, buffer, bufferSize, &bytesRead, nullptr);
-    if (!isSuccess || bytesRead == 0) break;
+    if (!isSuccess || bytesRead == 0) {
+      break;
+    }
 
     result.append(buffer, bytesRead);
   }

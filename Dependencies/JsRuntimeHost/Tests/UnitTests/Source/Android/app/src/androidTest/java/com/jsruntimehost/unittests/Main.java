@@ -23,7 +23,6 @@ public class Main {
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
         assertEquals("com.jsruntimehost.unittests", appContext.getPackageName());
 
-        Context applicationContext = appContext.getApplicationContext();
-        assertEquals(0, Native.javaScriptTests(applicationContext));
+        assertEquals(0, Native.javaScriptTests(appContext));
     }
 }

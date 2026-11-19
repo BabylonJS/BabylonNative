@@ -21,4 +21,3 @@ typedef struct {
 } napi_node_version;
 
 #endif  // NODE_API_TYPES_H_
-

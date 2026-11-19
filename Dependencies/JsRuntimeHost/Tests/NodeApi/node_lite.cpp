@@ -17,6 +17,10 @@
 #include <regex>
 #include <sstream>
 #include <utility>
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 #include "child_process.h"
 
 namespace fs = std::filesystem;
@@ -133,7 +137,8 @@ class NodeApiCallbackInfo {
 
 std::unique_ptr<IEnvHolder> CreateEnvHolder(
     std::shared_ptr<NodeLiteTaskRunner> taskRunner,
-    std::function<void(napi_env, napi_value)> onUnhandledError);
+    std::function<void(napi_env, napi_value)> onUnhandledError,
+    std::string executablePath);
 
 //=============================================================================
 // NodeLiteModule implementation
@@ -333,14 +338,16 @@ NodeLiteRuntime::NodeLiteRuntime(
       callbacks_(std::move(callbacks)) {}
 
 void NodeLiteRuntime::Initialize() {
-  env_holder_ =
-      CreateEnvHolder(task_runner_, [this](napi_env env, napi_value error) {
+  env_holder_ = CreateEnvHolder(
+      task_runner_,
+      [this](napi_env env, napi_value error) {
         NODE_LITE_ASSERT(env == env_,
                          "Unhandled error in different napi_env: %p != %p",
                          env,
                          env_);
         OnUncaughtException(error);
-      });
+      },
+      args_[0]);
   env_ = env_holder_->getEnv();
   NodeApiEnvScope env_scope{env_};
   NodeApiHandleScope handle_scope{env_};
@@ -464,7 +471,12 @@ void NodeLiteRuntime::RunTestScript(const std::string& script_path) {
       main_module.LoadModule(env_);
     });
     ExitOnException(env_, [this]() {
-      task_runner_->DrainTaskQueue();
+      napi_env env = env_;
+      do {
+        task_runner_->DrainTaskQueue();
+        bool microtasks_drained{};
+        NODE_LITE_CALL(jsr_drain_microtasks(env, -1, &microtasks_drained));
+      } while (task_runner_->HasPendingTasks());
       OnExit();
       on_exit_callbacks_.clear();
       on_uncaughtException_callbacks_.clear();
@@ -614,6 +626,16 @@ void NodeLiteRuntime::DefineGlobalFunctions() {
   NodeApi::SetMethod(
       env_, global, "gc", [](napi_env env, span<napi_value> /*args*/) {
         NODE_LITE_CALL(jsr_collect_garbage(env));
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE) || defined(JSR_NAPI_ENGINE_V8)
+        // The active callback/evaluation frames can keep the newly unreachable
+        // value alive. Collect once more after those frames unwind.
+        GetRuntime(env)->task_runner_->PostTask([env]() {
+          ExitOnException(env, [env]() {
+            NodeApiHandleScope scope{env};
+            NODE_LITE_CALL(jsr_collect_garbage(env));
+          });
+        });
+#endif
         return nullptr;
       });
 
@@ -663,8 +685,9 @@ void NodeLiteRuntime::DefineGlobalFunctions() {
     // process.execPath
     NodeApi::SetPropertyString(env_, process_obj, "execPath", args_[0]);
 
-    // process.target_config - always use "Release" to match CMAKE module output directory
-    NodeApi::SetPropertyString(env_, process_obj, "target_config", "Release");
+    // process.target_config follows the directory where CMake staged addons.
+    NodeApi::SetPropertyString(
+        env_, process_obj, "target_config", NODE_API_BUILD_TYPE);
 
 // process.platform
 #ifdef WIN32
@@ -852,6 +875,10 @@ void NodeLiteTaskRunner::DrainTaskQueue() noexcept {
     task_queue_.pop_front();
     task.second();
   }
+}
+
+bool NodeLiteTaskRunner::HasPendingTasks() const noexcept {
+  return !task_queue_.empty();
 }
 
 /*static*/ void NodeLiteTaskRunner::PostTaskCallback(
@@ -1441,7 +1468,13 @@ ProcessResult RunNodeLiteScript(const std::filesystem::path& js_root,
 
 }  // namespace node_api_tests
 
+#if !defined(__ANDROID__)
 int main(int argc, char* argv[]) {
+#if defined(_WIN32)
+  ::SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+#endif
+
   node_api_tests::NodeLiteRuntime::Run(
       std::vector<std::string>(argv, argv + argc));
 }
+#endif
