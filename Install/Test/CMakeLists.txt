@@ -97,6 +97,7 @@ else()
     find_package(X11 REQUIRED)
     find_package(CURL REQUIRED)
     find_library(JAVASCRIPTCORE_LIBRARY NAMES javascriptcoregtk-4.1 REQUIRED)
+    find_library(GLIB_LIBRARY NAMES glib-2.0 REQUIRED)
 
     # The installed tree is plain archives with no CMake targets describing how they depend on
     # each other, so link them as a group and let the linker resolve the cycles rather than
@@ -105,6 +106,7 @@ else()
         -Wl,--start-group ${INSTALL_LIBS} -Wl,--end-group
         gtest_main
         ${JAVASCRIPTCORE_LIBRARY}
+        ${GLIB_LIBRARY}
         OpenGL::OpenGL
         OpenGL::GLX
         X11::X11

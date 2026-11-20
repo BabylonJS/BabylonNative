@@ -1,11 +1,15 @@
 #include <Babylon/AppRuntime.h>
 #include <gtest/gtest.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
+#include <napi/env.h>
 #include <chrono>
+#include <cstdlib>
 #include <future>
 #include <memory>
 #include <thread>
+#include <string>
 #include <string_view>
+#include <vector>
 
 TEST(AppRuntime, DestroyDoesNotDeadlock)
 {
@@ -61,9 +65,10 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
         });
         ready.get_future().wait();
 
-        // JavaScriptCore on Apple platforms waits in the thread's CFRunLoop instead of blocking_tick,
-        // so the queue hook never fires there; the destructor must still wake the run loop.
-#ifdef __APPLE__
+        // JavaScriptCore on Apple and Linux waits in the thread's run loop (CFRunLoop or a GLib main
+        // context) instead of blocking_tick, so the queue hook never fires there; the destructor
+        // must still wake the run loop.
+#if defined(__APPLE__) || (defined(__linux__) && !defined(__ANDROID__))
         constexpr bool waitsInDispatcherQueue{std::string_view{NAPI_JAVASCRIPT_ENGINE} != "JavaScriptCore"};
 #else
         constexpr bool waitsInDispatcherQueue{true};
@@ -113,3 +118,70 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
 
     testThread.join();
 }
+
+#if defined(__linux__) && !defined(__ANDROID__)
+#include <spawn.h>
+#include <sys/wait.h>
+
+extern char** environ;
+
+TEST(AppRuntime, TimerDrivenCollectionAfterFirstRuntimeExits)
+{
+    // On Linux JavaScriptCore, the full collection timer needs WTF's process-wide main RunLoop,
+    // which is set up only once per process. It must outlive the runtime whose thread set it up:
+    // destroy a runtime that never collects, then let a second runtime run collection timers.
+    // Run in a fresh copy of this executable so this is the first runtime and the first
+    // timer-driven collection in that process.
+    constexpr const char* childVariable{"JSRUNTIMEHOST_TIMER_COLLECTION_CHILD"};
+    if (getenv(childVariable) == nullptr)
+    {
+        std::vector<std::string> variables{
+            std::string{childVariable} + "=1",
+            "GTEST_FILTER=AppRuntime.TimerDrivenCollectionAfterFirstRuntimeExits"};
+        std::vector<char*> envp;
+        for (std::string& variable : variables)
+        {
+            envp.push_back(variable.data());
+        }
+        for (char** variable = environ; *variable != nullptr; ++variable)
+        {
+            if (std::string_view{*variable}.rfind("GTEST_FILTER=", 0) != 0)
+            {
+                envp.push_back(*variable);
+            }
+        }
+        envp.push_back(nullptr);
+
+        char path[]{"/proc/self/exe"};
+        char* argv[]{path, nullptr};
+        pid_t pid{};
+        ASSERT_EQ(posix_spawn(&pid, path, nullptr, nullptr, argv, envp.data()), 0);
+        int status{};
+        ASSERT_EQ(waitpid(pid, &status, 0), pid);
+        EXPECT_TRUE(WIFEXITED(status) && WEXITSTATUS(status) == 0) << "Child status " << status;
+        return;
+    }
+
+    {
+        Babylon::AppRuntime first{};
+        std::promise<void> ready;
+        first.Dispatch([&ready](Napi::Env) { ready.set_value(); });
+        ready.get_future().wait();
+    }
+
+    Babylon::AppRuntime second{};
+    const auto end{std::chrono::steady_clock::now() + std::chrono::seconds(3)};
+    while (std::chrono::steady_clock::now() < end)
+    {
+        std::promise<void> allocated;
+        second.Dispatch([&allocated](Napi::Env env) {
+            Napi::Eval(env, "{ const a = []; for (let i = 0; i < 100000; ++i) a.push({ i }); }", "garbage.js");
+            allocated.set_value();
+        });
+        allocated.get_future().wait();
+
+        // Leave the runtime's dispatch loop idle so it runs pending collection timers.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+#endif

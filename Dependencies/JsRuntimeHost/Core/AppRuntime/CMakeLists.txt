@@ -52,6 +52,16 @@ if(APPLE)
         PUBLIC "-framework CoreFoundation")
 endif()
 
+# WebKitGTK's JavaScriptCore completes some engine work (notably async WebAssembly promises) on a
+# GLib main context, which AppRuntime_JavaScriptCore.cpp iterates on the JavaScript thread.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore" AND UNIX AND NOT APPLE AND NOT ANDROID)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GLIB REQUIRED glib-2.0)
+    target_include_directories(AppRuntime PRIVATE ${GLIB_INCLUDE_DIRS})
+    target_link_libraries(AppRuntime PUBLIC ${GLIB_LINK_LIBRARIES})
+    target_compile_definitions(AppRuntime PRIVATE JSRUNTIMEHOST_JAVASCRIPTCORE_GLIB)
+endif()
+
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
     add_subdirectory(V8Inspector)
 
