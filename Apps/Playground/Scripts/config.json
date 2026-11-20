@@ -1967,7 +1967,7 @@
             "workarounds": ["dom-controls"],
             "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
             "excludedPlatforms": ["Android/JavaScriptCore"],
-            "reason": "Android JavaScriptCore: SyntaxError (jsc-android does not parse the playground's modern JavaScript syntax). Passes on Win32 D3D11 and Linux OpenGL."
+            "reason": "Android JavaScriptCore: SyntaxError (jsc-android does not parse the playground's modern JavaScript syntax). Passes on Linux OpenGL. Skipped on D3D11, where Babylon Native does not report CAPS_INTEGER_COLOR_ATTACHMENTS."
         },
         {
             "title": "Mesh blending - FrameGraph alpha cutoff coverage",
@@ -3298,7 +3298,7 @@
             "workarounds": ["es-module-import"],
             "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
             "excludedPlatforms": ["Android/JavaScriptCore"],
-            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on Apple and Linux JavaScriptCore. Skipped on D3D11, where Babylon Native does not report CAPS_INTEGER_COLOR_ATTACHMENTS."
         },
         {
             "title": "FrameGraph object renderer - Gaussian mesh reference",
