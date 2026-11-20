@@ -1,16 +1,19 @@
 #include "Fetch.h"
+#include "FetchScripts.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Polyfills/Fetch.h>
 
 #include <UrlLib/UrlLib.h>
+#include <Babylon/Polyfills/DataUrl.h>
 
 #include <algorithm>
 #include <cctype>
 #include <cstring>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -18,25 +21,16 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    using DataUrlResponse = Babylon::Polyfills::DataUrl::Response;
     namespace
     {
-        // Buffered response payload shared between the Response object and any clones it produces.
-        struct ResponseData
-        {
-            int statusCode{};
-            std::string statusText;
-            std::string url;
-            std::vector<std::pair<std::string, std::string>> headers;
-            std::vector<std::byte> body;
-        };
-
         // Shared state for honoring an AbortSignal passed via init.signal. Co-owned by the "abort"
         // listener (which sets the flag, captures the reason, and cancels the transport) and the
         // completion continuation (which reports the AbortError and tears the listener down).
         struct AbortState
         {
             bool aborted{false};
-            Napi::Reference<Napi::Value> reason;
+            Napi::ObjectReference reasonHolder;
             Napi::ObjectReference signal;
             Napi::FunctionReference listener;
         };
@@ -63,10 +57,12 @@ namespace Babylon::Polyfills::Internal
             });
         }
 
+
         // Stable message used for every transport-failure rejection. Browsers and Node both keep
         // this constant (the variable detail rides on `cause`) so crash-report grouping stays
         // intact; we follow Node/undici's "fetch failed" spelling.
         constexpr const char* FETCH_FAILED_MESSAGE = "fetch failed";
+        constexpr const char* JS_FETCH_POLYFILL_EXPORTS_NAME = "fetchPolyfillExports";
 
         // Snapshot the JS call-site stack synchronously, inside fetch(), before SendAsync() hands
         // the request to a worker thread. The transport-failure rejection is otherwise built in a
@@ -153,18 +149,6 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{"Unsupported fetch method: " + method + " (only GET and POST are supported)"};
         }
 
-        std::optional<std::string> FindHeader(const ResponseData& data, std::string_view name)
-        {
-            for (const auto& header : data.headers)
-            {
-                if (EqualsIgnoreCase(header.first, name))
-                {
-                    return header.second;
-                }
-            }
-            return std::nullopt;
-        }
-
         void ApplyRequestHeaders(UrlLib::UrlRequest& request, const Napi::Value& headers)
         {
             if (headers.IsUndefined() || headers.IsNull())
@@ -172,166 +156,85 @@ namespace Babylon::Polyfills::Internal
                 return;
             }
 
-            Napi::Env env = headers.Env();
-
-            // Array of [name, value] pairs.
-            if (headers.IsArray())
+            const auto env = headers.Env();
+            const auto headersConstructor = env.Global().Get("Headers");
+            if (headersConstructor.IsUndefined() || headersConstructor.IsNull())
             {
-                const auto array = headers.As<Napi::Array>();
-                for (uint32_t i = 0; i < array.Length(); ++i)
-                {
-                    const auto pair = array.Get(i);
-                    if (pair.IsArray())
-                    {
-                        const auto entry = pair.As<Napi::Array>();
-                        request.SetRequestHeader(entry.Get(0u).ToString().Utf8Value(), entry.Get(1u).ToString().Utf8Value());
-                    }
-                }
-                return;
+                throw Napi::TypeError::New(env, "fetch requires Headers to be installed.");
             }
 
-            if (headers.IsObject())
+            auto normalizedHeaders = headersConstructor.As<Napi::Function>().New({headers});
+            const auto callback = Napi::Function::New(env, [&request](const Napi::CallbackInfo& info) {
+                if (info.Length() >= 2)
+                {
+                    request.SetRequestHeader(info[1].ToString().Utf8Value(), info[0].ToString().Utf8Value());
+                }
+            });
+            normalizedHeaders.Get("forEach").As<Napi::Function>().Call(normalizedHeaders, {callback});
+        }
+
+        void InitializeFetchClasses(Napi::Env env)
+        {
+            auto global = env.Global();
+            auto nativeObject = JsRuntime::NativeObject::GetFromJavaScript(env);
+            auto exportsValue = nativeObject.Get(JS_FETCH_POLYFILL_EXPORTS_NAME);
+            if (exportsValue.IsUndefined() || exportsValue.IsNull())
             {
-                const auto object = headers.As<Napi::Object>();
-
-                // Headers / Map instances expose forEach((value, key) => ...).
-                const auto forEach = object.Get("forEach");
-                if (forEach.IsFunction())
-                {
-                    const auto callback = Napi::Function::New(env, [&request](const Napi::CallbackInfo& info) {
-                        if (info.Length() >= 2)
-                        {
-                            request.SetRequestHeader(info[1].ToString().Utf8Value(), info[0].ToString().Utf8Value());
-                        }
-                    });
-                    forEach.As<Napi::Function>().Call(object, {callback});
-                    return;
-                }
-
-                // Plain object of name/value properties.
-                const auto names = object.GetPropertyNames();
-                for (uint32_t i = 0; i < names.Length(); ++i)
-                {
-                    const auto key = names.Get(i);
-                    request.SetRequestHeader(key.ToString().Utf8Value(), object.Get(key).ToString().Utf8Value());
-                }
+                exportsValue = Napi::Eval(env, FetchScripts::Polyfill, "jsruntimehost://fetch-polyfill.js");
+                nativeObject.Set(JS_FETCH_POLYFILL_EXPORTS_NAME, exportsValue);
             }
+            const auto exports = exportsValue.As<Napi::Object>();
+            const auto headers = global.Get("Headers");
+            const auto response = global.Get("Response");
+            if (headers.IsUndefined() || headers.IsNull() || response.IsUndefined() || response.IsNull())
+            {
+                global.Set("Headers", exports.Get("Headers"));
+                global.Set("Response", exports.Get("Response"));
+            }
+            nativeObject.Set("createFetchResponse", exports.Get("createFetchResponse"));
         }
 
-        Napi::Object BuildHeaders(Napi::Env env, const std::shared_ptr<ResponseData>& data)
+        template<typename THeaders>
+        Napi::Value CreateFetchResponse(
+            Napi::Env env,
+            const void* body,
+            size_t bodySize,
+            const THeaders& headers,
+            int status,
+            std::string_view statusText,
+            std::string_view url,
+            bool redirected)
         {
-            Napi::Object headers = Napi::Object::New(env);
+            auto arrayBuffer = Napi::ArrayBuffer::New(env, bodySize);
+            if (bodySize > 0)
+            {
+                std::memcpy(arrayBuffer.Data(), body, bodySize);
+            }
+            const auto bytes = Napi::Uint8Array::New(env, bodySize, arrayBuffer, 0);
 
-            headers.Set("get", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                const auto value = FindHeader(*data, info[0].ToString().Utf8Value());
-                return value ? Napi::Value{Napi::String::New(env, *value)} : Napi::Value{env.Null()};
-            }, "get"));
+            auto responseHeaders = Napi::Array::New(env, headers.size());
+            uint32_t headerIndex{};
+            for (const auto& header : headers)
+            {
+                auto pair = Napi::Array::New(env, 2);
+                pair.Set(uint32_t{0}, Napi::String::New(env, header.first));
+                pair.Set(uint32_t{1}, Napi::String::New(env, header.second));
+                responseHeaders.Set(headerIndex++, pair);
+            }
 
-            headers.Set("has", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                return Napi::Boolean::New(info.Env(), FindHeader(*data, info[0].ToString().Utf8Value()).has_value());
-            }, "has"));
+            auto init = Napi::Object::New(env);
+            init.Set("headers", responseHeaders);
+            init.Set("status", Napi::Number::New(env, status));
+            init.Set("statusText", Napi::String::New(env, statusText.data(), statusText.size()));
 
-            headers.Set("forEach", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                const auto callback = info[0].As<Napi::Function>();
-                const auto thisArg = info.Length() > 1 ? info[1] : env.Undefined();
-                for (const auto& header : data->headers)
-                {
-                    callback.Call(thisArg, {Napi::String::New(env, header.second), Napi::String::New(env, header.first)});
-                }
-                return env.Undefined();
-            }, "forEach"));
+            auto metadata = Napi::Object::New(env);
+            metadata.Set("redirected", Napi::Boolean::New(env, redirected));
+            metadata.Set("type", Napi::String::New(env, "basic"));
+            metadata.Set("url", Napi::String::New(env, url.data(), url.size()));
 
-            return headers;
-        }
-
-        Napi::Object BuildResponse(Napi::Env env, const std::shared_ptr<ResponseData>& data)
-        {
-            Napi::Object response = Napi::Object::New(env);
-
-            const bool ok = data->statusCode >= 200 && data->statusCode < 300;
-            response.Set("ok", Napi::Boolean::New(env, ok));
-            response.Set("status", Napi::Number::New(env, data->statusCode));
-            response.Set("statusText", Napi::String::New(env, data->statusText));
-            response.Set("url", Napi::String::New(env, data->url));
-            response.Set("redirected", Napi::Boolean::New(env, false));
-            response.Set("type", Napi::String::New(env, "basic"));
-            response.Set("bodyUsed", Napi::Boolean::New(env, false));
-            response.Set("headers", BuildHeaders(env, data));
-
-            response.Set("text", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                const auto deferred = Napi::Promise::Deferred::New(env);
-                std::string text{reinterpret_cast<const char*>(data->body.data()), data->body.size()};
-                deferred.Resolve(Napi::String::New(env, text));
-                return deferred.Promise();
-            }, "text"));
-
-            response.Set("arrayBuffer", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                const auto deferred = Napi::Promise::Deferred::New(env);
-                const auto arrayBuffer = Napi::ArrayBuffer::New(env, data->body.size());
-                if (!data->body.empty())
-                {
-                    std::memcpy(arrayBuffer.Data(), data->body.data(), data->body.size());
-                }
-                deferred.Resolve(arrayBuffer);
-                return deferred.Promise();
-            }, "arrayBuffer"));
-
-            response.Set("json", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                const auto deferred = Napi::Promise::Deferred::New(env);
-                std::string text{reinterpret_cast<const char*>(data->body.data()), data->body.size()};
-                const auto json = env.Global().Get("JSON").As<Napi::Object>();
-                const auto parse = json.Get("parse").As<Napi::Function>();
-                try
-                {
-                    deferred.Resolve(parse.Call(json, {Napi::String::New(env, text)}));
-                }
-                catch (const Napi::Error& error)
-                {
-                    deferred.Reject(error.Value());
-                }
-                return deferred.Promise();
-            }, "json"));
-
-            response.Set("blob", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                Napi::Env env = info.Env();
-                const auto deferred = Napi::Promise::Deferred::New(env);
-
-                // Require the Blob polyfill to be installed.
-                const auto blobConstructor = env.Global().Get("Blob");
-                if (!blobConstructor.IsFunction())
-                {
-                    deferred.Reject(Napi::Error::New(env, "fetch: Blob is not available in this environment").Value());
-                    return deferred.Promise();
-                }
-
-                const auto arrayBuffer = Napi::ArrayBuffer::New(env, data->body.size());
-                if (!data->body.empty())
-                {
-                    std::memcpy(arrayBuffer.Data(), data->body.data(), data->body.size());
-                }
-                const auto bytes = Napi::Uint8Array::New(env, data->body.size(), arrayBuffer, 0);
-
-                Napi::Array parts = Napi::Array::New(env, 1);
-                parts.Set(0u, bytes);
-
-                Napi::Object options = Napi::Object::New(env);
-                const auto contentType = FindHeader(*data, "content-type");
-                options.Set("type", Napi::String::New(env, contentType.value_or("")));
-
-                deferred.Resolve(blobConstructor.As<Napi::Function>().New({parts, options}));
-                return deferred.Promise();
-            }, "blob"));
-
-            response.Set("clone", Napi::Function::New(env, [data](const Napi::CallbackInfo& info) -> Napi::Value {
-                return BuildResponse(info.Env(), data);
-            }, "clone"));
-
-            return response;
+            const auto nativeObject = JsRuntime::NativeObject::GetFromJavaScript(env);
+            const auto createResponse = nativeObject.Get("createFetchResponse").As<Napi::Function>();
+            return createResponse.Call(nativeObject, {env.Global().Get("Response"), bytes, init, metadata});
         }
     }
 
@@ -340,6 +243,7 @@ namespace Babylon::Polyfills::Internal
         void Initialize(Napi::Env env)
         {
             static constexpr auto JS_FETCH_NAME = "fetch";
+            InitializeFetchClasses(env);
 
             auto fetchFunction = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();
@@ -397,6 +301,47 @@ namespace Babylon::Polyfills::Internal
                         signal = init.Get("signal");
                     }
 
+                    if (signal.IsObject())
+                    {
+                        const auto signalObject = signal.As<Napi::Object>();
+                        if (signalObject.Get("aborted").ToBoolean().Value())
+                        {
+                            deferred.Reject(GetAbortReason(env, signalObject));
+                            return deferred.Promise();
+                        }
+                    }
+
+                    std::optional<DataUrlResponse> dataUrl;
+                    try
+                    {
+                        dataUrl = Babylon::Polyfills::DataUrl::Parse(url);
+                    }
+                    catch (const std::runtime_error& error)
+                    {
+                        deferred.Reject(Napi::TypeError::New(env, error.what()).Value());
+                        return deferred.Promise();
+                    }
+
+                    if (dataUrl)
+                    {
+                        if (method != UrlLib::UrlMethod::Get || body.has_value())
+                        {
+                            throw std::runtime_error{"fetch: data URLs only support GET requests"};
+                        }
+                        const std::vector<std::pair<std::string, std::string>> responseHeaders{
+                            {"content-type", dataUrl->contentType}};
+                        deferred.Resolve(CreateFetchResponse(
+                            env,
+                            dataUrl->body.data(),
+                            dataUrl->body.size(),
+                            responseHeaders,
+                            200,
+                            "OK",
+                            dataUrl->url,
+                            false));
+                        return deferred.Promise();
+                    }
+
                     auto request = std::make_shared<UrlLib::UrlRequest>();
                     request->Open(method, url);
                     request->ResponseType(UrlLib::UrlResponseType::Buffer);
@@ -434,7 +379,12 @@ namespace Babylon::Polyfills::Internal
                             if (!abortState->aborted)
                             {
                                 abortState->aborted = true;
-                                abortState->reason = Napi::Persistent(GetAbortReason(env, abortState->signal.Value()));
+                                // Node-API references cannot target primitive
+                                // values, while AbortSignal reasons can be any
+                                // JavaScript value.
+                                Napi::Object reasonHolder = Napi::Object::New(env);
+                                reasonHolder.Set("value", GetAbortReason(env, abortState->signal.Value()));
+                                abortState->reasonHolder = Napi::Persistent(reasonHolder);
                                 // Cancel the in-flight transport; the completion continuation then
                                 // rejects with the AbortError instead of a transport TypeError.
                                 request->Abort();
@@ -468,7 +418,7 @@ namespace Babylon::Polyfills::Internal
                                     {
                                         // Per the fetch spec, an aborted request rejects with the
                                         // signal's reason (an AbortError), not a network error.
-                                        deferred.Reject(abortState->reason.Value());
+                                        deferred.Reject(abortState->reasonHolder.Value().Get("value"));
                                         return;
                                     }
                                 }
@@ -487,18 +437,19 @@ namespace Babylon::Polyfills::Internal
                                     return;
                                 }
 
-                                auto data = std::make_shared<ResponseData>();
-                                data->statusCode = status;
-                                data->statusText = std::string{request->StatusText()};
-                                data->url = std::string{request->ResponseUrl()};
-                                for (const auto& header : request->GetAllResponseHeaders())
-                                {
-                                    data->headers.emplace_back(header.first, header.second);
-                                }
                                 const auto responseBuffer = request->ResponseBuffer();
-                                data->body.assign(responseBuffer.begin(), responseBuffer.end());
-
-                                deferred.Resolve(BuildResponse(env, data));
+                                const auto statusText = request->StatusText();
+                                const std::string responseUrl{request->ResponseUrl()};
+                                const std::string_view finalUrl = responseUrl.empty() ? std::string_view{url} : std::string_view{responseUrl};
+                                deferred.Resolve(CreateFetchResponse(
+                                    env,
+                                    responseBuffer.data(),
+                                    responseBuffer.size(),
+                                    request->GetAllResponseHeaders(),
+                                    status,
+                                    statusText,
+                                    finalUrl,
+                                    !responseUrl.empty() && responseUrl != url));
                             })
                         .then(*scheduler, arcana::cancellation::none(),
                             [deferred, env, scheduler](const arcana::expected<void, std::exception_ptr>& result) {
@@ -518,8 +469,7 @@ namespace Babylon::Polyfills::Internal
                     deferred.Reject(Napi::Error::New(env, std::current_exception()).Value());
                 }
 
-                return deferred.Promise();
-            }, JS_FETCH_NAME);
+                return deferred.Promise(); }, JS_FETCH_NAME);
 
             if (env.Global().Get(JS_FETCH_NAME).IsUndefined())
             {

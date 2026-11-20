@@ -6,16 +6,6 @@
 namespace
 {
     constexpr const char* JS_INSTANCE_NAME{"performance"};
-
-    // Store the start time when the polyfill is initialized
-    std::chrono::high_resolution_clock::time_point g_startTime;
-
-    Napi::Value Now(const Napi::CallbackInfo& info)
-    {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration<double, std::milli>(now - g_startTime);
-        return Napi::Number::New(info.Env(), duration.count());
-    }
 }
 
 namespace Babylon::Polyfills::Performance
@@ -23,9 +13,6 @@ namespace Babylon::Polyfills::Performance
     void BABYLON_API Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
-
-        // Initialize the start time
-        g_startTime = std::chrono::high_resolution_clock::now();
 
         auto performance = env.Global().Get(JS_INSTANCE_NAME).As<Napi::Object>();
         if (!performance.IsUndefined())
@@ -36,6 +23,13 @@ namespace Babylon::Polyfills::Performance
         performance = Napi::Object::New(env);
         env.Global().Set(JS_INSTANCE_NAME, performance);
 
-        performance.Set("now", Napi::Function::New(env, Now, "now"));
+        // The time origin belongs to this environment, as it does to each browsing context and
+        // worker: a process-wide origin would be reset by every runtime (worker) that initializes
+        // the polyfill, moving performance.now() backwards elsewhere and racing with it.
+        const auto timeOrigin = std::chrono::steady_clock::now();
+        performance.Set("now", Napi::Function::New(env, [timeOrigin](const Napi::CallbackInfo& info) {
+            const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - timeOrigin);
+            return Napi::Number::New(info.Env(), elapsed.count());
+        }, "now"));
     }
 }

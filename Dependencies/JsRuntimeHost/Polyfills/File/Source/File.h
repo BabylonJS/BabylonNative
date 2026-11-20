@@ -22,6 +22,8 @@ namespace Babylon::Polyfills::Internal
         Napi::Value ArrayBuffer(const Napi::CallbackInfo& info);
         Napi::Value Text(const Napi::CallbackInfo& info);
         Napi::Value Bytes(const Napi::CallbackInfo& info);
+        Napi::Value Slice(const Napi::CallbackInfo& info);
+        Napi::Value Stream(const Napi::CallbackInfo& info);
 
         Napi::ObjectReference m_blob;
         std::string m_name;

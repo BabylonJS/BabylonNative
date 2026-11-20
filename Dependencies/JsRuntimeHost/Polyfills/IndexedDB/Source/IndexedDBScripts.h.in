@@ -1,0 +1,9 @@
+#pragma once
+
+#include <string_view>
+
+namespace Babylon::Polyfills::Internal::IndexedDBScripts
+{
+    inline constexpr std::string_view PolyfillParts[]{
+@INDEXEDDB_POLYFILL_PARTS@    };
+}

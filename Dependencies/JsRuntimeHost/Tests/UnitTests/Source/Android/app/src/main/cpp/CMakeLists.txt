@@ -27,6 +27,11 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.Scheduling.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.StandardStreamLogger.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Compression.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Fetch.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.IndexedDB.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Performance.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Streams.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.TimeoutDispatcher.cpp)
 
 if(TARGET NodeApiTestHarness)
@@ -42,6 +47,11 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.V8.cpp)
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.V8ForegroundTaskRunner.cpp)
     target_link_libraries(UnitTestsJNI PRIVATE AppRuntimeInternal)
+endif()
+
+# Mirrors Tests/UnitTests/CMakeLists.txt so the JavaScriptCore-only Node-API tests run here too.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
+    target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JAVASCRIPTCORE)
 endif()
 
 target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
@@ -73,4 +83,7 @@ target_link_libraries(UnitTestsJNI
     PRIVATE File
     PRIVATE TextDecoder
     PRIVATE TextEncoder
-    PRIVATE Performance)
+    PRIVATE Performance
+    PRIVATE Streams
+    PRIVATE Compression
+    PRIVATE IndexedDB)

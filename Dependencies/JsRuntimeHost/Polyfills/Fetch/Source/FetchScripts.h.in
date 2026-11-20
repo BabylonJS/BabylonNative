@@ -1,0 +1,10 @@
+#pragma once
+
+namespace Babylon::Polyfills::Internal::FetchScripts
+{
+    // CMake splits the bundle into adjacent raw-string literals of at most 16,000 bytes (MSVC C2026)
+    // and the compiler concatenates them back; nothing is inserted between parts.
+    inline constexpr char Polyfill[] =
+        "\n"
+@FETCH_POLYFILL_LITERALS@        "\n";
+}

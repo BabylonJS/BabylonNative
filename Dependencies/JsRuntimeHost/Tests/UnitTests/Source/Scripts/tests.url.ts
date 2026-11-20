@@ -442,6 +442,43 @@ describe("URL.createObjectURL", function () {
         expect(() => URL.createObjectURL("not a blob" as any)).to.throw();
     });
 
+    it("identifies real Blobs, and rejects look-alikes, after a script replaces the global Blob", function () {
+        // A page or test harness may install its own Blob class. Identity must come from the
+        // polyfill's own constructor: a real Blob still works and a foreign instance is a clean
+        // TypeError, not a bare "Invalid argument" from unwrapping an object that wraps nothing.
+        // ChakraCore has no globalThis; the sloppy-mode Function trick reaches the global object everywhere.
+        const globalObject: any = Function("return this")();
+        const NativeBlob = Blob;
+        const real = new NativeBlob(["hello"], { type: "text/plain" });
+        class LookAlikeBlob {
+            size = 5;
+            type = "text/plain";
+        }
+        globalObject.Blob = LookAlikeBlob;
+        try {
+            const url = URL.createObjectURL(real);
+            expect(url.indexOf("blob:")).to.equal(0);
+            URL.revokeObjectURL(url);
+            // Message only: the JSI adapter still surfaces native throws as plain Errors.
+            expect(() => URL.createObjectURL(new LookAlikeBlob() as any)).to.throw(/not a Blob/);
+        } finally {
+            globalObject.Blob = NativeBlob;
+        }
+    });
+
+    it("exposes createObjectURL as a writable, configurable static (WebIDL operation)", function () {
+        const descriptor = Object.getOwnPropertyDescriptor(URL, "createObjectURL")!;
+        expect(descriptor.writable, "writable").to.equal(true);
+        expect(descriptor.configurable, "configurable").to.equal(true);
+        const original = URL.createObjectURL;
+        try {
+            (URL as any).createObjectURL = () => "blob:replaced";
+            expect(URL.createObjectURL(new Blob([]))).to.equal("blob:replaced");
+        } finally {
+            (URL as any).createObjectURL = original;
+        }
+    });
+
     it("resolves a blob: URL through fetch (text + content-type)", async function () {
         const url = URL.createObjectURL(new Blob(["hello blob"], { type: "text/plain" }));
         const response = await fetch(url);

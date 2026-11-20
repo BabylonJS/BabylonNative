@@ -1,5 +1,7 @@
 # Fetch
-Minimal implementation of the [WHATWG `fetch()`](https://fetch.spec.whatwg.org/) API. Like `XMLHttpRequest`, it is implemented on top of the platform-specific transports in the `UrlLib` dependency, so network behavior (libcurl / WinHTTP / etc.) is identical between the two polyfills.
+Implementation of the [WHATWG `fetch()`](https://fetch.spec.whatwg.org/) API.
+Like `XMLHttpRequest`, it uses the platform-specific transport from `UrlLib`, so
+network behavior is shared between the two polyfills.
 
 ```js
 const response = await fetch("https://example.com/data.json");
@@ -8,16 +10,24 @@ if (response.ok) {
 }
 ```
 
-## Response
-`fetch()` returns a `Promise` that resolves to a `Response`-like object exposing:
-* `ok`, `status`, `statusText`, `url`, `redirected`, `type`, `bodyUsed`
-* `headers` with `get(name)`, `has(name)`, and `forEach(callback)` (header names are matched case-insensitively)
-* `text()`, `arrayBuffer()`, `json()`, `blob()` (each returns a `Promise`)
-* `clone()`
+## Headers and Response
+The module installs `Headers` and `Response` when the host does not already
+provide them. Response bodies use a `ReadableStream` and follow the browser's
+single-consumption behavior through `bodyUsed`. The supported body readers are
+`arrayBuffer()`, `blob()`, `bytes()`, `json()`, and `text()`.
 
-The response body is fully buffered before the promise resolves. The body accessors may therefore be called more than once (`bodyUsed` is always reported as `false`), which is a deliberate, lenient deviation from the spec's single-use semantics.
+Initialize the Streams, Blob, TextEncoder, TextDecoder, and URL polyfills before
+using body-bearing responses on engines that do not provide those globals.
 
-`blob()` requires the `Blob` polyfill to be initialized; otherwise the returned promise rejects.
+A completed native response is copied once into JavaScript-owned memory and
+exposed as a byte stream. Body readers retain chunk references while consuming
+a stream and allocate a contiguous result at most once when that result requires
+one. Repeated header iteration reuses a mutation-versioned normalized view, and
+header deletion and replacement compact the field list in place.
+
+The focused conformance tests are adapted from WPT `fetch/api/headers` and
+`fetch/api/response`, plus WebKit, Firefox, and Chromium response-body
+regressions.
 
 ## Local files
 Like `XMLHttpRequest`, `fetch()` supports loading local resources:
@@ -60,4 +70,3 @@ The rejection's `stack` is captured synchronously at the `fetch()` call site (be
 is handed to a worker thread), so crash reports can attribute the failing call rather than an
 empty scheduler tick. (Engines that only materialize `.stack` when an error is thrown may omit
 the frames.)
-

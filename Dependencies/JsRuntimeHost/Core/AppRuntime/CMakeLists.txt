@@ -20,6 +20,9 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
 endif()
 
 add_library(AppRuntime ${SOURCES})
+if(APPLE AND JSRUNTIMEHOST_JSC_PRIVATE_WATCHDOG)
+    target_compile_definitions(AppRuntime PRIVATE JSR_ENABLE_JSC_WATCHDOG)
+endif()
 warnings_as_errors(AppRuntime)
 
 target_include_directories(AppRuntime
@@ -77,6 +80,8 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
     set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
     target_link_libraries(AppRuntime PRIVATE qjs)
+elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore" AND UNIX AND NOT APPLE)
+    target_link_libraries(AppRuntime PRIVATE ${CMAKE_DL_LIBS})
 endif()
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)

@@ -46,6 +46,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("arrayBuffer", &File::ArrayBuffer),
                 InstanceMethod("text", &File::Text),
                 InstanceMethod("bytes", &File::Bytes),
+                InstanceMethod("slice", &File::Slice),
+                InstanceMethod("stream", &File::Stream),
             });
 
         global.Set(JS_FILE_CONSTRUCTOR_NAME, func);
@@ -55,12 +57,16 @@ namespace Babylon::Polyfills::Internal
         // a Blob subtype; BJS core (fileTools, Offline/database,
         // abstractEngine, thinNativeEngine) branches on `instanceof Blob`
         // and needs File inputs to satisfy that check.
-        auto setPrototypeOf = env.Global().Get("Object").As<Napi::Object>()
-            .Get("setPrototypeOf").As<Napi::Function>();
+        auto setPrototypeOf = env.Global().Get("Object").As<Napi::Object>().Get("setPrototypeOf").As<Napi::Function>();
         setPrototypeOf.Call({
             func.Get("prototype"),
             blob.As<Napi::Function>().Get("prototype"),
         });
+
+        auto descriptor = Napi::Object::New(env);
+        descriptor.Set("configurable", true);
+        descriptor.Set("value", JS_FILE_CONSTRUCTOR_NAME);
+        global.Get("Object").As<Napi::Object>().Get("defineProperty").As<Napi::Function>().Call(global.Get("Object"), {func.Get("prototype"), Napi::Symbol::WellKnown(env, "toStringTag"), descriptor});
     }
 
     File::File(const Napi::CallbackInfo& info)
@@ -75,7 +81,7 @@ namespace Babylon::Polyfills::Internal
         {
             throw Napi::TypeError::New(env,
                 "Failed to construct 'File': 2 arguments required, but only " +
-                std::to_string(info.Length()) + " present.");
+                    std::to_string(info.Length()) + " present.");
         }
 
         Napi::Value parts = info[0];
@@ -114,21 +120,11 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        Napi::Value partsArray;
-        if (parts.IsArray())
-        {
-            partsArray = parts;
-        }
-        else
-        {
-            partsArray = Napi::Array::New(env, 0);
-        }
-
         // Delegate byte-buffer construction to the native Blob polyfill so
         // we benefit from its existing BlobPart handling (ArrayBuffer,
         // typed array, string, Blob).
         auto blobCtor = env.Global().Get(JS_BLOB_CONSTRUCTOR_NAME).As<Napi::Function>();
-        auto blobInstance = blobCtor.New({partsArray, blobOptions});
+        auto blobInstance = blobCtor.New({parts, blobOptions});
         m_blob = Napi::Persistent(blobInstance);
     }
 
@@ -168,6 +164,29 @@ namespace Babylon::Polyfills::Internal
     {
         auto blob = m_blob.Value();
         return blob.Get("bytes").As<Napi::Function>().Call(blob, {});
+    }
+
+    Napi::Value File::Slice(const Napi::CallbackInfo& info)
+    {
+        auto blob = m_blob.Value();
+        const auto slice = blob.Get("slice").As<Napi::Function>();
+        switch (info.Length())
+        {
+            case 0:
+                return slice.Call(blob, {});
+            case 1:
+                return slice.Call(blob, {info[0]});
+            case 2:
+                return slice.Call(blob, {info[0], info[1]});
+            default:
+                return slice.Call(blob, {info[0], info[1], info[2]});
+        }
+    }
+
+    Napi::Value File::Stream(const Napi::CallbackInfo&)
+    {
+        auto blob = m_blob.Value();
+        return blob.Get("stream").As<Napi::Function>().Call(blob, {});
     }
 }
 
