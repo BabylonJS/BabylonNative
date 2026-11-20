@@ -111,13 +111,12 @@ namespace Babylon::Polyfills::Internal
         Graphics::DynamicBufferPool& GetBufferPool();
 
     private:
-        enum class ConvertedTextureKind : size_t
-        {
-            NoMipMaps,
-            StraightAlphaMipMaps,
-            PremultipliedAlphaMipMaps,
-            Count,
-        };
+        // Converted representations are indexed by these bits so queued copies of different
+        // representations never share a target.
+        static constexpr size_t CONVERTED_TEXTURE_MIPMAPS = 1;
+        static constexpr size_t CONVERTED_TEXTURE_PREMULTIPLIED = 2;
+        static constexpr size_t CONVERTED_TEXTURE_FLIPPED = 4;
+        static constexpr size_t CONVERTED_TEXTURE_COUNT = 8;
 
         Napi::Value GetContext(const Napi::CallbackInfo&);
         Napi::Value GetWidth(const Napi::CallbackInfo&);
@@ -126,7 +125,7 @@ namespace Babylon::Polyfills::Internal
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
         void SetDimension(uint16_t& dimension, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
-        Graphics::Texture& GetConvertedTexture(bool premulAlpha, bool generateMipMaps);
+        Graphics::Texture& GetConvertedTexture(bool premulAlpha, bool generateMipMaps, bool invertY);
         Napi::Value ToDataURL(const Napi::CallbackInfo& info);
         static void LoadTTF(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
@@ -151,7 +150,7 @@ namespace Babylon::Polyfills::Internal
             std::unique_ptr<Graphics::FrameBuffer> FrameBuffer{};
             std::unique_ptr<Graphics::Texture> Texture{};
         };
-        std::array<ConvertedTexture, static_cast<size_t>(ConvertedTextureKind::Count)> m_convertedTextures{};
+        std::array<ConvertedTexture, CONVERTED_TEXTURE_COUNT> m_convertedTextures{};
         bgfx::ProgramHandle m_unpremultiplyProgram{BGFX_INVALID_HANDLE};
         bgfx::UniformHandle m_copySampler{BGFX_INVALID_HANDLE};
         bgfx::UniformHandle m_copyParams{BGFX_INVALID_HANDLE};
