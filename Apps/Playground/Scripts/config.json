@@ -663,8 +663,8 @@
             "playgroundId": "#JXYWHI#1",
             "referenceImage": "gsplat-gltf-spz-compression-compound-part.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Required extension KHR_gaussian_splatting_compression_spz_2 is not available"
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting SPZ SH Order 4",
@@ -779,16 +779,16 @@
             "playgroundId": "#DAID4Q#7",
             "referenceImage": "gsplat-compound-incremental-update.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 3.697% pixel difference"
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Compound No SH then Full SH",
             "playgroundId": "#DAID4Q#8",
             "referenceImage": "gsplat-compound-no-sh-then-full-sh.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 3.524% pixel difference"
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting IBL Shadows",
@@ -796,8 +796,8 @@
             "renderCount": 15,
             "referenceImage": "gsplat-ibl-shadows.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting IBL on Shadow Only Ground",
@@ -805,8 +805,8 @@
             "renderCount": 15,
             "referenceImage": "gsplat-ibl-shadow-only-ground.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting LOD SH and IBL Shadows",
@@ -814,8 +814,8 @@
             "renderCount": 15,
             "errorRatio": 10,
             "referenceImage": "gsplat-lod-sh-ibl-shadows.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: aborts in PrepareImage on an unsupported image format. Passes on Win32 D3D11 and Linux OpenGL."
         },
         {
             "title": "Gaussian Splatting IBL Shadows Camera Switch",
@@ -823,8 +823,8 @@
             "renderCount": 15,
             "referenceImage": "gsplat-ibl-shadows-camera-switch.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: never completes. Passes on Win32 D3D11 and Linux OpenGL."
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Single Part",
@@ -832,8 +832,8 @@
             "renderCount": 15,
             "referenceImage": "gsplat-compound-ibl-shadows-single-part.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts",
@@ -841,8 +841,8 @@
             "renderCount": 15,
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts Mixed Visibility",
@@ -850,8 +850,8 @@
             "renderCount": 15,
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts-mixed-visibility.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: Error: Unsupported alpha mode: 19."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "NPE - Angle align",
@@ -1158,9 +1158,7 @@
             "title": "Node Geometry - Building generator",
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#7RWIUU#29",
-            "referenceImage": "nodeGeometryBuildingGenerator.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): createScene never resolves."
+            "referenceImage": "nodeGeometryBuildingGenerator.png"
         },
         {
             "title": "GreasedLine - non camera facing",
@@ -1482,26 +1480,20 @@
             "title": "Draco Mesh Compression (decodeMeshAsync, numWorkers = 1)",
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#77",
-            "referenceImage": "draco.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
+            "referenceImage": "draco.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 0)",
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#78",
-            "referenceImage": "draco.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
+            "referenceImage": "draco.png"
         },
         {
             "title": "Draco Mesh Compression (decodeMeshToGeometryAsync, numWorkers = 1)",
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#78",
             "replace": "numWorkers = 0, numWorkers = 1",
-            "referenceImage": "draco.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
+            "referenceImage": "draco.png"
         },
         {
             "title": "Draco Mesh Compression (fallback)",
@@ -1514,16 +1506,12 @@
             "title": "Draco Decoder",
             "workarounds": ["leak-cleanup"],
             "playgroundId": "#22MFU2#82",
-            "referenceImage": "draco.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
+            "referenceImage": "draco.png"
         },
         {
             "title": "Draco Decoder/Encoder roundtrip",
             "playgroundId": "#JNW207#4",
-            "referenceImage": "dracoRoundtrip.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
+            "referenceImage": "dracoRoundtrip.png"
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (left handed, once)",
@@ -1579,9 +1567,7 @@
         {
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
-            "referenceImage": "glTFSerializerKhrDracoMeshCompression.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
+            "referenceImage": "glTFSerializerKhrDracoMeshCompression.png"
         },
         {
             "title": "GLTF Serializer KHR materials clearcoat",
@@ -1662,15 +1648,13 @@
             "playgroundId": "#8NTR5X#8",
             "replace": "//options//, roundtrip = true;",
             "referenceImage": "glTFSerializerTextureExport.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: never completes on Linux CI (JavaScriptCore), times out; passes on Win32 D3D11."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: createScene does not resolve within 120s. Passes on Win32 D3D11 and Linux OpenGL."
         },
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
             "playgroundId": "#JNW207#1",
-            "referenceImage": "gltfBuggyDraco.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "JavaScriptCore (Linux CI): WebAssembly-based Draco decode never resolves."
+            "referenceImage": "gltfBuggyDraco.png"
         },
         {
             "title": "GLTF Box with bad Draco normalized flag",
@@ -1975,8 +1959,8 @@
             "referenceImage": "mesh-blending-coastal-cliff.png",
             "workarounds": ["dom-controls"],
             "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "On OpenGL (Linux CI) createScene does not resolve within 120s"
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: SyntaxError (jsc-android does not parse the playground's modern JavaScript syntax). Passes on Win32 D3D11 and Linux OpenGL."
         },
         {
             "title": "Mesh blending - FrameGraph alpha cutoff coverage",
@@ -2089,17 +2073,13 @@
         {
             "title": "Prepass SSAO + instances",
             "playgroundId": "#YB006J#795",
-            "referenceImage": "prepass-ssao-instances.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-instances.png"
         },
         {
             "title": "Prepass SSAO + instanced bones",
             "playgroundId": "#0K8EYN#197",
             "renderCount": 50,
-            "referenceImage": "prepass-ssao-instanced-bones.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
+            "referenceImage": "prepass-ssao-instanced-bones.png"
         },
         {
             "title": "Prepass SSAO + depth of field",
@@ -2111,19 +2091,15 @@
         },
         {
             "title": "Prepass + mirror, without postprocess",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#9A4QF8#0",
             "renderCount": 10,
-            "referenceImage": "prepass-mirror-without-pp.png",
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-mirror-without-pp.png"
         },
         {
             "title": "Prepass + mirror, with postprocesses",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#E4QF68#0",
             "renderCount": 10,
-            "referenceImage": "prepass-mirror-with-pp.png",
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-mirror-with-pp.png"
         },
         {
             "title": "Prepass SSAO + sprites",
@@ -2145,15 +2121,11 @@
             "title": "Prepass SSAO + bounding box renderer",
             "playgroundId": "#4F33I3#35",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-bbr.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-bbr.png"
         },
         {
             "title": "Prepass SSAO + line edges renderer",
             "playgroundId": "#T90MQ4#3",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-line-edges.png"
         },
@@ -2161,9 +2133,7 @@
             "title": "Prepass SSAO + B&W post process",
             "playgroundId": "#N55Q2M#8",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-b-and-w.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-b-and-w.png"
         },
         {
             "title": "Prepass SSAO + clip planes",
@@ -2186,17 +2156,13 @@
             "playgroundId": "#FFMFW5#29",
             "errorRatio": 6,
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-lod.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-lod.png"
         },
         {
             "title": "Prepass SSAO + shadow only",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#1KF7V1#55",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-shadow-only.png",
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-shadow-only.png"
         },
         {
             "title": "Prepass SSAO + highlight layer",
@@ -2209,18 +2175,14 @@
         },
         {
             "title": "Prepass SSAO + point light",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#WW5UB5#0",
-            "referenceImage": "prepass-ssao-point-light.png",
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-point-light.png"
         },
         {
             "title": "Prepass SSAO + on/off post-process",
             "playgroundId": "#1VI6WV#20",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-on-off-pp.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "workarounds": ["opaque-clear-alpha"]
         },
         {
@@ -2228,33 +2190,25 @@
             "playgroundId": "#V1JE4Z#25",
             "errorRatio": 3,
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-thin-instances.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
+            "referenceImage": "prepass-ssao-thin-instances.png"
         },
         {
             "title": "Prepass SSAO + depth renderer",
             "playgroundId": "#3HPMAA#1",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-depth-renderer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
+            "referenceImage": "prepass-ssao-depth-renderer.png"
         },
         {
             "title": "Prepass SSAO + visibility",
             "playgroundId": "#PXC9CF#7",
             "renderCount": 30,
-            "referenceImage": "prepass-ssao-visibility.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-visibility.png"
         },
         {
             "title": "Prepass SSAO + default pipeline",
             "playgroundId": "#IIMFWT#0",
             "renderCount": 10,
-            "referenceImage": "prepass-ssao-default-pipeline.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "referenceImage": "prepass-ssao-default-pipeline.png"
         },
         {
             "title": "Prepass MBlur + Lens",
@@ -2264,11 +2218,11 @@
         },
         {
             "title": "Prepass SSAO + MSAA",
-            "excludedGraphicsApis": ["OpenGL"],
             "playgroundId": "#LSTDFU#0",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-msaa.png",
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: never completes. Passes on Win32 D3D11 and Linux OpenGL."
         },
         {
             "title": "Scissor test",
@@ -3007,9 +2961,7 @@
             "playgroundId": "#8R5SSE#796",
             "errorRatio": 5,
             "renderCount": 15,
-            "referenceImage": "voxelShadows.png",
-            "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
+            "referenceImage": "voxelShadows.png"
         },
         {
             "title": "Glow layer with vertex alpha",
@@ -3021,35 +2973,27 @@
             "title": "IBL Voxel Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#797",
             "renderCount": 15,
-            "referenceImage": "voxelShadowsRightHanded.png",
-            "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
+            "referenceImage": "voxelShadowsRightHanded.png"
         },
         {
             "title": "IBL Voxel Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#798",
             "renderCount": 15,
-            "referenceImage": "voxelShadowsLeftHanded.png",
-            "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
+            "referenceImage": "voxelShadowsLeftHanded.png"
         },
         {
             "title": "IBL Screen-space Shadowing Left-Handed",
             "playgroundId": "#8R5SSE#799",
             "errorRatio": 5,
             "renderCount": 15,
-            "referenceImage": "ssShadowsLeftHanded.png",
-            "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
+            "referenceImage": "ssShadowsLeftHanded.png"
         },
         {
             "title": "IBL Screen-space Shadowing Right-Handed",
             "playgroundId": "#8R5SSE#800",
             "errorRatio": 5,
             "renderCount": 15,
-            "referenceImage": "ssShadowsRightHanded.png",
-            "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11."
+            "referenceImage": "ssShadowsRightHanded.png"
         },
         {
             "title": "Normed 16 bits texture formats",
@@ -3111,8 +3055,6 @@
         {
             "title": "FrameGraph nrge SSR neon",
             "playgroundId": "#Z6C5EF#5",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (4.1%); passes on ANGLE GLES and D3D11.",
             "referenceImage": "FrameGraph-nrge-SSR-neon.png"
         },
         {
@@ -3158,8 +3100,6 @@
         {
             "title": "FrameGraph nrge SSAO",
             "playgroundId": "#SYQW69#1368",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
             "referenceImage": "FrameGraph-nrge-SSAO.png"
         },
         {
@@ -3338,8 +3278,8 @@
             "referenceImage": "framegraph-geometry-gaussian-mesh.png",
             "workarounds": ["es-module-import"],
             "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "On OpenGL (Linux CI) createScene does not resolve within 120s"
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "FrameGraph object renderer - Gaussian mesh reference",
@@ -4131,8 +4071,8 @@
             "title": "OpenPBR Subsurface SSS Frame Graph - Shadows - IBL",
             "playgroundId": "#PJ5JXH#120",
             "referenceImage": "OpenPBR-Subsurface-SSS-Frame-Graph---Shadows---IBL.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: renders 7.8% different from the reference on Linux CI (limit 2.5%); passes on Win32 D3D11."
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: SyntaxError (jsc-android does not parse class field syntax used by the playground). Passes on Win32 D3D11 and Linux OpenGL."
         },
         {
             "title": "OpenPBR Subsurface SSS Frame Graph - Analytic Lights",
@@ -5183,7 +5123,7 @@
             "errorRatio": 6,
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Chakra parse failure on modern JS syntax",
+            "reason": "Fails on native: createStorageBuffer is not a function (storage buffers are not supported)",
             "referenceImage": "terrain-erosion.png"
         },
         {
@@ -5270,9 +5210,7 @@
         {
             "title": "PBR Bent Normal Mediump Precision",
             "playgroundId": "#G3UAD8#0",
-            "referenceImage": "pbr-bent-normal-mediump-precision.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 41.586% pixel difference"
+            "referenceImage": "pbr-bent-normal-mediump-precision.png"
         },
         {
             "title": "Solid Particle System Mixed Model Winding",
@@ -5310,8 +5248,8 @@
             "renderCount": 15,
             "referenceImage": "gsplat-lod-compound.png",
             "workarounds": ["es-module-import"],
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: 75.243% pixel difference"
+            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "reason": "Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Passes on V8 and on Apple and Linux JavaScriptCore."
         },
         {
             "title": "MSAA RTT samples=4 (magnified)",
