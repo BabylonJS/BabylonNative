@@ -290,14 +290,15 @@ namespace Babylon::Polyfills::Internal
                 throw Napi::Error::New(info.Env(), ex.what());
             }
         }
-        // Omitted arguments preserve the raw, premultiplied texture used by older engines.
+        // Omitted arguments preserve the raw, premultiplied, Y-inverted texture used by older engines.
         const bool premulAlpha = info.Length() == 0 || info[0].IsUndefined() || info[0].As<Napi::Boolean>().Value();
         const bool generateMipMaps = info.Length() > 1 && !info[1].IsUndefined() && info[1].As<Napi::Boolean>().Value();
-        if (!premulAlpha || generateMipMaps)
+        const bool invertY = info.Length() < 3 || info[2].IsUndefined() || info[2].As<Napi::Boolean>().Value();
+        if (!premulAlpha || generateMipMaps || !invertY)
         {
             try
             {
-                return Napi::Pointer<Graphics::Texture>::Create(info.Env(), &GetConvertedTexture(premulAlpha, generateMipMaps));
+                return Napi::Pointer<Graphics::Texture>::Create(info.Env(), &GetConvertedTexture(premulAlpha, generateMipMaps, invertY));
             }
             catch (const std::exception& ex)
             {
@@ -317,7 +318,7 @@ namespace Babylon::Polyfills::Internal
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), m_texture.get());
     }
 
-    Graphics::Texture& NativeCanvas::GetConvertedTexture(bool premulAlpha, bool generateMipMaps)
+    Graphics::Texture& NativeCanvas::GetConvertedTexture(bool premulAlpha, bool generateMipMaps, bool invertY)
     {
         auto scope = m_graphicsContext.AcquireFrameCompletionScope();
         m_graphicsContext.CheckViewBudget();
@@ -367,10 +368,10 @@ namespace Babylon::Polyfills::Internal
             throw std::runtime_error{"Canvas mipmaps require RGBA8 automatic mip generation."};
         }
         // Keep representations separate: queued copies retain these Texture pointers.
-        const auto kind = generateMipMaps
-            ? (premulAlpha ? ConvertedTextureKind::PremultipliedAlphaMipMaps : ConvertedTextureKind::StraightAlphaMipMaps)
-            : ConvertedTextureKind::NoMipMaps;
-        auto& converted = m_convertedTextures[static_cast<size_t>(kind)];
+        const size_t kind = (generateMipMaps ? CONVERTED_TEXTURE_MIPMAPS : 0)
+            | (premulAlpha ? CONVERTED_TEXTURE_PREMULTIPLIED : 0)
+            | (invertY ? 0 : CONVERTED_TEXTURE_FLIPPED);
+        auto& converted = m_convertedTextures[kind];
         if (!converted.FrameBuffer)
         {
             const auto color = bgfx::createTexture2D(m_width, m_height, generateMipMaps, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
@@ -414,7 +415,10 @@ namespace Babylon::Polyfills::Internal
         bgfx::setViewFrameBuffer(conversionView, converted.FrameBuffer->Handle());
         bgfx::setViewRect(conversionView, 0, 0, m_width, m_height);
         bgfx::setViewMode(conversionView, bgfx::ViewMode::Sequential);
-        const std::array<float, COPY_PARAMETER_COUNT> parameters{bgfx::getCaps()->originBottomLeft ? 1.f : 0.f, premulAlpha ? 1.f : 0.f, 0.f, 0.f};
+        // The raw canvas target already has the orientation Babylon.js expects for invertY=true;
+        // flip once more for invertY=false.
+        const bool flip = bgfx::getCaps()->originBottomLeft == invertY;
+        const std::array<float, COPY_PARAMETER_COUNT> parameters{flip ? 1.f : 0.f, premulAlpha ? 1.f : 0.f, 0.f, 0.f};
         encoder->discard(BGFX_DISCARD_ALL);
         encoder->setVertexBuffer(0, buffer.Handle, buffer.StartVertex, FULLSCREEN_TRIANGLE_VERTEX_COUNT);
         encoder->setTexture(0, m_copySampler, bgfx::getTexture(m_frameBuffer->Handle()),
