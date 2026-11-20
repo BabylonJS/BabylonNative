@@ -796,9 +796,9 @@
             "renderCount": 15,
             "referenceImage": "gsplat-ibl-shadows.png",
             "workarounds": ["es-module-import"],
-            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "excludedPlatforms": ["Android/JavaScriptCore", "Unix/JavaScriptCore"],
             "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide."
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Linux JavaScriptCore: the IBL shadows pipeline creates and releases ~1.7k render pass IDs, which are never reused, so every later submesh gets a long sparse _drawWrappers array and Sponza Clustered Lighting exceeds the test timeout."
         },
         {
             "title": "Gaussian Splatting IBL on Shadow Only Ground",
@@ -806,9 +806,9 @@
             "renderCount": 15,
             "referenceImage": "gsplat-ibl-shadow-only-ground.png",
             "workarounds": ["es-module-import"],
-            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "excludedPlatforms": ["Android/JavaScriptCore", "Unix/JavaScriptCore"],
             "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide."
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Linux JavaScriptCore: the IBL shadows pipeline creates and releases ~1.7k render pass IDs, which are never reused, so every later submesh gets a long sparse _drawWrappers array and Sponza Clustered Lighting exceeds the test timeout."
         },
         {
             "title": "Gaussian Splatting LOD SH and IBL Shadows",
@@ -816,9 +816,9 @@
             "renderCount": 15,
             "errorRatio": 10,
             "referenceImage": "gsplat-lod-sh-ibl-shadows.png",
-            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "excludedPlatforms": ["Android/JavaScriptCore", "Unix/JavaScriptCore"],
             "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: aborts in PrepareImage on an unsupported image format."
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: aborts in PrepareImage on an unsupported image format. Linux JavaScriptCore: the IBL shadows pipeline creates and releases ~1.7k render pass IDs, which are never reused, so every later submesh gets a long sparse _drawWrappers array and Sponza Clustered Lighting exceeds the test timeout."
         },
         {
             "title": "Gaussian Splatting IBL Shadows Camera Switch",
@@ -826,9 +826,9 @@
             "renderCount": 15,
             "referenceImage": "gsplat-ibl-shadows-camera-switch.png",
             "workarounds": ["es-module-import"],
-            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "excludedPlatforms": ["Android/JavaScriptCore", "Unix/JavaScriptCore"],
             "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: never completes."
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: never completes. Linux JavaScriptCore: the IBL shadows pipeline creates and releases ~1.7k render pass IDs, which are never reused, so every later submesh gets a long sparse _drawWrappers array and Sponza Clustered Lighting exceeds the test timeout."
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Single Part",
@@ -836,9 +836,9 @@
             "renderCount": 15,
             "referenceImage": "gsplat-compound-ibl-shadows-single-part.png",
             "workarounds": ["es-module-import"],
-            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "excludedPlatforms": ["Android/JavaScriptCore", "Unix/JavaScriptCore"],
             "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide."
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Linux JavaScriptCore: the IBL shadows pipeline creates and releases ~1.7k render pass IDs, which are never reused, so every later submesh gets a long sparse _drawWrappers array and Sponza Clustered Lighting exceeds the test timeout."
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts",
@@ -846,9 +846,9 @@
             "renderCount": 15,
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts.png",
             "workarounds": ["es-module-import"],
-            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "excludedPlatforms": ["Android/JavaScriptCore", "Unix/JavaScriptCore"],
             "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide."
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Linux JavaScriptCore: the IBL shadows pipeline creates and releases ~1.7k render pass IDs, which are never reused, so every later submesh gets a long sparse _drawWrappers array and Sponza Clustered Lighting exceeds the test timeout."
         },
         {
             "title": "Gaussian Splatting Compound IBL Shadows Multiple Parts Mixed Visibility",
@@ -856,9 +856,9 @@
             "renderCount": 15,
             "referenceImage": "gsplat-compound-ibl-shadows-multiple-parts-mixed-visibility.png",
             "workarounds": ["es-module-import"],
-            "excludedPlatforms": ["Android/JavaScriptCore"],
+            "excludedPlatforms": ["Android/JavaScriptCore", "Unix/JavaScriptCore"],
             "excludedGraphicsApis": ["D3D11"],
-            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide."
+            "reason": "D3D11: removes the device (DXGI_ERROR_DEVICE_REMOVED) on the WARP software rasterizer of GPU-less CI runners, which strands every later test in the process; passes on hardware D3D11. Android JavaScriptCore: jsc-android is built without WebAssembly, and the SPZ fallback needs ReadableStream, which Babylon Native does not provide. Linux JavaScriptCore: the IBL shadows pipeline creates and releases ~1.7k render pass IDs, which are never reused, so every later submesh gets a long sparse _drawWrappers array and Sponza Clustered Lighting exceeds the test timeout."
         },
         {
             "title": "NPE - Angle align",
@@ -1416,16 +1416,16 @@
         {
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%, renders black); passes on ANGLE GLES and D3D11.",
+            "excludedPlatforms": ["Unix"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%, renders black); passes on ANGLE GLES and D3D11. Passes on Android OpenGL ES and Vulkan.",
             "referenceImage": "areaLightsStandardMaterial.png",
             "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"]
         },
         {
             "title": "Textured - Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#103",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%); passes on ANGLE GLES and D3D11.",
+            "excludedPlatforms": ["Unix"],
+            "reason": "Pixel diff on Linux OpenGL llvmpipe CI (10.7%); passes on ANGLE GLES and D3D11. Passes on Android OpenGL ES and Vulkan.",
             "workarounds": ["opaque-clear-alpha", "wait-for-area-light-ltc"],
             "referenceImage": "textureAreaLightStandard.png"
         },
@@ -2073,8 +2073,8 @@
             "playgroundId": "#65MUMZ#59",
             "renderCount": 50,
             "referenceImage": "prepass-ssao-particles.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
+            "excludedPlatforms": ["Unix"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES. Passes on Android OpenGL ES and Vulkan.",
             "workarounds": ["wait-for-readiness"]
         },
         {
@@ -2111,8 +2111,8 @@
         {
             "title": "Prepass SSAO + sprites",
             "playgroundId": "#9RI8CG#187",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
+            "excludedPlatforms": ["Unix"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES. Passes on Android OpenGL ES and Vulkan.",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-sprites.png"
         },
@@ -2121,8 +2121,8 @@
             "playgroundId": "#7HMTCH#0",
             "renderCount": 30,
             "referenceImage": "prepass-ssao-glow-layer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "excludedPlatforms": ["Unix"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11. Passes on Android OpenGL ES and Vulkan."
         },
         {
             "title": "Prepass SSAO + bounding box renderer",
@@ -2144,19 +2144,19 @@
         },
         {
             "title": "Prepass SSAO + clip planes",
-            "excludedGraphicsApis": ["OpenGL"],
+            "excludedPlatforms": ["Unix"],
             "playgroundId": "#Y6W087#71",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-clip-planes.png",
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11."
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); passes on Win32 D3D11. Passes on Android OpenGL ES and Vulkan."
         },
         {
             "title": "Prepass SSAO + GUI",
             "playgroundId": "#LLVZ90#4",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-gui.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES"
+            "excludedPlatforms": ["Unix"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES. Passes on Android OpenGL ES and Vulkan."
         },
         {
             "title": "Prepass SSAO + LOD",
@@ -2176,8 +2176,8 @@
             "playgroundId": "#79439I#0",
             "renderCount": 10,
             "referenceImage": "prepass-ssao-highlight-layer.png",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES",
+            "excludedPlatforms": ["Unix"],
+            "reason": "llvmpipe on the Ubuntu CI runner aborts the process with LLVM ERROR: Cannot emit physreg copy instruction while JIT-compiling the prepass SSAO shaders (Mesa/LLVM register allocator bug, thrown before pixel comparison, not a pixel-diff); the test passes on D3D11 and on ANGLE/GLES. Passes on Android OpenGL ES and Vulkan.",
             "workarounds": ["prime-effect-layers"]
         },
         {
@@ -3084,8 +3084,8 @@
             "title": "FrameGraph nrge bounding boxes",
             "playgroundId": "#IG8NRC#85",
             "errorRatio": 14,
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: 14.6% pixel difference",
+            "excludedPlatforms": ["Unix"],
+            "reason": "OpenGL: 14.6% pixel difference. Passes on Android OpenGL ES and Vulkan.",
             "referenceImage": "FrameGraph-nrge-bounding-boxes.png"
         },
         {
@@ -3217,6 +3217,8 @@
             "title": "FrameGraph sharpen post process",
             "playgroundId": "#SYQW69#1367",
             "errorRatio": 6,
+            "excludedGraphicsApis": ["Vulkan"],
+            "reason": "Vulkan: 6.76% pixel difference on Win32 Vulkan; passes on D3D11 and D3D12.",
             "referenceImage": "FrameGraph-sharpen-post-process.png"
         },
         {
@@ -3725,15 +3727,15 @@
         {
             "title": "OpenPBR Thin Film Weight VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#87",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Thin-film renders as background on Linux desktop OpenGL (28798 px diff); passes on Win32 D3D11.",
+            "excludedPlatforms": ["Unix"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL (28798 px diff); passes on Win32 D3D11. Passes on Android OpenGL ES and Vulkan.",
             "referenceImage": "OpenPBR-Thin-Film-Weight-VS-IOR---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Film Thickness VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#88",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
+            "excludedPlatforms": ["Unix"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11. Passes on Android OpenGL ES and Vulkan.",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR---Analytic-Lights.png"
         },
         {
@@ -3759,15 +3761,15 @@
         {
             "title": "OpenPBR Thin Film and Specular Weight - Analytic Lights",
             "playgroundId": "#GRQHVV#95",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
+            "excludedPlatforms": ["Unix"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11. Passes on Android OpenGL ES and Vulkan.",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Film and Specular Weight Metals - Analytic Lights",
             "playgroundId": "#GRQHVV#96",
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
+            "excludedPlatforms": ["Unix"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11. Passes on Android OpenGL ES and Vulkan.",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight-Metals---Analytic-Lights.png"
         },
         {
