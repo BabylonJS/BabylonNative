@@ -1,0 +1,7 @@
+if(JSR_NODE_API_BUILD_NATIVE_TESTS)
+  foreach(NODE_API_TEST_DIR ${JSR_NODE_API_NATIVE_TEST_DIRS})
+    if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/${NODE_API_TEST_DIR}/CMakeLists.txt)
+      add_subdirectory(${NODE_API_TEST_DIR})
+    endif()
+  endforeach()
+endif()

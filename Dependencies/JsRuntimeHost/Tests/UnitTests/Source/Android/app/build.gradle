@@ -22,10 +22,13 @@ if (project.hasProperty("importHostCompilers")) {
     cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property('importHostCompilers')}")
 }
 
+def nodeApiAssetsDir = "${project.buildDir}/generated/nodeapiassets"
+def enableAsan = project.hasProperty("enableAsan")
+
 android {
     namespace 'com.jsruntimehost.unittests'
     compileSdk 33
-    ndkVersion = "23.1.7779620"
+    ndkVersion = "28.2.13676358"
     if (project.hasProperty("ndkVersion")) {
         ndkVersion = project.property("ndkVersion")
     }
@@ -41,7 +44,11 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments(*cmakeArguments)
+                def cmakeArgs = cmakeArguments.clone()
+                if (enableAsan) {
+                    cmakeArgs += "-DENABLE_SANITIZERS=ON"
+                }
+                arguments(*cmakeArgs)
             }
         }
 
@@ -72,9 +79,22 @@ android {
     buildFeatures {
         viewBinding true
     }
+
+    packagingOptions {
+        if (enableAsan) {
+            doNotStrip "**/*.so"
+            jniLibs.useLegacyPackaging true
+        }
+    }
+
     sourceSets {
         main {
-            assets.srcDirs = []
+            // The generated test bundle is wired per variant below; the Node-API conformance
+            // scripts (copyNodeApiTests) are the only assets sourced from the main set.
+            assets.srcDirs = [nodeApiAssetsDir]
+            if (enableAsan) {
+                jniLibs.srcDir "${buildDir}/generated/asanRuntime/jniLibs"
+            }
         }
     }
 }
@@ -119,6 +139,104 @@ dependencies {
             task.name == "lintVitalAnalyze${variant}" ||
             task.name == "generate${variant}LintVitalReportModel") {
             task.dependsOn(copyAssets)
+        }
+    }
+}
+
+task copyNodeApiTests(type: Copy) {
+    from '../../../../NodeApi/test'
+    into "${nodeApiAssetsDir}/NodeApi/test"
+    // Always re-run so the manifest is regenerated even when the copied sources are unchanged.
+    outputs.upToDateWhen { false }
+    doLast {
+        // AAssetManager cannot enumerate subdirectories at runtime, so emit a manifest listing
+        // every copied file (one path relative to NodeApi/test per line). Consumed by App.cpp.
+        // Must NOT start with a dot -- aapt ignores dotfiles when packaging assets.
+        def testRoot = file("${nodeApiAssetsDir}/NodeApi/test")
+        def manifestFile = new File(testRoot, 'manifest.txt')
+        manifestFile.withWriter('UTF-8') { writer ->
+            testRoot.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+                if (f != manifestFile) {
+                    writer.writeLine(testRoot.toPath().relativize(f.toPath()).toString().replace(File.separator, '/'))
+                }
+            }
+        }
+    }
+}
+
+// The manifest must exist before assets are merged. Lint reads the asset source directory
+// independently of mergeAssets, so it needs the same dependency (see the bundle wiring above).
+tasks.configureEach { task ->
+    if (task.name in ['mergeDebugAssets', 'mergeReleaseAssets',
+                      'lintVitalAnalyzeDebug', 'lintVitalAnalyzeRelease',
+                      'generateDebugLintVitalReportModel', 'generateReleaseLintVitalReportModel']) {
+        task.dependsOn(copyNodeApiTests)
+    }
+}
+
+preBuild.dependsOn(copyNodeApiTests)
+
+if (enableAsan) {
+    def hostTag = {
+        def osName = System.getProperty("os.name").toLowerCase()
+        if (osName.contains("mac") || osName.contains("darwin")) {
+            return "darwin-x86_64"
+        } else if (osName.contains("windows")) {
+            return "windows-x86_64"
+        } else {
+            return "linux-x86_64"
+        }
+    }.call()
+
+    def asanRuntimeProvider = providers.provider {
+        def prebuiltRoot = new File(android.ndkDirectory, "toolchains/llvm/prebuilt/${hostTag}/lib64/clang")
+        if (!prebuiltRoot.exists()) {
+            throw new GradleException("Unable to locate clang libraries under ${prebuiltRoot}")
+        }
+        def versionDir = prebuiltRoot.listFiles().find { it.isDirectory() }
+        if (versionDir == null) {
+            throw new GradleException("Unable to determine clang version directory within ${prebuiltRoot}")
+        }
+        def runtimeFile = new File(versionDir, "lib/linux/libclang_rt.asan-aarch64-android.so")
+        if (!runtimeFile.exists()) {
+            throw new GradleException("Unable to locate ASan runtime library at ${runtimeFile}")
+        }
+        return runtimeFile
+    }
+
+    def generatedAsanDir = layout.buildDirectory.dir("generated/asanRuntime/jniLibs/arm64-v8a")
+
+    def prepareAsanRuntime = tasks.register("prepareAsanRuntime", Copy) {
+        from(asanRuntimeProvider)
+        into(generatedAsanDir)
+    }
+
+    tasks.matching { it.name in ["mergeDebugNativeLibs", "mergeReleaseNativeLibs"] }.configureEach {
+        dependsOn(prepareAsanRuntime)
+    }
+
+    def wrapScript = file("${projectDir}/../tools/wrap.sh")
+
+    def pushAsanRuntime = tasks.register("pushAsanRuntime", Exec) {
+        dependsOn(prepareAsanRuntime)
+        commandLine("adb", "push",
+                generatedAsanDir.get().file("libclang_rt.asan-aarch64-android.so").asFile.absolutePath,
+                "/data/local/tmp/libclang_rt.asan-aarch64-android.so")
+    }
+
+    def pushAsanWrapScript = tasks.register("pushAsanWrapScript", Exec) {
+        commandLine("adb", "push", wrapScript.absolutePath, "/data/local/tmp/wrap.sh")
+    }
+
+    tasks.register("pushAsanArtifacts") {
+        dependsOn(pushAsanRuntime, pushAsanWrapScript)
+        doLast {
+            exec {
+                commandLine("adb", "shell", "chcon", "u:object_r:zygote_exec:s0", "/data/local/tmp/wrap.sh")
+            }
+            exec {
+                commandLine("adb", "shell", "chmod", "+x", "/data/local/tmp/wrap.sh")
+            }
         }
     }
 }

@@ -16,6 +16,36 @@ FetchContent_MakeAvailable_With_Message(googletest)
 
 npm(install --silent WORKING_DIRECTORY ${TESTS_DIR})
 
+if(WIN32)
+    set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_windows.cpp)
+    set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process.cpp)
+elseif(APPLE)
+    set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_posix.cpp)
+    set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_posix.cpp)
+elseif(ANDROID)
+    set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_android.cpp)
+    set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_android.cpp)
+else()
+    set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_posix.cpp)
+    set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_posix.cpp)
+endif()
+
+# The in-process Node-API conformance harness only builds against engines that export the full C
+# napi_* surface it uses. Hermes supplies napi through its own hermesNapi library, which does not
+# export e.g. napi_create_external / napi_get_value_external, so linking it fails; QuickJS is likewise
+# not validated on-device yet. Opt an engine in here once its harness run is green.
+set(JSR_NODE_API_HARNESS_ENGINES V8 JavaScriptCore)
+if(NAPI_JAVASCRIPT_ENGINE IN_LIST JSR_NODE_API_HARNESS_ENGINES)
+    set(JSR_NODE_API_HARNESS_SRC
+        ${TESTS_DIR}/NodeApi/node_lite.cpp
+        ${NODE_LITE_PLATFORM_SRC}
+        ${NODE_LITE_CHILD_PROCESS_SRC}
+        ${TESTS_DIR}/NodeApi/node_lite_jsruntimehost.cpp
+        ${TESTS_DIR}/NodeApi/js_runtime_api.cpp
+        ${TESTS_DIR}/NodeApi/string_utils.cpp
+        ${TESTS_DIR}/NodeApi/test_main.cpp)
+endif()
+
 add_library(UnitTestsJNI SHARED
     JNI.cpp
     ${UNIT_TESTS_DIR}/Source/App.cpp
@@ -27,7 +57,8 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.Scheduling.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.StandardStreamLogger.cpp
-    ${UNIT_TESTS_DIR}/Source/Tests.TimeoutDispatcher.cpp)
+    ${UNIT_TESTS_DIR}/Source/Tests.TimeoutDispatcher.cpp
+    ${JSR_NODE_API_HARNESS_SRC})
 
 if(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER)
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.DynamicScriptLoader.cpp)
@@ -48,7 +79,10 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
 endif()
 
 target_include_directories(UnitTestsJNI
-    PRIVATE ${UNIT_TESTS_DIR})
+    PRIVATE ${UNIT_TESTS_DIR}
+    PRIVATE ${TESTS_DIR}/NodeApi
+    PRIVATE ${TESTS_DIR}/NodeApi/include
+    PRIVATE ${REPO_ROOT_DIR}/Core/Node-API/Source)
 
 target_link_libraries(UnitTestsJNI
     PRIVATE log
@@ -69,4 +103,17 @@ target_link_libraries(UnitTestsJNI
     PRIVATE File
     PRIVATE TextDecoder
     PRIVATE TextEncoder
-    PRIVATE Performance)
+    PRIVATE Performance
+    PRIVATE napi)
+
+if(ANDROID)
+    target_link_libraries(UnitTestsJNI PRIVATE dl)
+endif()
+if(JSR_NODE_API_HARNESS_SRC)
+    target_compile_definitions(UnitTestsJNI
+        PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="2_function_arguments,3_callbacks,4_object_factory,5_function_factory,test_reference_double_free")
+endif()
+
+# The conformance addons are built as standalone SHARED lib<name>.so by Tests/NodeApi/CMakeLists.txt,
+# packaged by AGP into nativeLibraryDir, and dlopen'd in-process by node_lite_android. Both they and
+# this host link the shared napi (libnapi.so), so the addons' napi_* imports resolve at load.
