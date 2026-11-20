@@ -25,9 +25,9 @@ const originalCall = Function.prototype.call;
 const unexpectedCall = () => {
   assert.fail('napi_call_function must not use a replaceable call property');
 };
-const callback = function() {
+const callback = common.mustCall(function() {
   assert.strictEqual(this, undefined);
-};
+});
 callback.call = unexpectedCall;
 Function.prototype.call = unexpectedCall;
 try {
