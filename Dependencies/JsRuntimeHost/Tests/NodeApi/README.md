@@ -4,13 +4,12 @@
 
 The suite is built with `JSRUNTIMEHOST_TESTS=ON` for desktop C Node-API engines. JSI is excluded because its C++ shim does not implement the C addon interface. Build the `NodeApiTests` target and run the executable from its output directory. The build stages JavaScript assets, addons, and engine runtime libraries there.
 
-The enabled native directories are listed in `JSR_NODE_API_NATIVE_TEST_DIRS` in `CMakeLists.txt`: every vendored directory whose tests need only Node-API version 5, the version JsRuntimeHost implements. The remaining directories need a newer version or `NAPI_EXPERIMENTAL`, and are enabled only once the shared headers support it:
+The native test list in `CMakeLists.txt` includes the v5 baseline plus BigInt and per-environment instance data on engines supporting the addon imports. Remaining directories:
 
 | Directory | Needs |
 |---|---|
 | `6_object_wrap`, `test_finalizer` | `NAPI_EXPERIMENTAL` |
-| `test_bigint`, `test_instance_data` | 6 |
-| `test_typedarray` | 7 |
+| `test_typedarray` (not yet enabled across engines) | 7 |
 | `test_object` | 6 and 8 |
 | `test_cannot_run_js`, `test_error`, `test_properties`, `test_reference` | 9 |
 | `test_string` | 10 |
@@ -21,4 +20,4 @@ An addon that imports an API an engine does not implement cannot load, so `CMake
 
 On Android, the existing runtime test app embeds the harness for V8 and JavaScriptCore. Scripts run in-process with independent runtimes; addons remain separate shared libraries packaged with the app. The runner cannot spawn child processes, so the scripts that do are skipped there. Other Android engines and iOS are not enabled.
 
-These are Node-API version 5 conformance cases, not proof of complete support for any version. The suite originates from [JsRuntimeHost#116](https://github.com/BabylonJS/JsRuntimeHost/pull/116). Microsoft and V8 source notices are retained; `LICENSE` contains the Node.js copyright and permission notices.
+Passing the enabled cases is not proof of complete Node-API conformance. The suite originates from [JsRuntimeHost#116](https://github.com/BabylonJS/JsRuntimeHost/pull/116). Microsoft and V8 source notices are retained; `LICENSE` contains the Node.js copyright and permission notices.

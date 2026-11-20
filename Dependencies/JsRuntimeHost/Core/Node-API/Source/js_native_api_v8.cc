@@ -3503,8 +3503,7 @@ napi_status NAPI_CDECL napi_is_detached_arraybuffer(napi_env env,
 
   v8::Local<v8::Value> value = v8impl::V8LocalValueFromJsValue(arraybuffer);
 
-  //*result =
-  //    value->IsArrayBuffer() && value.As<v8::ArrayBuffer>()->WasDetached();
-  *result = true;
+  *result =
+      value->IsArrayBuffer() && value.As<v8::ArrayBuffer>()->WasDetached();
   return napi_clear_last_error(env);
 }

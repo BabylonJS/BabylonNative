@@ -2504,6 +2504,119 @@ napi_status napi_run_script(napi_env env,
   return napi_ok;
 }
 
+// === N-API v6 / v7 ===
+//
+// napi_set_instance_data / napi_get_instance_data (v6): per-env data slot, finalized at env teardown
+// by ~napi_env__ (see js_native_api_chakra.h).
+napi_status napi_set_instance_data(napi_env env,
+                                   void* data,
+                                   napi_finalize finalize_cb,
+                                   void* finalize_hint) {
+  CHECK_ENV(env);
+  env->instance_data = data;
+  env->instance_data_finalize_cb = finalize_cb;
+  env->instance_data_finalize_hint = finalize_hint;
+  return napi_ok;
+}
+
+napi_status napi_get_instance_data(napi_env env, void** data) {
+  CHECK_ENV(env);
+  CHECK_ARG(env, data);
+  *data = env->instance_data;
+  return napi_ok;
+}
+
+// N-API v7 ArrayBuffer detach. Win10's OS Chakra exposes no way to detach an ArrayBuffer: the
+// runtime has no detach entry point, and its JavaScript engine predates ES2024
+// ArrayBuffer.prototype.transfer(). As with BigInt below, report that honestly rather than failing
+// with a bare status an addon cannot tell from a real error.
+napi_status napi_detach_arraybuffer(napi_env env, napi_value arraybuffer) {
+  CHECK_ENV(env);
+  CHECK_ARG(env, arraybuffer);
+  CHECK_NAPI(napi_throw_error(
+      env, "ENOTSUP",
+      "ArrayBuffer detach is not supported by the underlying JavaScript engine (Chakra)."));
+  return napi_set_last_error(env, napi_pending_exception);
+}
+
+napi_status napi_is_detached_arraybuffer(napi_env env,
+                                         napi_value arraybuffer,
+                                         bool* result) {
+  CHECK_ENV(env);
+  CHECK_ARG(env, arraybuffer);
+  CHECK_ARG(env, result);
+
+  // Nothing can detach a buffer on this engine (see above), so an ArrayBuffer that still reports
+  // storage is live. Non-ArrayBuffers are not detached either, matching Node's contract.
+  JsValueType valueType;
+  CHECK_JSRT(env, JsGetValueType(reinterpret_cast<JsValueRef>(arraybuffer), &valueType));
+  if (valueType != JsArrayBuffer) {
+    *result = false;
+    return napi_ok;
+  }
+
+  BYTE* storageData;
+  unsigned int storageLength;
+  CHECK_JSRT(env, JsGetArrayBufferStorage(
+    reinterpret_cast<JsValueRef>(arraybuffer),
+    &storageData,
+    &storageLength));
+
+  *result = (storageData == nullptr);
+  return napi_ok;
+}
+
+// BigInt (v6): the Win10 OS edge-mode Chakra (jsrt) predates BigInt and exposes no JsBigInt* API, so
+// there is no value-preserving fallback. Per the Node-API feature-detection-by-exception pattern, throw
+// a JS-catchable error tagged "ENOTSUP" (so JS land can detect + polyfill) and return a pending
+// exception rather than silently failing. (ChakraCore added BigInt behind a flag, but the OS Chakra
+// this backend targets did not ship it.)
+static napi_status napi_bigint_not_supported(napi_env env) {
+  CHECK_ENV(env);
+  CHECK_NAPI(napi_throw_error(
+      env, "ENOTSUP",
+      "BigInt is not supported by the underlying JavaScript engine (Chakra)."));
+  return napi_set_last_error(env, napi_pending_exception);
+}
+
+napi_status napi_create_bigint_int64(napi_env env, int64_t value, napi_value* result) {
+  return napi_bigint_not_supported(env);
+}
+
+napi_status napi_create_bigint_uint64(napi_env env, uint64_t value, napi_value* result) {
+  return napi_bigint_not_supported(env);
+}
+
+napi_status napi_create_bigint_words(napi_env env,
+                                     int sign_bit,
+                                     size_t word_count,
+                                     const uint64_t* words,
+                                     napi_value* result) {
+  return napi_bigint_not_supported(env);
+}
+
+napi_status napi_get_value_bigint_int64(napi_env env,
+                                        napi_value value,
+                                        int64_t* result,
+                                        bool* lossless) {
+  return napi_bigint_not_supported(env);
+}
+
+napi_status napi_get_value_bigint_uint64(napi_env env,
+                                         napi_value value,
+                                         uint64_t* result,
+                                         bool* lossless) {
+  return napi_bigint_not_supported(env);
+}
+
+napi_status napi_get_value_bigint_words(napi_env env,
+                                        napi_value value,
+                                        int* sign_bit,
+                                        size_t* word_count,
+                                        uint64_t* words) {
+  return napi_bigint_not_supported(env);
+}
+
 napi_status napi_add_finalizer(napi_env env,
                                napi_value js_object,
                                void* native_object,
