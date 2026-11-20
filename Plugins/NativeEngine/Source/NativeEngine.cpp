@@ -67,6 +67,8 @@ namespace Babylon
         constexpr uint32_t BUFFER_READBACK_WORKGROUP_SIZE = 64;
         constexpr size_t MAXIMUM_COLOR_ATTACHMENTS = 8;
         constexpr size_t MAXIMUM_FRAME_BUFFER_ATTACHMENTS = MAXIMUM_COLOR_ATTACHMENTS + 1;
+        // COMMAND_CLEAR2 flag above the 8-bit attachment mask; set by clearAttachments().
+        constexpr uint32_t CLEAR_ATTACHMENTS_OPERATION = 0x100;
         constexpr uint32_t STENCIL_MASK = UINT8_MAX;
         constexpr size_t FRAME_BUFFER_VALIDATION_MESSAGE_LENGTH = 512;
         constexpr size_t TRANSFORM_FEEDBACK_LAYOUT_COMPONENT_COUNT = 4;
@@ -1183,6 +1185,8 @@ namespace Babylon
                     : env.Undefined()),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_CLEAR2", Napi::FunctionPointer::Create(env, &NativeEngine::Clear2)),
+                // OR into the COMMAND_CLEAR2 attachment mask to clear integer attachments like WebGL clearAttachments().
+                StaticValue("CLEAR_ATTACHMENTS_OPERATION", Napi::Number::From(env, CLEAR_ATTACHMENTS_OPERATION)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
                 StaticValue("COMMAND_SETSTENCIL2", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil2)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
@@ -3398,7 +3402,8 @@ void main() {
         std::array<bgfx::Attachment, MAXIMUM_FRAME_BUFFER_ATTACHMENTS> attachments{};
         uint8_t numAttachments = 0;
         uint8_t depthOneVolumeAttachmentMask{};
-        uint8_t integerColorAttachmentMask{};
+        uint8_t signedIntegerColorAttachmentMask{};
+        uint8_t unsignedIntegerColorAttachmentMask{};
 
         // An uninitialized texture requests a sampleable depth attachment.
         Graphics::Texture* depthStencilTextureRequest = depthStencilTexture;
@@ -3441,11 +3446,16 @@ void main() {
                 );
 
             const auto encoding = bx::EncodingType::Enum(bimg::getBlockInfo(bimg::TextureFormat::Enum(texture->Format())).encoding);
-            if (encoding == bx::EncodingType::Int || encoding == bx::EncodingType::Uint)
+            if (encoding == bx::EncodingType::Int)
             {
-                integerColorAttachmentMask |= static_cast<uint8_t>(1 << (numAttachments - 1));
+                signedIntegerColorAttachmentMask |= static_cast<uint8_t>(1 << (numAttachments - 1));
+            }
+            else if (encoding == bx::EncodingType::Uint)
+            {
+                unsignedIntegerColorAttachmentMask |= static_cast<uint8_t>(1 << (numAttachments - 1));
             }
         }
+        const uint8_t colorAttachmentMask{static_cast<uint8_t>((1u << numAttachments) - 1)};
 
         // Create and alias shared depth once; subsequent framebuffers borrow its handle.
         bool borrowedExplicitDepth = false;
@@ -3614,7 +3624,7 @@ void main() {
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, -1, isMultisampled, depthOneVolumeAttachmentMask);
         frameBuffer->SetGeneratedDepthStencil(std::move(generatedDepthStencil));
-        frameBuffer->SetIntegerColorAttachmentMask(integerColorAttachmentMask);
+        frameBuffer->SetColorAttachmentMasks(colorAttachmentMask, signedIntegerColorAttachmentMask, unsignedIntegerColorAttachmentMask);
 
         // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
         // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
@@ -3847,7 +3857,11 @@ void main() {
         const float depth{data.ReadFloat32()};
         const bool shouldClearStencil{static_cast<bool>(data.ReadUint32())};
         const uint8_t stencil{static_cast<uint8_t>(data.ReadUint32())};
-        const uint8_t colorAttachmentMask{static_cast<uint8_t>(hasAttachmentMask ? data.ReadUint32() : UINT8_MAX)};
+        const uint32_t attachmentMaskArg{hasAttachmentMask ? data.ReadUint32() : UINT8_MAX};
+        const uint8_t colorAttachmentMask{static_cast<uint8_t>(attachmentMaskArg & UINT8_MAX)};
+        const auto operation = (attachmentMaskArg & CLEAR_ATTACHMENTS_OPERATION) != 0
+            ? Graphics::ClearOperation::ClearAttachments
+            : Graphics::ClearOperation::Clear;
 
         bgfx::Encoder* encoder = GetEncoder();
 
@@ -3867,7 +3881,7 @@ void main() {
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask);
+        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask, false, operation);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)

@@ -55,6 +55,15 @@ namespace Babylon::Graphics
         bool m_released{};
     };
 
+    // How integer color attachments convert the normalized clear color, matching Babylon.js on WebGL.
+    enum class ClearOperation
+    {
+        // engine.clear(): clearBufferuiv/clearBufferiv with trunc(255 * c) for both integer types.
+        Clear,
+        // engine.clearAttachments(): round(255 * c) for unsigned and round(c) for signed integer attachments.
+        ClearAttachments,
+    };
+
     class FrameBuffer final
     {
     public:
@@ -78,7 +87,7 @@ namespace Babylon::Graphics
         // Floating-point colors preserve HDR values through bgfx's clear palette.
         // More than 16 distinct palette colors in a physical frame throws rather than overwriting pending clears.
         // ignoreScissor clears the whole framebuffer regardless of the current scissor.
-        void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX, bool ignoreScissor = false);
+        void Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask = UINT8_MAX, bool ignoreScissor = false, ClearOperation operation = ClearOperation::Clear);
         void SetViewPort(float x, float y, float width, float height);
         void SetScissor(float x, float y, float width, float height);
         // Adopts a scissor without starting a view, for the next draw after Bind. WebGL scissor state is
@@ -106,9 +115,14 @@ namespace Babylon::Graphics
         void SetGLRowOrder(bool glRowOrder) { m_glRowOrder = glRowOrder; }
         bool GLRowOrder() const { return m_glRowOrder; }
 
-        // Integer color attachments are cleared like WebGL clearBufferuiv/clearBufferiv in Babylon.js, which
-        // scale the normalized clear color by 255. Bit N marks color attachment N.
-        void SetIntegerColorAttachmentMask(uint8_t integerColorAttachmentMask) { m_integerColorAttachmentMask = integerColorAttachmentMask; }
+        // Describes the color attachments so integer attachments are cleared like Babylon.js clears them on WebGL
+        // (see ClearOperation). Bit N marks color attachment N.
+        void SetColorAttachmentMasks(uint8_t colorAttachmentMask, uint8_t signedIntegerMask, uint8_t unsignedIntegerMask)
+        {
+            m_colorAttachmentMask = colorAttachmentMask;
+            m_signedIntegerColorAttachmentMask = signedIntegerMask;
+            m_unsignedIntegerColorAttachmentMask = unsignedIntegerMask;
+        }
 
     private:
         Rect ToTargetRect(const Rect& rect, float height) const;
@@ -143,7 +157,9 @@ namespace Babylon::Graphics
 
         bool m_disposed{};
         bool m_glRowOrder{};
-        uint8_t m_integerColorAttachmentMask{};
+        uint8_t m_colorAttachmentMask{UINT8_MAX};
+        uint8_t m_signedIntegerColorAttachmentMask{};
+        uint8_t m_unsignedIntegerColorAttachmentMask{};
         int8_t m_depthStencilAttachmentIndex{-1};
         std::shared_ptr<GeneratedDepthStencil> m_generatedDepthStencil{};
     };
