@@ -106,9 +106,9 @@ namespace Babylon::Graphics
         void SetGLRowOrder(bool glRowOrder) { m_glRowOrder = glRowOrder; }
         bool GLRowOrder() const { return m_glRowOrder; }
 
-        // Integer color attachments are cleared to the numeric clear color (as in WebGL clearBufferuiv), which only
-        // bgfx's float palette preserves; packed RGBA8 clears are read as literal integers on integer attachments.
-        void SetHasIntegerColorAttachment(bool hasIntegerColorAttachment) { m_hasIntegerColorAttachment = hasIntegerColorAttachment; }
+        // Integer color attachments are cleared like WebGL clearBufferuiv/clearBufferiv in Babylon.js, which
+        // scale the normalized clear color by 255. Bit N marks color attachment N.
+        void SetIntegerColorAttachmentMask(uint8_t integerColorAttachmentMask) { m_integerColorAttachmentMask = integerColorAttachmentMask; }
 
     private:
         Rect ToTargetRect(const Rect& rect, float height) const;
@@ -143,7 +143,7 @@ namespace Babylon::Graphics
 
         bool m_disposed{};
         bool m_glRowOrder{};
-        bool m_hasIntegerColorAttachment{};
+        uint8_t m_integerColorAttachmentMask{};
         int8_t m_depthStencilAttachmentIndex{-1};
         std::shared_ptr<GeneratedDepthStencil> m_generatedDepthStencil{};
     };

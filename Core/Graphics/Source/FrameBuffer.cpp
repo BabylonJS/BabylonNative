@@ -27,6 +27,18 @@ namespace
         return packed;
     }
 
+    // Babylon.js clears integer targets with the clear color times 255, stored through an Int32Array or
+    // Uint32Array, which truncates toward zero and maps non-finite values to zero.
+    std::array<float, 4> ToIntegerClearColor(const std::array<float, 4>& color)
+    {
+        std::array<float, 4> integerColor{};
+        for (size_t i = 0; i < color.size(); ++i)
+        {
+            integerColor[i] = std::isfinite(color[i]) ? std::trunc(color[i] * 255.f) : 0.f;
+        }
+        return integerColor;
+    }
+
     // Backends without bgfx clear-skip support would clamp UINT8_MAX into the palette.
     bool SupportsClearAttachmentMasking()
     {
@@ -211,10 +223,12 @@ namespace Babylon::Graphics
         }
 
         const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
+        const uint8_t integerColorAttachmentMask{bgfx::isValid(m_handle) ? m_integerColorAttachmentMask : uint8_t{}};
         const std::array<float, 4> color{r, g, b, a};
-        const auto packedColor = maskColorAttachments || m_hasIntegerColorAttachment ? std::nullopt : PackClearColor(color);
+        const auto packedColor = maskColorAttachments || integerColorAttachmentMask != 0 ? std::nullopt : PackClearColor(color);
         const bool usePalette = (flags & BGFX_CLEAR_COLOR) != 0 && !packedColor.has_value();
         const auto paletteIndex = usePalette ? m_deviceContext.AcquireClearPaletteIndex(color) : uint8_t{};
+        const auto integerPaletteIndex = usePalette && integerColorAttachmentMask != 0 ? m_deviceContext.AcquireClearPaletteIndex(ToIntegerClearColor(color)) : uint8_t{};
 
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
         m_viewId = m_deviceContext.AcquireNewViewId();
@@ -227,7 +241,9 @@ namespace Babylon::Graphics
             uint8_t indices[MaxColorAttachments];
             for (uint8_t attachment = 0; attachment < MaxColorAttachments; ++attachment)
             {
-                indices[attachment] = !maskColorAttachments || (colorAttachmentMask & (1 << attachment)) != 0 ? paletteIndex : UINT8_MAX;
+                indices[attachment] = !maskColorAttachments || (colorAttachmentMask & (1 << attachment)) != 0
+                    ? ((integerColorAttachmentMask & (1 << attachment)) != 0 ? integerPaletteIndex : paletteIndex)
+                    : UINT8_MAX;
             }
             bgfx::setViewClear(m_viewId.value(), flags, depth, stencil,
                 indices[0], indices[1], indices[2], indices[3], indices[4], indices[5], indices[6], indices[7]);
