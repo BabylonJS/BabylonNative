@@ -29,6 +29,8 @@ file(
 if(BX_AMALGAMATED)
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/allocator.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/bitarray.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/blk.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/blockstorage.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/bounds.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/bx.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/commandline.cpp")
@@ -38,7 +40,10 @@ if(BX_AMALGAMATED)
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/easing.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/file.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/filepath.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/handletable.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/hash.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/hashmap.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/heap.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/literal-parser.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/math.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/mutex.cpp")
@@ -47,10 +52,14 @@ if(BX_AMALGAMATED)
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/scanner.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/semaphore.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/settings.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/sharedspanallocator.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/sort.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/storageblk.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/string.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/stringpool.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/superluminal.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/thread.cpp")
+	list(APPEND BX_NOBUILD "${BX_DIR}/src/threadspanallocator.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/timer.cpp")
 	list(APPEND BX_NOBUILD "${BX_DIR}/src/url.cpp")
 else()
@@ -102,6 +111,9 @@ target_compile_definitions(bx PUBLIC "__STDC_CONSTANT_MACROS")
 target_compile_features(bx PUBLIC cxx_std_14)
 # (note: see bx\scripts\toolchain.lua for equivalent compiler flag)
 target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus /Zc:preprocessor>)
+# bx public headers (bx/blk.h) use nameless structs in unions, like bx's scripts/toolchain.lua,
+# which disables C4201 for everything it builds. PUBLIC so /W4 /WX consumers compile them.
+target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/wd4201>)
 
 # bx's SIMD path (bx/inline/simd128_sse.inl) uses SSE4.1 intrinsics on x86, matching the
 # SSE4.2 minspec bx's own scripts/toolchain.lua sets. GCC-style drivers need the flag
@@ -201,10 +213,9 @@ if(BGFX_INSTALL)
 		ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 		RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 	)
-	# We will make sure tinystl and compat are not installed in /usr/include
+	# We will make sure compat is not installed in /usr/include
 	install(DIRECTORY "${BX_DIR}/include/bx" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 	install(DIRECTORY "${BX_DIR}/include/compat/${BX_COMPAT_PLATFORM}"
 			DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bx/compat"
 	)
-	install(DIRECTORY "${BX_DIR}/include/tinystl" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bx")
 endif()
