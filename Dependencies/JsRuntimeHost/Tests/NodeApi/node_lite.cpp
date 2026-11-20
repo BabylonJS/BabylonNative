@@ -622,7 +622,8 @@ void NodeLiteRuntime::DefineGlobalFunctions() {
   // Remove the global.require defined by Hermes
   NodeApi::DeleteProperty(env_, global, "require");
 
-  // global.gc()
+  // global.gc(). Hermes already defines it through HermesInternal.
+#if !defined(JSR_NAPI_ENGINE_HERMES)
   NodeApi::SetMethod(
       env_, global, "gc", [](napi_env env, span<napi_value> /*args*/) {
         NODE_LITE_CALL(jsr_collect_garbage(env));
@@ -638,6 +639,7 @@ void NodeLiteRuntime::DefineGlobalFunctions() {
 #endif
         return nullptr;
       });
+#endif
 
   auto set_immediate_cb = [](napi_env env, span<napi_value> args) {
     NODE_LITE_ASSERT(args.size() >= 1,

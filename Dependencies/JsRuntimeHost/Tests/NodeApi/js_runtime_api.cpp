@@ -170,12 +170,6 @@ napi_status jsr_collect_garbage(napi_env env) {
     return napi_generic_failure;
   }
   return napi_ok;
-#elif defined(JSR_NAPI_ENGINE_HERMES)
-  if (env == nullptr) {
-    return napi_invalid_arg;
-  }
-  Napi::CollectGarbage(Napi::Env{env});
-  return napi_ok;
 #else
   (void)env;
   return napi_generic_failure;
