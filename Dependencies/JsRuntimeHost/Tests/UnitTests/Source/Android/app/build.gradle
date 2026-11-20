@@ -107,9 +107,20 @@ dependencies {
         dependsOn buildBundle
         from(bundleDir) { into 'Assets' }
         from('../../../Assets') { into 'Assets' }
+        from('../../../../NodeApi/test') {
+            include '**/*.js'
+            into 'NodeApi/test'
+        }
         into assetsDir
         doFirst {
             delete 'src/main/assets/Scripts', 'src/main/assets/Assets/tests.js'
+        }
+        doLast {
+            def testRoot = new File(assetsDir, 'NodeApi/test')
+            def paths = fileTree(testRoot).files.collect {
+                testRoot.toPath().relativize(it.toPath()).toString().replace('\\', '/')
+            }.sort()
+            new File(assetsDir, 'NodeApi/manifest.txt').setText(paths.join('\n'), 'UTF-8')
         }
     }
     android.sourceSets.getByName(variantName).assets.srcDir(copyAssets)

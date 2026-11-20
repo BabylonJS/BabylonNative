@@ -267,7 +267,14 @@ Make sure Hermes was fetched at the top-level CMakeLists.txt and NAPI_JAVASCRIPT
     message(STATUS "Selected ${NAPI_JAVASCRIPT_ENGINE}")
 endif()
 
-add_library(napi ${SOURCES})
+# Android's dynamically loaded conformance addons must share the host's napi.
+# Keep production builds on their existing library type.
+if(ANDROID AND JSRUNTIMEHOST_TESTS
+        AND (NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" OR NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore"))
+    add_library(napi SHARED ${SOURCES})
+else()
+    add_library(napi ${SOURCES})
+endif()
 
 target_include_directories(napi ${INCLUDE_DIRECTORIES})
 target_link_libraries(napi ${LINK_LIBRARIES})

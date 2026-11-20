@@ -846,6 +846,15 @@ void napi_env__::deinit_symbol(JSValueRef symbol) {
   JSValueUnprotect(context, symbol);
 }
 
+void napi_env__::init_function_prototype_call() {
+  JSObjectRef global = JSContextGetGlobalObject(context);
+  JSValueRef constructor = JSObjectGetProperty(context, global, JSString("Function"), nullptr);
+  JSValueRef prototype = JSObjectGetProperty(context, JSValueToObject(context, constructor, nullptr), JSString("prototype"), nullptr);
+  JSValueRef call = JSObjectGetProperty(context, JSValueToObject(context, prototype, nullptr), JSString("call"), nullptr);
+  function_prototype_call = JSValueToObject(context, call, nullptr);
+  JSValueProtect(context, function_prototype_call);
+}
+
 // Warning: Keep in-sync with napi_status enum
 static const char* error_messages[] = {
   nullptr,
@@ -1683,13 +1692,21 @@ napi_status napi_call_function(napi_env env,
     CHECK_ARG(env, argv);
   }
 
+  std::vector<JSValueRef> call_args(argc + 1);
+  call_args[0] = ToJSValue(recv);
+  for (size_t i = 0; i < argc; ++i) {
+    call_args[i + 1] = ToJSValue(argv[i]);
+  }
+
+  // The C API accepts only an object receiver and otherwise coerces `this`.
+  // The captured intrinsic preserves strict receivers without consulting func.call.
   JSValueRef exception{};
   JSValueRef return_value{JSObjectCallAsFunction(
     env->context,
+    env->function_prototype_call,
     ToJSObject(env, func),
-    JSValueIsUndefined(env->context, ToJSValue(recv)) ? nullptr : ToJSObject(env, recv),
-    argc,
-    ToJSValues(argv),
+    call_args.size(),
+    call_args.data(),
     &exception)};
   CHECK_JSC(env, exception);
 
