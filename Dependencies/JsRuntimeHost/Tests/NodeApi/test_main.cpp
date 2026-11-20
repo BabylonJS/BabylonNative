@@ -103,6 +103,9 @@ class NodeApiTestFixture : public TestFixtureBase {
         "napi_define_class dereferences a NULL properties array (crash)";
     static constexpr const char* kInt64Overflow =
         "napi_get_value_int64 casts out-of-range doubles instead of saturating";
+    static constexpr const char* kHermesWrapFinalizer =
+        "Hermes runs a napi_wrap finalizer only at env shutdown, not on "
+        "garbage collection, when a result reference is requested";
     static constexpr Exclusion kExclusions[] = {
         {"test_general/test.js", true,
          "asserts napi_get_version() == 8; JsRuntimeHost targets Node-API 5"},
@@ -116,6 +119,8 @@ class NodeApiTestFixture : public TestFixtureBase {
         {"test_general/testNapiRun.js", kHermes,
          "Hermes exports the 3-argument napi_run_script, but the shared header "
          "declares the 4-argument variant"},
+        {"7_factory_wrap/test.js", kHermes, kHermesWrapFinalizer},
+        {"8_passing_wrapped/test.js", kHermes, kHermesWrapFinalizer},
         {"test_constructor/test.js", kChakra || kQuickJS,
          "napi_define_class dereferences a NULL properties array (crash); "
          "read-only assignment errors also use non-V8 message text"},

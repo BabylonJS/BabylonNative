@@ -475,12 +475,27 @@ void NodeLiteRuntime::RunTestScript(const std::string& script_path) {
       do {
         task_runner_->DrainTaskQueue();
         bool microtasks_drained{};
+        // Node runs microtasks inside a per-callback handle scope. Without one, handles that a
+        // QuickJS native callback creates during a promise job (it opens no scope of its own)
+        // stay alive until the script finishes, so their objects are never collected.
+        NodeApiHandleScope microtask_scope{env};
         NODE_LITE_CALL(jsr_drain_microtasks(env, -1, &microtasks_drained));
       } while (task_runner_->HasPendingTasks());
+      HandleUnhandledPromiseRejections();
       OnExit();
       on_exit_callbacks_.clear();
       on_uncaughtException_callbacks_.clear();
     });
+  }
+}
+
+void NodeLiteRuntime::HandleUnhandledPromiseRejections() {
+  // Matches Node.js's default unhandled-rejection mode: a rejection still unhandled once the event
+  // loop is idle is reported as an uncaught exception, so an assertion that fails inside a promise
+  // callback fails the test.
+  napi_value reason{};
+  if (env_holder_->TakeUnhandledRejection(&reason)) {
+    OnUncaughtException(reason);
   }
 }
 

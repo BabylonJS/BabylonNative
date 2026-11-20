@@ -54,6 +54,9 @@ class NodeLiteErrorHandler;
 struct IEnvHolder {
   virtual ~IEnvHolder() {}
   virtual napi_env getEnv() = 0;
+  // Returns the reason of a promise rejection that is still unhandled, if any, and forgets all
+  // tracked rejections. Engines without a rejection-tracking hook keep the default.
+  virtual bool TakeUnhandledRejection(napi_value* /*reason*/) { return false; }
 };
 
 class NodeLiteTaskRunner {
