@@ -26,6 +26,9 @@ namespace Babylon::Polyfills::Internal
             int statusCode{};
             std::string statusText;
             std::string url;
+            bool redirected{};
+            // Lower-cased names in sorted order, each with its combined value: the order in which
+            // the Fetch standard iterates a Headers object.
             std::vector<std::pair<std::string, std::string>> headers;
             std::vector<std::byte> body;
         };
@@ -255,7 +258,7 @@ namespace Babylon::Polyfills::Internal
             response.Set("status", Napi::Number::New(env, data->statusCode));
             response.Set("statusText", Napi::String::New(env, data->statusText));
             response.Set("url", Napi::String::New(env, data->url));
-            response.Set("redirected", Napi::Boolean::New(env, false));
+            response.Set("redirected", Napi::Boolean::New(env, data->redirected));
             response.Set("type", Napi::String::New(env, "basic"));
             response.Set("bodyUsed", Napi::Boolean::New(env, false));
             response.Set("headers", BuildHeaders(env, data));
@@ -491,10 +494,12 @@ namespace Babylon::Polyfills::Internal
                                 data->statusCode = status;
                                 data->statusText = std::string{request->StatusText()};
                                 data->url = std::string{request->ResponseUrl()};
+                                data->redirected = request->Redirected();
                                 for (const auto& header : request->GetAllResponseHeaders())
                                 {
                                     data->headers.emplace_back(header.first, header.second);
                                 }
+                                std::sort(data->headers.begin(), data->headers.end());
                                 const auto responseBuffer = request->ResponseBuffer();
                                 data->body.assign(responseBuffer.begin(), responseBuffer.end());
 

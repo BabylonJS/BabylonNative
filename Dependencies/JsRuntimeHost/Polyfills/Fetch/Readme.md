@@ -11,9 +11,11 @@ if (response.ok) {
 ## Response
 `fetch()` returns a `Promise` that resolves to a `Response`-like object exposing:
 * `ok`, `status`, `statusText`, `url`, `redirected`, `type`, `bodyUsed`
-* `headers` with `get(name)`, `has(name)`, and `forEach(callback)` (header names are matched case-insensitively)
+* `headers` with `get(name)`, `has(name)`, and `forEach(callback)` (header names are matched case-insensitively; `forEach` visits lower-cased names in sorted order, and the values of a repeated header are combined with `, `)
 * `text()`, `arrayBuffer()`, `json()`, `blob()` (each returns a `Promise`)
 * `clone()`
+
+`url` is the URL of the response after redirects, without a fragment, and `redirected` tells whether there was a redirect. `statusText` is the reason phrase the server sent over HTTP/1.x where the platform reports it (Linux, Windows), `""` for a response over HTTP/2 or HTTP/3 (which have no reason phrase), and otherwise the standard phrase for the status code.
 
 The response body is fully buffered before the promise resolves. The body accessors may therefore be called more than once (`bodyUsed` is always reported as `false`), which is a deliberate, lenient deviation from the spec's single-use semantics.
 

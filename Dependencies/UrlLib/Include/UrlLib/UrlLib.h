@@ -96,10 +96,16 @@ namespace UrlLib
 
         std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
 
+        // The response headers, keyed by lower-cased name. The values of a header that the
+        // response repeats are combined into one, separated by ", ".
         const std::unordered_map<std::string, std::string>& GetAllResponseHeaders() const;
         
         UrlStatusCode StatusCode() const;
 
+        // The reason phrase of an HTTP/1.x status line where the platform reports it (libcurl,
+        // Windows). Empty for HTTP/2 and HTTP/3, which have no reason phrase. Where the platform
+        // does not report the phrase (Apple, Android) and for local files, the standard phrase for
+        // the status code.
         std::string_view StatusText() const;
 
         // Transport-level error reporting. ErrorString() and ErrorSymbol() are empty (and
@@ -125,7 +131,12 @@ namespace UrlLib
         // emptiness as the failure signal rather than this value.
         int32_t ErrorCode() const;
 
+        // The URL of the response, after any redirects and without a fragment. Empty until there
+        // is a response, and after a transport failure.
         std::string_view ResponseUrl() const;
+
+        // Whether the response was reached through at least one redirect.
+        bool Redirected() const;
 
         std::string_view ResponseString() const;
 

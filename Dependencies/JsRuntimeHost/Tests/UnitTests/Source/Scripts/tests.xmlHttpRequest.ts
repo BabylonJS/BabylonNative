@@ -56,35 +56,121 @@ describe("XMLHTTPRequest", function () {
     });
 
     it("should expose statusText", async function () {
-        const okXhr = await createRequest("GET", "https://github.com/");
+        // The loopback server speaks HTTP/1.1, which has a reason phrase. Over HTTP/2 and HTTP/3
+        // there is none and statusText is "", so this cannot be asserted against a public host.
+        const okXhr = await createRequest("GET", loopbackHttpOrigin + "/xhr/resources/status.py?code=200&text=OK");
         expect(okXhr.statusText).to.equal("OK");
-        const notFoundXhr = await createRequest("GET", "https://github.com/babylonJS/BabylonNative404");
+        const notFoundXhr = await createRequest("GET", loopbackHttpOrigin + "/xhr/resources/status.py?code=404&text=Not%20Found");
         expect(notFoundXhr.statusText).to.equal("Not Found");
     });
 
-    it("should fire 'error' event for a remote URL that returns HTTP 404", async function () {
-        // Regression test: previously the success-only continuation in XMLHttpRequest::Send
-        // skipped 'error' on async failures including non-2xx HTTP responses, so onerror
-        // observers never ran. See https://github.com/BabylonJS/JsRuntimeHost/pull/165.
+    it("should fire 'load', not 'error', for a remote URL that returns HTTP 404", async function () {
+        // An HTTP error status is a completed response: load and loadend fire, as in a browser.
+        // error is for transport failures. Every outcome must end with loadend; see
+        // https://github.com/BabylonJS/JsRuntimeHost/pull/165.
         this.timeout(30000);
-        const result = await new Promise<{ errorFired: boolean; loadendFired: boolean; status: number; readyState: number }>((resolve, reject) => {
+        const result = await new Promise<{ errorFired: boolean; loadFired: boolean; loadendFired: boolean; status: number; readyState: number }>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             let errorFired = false;
+            let loadFired = false;
             let loadendFired = false;
             const guard = setTimeout(() => reject(new Error("XHR neither errored nor loadended within 25s")), 25000);
             xhr.addEventListener("error", () => { errorFired = true; });
+            xhr.addEventListener("load", () => { loadFired = true; });
             xhr.addEventListener("loadend", () => {
                 loadendFired = true;
                 clearTimeout(guard);
-                resolve({ errorFired, loadendFired, status: xhr.status, readyState: xhr.readyState });
+                resolve({ errorFired, loadFired, loadendFired, status: xhr.status, readyState: xhr.readyState });
             });
             xhr.open("GET", "https://github.com/babylonJS/BabylonNative404");
             xhr.send();
         });
         expect(result.status).to.equal(404);
-        expect(result.errorFired).to.equal(true);
+        expect(result.errorFired).to.equal(false);
+        expect(result.loadFired).to.equal(true);
         expect(result.loadendFired).to.equal(true);
         expect(result.readyState).to.equal(4);
+    });
+
+    describe("used the way Babylon.js FileTools.RequestFile uses it", function () {
+        // The listeners Babylon.js attaches to a request: "progress", "loadend", and a
+        // "readystatechange" listener that acts on DONE and removes itself while it is being called.
+        // A status of 0 is what its retry strategy keys on.
+        function requestFile(url: string, useArrayBuffer: boolean): Promise<{ successes: any[]; errors: number[]; progress: any[]; completions: number }> {
+            return new Promise((resolve) => {
+                const outcome = { successes: [] as any[], errors: [] as number[], progress: [] as any[], completions: 0 };
+                const request = new XMLHttpRequest();
+                const onProgress = (event: any) => { outcome.progress.push(event); };
+                const onLoadEnd = () => {
+                    request.removeEventListener("progress", onProgress);
+                    request.removeEventListener("readystatechange", onReadyStateChange);
+                    request.removeEventListener("loadend", onLoadEnd);
+                    outcome.completions++;
+                    // Leave time for anything that would be raised after loadend.
+                    setTimeout(() => resolve(outcome), 50);
+                };
+                const onReadyStateChange = () => {
+                    if (request.readyState === (XMLHttpRequest.DONE || 4)) {
+                        request.removeEventListener("readystatechange", onReadyStateChange);
+                        if (request.status >= 200 && request.status < 300) {
+                            const data = useArrayBuffer ? request.response : request.responseText;
+                            if (data !== null) {
+                                outcome.successes.push(data);
+                                return;
+                            }
+                        }
+                        outcome.errors.push(request.status);
+                    }
+                };
+                request.open("GET", url);
+                if (useArrayBuffer) {
+                    request.responseType = "arraybuffer";
+                }
+                request.addEventListener("progress", onProgress);
+                request.addEventListener("loadend", onLoadEnd);
+                request.addEventListener("readystatechange", onReadyStateChange);
+                request.send();
+            });
+        }
+
+        it("loads an app:// file once, with status 200 and one progress event", async function () {
+            const text = "var symlink_target_js = true;";
+            const outcome = await requestFile("app:///Assets/symlink_target.js", false);
+            expect(outcome.successes).to.deep.equal([text]);
+            expect(outcome.errors).to.deep.equal([]);
+            expect(outcome.completions).to.equal(1);
+            expect(outcome.progress).to.have.lengthOf(1);
+            expect(outcome.progress[0].lengthComputable).to.equal(true);
+            expect(outcome.progress[0].loaded).to.equal(text.length);
+            expect(outcome.progress[0].total).to.equal(text.length);
+        });
+
+        it("loads an http:// resource as an ArrayBuffer once", async function () {
+            const outcome = await requestFile(loopbackHttpOrigin + "/xhr/resources/content.py?content=Test%20Message", true);
+            expect(outcome.errors).to.deep.equal([]);
+            expect(outcome.completions).to.equal(1);
+            expect(outcome.successes).to.have.lengthOf(1);
+            expect(new Uint8Array(outcome.successes[0]).length).to.equal(12);
+            expect(outcome.progress).to.have.lengthOf(1);
+            expect(outcome.progress[0].loaded).to.equal(12);
+        });
+
+        it("reports an HTTP error status once, as that status", async function () {
+            const outcome = await requestFile(loopbackHttpOrigin + "/xhr/resources/status.py?code=404", false);
+            expect(outcome.successes).to.deep.equal([]);
+            expect(outcome.errors).to.deep.equal([404]);
+            expect(outcome.completions).to.equal(1);
+        });
+
+        it("reports a failed connection and a missing app:// file once, as status 0", async function () {
+            for (const url of [loopbackClosedPortOrigin + "/", "app:///does_not_exist.js"]) {
+                const outcome = await requestFile(url, false);
+                expect(outcome.successes).to.deep.equal([]);
+                expect(outcome.errors).to.deep.equal([0]);
+                expect(outcome.completions).to.equal(1);
+                expect(outcome.progress).to.deep.equal([]);
+            }
+        });
     });
 
     it("should expose errorCode/errorDetail diagnostics after a transport failure", async function () {

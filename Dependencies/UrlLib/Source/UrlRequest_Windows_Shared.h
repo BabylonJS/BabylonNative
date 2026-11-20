@@ -116,21 +116,39 @@ namespace UrlLib
                 {
                     m_statusCode = static_cast<UrlStatusCode>(responseMessage.StatusCode());
                     m_statusText = winrt::to_string(responseMessage.ReasonPhrase());
+
+                    // An HTTP/1.x status line carries the reason phrase; HTTP/2 and later have none.
+                    switch (responseMessage.Version())
+                    {
+                        case Web::Http::HttpVersion::Http10:
+                        case Web::Http::HttpVersion::Http11:
+                            m_reasonPhrase = Http::ReasonPhrase::OnWire;
+                            break;
+                        case Web::Http::HttpVersion::None:
+                            break;
+                        default:
+                            m_reasonPhrase = Http::ReasonPhrase::None;
+                            break;
+                    }
+
+                    // The URL of the final response of a redirect chain.
+                    m_responseUrl = winrt::to_string(responseMessage.RequestMessage().RequestUri().RawUri());
+                    m_redirected = !responseMessage.RequestMessage().RequestUri().Equals(m_uri);
+
+                    for (auto&& iter : responseMessage.Headers())
+                    {
+                        AddResponseHeader(winrt::to_string(iter.Key()), winrt::to_string(iter.Value()));
+                    }
+                    // process the content type response header
+                    if (const auto contentType = responseMessage.Content().Headers().ContentType())
+                    {
+                        AddResponseHeader("content-type", winrt::to_string(contentType.ToString()));
+                    }
+
                     if (!responseMessage.IsSuccessStatusCode())
                     {
                         return arcana::task_from_result<std::exception_ptr>();
                     }
-
-                    m_responseUrl = winrt::to_string(responseMessage.RequestMessage().RequestUri().RawUri());
-
-                    for (auto&& iter : responseMessage.Headers())
-                    {
-                        m_headers.insert(std::make_pair(winrt::to_string(iter.Key()), winrt::to_string(iter.Value())));
-                    }
-                    // process the content type response header
-                    std::string contentTypeValue = winrt::to_string(responseMessage.Content().Headers().ContentType().ToString());
-                    std::string contentTypeKey = "content-type";
-                    m_headers.insert(std::make_pair(contentTypeKey, contentTypeValue));
 
                     switch (m_responseType)
                     {
@@ -140,11 +158,6 @@ namespace UrlLib
                                 .then(arcana::inline_scheduler, m_cancellationSource, [this](winrt::hstring string)
                                 {
                                     m_responseString = winrt::to_string(string);
-                                    // This backend normalizes any successful (2xx) response to Ok once the
-                                    // body has been read. Clear the wire phrase so StatusText() stays
-                                    // consistent with the normalized status code (falls back to "OK").
-                                    m_statusCode = UrlStatusCode::Ok;
-                                    m_statusText.clear();
                                 });
                         }
                         case UrlResponseType::Buffer:
@@ -153,10 +166,6 @@ namespace UrlLib
                                 .then(arcana::inline_scheduler, m_cancellationSource, [this](Storage::Streams::IBuffer buffer)
                                 {
                                     m_responseBuffer = std::move(buffer);
-                                    // See the String case: keep StatusText() consistent with the
-                                    // status code that this backend normalizes to Ok on success.
-                                    m_statusCode = UrlStatusCode::Ok;
-                                    m_statusText.clear();
                                 });
                         }
                         default:

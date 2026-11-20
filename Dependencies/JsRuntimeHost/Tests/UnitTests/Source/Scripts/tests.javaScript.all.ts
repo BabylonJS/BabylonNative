@@ -1,7 +1,9 @@
 import "./tests.setup";
 import "./tests.abortController";
 import "./tests.xmlHttpRequest";
+import "./tests.xmlHttpRequest.wpt";
 import "./tests.fetch";
+import "./tests.fetch.wpt";
 import "./tests.scheduling";
 import "./tests.webSocket";
 import "./tests.url";

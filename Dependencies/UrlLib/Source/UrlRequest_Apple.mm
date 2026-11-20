@@ -6,6 +6,23 @@
 
 #import <Foundation/Foundation.h>
 
+// Records what NSURLSession reports only through task metrics: the protocol the response arrived
+// over and the number of redirects. The metrics reach a delegate before the task's completion
+// handler is called.
+@interface UrlLibTaskMetricsDelegate : NSObject <NSURLSessionTaskDelegate>
+// The ALPN name of the last transaction ("http/1.1", "h2", "h3"), or nil when there was none.
+@property (atomic, copy) NSString* networkProtocolName;
+@property (atomic) NSUInteger redirectCount;
+@end
+
+@implementation UrlLibTaskMetricsDelegate
+- (void)URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task didFinishCollectingMetrics:(NSURLSessionTaskMetrics*)metrics
+{
+    self.networkProtocolName = metrics.transactionMetrics.lastObject.networkProtocolName;
+    self.redirectCount = metrics.redirectCount;
+}
+@end
+
 namespace
 {
     auto URLAllowedCharacterSet = []()
@@ -132,9 +149,35 @@ namespace UrlLib
                 mutableRequest.HTTPBody = requestBodyData;
             }
 
+#if defined(URLLIB_ATTEMPT_HTTP3) && ( \
+    (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 110300) || \
+    (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 140500) || \
+    (defined(__TV_OS_VERSION_MAX_ALLOWED) && __TV_OS_VERSION_MAX_ALLOWED >= 140500))
+            // Race QUIC against TCP for this request instead of waiting to learn HTTP/3 support
+            // from DNS or a previous response. QUIC is TLS-only, so https only (app:// is file://
+            // by now). The SDK check keeps the property out of builds against older SDKs, and
+            // @available keeps it off older systems.
+            if ([m_url.scheme caseInsensitiveCompare:@"https"] == NSOrderedSame)
+            {
+                if (@available(macOS 11.3, iOS 14.5, tvOS 14.5, *))
+                {
+                    mutableRequest.assumesHTTP3Capable = YES;
+                }
+            }
+#endif
+
             request = [mutableRequest copy];
 
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
+
+            // A per-task delegate needs macOS 12 / iOS 15. On older systems the protocol stays
+            // unknown, so the status text is the standard phrase for the status code, and a
+            // redirect is recognized by the URL having changed.
+            UrlLibTaskMetricsDelegate* metricsDelegate{nil};
+            if (@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *))
+            {
+                metricsDelegate = [[UrlLibTaskMetricsDelegate alloc] init];
+            }
 
             id completionHandler{^(NSData* data, NSURLResponse* response, NSError* error)
             {
@@ -189,11 +232,28 @@ namespace UrlLib
                 {
                     NSHTTPURLResponse* httpResponse{(NSHTTPURLResponse*)response};
                     m_statusCode = static_cast<UrlStatusCode>(httpResponse.statusCode);
-                    
+
+                    // NSURLSession does not report the reason phrase of an HTTP/1.x status line,
+                    // so the status text is the standard phrase for the status code, except over
+                    // HTTP/2 and HTTP/3, which have no reason phrase.
+                    if (Http::IsHttp2OrLater(ToStdString(metricsDelegate.networkProtocolName)))
+                    {
+                        m_reasonPhrase = Http::ReasonPhrase::None;
+                    }
+
+                    // The URL of the final response of a redirect chain. Local file responses keep
+                    // the URL the request was opened with (app:// maps to a bundle path here).
+                    m_responseUrl = ToStdString(httpResponse.URL.absoluteString);
+                    m_redirected = metricsDelegate != nil
+                        ? metricsDelegate.redirectCount > 0
+                        : ![httpResponse.URL.absoluteString isEqualToString:request.URL.absoluteString];
+
+                    // allHeaderFields has one entry per name, with the values of a repeated header
+                    // already joined by ", ".
                     for (id key in httpResponse.allHeaderFields)
                     {
                         id value = [httpResponse.allHeaderFields objectForKey:key];
-                        m_headers.insert({ToLower([key UTF8String]), [value UTF8String]});
+                        AddResponseHeader(ToStdString(key), ToStdString(value));
                     }
                 }
                 else
@@ -226,6 +286,10 @@ namespace UrlLib
             }};
 
             NSURLSessionDataTask* task{[session dataTaskWithRequest:request completionHandler:completionHandler]};
+            if (@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *))
+            {
+                task.delegate = metricsDelegate;
+            }
             [task resume];
 
             // Observe Abort(): NSURLSession runs the request asynchronously and does not watch

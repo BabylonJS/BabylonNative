@@ -149,6 +149,21 @@ namespace UrlLib
                 // Request-specific failure detail (host/port/path specifics) lands here during
                 // the transfer; see the error handling in PerformAsync.
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_ERRORBUFFER, m_curlErrorBuffer.data()));
+
+#if defined(URLLIB_ATTEMPT_HTTP3)
+                // Attempt HTTP/3 first on https and let libcurl fall back to HTTP/2 or 1.1. Checked
+                // at run time so one binary follows the system curl: the fallback exists from
+                // 8.0.0 (earlier versions treat CURL_HTTP_VERSION_3 as HTTP/3 or fail), and only
+                // builds with a QUIC backend report CURL_VERSION_HTTP3.
+                if (scheme != nullptr && std::strcmp(scheme, "https") == 0)
+                {
+                    const curl_version_info_data* versionInfo{curl_version_info(CURLVERSION_NOW)};
+                    if ((versionInfo->features & CURL_VERSION_HTTP3) != 0 && versionInfo->version_num >= 0x080000)
+                    {
+                        curl_check(curl_easy_setopt(m_curl, CURLOPT_HTTP_VERSION, static_cast<long>(CURL_HTTP_VERSION_3)));
+                    }
+                }
+#endif
             }
         }
 
@@ -312,6 +327,21 @@ namespace UrlLib
                         else
                         {
                             m_statusCode = static_cast<UrlStatusCode>(codep);
+
+                            // The URL of the final response of a redirect chain. Local file
+                            // responses keep the URL the request was opened with (app:// maps to
+                            // a path next to the executable here).
+                            char* effectiveUrl{};
+                            if (!m_file && curl_easy_getinfo(m_curl, CURLINFO_EFFECTIVE_URL, &effectiveUrl) == CURLE_OK && effectiveUrl != nullptr)
+                            {
+                                m_responseUrl = effectiveUrl;
+                            }
+
+                            long redirectCount{};
+                            if (curl_easy_getinfo(m_curl, CURLINFO_REDIRECT_COUNT, &redirectCount) == CURLE_OK)
+                            {
+                                m_redirected = redirectCount > 0;
+                            }
                         }
                     }
                     catch (const std::exception& e)
@@ -340,34 +370,16 @@ namespace UrlLib
                 char* bufferEnd = buffer + length;
 
                 // Status line: "HTTP/<version> <code>[ <reason>]\r\n". HTTP/1.x carries a reason
-                // phrase; HTTP/2+ omits it. curl delivers a fresh status line for every response
-                // in the chain (e.g. each redirect hop), so reset and let the final one win.
-                if (length >= 5 && std::strncmp(buffer, "HTTP/", 5) == 0)
+                // phrase; HTTP/2+ has none. curl delivers a status line and a set of headers for
+                // every response in the chain (each redirect hop, a 100 Continue), so start over
+                // on each one and let the final response win.
+                const Http::StatusLine statusLine{Http::ParseStatusLine({buffer, length})};
+                if (statusLine.majorVersion != 0)
                 {
                     auto& impl = *static_cast<Impl*>(userdata);
-                    impl.m_statusText.clear();
-
-                    // Skip "HTTP/<version>" then the spaces and the numeric status code.
-                    char* cursor = buffer;
-                    for (; cursor < bufferEnd && *cursor != ' '; ++cursor) {}      // end of version token
-                    for (; cursor < bufferEnd && *cursor == ' '; ++cursor) {}      // spaces before code
-                    for (; cursor < bufferEnd && *cursor != ' '; ++cursor) {}      // status code digits
-                    for (; cursor < bufferEnd && *cursor == ' '; ++cursor) {}      // spaces before reason
-
-                    char* reasonEnd = bufferEnd;
-                    for (; reasonEnd - 1 >= cursor; --reasonEnd)
-                    {
-                        auto ch = *(reasonEnd - 1);
-                        if (ch != '\r' && ch != '\n' && ch != ' ')
-                        {
-                            break;
-                        }
-                    }
-
-                    if (cursor < reasonEnd)
-                    {
-                        impl.m_statusText.assign(cursor, reasonEnd);
-                    }
+                    impl.m_headers.clear();
+                    impl.m_reasonPhrase = statusLine.reasonPhrase;
+                    impl.m_statusText.assign(statusLine.phrase);
 
                     return nitems * size;
                 }
@@ -387,7 +399,7 @@ namespace UrlLib
                     char* valueStart = keyEnd + 1;
                     for (; valueStart < bufferEnd; ++valueStart)
                     {
-                        if (*valueStart != ' ')
+                        if (*valueStart != ' ' && *valueStart != '\t')
                         {
                             break;
                         }
@@ -397,15 +409,16 @@ namespace UrlLib
                     for (; valueEnd - 1 >= valueStart; --valueEnd)
                     {
                         auto ch = *(valueEnd - 1);
-                        if (ch != '\r' && ch != '\n' && ch != ' ')
+                        if (ch != '\r' && ch != '\n' && ch != ' ' && ch != '\t')
                         {
                             break;
                         }
                     }
 
-                    std::string key{keyStart, keyEnd};
-                    std::string value{valueStart, valueEnd};
-                    static_cast<Impl*>(userdata)->m_headers.insert({std::move(key), std::move(value)});
+                    // Names are stored lower-cased and the values of a repeated name are combined.
+                    const std::string_view key{keyStart, static_cast<size_t>(keyEnd - keyStart)};
+                    const std::string_view value{valueStart, static_cast<size_t>(valueEnd - valueStart)};
+                    static_cast<Impl*>(userdata)->AddResponseHeader(key, value);
                 }
             }
 

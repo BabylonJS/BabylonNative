@@ -16,9 +16,11 @@ describe("fetch", function () {
     });
 
     it("should expose statusText", async function () {
-        const okResponse = await fetch("https://github.com/");
+        // The loopback server speaks HTTP/1.1, which has a reason phrase. Over HTTP/2 and HTTP/3
+        // there is none and statusText is "", so this cannot be asserted against a public host.
+        const okResponse = await fetch(loopbackHttpOrigin + "/xhr/resources/status.py?code=200&text=OK");
         expect(okResponse.statusText).to.equal("OK");
-        const notFoundResponse = await fetch("https://github.com/babylonJS/BabylonNative404");
+        const notFoundResponse = await fetch(loopbackHttpOrigin + "/xhr/resources/status.py?code=404&text=Not%20Found");
         expect(notFoundResponse.statusText).to.equal("Not Found");
     });
 

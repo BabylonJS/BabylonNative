@@ -15,10 +15,18 @@ FetchContent_MakeAvailable(googletest)
 set_property(TARGET gtest PROPERTY FOLDER Dependencies)
 set_property(TARGET gtest_main PROPERTY FOLDER Dependencies)
 
-add_executable(UrlLibTests UrlRequestErrorReporting.cpp SchemeResolver.cpp)
+add_executable(UrlLibTests
+    HttpSemantics.cpp
+    SchemeResolver.cpp
+    UrlRequestErrorReporting.cpp
+    UrlRequestHttpResponse.cpp)
+
+# HttpSemantics.cpp tests the internal header Source/UrlRequest_Http.h.
+target_include_directories(UrlLibTests PRIVATE "../Source")
 
 target_link_libraries(UrlLibTests
     PRIVATE UrlLib
+    PRIVATE UrlLibTestSupport
     PRIVATE GTest::gtest_main)
 
 if(APPLE)
