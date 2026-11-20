@@ -17,6 +17,27 @@ namespace fs = std::filesystem;
 
 namespace {
 
+fs::path GetExecutablePath(const char* argv0) {
+#if defined(_WIN32)
+  // argv[0] is the command as typed, which omits ".exe" when launched by bare name.
+  std::wstring path(MAX_PATH, L'\0');
+  for (;;) {
+    DWORD length = ::GetModuleFileNameW(nullptr, path.data(),
+                                        static_cast<DWORD>(path.size()));
+    if (length == 0) {
+      return {};
+    }
+    if (length < path.size()) {
+      path.resize(length);
+      return path;
+    }
+    path.resize(path.size() * 2);
+  }
+#else
+  return fs::canonical(argv0);
+#endif
+}
+
 fs::path ResolveNodeLitePath(const fs::path& exe_path) {
   fs::path nodeLitePath = exe_path;
   nodeLitePath.replace_filename("node_lite");
@@ -57,7 +78,7 @@ int main(int argc, char** argv) {
   ::SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
 #endif
 
-  fs::path exe_path = fs::canonical(argv[0]);
+  fs::path exe_path = GetExecutablePath(argv[0]);
   fs::path js_root = ResolveTestsRoot(exe_path);
   if (!fs::exists(js_root)) {
     std::cerr << "Error: Cannot find Node-API test directory." << std::endl;
