@@ -34,7 +34,7 @@ FetchContent_Declare(bimg
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.git
-    GIT_TAG 2b0c461c7fbe4a83df5f0a458e5c4e86a8deeb8d
+    GIT_TAG 201e2f57a95226eb1997c526ff223152aff6173b
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
