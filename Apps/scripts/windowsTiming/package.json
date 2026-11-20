@@ -1,0 +1,10 @@
+{
+  "name": "experimental-native-windows-timing",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "@playwright/test": "1.57.0",
+    "pngjs": "7.0.0",
+    "typescript": "5.9.3"
+  }
+}
