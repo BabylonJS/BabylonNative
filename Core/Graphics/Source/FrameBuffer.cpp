@@ -212,7 +212,7 @@ namespace Babylon::Graphics
 
         const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
         const std::array<float, 4> color{r, g, b, a};
-        const auto packedColor = maskColorAttachments ? std::nullopt : PackClearColor(color);
+        const auto packedColor = maskColorAttachments || m_hasIntegerColorAttachment ? std::nullopt : PackClearColor(color);
         const bool usePalette = (flags & BGFX_CLEAR_COLOR) != 0 && !packedColor.has_value();
         const auto paletteIndex = usePalette ? m_deviceContext.AcquireClearPaletteIndex(color) : uint8_t{};
 

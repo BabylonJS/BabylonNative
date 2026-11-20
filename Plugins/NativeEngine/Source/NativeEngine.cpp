@@ -21,6 +21,7 @@
 #include <bgfx/bgfx.h>
 #include <bimg/bimg.h>
 #include <bx/error.h>
+#include <bx/pixelformat.h>
 #include <bx/platform.h>
 
 namespace bgfx
@@ -3397,6 +3398,7 @@ void main() {
         std::array<bgfx::Attachment, MAXIMUM_FRAME_BUFFER_ATTACHMENTS> attachments{};
         uint8_t numAttachments = 0;
         uint8_t depthOneVolumeAttachmentMask{};
+        bool hasIntegerColorAttachment{};
 
         // An uninitialized texture requests a sampleable depth attachment.
         Graphics::Texture* depthStencilTextureRequest = depthStencilTexture;
@@ -3437,6 +3439,9 @@ void main() {
             attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, attachmentLayer, 1, mip
                 , autoGenMips ? BGFX_ATTACHMENT_AUTO_GEN_MIPS : BGFX_ATTACHMENT_NONE
                 );
+
+            const auto encoding = bx::EncodingType::Enum(bimg::getBlockInfo(bimg::TextureFormat::Enum(texture->Format())).encoding);
+            hasIntegerColorAttachment |= encoding == bx::EncodingType::Int || encoding == bx::EncodingType::Uint;
         }
 
         // Create and alias shared depth once; subsequent framebuffers borrow its handle.
@@ -3606,6 +3611,7 @@ void main() {
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, -1, isMultisampled, depthOneVolumeAttachmentMask);
         frameBuffer->SetGeneratedDepthStencil(std::move(generatedDepthStencil));
+        frameBuffer->SetHasIntegerColorAttachment(hasIntegerColorAttachment);
 
         // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
         // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
