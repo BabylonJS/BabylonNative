@@ -186,6 +186,13 @@ if(ANGLE_LIBEGL)
     )
 endif()
 
+if (UNIX AND NOT APPLE AND NOT ANDROID AND GRAPHICS_API STREQUAL "OpenGL")
+    # The X11 window takes the visual of bgfx's EGL config (X11/App.cpp).
+    find_package(OpenGL REQUIRED COMPONENTS EGL)
+    target_link_libraries(Playground PRIVATE OpenGL::EGL)
+    target_compile_definitions(Playground PRIVATE PLAYGROUND_EGL_VISUAL)
+endif()
+
 if (UNIX AND NOT APPLE AND NOT ANDROID)
     # Ubuntu mixes old experimental header and new runtime libraries
     # Resulting in crash at runtime for std::filesystem

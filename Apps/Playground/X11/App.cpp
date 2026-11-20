@@ -3,6 +3,9 @@
 #include <X11/keysymdef.h>
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.
 #include <X11/Xutil.h>
+#ifdef PLAYGROUND_EGL_VISUAL
+#include <EGL/egl.h>
+#endif
 #include <unistd.h> // syscall
 #undef None
 #include <cstdio>
@@ -24,6 +27,57 @@ namespace
 {
     std::optional<Babylon::Embedding::Runtime> g_runtime;
     std::optional<Babylon::Embedding::View> g_view;
+
+#ifdef PLAYGROUND_EGL_VISUAL
+    // bgfx renders through the first EGL config matching these attributes (OpenGL ES 3.0, the
+    // default BGRA8 back buffer with D24S8 depth/stencil). NVIDIA's EGL refuses to create a window
+    // surface whose X visual differs from that config's, so the window is created with its visual.
+    bool GetEglVisual(Display* display, XVisualInfo& visualInfo)
+    {
+        EGLDisplay eglDisplay = eglGetDisplay(display);
+        if (eglDisplay == EGL_NO_DISPLAY || !eglInitialize(eglDisplay, nullptr, nullptr))
+        {
+            return false;
+        }
+
+        const EGLint attributes[] = {
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+            EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+            EGL_BLUE_SIZE, 8,
+            EGL_GREEN_SIZE, 8,
+            EGL_RED_SIZE, 8,
+            EGL_ALPHA_SIZE, 8,
+            EGL_DEPTH_SIZE, 24,
+            EGL_STENCIL_SIZE, 8,
+            EGL_SAMPLES, 0,
+            EGL_NONE,
+        };
+
+        EGLConfig config{};
+        EGLint count{};
+        EGLint visualId{};
+        const bool found = eglChooseConfig(eglDisplay, attributes, &config, 1, &count) && count > 0 &&
+                           eglGetConfigAttrib(eglDisplay, config, EGL_NATIVE_VISUAL_ID, &visualId) && visualId != 0;
+        eglTerminate(eglDisplay);
+        if (!found)
+        {
+            return false;
+        }
+
+        XVisualInfo visualTemplate{};
+        visualTemplate.visualid = static_cast<VisualID>(visualId);
+        int visualCount{};
+        XVisualInfo* visuals = XGetVisualInfo(display, VisualIDMask, &visualTemplate, &visualCount);
+        if (visuals == nullptr)
+        {
+            return false;
+        }
+
+        visualInfo = visuals[0];
+        XFree(visuals);
+        return true;
+    }
+#endif
 
     void Uninitialize()
     {
@@ -111,6 +165,16 @@ int main(int _argc, const char* const* _argv)
     int32_t depth  = DefaultDepth(display, screen);
     Visual* visual = DefaultVisual(display, screen);
     Window root   = RootWindow(display, screen);
+    Colormap colormap{};
+#ifdef PLAYGROUND_EGL_VISUAL
+    XVisualInfo eglVisual{};
+    if (GetEglVisual(display, eglVisual))
+    {
+        visual = eglVisual.visual;
+        depth = eglVisual.depth;
+        colormap = XCreateColormap(display, root, visual, AllocNone);
+    }
+#endif
     const int width = 600;
     const int height = 400;
 
@@ -118,6 +182,7 @@ int main(int _argc, const char* const* _argv)
     windowAttrs.background_pixel = 0;
     windowAttrs.background_pixmap = 0;
     windowAttrs.border_pixel = 0;
+    windowAttrs.colormap = colormap;
     windowAttrs.event_mask = 0
             | ButtonPressMask
             | ButtonReleaseMask
@@ -135,7 +200,7 @@ int main(int _argc, const char* const* _argv)
                             , depth
                             , InputOutput
                             , visual
-                            , CWBorderPixel|CWEventMask
+                            , CWBorderPixel|CWEventMask|(colormap != 0 ? CWColormap : 0)
                             , &windowAttrs
                             );
 
@@ -269,6 +334,10 @@ int main(int _argc, const char* const* _argv)
 
     XUnmapWindow(display, window);
     XDestroyWindow(display, window);
+    if (colormap != 0)
+    {
+        XFreeColormap(display, colormap);
+    }
     XCloseDisplay(display);
 
     return 0;
