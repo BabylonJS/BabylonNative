@@ -113,7 +113,11 @@ bool InitializeAndroidNodeApiTests(JNIEnv* env, jobject context) {
     NodeApiTestConfig config{};
     config.js_root = root;
     config.run_script = [root](const std::filesystem::path& script) {
-      return RunNodeLiteScript(root, script);
+      ProcessResult result = RunNodeLiteScript(root, script);
+      // Node runs each script in a fresh process, so unload the addons to
+      // give the next script fresh static state.
+      NodeLitePlatform::UnloadLibraries();
+      return result;
     };
     std::istringstream suites{NODE_API_AVAILABLE_NATIVE_TESTS};
     std::string suite;

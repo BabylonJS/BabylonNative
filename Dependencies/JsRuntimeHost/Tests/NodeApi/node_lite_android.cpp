@@ -1,8 +1,15 @@
 #include "node_lite.h"
 
 #include <dlfcn.h>
+#include <vector>
 
 namespace node_api_tests {
+
+namespace
+{
+    // Each successful dlopen adds a reference, so keep every handle.
+    std::vector<void*> g_loadedLibraries;
+}
 
 /*static*/ void* NodeLitePlatform::LoadFunction(
     napi_env /*env*/,
@@ -21,7 +28,17 @@ namespace node_api_tests {
         return nullptr;
     }
 
+    g_loadedLibraries.push_back(handle);
     return dlsym(handle, function_name.c_str());
+}
+
+/*static*/ void NodeLitePlatform::UnloadLibraries() noexcept
+{
+    for (auto it = g_loadedLibraries.rbegin(); it != g_loadedLibraries.rend(); ++it)
+    {
+        dlclose(*it);
+    }
+    g_loadedLibraries.clear();
 }
 
 } // namespace node_api_tests

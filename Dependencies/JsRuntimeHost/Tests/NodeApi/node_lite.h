@@ -285,6 +285,11 @@ class NodeLitePlatform {
   static void* LoadFunction(napi_env env,
                             const std::filesystem::path& lib_path,
                             const std::string& function_name) noexcept;
+#if defined(__ANDROID__)
+  // Closes every library opened by LoadFunction. Call only after the runtime
+  // that used them has been destroyed.
+  static void UnloadLibraries() noexcept;
+#endif
 };
 
 using NodeApiCallback =
