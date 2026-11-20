@@ -1,8 +1,13 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/JsRuntime.h>
+#include <bx/sort.h>
 #include <algorithm>
 #include <array>
+#include <cstdint>
+#include <cstring>
+#include <limits>
 #include <optional>
+#include <vector>
 
 namespace
 {
@@ -303,20 +308,15 @@ namespace
         }
     }
 
-    static int sortSplatQSort(const void* p1, const void* p2) {
-        const float* a = (const float*)p1;
-        const float* b = (const float*)p2;
-        if (a[1] < b[1]) {
-            return -1;
-        }
-        if (a[1] > b[1]) {
-            return 1;
-        }
-        return 0;
+    // Maps an IEEE-754 float to an unsigned key whose integer order matches the float order, so the
+    // depth sort can be a stable radix sort instead of a comparison sort.
+    static inline uint32_t FloatToSortableKey(float value)
+    {
+        uint32_t bits;
+        std::memcpy(&bits, &value, sizeof(bits));
+        return (bits & 0x80000000u) ? ~bits : (bits | 0x80000000u);
     }
 
-
-    // This function is not threadsafe because of static
     void sortSplats(const Napi::CallbackInfo& info)
     {
         const auto modelView{ info[0].As<Napi::Object>() };
@@ -328,6 +328,11 @@ namespace
         }
         const auto m{ matrixStorage.As<Napi::Object>() };
 
+        if (!(info[1].IsTypedArray() && info[1].As<Napi::TypedArray>().TypedArrayType() == napi_float32_array) ||
+            !(info[2].IsTypedArray() && info[2].As<Napi::TypedArray>().TypedArrayType() == napi_float32_array))
+        {
+            throw Napi::TypeError::New(info.Env(), "sortSplats requires positions and indices to be Float32Arrays.");
+        }
         auto positions{ info[1].As<Napi::Float32Array>() };
 
         auto indices{ info[2].As<Napi::Float32Array>() };
@@ -352,26 +357,43 @@ namespace
         {
             throw Napi::TypeError::New(info.Env(), "sortSplats requires modelView._m[2], [6], [10] to be numbers.");
         }
-        float vp[3] = {
+        const float vp[3] = {
             m2.As<Napi::Number>().FloatValue(),
             m6.As<Napi::Number>().FloatValue(),
             m10.As<Napi::Number>().FloatValue()
         };
-        static std::vector<float> depthMix;
-
-        depthMix.resize(splatCount * 2);
-
-        for (size_t i = 0; i < splatCount; i++)
+        if (splatCount > std::numeric_limits<uint32_t>::max())
         {
-            depthMix[i * 2 + 0] = float(i);
-            depthMix[i * 2 + 1] = 10000.f + (vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]) * depthFactor;
+            throw Napi::RangeError::New(info.Env(), "sortSplats supports at most 2^32 - 1 splats.");
         }
 
-        qsort(depthMix.data(), splatCount, 2 * sizeof(float), sortSplatQSort);
+        // Reused across calls (no per-sort allocation once the splat count is stable) and per thread,
+        // so runtimes on different threads do not share scratch storage.
+        thread_local std::vector<uint32_t> keys, keysScratch, order, orderScratch;
+        keys.resize(splatCount);
+        keysScratch.resize(splatCount);
+        order.resize(splatCount);
+        orderScratch.resize(splatCount);
 
+        const float* positionData = positions.Data();
         for (size_t i = 0; i < splatCount; i++)
         {
-            indices[i] = depthMix[i * 2 + 0];
+            const float depth = 10000.f + (vp[0] * positionData[4 * i + 0] + vp[1] * positionData[4 * i + 1] + vp[2] * positionData[4 * i + 2]) * depthFactor;
+            keys[i] = FloatToSortableKey(depth);
+            order[i] = static_cast<uint32_t>(i);
+        }
+
+        // Stable: splats at equal depth keep their index order. bx::radixSort reads the first key
+        // unconditionally, so skip it for an empty buffer.
+        if (splatCount > 0)
+        {
+            bx::radixSort(keys.data(), keysScratch.data(), order.data(), orderScratch.data(), static_cast<uint32_t>(splatCount));
+        }
+
+        float* indexData = indices.Data();
+        for (size_t i = 0; i < splatCount; i++)
+        {
+            indexData[i] = static_cast<float>(order[i]);
         }
 
         // Point padding entries at the one-past-the-end sentinel, like the Babylon.js sort worker.
