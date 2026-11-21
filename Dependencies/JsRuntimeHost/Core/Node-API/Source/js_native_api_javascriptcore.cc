@@ -2211,6 +2211,12 @@ napi_status napi_is_detached_arraybuffer(napi_env env, napi_value arraybuffer, b
   CHECK_ENV(env);
   CHECK_ARG(env, arraybuffer);
   CHECK_ARG(env, result);
+  bool is_arraybuffer{};
+  CHECK_NAPI(napi_is_arraybuffer(env, arraybuffer, &is_arraybuffer));
+  if (!is_arraybuffer) {
+    *result = false;
+    return napi_ok;
+  }
   JSObjectRef ab = ToJSObject(env, arraybuffer);
   JSValueRef exception{};
   if (env->arraybuffer_detached_getter != nullptr) {

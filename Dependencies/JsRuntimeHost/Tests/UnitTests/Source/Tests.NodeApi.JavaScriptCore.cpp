@@ -190,6 +190,31 @@ TEST_F(JscNodeApiWithoutDetachedGetter, SliceFallbackIgnoresPatchedMethods)
     EXPECT_FALSE(detached);
 }
 
+TEST_F(JscNodeApi, ArrayBufferWrapperRefreshesInfoAfterDetach)
+{
+    if (!Napi::Value(env, Eval("typeof ArrayBuffer.prototype.transfer === 'function'")).ToBoolean())
+    {
+        GTEST_SKIP() << "ArrayBuffer transfer is unavailable in this engine";
+    }
+    const auto buffer = Eval("new ArrayBuffer(32)");
+    const Napi::ArrayBuffer wrapper{env, buffer};
+    EXPECT_EQ(wrapper.ByteLength(), 32u);
+    ASSERT_EQ(napi_detach_arraybuffer(env, buffer), napi_ok);
+    EXPECT_EQ(wrapper.ByteLength(), 0u);
+    EXPECT_EQ(wrapper.Data(), nullptr);
+}
+
+// Deno tests/napi/arraybuffer_test.js: this is a predicate, not a receiver brand check.
+TEST_F(JscNodeApi, NonArrayBuffersAreNotDetached)
+{
+    for (const char* source : {"undefined", "null", "2", "'foo'", "({})", "new Uint8Array(10)"})
+    {
+        bool detached{true};
+        ASSERT_EQ(napi_is_detached_arraybuffer(env, Eval(source), &detached), napi_ok) << source;
+        EXPECT_FALSE(detached) << source;
+    }
+}
+
 TEST_F(JscNodeApi, DetachNeverReportsSuccessForPinnedBuffer)
 {
     if (!Napi::Value(env, Eval("typeof ArrayBuffer.prototype.transfer === 'function'")).ToBoolean())

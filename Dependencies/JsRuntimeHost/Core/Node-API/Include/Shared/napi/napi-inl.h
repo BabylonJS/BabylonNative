@@ -1974,25 +1974,17 @@ inline ArrayBuffer::ArrayBuffer(napi_env env, napi_value value, void* data, size
 
 // [BABYLON-NATIVE-ADDITION]
 inline void* ArrayBuffer::Data() const {
-  EnsureInfo();
+  napi_status status = napi_get_arraybuffer_info(_env, _value, &_data, nullptr);
+  NAPI_THROW_IF_FAILED(_env, status, nullptr);
   return _data;
 }
 
 // [BABYLON-NATIVE-ADDITION]
 inline size_t ArrayBuffer::ByteLength() const {
-  EnsureInfo();
+  // A pointer request can pin the backing store on JSC. A length query must not.
+  napi_status status = napi_get_arraybuffer_info(_env, _value, nullptr, &_length);
+  NAPI_THROW_IF_FAILED(_env, status, 0);
   return _length;
-}
-
-// [BABYLON-NATIVE-ADDITION]
-inline void ArrayBuffer::EnsureInfo() const {
-  // The ArrayBuffer instance may have been constructed from a napi_value whose
-  // length/data are not yet known. Fetch and cache these values just once,
-  // since they can never change during the lifetime of the ArrayBuffer.
-  if (_data == nullptr) {
-    napi_status status = napi_get_arraybuffer_info(_env, _value, &_data, &_length);
-    NAPI_THROW_IF_FAILED_VOID(_env, status);
-  }
 }
 
 #if NAPI_VERSION >= 7
