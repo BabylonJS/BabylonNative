@@ -36,6 +36,12 @@
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Fetch.h>
+#if JSRUNTIMEHOST_POLYFILL_STREAMS
+#include <Babylon/Polyfills/Streams.h>
+#endif
+#if JSRUNTIMEHOST_POLYFILL_COMPRESSION
+#include <Babylon/Polyfills/Compression.h>
+#endif
 #include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
@@ -247,6 +253,12 @@ namespace Babylon::Embedding
             Babylon::Polyfills::TextDecoder::Initialize(env);
             Babylon::Polyfills::TextEncoder::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+#if JSRUNTIMEHOST_POLYFILL_STREAMS
+            Babylon::Polyfills::Streams::Initialize(env);
+#endif
+#if JSRUNTIMEHOST_POLYFILL_COMPRESSION
+            Babylon::Polyfills::Compression::Initialize(env);
+#endif
             Babylon::Polyfills::Fetch::Initialize(env);
 
 #if JSRUNTIMEHOST_POLYFILL_ABORTCONTROLLER

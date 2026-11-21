@@ -8,6 +8,8 @@ import "./tests.url";
 import "./tests.urlSearchParams";
 import "./tests.console";
 import "./tests.blob";
+import "./tests.streams";
+import "./tests.compression";
 import "./tests.nodeApi";
 import "./tests.performance";
 import "./tests.textDecoder";
