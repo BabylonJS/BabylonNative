@@ -11,7 +11,10 @@
 #endif
 #include <array>
 #include <cassert>
+#include <climits>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -256,6 +259,11 @@ static JSValue Callback(JSContext *ctx, JSValueConst this_val, int argc, JSValue
 };
 
 // Reference info for preventing GC - defined in js_native_api_quickjs.h.
+
+struct HandleScopeInfo {
+  size_t start;
+  bool escaped;
+};
 
 // Initialize class IDs (allocate once globally, register per runtime)
 void InitClassIds(JSRuntime* rt) {
@@ -1895,7 +1903,8 @@ napi_status napi_open_handle_scope(napi_env env, napi_handle_scope* result) {
   // it -- napi_open_escapable_handle_scope did exactly that and the colliding
   // scopes shared one entry; it uses a counter for that reason.
   env->current_scope_start = env->handle_scope_stack.size();
-  *result = reinterpret_cast<napi_handle_scope>(env->current_scope_start + 1);
+  *result = reinterpret_cast<napi_handle_scope>(
+    new HandleScopeInfo{env->current_scope_start, false});
   
   napi_clear_last_error(env);
   return napi_ok;
@@ -1906,7 +1915,8 @@ napi_status napi_close_handle_scope(napi_env env, napi_handle_scope scope) {
   CHECK_ARG(env, scope);
   
   // Free all JSValues created in this scope
-  size_t scope_start = reinterpret_cast<size_t>(scope) - 1;
+  auto* scopeInfo = reinterpret_cast<HandleScopeInfo*>(scope);
+  size_t scope_start = scopeInfo->start;
   
   // Call JS_FreeValue on all values in scope
   for (size_t i = scope_start; i < env->handle_scope_stack.size(); i++) {
@@ -1916,6 +1926,7 @@ napi_status napi_close_handle_scope(napi_env env, napi_handle_scope scope) {
   // Remove from stack
   env->handle_scope_stack.resize(scope_start);
   env->current_scope_start = scope_start;
+  delete scopeInfo;
   
   napi_clear_last_error(env);
   return napi_ok;
@@ -2039,32 +2050,89 @@ napi_status napi_create_arraybuffer(napi_env env, size_t byte_length, void** dat
 }
 
 namespace {
-  void ArrayBufferFreeCallback(JSRuntime* rt, void* opaque, void* ptr) {
-    ExternalData* externalData = reinterpret_cast<ExternalData*>(opaque);
-    if (externalData != nullptr) {
-      // Invoke via the class finalizer which calls _cb properly
-      ExternalData::RunCallback(externalData);
-      delete externalData;
+  napi_status AttachFinalizerHolder(napi_env env,
+                                    JSValueConst jsObject,
+                                    void* finalizeData,
+                                    napi_finalize finalizeCb,
+                                    void* finalizeHint) {
+    JSRuntime* rt = JS_GetRuntime(env->context);
+    InitClassIds(rt);
+
+    JSValue holder = JS_NewObjectClass(env->context, js_external_class_id);
+    if (JS_IsException(holder)) {
+      return napi_set_last_error(env, napi_generic_failure);
     }
+
+    JSValue symbol = JS_NewSymbol(env->context, "napi.finalizer", false);
+    if (JS_IsException(symbol)) {
+      JS_FreeValue(env->context, holder);
+      return napi_set_last_error(env, napi_generic_failure);
+    }
+
+    JSAtom atom = JS_ValueToAtom(env->context, symbol);
+    JS_FreeValue(env->context, symbol);
+    if (atom == JS_ATOM_NULL) {
+      JS_FreeValue(env->context, holder);
+      return napi_set_last_error(env, napi_generic_failure);
+    }
+
+    // JS_DefinePropertyValue consumes its value regardless of success. Pass a
+    // duplicate and retain the local reference until the definition succeeds,
+    // so an attachment failure does not invoke a finalizer for memory that
+    // remains owned by the caller.
+    int defineResult = JS_DefinePropertyValue(
+      env->context,
+      jsObject,
+      atom,
+      JS_DupValue(env->context, holder),
+      JS_PROP_HAS_VALUE | JS_PROP_HAS_CONFIGURABLE | JS_PROP_CONFIGURABLE);
+    JS_FreeAtom(env->context, atom);
+    if (defineResult < 0) {
+      JS_FreeValue(env->context, holder);
+      return napi_set_last_error(env, napi_pending_exception);
+    }
+
+    JS_SetOpaque(holder, new ExternalData(env, finalizeData, finalizeCb, finalizeHint));
+    JS_FreeValue(env->context, holder);
+    return napi_ok;
   }
 }
 
 napi_status napi_create_external_arraybuffer(napi_env env, void* external_data, size_t byte_length, napi_finalize finalize_cb, void* finalize_hint, napi_value* result) {
   CHECK_ENV(env);
   CHECK_ARG(env, result);
-  
-  ExternalData* externalDataInfo = new ExternalData(env, external_data, finalize_cb, finalize_hint);
+
+  // Node treats a zero-length external ArrayBuffer with a null backing store
+  // as detached. quickjs-ng otherwise creates a valid zero-length buffer.
+  const bool createDetached = external_data == nullptr && byte_length == 0;
   
   JSValue arrayBuffer = JS_NewArrayBuffer(env->context, 
                                           reinterpret_cast<uint8_t*>(external_data), 
                                           byte_length, 
-                                          ArrayBufferFreeCallback, 
-                                          externalDataInfo, 
+                                          nullptr,
+                                          nullptr,
                                           0);
   
   if (JS_IsException(arrayBuffer)) {
-    delete externalDataInfo;
     return napi_set_last_error(env, napi_generic_failure);
+  }
+
+  // Let a holder owned by the ArrayBuffer run the Node-API finalizer. Using
+  // QuickJS's backing-store free callback is unsafe for detachable buffers:
+  // quickjs-ng invokes it once during detach and again during object teardown.
+  // The holder instead survives detach and finalizes exactly once with the
+  // ArrayBuffer object, while QuickJS never tries to free embedder-owned data.
+  if (finalize_cb != nullptr) {
+    napi_status status = AttachFinalizerHolder(
+      env, arrayBuffer, external_data, finalize_cb, finalize_hint);
+    if (status != napi_ok) {
+      JS_FreeValue(env->context, arrayBuffer);
+      return status;
+    }
+  }
+
+  if (createDetached) {
+    JS_DetachArrayBuffer(env->context, arrayBuffer);
   }
   
   *result = FromJSValue(env, arrayBuffer);
@@ -2456,6 +2524,37 @@ napi_status napi_run_script(napi_env env, napi_value script, const char* source_
   return napi_ok;
 }
 
+napi_status napi_add_finalizer(napi_env env,
+                               napi_value js_object,
+                               void* finalize_data,
+                               napi_finalize finalize_cb,
+                               void* finalize_hint,
+                               napi_ref* result) {
+  CHECK_ENV(env);
+  CHECK_ARG(env, js_object);
+  CHECK_ARG(env, finalize_cb);
+
+  JSValue jsObject = ToJSValue(js_object);
+  if (!JS_IsObject(jsObject)) {
+    return napi_set_last_error(env, napi_invalid_arg);
+  }
+
+  // QuickJS does not expose an embedder field for arbitrary objects. Keep a
+  // native-finalized holder alive through a unique Symbol property instead;
+  // collecting the target releases the holder and runs the Node-API callback.
+  // A fresh Symbol makes the attachment collision-free and invisible to
+  // string-keyed reflection.
+  CHECK_NAPI(AttachFinalizerHolder(
+    env, jsObject, finalize_data, finalize_cb, finalize_hint));
+
+  if (result != nullptr) {
+    CHECK_NAPI(napi_create_reference(env, js_object, 0, result));
+  }
+
+  napi_clear_last_error(env);
+  return napi_ok;
+}
+
 // Wrap/Unwrap for native objects
 //
 // Instances created by a napi class constructor carry the js_wrap_class_id
@@ -2709,20 +2808,74 @@ napi_status napi_create_bigint_uint64(napi_env env, uint64_t value, napi_value* 
   return napi_ok;
 }
 
+napi_status napi_create_bigint_words(napi_env env,
+                                     int sign_bit,
+                                     size_t word_count,
+                                     const uint64_t* words,
+                                     napi_value* result) {
+  CHECK_ENV(env);
+  CHECK_ARG(env, result);
+
+  if (word_count > static_cast<size_t>(INT_MAX)) {
+    return napi_set_last_error(env, napi_invalid_arg);
+  }
+  if (word_count > (static_cast<size_t>(1) << 24)) {
+    napi_throw_range_error(env, nullptr, "Maximum BigInt size exceeded");
+    return napi_set_last_error(env, napi_pending_exception);
+  }
+  if (word_count > 0) {
+    CHECK_ARG(env, words);
+  }
+
+  // Node-API words are little-endian 64-bit limbs. Build a hexadecimal
+  // literal from most- to least-significant limb and let QuickJS create the
+  // arbitrary-precision value.
+  std::string hex;
+  hex.reserve(word_count * 16);
+  for (size_t i = word_count; i-- > 0;) {
+    char limb[17];
+    std::snprintf(limb, sizeof(limb), "%016llx",
+                  static_cast<unsigned long long>(words[i]));
+    hex += limb;
+  }
+  if (hex.empty()) {
+    hex = "0";
+  }
+
+  std::string expression =
+      (sign_bit ? "-BigInt(\"0x" : "BigInt(\"0x") + hex + "\")";
+  JSValue bigint = JS_Eval(env->context,
+                           expression.c_str(),
+                           expression.size(),
+                           "napi_create_bigint_words",
+                           JS_EVAL_TYPE_GLOBAL);
+  if (JS_IsException(bigint)) {
+    return napi_set_last_error(env, napi_pending_exception);
+  }
+
+  *result = FromJSValue(env, bigint);
+  napi_clear_last_error(env);
+  return napi_ok;
+}
+
 napi_status napi_get_value_bigint_int64(napi_env env, napi_value value, int64_t* result, bool* lossless) {
   CHECK_ENV(env);
   CHECK_ARG(env, value);
   CHECK_ARG(env, result);
+  CHECK_ARG(env, lossless);
   
   JSValue jsValue = ToJSValue(value);
-  
+
+  if (!JS_IsBigInt(jsValue)) {
+    return napi_set_last_error(env, napi_bigint_expected);
+  }
   if (JS_ToBigInt64(env->context, result, jsValue) < 0) {
     return napi_set_last_error(env, napi_bigint_expected);
   }
-  
-  if (lossless != nullptr) {
-    *lossless = true; // QuickJS BigInt is arbitrary precision
-  }
+
+  JSValue truncated = JS_NewBigInt64(env->context, *result);
+  *lossless = JS_IsStrictEqual(env->context, jsValue, truncated);
+  JS_FreeValue(env->context, truncated);
   
   napi_clear_last_error(env);
   return napi_ok;
@@ -2732,20 +2885,105 @@ napi_status napi_get_value_bigint_uint64(napi_env env, napi_value value, uint64_
   CHECK_ENV(env);
   CHECK_ARG(env, value);
   CHECK_ARG(env, result);
+  CHECK_ARG(env, lossless);
   
   JSValue jsValue = ToJSValue(value);
-  
-  int64_t val;
-  if (JS_ToBigInt64(env->context, &val, jsValue) < 0) {
+
+  if (!JS_IsBigInt(jsValue)) {
     return napi_set_last_error(env, napi_bigint_expected);
   }
-  
-  *result = static_cast<uint64_t>(val);
-  
-  if (lossless != nullptr) {
-    *lossless = (val >= 0);
+  if (JS_ToBigUint64(env->context, result, jsValue) < 0) {
+    return napi_set_last_error(env, napi_bigint_expected);
   }
-  
+
+  JSValue truncated = JS_NewBigUint64(env->context, *result);
+  *lossless = JS_IsStrictEqual(env->context, jsValue, truncated);
+  JS_FreeValue(env->context, truncated);
+
+  napi_clear_last_error(env);
+  return napi_ok;
+}
+
+napi_status napi_get_value_bigint_words(napi_env env,
+                                        napi_value value,
+                                        int* sign_bit,
+                                        size_t* word_count,
+                                        uint64_t* words) {
+  CHECK_ENV(env);
+  CHECK_ARG(env, value);
+  CHECK_ARG(env, word_count);
+
+  JSValue jsValue = ToJSValue(value);
+  if (!JS_IsBigInt(jsValue)) {
+    return napi_set_last_error(env, napi_bigint_expected);
+  }
+
+  JSValue toString = JS_GetPropertyStr(env->context, jsValue, "toString");
+  if (JS_IsException(toString)) {
+    return napi_set_last_error(env, napi_pending_exception);
+  }
+  JSValue radix = JS_NewInt32(env->context, 16);
+  JSValue hexValue = JS_Call(env->context, toString, jsValue, 1, &radix);
+  JS_FreeValue(env->context, radix);
+  JS_FreeValue(env->context, toString);
+  if (JS_IsException(hexValue)) {
+    return napi_set_last_error(env, napi_pending_exception);
+  }
+
+  const char* rawHex = JS_ToCString(env->context, hexValue);
+  if (rawHex == nullptr) {
+    JS_FreeValue(env->context, hexValue);
+    return napi_set_last_error(env, napi_pending_exception);
+  }
+  std::string hex{rawHex};
+  JS_FreeCString(env->context, rawHex);
+  JS_FreeValue(env->context, hexValue);
+
+  const bool negative = !hex.empty() && hex.front() == '-';
+  std::string digits = negative ? hex.substr(1) : std::move(hex);
+  if (digits == "0") {
+    digits.clear();
+  }
+  const size_t needed = (digits.size() + 15) / 16;
+
+  if (words == nullptr) {
+    *word_count = needed;
+    napi_clear_last_error(env);
+    return napi_ok;
+  }
+
+  CHECK_ARG(env, sign_bit);
+  const size_t capacity = *word_count;
+  *word_count = needed;
+  *sign_bit = negative ? 1 : 0;
+  for (size_t i = 0; i < needed && i < capacity; ++i) {
+    const size_t end = digits.size() - i * 16;
+    const size_t start = end > 16 ? end - 16 : 0;
+    const std::string limb = digits.substr(start, end - start);
+    words[i] = static_cast<uint64_t>(
+        std::strtoull(limb.c_str(), nullptr, 16));
+  }
+
+  napi_clear_last_error(env);
+  return napi_ok;
+}
+
+napi_status napi_set_instance_data(napi_env env,
+                                   void* data,
+                                   napi_finalize finalize_cb,
+                                   void* finalize_hint) {
+  CHECK_ENV(env);
+  env->instance_data = data;
+  env->instance_data_finalize = finalize_cb;
+  env->instance_data_finalize_hint = finalize_hint;
+  napi_clear_last_error(env);
+  return napi_ok;
+}
+
+napi_status napi_get_instance_data(napi_env env, void** data) {
+  CHECK_ENV(env);
+  CHECK_ARG(env, data);
+  *data = env->instance_data;
   napi_clear_last_error(env);
   return napi_ok;
 }
@@ -2849,6 +3087,12 @@ napi_status napi_detach_arraybuffer(napi_env env, napi_value arraybuffer) {
   CHECK_ARG(env, arraybuffer);
   
   JSValue jsArrayBuffer = ToJSValue(arraybuffer);
+  if (!JS_IsArrayBuffer(jsArrayBuffer)) {
+    return napi_set_last_error(env, napi_arraybuffer_expected);
+  }
+  if (JS_IsImmutableArrayBuffer(jsArrayBuffer) != 0) {
+    return napi_set_last_error(env, napi_detachable_arraybuffer_expected);
+  }
   JS_DetachArrayBuffer(env->context, jsArrayBuffer);
   
   napi_clear_last_error(env);
@@ -2861,12 +3105,26 @@ napi_status napi_is_detached_arraybuffer(napi_env env, napi_value value, bool* r
   CHECK_ARG(env, result);
   
   JSValue jsValue = ToJSValue(value);
-  size_t size;
-  uint8_t* data = JS_GetArrayBuffer(env->context, &size, jsValue);
-  
-  // A detached ArrayBuffer returns NULL for data
-  *result = (data == nullptr);
-  
+  if (!JS_IsArrayBuffer(jsValue)) {
+    *result = false;
+    napi_clear_last_error(env);
+    return napi_ok;
+  }
+
+  // quickjs-ng exposes the standards-track ArrayBuffer.prototype.detached
+  // getter. Unlike testing the backing pointer, this correctly distinguishes
+  // detached buffers from valid zero-length buffers.
+  JSValue detached = JS_GetPropertyStr(env->context, jsValue, "detached");
+  if (JS_IsException(detached)) {
+    return napi_set_last_error(env, napi_pending_exception);
+  }
+  int detachedBool = JS_ToBool(env->context, detached);
+  JS_FreeValue(env->context, detached);
+  if (detachedBool < 0) {
+    return napi_set_last_error(env, napi_pending_exception);
+  }
+  *result = detachedBool != 0;
+
   napi_clear_last_error(env);
   return napi_ok;
 }

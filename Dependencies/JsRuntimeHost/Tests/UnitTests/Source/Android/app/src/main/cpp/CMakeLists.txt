@@ -29,6 +29,10 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Source/Tests.StandardStreamLogger.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.TimeoutDispatcher.cpp)
 
+if(TARGET NodeApiTestHarness)
+    target_link_libraries(UnitTestsJNI PRIVATE NodeApiTestHarness)
+endif()
+
 if(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER)
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.DynamicScriptLoader.cpp)
     target_link_libraries(UnitTestsJNI PRIVATE DynamicScriptLoader)

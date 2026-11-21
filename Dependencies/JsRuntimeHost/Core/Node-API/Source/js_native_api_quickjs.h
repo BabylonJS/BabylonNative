@@ -60,6 +60,13 @@ struct napi_env__ {
   // JS_FreeRuntime.
   std::vector<void*> refs_list;
 
+  // Per-environment instance data (Node-API v6). Replacing instance data does
+  // not finalize the previous value; the currently installed finalizer runs
+  // once when the environment is detached.
+  void* instance_data = nullptr;
+  napi_finalize instance_data_finalize = nullptr;
+  void* instance_data_finalize_hint = nullptr;
+
   // Set to true once Detach has run. Subsequent napi_delete_reference
   // calls (from native destructors running during the JS teardown
   // cascade) must not touch the context or the (already emptied)

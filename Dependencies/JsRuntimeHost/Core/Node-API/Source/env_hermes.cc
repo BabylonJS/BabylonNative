@@ -168,6 +168,16 @@ namespace Napi
         runtime->clearKeptObjects();
     }
 
+    void CollectGarbage(Napi::Env env)
+    {
+        auto* runtime = LookupRuntime(env);
+        if (runtime == nullptr)
+        {
+            throw std::invalid_argument{"Unknown Hermes environment"};
+        }
+        runtime->collect("Node-API conformance test");
+    }
+
     Napi::Value Eval(Napi::Env env, const char* source, const char* sourceUrl)
     {
         napi_env env_ptr{env};

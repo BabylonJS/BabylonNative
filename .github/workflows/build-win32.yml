@@ -220,6 +220,13 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\UrlLib\Tests\RelWithDebInfo
           UrlLibTests
 
+      - name: Node-API Conformance Tests
+        if: ${{ inputs.napi-type != 'jsi' }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Dependencies\JsRuntimeHost\Tests\NodeApi\RelWithDebInfo
+          NodeApiTests
+
       - name: Stage UnitTests Crash Dump
         if: failure()
         shell: powershell

@@ -3,7 +3,7 @@
 
 // [BABYLON-NATIVE-ADDITION]
 #ifndef NAPI_VERSION
-#define NAPI_VERSION 5
+#define NAPI_VERSION 7
 #endif
 
 // This file needs to be compatible with C compilers.
