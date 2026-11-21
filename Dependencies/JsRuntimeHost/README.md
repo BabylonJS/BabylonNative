@@ -41,6 +41,19 @@ _Follow the steps from [All Development Platforms](#all-development-platforms) b
 
 The minimal requirement target is Android 5.0.
 
+Android V8 uses a compact distribution without `Intl` by default. In that
+configuration, `Date.prototype.toLocaleString` need not honor locale, field, or
+time zone options. To use ECMA-402, pass
+`-DNAPI_ANDROID_V8_INTL_ROOT=/absolute/path/to/unpacked-v8` to CMake.
+Use headers, libraries and snapshots from the **same** Intl-enabled V8 build,
+compatible with the host's V8 ABI. The root must contain `include/v8.h`,
+`jni/<abi>/libv8android.so`, and `snapshot_blob/<abi>/snapshot_blob.bin` for
+each target ABI. For a distribution with an AAR, extract its `jni/` alongside
+the supplied `include/` and `snapshot_blob/`. The snapshot is embedded in the
+native host; no asset extraction is needed at startup. Choose a distribution
+with the API-level and ELF page alignment required by your Android targets.
+This option does not alter other JavaScript engines.
+
 Only building with Android Studio is supported. CMake is not used directly. Instead, Gradle
 is used for building and CMake is automatically invocated for building the native part.
 An `.apk` that can be executed on your device or simulator is the output.

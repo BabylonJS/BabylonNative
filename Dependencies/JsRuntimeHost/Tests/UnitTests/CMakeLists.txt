@@ -32,6 +32,11 @@ set(SOURCES
     "Source/Tests.StandardStreamLogger.cpp"
     "Source/Tests.TimeoutDispatcher.cpp")
 
+if((APPLE AND NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore") OR
+   (ANDROID AND NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND NAPI_ANDROID_V8_INTL_ROOT))
+    list(APPEND SOURCES "Source/Tests.Intl.cpp")
+endif()
+
 if(APPLE)
     if(IOS)
         set(SOURCES ${SOURCES}
