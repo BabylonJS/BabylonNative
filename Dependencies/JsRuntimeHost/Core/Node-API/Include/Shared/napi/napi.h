@@ -1210,7 +1210,6 @@ class ArrayBuffer : public Object {
   mutable size_t _length;
 
   ArrayBuffer(napi_env env, napi_value value, void* data, size_t length);
-  void EnsureInfo() const;
 
 #if NAPI_VERSION >= 7
   bool IsDetached() const;
