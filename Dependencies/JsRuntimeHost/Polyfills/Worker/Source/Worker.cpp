@@ -6,14 +6,11 @@
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Polyfills/AbortController.h>
 #include <Babylon/Polyfills/Blob.h>
-#include <Babylon/Polyfills/Compression.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Fetch.h>
 #include <Babylon/Polyfills/File.h>
-#include <Babylon/Polyfills/IndexedDB.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/Scheduling.h>
-#include <Babylon/Polyfills/Streams.h>
 #include <Babylon/Polyfills/TextDecoder.h>
 #include <Babylon/Polyfills/TextEncoder.h>
 #include <Babylon/Polyfills/URL.h>
@@ -552,14 +549,15 @@ namespace Babylon::Polyfills::Internal
         Babylon::Polyfills::URL::Initialize(env);
         Babylon::Polyfills::WebSocket::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Streams::Initialize(env);
         Babylon::Polyfills::Blob::Initialize(env);
         Babylon::Polyfills::File::Initialize(env);
         Babylon::Polyfills::TextDecoder::Initialize(env);
         Babylon::Polyfills::TextEncoder::Initialize(env);
         Babylon::Polyfills::Fetch::Initialize(env);
-        Babylon::Polyfills::Compression::Initialize(env);
-        Babylon::Polyfills::IndexedDB::Initialize(env);
+        if (state->Config.InitializeRealm)
+        {
+            state->Config.InitializeRealm(env);
+        }
 
         const std::weak_ptr<State> weakState{state};
         env.Global().Set("__jsrhNativePostMessage", Napi::Function::New(

@@ -92,11 +92,8 @@ option(JSRUNTIMEHOST_POLYFILL_FILE "Include JsRuntimeHost Polyfill File and File
 option(JSRUNTIMEHOST_POLYFILL_PERFORMANCE "Include JsRuntimeHost Polyfill Performance." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDecoder." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTENCODER "Include JsRuntimeHost Polyfill TextEncoder." ON)
-option(JSRUNTIMEHOST_POLYFILL_STREAMS "Include JsRuntimeHost Polyfill Web Streams." ON)
-option(JSRUNTIMEHOST_POLYFILL_COMPRESSION "Include JsRuntimeHost Polyfills CompressionStream and DecompressionStream." ON)
 option(JSRUNTIMEHOST_POLYFILL_WORKER "Include JsRuntimeHost Polyfill Worker." ${JSRUNTIMEHOST_TESTS})
 option(JSRUNTIMEHOST_JSC_PRIVATE_WATCHDOG "Use private Apple JSC SPI for non-cooperative Worker termination (not for distribution)." OFF)
-option(JSRUNTIMEHOST_POLYFILL_INDEXEDDB "Include JsRuntimeHost Polyfill IndexedDB." ON)
 
 # Plugins
 option(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER "Include JsRuntimeHost asynchronous resource script loader." ON)

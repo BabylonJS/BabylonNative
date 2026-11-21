@@ -1,8 +1,0 @@
-#pragma once
-
-namespace Babylon::Polyfills::Internal::CompressionScripts
-{
-    inline constexpr char Polyfill[] = R"JSRHCOMPRESSION(
-@COMPRESSION_POLYFILL_SOURCE@
-)JSRHCOMPRESSION";
-}

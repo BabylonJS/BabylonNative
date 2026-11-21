@@ -13,14 +13,11 @@ target_link_libraries(Worker
     PUBLIC AppRuntime
     PRIVATE AbortController
     PRIVATE Blob
-    PRIVATE Compression
     PRIVATE Console
     PRIVATE Fetch
     PRIVATE File
-    PRIVATE IndexedDB
     PRIVATE Performance
     PRIVATE Scheduling
-    PRIVATE Streams
     PRIVATE TextDecoder
     PRIVATE TextEncoder
     PRIVATE URL

@@ -15,12 +15,7 @@ Implemented surface:
   `close()`, synchronous `importScripts()`, and worker `postMessage()`
 - `EventTarget`, `Event`, `MessageEvent`, `ErrorEvent`, `DOMException`,
   `onmessage`, `onmessageerror`, and `onerror`
-- the standalone in-memory IndexedDB polyfill, including object stores,
-  indexes, cursors, key ranges, upgrade/versionchange handling, transactional
-  rollback, and storage structured clone
-- worker-relative string and `URL` inputs to `fetch()`, plus the standalone
-  Streams, Blob, Fetch/Response, and Compression polyfills used by browser
-  application bundles
+- worker-relative fetch URLs through the existing Fetch polyfill
 - structured cloning for cyclic objects, arrays, dates, regular expressions,
   maps, sets, errors, ArrayBuffers, DataViews, typed arrays, BigInts, and
   special number values
@@ -38,17 +33,9 @@ Native JavaScriptCore class objects are normalized inside the Worker realm so
 browser-style constructor feature checks such as
 `typeof AbortController === "function"` behave as expected.
 
-IndexedDB is intentionally in-memory and scoped to one JavaScript realm. It
-provides the browser API and transactional semantics needed by worker bundles,
-including the visualization integration fixture, but not durable storage or
-cross-realm database sharing. A future persistent backend can replace it
-without changing the Worker implementation because the initializer preserves a
-host-provided `indexedDB`.
-
-Streams, Blob streaming, Fetch body handling, and gzip/deflate transforms come
-from their independent polyfill targets. Worker only initializes them in
-browser-compatible dependency order; it does not carry private, reduced
-versions of those APIs.
+Embedders can install optional APIs (such as streams or compression) through
+`Options::InitializeRealm`. This runs once on the worker thread before its
+entry script. Worker does not link those libraries.
 
 `type: "module"` accepts self-contained, script-compatible application bundles.
 JavaScriptCore's public C API has no module-loader hook, so the application's

@@ -22,6 +22,9 @@ namespace Babylon::Polyfills::Worker
         // Optional worker-console sink. The callback is invoked on the Worker
         // runtime thread and must be thread-safe.
         std::function<void(const char*)> ConsoleCallback{};
+
+        // Install optional host polyfills on the worker thread before its entry script runs.
+        std::function<void(Napi::Env)> InitializeRealm{};
     };
 
     // Installs Worker, EventTarget, Event, MessageEvent, ErrorEvent and

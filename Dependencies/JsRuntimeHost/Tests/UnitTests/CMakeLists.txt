@@ -25,18 +25,14 @@ set(SOURCES
     "Source/App.h"
     "Source/TestAssetRoot.h"
     "Source/Tests.AppRuntime.cpp"
-    "Source/Tests.Compression.cpp"
     "Source/Tests.Console.cpp"
     "Source/Tests.DelayedTaskScheduler.cpp"
-    "Source/Tests.Fetch.cpp"
-    "Source/Tests.IndexedDB.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.JsRuntimeScheduler.cpp"
     "Source/Tests.NodeApi.cpp"
     "Source/Tests.Performance.cpp"
     "Source/Tests.Scheduling.cpp"
     "Source/Tests.StandardStreamLogger.cpp"
-    "Source/Tests.Streams.cpp"
     "Source/Tests.TimeoutDispatcher.cpp"
     "Source/Tests.Worker.cpp")
 
@@ -134,9 +130,6 @@ target_link_libraries(${_jsruntimehost_unit_tests_target}
     PRIVATE Performance
     PRIVATE TextDecoder
     PRIVATE TextEncoder
-    PRIVATE Streams
-    PRIVATE Compression
-    PRIVATE IndexedDB
     ${ADDITIONAL_LIBRARIES})
 
 if(TARGET Worker)
@@ -154,19 +147,12 @@ add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:${_jsruntimehost_unit_tests_target}>>,copy,true> $<TARGET_RUNTIME_DLLS:${_jsruntimehost_unit_tests_target}> $<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}> COMMAND_EXPAND_LISTS)
 
 # The Worker regressions are a script tree (workers load each other by relative path), so they are
-# staged as a directory next to the bundled assets rather than through the flat ASSETS list. The
-# visualization fixture fetches its cache relative to the worker's location, which the fetch polyfill
-# resolves against the app root, hence the second copy.
+# staged as a directory next to the bundled assets rather than through the flat ASSETS list.
 if(TARGET Worker)
     add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_CURRENT_SOURCE_DIR}/Assets/WebPlatformTests"
             "$<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}>/Assets/WebPlatformTests"
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-            "$<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}>/workers/support"
-        COMMAND ${CMAKE_COMMAND} -E copy
-            "${CMAKE_CURRENT_SOURCE_DIR}/Assets/WebPlatformTests/workers/support/visualization-worker-cache.json"
-            "$<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}>/workers/support/visualization-worker-cache.json"
         COMMENT "Copying focused Worker conformance regressions")
 endif()
 

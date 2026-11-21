@@ -46,21 +46,6 @@ if(JSRUNTIMEHOST_POLYFILL_TEXTENCODER)
     add_subdirectory(TextEncoder)
 endif()
 
-if(JSRUNTIMEHOST_POLYFILL_STREAMS)
-    add_subdirectory(Streams)
-endif()
-
-if(JSRUNTIMEHOST_POLYFILL_COMPRESSION)
-    if(NOT JSRUNTIMEHOST_POLYFILL_STREAMS)
-        message(FATAL_ERROR "The Compression polyfill requires the Streams polyfill.")
-    endif()
-    add_subdirectory(Compression)
-endif()
-
-if(JSRUNTIMEHOST_POLYFILL_INDEXEDDB)
-    add_subdirectory(IndexedDB)
-endif()
-
 if(JSRUNTIMEHOST_POLYFILL_WORKER)
     if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         # The legacy JSI adapter only implements the v5-shaped C++ surface and
@@ -80,10 +65,7 @@ if(JSRUNTIMEHOST_POLYFILL_WORKER)
             JSRUNTIMEHOST_POLYFILL_FILE
             JSRUNTIMEHOST_POLYFILL_PERFORMANCE
             JSRUNTIMEHOST_POLYFILL_TEXTDECODER
-            JSRUNTIMEHOST_POLYFILL_TEXTENCODER
-            JSRUNTIMEHOST_POLYFILL_STREAMS
-            JSRUNTIMEHOST_POLYFILL_COMPRESSION
-            JSRUNTIMEHOST_POLYFILL_INDEXEDDB)
+            JSRUNTIMEHOST_POLYFILL_TEXTENCODER)
         foreach(_worker_dependency IN LISTS _worker_required_polyfills)
             if(NOT ${_worker_dependency})
                 message(FATAL_ERROR

@@ -28,16 +28,8 @@ test carries the exact upstream link:
 - `runner.js` checks that a throwing structured-clone getter propagates the
   original exception and leaves transferables attached, guarding Servo's 2025
   exception-clearing regression.
-- `workers/support/visualization-worker-smoke.js` is a small, non-proprietary
-  reproduction of the deployed rebeckerspecialties visualization worker's
-  startup contract. It constructs a named module-compatible worker from a
-  WHATWG `URL`, opens the IndexedDB cache used by `pipelineCreate`, queues the
-  interop startup messages, and sends multiple `Date`/`Map`/`Set`-rich
-  playback streams through structured clone.
 
 `runner.js` launches these focused tests directly, without WPT infrastructure,
 and adapts the document-side structured-clone, transfer, startup, close, and
 termination checks to the JsRuntimeHost unit-test host. The infinite-evaluation
 case runs only when the selected engine has a native execution-interrupt hook.
-The visualization smoke case runs last so it exercises a fresh worker after
-the lifecycle stress cases.
