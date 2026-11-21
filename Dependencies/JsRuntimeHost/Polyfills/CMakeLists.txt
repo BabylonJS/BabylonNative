@@ -26,6 +26,17 @@ if(JSRUNTIMEHOST_POLYFILL_WEBSOCKET)
     add_subdirectory(WebSocket)
 endif()
 
+if(JSRUNTIMEHOST_POLYFILL_STREAMS)
+    add_subdirectory(Streams)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_COMPRESSION)
+    if(NOT TARGET Streams)
+        message(FATAL_ERROR "Compression requires the Streams polyfill")
+    endif()
+    add_subdirectory(Compression)
+endif()
+
 if(JSRUNTIMEHOST_POLYFILL_BLOB)
     add_subdirectory(Blob)
 endif()

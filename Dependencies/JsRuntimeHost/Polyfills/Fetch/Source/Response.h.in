@@ -1,0 +1,6 @@
+#pragma once
+
+namespace Babylon::Polyfills::Internal::Fetch
+{
+    inline constexpr char ResponseSource[] = R"JSRHRESP(@response_js@)JSRHRESP";
+}

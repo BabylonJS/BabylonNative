@@ -22,6 +22,8 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Source/App.h
     ${UNIT_TESTS_DIR}/Source/Tests.AppRuntime.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.Console.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Streams.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Compression.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.DelayedTaskScheduler.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.JavaScript.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.cpp
@@ -66,6 +68,8 @@ target_link_libraries(UnitTestsJNI
     PRIVATE WebSocket
     PRIVATE gtest_main
     PRIVATE Blob
+    PRIVATE Streams
+    PRIVATE Compression
     PRIVATE File
     PRIVATE TextDecoder
     PRIVATE TextEncoder

@@ -85,6 +85,8 @@ option(JSRUNTIMEHOST_POLYFILL_URL "Include JsRuntimeHost Polyfill URL and URLSea
 option(JSRUNTIMEHOST_POLYFILL_ABORTCONTROLLER "Include JsRuntimeHost Polyfills AbortController and AbortSignal." ON)
 option(JSRUNTIMEHOST_POLYFILL_WEBSOCKET "Include JsRuntimeHost Polyfill WebSocket." ON)
 option(JSRUNTIMEHOST_POLYFILL_BLOB "Include JsRuntimeHost Polyfill Blob." ON)
+option(JSRUNTIMEHOST_POLYFILL_STREAMS "Include Web Streams." ON)
+option(JSRUNTIMEHOST_POLYFILL_COMPRESSION "Include CompressionStream and DecompressionStream." ${JSRUNTIMEHOST_POLYFILL_STREAMS})
 option(JSRUNTIMEHOST_POLYFILL_FILE "Include JsRuntimeHost Polyfill File and FileReader." ON)
 option(JSRUNTIMEHOST_POLYFILL_PERFORMANCE "Include JsRuntimeHost Polyfill Performance." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDecoder." ON)

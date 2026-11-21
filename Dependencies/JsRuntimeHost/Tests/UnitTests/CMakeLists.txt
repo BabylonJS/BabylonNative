@@ -25,6 +25,8 @@ set(SOURCES
     "Source/App.h"
     "Source/Tests.AppRuntime.cpp"
     "Source/Tests.Console.cpp"
+    "Source/Tests.Streams.cpp"
+    "Source/Tests.Compression.cpp"
     "Source/Tests.DelayedTaskScheduler.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NodeApi.cpp"
@@ -111,6 +113,8 @@ target_link_libraries(${_jsruntimehost_unit_tests_target}
     PRIVATE gtest_main
     PRIVATE FoundationInternal
     PRIVATE Blob
+    PRIVATE Streams
+    PRIVATE Compression
     PRIVATE File
     PRIVATE Performance
     PRIVATE TextDecoder

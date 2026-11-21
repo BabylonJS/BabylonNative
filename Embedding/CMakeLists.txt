@@ -64,6 +64,16 @@ if(TARGET AbortController)
     target_link_libraries(Embedding PRIVATE AbortController)
 endif()
 
+if(TARGET Streams)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_STREAMS=1)
+    target_link_libraries(Embedding PRIVATE Streams)
+endif()
+
+if(TARGET Compression)
+    target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_COMPRESSION=1)
+    target_link_libraries(Embedding PRIVATE Compression)
+endif()
+
 if(TARGET Scheduling)
     target_compile_definitions(Embedding PRIVATE JSRUNTIMEHOST_POLYFILL_SCHEDULING=1)
     target_link_libraries(Embedding PRIVATE Scheduling)

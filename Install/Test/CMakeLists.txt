@@ -116,6 +116,14 @@ else()
         dl)
 endif()
 
+if(EXISTS "${INSTALL_LIBS_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}Compression${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    # When the SDK was built with system zlib, its archive is not installed.
+    if(NOT WIN32)
+        find_package(ZLIB REQUIRED)
+        list(APPEND INSTALL_TEST_LIBS ZLIB::ZLIB)
+    endif()
+endif()
+
 target_link_libraries(TestInstall ${INSTALL_TEST_LIBS})
 
 if(EXISTS "${INSTALL_LIBS_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}Embedding${CMAKE_STATIC_LIBRARY_SUFFIX}")

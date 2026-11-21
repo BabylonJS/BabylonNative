@@ -1,0 +1,40 @@
+#pragma once
+
+#include <array>
+#include <cstddef>
+
+namespace Babylon::Polyfills::Internal::StreamsScripts
+{
+    // The vendored bundle is split by CMake into PonyfillPart1..N raw-string literals of at most
+    // 16,000 bytes each (MSVC C2026) and joined below. The prologue and epilogue wrap it as a
+    // CommonJS module so its exports can be read back. Nothing is inserted between parts: a
+    // separator could divide an identifier or string literal when the bundle is regenerated.
+    inline constexpr char PonyfillPrologue[] = R"JSRHSTREAM(
+(function() {
+    var exports = {};
+    var module = { exports: exports };
+)JSRHSTREAM";
+
+@WEB_STREAMS_POLYFILL_PARTS@
+    inline constexpr char PonyfillEpilogue[] = R"JSRHSTREAM(
+    return module.exports;
+})()
+)JSRHSTREAM";
+
+    template<std::size_t... Sizes>
+    consteval auto Join(const char (&... parts)[Sizes])
+    {
+        std::array<char, (Sizes + ...) - sizeof...(Sizes) + 1> result{};
+        std::size_t offset{};
+        auto append = [&](const char* part, std::size_t size) {
+            for (std::size_t index{}; index + 1 < size; ++index)
+            {
+                result[offset++] = part[index];
+            }
+        };
+        (append(parts, Sizes), ...);
+        return result;
+    }
+
+    inline constexpr auto Ponyfill = Join(PonyfillPrologue@WEB_STREAMS_POLYFILL_PART_NAMES@, PonyfillEpilogue);
+}
