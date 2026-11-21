@@ -1,7 +1,11 @@
 #pragma once
+#include <napi/napi.h>
+#include "Constants.h"
 
 namespace Babylon
 {
+    class XRRigidTransform;
+
     // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
     class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace>
     {
@@ -27,6 +31,45 @@ namespace Babylon
             return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({info[0]});
         }
 
+        static Napi::Value Request(const Napi::CallbackInfo& info)
+        {
+            auto env = info.Env();
+            auto deferred = Napi::Promise::Deferred::New(env);
+            try
+            {
+                const auto type = info[0].ToString().Utf8Value();
+                if (type == XRReferenceSpaceType::VIEWER || type == XRReferenceSpaceType::LOCAL || type == XRReferenceSpaceType::UNBOUNDED)
+                {
+                    deferred.Resolve(env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({}));
+                }
+                else if (type == XRReferenceSpaceType::LOCAL_FLOOR || type == XRReferenceSpaceType::BOUNDED_FLOOR)
+                {
+                    // The current backends expose a world origin, not a calibrated floor or bounds.
+                    const auto message = "Unsupported reference space: " + type;
+                    auto ctor = env.Global().Get("DOMException");
+                    if (ctor.IsFunction())
+                    {
+                        deferred.Reject(ctor.As<Napi::Function>().New({Napi::String::New(env, message), Napi::String::New(env, "NotSupportedError")}));
+                    }
+                    else
+                    {
+                        auto error = Napi::Error::New(env, message).Value();
+                        error.Set("name", "NotSupportedError");
+                        deferred.Reject(error);
+                    }
+                }
+                else
+                {
+                    deferred.Reject(Napi::TypeError::New(env, "Unknown reference space type: " + type).Value());
+                }
+            }
+            catch (const Napi::Error& error)
+            {
+                deferred.Reject(error.Value());
+            }
+            return deferred.Promise();
+        }
+
         static Napi::Object New(const Napi::Env env, Napi::Object napiTransform)
         {
             return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({napiTransform});
@@ -35,21 +78,9 @@ namespace Babylon
         XRReferenceSpace(const Napi::CallbackInfo& info)
             : Napi::ObjectWrap<XRReferenceSpace>{info}
         {
-            if (info.Length() > 0)
+            if (info.Length() > 0 && info[0].IsObject())
             {
-                if (info[0].IsString())
-                {
-                    // TODO: Actually support the different types of reference spaces.
-                    const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
-                    assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
-                            referenceSpaceType == XRReferenceSpaceType::VIEWER);
-                    (void)XRReferenceSpaceType::UNBOUNDED;
-                    (void)XRReferenceSpaceType::VIEWER;
-                }
-                else
-                {
-                    m_jsTransform = Napi::Persistent(info[0].As<Napi::Object>());
-                }
+                m_jsTransform = Napi::Persistent(info[0].As<Napi::Object>());
             }
         }
 
@@ -58,10 +89,7 @@ namespace Babylon
             m_jsTransform = Napi::Persistent(transformObj);
         }
 
-        XRRigidTransform* GetTransform()
-        {
-            return XRRigidTransform::Unwrap(m_jsTransform.Value());
-        }
+        XRRigidTransform* GetTransform();
 
     private:
         Napi::Value GetOffsetReferenceSpace(const Napi::CallbackInfo& info)

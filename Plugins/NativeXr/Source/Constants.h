@@ -17,9 +17,9 @@ namespace Babylon
     struct XRReferenceSpaceType
     {
         static constexpr auto VIEWER{"viewer"};
-        // static constexpr auto LOCAL{"local"};
-        // static constexpr auto LOCAL_FLOOR{"local-floor"};
-        // static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
+        static constexpr auto LOCAL{"local"};
+        static constexpr auto LOCAL_FLOOR{"local-floor"};
+        static constexpr auto BOUNDED_FLOOR{"bounded-floor"};
         static constexpr auto UNBOUNDED{"unbounded"};
     };
 

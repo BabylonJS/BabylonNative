@@ -78,6 +78,7 @@ set(SOURCES
     "Source/Tests.NativeEngine.TextureFormats.cpp"
     "Source/Tests.NativeEngine.Textures.cpp"
     "Source/Tests.NativeOptimizations.cpp"
+    "Source/Tests.NativeXr.ReferenceSpaceRequest.cpp"
     "Source/Tests.NativeEngine.VertexArray.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCache.TransformFeedback.cpp"
