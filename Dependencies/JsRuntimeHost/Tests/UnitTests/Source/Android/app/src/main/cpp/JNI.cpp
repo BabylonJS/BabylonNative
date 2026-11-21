@@ -5,6 +5,9 @@
 #include "Babylon/DebugTrace.h"
 #include "Babylon/StandardStreamLogger.h"
 #include <Source/App.h>
+#if defined(NODE_API_AVAILABLE_NATIVE_TESTS)
+#include "android_tests.h"
+#endif
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass clazz, jobject context) {
@@ -13,6 +16,13 @@ Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
     {
         throw std::runtime_error{"Failed to get Java VM"};
     }
+
+#if defined(NODE_API_AVAILABLE_NATIVE_TESTS)
+    if (!node_api_tests::InitializeAndroidNodeApiTests(env, context))
+    {
+        return -1;
+    }
+#endif
 
     if (!Babylon::StandardStreamLogger::Start())
     {

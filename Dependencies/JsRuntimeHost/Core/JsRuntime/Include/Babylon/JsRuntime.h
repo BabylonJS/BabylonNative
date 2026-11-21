@@ -4,7 +4,7 @@
 #include <Babylon/Api.h>
 
 #include <functional>
-#include <mutex>
+#include <memory>
 
 namespace Babylon
 {
@@ -45,9 +45,15 @@ namespace Babylon
         JsRuntime& operator=(const JsRuntime&) = delete;
 
     private:
-        JsRuntime(Napi::Env, DispatchFunctionT);
+        friend class AppRuntime;
+        friend class JsRuntimeScheduler;
 
-        DispatchFunctionT m_dispatchFunction{};
-        std::mutex m_mutex{};
+        JsRuntime(Napi::Env, DispatchFunctionT);
+        ~JsRuntime();
+
+        static void Dispatch(const std::shared_ptr<InternalState>&, std::function<void BABYLON_API (Napi::Env)>);
+        static void Close(const std::shared_ptr<InternalState>&);
+
+        std::shared_ptr<InternalState> m_state;
     };
 }

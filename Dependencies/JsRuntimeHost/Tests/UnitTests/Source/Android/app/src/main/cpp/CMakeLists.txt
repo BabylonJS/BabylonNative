@@ -27,7 +27,19 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.Scheduling.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.StandardStreamLogger.cpp
+    ${UNIT_TESTS_DIR}/Source/Tests.Performance.cpp
     ${UNIT_TESTS_DIR}/Source/Tests.TimeoutDispatcher.cpp)
+
+if(TARGET NodeApiTestHarness)
+    target_link_libraries(UnitTestsJNI PRIVATE NodeApiTestHarness)
+endif()
+
+if(TARGET Worker)
+    target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.Worker.cpp)
+    target_link_libraries(UnitTestsJNI PRIVATE Worker)
+    string(TOUPPER "${NAPI_JAVASCRIPT_ENGINE}" _worker_test_engine)
+    target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_TEST_WORKER=1 JSR_NAPI_ENGINE_${_worker_test_engine})
+endif()
 
 if(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER)
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.DynamicScriptLoader.cpp)
@@ -38,6 +50,11 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.NodeApi.V8.cpp)
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.V8ForegroundTaskRunner.cpp)
     target_link_libraries(UnitTestsJNI PRIVATE AppRuntimeInternal)
+endif()
+
+# Mirrors Tests/UnitTests/CMakeLists.txt so the JavaScriptCore-only Node-API tests run here too.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
+    target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JAVASCRIPTCORE)
 endif()
 
 target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")

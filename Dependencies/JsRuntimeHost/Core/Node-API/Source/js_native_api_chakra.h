@@ -32,7 +32,19 @@ struct napi_env__ {
   size_t next_escapable_scope_token = 0;
   std::map<size_t, bool> open_escapable_scopes;
 
+  // napi_set_instance_data / napi_get_instance_data (N-API v6).
+  void* instance_data = nullptr;
+  napi_finalize instance_data_finalize_cb = nullptr;
+  void* instance_data_finalize_hint = nullptr;
+
   const std::thread::id thread_id{std::this_thread::get_id()};
+
+  ~napi_env__() {
+    // Run the instance-data finalizer at env teardown (env_chakra.cc deletes the env), matching V8/JSC.
+    if (instance_data_finalize_cb != nullptr) {
+      instance_data_finalize_cb(this, instance_data, instance_data_finalize_hint);
+    }
+  }
 };
 
 #define RETURN_STATUS_IF_FALSE(env, condition, status) \

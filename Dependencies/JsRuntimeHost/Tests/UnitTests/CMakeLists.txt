@@ -18,19 +18,23 @@ add_custom_command(
 
 set_source_files_properties(${TEST_JAVASCRIPT} PROPERTIES HEADER_FILE_ONLY TRUE)
 
-file(GLOB ASSETS "${CMAKE_CURRENT_SOURCE_DIR}/Assets/*")
+file(GLOB ASSETS LIST_DIRECTORIES false "${CMAKE_CURRENT_SOURCE_DIR}/Assets/*")
 
 set(SOURCES
     "Source/App.cpp"
     "Source/App.h"
+    "Source/TestAssetRoot.h"
     "Source/Tests.AppRuntime.cpp"
     "Source/Tests.Console.cpp"
     "Source/Tests.DelayedTaskScheduler.cpp"
     "Source/Tests.JavaScript.cpp"
+    "Source/Tests.JsRuntimeScheduler.cpp"
     "Source/Tests.NodeApi.cpp"
+    "Source/Tests.Performance.cpp"
     "Source/Tests.Scheduling.cpp"
     "Source/Tests.StandardStreamLogger.cpp"
-    "Source/Tests.TimeoutDispatcher.cpp")
+    "Source/Tests.TimeoutDispatcher.cpp"
+    "Source/Tests.Worker.cpp")
 
 if(APPLE)
     if(IOS)
@@ -97,6 +101,17 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JSI)
 endif()
 
+# The JavaScriptCore backend follows Node's ToObject coercion of property receivers and its
+# reference rules for primitives; other engines diverge (Chakra references any value, some reject
+# a primitive receiver outright), so the tests that pin those semantics build for it only.
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
+    target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_NAPI_ENGINE_JAVASCRIPTCORE)
+endif()
+
+if(APPLE AND NAPI_JAVASCRIPT_ENGINE STREQUAL "JavaScriptCore")
+    target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_APPLE_JAVASCRIPTCORE)
+endif()
+
 target_link_libraries(${_jsruntimehost_unit_tests_target}
     PRIVATE AppRuntime
     PRIVATE Console
@@ -117,10 +132,32 @@ target_link_libraries(${_jsruntimehost_unit_tests_target}
     PRIVATE TextEncoder
     ${ADDITIONAL_LIBRARIES})
 
+if(TARGET Worker)
+    target_link_libraries(${_jsruntimehost_unit_tests_target} PRIVATE Worker)
+    if(ANDROID)
+        target_link_libraries(${_jsruntimehost_unit_tests_target} PRIVATE AndroidExtensions android)
+    endif()
+    string(TOUPPER "${NAPI_JAVASCRIPT_ENGINE}" _worker_test_engine)
+    target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_TEST_WORKER=1 JSR_NAPI_ENGINE_${_worker_test_engine})
+    if(APPLE AND JSRUNTIMEHOST_JSC_PRIVATE_WATCHDOG)
+        target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSR_ENABLE_JSC_WATCHDOG)
+    endif()
+endif()
+
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
 add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:${_jsruntimehost_unit_tests_target}>>,copy,true> $<TARGET_RUNTIME_DLLS:${_jsruntimehost_unit_tests_target}> $<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}> COMMAND_EXPAND_LISTS)
+
+# The Worker regressions are a script tree (workers load each other by relative path), so they are
+# staged as a directory next to the bundled assets rather than through the flat ASSETS list.
+if(TARGET Worker)
+    add_custom_command(TARGET ${_jsruntimehost_unit_tests_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/Assets/WebPlatformTests"
+            "$<TARGET_FILE_DIR:${_jsruntimehost_unit_tests_target}>/Assets/WebPlatformTests"
+        COMMENT "Copying focused Worker conformance regressions")
+endif()
 
 if(APPLE)
     enable_objc_arc(${_jsruntimehost_unit_tests_target})

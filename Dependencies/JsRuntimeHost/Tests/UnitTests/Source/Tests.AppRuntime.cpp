@@ -185,3 +185,50 @@ TEST(AppRuntime, TimerDrivenCollectionAfterFirstRuntimeExits)
     }
 }
 #endif
+
+#if defined(JSRUNTIMEHOST_APPLE_JAVASCRIPTCORE)
+TEST(AppRuntime, AsyncWebAssemblyInstantiationMakesProgress)
+{
+    Babylon::AppRuntime runtime{};
+    std::promise<bool> completionPromise;
+    auto completionFuture = completionPromise.get_future();
+
+    runtime.Dispatch([&completionPromise](Napi::Env env) {
+        env.Global().Set(
+            "completeAsyncWebAssemblyTest",
+            Napi::Function::New(env, [&completionPromise](const Napi::CallbackInfo& info) {
+                completionPromise.set_value(info[0].ToBoolean().Value());
+            }));
+
+        Napi::Eval(env, R"(
+            (() => {
+                const customPayloadSize = 1024 * 1024;
+                const bytes = new Uint8Array(13 + customPayloadSize);
+                bytes.set([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+                bytes.set([0x00, 0x81, 0x80, 0x40, 0x00], 8);
+                WebAssembly.instantiate(bytes, {}).then(
+                    () => completeAsyncWebAssemblyTest(true),
+                    () => completeAsyncWebAssemblyTest(false));
+            })();
+        )",
+            "async-webassembly-test.js");
+    });
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{5};
+    while (completionFuture.wait_for(std::chrono::milliseconds{0}) != std::future_status::ready &&
+           std::chrono::steady_clock::now() < deadline)
+    {
+        std::promise<void> pumpPromise;
+        auto pumpFuture = pumpPromise.get_future();
+        runtime.Dispatch([&pumpPromise](Napi::Env) {
+            pumpPromise.set_value();
+        });
+        ASSERT_EQ(pumpFuture.wait_for(std::chrono::seconds{1}), std::future_status::ready);
+        std::this_thread::sleep_for(std::chrono::milliseconds{1});
+    }
+
+    ASSERT_EQ(completionFuture.wait_for(std::chrono::milliseconds{0}), std::future_status::ready)
+        << "WebAssembly.instantiate did not settle while the host runtime was being pumped";
+    EXPECT_TRUE(completionFuture.get());
+}
+#endif

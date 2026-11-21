@@ -40,6 +40,7 @@ FetchContent_Declare(ios-cmake
 FetchContent_Declare(llhttp
     URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz"
     EXCLUDE_FROM_ALL)
+
 FetchContent_Declare(quickjs-ng
     GIT_REPOSITORY https://github.com/quickjs-ng/quickjs.git
     GIT_TAG 93d3f7df465027f487ed37e175a0bc3012fee79e
@@ -51,7 +52,9 @@ if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
-    set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+    # std::filesystem (used by the Worker polyfill) is unavailable below iOS 13 / macOS 10.15,
+    # and the project floor is well above iOS 12 regardless; keep 13 as the minimum.
+    set(DEPLOYMENT_TARGET "13" CACHE STRING "")
     set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
 endif()
 
@@ -89,6 +92,8 @@ option(JSRUNTIMEHOST_POLYFILL_FILE "Include JsRuntimeHost Polyfill File and File
 option(JSRUNTIMEHOST_POLYFILL_PERFORMANCE "Include JsRuntimeHost Polyfill Performance." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDecoder." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTENCODER "Include JsRuntimeHost Polyfill TextEncoder." ON)
+option(JSRUNTIMEHOST_POLYFILL_WORKER "Include JsRuntimeHost Polyfill Worker." ${JSRUNTIMEHOST_TESTS})
+option(JSRUNTIMEHOST_JSC_PRIVATE_WATCHDOG "Use private Apple JSC SPI for non-cooperative Worker termination (not for distribution)." OFF)
 
 # Plugins
 option(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER "Include JsRuntimeHost asynchronous resource script loader." ON)

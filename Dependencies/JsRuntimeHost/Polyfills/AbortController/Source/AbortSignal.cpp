@@ -51,7 +51,13 @@ namespace Babylon::Polyfills::Internal
         const Napi::Value resolvedReason = (reason.IsUndefined() || reason.IsEmpty())
             ? CreateAbortError(env, "The operation was aborted.")
             : reason;
-        m_reason = Napi::Persistent(resolvedReason);
+        // Node-API references may only target objects/functions/externals, but
+        // AbortController.abort(reason) accepts any JavaScript value. Keep the
+        // arbitrary reason in an object property and persist that holder.
+        // This also covers the primitive cleanup reason used by WPT.
+        Napi::Object reasonHolder = Napi::Object::New(env);
+        reasonHolder.Set("value", resolvedReason);
+        m_reason = Napi::Persistent(reasonHolder);
 
         auto onabort = m_onabort.Value();
         if (!onabort.IsNull() && !onabort.IsUndefined())
@@ -83,7 +89,7 @@ namespace Babylon::Polyfills::Internal
             return Env().Undefined();
         }
 
-        return m_reason.Value();
+        return m_reason.Value().Get("value");
     }
 
     void AbortSignal::ThrowIfAborted(const Napi::CallbackInfo& info)

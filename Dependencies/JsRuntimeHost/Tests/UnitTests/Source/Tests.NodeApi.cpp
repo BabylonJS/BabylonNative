@@ -1,4 +1,5 @@
 #include <Babylon/AppRuntime.h>
+#include <Babylon/ScriptLoader.h>
 #include <gtest/gtest.h>
 #include <array>
 #include <cstdint>
@@ -67,6 +68,140 @@ TEST(NodeApi, ThrownHostErrorClearsPendingException)
     EXPECT_TRUE(passed[0]) << "The JavaScript catch must receive the thrown error object";
     EXPECT_TRUE(passed[1]) << "The caught host error must not remain pending";
     EXPECT_TRUE(passed[2]) << "The next host callback must return without throwing";
+}
+#endif
+
+// N-API results must not depend on anything reachable from script. The JavaScriptCore backend has no
+// BigInt C API below macOS 15 / iOS 18 / visionOS 2, and none at all on Android, so it reaches BigInt
+// through JS intrinsics; those are captured at env init (like Function.prototype.call) precisely so a
+// page that replaces `BigInt`, `BigInt.asIntN/asUintN` or `BigInt.prototype.toString` cannot steer an
+// addon's napi_*_bigint_* calls through its own code. Before that, every one of these entry points
+// re-resolved the name on the live global object, and the create path evaluated a `BigInt("...")`
+// source string -- so the patches below each returned an attacker-chosen value.
+#if !defined(JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+TEST(NodeApi, BigIntIgnoresMonkeyPatchedIntrinsics)
+{
+    Babylon::AppRuntime runtime{};
+    Babylon::ScriptLoader loader{runtime};
+
+    // Replace every intrinsic the BigInt paths touch, the way user script could.
+    loader.Eval(R"(
+        if (typeof BigInt === 'function') {
+            globalThis.__pristine = { BigInt, asIntN: BigInt.asIntN, toString: BigInt.prototype.toString };
+            globalThis.BigInt = function () { return globalThis.__pristine.BigInt(1234); };
+            globalThis.BigInt.asIntN = function () { return globalThis.__pristine.BigInt(1234); };
+            globalThis.BigInt.asUintN = function () { return globalThis.__pristine.BigInt(1234); };
+            globalThis.__pristine.BigInt.prototype.toString = function () { return '1234'; };
+        }
+    )",
+        "");
+
+    std::promise<void> done;
+    struct { bool supported; int64_t roundTripped; bool lossless; napi_valuetype type; } observed{};
+
+    runtime.Dispatch([&done, &observed](Napi::Env env) {
+        napi_env nenv{env};
+
+        napi_value big{nullptr};
+        if (napi_create_bigint_int64(nenv, 9007199254740993LL, &big) != napi_ok)
+        {
+            // Engine without BigInt (jsc-android r250231, Win10 Chakra): it throws ENOTSUP instead.
+            napi_value pending{nullptr};
+            napi_get_and_clear_last_exception(nenv, &pending);
+            observed.supported = false;
+            done.set_value();
+            return;
+        }
+        observed.supported = true;
+        napi_typeof(nenv, big, &observed.type);
+        napi_get_value_bigint_int64(nenv, big, &observed.roundTripped, &observed.lossless);
+        done.set_value();
+    });
+
+    done.get_future().get();
+
+    if (!observed.supported)
+    {
+        GTEST_SKIP() << "Engine does not support BigInt";
+    }
+    EXPECT_EQ(napi_bigint, observed.type);
+    // 1234 here would mean a patched intrinsic was consulted.
+    EXPECT_EQ(9007199254740993LL, observed.roundTripped);
+    EXPECT_TRUE(observed.lossless);
+}
+#endif
+
+// napi_detach_arraybuffer is the API that defines N-API v7, and its behaviour is not uniform across
+// the engines here: ArrayBuffer.prototype.transfer() (ES2024) is the only public detach path -- the
+// JavaScriptCore C API has no detach entry point at all -- so an engine without it can only report
+// the capability as missing. This asserts both halves of that contract, whichever applies:
+//
+//   detach works        V8; JavaScriptCore on macOS 14.4+ / iOS 17.4+ / visionOS 1.1+
+//   ENOTSUP thrown      JavaScriptCore on older Apple OSes, and every jsc-android build
+//                       (verified on device: r250231 and r294992 both lack transfer)
+#if !defined(JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+TEST(NodeApi, DetachArrayBufferOrReportsUnsupported)
+{
+    Babylon::AppRuntime runtime{};
+
+    std::promise<void> done;
+    struct
+    {
+        napi_status queryBefore{napi_ok};
+        napi_status queryAfter{napi_ok};
+        bool detachedBefore{true};
+        bool detachedAfter{false};
+        bool supported{false};
+        std::string code;
+    } observed;
+
+    runtime.Dispatch([&done, &observed](Napi::Env env) {
+        napi_env nenv{env};
+
+        Napi::ArrayBuffer buffer{Napi::ArrayBuffer::New(env, 8)};
+        napi_value value{buffer};
+
+        observed.queryBefore = napi_is_detached_arraybuffer(nenv, value, &observed.detachedBefore);
+
+        if (napi_detach_arraybuffer(nenv, value) == napi_ok)
+        {
+            observed.supported = true;
+            observed.queryAfter = napi_is_detached_arraybuffer(nenv, value, &observed.detachedAfter);
+        }
+        else
+        {
+            // Feature-detected failure must be a catchable JS error carrying code ENOTSUP, not a
+            // bare napi_status an addon cannot distinguish from a real error.
+            napi_value pending{nullptr};
+            napi_get_and_clear_last_exception(nenv, &pending);
+            if (pending != nullptr)
+            {
+                napi_value code{nullptr};
+                if (napi_get_named_property(nenv, pending, "code", &code) == napi_ok)
+                {
+                    char buffer[32]{};
+                    size_t written{0};
+                    napi_get_value_string_utf8(nenv, code, buffer, sizeof(buffer), &written);
+                    observed.code.assign(buffer, written);
+                }
+            }
+        }
+        done.set_value();
+    });
+
+    done.get_future().get();
+
+    ASSERT_EQ(napi_ok, observed.queryBefore) << "napi_is_detached_arraybuffer failed on a live buffer";
+    EXPECT_FALSE(observed.detachedBefore) << "a live ArrayBuffer must not report as detached";
+    if (observed.supported)
+    {
+        ASSERT_EQ(napi_ok, observed.queryAfter) << "napi_is_detached_arraybuffer failed after detach";
+        EXPECT_TRUE(observed.detachedAfter) << "napi_detach_arraybuffer returned ok but did not detach";
+    }
+    else
+    {
+        EXPECT_EQ("ENOTSUP", observed.code);
+    }
 }
 #endif
 

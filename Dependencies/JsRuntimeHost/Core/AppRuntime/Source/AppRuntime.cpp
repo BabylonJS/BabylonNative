@@ -6,6 +6,7 @@
 #include <arcana/threading/dispatcher.h>
 
 #include <cassert>
+#include <atomic>
 #include <optional>
 #include <mutex>
 #include <thread>
@@ -43,12 +44,15 @@ namespace Babylon
         std::function<void()> m_dispatchLoopWaker{};
 
         std::optional<Napi::Env> m_env{};
+        std::shared_ptr<JsRuntime::InternalState> m_jsRuntimeState{};
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
         arcana::cancellation_source m_cancelSource{};
         arcana::manual_dispatcher<128> m_dispatcher{};
         std::unique_ptr<Internal::DelayedTaskScheduler> m_delayedTaskScheduler{std::make_unique<Internal::DelayedTaskScheduler>()};
         bool m_delayedTaskSchedulerRegistered{};
         std::thread m_thread;
+        std::atomic_bool m_terminationRequested{false};
+        std::atomic_bool m_executionTerminationRequested{false};
     };
 
     void AppRuntime::RunDispatcher()
@@ -84,10 +88,16 @@ namespace Babylon
         : m_options{std::move(options)}
         , m_impl{std::make_unique<Impl>()}
     {
-        m_impl->m_thread = std::thread{[this] { RunPlatformTier(); }};
+        m_impl->m_thread = std::thread{[this] {
+            RunPlatformTier();
+            if (m_options.ThreadExitHandler)
+            {
+                m_options.ThreadExitHandler();
+            }
+        }};
 
         Dispatch([this](Napi::Env env) {
-            JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(std::move(func)); });
+            m_impl->m_jsRuntimeState = JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(std::move(func)); }).m_state;
             Internal::DelayedTaskScheduler::SetForJavaScript(env, GetDelayedTaskScheduler());
             m_impl->m_delayedTaskSchedulerRegistered = true;
         });
@@ -100,17 +110,7 @@ namespace Babylon
             m_impl->m_suspensionLock.reset();
         }
 
-        // Cancel immediately so pending work is dropped promptly, then append
-        // a no-op work item to wake the worker thread from blocking_tick. The
-        // no-op goes through push() which acquires the queue mutex, avoiding
-        // the race where a bare notify_all() can be missed by wait().
-        //
-        // NOTE: This preserves the existing shutdown behavior where pending
-        // callbacks are dropped on cancellation. A more complete solution
-        // would add cooperative shutdown (e.g. NotifyDisposing/Rundown) so
-        // consumers can finish cleanup work before the runtime is destroyed.
-        m_impl->m_cancelSource.cancel();
-        m_impl->Append([](Napi::Env) {});
+        Terminate();
 
         m_impl->m_thread.join();
     }
@@ -124,6 +124,11 @@ namespace Babylon
         RunDispatchLoop();
 
         Napi::HandleScope scope{env};
+
+        // Stop native completions before discarding work, while captures can still
+        // safely release environment-owned values. Do not rely on JS finalizer order.
+        JsRuntime::Close(m_impl->m_jsRuntimeState);
+
         ShutdownEnvironment(env);
 
         if (m_impl->m_delayedTaskSchedulerRegistered)
@@ -156,8 +161,44 @@ namespace Babylon
         m_impl->m_suspensionLock.reset();
     }
 
+    void AppRuntime::Terminate()
+    {
+        m_impl->m_executionTerminationRequested.store(true);
+        Close();
+    }
+
+    void AppRuntime::Close()
+    {
+        if (m_impl->m_terminationRequested.exchange(true))
+        {
+            return;
+        }
+
+        m_impl->m_cancelSource.cancel();
+
+        // Queueing under the dispatcher's mutex makes the wake-up immune to
+        // the missed-notification race covered by DestroyDoesNotDeadlock.
+        // The cancelled run loop drops this no-op rather than executing it.
+        m_impl->Append([](Napi::Env) {});
+    }
+
+    bool AppRuntime::IsTerminationRequested() const noexcept
+    {
+        return m_impl->m_terminationRequested.load();
+    }
+
+    bool AppRuntime::IsExecutionTerminationRequested() const noexcept
+    {
+        return m_impl->m_executionTerminationRequested.load();
+    }
+
     void AppRuntime::Dispatch(Dispatchable<void(Napi::Env)> func)
     {
+        if (IsTerminationRequested())
+        {
+            return;
+        }
+
         m_impl->Append([this, func{std::move(func)}](Napi::Env env) mutable {
             Execute([this, env, func{std::move(func)}]() mutable {
                 // Some engines (notably Hermes) require an open NAPI handle

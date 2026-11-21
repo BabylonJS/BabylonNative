@@ -8,8 +8,13 @@
 #ifndef NODE_ADDON_API_DISABLE_NODE_SPECIFIC
 #define NODE_ADDON_API_DISABLE_NODE_SPECIFIC
 #endif
+// [BABYLON-NATIVE-ADDITION] Keep this in step with js_native_api.h / js_native_api_types.h. The C
+// headers already default to 7, but this one is reached first by every consumer that includes
+// <napi/napi.h> (all of Babylon Native, and every node-addon-api addon), and #ifndef made it win --
+// so Napi::BigInt, Value::IsBigInt, GetInstanceData<T> and Napi::Addon stayed compiled out even
+// though the C entry points behind them were implemented.
 #ifndef NAPI_VERSION
-#define NAPI_VERSION 5
+#define NAPI_VERSION 7
 #endif
 #ifndef NAPI_HAS_THREADS
 #define NAPI_HAS_THREADS 0
@@ -1205,7 +1210,6 @@ class ArrayBuffer : public Object {
   mutable size_t _length;
 
   ArrayBuffer(napi_env env, napi_value value, void* data, size_t length);
-  void EnsureInfo() const;
 
 #if NAPI_VERSION >= 7
   bool IsDetached() const;
