@@ -631,9 +631,7 @@
         {
             "title": "Gaussian Splatting SPZ SH No WASM",
             "playgroundId": "#XSNFXP#12",
-            "referenceImage": "gsplat-spz-sh.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: ReadableStream is not defined"
+            "referenceImage": "gsplat-spz-sh.png"
         },
         {
             "title": "Gaussian Splatting SPZ Extensions",
@@ -677,9 +675,7 @@
         {
             "title": "Gaussian Splatting SPZ SH Order 4 No WASM",
             "playgroundId": "#XSNFXP#13",
-            "referenceImage": "gsplat-spz-sh-order-4.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: ReadableStream is not defined"
+            "referenceImage": "gsplat-spz-sh-order-4.png"
         },
         {
             "title": "Gaussian Splatting SPZ Detailed Splat",
@@ -692,9 +688,7 @@
         {
             "title": "Gaussian Splatting SPZ Detailed Splat No WASM",
             "playgroundId": "#XSNFXP#14",
-            "referenceImage": "gsplat-spz-detailed-splat.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: ReadableStream is not defined"
+            "referenceImage": "gsplat-spz-detailed-splat.png"
         },
         {
             "title": "Gaussian Splatting PLY SH Order 4",

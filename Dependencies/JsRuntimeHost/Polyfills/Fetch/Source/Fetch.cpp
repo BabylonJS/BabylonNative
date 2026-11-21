@@ -1,4 +1,5 @@
 #include "Fetch.h"
+#include "Response.h"
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
@@ -340,6 +341,17 @@ namespace Babylon::Polyfills::Internal
         void Initialize(Napi::Env env)
         {
             static constexpr auto JS_FETCH_NAME = "fetch";
+
+            auto global = env.Global();
+            if (global.Get("Response").IsUndefined() && global.Get("ReadableStream").IsFunction())
+            {
+                const auto classes = Napi::Eval(env, ResponseSource, "jsruntimehost://response.js").As<Napi::Object>();
+                if (global.Get("Headers").IsUndefined())
+                {
+                    global.Set("Headers", classes.Get("Headers"));
+                }
+                global.Set("Response", classes.Get("Response"));
+            }
 
             auto fetchFunction = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
                 Napi::Env env = info.Env();

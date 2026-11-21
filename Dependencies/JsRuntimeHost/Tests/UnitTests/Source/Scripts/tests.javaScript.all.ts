@@ -9,6 +9,7 @@ import "./tests.urlSearchParams";
 import "./tests.console";
 import "./tests.blob";
 import "./tests.streams";
+import "./tests.response";
 import "./tests.compression";
 import "./tests.nodeApi";
 import "./tests.performance";

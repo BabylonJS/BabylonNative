@@ -83,9 +83,9 @@ TEST(JavaScript, All)
         Babylon::Polyfills::URL::Initialize(env);
         Babylon::Polyfills::WebSocket::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Fetch::Initialize(env);
         Babylon::Polyfills::Blob::Initialize(env);
         Babylon::Polyfills::Streams::Initialize(env);
+        Babylon::Polyfills::Fetch::Initialize(env);
         Babylon::Polyfills::Compression::Initialize(env);
         Babylon::Polyfills::File::Initialize(env);
         Babylon::Polyfills::TextDecoder::Initialize(env);
