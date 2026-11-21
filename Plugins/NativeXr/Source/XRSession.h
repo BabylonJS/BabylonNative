@@ -82,9 +82,7 @@ namespace Babylon
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
             {
-                auto deferred = Napi::Promise::Deferred::New(info.Env());
-                deferred.Resolve(XRReferenceSpace::New(info));
-                return deferred.Promise();
+                return XRReferenceSpace::Request(info);
             }
 
             Napi::Value UpdateRenderState(const Napi::CallbackInfo& info);
