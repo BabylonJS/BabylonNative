@@ -41,6 +41,9 @@
 #include "LineCaps.h"
 #include "Gradient.h"
 #include "RoundRectUtils.h"
+#ifdef __ANDROID__
+#include "AndroidDefaultFont.h"
+#endif
 
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
@@ -796,6 +799,17 @@ namespace Babylon::Polyfills::Internal
         EnsureFontsLoaded();
         if (m_fonts.empty())
         {
+#ifdef __ANDROID__
+            if (!m_defaultFontId.has_value())
+            {
+                m_defaultFontId = LoadAndroidDefaultFont(*m_nvg);
+            }
+            if (*m_defaultFontId >= CanvasConstants::MIN_NANOVG_RESOURCE_INDEX)
+            {
+                nvgFontFaceId(*m_nvg, *m_defaultFontId);
+                return true;
+            }
+#endif
             return false;
         }
         if (m_state.currentFontId >= CanvasConstants::MIN_NANOVG_RESOURCE_INDEX)

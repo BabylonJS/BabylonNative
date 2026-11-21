@@ -166,6 +166,9 @@ namespace Babylon::Polyfills::Internal
 
         // Context-wide resource cache; save/restore does not rewind loaded fonts.
         std::map<std::string, int> m_fonts;
+#ifdef __ANDROID__
+        std::optional<int> m_defaultFontId;
+#endif
 
         Graphics::DeviceContext& m_graphicsContext;
 

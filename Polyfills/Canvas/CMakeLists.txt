@@ -38,6 +38,9 @@ set(SOURCES
 file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
 
 add_library(Canvas ${SOURCES} ${SHADERS})
+if(ANDROID)
+    target_sources(Canvas PRIVATE "Source/AndroidDefaultFont.cpp")
+endif()
 
 target_include_directories(Canvas
     PUBLIC "Include"
