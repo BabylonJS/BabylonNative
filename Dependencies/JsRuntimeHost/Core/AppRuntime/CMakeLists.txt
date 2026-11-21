@@ -28,6 +28,18 @@ target_include_directories(AppRuntime
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_include_directories(AppRuntime PRIVATE "../Node-API/Source")
+    if(ANDROID AND NAPI_ANDROID_V8_INTL_ROOT)
+        set(snapshot "${NAPI_ANDROID_V8_INTL_ROOT}/snapshot_blob/${ANDROID_ABI}/snapshot_blob.bin")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${snapshot}")
+        file(READ "${snapshot}" snapshot_bytes HEX)
+        if(NOT snapshot_bytes)
+            message(FATAL_ERROR "Empty V8 startup snapshot: ${snapshot}")
+        endif()
+        string(REGEX REPLACE "(..)" "0x\\1," snapshot_bytes "${snapshot_bytes}")
+        configure_file(Source/AndroidV8Snapshot.h.in AndroidV8Snapshot.h @ONLY)
+        target_include_directories(AppRuntime PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+        target_compile_definitions(AppRuntime PRIVATE JSRUNTIMEHOST_EMBED_V8_SNAPSHOT)
+    endif()
 endif()
 
 target_link_libraries(AppRuntime

@@ -13,6 +13,10 @@
 #include <optional>
 #include <stdexcept>
 
+#ifdef JSRUNTIMEHOST_EMBED_V8_SNAPSHOT
+#include "AndroidV8Snapshot.h"
+#endif
+
 namespace Babylon
 {
     namespace
@@ -68,7 +72,13 @@ namespace Babylon
             Module(const char* executablePath)
             {
                 v8::V8::InitializeICUDefaultLocation(executablePath);
+#ifdef JSRUNTIMEHOST_EMBED_V8_SNAPSHOT
+                // APK assets have no filesystem path. V8 borrows this data for the process lifetime.
+                static v8::StartupData snapshot{reinterpret_cast<const char*>(AndroidV8Snapshot), sizeof(AndroidV8Snapshot)};
+                v8::V8::SetSnapshotDataBlob(&snapshot);
+#else
                 v8::V8::InitializeExternalStartupData(executablePath);
+#endif
                 m_platform = std::make_unique<Internal::V8Platform>(v8::platform::NewDefaultPlatform());
                 v8::V8::InitializePlatform(m_platform.get());
                 v8::V8::Initialize();

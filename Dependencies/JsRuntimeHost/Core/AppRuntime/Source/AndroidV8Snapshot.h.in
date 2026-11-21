@@ -1,0 +1,6 @@
+#pragma once
+
+namespace
+{
+    alignas(16) constexpr unsigned char AndroidV8Snapshot[] = {@snapshot_bytes@};
+}
