@@ -34,6 +34,13 @@ if(TARGET NodeApiTestHarness)
     target_link_libraries(UnitTestsJNI PRIVATE NodeApiTestHarness)
 endif()
 
+if(TARGET Worker)
+    target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.Worker.cpp)
+    target_link_libraries(UnitTestsJNI PRIVATE Worker)
+    string(TOUPPER "${NAPI_JAVASCRIPT_ENGINE}" _worker_test_engine)
+    target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_TEST_WORKER=1 JSR_NAPI_ENGINE_${_worker_test_engine})
+endif()
+
 if(JSRUNTIMEHOST_PLUGIN_DYNAMICSCRIPTLOADER)
     target_sources(UnitTestsJNI PRIVATE ${UNIT_TESTS_DIR}/Source/Tests.DynamicScriptLoader.cpp)
     target_link_libraries(UnitTestsJNI PRIVATE DynamicScriptLoader)

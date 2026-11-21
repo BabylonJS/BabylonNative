@@ -134,6 +134,9 @@ target_link_libraries(${_jsruntimehost_unit_tests_target}
 
 if(TARGET Worker)
     target_link_libraries(${_jsruntimehost_unit_tests_target} PRIVATE Worker)
+    if(ANDROID)
+        target_link_libraries(${_jsruntimehost_unit_tests_target} PRIVATE AndroidExtensions android)
+    endif()
     string(TOUPPER "${NAPI_JAVASCRIPT_ENGINE}" _worker_test_engine)
     target_compile_definitions(${_jsruntimehost_unit_tests_target} PRIVATE JSRUNTIMEHOST_TEST_WORKER=1 JSR_NAPI_ENGINE_${_worker_test_engine})
     if(APPLE AND JSRUNTIMEHOST_JSC_PRIVATE_WATCHDOG)

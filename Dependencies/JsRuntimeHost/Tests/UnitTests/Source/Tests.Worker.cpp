@@ -13,8 +13,12 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#if defined(__ANDROID__)
+#include <AndroidExtensions/Globals.h>
+#include <memory>
+#endif
 
-#if defined(JSRUNTIMEHOST_TEST_WORKER) && !defined(__ANDROID__) && \
+#if defined(JSRUNTIMEHOST_TEST_WORKER) && \
     (defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE) || defined(JSR_NAPI_ENGINE_QUICKJS) || \
      defined(JSR_NAPI_ENGINE_V8) || defined(JSR_NAPI_ENGINE_HERMES))
 TEST(Worker, ParentTeardownWithPendingDelivery)
@@ -155,13 +159,27 @@ TEST(Worker, WebPlatformTests)
         Babylon::Polyfills::URL::Initialize(env);
 
         Babylon::Polyfills::Worker::Options options{};
+#if defined(__ANDROID__)
+        // Android packages the fixture tree in the APK, not beside an executable.
+        options.ScriptRoot = "Assets/WebPlatformTests";
+        options.ScriptResolver = [](const std::string& path) {
+            std::unique_ptr<AAsset, decltype(&AAsset_close)> asset{
+                AAssetManager_open(android::global::GetAssetManager(), path.c_str(), AASSET_MODE_BUFFER), AAsset_close};
+            if (!asset || !AAsset_getBuffer(asset.get()))
+            {
+                throw std::runtime_error{"Unable to read worker test asset: " + path};
+            }
+            return std::string{static_cast<const char*>(AAsset_getBuffer(asset.get())), static_cast<size_t>(AAsset_getLength(asset.get()))};
+        };
+#else
         options.ScriptRoot = (TestAssetRoot() / "Assets" / "WebPlatformTests").string();
+#endif
         options.ConsoleCallback = [](const char* message) {
             std::cerr << "[Worker] " << message << std::endl;
         };
         Babylon::Polyfills::Worker::Initialize(env, std::move(options));
 
-#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE) && (!defined(__APPLE__) || defined(JSR_ENABLE_JSC_WATCHDOG))
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE) && ((!defined(__APPLE__) && !defined(__ANDROID__)) || defined(JSR_ENABLE_JSC_WATCHDOG))
         // System JSC exposes the execution-time-limit hook used to interrupt
         // a worker stuck in top-level evaluation. Other adapters currently
         // terminate cooperatively between dispatches, so the infinite-loop
