@@ -11,6 +11,45 @@
 #include <memory>
 #include <vector>
 
+#ifdef __ANDROID__
+#include "../../../Polyfills/Canvas/Source/AndroidDefaultFont.h"
+#include "../../../Polyfills/Canvas/Source/nanovg/nanovg.h"
+
+TEST(CanvasTextMetrics, AndroidSystemFaceDrawsWithoutApplicationFonts)
+{
+    int vertices{};
+    NVGparams params{};
+    params.userPtr = &vertices;
+    params.renderCreate = [](void*) { return 1; };
+    params.renderCreateTexture = [](void*, int, int, int, int, const unsigned char*) { return 1; };
+    params.renderDeleteTexture = [](void*, int) { return 1; };
+    params.renderUpdateTexture = [](void*, int, int, int, int, int, const unsigned char*) { return 1; };
+    params.renderTriangles = [](void* data, NVGpaint*, NVGcompositeOperationState, NVGscissor*, const NVGvertex*, int count, nanovg_filterstack&) {
+        *static_cast<int*>(data) += count;
+    };
+
+    // Each context owns its own face ID, even when both borrow the same font bytes.
+    const auto makeContext = [&params]() {
+        return std::unique_ptr<NVGcontext, decltype(&nvgDeleteInternal)>{nvgCreateInternal(&params), nvgDeleteInternal};
+    };
+    auto first = makeContext();
+    auto second = makeContext();
+    for (auto* context : {first.get(), second.get()})
+    {
+        ASSERT_NE(context, nullptr);
+        vertices = 0;
+        nvgFontSize(context, 30);
+        nvgText(context, 0, 40, "Start Story", nullptr);
+        EXPECT_EQ(vertices, 0);
+        const int face = Babylon::Polyfills::Internal::LoadAndroidDefaultFont(context);
+        ASSERT_GE(face, 0);
+        nvgFontFaceId(context, face);
+        EXPECT_GT(nvgText(context, 0, 40, "Start Story", nullptr), 0.f);
+        EXPECT_GT(vertices, 0);
+    }
+}
+#endif
+
 TEST(CanvasTextMetrics, ExcludesAtlasBorderAndBlurPaddingFromInkBounds)
 {
     const auto fontPath = GetExecutableDirectory() / "Assets" / "droidsans.ttf";
