@@ -3,9 +3,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <future>
-#include "../../../Dependencies/xr/Include/XR.h"
-#include "../../../Plugins/NativeXr/Source/Constants.h"
-#include "../../../Plugins/NativeXr/Source/XRRigidTransform.h"
 #include "../../../Plugins/NativeXr/Source/XRReferenceSpace.h"
 
 TEST(NativeXr, RequestReferenceSpaceResolvesOrRejectsWithoutTerminatingTheRuntime)

@@ -1,7 +1,11 @@
 #pragma once
+#include <napi/napi.h>
+#include "Constants.h"
 
 namespace Babylon
 {
+    class XRRigidTransform;
+
     // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
     class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace>
     {
@@ -85,10 +89,7 @@ namespace Babylon
             m_jsTransform = Napi::Persistent(transformObj);
         }
 
-        XRRigidTransform* GetTransform()
-        {
-            return XRRigidTransform::Unwrap(m_jsTransform.Value());
-        }
+        XRRigidTransform* GetTransform();
 
     private:
         Napi::Value GetOffsetReferenceSpace(const Napi::CallbackInfo& info)

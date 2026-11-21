@@ -35,6 +35,11 @@
 // NativeXr implementation proper.
 namespace Babylon
 {
+    XRRigidTransform* XRReferenceSpace::GetTransform()
+    {
+        return XRRigidTransform::Unwrap(m_jsTransform.Value());
+    }
+
     namespace Plugins
     {
         NativeXr::NativeXr(std::shared_ptr<Impl> impl)
