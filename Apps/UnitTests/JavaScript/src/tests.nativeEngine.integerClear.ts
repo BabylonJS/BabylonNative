@@ -145,13 +145,14 @@ export function registerIntegerClearTests(
                 // Babylon.js clearAttachments() binds the layout and clears; mark the clear as clearAttachments.
                 engine.bindAttachments(engine.buildTextureLayout([true, true, false]));
                 nativeEngine._clearAttachmentMask |= _native.Engine.CLEAR_ATTACHMENTS_OPERATION;
-                engine.clear(new Color4(0.5, 0.25, 0.002, 1), true, false, false);
+                // 0.699999988079071 and 0.4999999701976776 are exact float32 values that round differently in float than in double.
+                engine.clear(new Color4(0.5, 0.25, 0.699999988079071, 0.4999999701976776), true, false, false);
                 engine.unBindMultiColorAttachmentFramebuffer(target.renderTarget!, true);
 
-                // Signed: Math.round(c) = [1, 0, 0, 1]. clear() would give trunc(255 * c) = [127, 63, 0, 255].
-                expect(await readback.readPixel(0)).to.deep.equal([1, 0, 0, 1]);
-                // Unsigned: Math.round(255 * c) = [128, 64, 1, 255].
-                expect(await readback.readPixel(1)).to.deep.equal([128, 64, 1, 255]);
+                // Signed: Math.round(c) = [1, 0, 1, 0]. clear() would give trunc(255 * c) = [127, 63, 178, 127].
+                expect(await readback.readPixel(0)).to.deep.equal([1, 0, 1, 0]);
+                // Unsigned: Math.round(255 * c) = [128, 64, 178, 127].
+                expect(await readback.readPixel(1)).to.deep.equal([128, 64, 178, 127]);
                 // The unselected RGBA8 attachment keeps the first clear.
                 expect(await readback.readPixel(2)).to.deep.equal([51, 102, 153, 204]);
             } finally {

@@ -29,16 +29,17 @@ namespace
 
     // Babylon.js stores integer clear values through an Int32Array or Uint32Array, which maps non-finite values to zero.
     // clear() scales by 255 and truncates toward zero; clearAttachments() rounds with Math.round (halves toward
-    // +infinity) and scales only unsigned attachments.
-    std::array<float, 4> ToIntegerClearColor(const std::array<float, 4>& color, bool round, float scale)
+    // +infinity) and scales only unsigned attachments. The arithmetic is done in double like JavaScript, which is exact
+    // for float32 inputs, so rounding matches at the edges (e.g. unsigned 0.699999988079071 clears to 178).
+    std::array<float, 4> ToIntegerClearColor(const std::array<float, 4>& color, bool round, double scale)
     {
         std::array<float, 4> integerColor{};
         for (size_t i = 0; i < color.size(); ++i)
         {
-            const float value = color[i] * scale;
+            const double value = static_cast<double>(color[i]) * scale;
             if (std::isfinite(value))
             {
-                integerColor[i] = round ? std::floor(value + 0.5f) : std::trunc(value);
+                integerColor[i] = static_cast<float>(round ? std::floor(value + 0.5) : std::trunc(value));
             }
         }
         return integerColor;
@@ -243,8 +244,8 @@ namespace Babylon::Graphics
             return usePalette && attachments != 0 ? m_deviceContext.AcquireClearPaletteIndex(paletteColor) : uint8_t{};
         };
         const auto paletteIndex = acquire(normalizedAttachments, color);
-        const auto signedPaletteIndex = acquire(signedAttachments, ToIntegerClearColor(color, clearAttachments, clearAttachments ? 1.f : 255.f));
-        const auto unsignedPaletteIndex = acquire(unsignedAttachments, ToIntegerClearColor(color, clearAttachments, 255.f));
+        const auto signedPaletteIndex = acquire(signedAttachments, ToIntegerClearColor(color, clearAttachments, clearAttachments ? 1.0 : 255.0));
+        const auto unsignedPaletteIndex = acquire(unsignedAttachments, ToIntegerClearColor(color, clearAttachments, 255.0));
 
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
         m_viewId = m_deviceContext.AcquireNewViewId();
