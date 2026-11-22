@@ -68,6 +68,20 @@ namespace Napi
         napi_env env_ptr{env};
         if (env_ptr)
         {
+            // Node-API instance data belongs to the environment rather than a
+            // JS object. Finalize it while both the context and env are still
+            // valid; user finalizers are permitted to call Node-API.
+            if (env_ptr->instance_data_finalize != nullptr)
+            {
+                auto finalize = env_ptr->instance_data_finalize;
+                void* data = env_ptr->instance_data;
+                void* hint = env_ptr->instance_data_finalize_hint;
+                env_ptr->instance_data = nullptr;
+                env_ptr->instance_data_finalize = nullptr;
+                env_ptr->instance_data_finalize_hint = nullptr;
+                finalize(env_ptr, data, hint);
+            }
+
             if (napi_shared::ReleasePropertyNameIntrinsics(env_ptr, env_ptr->property_name_intrinsics) != napi_ok)
             {
                 throw std::runtime_error{"Napi::Detach: failed to release property-name intrinsics"};

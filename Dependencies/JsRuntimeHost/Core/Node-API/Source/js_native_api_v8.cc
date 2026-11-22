@@ -358,17 +358,18 @@ inline napi_status Unwrap(napi_env env,
   RETURN_STATUS_IF_FALSE(env, value->IsObject(), napi_invalid_arg);
   v8::Local<v8::Object> obj = value.As<v8::Object>();
   
-  // [BABYLON-NATIVE-ADDITION]: Increase perf by using internal field instead of private property
-  Reference* reference =
-      static_cast<v8impl::Reference*>(obj->GetAlignedPointerFromInternalField(0));
+  const auto key = env->wrap_key.Get(env->isolate);
+  v8::Local<v8::Value> wrapped;
+  RETURN_STATUS_IF_FALSE(env, obj->GetPrivate(context, key).ToLocal(&wrapped), napi_generic_failure);
+  RETURN_STATUS_IF_FALSE(env, wrapped->IsExternal(), napi_invalid_arg);
+  auto* reference = static_cast<Reference*>(wrapped.As<v8::External>()->Value());
 
   if (result) {
     *result = reference->Data();
   }
 
   if (action == RemoveWrap) {
-    // [BABYLON-NATIVE-ADDITION]: Increase perf by using internal field instead of private property
-    obj->SetAlignedPointerInInternalField(0, nullptr);
+    RETURN_STATUS_IF_FALSE(env, obj->DeletePrivate(context, key).FromMaybe(false), napi_generic_failure);
     if (reference->ownership() == Ownership::kUserland) {
       // When the wrap is been removed, the finalizer should be reset.
       reference->ResetFinalizer();
@@ -568,6 +569,11 @@ inline napi_status Wrap(napi_env env,
   v8::Local<v8::Object> obj = value.As<v8::Object>();
 
   v8impl::Reference* reference = nullptr;
+  // Internal fields belong to the object's embedder and ordinary JS objects have none.
+  const auto key = env->wrap_key.Get(env->isolate);
+  const auto has_wrap = obj->HasPrivate(context, key);
+  RETURN_STATUS_IF_FALSE(env, !has_wrap.IsNothing(), napi_generic_failure);
+  RETURN_STATUS_IF_FALSE(env, !has_wrap.FromJust(), napi_invalid_arg);
   if (result != nullptr) {
     // The returned reference should be deleted via napi_delete_reference()
     // ONLY in response to the finalize callback invocation. (If it is deleted
@@ -581,7 +587,6 @@ inline napi_status Wrap(napi_env env,
                                        finalize_cb,
                                        native_object,
                                        finalize_hint);
-    *result = reinterpret_cast<napi_ref>(reference);
   } else {
     // Create a self-deleting reference.
     reference = v8impl::Reference::New(
@@ -594,8 +599,12 @@ inline napi_status Wrap(napi_env env,
         finalize_cb == nullptr ? nullptr : finalize_hint);
   }
 
-  // [BABYLON-NATIVE-ADDITION]: Increase perf by using internal field instead of private property
-  obj->SetAlignedPointerInInternalField(0, reference);
+  if (!obj->SetPrivate(context, key, v8::External::New(env->isolate, reference)).FromMaybe(false)) {
+    reference->ResetFinalizer();
+    delete reference;
+    return napi_set_last_error(env, napi_generic_failure);
+  }
+  if (result != nullptr) *result = reinterpret_cast<napi_ref>(reference);
 
   return GET_RETURN_STATUS(env);
 }
@@ -2955,6 +2964,18 @@ napi_create_external_arraybuffer(napi_env env,
     CHECK_ARG(env, result);
 
     v8::Isolate* isolate = env->isolate;
+    if (external_data == nullptr) {
+      RETURN_STATUS_IF_FALSE(env, byte_length == 0, napi_invalid_arg);
+      // V8 does not invoke a backing store deleter for a null pointer.
+      auto buffer = v8::ArrayBuffer::New(isolate, 0);
+      buffer->Detach();
+      if (finalize_cb != nullptr) {
+        v8impl::Reference::New(env, buffer, 0, v8impl::Ownership::kRuntime,
+                               finalize_cb, nullptr, finalize_hint);
+      }
+      *result = v8impl::JsValueFromV8LocalValue(buffer);
+      return GET_RETURN_STATUS(env);
+    }
 
 #ifdef V8_ENABLE_SANDBOX
     // TODO: We should error out like what happens with node.js. For now, we will copy the buffer instead.
@@ -3503,8 +3524,7 @@ napi_status NAPI_CDECL napi_is_detached_arraybuffer(napi_env env,
 
   v8::Local<v8::Value> value = v8impl::V8LocalValueFromJsValue(arraybuffer);
 
-  //*result =
-  //    value->IsArrayBuffer() && value.As<v8::ArrayBuffer>()->WasDetached();
-  *result = true;
+  *result =
+      value->IsArrayBuffer() && value.As<v8::ArrayBuffer>()->WasDetached();
   return napi_clear_last_error(env);
 }
