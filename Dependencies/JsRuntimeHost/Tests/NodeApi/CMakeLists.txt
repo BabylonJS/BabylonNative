@@ -35,6 +35,11 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "QuickJS")
     list(REMOVE_ITEM JSR_NODE_API_NATIVE_TEST_DIRS test_general)
 endif()
 
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    # Includes the native-addon null-backed ArrayBuffer and typed-array detach cases.
+    list(APPEND JSR_NODE_API_NATIVE_TEST_DIRS test_typedarray)
+endif()
+
 if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "Chakra")
     list(APPEND JSR_NODE_API_NATIVE_TEST_DIRS test_bigint)
 else()

@@ -97,8 +97,6 @@ class NodeApiTestFixture : public TestFixtureBase {
     static constexpr const char* kNoSpawnSync =
         "the in-process Android runner cannot spawn the child process this "
         "test runs";
-    static constexpr const char* kV8WrapAbort =
-        "V8 napi_wrap aborts on objects not created by napi_define_class";
     static constexpr const char* kDefineClassNullProperties =
         "napi_define_class dereferences a NULL properties array (crash)";
     static constexpr const char* kInt64Overflow =
@@ -106,10 +104,6 @@ class NodeApiTestFixture : public TestFixtureBase {
     static constexpr Exclusion kExclusions[] = {
         {"test_general/test.js", true,
          "asserts napi_get_version() == 8; JsRuntimeHost targets Node-API 5"},
-        {"test_function/test.js", kV8, kV8WrapAbort},
-        {"test_general/testEnvCleanup.js", kV8, kV8WrapAbort},
-        {"test_general/testFinalizer.js", kV8, kV8WrapAbort},
-        {"test_reference_double_free/test_wrap.js", kV8, kV8WrapAbort},
         {"test_general/testNapiRun.js", kV8,
          "V8 napi_run_script aborts on a non-string script instead of returning "
          "napi_string_expected"},
