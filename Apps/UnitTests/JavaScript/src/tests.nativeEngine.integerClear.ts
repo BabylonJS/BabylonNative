@@ -139,14 +139,10 @@ export function registerIntegerClearTests(
                 readback.material.setTexture("normalizedTexture", target.textures[2]);
                 await readback.whenReadyAsync();
 
-                const nativeEngine = engine as unknown as { _clearAttachmentMask: number };
                 engine.bindFramebuffer(target.renderTarget!);
                 engine.clear(new Color4(0.2, 0.4, 0.6, 0.8), true, false, false);
-                // Babylon.js clearAttachments() binds the layout and clears; mark the clear as clearAttachments.
-                engine.bindAttachments(engine.buildTextureLayout([true, true, false]));
-                nativeEngine._clearAttachmentMask |= _native.Engine.CLEAR_ATTACHMENTS_OPERATION;
                 // 0.699999988079071 and 0.4999999701976776 are exact float32 values that round differently in float than in double.
-                engine.clear(new Color4(0.5, 0.25, 0.699999988079071, 0.4999999701976776), true, false, false);
+                engine.clearAttachments(new Color4(0.5, 0.25, 0.699999988079071, 0.4999999701976776), engine.buildTextureLayout([true, true, false]), true, false);
                 engine.unBindMultiColorAttachmentFramebuffer(target.renderTarget!, true);
 
                 // Signed: Math.round(c) = [1, 0, 1, 0]. clear() would give trunc(255 * c) = [127, 63, 178, 127].

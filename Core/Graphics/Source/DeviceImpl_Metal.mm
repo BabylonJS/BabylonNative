@@ -10,7 +10,7 @@ namespace Babylon::Graphics
         auto internalData = bgfx::getInternalData();
         return {
             reinterpret_cast<MTL::Device*>(internalData->context),
-            reinterpret_cast<MTL::CommandQueue*>(internalData->commandQueue),
+            reinterpret_cast<MTL::CommandQueue*>(internalData->queue),
         };
     }
 

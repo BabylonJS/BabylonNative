@@ -22,14 +22,8 @@ async function readTexture(texture: DynamicTexture, premulAlpha = false): Promis
     if (!(pixels instanceof Uint8Array)) {
         throw new Error("Expected RGBA8 GPU readback for the canvas texture");
     }
-    // Native readback uses WebGL's bottom-up row order; assertions use Canvas coordinates.
-    const { width, height } = texture.getSize();
-    const stride = width * 4;
-    const topDown = new Uint8Array(pixels.length);
-    for (let y = 0; y < height; ++y) {
-        topDown.set(pixels.subarray(y * stride, (y + 1) * stride), (height - 1 - y) * stride);
-    }
-    return topDown;
+    // update(invertY = false) uploads Canvas rows top-down, so readback rows are already in Canvas coordinates.
+    return pixels;
 }
 
 export function registerCanvasImageTests(
