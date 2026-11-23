@@ -5283,17 +5283,23 @@
         {
             "title": "PBR Bent Normal Mixed UV Frames",
             "playgroundId": "#TWCK59#0",
-            "referenceImage": "pbr-bent-normal-mixed-uv-frames.png"
+            "referenceImage": "pbr-bent-normal-mixed-uv-frames.png",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs"
         },
         {
             "title": "PBR Bent Normal Nonuniform Scaling",
             "playgroundId": "#HFS4KH#0",
-            "referenceImage": "pbr-bent-normal-nonuniform-scaling.png"
+            "referenceImage": "pbr-bent-normal-nonuniform-scaling.png",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs"
         },
         {
             "title": "PBR Bent Normal Mediump Precision",
             "playgroundId": "#G3UAD8#0",
-            "referenceImage": "pbr-bent-normal-mediump-precision.png"
+            "referenceImage": "pbr-bent-normal-mediump-precision.png",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs"
         },
         {
             "title": "Solid Particle System Mixed Model Winding",
