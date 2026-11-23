@@ -2006,9 +2006,7 @@
             "playgroundId": "#Q46SI1#2",
             "replace": "const scenario = \"all\";, const scenario = \"viewportEdges\";, BABYLON.MeshBlendQuality.Medium, BABYLON.MeshBlendQuality.Low",
             "referenceImage": "mesh-blending-phase4-low.png",
-            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"],
-            "excludedGraphicsApis": ["WebGPU"],
-            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs"
+            "requiredNativeCaps": ["CAPS_INTEGER_COLOR_ATTACHMENTS"]
         },
         {
             "title": "Mesh blending - mixed radius continuation",
@@ -5314,15 +5312,11 @@
         {
             "title": "PBR Bent Normal Regression Cases",
             "playgroundId": "#R7QHEO#3",
-            "referenceImage": "pbr-bent-normal-regression-cases.png",
-            "excludedGraphicsApis": ["WebGPU"],
-            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs"
+            "referenceImage": "pbr-bent-normal-regression-cases.png"
         },
         {
             "title": "PBR Bent Normal Visibility Invariants",
             "playgroundId": "#3PC7QS#0",
-            "excludedGraphicsApis": ["WebGPU"],
-            "reason": "On WebGPU (Dawn) the CI software adapter (WARP) reports DXGI_ERROR_DEVICE_REMOVED; passes on hardware GPUs",
             "referenceImage": "pbr-bent-normal-visibility-invariants.png"
         },
         {

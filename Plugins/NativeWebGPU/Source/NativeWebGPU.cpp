@@ -473,13 +473,17 @@ namespace Babylon::Plugins::NativeWebGPU
                     .sType = WGPUSType_DawnTogglesDescriptor,
                 },
             };
-            const char* kWarpWorkaround = "nonzero_clear_resources_on_creation_for_testing";
+            // Software adapters (WARP) back "GPU" memory with process memory:
+            // - lazy-clear MSAA resolves are broken without nonzero clears;
+            // - Dawn's pooled resource heaps keep their high-water mark for the
+            //   device lifetime, so suballocation is disabled to return memory.
+            static const char* kWarpToggles[] = {"nonzero_clear_resources_on_creation_for_testing", "disable_resource_suballocation"};
             if (isSoftwareAdapter)
             {
-                toggles.enabledToggleCount = 1;
-                toggles.enabledToggles = &kWarpWorkaround;
+                toggles.enabledToggleCount = 2;
+                toggles.enabledToggles = kWarpToggles;
                 devDesc.nextInChain = &toggles.chain;
-                DawnLog(LogLevel::Warn, "software adapter detected -- enabling MSAA-resolve lazy-clear workaround");
+                DawnLog(LogLevel::Warn, "software adapter detected -- enabling MSAA-resolve lazy-clear and no-suballocation workarounds");
             }
             WGPURequestDeviceCallbackInfo deviceCb{
                 .mode = WGPUCallbackMode_WaitAnyOnly,
