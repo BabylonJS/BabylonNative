@@ -4,12 +4,13 @@ describe("WebAssembly", function () {
     this.timeout(30000);
 
     // These promises only settle when the AppRuntime pumps the engine's deferred work: V8's
-    // foreground task queue, or the CFRunLoop JavaScriptCore completes them on (Apple only).
-    // The other runtimes have the same class of gap and hang here instead of failing, so scope
-    // the suite rather than leave a 30s timeout on every other leg.
+    // foreground task queue, or the run loop JavaScriptCore completes them on (CFRunLoop on
+    // Apple, a GLib main context on Linux). The other runtimes have the same class of gap and
+    // hang here instead of failing, so scope the suite rather than leave a 30s timeout on every
+    // other leg.
     beforeEach(function () {
         const settlesAsyncWasm = hostEngine === "V8" ||
-            (hostEngine === "JavaScriptCore" && (hostPlatform === "macOS" || hostPlatform === "iOS"));
+            (hostEngine === "JavaScriptCore" && (hostPlatform === "macOS" || hostPlatform === "iOS" || hostPlatform === "Unix"));
         if (!settlesAsyncWasm || typeof WebAssembly === "undefined") {
             this.skip();
         }

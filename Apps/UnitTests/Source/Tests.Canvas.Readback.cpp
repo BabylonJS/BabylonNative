@@ -770,6 +770,122 @@ TEST(CanvasReadback, QueuedRepresentationsPreservePixelsAndMips)
 #endif
 }
 
+TEST(CanvasReadback, CanvasTextureHonorsInvertY)
+{
+#if defined(USE_NOOP_METAL_DEVICE) || defined(SKIP_RENDER_TESTS)
+    GTEST_SKIP();
+#else
+    RunCanvasTest([](Napi::Env env) {
+        auto canvas = Babylon::JsRuntime::NativeObject::GetFromJavaScript(env).Get("Canvas").As<Napi::Function>().New({});
+        canvas.Set("width", 4);
+        canvas.Set("height", 4);
+        auto context = canvas.Get("getContext").As<Napi::Function>().Call(canvas, {Napi::String::New(env, "2d")}).As<Napi::Object>();
+        // Semi-transparent, so premultiplied and straight-alpha representations differ.
+        context.Set("fillStyle", "rgba(255, 0, 0, 0.5)");
+        context.Get("fillRect").As<Napi::Function>().Call(context, {
+            Napi::Number::New(env, 0), Napi::Number::New(env, 0), Napi::Number::New(env, 4), Napi::Number::New(env, 1)});
+        context.Get("flush").As<Napi::Function>().Call(context, {});
+        auto* nativeCanvas = Babylon::Polyfills::Internal::NativeCanvas::Unwrap(canvas);
+        const auto source = bgfx::getTexture(nativeCanvas->GetFrameBuffer().Handle());
+        auto& graphics = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+
+        struct Representation
+        {
+            bool PremulAlpha;
+            bool InvertY;
+        };
+        constexpr std::array<Representation, 4> representations{{{true, true}, {true, false}, {false, true}, {false, false}}};
+        constexpr uint16_t readbackWidth = 4 * representations.size();
+        auto pixels = std::make_shared<std::array<uint8_t, readbackWidth * 4 * 4>>();
+        auto completed = std::make_shared<std::promise<void>>();
+        auto future = completed->get_future();
+        {
+            // Every representation is requested and copied within one frame, so their queued
+            // conversions are only correct if each has its own target.
+            auto frameScope = graphics.AcquireFrameCompletionScope();
+            const auto getTexture = canvas.Get("getCanvasTexture").As<Napi::Function>();
+            std::array<Babylon::Graphics::Texture*, representations.size()> textures{};
+            for (size_t i = 0; i < representations.size(); ++i)
+            {
+                textures[i] = getTexture.Call(canvas, {Napi::Boolean::New(env, representations[i].PremulAlpha), Napi::Boolean::New(env, false),
+                                                          Napi::Boolean::New(env, representations[i].InvertY)})
+                                  .As<Napi::Pointer<Babylon::Graphics::Texture>>().Get();
+                if (i == 0)
+                {
+                    EXPECT_EQ(textures[i]->Handle().idx, source.idx);
+                }
+                else
+                {
+                    EXPECT_NE(textures[i]->Handle().idx, source.idx);
+                }
+            }
+            auto readback = std::make_shared<Babylon::Graphics::Texture>(graphics);
+            readback->Create2D(readbackWidth, 4, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK);
+            for (uint16_t i = 0; i < textures.size(); ++i)
+            {
+                bgfx::TextureRegion sourceRegion{};
+                sourceRegion.init(textures[i]->Handle(), 0, 0, 4, 4);
+                bgfx::TextureRegion destination{};
+                destination.init(readback->Handle(), i * 4, 0, 4, 4);
+                graphics.GetActiveEncoder()->blit(graphics.AcquireNewViewId(), destination, sourceRegion);
+            }
+            graphics.ReadTextureAsync(readback->Handle(), gsl::make_span(*pixels))
+                .then(arcana::inline_scheduler, arcana::cancellation::none(),
+                    [readback, pixels, completed](arcana::expected<void, std::exception_ptr> result) {
+                        readback->Dispose();
+                        if (result.has_error())
+                        {
+                            completed->set_exception(result.error());
+                        }
+                        else
+                        {
+                            completed->set_value();
+                        }
+                    });
+        }
+        ASSERT_EQ(future.wait_for(std::chrono::seconds{30}), std::future_status::ready);
+        ASSERT_NO_THROW(future.get());
+
+        // The raw texture's filled row is the reference for invertY=true; invertY=false mirrors it.
+        size_t uprightRow = 4;
+        for (size_t y = 0; y < 4; ++y)
+        {
+            if ((*pixels)[(y * readbackWidth) * 4 + 3] > 64)
+            {
+                EXPECT_EQ(uprightRow, 4u) << "more than one filled row";
+                uprightRow = y;
+            }
+        }
+        ASSERT_LT(uprightRow, 4u);
+        for (size_t i = 0; i < representations.size(); ++i)
+        {
+            SCOPED_TRACE(i);
+            const size_t filledRow = representations[i].InvertY ? uprightRow : 3 - uprightRow;
+            for (size_t y = 0; y < 4; ++y)
+            {
+                SCOPED_TRACE(y);
+                for (size_t x = 0; x < 4; ++x)
+                {
+                    const size_t offset = (y * readbackWidth + i * 4 + x) * 4;
+                    if (y == filledRow)
+                    {
+                        const int alpha = (*pixels)[(uprightRow * readbackWidth + x) * 4 + 3];
+                        ASSERT_LT(alpha, 255);
+                        // Straight alpha restores full red; premultiplied red equals the coverage alpha.
+                        EXPECT_NEAR((*pixels)[offset + 3], alpha, 1);
+                        EXPECT_NEAR((*pixels)[offset], representations[i].PremulAlpha ? alpha : 255, 2);
+                    }
+                    else
+                    {
+                        EXPECT_EQ((*pixels)[offset + 3], 0);
+                    }
+                }
+            }
+        }
+    });
+#endif
+}
+
 TEST(CanvasReadback, EncodesPngWithoutInputImageLoading)
 {
     RunCanvasTest([](Napi::Env env) {

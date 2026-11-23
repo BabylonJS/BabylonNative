@@ -115,8 +115,8 @@ namespace Babylon::Graphics
 
         // Babylon Native draws from dynamic buffers (see DynamicBufferPool) and never allocates transient buffers,
         // which bgfx would otherwise reserve at init (a GPU buffer plus CPU copies for each in-flight frame).
-        init.limits.maxTransientVbSize = MIN_TRANSIENT_BUFFER_SIZE;
-        init.limits.maxTransientIbSize = MIN_TRANSIENT_BUFFER_SIZE;
+        init.limits.minTransientVbSize = MIN_TRANSIENT_BUFFER_SIZE;
+        init.limits.minTransientIbSize = MIN_TRANSIENT_BUFFER_SIZE;
 
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);

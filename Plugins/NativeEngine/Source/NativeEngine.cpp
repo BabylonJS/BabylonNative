@@ -21,6 +21,7 @@
 #include <bgfx/bgfx.h>
 #include <bimg/bimg.h>
 #include <bx/error.h>
+#include <bx/platform.h>
 
 namespace bgfx
 {
@@ -1192,6 +1193,8 @@ namespace Babylon
                 InstanceValue("supportsMultisampledMipmaps", Napi::Boolean::From(env, true)),
                 InstanceValue("supportsDynamicTextureMipMaps", Napi::Boolean::From(env,
                     0 != (bgfx::getCaps()->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN))),
+                // There is no navigator.userAgent to sniff, so report mobile hosts explicitly.
+                InstanceValue("isMobile", Napi::Boolean::From(env, BX_PLATFORM_ANDROID || BX_PLATFORM_IOS)),
                 InstanceMethod("dispose", &NativeEngine::Dispose),
 #ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
                 InstanceMethod("_disposeDrainTestSchedule", &NativeEngine::DisposeDrainTestSchedule),
