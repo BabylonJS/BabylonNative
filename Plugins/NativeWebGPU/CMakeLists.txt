@@ -57,19 +57,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
         PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
 endif()
 
-# NativeWebGPU exposes every WebGPU object as an N-API External wrapper. On the V8
-# engine, jsruntimehost's N-API never drains its GC finalizer queue at runtime, so
-# those wrappers (and the wgpu handles they hold) accumulate until the process OOMs.
-# When building against V8, give the plugin access to the internal env header so it
-# can drain the queue itself (see PumpJsFinalizers in NativeWebGPU.cpp). Other engines
-# finalize through their own mechanisms and need none of this.
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    target_compile_definitions(NativeWebGPU PRIVATE NATIVEWEBGPU_V8_FINALIZER_DRAIN)
-    target_include_directories(NativeWebGPU PRIVATE
-        $<TARGET_PROPERTY:napi,INCLUDE_DIRECTORIES>
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../Dependencies/JsRuntimeHost/Core/Node-API/Source")
-endif()
-
 if(WIN32)
     target_compile_definitions(NativeWebGPU
         PRIVATE NOMINMAX)

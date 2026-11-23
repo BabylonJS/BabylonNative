@@ -16,18 +16,6 @@
 
 #include <webgpu/webgpu.h>
 
-// jsruntimehost's V8 N-API enqueues GC finalizers into napi_env__::pending_finalizers
-// but, unlike real Node's event-loop-backed env, never drains that queue at runtime.
-// NativeWebGPU creates many short-lived N-API wrappers per frame (one per WebGPU object:
-// command encoders, passes, views, bind groups...), so their finalizers — and the
-// wgpu handles they would release — accumulate unbounded until the process OOMs.
-// When built against V8 we reach into the internal env to nudge GC and drain the queue
-// (see PumpJsFinalizers). NATIVEWEBGPU_V8_FINALIZER_DRAIN is defined by CMake only when
-// NAPI_JAVASCRIPT_ENGINE == V8; other engines finalize through their own mechanisms.
-#if defined(NATIVEWEBGPU_V8_FINALIZER_DRAIN)
-#include "js_native_api_v8.h"
-#endif
-
 #include <bimg/encode.h>
 #include <bx/error.h>
 #include <bx/file.h>
@@ -585,47 +573,6 @@ namespace Babylon::Plugins::NativeWebGPU
             return o;
         }
 
-        // Count of GPU wrappers created since process start. Used to gate how
-        // often we force GC + drain finalizers (see PumpJsFinalizers): dropped
-        // wrappers are only reclaimed when V8 collects and their N-API finalizer
-        // runs, and this host never drains finalizers on its own during the
-        // native render loop.
-        uint64_t g_wrappersCreated = 0;
-
-#if defined(NATIVEWEBGPU_V8_FINALIZER_DRAIN)
-        uint64_t g_wrappersAtLastPump = 0;
-        // Force a GC (so dead wrappers' finalizers get enqueued) then drain the
-        // napi finalizer queue (which this host otherwise never drains at
-        // runtime). Bounded-frequency: only forces GC once enough wrappers have
-        // been created since the last pump, so steady-state rendering isn't
-        // penalised by a full GC every frame.
-        void PumpJsFinalizers(Napi::Env env, bool force)
-        {
-            constexpr uint64_t kWrappersPerPump = 1500;
-            if (!force && g_wrappersCreated - g_wrappersAtLastPump < kWrappersPerPump)
-            {
-                return;
-            }
-            g_wrappersAtLastPump = g_wrappersCreated;
-
-            auto* e = reinterpret_cast<napi_env__*>(static_cast<napi_env>(env));
-            if (e->isolate != nullptr)
-            {
-                // Runs GC and invokes first-pass weak callbacks, which enqueue
-                // the dead wrappers' finalizers into pending_finalizers.
-                e->isolate->LowMemoryNotification();
-            }
-            while (!e->pending_finalizers.empty())
-            {
-                v8impl::RefTracker* rt = *e->pending_finalizers.begin();
-                e->pending_finalizers.erase(rt);
-                rt->Finalize();
-            }
-        }
-#else
-        void PumpJsFinalizers(Napi::Env, bool) {}
-#endif
-
         // The C API has no RAII: handles are raw pointers with manual
         // refcounting. WgpuOps<T> maps each object type to its AddRef/Release
         // pair so the N-API wrapper below can hold a strong reference for
@@ -673,13 +620,23 @@ namespace Babylon::Plugins::NativeWebGPU
         // reference directly. Wrapping a *borrowed* handle (one this code did
         // not just create, e.g. g_state.device) requires an explicit
         // WgpuOps<T>::AddRef at the call site.
+        //
+        // The JS engine cannot see the GPU memory behind a wrapper, so each one
+        // reports a nominal external size. That memory pressure makes the
+        // garbage collector reclaim dropped wrappers (and their GPU objects)
+        // promptly while rendering.
+        constexpr int64_t kWrapperExternalMemory = 256 * 1024;
+
         template <typename T>
         Napi::External<T> MakeExt(Napi::Env env, const T& h)
         {
-            ++g_wrappersCreated;
-            return Napi::External<T>::New(env, new T(h), [](Napi::Env, T* p) {
+            int64_t adjusted{};
+            napi_adjust_external_memory(env, kWrapperExternalMemory, &adjusted);
+            return Napi::External<T>::New(env, new T(h), [](Napi::Env env, T* p) {
                 WgpuOps<T>::Release(*p);
                 delete p;
+                int64_t adjusted{};
+                napi_adjust_external_memory(env, -kWrapperExternalMemory, &adjusted);
             });
         }
 
@@ -4882,10 +4839,6 @@ namespace Babylon::Plugins::NativeWebGPU
         g_presentationCanvas.Reset();
         Babylon::Plugins::Internal::NativeCanvasDawn::Deinitialize();
 
-        // Drain deferred wrapper finalizers while both the N-API environment and
-        // the Dawn device are valid.
-        PumpJsFinalizers(env, true);
-
         // Deferred destroy callbacks own an extra resource reference. Run them
         // before releasing the plugin's device and instance references.
         for (auto& pending : g_pendingDestroy)
@@ -4912,10 +4865,6 @@ namespace Babylon::Plugins::NativeWebGPU
         if (g_state.instance) wgpuInstanceRelease(g_state.instance);
 
         g_state = {};
-        g_wrappersCreated = 0;
-#if defined(NATIVEWEBGPU_V8_FINALIZER_DRAIN)
-        g_wrappersAtLastPump = 0;
-#endif
 
         // The environment is about to go away; anything logged after this point
         // has to use the stderr fallback.
@@ -4988,19 +4937,15 @@ namespace Babylon::Plugins::NativeWebGPU
                     throw;
                 }
                 errorCallback.Value().Call({e.Value()});
-                PumpJsFinalizers(env, true);
                 return;
             }
             Napi::Object res = readResult.As<Napi::Object>();
             Napi::ArrayBuffer ab = res.Get("data").As<Napi::ArrayBuffer>();
             Napi::Uint8Array u8 = Napi::Uint8Array::New(env, ab.ByteLength(), ab, 0);
             callback.Value().Call({u8});
-            // Short validation scenes may not reach the normal wrapper budget.
-            PumpJsFinalizers(env, true);
         }
         wgpuInstanceProcessEvents(g_state.instance);
         FlushPendingDestroy();
-        PumpJsFinalizers(env, false);
     }
 
     void ResizeSurface(uint32_t width, uint32_t height)
