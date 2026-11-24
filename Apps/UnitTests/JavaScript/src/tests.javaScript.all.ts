@@ -198,6 +198,26 @@ describe("Native texture readback", function () {
       } finally {
         texture.dispose();
       }
+
+      // Odd heights must pair the same source rows on every backend: rows [0, 100, 200] filter to 50, not 150.
+      const oddData = new Uint8Array(2 * 3 * 4);
+      for (let y = 0; y < 3; ++y) {
+        for (let x = 0; x < 2; ++x) {
+          oddData.set([y * 100, y * 100, y * 100, 255], (y * 2 + x) * 4);
+        }
+      }
+      const oddTexture = engine.createRawTexture2DArray(oddData, 2, 3, 1, Constants.TEXTUREFORMAT_RGBA, true, false, Constants.TEXTURE_NEAREST_SAMPLINGMODE);
+      try {
+        const result = await engine._readTexturePixels(oddTexture, 1, 1, -1, 1);
+        if (!(result instanceof Uint8Array)) {
+          throw new Error("Expected RGBA8 mip readback");
+        }
+        Array.from(result).forEach(function (value, index) {
+          expect(value).to.be.closeTo([50, 50, 50, 255][index], 1);
+        });
+      } finally {
+        oddTexture.dispose();
+      }
     } finally {
       scene.dispose();
       engine.dispose();

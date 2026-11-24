@@ -2620,10 +2620,16 @@ void main() {
                 if (generateMips)
                 {
                     // bgfx can only generate mips for render targets; build each layer's chain on the CPU.
-                    // Generate from the flipped copy so every level shares the same row order.
-                    GenerateBoxFilteredMips(Env(), uploadFormat, width, height, dataCopy->data, 0, mipChainInfo.numMips,
-                        [texture, i](uint8_t level, uint16_t levelWidth, uint16_t levelHeight, const uint8_t* bytes, uint32_t size) {
-                            texture->Update2D(i, level, 0, 0, levelWidth, levelHeight, bgfx::copy(bytes, size));
+                    // Filter the unflipped data and flip each level afterwards, like updateTextureData, so
+                    // odd-height levels pair the same rows on every backend.
+                    GenerateBoxFilteredMips(Env(), uploadFormat, width, height, upload.data(), 0, mipChainInfo.numMips,
+                        [texture, i, flipRows](uint8_t level, uint16_t levelWidth, uint16_t levelHeight, const uint8_t* bytes, uint32_t size) {
+                            const bgfx::Memory* levelCopy{bgfx::copy(bytes, size)};
+                            if (flipRows)
+                            {
+                                FlipImage({levelCopy->data, size}, levelHeight);
+                            }
+                            texture->Update2D(i, level, 0, 0, levelWidth, levelHeight, levelCopy);
                         });
                 }
                 texture->Update2D(i, 0, 0, 0, width, height, dataCopy);
