@@ -21,6 +21,7 @@
 #include <bgfx/bgfx.h>
 #include <bimg/bimg.h>
 #include <bx/error.h>
+#include <bx/pixelformat.h>
 #include <bx/platform.h>
 
 namespace bgfx
@@ -66,6 +67,8 @@ namespace Babylon
         constexpr uint32_t BUFFER_READBACK_WORKGROUP_SIZE = 64;
         constexpr size_t MAXIMUM_COLOR_ATTACHMENTS = 8;
         constexpr size_t MAXIMUM_FRAME_BUFFER_ATTACHMENTS = MAXIMUM_COLOR_ATTACHMENTS + 1;
+        // COMMAND_CLEAR2 flag above the 8-bit attachment mask; set by clearAttachments().
+        constexpr uint32_t CLEAR_ATTACHMENTS_OPERATION = 0x100;
         constexpr uint32_t STENCIL_MASK = UINT8_MAX;
         constexpr size_t FRAME_BUFFER_VALIDATION_MESSAGE_LENGTH = 512;
         constexpr size_t TRANSFORM_FEEDBACK_LAYOUT_COMPONENT_COUNT = 4;
@@ -395,7 +398,6 @@ namespace Babylon
             // m_depth == 0 rather than 1. Use isVolume rather than comparing m_depth.
             assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
-            assert(image->m_numMips == 1);
             assert(!image->m_cubeMap);
 
             if (image->m_format == bimg::TextureFormat::R8 ||
@@ -436,6 +438,22 @@ namespace Babylon
             return image;
         }
 
+        // Consumes image and returns it converted to dstFormat, or throws.
+        bimg::ImageContainer* ConvertImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bimg::TextureFormat::Enum dstFormat, bool convertMips, const char* purpose)
+        {
+            const bimg::TextureFormat::Enum srcFormat{image->m_format};
+            bimg::ImageContainer* converted{bimg::imageConvert(&allocator, dstFormat, *image, convertMips)};
+            bimg::imageFree(image);
+
+            if (converted == nullptr)
+            {
+                throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to " +
+                    bimg::getName(dstFormat) + " for " + purpose + "."};
+            }
+
+            return converted;
+        }
+
         // Returns a non-null image, or throws if any conversion step fails. Throwing rather than
         // returning null keeps every caller safe by default: the async load paths run inside arcana
         // tasks, which capture the exception and route it to their JavaScript onError callback,
@@ -443,77 +461,56 @@ namespace Babylon
         // would be silently dereferenced by LoadTextureFromImage / LoadCubeTextureFromImages.
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
-            assert(
-                image->m_format == bimg::TextureFormat::R8 ||
-                image->m_format == bimg::TextureFormat::R16 ||
-                image->m_format == bimg::TextureFormat::RGB8 ||
-                image->m_format == bimg::TextureFormat::RGBA8 ||
-                image->m_format == bimg::TextureFormat::RGBA16 ||
-                image->m_format == bimg::TextureFormat::RGBA16F ||
-                image->m_format == bimg::TextureFormat::RG16F ||
-                image->m_format == bimg::TextureFormat::RG32F ||
-                image->m_format == bimg::TextureFormat::RGBA32F ||
-                image->m_format == bimg::TextureFormat::RGBA32U);
-
+            // Any bgfx format can reach this point: raw texture uploads pass whatever format the
+            // JavaScript side requested (e.g. R32F, RG8, RG16, R16S, B5G6R5), and DDS/KTX files
+            // arrive with their own (possibly block-compressed) mip chain.
             assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
-            assert(image->m_numMips == 1);
             assert(image->m_cubeMap == false);
 
+            // Image data is upright, (0, 0) is the top-left texel. Flip it when the requested
+            // orientation doesn't match the renderer's texture origin.
             if (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)
             {
-                FlipImage({static_cast<uint8_t*>(image->m_data), image->m_size}, image->m_height);
+                if (bimg::isCompressed(image->m_format))
+                {
+                    // Block-compressed rows can't be flipped in place, decode first.
+                    image = ConvertImage(allocator, image, bimg::isFloat(image->m_format) ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA8, true, "flipping");
+                }
+
+                for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+                {
+                    bimg::ImageMip imageMip{};
+                    if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
+                    {
+                        FlipImage({const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size}, imageMip.m_height);
+                    }
+                }
             }
 
             if (srgb && !bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB))
             {
-                const bimg::TextureFormat::Enum srcFormat{image->m_format};
-
-                bimg::ImageContainer* oldImage{image};
-                image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
-                bimg::imageFree(oldImage);
-
-                if (image == nullptr)
-                {
-                    throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to RGBA8 for sRGB upload."};
-                }
-
+                image = ConvertImage(allocator, image, bimg::TextureFormat::RGBA8, true, "sRGB upload");
                 assert(bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB));
             }
 
-            if (generateMips)
+            if (generateMips && image->m_numMips == 1)
             {
                 // bimg::imageGenerateMips only supports RGBA8 and RGBA32F source data; for any
                 // other format it returns NULL. Convert first so mip generation (and the
-                // subsequent GPU upload) succeeds. High-precision / float formats are promoted to
-                // RGBA32F to preserve range; everything else - including single/dual-channel,
-                // RGB8/BGRA8 and block-compressed formats such as BC1/DXT1 - is decoded to RGBA8.
-                // Without this, e.g. a BC1 texture with generateMips produced a NULL image that the
-                // caller dereferenced, crashing the process.
+                // subsequent GPU upload) succeeds. Float formats and formats with more than 8 bits
+                // per channel (e.g. R32F, RG16, R16S) are promoted to RGBA32F to preserve range;
+                // everything else - including RG8, RGB8, BGRA8, B5G6R5 and block-compressed formats
+                // such as BC1/DXT1 - is decoded to RGBA8. Images that already carry a mip chain
+                // (DDS/KTX) keep it.
                 if (image->m_format != bimg::TextureFormat::RGBA8 &&
                     image->m_format != bimg::TextureFormat::RGBA32F)
                 {
-                    const bimg::TextureFormat::Enum dstFormat =
-                        (image->m_format == bimg::TextureFormat::R16 ||
-                         image->m_format == bimg::TextureFormat::R16F ||
-                         image->m_format == bimg::TextureFormat::RG16F ||
-                         image->m_format == bimg::TextureFormat::RG32F ||
-                         image->m_format == bimg::TextureFormat::RGBA16 ||
-                         image->m_format == bimg::TextureFormat::RGBA16F)
-                            ? bimg::TextureFormat::RGBA32F
-                            : bimg::TextureFormat::RGBA8;
+                    const bimg::ImageBlockInfo& blockInfo{bimg::getBlockInfo(image->m_format)};
+                    const bool highPrecision{bimg::isFloat(image->m_format) ||
+                        blockInfo.rBits > 8 || blockInfo.gBits > 8 || blockInfo.bBits > 8 || blockInfo.aBits > 8};
 
-                    const bimg::TextureFormat::Enum srcFormat{image->m_format};
-
-                    bimg::ImageContainer* oldImage{image};
-                    image = bimg::imageConvert(&allocator, dstFormat, *image, false);
-                    bimg::imageFree(oldImage);
-
-                    if (image == nullptr)
-                    {
-                        throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to " +
-                            bimg::getName(dstFormat) + " for mip generation."};
-                    }
+                    image = ConvertImage(allocator, image, highPrecision ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA8, false, "mip generation");
                 }
 
                 bimg::ImageContainer* oldImage{image};
@@ -918,8 +915,6 @@ namespace Babylon
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
                 StaticValue("CAPS_ORIGIN_BOTTOM_LEFT", Napi::Boolean::From(env, bgfx::getCaps()->originBottomLeft)),
                 // Renderers known to clear integer color attachments with integer values and never blend them.
-                // D3D11/D3D12 are excluded: bgfx keeps blending enabled on integer render targets there, which
-                // D3D11 treats as invalid (the draw is dropped) and D3D12 rejects at pipeline state creation.
                 StaticValue("CAPS_INTEGER_COLOR_ATTACHMENTS", Napi::Boolean::From(env, [] {
                     switch (bgfx::getRendererType())
                     {
@@ -927,6 +922,8 @@ namespace Babylon
                             // bgfx disables blending only on the integer attachments, so the attachment blend
                             // states differ, which Vulkan allows only with the independentBlend feature.
                             return 0 != (bgfx::getCaps()->supported & BGFX_CAPS_BLEND_INDEPENDENT);
+                        case bgfx::RendererType::Direct3D11:
+                        case bgfx::RendererType::Direct3D12:
                         case bgfx::RendererType::Metal:
                         case bgfx::RendererType::OpenGL:
                         case bgfx::RendererType::OpenGLES:
@@ -1182,6 +1179,8 @@ namespace Babylon
                     : env.Undefined()),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_CLEAR2", Napi::FunctionPointer::Create(env, &NativeEngine::Clear2)),
+                // OR into the COMMAND_CLEAR2 attachment mask to clear integer attachments like WebGL clearAttachments().
+                StaticValue("CLEAR_ATTACHMENTS_OPERATION", Napi::Number::From(env, CLEAR_ATTACHMENTS_OPERATION)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
                 StaticValue("COMMAND_SETSTENCIL2", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil2)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
@@ -3397,6 +3396,8 @@ void main() {
         std::array<bgfx::Attachment, MAXIMUM_FRAME_BUFFER_ATTACHMENTS> attachments{};
         uint8_t numAttachments = 0;
         uint8_t depthOneVolumeAttachmentMask{};
+        uint8_t signedIntegerColorAttachmentMask{};
+        uint8_t unsignedIntegerColorAttachmentMask{};
 
         // An uninitialized texture requests a sampleable depth attachment.
         Graphics::Texture* depthStencilTextureRequest = depthStencilTexture;
@@ -3437,7 +3438,18 @@ void main() {
             attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, attachmentLayer, 1, mip
                 , autoGenMips ? BGFX_ATTACHMENT_AUTO_GEN_MIPS : BGFX_ATTACHMENT_NONE
                 );
+
+            const auto encoding = bx::EncodingType::Enum(bimg::getBlockInfo(bimg::TextureFormat::Enum(texture->Format())).encoding);
+            if (encoding == bx::EncodingType::Int)
+            {
+                signedIntegerColorAttachmentMask |= static_cast<uint8_t>(1 << (numAttachments - 1));
+            }
+            else if (encoding == bx::EncodingType::Uint)
+            {
+                unsignedIntegerColorAttachmentMask |= static_cast<uint8_t>(1 << (numAttachments - 1));
+            }
         }
+        const uint8_t colorAttachmentMask{static_cast<uint8_t>((1u << numAttachments) - 1)};
 
         // Create and alias shared depth once; subsequent framebuffers borrow its handle.
         bool borrowedExplicitDepth = false;
@@ -3565,7 +3577,16 @@ void main() {
             attachments[numAttachments++].init(depthStencilTextureHandle, bgfx::Access::Write, attachLayer, 1, 0, BGFX_ATTACHMENT_NONE);
         }
 
-        bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
+        // Validate first: bgfx::createFrameBuffer asserts on invalid attachments in debug builds
+        // instead of returning an invalid handle.
+        bx::Error fbErr;
+        bgfx::isFrameBufferValid(numAttachments, attachments.data(), &fbErr);
+        bgfx::FrameBufferHandle frameBufferHandle = BGFX_INVALID_HANDLE;
+        if (fbErr.isOk())
+        {
+            frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
+        }
+
         if (!bgfx::isValid(frameBufferHandle))
         {
             if (createdDepthStencil && !generatedDepthStencil)
@@ -3574,8 +3595,6 @@ void main() {
             }
 
             // Report bgfx's specific framebuffer validation failure.
-            bx::Error fbErr;
-            bgfx::isFrameBufferValid(numAttachments, attachments.data(), &fbErr);
             const bx::StringView reason = fbErr.getMessage();
             char message[FRAME_BUFFER_VALIDATION_MESSAGE_LENGTH];
             snprintf(message, sizeof(message), "Failed to create frame buffer: %.*s",
@@ -3606,6 +3625,7 @@ void main() {
         const bool isMultisampled = RenderTargetSamplesToBgfxRtFlag(samples) != BGFX_TEXTURE_RT;
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, -1, isMultisampled, depthOneVolumeAttachmentMask);
         frameBuffer->SetGeneratedDepthStencil(std::move(generatedDepthStencil));
+        frameBuffer->SetColorAttachmentMasks(colorAttachmentMask, signedIntegerColorAttachmentMask, unsignedIntegerColorAttachmentMask);
 
         // Like ANGLE on D3D, render cube faces upside down on top-left-origin backends so their rows land
         // in GL order. Cube directions are sampled unflipped, so this keeps rendered faces consistent with
@@ -3838,7 +3858,11 @@ void main() {
         const float depth{data.ReadFloat32()};
         const bool shouldClearStencil{static_cast<bool>(data.ReadUint32())};
         const uint8_t stencil{static_cast<uint8_t>(data.ReadUint32())};
-        const uint8_t colorAttachmentMask{static_cast<uint8_t>(hasAttachmentMask ? data.ReadUint32() : UINT8_MAX)};
+        const uint32_t attachmentMaskArg{hasAttachmentMask ? data.ReadUint32() : UINT8_MAX};
+        const uint8_t colorAttachmentMask{static_cast<uint8_t>(attachmentMaskArg & UINT8_MAX)};
+        const auto operation = (attachmentMaskArg & CLEAR_ATTACHMENTS_OPERATION) != 0
+            ? Graphics::ClearOperation::ClearAttachments
+            : Graphics::ClearOperation::Clear;
 
         bgfx::Encoder* encoder = GetEncoder();
 
@@ -3858,7 +3882,7 @@ void main() {
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask);
+        GetBoundFrameBuffer().Clear(*encoder, flags, r, g, b, a, depth, stencil, colorAttachmentMask, false, operation);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)

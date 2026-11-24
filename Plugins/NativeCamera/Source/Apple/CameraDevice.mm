@@ -395,7 +395,7 @@ namespace Babylon::Plugins
             // Set the thread affinity to the current thread
             m_impl->threadAffinity = std::this_thread::get_id();
 
-            m_impl->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
+            m_impl->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->queue;
             m_impl->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
             m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
 

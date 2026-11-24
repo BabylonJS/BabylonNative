@@ -27,6 +27,24 @@ namespace
         return packed;
     }
 
+    // Babylon.js stores integer clear values through an Int32Array or Uint32Array, which maps non-finite values to zero.
+    // clear() scales by 255 and truncates toward zero; clearAttachments() rounds with Math.round (halves toward
+    // +infinity) and scales only unsigned attachments. The arithmetic is done in double like JavaScript, which is exact
+    // for float32 inputs, so rounding matches at the edges (e.g. unsigned 0.699999988079071 clears to 178).
+    std::array<float, 4> ToIntegerClearColor(const std::array<float, 4>& color, bool round, double scale)
+    {
+        std::array<float, 4> integerColor{};
+        for (size_t i = 0; i < color.size(); ++i)
+        {
+            const double value = static_cast<double>(color[i]) * scale;
+            if (std::isfinite(value))
+            {
+                integerColor[i] = static_cast<float>(round ? std::floor(value + 0.5) : std::trunc(value));
+            }
+        }
+        return integerColor;
+    }
+
     // Backends without bgfx clear-skip support would clamp UINT8_MAX into the palette.
     bool SupportsClearAttachmentMasking()
     {
@@ -200,7 +218,7 @@ namespace Babylon::Graphics
         }
     }
 
-    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask, bool ignoreScissor)
+    void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, float r, float g, float b, float a, float depth, uint8_t stencil, uint8_t colorAttachmentMask, bool ignoreScissor, ClearOperation operation)
     {
         // An enabled scissor that covers nothing (see GetBgfxScissor) clears nothing. bgfx would
         // raise its zero-size view rect to 1x1, outside the target, so skip the clear instead.
@@ -211,10 +229,23 @@ namespace Babylon::Graphics
         }
 
         const bool maskColorAttachments{colorAttachmentMask != UINT8_MAX && bgfx::isValid(m_handle) && SupportsClearAttachmentMasking()};
+        const bool hasAttachmentInfo{bgfx::isValid(m_handle)};
+        const uint8_t clearedAttachments{static_cast<uint8_t>((maskColorAttachments ? colorAttachmentMask : UINT8_MAX) & (hasAttachmentInfo ? m_colorAttachmentMask : UINT8_MAX))};
+        const uint8_t signedAttachments{static_cast<uint8_t>(hasAttachmentInfo ? clearedAttachments & m_signedIntegerColorAttachmentMask : 0)};
+        const uint8_t unsignedAttachments{static_cast<uint8_t>(hasAttachmentInfo ? clearedAttachments & m_unsignedIntegerColorAttachmentMask : 0)};
+        const uint8_t normalizedAttachments{static_cast<uint8_t>(clearedAttachments & ~(signedAttachments | unsignedAttachments))};
         const std::array<float, 4> color{r, g, b, a};
-        const auto packedColor = maskColorAttachments ? std::nullopt : PackClearColor(color);
+        const auto packedColor = maskColorAttachments || (signedAttachments | unsignedAttachments) != 0 ? std::nullopt : PackClearColor(color);
         const bool usePalette = (flags & BGFX_CLEAR_COLOR) != 0 && !packedColor.has_value();
-        const auto paletteIndex = usePalette ? m_deviceContext.AcquireClearPaletteIndex(color) : uint8_t{};
+
+        // Only attachments being cleared take palette entries; there are 16 per physical frame.
+        const bool clearAttachments{operation == ClearOperation::ClearAttachments};
+        const auto acquire = [&](uint8_t attachments, const std::array<float, 4>& paletteColor) {
+            return usePalette && attachments != 0 ? m_deviceContext.AcquireClearPaletteIndex(paletteColor) : uint8_t{};
+        };
+        const auto paletteIndex = acquire(normalizedAttachments, color);
+        const auto signedPaletteIndex = acquire(signedAttachments, ToIntegerClearColor(color, clearAttachments, clearAttachments ? 1.0 : 255.0));
+        const auto unsignedPaletteIndex = acquire(unsignedAttachments, ToIntegerClearColor(color, clearAttachments, 255.0));
 
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
         m_viewId = m_deviceContext.AcquireNewViewId();
@@ -227,7 +258,11 @@ namespace Babylon::Graphics
             uint8_t indices[MaxColorAttachments];
             for (uint8_t attachment = 0; attachment < MaxColorAttachments; ++attachment)
             {
-                indices[attachment] = !maskColorAttachments || (colorAttachmentMask & (1 << attachment)) != 0 ? paletteIndex : UINT8_MAX;
+                const uint8_t bit = static_cast<uint8_t>(1 << attachment);
+                indices[attachment] = (clearedAttachments & bit) == 0 ? UINT8_MAX
+                    : (signedAttachments & bit) != 0 ? signedPaletteIndex
+                    : (unsignedAttachments & bit) != 0 ? unsignedPaletteIndex
+                    : paletteIndex;
             }
             bgfx::setViewClear(m_viewId.value(), flags, depth, stencil,
                 indices[0], indices[1], indices[2], indices[3], indices[4], indices[5], indices[6], indices[7]);

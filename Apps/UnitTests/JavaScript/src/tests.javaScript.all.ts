@@ -2,6 +2,7 @@ import Mocha from "mocha";
 import { expect } from "chai";
 import { registerTriangleStripDepthTests } from "./tests.nativeEngine.triangleStripDepth";
 import { registerDefaultCullingTests } from "./tests.nativeEngine.defaultCulling";
+import { registerIntegerClearTests } from "./tests.nativeEngine.integerClear";
 import { registerIblCdfTests } from "./tests.nativeEngine.iblCdf";
 import { registerPngTests } from "./tests.nativeEngine.png";
 import { registerCanvasImageTests } from "./tests.nativeEngine.canvasImage";
@@ -48,6 +49,7 @@ declare const _native: any;
 
 registerTriangleStripDepthTests(describe, it, skipCanvasGpuTests);
 registerDefaultCullingTests(describe, it, hasGpuRendering);
+registerIntegerClearTests(describe, it, hasGpuRendering && !!_native.Engine.CAPS_INTEGER_COLOR_ATTACHMENTS);
 registerIblCdfTests(describe, it, skipCanvasGpuTests);
 registerPngTests(describe, it, hasGpuRendering && hasNativeImageLoading);
 registerAttributeLessInstancingTests(describe, it, hasAttributeLessInstancing);
@@ -540,12 +542,8 @@ describe("Canvas2D", function () {
         if (!(pixels instanceof Uint8Array)) {
           throw new Error("Expected RGBA8 GPU readback for curved clips");
         }
-        // Native readback is bottom-up; assertions below use Canvas coordinates.
-        const topDown = new Uint8Array(pixels.length);
-        for (let y = 0; y < 64; ++y) {
-          topDown.set(pixels.subarray(y * 64 * 4, (y + 1) * 64 * 4), (63 - y) * 64 * 4);
-        }
-        return topDown;
+        // update(invertY = false) uploads Canvas rows top-down, so readback rows are already in Canvas coordinates.
+        return pixels;
       };
       for (const mode of ["text", "fill", "stroke", "image", "clear", "blur(1px)", "blur(3px)"]) {
         ctx.fillStyle = "white";
