@@ -1157,7 +1157,7 @@
 
             if (differencesCount === 0) {
                 const pixel = index / 4;
-                const width = Math.round(testWidth / engine.getHardwareScalingLevel());
+                const width = Math.round(getScreenshotSize().width);
                 console.log(`First pixel off at ${index} (pixel ${pixel} @ x=${pixel % width}, y=${Math.floor(pixel / width)}): Value: (${renderData[index]}, ${renderData[index + 1]}, ${renderData[index + 2]}) - Expected: (${referenceData[index]}, ${referenceData[index + 1]}, ${referenceData[index + 2]}) `);
             }
 
@@ -1177,8 +1177,7 @@
 
         const error = (differencesCount * 100) / (size / 4) > errorRatio;
 
-        const width = testWidth / engine.getHardwareScalingLevel();
-        const height = testHeight / engine.getHardwareScalingLevel();
+        const { width, height } = getScreenshotSize();
 
         if (error) {
             TestUtils.writePNG(referenceData, width, height, TestUtils.getOutputDirectory() + "/Errors/" + test.referenceImage);
@@ -1190,8 +1189,7 @@
     }
 
     function saveRenderedResult(test, renderData) {
-        const width = testWidth / engine.getHardwareScalingLevel();
-        const height = testHeight / engine.getHardwareScalingLevel();
+        const { width, height } = getScreenshotSize();
         TestUtils.writePNG(renderData, width, height, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
         return false; // no error
     }
@@ -1232,8 +1230,56 @@
         return false;
     }
 
+    // Browser screenshots capture the canvas at its CSS size, so a hardware scaling level of
+    // 1/N (supersampling) is downscaled to testWidth x testHeight; match that with an NxN box filter.
+    function getSupersampleFactor() {
+        // The native engine stores the level as float32, so 1/3 reads back as 0.33333334.
+        const level = engine.getHardwareScalingLevel();
+        const factor = Math.round(1 / level);
+        return factor > 1 && Math.abs(factor * level - 1) < 1e-6 ? factor : 1;
+    }
+
+    function getScreenshotSize() {
+        if (getSupersampleFactor() > 1) {
+            return { width: testWidth, height: testHeight };
+        }
+        return {
+            width: testWidth / engine.getHardwareScalingLevel(),
+            height: testHeight / engine.getHardwareScalingLevel(),
+        };
+    }
+
+    function downsampleSupersampled(data) {
+        const factor = getSupersampleFactor();
+        const srcWidth = testWidth * factor;
+        if (factor === 1 || data.length !== srcWidth * testHeight * factor * 4) {
+            return data;
+        }
+        const result = new Uint8Array(testWidth * testHeight * 4);
+        const samples = factor * factor;
+        for (let y = 0; y < testHeight; ++y) {
+            for (let x = 0; x < testWidth; ++x) {
+                const dst = (y * testWidth + x) * 4;
+                for (let c = 0; c < 4; ++c) {
+                    let sum = 0;
+                    for (let sy = 0; sy < factor; ++sy) {
+                        let src = ((y * factor + sy) * srcWidth + x * factor) * 4 + c;
+                        for (let sx = 0; sx < factor; ++sx, src += 4) {
+                            sum += data[src];
+                        }
+                    }
+                    result[dst + c] = Math.round(sum / samples);
+                }
+            }
+        }
+        return result;
+    }
+
     function evaluateScreenshot(test, screenshot, referenceImage, done, compareFunction) {
         let testRes = true;
+
+        // Readback is premultiplied, so averaging before compositing matches the browser.
+        screenshot = downsampleSupersampled(screenshot);
 
         // opaque-clear-alpha: the browser always composites; skip it when the scene clears opaque
         // (FrameGraph may copy transparent attachments regardless of scene.clearColor).

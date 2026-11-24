@@ -4932,8 +4932,8 @@
             "playgroundId": "#UAPORV#0",
             "renderCount": 30,
             "referenceImage": "arc-legacy-inertia-comparison.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: renders at 1200x800 but the reference is 600x400"
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: under 0.5 hardware scaling (1200x800 backbuffer) the Linux OpenGL readback is mostly transparent (75% pixel diff), like the 0.9 scissor tests; passes on D3D11 and Vulkan."
         },
         {
             "title": "ArcRotate legacy panningInertia glide",
