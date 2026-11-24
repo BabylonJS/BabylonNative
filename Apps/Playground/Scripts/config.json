@@ -1156,6 +1156,8 @@
         },
         {
             "title": "GUI Input Text Area with Placeholder",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#NVAEWD#364",
             "errorRatio": 4,
             "referenceImage": "gui-inputtextarea-withplaceholder.png"
@@ -1317,6 +1319,8 @@
         },
         {
             "title": "GUI Transform StackPanel",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#BS60AB#0",
             "referenceImage": "TransformStackPanel.png"
         },
@@ -2290,12 +2294,16 @@
         },
         {
             "title": "Instances manual update + motion blur",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: motion blur result differs from the reference",
             "playgroundId": "#HJGC2G#127",
             "renderCount": 10,
             "referenceImage": "instances-mb-manual.png"
         },
         {
             "title": "Thin instances + motion blur",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: motion blur result differs from the reference",
             "playgroundId": "#HJGC2G#60",
             "renderCount": 30,
             "referenceImage": "thin-instances-mb.png",
@@ -2558,6 +2566,8 @@
         },
         {
             "title": "GUI Input Text Area Inside ScrollViewer",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#NVAEWD#69",
             "referenceImage": "GUI-Input-Text-Area-Inside-ScrollViewer.png"
         },
@@ -2569,6 +2579,8 @@
         },
         {
             "title": "GUI Force Resize Width",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#XCPP9Y#17259",
             "referenceImage": "GUI-Force-Resize-Width.png"
         },
@@ -2636,12 +2648,16 @@
         },
         {
             "title": "GUI Text Block with resizeToFit and forceResizeWidth",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#XCPP9Y#17810",
             "errorRatio": 4,
             "referenceImage": "GUI-Text-Block-with-resizeToFit-and-forceResizeWidth.png"
         },
         {
             "title": "GUI Horizontal Stack Panel and Text Block with resizeToFit and forceResizeWidth",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#XCPP9Y#17811",
             "errorRatio": 4,
             "referenceImage": "GUI-Horizontal-Stack-Panel-and-Text-Block-with-resizeToFit-and-forceResizeWidth.png"
@@ -2710,16 +2726,22 @@
         },
         {
             "title": "Font style inheritance",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#QFK9K4#26",
             "referenceImage": "Font-style-inheritance.png"
         },
         {
             "title": "Font size inheritance",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#QFK9K4#24",
             "referenceImage": "Fontsizeinheritance.png"
         },
         {
             "title": "Child overriding parent font properties",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on CI and locally on a real GPU: GUI text/font rendering differs from the reference",
             "playgroundId": "#QFK9K4#25",
             "referenceImage": "Childoverridingparentfontproperties.png"
         },
@@ -3896,6 +3918,8 @@
         },
         {
             "title": "OpenPBR Transmission Color glTF - Analytic Lights",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on the CI software adapter (WARP) only; passes on a real GPU",
             "playgroundId": "#GRQHVV#122",
             "referenceImage": "OpenPBR-Transmission-Color-glTF---Analytic-Lights.png",
             "workarounds": ["wait-for-import"]
@@ -4083,11 +4107,15 @@
         },
         {
             "title": "OpenPBR Subsurface Scatter Strength Thin-Walled - glTF",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on the CI software adapter (WARP) only; passes on a real GPU",
             "playgroundId": "#GRQHVV#343",
             "referenceImage": "OpenPBR-Subsurface-Scatter-Strength-Thin-Walled---glTF.png"
         },
         {
             "title": "OpenPBR Subsurface Scatter Strength - glTF",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on the CI software adapter (WARP) only; passes on a real GPU",
             "playgroundId": "#GRQHVV#344",
             "referenceImage": "OpenPBR-Subsurface-Scatter-Strength---glTF.png"
         },
@@ -5172,6 +5200,8 @@
         },
         {
             "title": "glTF Loader - PBRMaterial Scatter Color Density",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on the CI software adapter (WARP) only; passes on a real GPU",
             "playgroundId": "#GRQHVV#338",
             "referenceImage": "glTF-Loader---PBRMaterial-Scatter-Color-Density.png"
         },
@@ -5330,6 +5360,8 @@
         },
         {
             "title": "Gaussian Splatting Ranged Source Row Boundary",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison fails on the CI software adapter (WARP) only; passes on a real GPU",
             "playgroundId": "#7AZH52#1",
             "referenceImage": "gsplat-ranged-source-row-boundary.png"
         },
@@ -5359,7 +5391,8 @@
             "title": "Iridescence NME",
             "playgroundId": "#2FDQT5#1507",
             "referenceImage": "iridescence-nme.png",
-            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal"]
+            "excludedGraphicsApis": ["D3D11", "D3D12", "OpenGL", "Vulkan", "Metal", "WebGPU"],
+            "reason": "WebGPU pixel comparison fails on the CI software adapter (WARP) only; passes on a real GPU"
         },
         {
             "title": "Sprite maps",

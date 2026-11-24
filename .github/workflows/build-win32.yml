@@ -185,10 +185,10 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground ${{ !inputs.enable-sanitizers && '--test-timeout=120' || '' }} app:///Scripts/validation_native.js
 
-      # NativeWebGPU (WebGPU) validation. CI uses the Microsoft software adapter,
-      # whose raster output differs substantially from the hardware-generated
-      # references. Generate result images instead of comparing across adapters;
-      # this still gates scene loading/rendering failures and uncaptured Dawn
+      # NativeWebGPU (WebGPU) validation with pixel comparison. CI uses the
+      # Microsoft software adapter (WARP); scenes whose output differs from the
+      # references on WebGPU are excluded in config.json with a reason. This also
+      # gates scene loading/rendering failures and uncaptured Dawn
       # errors for the full WebGPU subset. The NativeWebGPU TestUtils adapter
       # enforces a failing exit. --headless routes all logs to stdout.
       # The default 20-minute readiness wait is sized for the ASAN job; scenes
@@ -198,7 +198,7 @@ jobs:
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
-          Playground --headless --generate-references --test-timeout=300 app:///Scripts/validation_native.js
+          Playground --headless --test-timeout=300 app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures (NativeWebGPU)
         if: ${{ inputs.nativewebgpu && !cancelled() }}
