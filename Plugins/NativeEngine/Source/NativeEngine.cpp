@@ -398,7 +398,6 @@ namespace Babylon
             // m_depth == 0 rather than 1. Use isVolume rather than comparing m_depth.
             assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
-            assert(image->m_numMips == 1);
             assert(!image->m_cubeMap);
 
             if (image->m_format == bimg::TextureFormat::R8 ||
@@ -439,6 +438,22 @@ namespace Babylon
             return image;
         }
 
+        // Consumes image and returns it converted to dstFormat, or throws.
+        bimg::ImageContainer* ConvertImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bimg::TextureFormat::Enum dstFormat, bool convertMips, const char* purpose)
+        {
+            const bimg::TextureFormat::Enum srcFormat{image->m_format};
+            bimg::ImageContainer* converted{bimg::imageConvert(&allocator, dstFormat, *image, convertMips)};
+            bimg::imageFree(image);
+
+            if (converted == nullptr)
+            {
+                throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to " +
+                    bimg::getName(dstFormat) + " for " + purpose + "."};
+            }
+
+            return converted;
+        }
+
         // Returns a non-null image, or throws if any conversion step fails. Throwing rather than
         // returning null keeps every caller safe by default: the async load paths run inside arcana
         // tasks, which capture the exception and route it to their JavaScript onError callback,
@@ -446,77 +461,56 @@ namespace Babylon
         // would be silently dereferenced by LoadTextureFromImage / LoadCubeTextureFromImages.
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
-            assert(
-                image->m_format == bimg::TextureFormat::R8 ||
-                image->m_format == bimg::TextureFormat::R16 ||
-                image->m_format == bimg::TextureFormat::RGB8 ||
-                image->m_format == bimg::TextureFormat::RGBA8 ||
-                image->m_format == bimg::TextureFormat::RGBA16 ||
-                image->m_format == bimg::TextureFormat::RGBA16F ||
-                image->m_format == bimg::TextureFormat::RG16F ||
-                image->m_format == bimg::TextureFormat::RG32F ||
-                image->m_format == bimg::TextureFormat::RGBA32F ||
-                image->m_format == bimg::TextureFormat::RGBA32U);
-
+            // Any bgfx format can reach this point: raw texture uploads pass whatever format the
+            // JavaScript side requested (e.g. R32F, RG8, RG16, R16S, B5G6R5), and DDS/KTX files
+            // arrive with their own (possibly block-compressed) mip chain.
             assert(!bimg::isVolume(*image));
             assert(image->m_numLayers == 1);
-            assert(image->m_numMips == 1);
             assert(image->m_cubeMap == false);
 
+            // Image data is upright, (0, 0) is the top-left texel. Flip it when the requested
+            // orientation doesn't match the renderer's texture origin.
             if (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)
             {
-                FlipImage({static_cast<uint8_t*>(image->m_data), image->m_size}, image->m_height);
+                if (bimg::isCompressed(image->m_format))
+                {
+                    // Block-compressed rows can't be flipped in place, decode first.
+                    image = ConvertImage(allocator, image, bimg::isFloat(image->m_format) ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA8, true, "flipping");
+                }
+
+                for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+                {
+                    bimg::ImageMip imageMip{};
+                    if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
+                    {
+                        FlipImage({const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size}, imageMip.m_height);
+                    }
+                }
             }
 
             if (srgb && !bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB))
             {
-                const bimg::TextureFormat::Enum srcFormat{image->m_format};
-
-                bimg::ImageContainer* oldImage{image};
-                image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
-                bimg::imageFree(oldImage);
-
-                if (image == nullptr)
-                {
-                    throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to RGBA8 for sRGB upload."};
-                }
-
+                image = ConvertImage(allocator, image, bimg::TextureFormat::RGBA8, true, "sRGB upload");
                 assert(bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB));
             }
 
-            if (generateMips)
+            if (generateMips && image->m_numMips == 1)
             {
                 // bimg::imageGenerateMips only supports RGBA8 and RGBA32F source data; for any
                 // other format it returns NULL. Convert first so mip generation (and the
-                // subsequent GPU upload) succeeds. High-precision / float formats are promoted to
-                // RGBA32F to preserve range; everything else - including single/dual-channel,
-                // RGB8/BGRA8 and block-compressed formats such as BC1/DXT1 - is decoded to RGBA8.
-                // Without this, e.g. a BC1 texture with generateMips produced a NULL image that the
-                // caller dereferenced, crashing the process.
+                // subsequent GPU upload) succeeds. Float formats and formats with more than 8 bits
+                // per channel (e.g. R32F, RG16, R16S) are promoted to RGBA32F to preserve range;
+                // everything else - including RG8, RGB8, BGRA8, B5G6R5 and block-compressed formats
+                // such as BC1/DXT1 - is decoded to RGBA8. Images that already carry a mip chain
+                // (DDS/KTX) keep it.
                 if (image->m_format != bimg::TextureFormat::RGBA8 &&
                     image->m_format != bimg::TextureFormat::RGBA32F)
                 {
-                    const bimg::TextureFormat::Enum dstFormat =
-                        (image->m_format == bimg::TextureFormat::R16 ||
-                         image->m_format == bimg::TextureFormat::R16F ||
-                         image->m_format == bimg::TextureFormat::RG16F ||
-                         image->m_format == bimg::TextureFormat::RG32F ||
-                         image->m_format == bimg::TextureFormat::RGBA16 ||
-                         image->m_format == bimg::TextureFormat::RGBA16F)
-                            ? bimg::TextureFormat::RGBA32F
-                            : bimg::TextureFormat::RGBA8;
+                    const bimg::ImageBlockInfo& blockInfo{bimg::getBlockInfo(image->m_format)};
+                    const bool highPrecision{bimg::isFloat(image->m_format) ||
+                        blockInfo.rBits > 8 || blockInfo.gBits > 8 || blockInfo.bBits > 8 || blockInfo.aBits > 8};
 
-                    const bimg::TextureFormat::Enum srcFormat{image->m_format};
-
-                    bimg::ImageContainer* oldImage{image};
-                    image = bimg::imageConvert(&allocator, dstFormat, *image, false);
-                    bimg::imageFree(oldImage);
-
-                    if (image == nullptr)
-                    {
-                        throw std::runtime_error{std::string{"Failed to convert "} + bimg::getName(srcFormat) + " image to " +
-                            bimg::getName(dstFormat) + " for mip generation."};
-                    }
+                    image = ConvertImage(allocator, image, highPrecision ? bimg::TextureFormat::RGBA32F : bimg::TextureFormat::RGBA8, false, "mip generation");
                 }
 
                 bimg::ImageContainer* oldImage{image};
@@ -3583,7 +3577,16 @@ void main() {
             attachments[numAttachments++].init(depthStencilTextureHandle, bgfx::Access::Write, attachLayer, 1, 0, BGFX_ATTACHMENT_NONE);
         }
 
-        bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
+        // Validate first: bgfx::createFrameBuffer asserts on invalid attachments in debug builds
+        // instead of returning an invalid handle.
+        bx::Error fbErr;
+        bgfx::isFrameBufferValid(numAttachments, attachments.data(), &fbErr);
+        bgfx::FrameBufferHandle frameBufferHandle = BGFX_INVALID_HANDLE;
+        if (fbErr.isOk())
+        {
+            frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
+        }
+
         if (!bgfx::isValid(frameBufferHandle))
         {
             if (createdDepthStencil && !generatedDepthStencil)
@@ -3592,8 +3595,6 @@ void main() {
             }
 
             // Report bgfx's specific framebuffer validation failure.
-            bx::Error fbErr;
-            bgfx::isFrameBufferValid(numAttachments, attachments.data(), &fbErr);
             const bx::StringView reason = fbErr.getMessage();
             char message[FRAME_BUFFER_VALIDATION_MESSAGE_LENGTH];
             snprintf(message, sizeof(message), "Failed to create frame buffer: %.*s",
