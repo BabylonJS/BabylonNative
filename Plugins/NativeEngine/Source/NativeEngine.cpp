@@ -284,6 +284,60 @@ namespace Babylon
             return storage;
         }
 
+        // Builds the mip levels after firstLevel from a full level like gl.generateMipmap, which box-filters
+        // linear values (bimg's mip generator applies a gamma curve). Calls uploadLevel(level, width, height, bytes, size).
+        template<typename UploadLevelT>
+        void GenerateBoxFilteredMips(Napi::Env env, bimg::TextureFormat::Enum format, uint32_t width, uint32_t height, const uint8_t* data,
+            uint8_t firstLevel, uint8_t numMips, UploadLevelT&& uploadLevel)
+        {
+            auto& allocator{Graphics::DeviceContext::GetDefaultAllocator()};
+            using ImagePtr = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
+            ImagePtr source{bimg::imageAlloc(&allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 0, 1, false, false, data), bimg::imageFree};
+            ImagePtr converted{source ? bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *source, false) : nullptr, bimg::imageFree};
+            if (!converted)
+            {
+                throw Napi::Error::New(env, std::string{"Cannot generate mips for format "} + bimg::getName(format));
+            }
+
+            const float* levelSource{static_cast<const float*>(converted->m_data)};
+            std::vector<float> levelTexels;
+            uint32_t levelWidth{width};
+            uint32_t levelHeight{height};
+            for (uint8_t level = static_cast<uint8_t>(firstLevel + 1); level < numMips; ++level)
+            {
+                const uint32_t nextWidth{std::max(1u, levelWidth >> 1)};
+                const uint32_t nextHeight{std::max(1u, levelHeight >> 1)};
+                std::vector<float> next(static_cast<size_t>(nextWidth) * nextHeight * RGBA_COMPONENT_COUNT);
+                for (uint32_t row = 0; row < nextHeight; ++row)
+                {
+                    for (uint32_t column = 0; column < nextWidth; ++column)
+                    {
+                        const uint32_t x0{std::min(column * 2, levelWidth - 1)};
+                        const uint32_t x1{std::min(column * 2 + 1, levelWidth - 1)};
+                        const uint32_t y0{std::min(row * 2, levelHeight - 1)};
+                        const uint32_t y1{std::min(row * 2 + 1, levelHeight - 1)};
+                        for (uint32_t channel = 0; channel < RGBA_COMPONENT_COUNT; ++channel)
+                        {
+                            const auto at = [&](uint32_t sx, uint32_t sy) { return levelSource[(static_cast<size_t>(sy) * levelWidth + sx) * RGBA_COMPONENT_COUNT + channel]; };
+                            next[(static_cast<size_t>(row) * nextWidth + column) * RGBA_COMPONENT_COUNT + channel] = (at(x0, y0) + at(x1, y0) + at(x0, y1) + at(x1, y1)) * 0.25f;
+                        }
+                    }
+                }
+                levelTexels = std::move(next);
+                levelSource = levelTexels.data();
+                levelWidth = nextWidth;
+                levelHeight = nextHeight;
+
+                const auto levelSize{static_cast<uint32_t>(bimg::imageGetSize(nullptr, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), 1, false, false, 1, format))};
+                std::vector<uint8_t> levelBytes(levelSize);
+                if (!bimg::imageConvert(&allocator, levelBytes.data(), format, levelSource, bimg::TextureFormat::RGBA32F, levelWidth, levelHeight, 1))
+                {
+                    throw Napi::Error::New(env, std::string{"Cannot convert generated mips to format "} + bimg::getName(format));
+                }
+                uploadLevel(level, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), levelBytes.data(), levelSize);
+            }
+        }
+
 #ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         constexpr size_t SPHERICAL_HARMONIC_COEFFICIENT_COUNT = 9;
         constexpr size_t SPHERICAL_POLYNOMIAL_COEFFICIENT_COUNT = 9;
@@ -2452,54 +2506,10 @@ void main() {
         {
             throw Napi::Error::New(info.Env(), "updateTextureData can only generate mips from a full mip level");
         }
-        auto& allocator{Graphics::DeviceContext::GetDefaultAllocator()};
-        using ImagePtr = std::unique_ptr<bimg::ImageContainer, decltype(&bimg::imageFree)>;
-        const auto format{static_cast<bimg::TextureFormat::Enum>(texture->Format())};
-        // gl.generateMipmap box-filters linear values; bimg's mip generator applies a gamma curve, so filter here.
-        ImagePtr source{bimg::imageAlloc(&allocator, format, width, height, 0, 1, false, false, upload.data()), bimg::imageFree};
-        ImagePtr converted{source ? bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *source, false) : nullptr, bimg::imageFree};
-        if (!converted)
-        {
-            throw Napi::Error::New(info.Env(), std::string{"updateTextureData cannot generate mips for format "} + bimg::getName(format));
-        }
-
-        const float* levelSource{static_cast<const float*>(converted->m_data)};
-        std::vector<float> levelTexels;
-        uint32_t levelWidth{width};
-        uint32_t levelHeight{height};
-        for (uint8_t level = static_cast<uint8_t>(mip + 1); level < mipChainInfo.numMips; ++level)
-        {
-            const uint32_t nextWidth{std::max(1u, levelWidth >> 1)};
-            const uint32_t nextHeight{std::max(1u, levelHeight >> 1)};
-            std::vector<float> next(static_cast<size_t>(nextWidth) * nextHeight * RGBA_COMPONENT_COUNT);
-            for (uint32_t row = 0; row < nextHeight; ++row)
-            {
-                for (uint32_t column = 0; column < nextWidth; ++column)
-                {
-                    const uint32_t x0{std::min(column * 2, levelWidth - 1)};
-                    const uint32_t x1{std::min(column * 2 + 1, levelWidth - 1)};
-                    const uint32_t y0{std::min(row * 2, levelHeight - 1)};
-                    const uint32_t y1{std::min(row * 2 + 1, levelHeight - 1)};
-                    for (uint32_t channel = 0; channel < RGBA_COMPONENT_COUNT; ++channel)
-                    {
-                        const auto at = [&](uint32_t sx, uint32_t sy) { return levelSource[(static_cast<size_t>(sy) * levelWidth + sx) * RGBA_COMPONENT_COUNT + channel]; };
-                        next[(static_cast<size_t>(row) * nextWidth + column) * RGBA_COMPONENT_COUNT + channel] = (at(x0, y0) + at(x1, y0) + at(x0, y1) + at(x1, y1)) * 0.25f;
-                    }
-                }
-            }
-            levelTexels = std::move(next);
-            levelSource = levelTexels.data();
-            levelWidth = nextWidth;
-            levelHeight = nextHeight;
-
-            const auto levelSize{static_cast<uint32_t>(bimg::imageGetSize(nullptr, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), 1, false, false, 1, format))};
-            std::vector<uint8_t> levelBytes(levelSize);
-            if (!bimg::imageConvert(&allocator, levelBytes.data(), format, levelSource, bimg::TextureFormat::RGBA32F, levelWidth, levelHeight, 1))
-            {
-                throw Napi::Error::New(info.Env(), std::string{"updateTextureData cannot convert generated mips to format "} + bimg::getName(format));
-            }
-            uploadLevel(level, 0, 0, static_cast<uint16_t>(levelWidth), static_cast<uint16_t>(levelHeight), levelBytes.data(), levelSize);
-        }
+        GenerateBoxFilteredMips(info.Env(), static_cast<bimg::TextureFormat::Enum>(texture->Format()), width, height, upload.data(), mip, mipChainInfo.numMips,
+            [&uploadLevel](uint8_t level, uint16_t levelWidth, uint16_t levelHeight, const uint8_t* bytes, uint32_t size) {
+                uploadLevel(level, 0, 0, levelWidth, levelHeight, bytes, size);
+            });
     }
 
     void NativeEngine::LoadRawTexture2DArray(const Napi::CallbackInfo& info)
@@ -2508,18 +2518,15 @@ void main() {
         throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
-        const auto data = info[1].As<Napi::TypedArray>();
+        // Napi::TypedArray inspects its value on construction, so a null (allocate-only) upload must not be cast.
+        const bool hasData{info[1].IsTypedArray()};
+        const auto data = hasData ? info[1].As<Napi::TypedArray>() : Napi::TypedArray{};
         const auto rawWidth{info[2].As<Napi::Number>().Uint32Value()};
         const auto rawHeight{info[3].As<Napi::Number>().Uint32Value()};
         const auto rawDepth{info[4].As<Napi::Number>().Uint32Value()};
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
         const auto generateMips = info[6].As<Napi::Boolean>().Value();
         const auto invertY = info[7].As<Napi::Boolean>().Value();
-
-        if (generateMips)
-        {
-            throw Napi::Error::New(Env(), "Texture 2D array currently do not support mipmaps.");
-        }
 
         if (invertY)
         {
@@ -2553,7 +2560,7 @@ void main() {
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
         texture->Create2D(width, height, generateMips, allocLayers, Cast(uploadFormat), flags);
 
-        if (!data.IsNull())
+        if (hasData)
         {
             // Keep size validation in 64-bit before bgfx narrows individual uploads.
             const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)};
@@ -2569,6 +2576,9 @@ void main() {
             size_t dataSize = resolved.size();
 
             size_t textureSize = dataSize / static_cast<size_t>(depth);
+
+            bgfx::TextureInfo mipChainInfo;
+            bgfx::calcTextureSize(mipChainInfo, width, height, 1, false, generateMips, 1, Cast(uploadFormat));
 
             // bgfx::Memory uses a 32-bit size.
             const auto uploadSize = bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, uploadFormat);
@@ -2607,6 +2617,15 @@ void main() {
                     // Match rendered array layers without modifying the caller's data.
                     FlipImage({dataCopy->data, upload.size()}, height);
                 }
+                if (generateMips)
+                {
+                    // bgfx can only generate mips for render targets; build each layer's chain on the CPU.
+                    // Generate from the flipped copy so every level shares the same row order.
+                    GenerateBoxFilteredMips(Env(), uploadFormat, width, height, dataCopy->data, 0, mipChainInfo.numMips,
+                        [texture, i](uint8_t level, uint16_t levelWidth, uint16_t levelHeight, const uint8_t* bytes, uint32_t size) {
+                            texture->Update2D(i, level, 0, 0, levelWidth, levelHeight, bgfx::copy(bytes, size));
+                        });
+                }
                 texture->Update2D(i, 0, 0, 0, width, height, dataCopy);
             }
         }
@@ -2619,7 +2638,9 @@ void main() {
         throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
-        const auto data = info[1].As<Napi::TypedArray>();
+        // Napi::TypedArray inspects its value on construction, so a null (allocate-only) upload must not be cast.
+        const bool hasData{info[1].IsTypedArray()};
+        const auto data = hasData ? info[1].As<Napi::TypedArray>() : Napi::TypedArray{};
         const auto rawWidth{info[2].As<Napi::Number>().Uint32Value()};
         const auto rawHeight{info[3].As<Napi::Number>().Uint32Value()};
         const auto rawDepth{info[4].As<Napi::Number>().Uint32Value()};
@@ -2654,7 +2675,7 @@ void main() {
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE};
         texture->Create3D(width, height, depth, false, Cast(format), flags);
 
-        if (!data.IsNull())
+        if (hasData)
         {
             // A 3D texture is one volume; keep size validation in 64-bit.
             const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, depth, false, false, 1, format)};
@@ -3932,6 +3953,13 @@ void main() {
         imageBitmap.Set("depth", Napi::Value::From(env, bimg::imageGetNumSlices(*image)));
         imageBitmap.Set("numLayers", Napi::Value::From(env, image->m_numLayers));
         imageBitmap.Set("format", Napi::Value::From(env, static_cast<uint32_t>(image->m_format)));
+        // Match ImageBitmap.close(): release the pixel data and report a zero size.
+        imageBitmap.Set("close", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+            auto self{info.This().As<Napi::Object>()};
+            self.Set("data", info.Env().Undefined());
+            self.Set("width", Napi::Value::From(info.Env(), 0));
+            self.Set("height", Napi::Value::From(info.Env(), 0));
+        }, "close"));
 
         if (allocatedImage)
         {
