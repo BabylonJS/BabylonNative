@@ -1233,8 +1233,10 @@
     // Browser screenshots capture the canvas at its CSS size, so a hardware scaling level of
     // 1/N (supersampling) is downscaled to testWidth x testHeight; match that with an NxN box filter.
     function getSupersampleFactor() {
-        const factor = 1 / engine.getHardwareScalingLevel();
-        return factor > 1 && Number.isInteger(factor) ? factor : 1;
+        // The native engine stores the level as float32, so 1/3 reads back as 0.33333334.
+        const level = engine.getHardwareScalingLevel();
+        const factor = Math.round(1 / level);
+        return factor > 1 && Math.abs(factor * level - 1) < 1e-6 ? factor : 1;
     }
 
     function getScreenshotSize() {
