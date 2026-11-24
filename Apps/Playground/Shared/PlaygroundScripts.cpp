@@ -181,6 +181,9 @@ namespace Playground
         // any polygon scene fails with `ReferenceError: earcut is not defined`.
         runtime.LoadScript("app:///Scripts/earcut.min.js");
         runtime.LoadScript("app:///Scripts/babylon.es5.js");
+#if BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU
+        runtime.LoadScript("app:///Scripts/dawn_playground.js");
+#endif
         // Load addons right after babylon.es5.js so addons init sees a fully
         // constructed BABYLON global.
         runtime.LoadScript("app:///Scripts/babylonjs.addons.es5.js");

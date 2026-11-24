@@ -11,6 +11,7 @@
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Web.Http.Headers.h>
+#include <winrt/Windows.Web.Http.Filters.h>
 #include <winapifamily.h>
 
 namespace UrlLib
@@ -110,7 +111,12 @@ namespace UrlLib
                 );
             }
 
-            Web::Http::HttpClient client;
+            // Bypass reads from the WinINet cache: bodies of cache-served responses are
+            // retained in process memory after the response is released, so repeated
+            // loads of the same URL grow memory without bound.
+            Web::Http::Filters::HttpBaseProtocolFilter filter;
+            filter.CacheControl().ReadBehavior(Web::Http::Filters::HttpCacheReadBehavior::NoCache);
+            Web::Http::HttpClient client{filter};
             return arcana::create_task<std::exception_ptr>(client.SendRequestAsync(requestMessage))
                 .then(arcana::inline_scheduler, m_cancellationSource, [this](Web::Http::HttpResponseMessage responseMessage)
                 {

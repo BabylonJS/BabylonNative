@@ -576,12 +576,12 @@ namespace Babylon::Polyfills::Internal
             throw Napi::TypeError::New(info.Env(), "Failed to construct 'URL': 1 argument required, but only 0 present.");
         }
 
-        std::string urlString = info[0].As<Napi::String>();
+        std::string urlString = info[0].ToString();
         std::string baseString;
 
         if (info.Length() > 1 && !info[1].IsUndefined())
         {
-            baseString = info[1].As<Napi::String>();
+            baseString = info[1].ToString();
         }
 
         if (!ParseURL(urlString, baseString))
@@ -802,12 +802,12 @@ namespace Babylon::Polyfills::Internal
             return Napi::Boolean::New(info.Env(), false);
         }
 
-        std::string urlString = info[0].As<Napi::String>();
+        std::string urlString = info[0].ToString();
         std::string baseString;
 
         if (info.Length() > 1 && !info[1].IsUndefined())
         {
-            baseString = info[1].As<Napi::String>();
+            baseString = info[1].ToString();
 
             // If base is provided, first check if base itself is valid
             auto baseParts = TryParseURL(baseString);

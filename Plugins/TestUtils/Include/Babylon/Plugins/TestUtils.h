@@ -14,5 +14,7 @@ namespace Babylon::Plugins::TestUtils
     // std::function to clear.
     using ExitCallback = std::function<void(int /*exitCode*/)>;
     void BABYLON_API SetExitCallback(ExitCallback callback);
-}
 
+    // Alternative graphics backends call this before their own termination path.
+    void BABYLON_API NotifyExit(int exitCode);
+}
