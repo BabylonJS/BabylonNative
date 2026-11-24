@@ -4931,9 +4931,7 @@
             "title": "ArcRotate legacy inertia comparison",
             "playgroundId": "#UAPORV#0",
             "renderCount": 30,
-            "referenceImage": "arc-legacy-inertia-comparison.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Fails on native: renders at 1200x800 but the reference is 600x400"
+            "referenceImage": "arc-legacy-inertia-comparison.png"
         },
         {
             "title": "ArcRotate legacy panningInertia glide",
