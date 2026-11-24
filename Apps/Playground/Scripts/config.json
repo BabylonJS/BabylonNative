@@ -4097,6 +4097,8 @@
         },
         {
             "title": "OpenPBR Subsurface Scatter Anisotropy - glTF",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison is intermittent on the CI software adapter (WARP): passed in one CI run, failed in the next; passes on a real GPU",
             "playgroundId": "#GRQHVV#333",
             "referenceImage": "OpenPBR-Subsurface-Scatter-Anisotropy---glTF.png"
         },
@@ -4127,6 +4129,8 @@
         },
         {
             "title": "OpenPBR Thin Walled Transmission IOR vs Roughness - Analytic Lights",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison is intermittent on the CI software adapter (WARP): passed in one CI run, failed in the next; passes on a real GPU",
             "playgroundId": "#GRQHVV#312",
             "referenceImage": "OpenPBR-Thin-Walled-Transmission-IOR-vs-Roughness---Analytic-Lights.png"
         },
