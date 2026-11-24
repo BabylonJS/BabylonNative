@@ -1157,7 +1157,7 @@
 
             if (differencesCount === 0) {
                 const pixel = index / 4;
-                const width = getScreenshotSize().width;
+                const width = Math.round(getScreenshotSize().width);
                 console.log(`First pixel off at ${index} (pixel ${pixel} @ x=${pixel % width}, y=${Math.floor(pixel / width)}): Value: (${renderData[index]}, ${renderData[index + 1]}, ${renderData[index + 2]}) - Expected: (${referenceData[index]}, ${referenceData[index + 1]}, ${referenceData[index + 2]}) `);
             }
 
@@ -1242,8 +1242,8 @@
             return { width: testWidth, height: testHeight };
         }
         return {
-            width: Math.round(testWidth / engine.getHardwareScalingLevel()),
-            height: Math.round(testHeight / engine.getHardwareScalingLevel()),
+            width: testWidth / engine.getHardwareScalingLevel(),
+            height: testHeight / engine.getHardwareScalingLevel(),
         };
     }
 
