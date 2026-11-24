@@ -117,12 +117,11 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), arcana::underlying_cast(m_readyState));
     }
 
-    Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
+    Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo& info)
     {
         if (m_request.ResponseType() == UrlLib::UrlResponseType::String)
         {
-            const std::string_view responseString{m_request.ResponseString()};
-            return Napi::String::New(Env(), responseString.data(), responseString.size());
+            return GetResponseText(info);
         }
         else
         {
@@ -139,7 +138,15 @@ namespace Babylon::Polyfills::Internal
         // example, inlines the .wasm payload as a JavaScript string literal. Passing .data()
         // alone would hand a const char* to Napi and truncate at the first null, so the length
         // has to be supplied explicitly.
-        const std::string_view responseString{m_request.ResponseString()};
+        std::string_view responseString{m_request.ResponseString()};
+
+        // Decode like the XHR spec's UTF-8 decode, which drops a leading byte order mark.
+        constexpr std::string_view utf8Bom{"\xEF\xBB\xBF"};
+        if (responseString.starts_with(utf8Bom))
+        {
+            responseString.remove_prefix(utf8Bom.size());
+        }
+
         return Napi::String::New(Env(), responseString.data(), responseString.size());
     }
 
