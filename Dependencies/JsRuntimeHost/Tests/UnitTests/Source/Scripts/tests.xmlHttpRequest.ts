@@ -202,4 +202,11 @@ describe("XMLHTTPRequest", function () {
         expect(xhr.responseText.length).to.equal(16);
         expect(xhr.response).to.equal(xhr.responseText);
     });
+
+    it("should drop a leading UTF-8 byte order mark from responseText and response", async function () {
+        const xhr = await createRequest("GET", "app:///Assets/utf8_bom.txt");
+        expect(xhr.status).to.equal(200);
+        expect(xhr.responseText).to.equal("bom text");
+        expect(xhr.response).to.equal(xhr.responseText);
+    });
 });

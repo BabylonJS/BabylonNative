@@ -1792,8 +1792,6 @@
         {
             "title": "Procedural textures playground",
             "playgroundId": "#24C4KC#67",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (~24% pixels differ): the procedural cloud noise hash is GPU-backend dependent",
             "referenceImage": "proceduralTexturePlayground.png",
             "workarounds": ["xhr-events"]
         },
