@@ -471,6 +471,11 @@ namespace Babylon::Polyfills::Internal
         const char* pngBytes = static_cast<const char*>(memoryBlock.more(0));
         std::string encoded;
         bn::encode_b64(pngBytes, pngBytes + pngSize, std::back_inserter(encoded));
+        // base-n emits unpadded base64; strict data: URL parsers (e.g. CFNetwork) reject it.
+        if (const size_t remainder = pngSize % 3; remainder != 0)
+        {
+            encoded.append(3 - remainder, '=');
+        }
         return Napi::String::New(info.Env(), "data:image/png;base64," + encoded);
     }
 

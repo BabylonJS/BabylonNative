@@ -25,7 +25,8 @@ import {
   ShaderMaterial,
   Scene,
   Vector2,
-  BlurPostProcess
+  BlurPostProcess,
+  Constants
 } from "@babylonjs/core";
 import { GradientMaterial } from "@babylonjs/materials";
 import { registerAttributeLessInstancingTests } from "./tests.nativeEngine.attributeLessInstancing";
@@ -160,6 +161,62 @@ describe("Native texture readback", function () {
         } finally {
           texture.dispose();
         }
+      }
+    } finally {
+      scene.dispose();
+      engine.dispose();
+    }
+  });
+
+  itWithRawTexture("generates box-filtered mips for raw 2D array layers", async function () {
+    const engine = new NativeEngine();
+    const scene = new Scene(engine);
+    try {
+      // Allocate-only arrays pass null data to the native loader.
+      engine.createRawTexture2DArray(null, 4, 4, 2, Constants.TEXTUREFORMAT_RGBA, true, false, Constants.TEXTURE_NEAREST_SAMPLINGMODE).dispose();
+
+      const data = new Uint8Array(4 * 4 * 4);
+      for (let y = 0; y < 4; ++y) {
+        for (let x = 0; x < 4; ++x) {
+          data.set([x % 2 === 0 ? 200 : 100, y < 2 ? 255 : 0, 0, 255], (y * 4 + x) * 4);
+        }
+      }
+      const texture = engine.createRawTexture2DArray(data, 4, 4, 1, Constants.TEXTUREFORMAT_RGBA, true, false, Constants.TEXTURE_NEAREST_SAMPLINGMODE);
+      try {
+        for (const [mip, size, expected] of [
+          [1, 2, [150, 255, 0, 255, 150, 255, 0, 255, 150, 0, 0, 255, 150, 0, 0, 255]],
+          [2, 1, [150, 128, 0, 255]],
+        ] as const) {
+          const result = await engine._readTexturePixels(texture, size, size, -1, mip);
+          if (!(result instanceof Uint8Array)) {
+            throw new Error("Expected RGBA8 mip readback");
+          }
+          Array.from(result).forEach(function (value, index) {
+            expect(value).to.be.closeTo(expected[index], 1);
+          });
+        }
+      } finally {
+        texture.dispose();
+      }
+
+      // Odd heights must pair the same source rows on every backend: rows [0, 100, 200] filter to 50, not 150.
+      const oddData = new Uint8Array(2 * 3 * 4);
+      for (let y = 0; y < 3; ++y) {
+        for (let x = 0; x < 2; ++x) {
+          oddData.set([y * 100, y * 100, y * 100, 255], (y * 2 + x) * 4);
+        }
+      }
+      const oddTexture = engine.createRawTexture2DArray(oddData, 2, 3, 1, Constants.TEXTUREFORMAT_RGBA, true, false, Constants.TEXTURE_NEAREST_SAMPLINGMODE);
+      try {
+        const result = await engine._readTexturePixels(oddTexture, 1, 1, -1, 1);
+        if (!(result instanceof Uint8Array)) {
+          throw new Error("Expected RGBA8 mip readback");
+        }
+        Array.from(result).forEach(function (value, index) {
+          expect(value).to.be.closeTo([50, 50, 50, 255][index], 1);
+        });
+      } finally {
+        oddTexture.dispose();
       }
     } finally {
       scene.dispose();
@@ -2110,7 +2167,10 @@ describe("Canvas2D", function () {
       canvas.height = size;
       try {
         const url = canvas.toDataURL();
-        const png = Buffer.from(url.substring("data:image/png;base64,".length), "base64");
+        const payload = url.substring("data:image/png;base64,".length);
+        const png = Buffer.from(payload, "base64");
+        // Strict data: URL parsers (e.g. CFNetwork's fetch) reject unpadded base64.
+        expect(payload).to.equal(png.toString("base64"));
         expect(Array.from(png.subarray(0, 8))).to.deep.equal([137, 80, 78, 71, 13, 10, 26, 10]);
         let offset = 8;
         let foundEnd = false;
