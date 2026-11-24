@@ -4104,6 +4104,8 @@
         },
         {
             "title": "OpenPBR Subsurface Scatter Color Density - glTF",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison is intermittent on the CI software adapter (WARP), like the other glTF scatter scenes; passes on a real GPU",
             "playgroundId": "#GRQHVV#332",
             "referenceImage": "OpenPBR-Subsurface-Scatter-Color-Density---glTF.png"
         },
@@ -5211,6 +5213,8 @@
         },
         {
             "title": "glTF Loader - PBRMaterial Scatter Strength Thin-Walled",
+            "excludedGraphicsApis": ["WebGPU"],
+            "reason": "WebGPU pixel comparison is intermittent on the CI software adapter (WARP), like the other glTF scatter scenes; passes on a real GPU",
             "playgroundId": "#GRQHVV#341",
             "referenceImage": "glTF-Loader---PBRMaterial-Scatter-Strength-Thin-Walled.png"
         },
