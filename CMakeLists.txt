@@ -164,15 +164,27 @@ option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 # RTTI
 # Babylon Native does not use dynamic_cast or typeid anywhere in Core, Plugins,
 # Polyfills, Embedding or Apps, but compilers emit RTTI records for every
-# polymorphic class by default. Disabling it is a pure size win. UBSan's vptr
-# check is the only thing that needs RTTI, so it is derived from the sanitizer
-# switch rather than exposed as an option of its own.
+# polymorphic class by default. Disabling it is a size win. UBSan's vptr
+# check needs RTTI, so it is always enabled with sanitizers.
 #
-# Deliberately a plain variable and not a cache entry: a cached ENABLE_RTTI
-# would persist ON in any build directory that was configured with
+# Embedders that link the static libraries into a host built with RTTI should
+# enable BABYLON_NATIVE_ENABLE_RTTI. With -fno-rtti, clang emits hidden local
+# copies of the standard exception type_info (std::exception, ...) into the
+# Babylon Native objects. Host catch clauses can resolve to those copies and
+# then fail to match exceptions thrown by the C++ runtime (observed on iOS),
+# terminating the process. Hosts may also need RTTI for headers they share with
+# Babylon Native (e.g. React Native's JSI uses dynamic_cast).
+#
+# ENABLE_RTTI is deliberately a plain variable and not a cache entry: a cached
+# ENABLE_RTTI would persist ON in any build directory that was configured with
 # -DENABLE_SANITIZERS=ON even once, so re-configuring that directory without
 # sanitizers would silently keep emitting RTTI and lose the size win.
-set(ENABLE_RTTI ${ENABLE_SANITIZERS})
+option(BABYLON_NATIVE_ENABLE_RTTI "Compile Babylon Native with RTTI. Enable when linking into a host that uses RTTI or catches standard exceptions." OFF)
+if(ENABLE_SANITIZERS OR BABYLON_NATIVE_ENABLE_RTTI)
+    set(ENABLE_RTTI ON)
+else()
+    set(ENABLE_RTTI OFF)
+endif()
 
 if(ENABLE_SANITIZERS)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
