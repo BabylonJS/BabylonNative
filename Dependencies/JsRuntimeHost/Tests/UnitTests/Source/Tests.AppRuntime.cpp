@@ -11,6 +11,34 @@
 #include <string_view>
 #include <vector>
 
+TEST(AppRuntime, SuspendedShutdownReleasesPendingCallbackOnTheEnvironmentThread)
+{
+    std::function<void()> pendingFrame;
+    std::thread::id jsThread;
+    bool invoked{};
+    int releases{};
+    {
+        Babylon::AppRuntime runtime{{}, [&] {
+            EXPECT_EQ(std::this_thread::get_id(), jsThread);
+            EXPECT_TRUE(pendingFrame);
+            pendingFrame = {};
+            ++releases;
+        }};
+        std::promise<void> queued;
+        runtime.Dispatch([&](Napi::Env env) {
+            jsThread = std::this_thread::get_id();
+            auto session = std::make_shared<Napi::ObjectReference>(Napi::Persistent(Napi::Object::New(env)));
+            pendingFrame = [session, &invoked] { invoked = true; };
+            queued.set_value();
+        });
+        queued.get_future().wait();
+        runtime.Suspend();
+    }
+    EXPECT_EQ(releases, 1);
+    EXPECT_FALSE(pendingFrame);
+    EXPECT_FALSE(invoked);
+}
+
 TEST(AppRuntime, DestroyDoesNotDeadlock)
 {
     // Regression test verifying AppRuntime destruction doesn't deadlock.

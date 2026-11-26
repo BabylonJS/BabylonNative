@@ -164,6 +164,22 @@ namespace Babylon
             return m_endTask;
         }
 
+        void NativeXr::Impl::ReleaseJavaScriptReferences()
+        {
+            if (m_sessionState)
+            {
+                // A queued graphics task can retain the session until device destruction.
+                auto& state = *m_sessionState;
+                state.ScheduleFrameCallbacks.clear();
+                state.CreateRenderTexture.Reset();
+                state.DestroyRenderTexture.Reset();
+                for (auto& entry : state.TextureToViewConfigurationMap)
+                {
+                    entry.second.JsTextures.clear();
+                }
+            }
+        }
+
         void NativeXr::Impl::ScheduleFrame(std::function<void(const std::shared_ptr<const xr::System::Session::Frame>&)>&& callback)
         {
             if (m_sessionState->FrameScheduled)

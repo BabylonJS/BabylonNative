@@ -35,6 +35,8 @@ namespace Babylon
 
         AppRuntime();
         AppRuntime(Options options);
+        // Runs once on the JS thread after dispatch stops, while native references can still be released.
+        AppRuntime(Options options, std::function<void()> beforeEnvironmentShutdown);
         ~AppRuntime();
 
         // Copy semantics
