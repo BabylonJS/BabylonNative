@@ -1,6 +1,10 @@
 #pragma once
 
 #include <bx/math.h>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstring>
 
 namespace Babylon
 {
@@ -98,27 +102,59 @@ namespace Babylon
             : Napi::ObjectWrap<XRRigidTransform>{info}
             , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
         {
-            if (info.Length() == 2)
+            const auto env = info.Env();
+            if (info.Length() == 0)
             {
-                m_position = Napi::Persistent(info[0].As<Napi::Object>());
-                m_orientation = Napi::Persistent(info[1].As<Napi::Object>());
+                m_position = Napi::Persistent(MakePoint(env, {0, 0, 0, 1}));
+                m_orientation = Napi::Persistent(MakePoint(env, {0, 0, 0, 1}));
+                std::memcpy(m_matrix.Value().Data(), IDENTITY_MATRIX.data(), sizeof(IDENTITY_MATRIX));
+                return;
             }
-            else
+            const auto position = ReadPoint(info[0]);
+            auto orientation = ReadPoint(info[1]);
+            if (position[3] != 1.0)
             {
-                auto position{Napi::Object::New(info.Env())};
-                position.Set("x", 0.f);
-                position.Set("y", 0.f);
-                position.Set("z", 0.f);
-                position.Set("w", 1.f);
-                m_position = Napi::Persistent(position);
-
-                auto orientation{Napi::Object::New(info.Env())};
-                orientation.Set("x", 0.f);
-                orientation.Set("y", 0.f);
-                orientation.Set("z", 0.f);
-                orientation.Set("w", 1.f);
-                m_orientation = Napi::Persistent(orientation);
+                throw Napi::TypeError::New(env, "XRRigidTransform position.w must be 1.");
             }
+            const auto finite = [](double value) { return std::isfinite(value); };
+            if (!std::all_of(position.begin(), position.end(), finite) || !std::all_of(orientation.begin(), orientation.end(), finite))
+            {
+                throw Napi::TypeError::New(env, "XRRigidTransform components must be finite.");
+            }
+            if (orientation != Point{0, 0, 0, 1})
+            {
+                // Scale before squaring so even very large or subnormal finite quaternions normalize.
+                const double scale = std::max({std::abs(orientation[0]), std::abs(orientation[1]), std::abs(orientation[2]), std::abs(orientation[3])});
+                if (scale == 0.0)
+                {
+                    const auto message = "XRRigidTransform orientation cannot have zero length.";
+                    const auto ctor = env.Global().Get("DOMException");
+                    if (ctor.IsFunction())
+                    {
+                        throw Napi::Error{env, ctor.As<Napi::Function>().New({Napi::String::New(env, message), Napi::String::New(env, "InvalidStateError")})};
+                    }
+                    auto error = Napi::Error::New(env, message);
+                    error.Value().Set("name", "InvalidStateError");
+                    throw error;
+                }
+                double squaredLength{};
+                for (auto& component : orientation)
+                {
+                    component /= scale;
+                    squaredLength += component * component;
+                }
+                const double length = std::sqrt(squaredLength);
+                for (auto& component : orientation)
+                {
+                    component /= length;
+                }
+            }
+            m_position = Napi::Persistent(MakePoint(env, position));
+            m_orientation = Napi::Persistent(MakePoint(env, orientation));
+            const xr::Space space{{{static_cast<float>(position[0]), static_cast<float>(position[1]), static_cast<float>(position[2])},
+                {static_cast<float>(orientation[0]), static_cast<float>(orientation[1]), static_cast<float>(orientation[2]), static_cast<float>(orientation[3])}}};
+            const auto matrix = CreateTransformMatrix(space, false);
+            std::memcpy(m_matrix.Value().Data(), matrix.data(), sizeof(matrix));
         }
 
         void Update(XRRigidTransform* transform)
@@ -175,6 +211,45 @@ namespace Babylon
         }
 
     private:
+        using Point = std::array<double, 4>;
+
+        static Point ReadPoint(const Napi::Value& value)
+        {
+            Point point{0, 0, 0, 1};
+            if (value.IsUndefined() || value.IsNull())
+            {
+                return point;
+            }
+            if (!value.IsObject() && !value.IsFunction())
+            {
+                throw Napi::TypeError::New(value.Env(), "Expected a DOMPointInit dictionary.");
+            }
+            const auto object = value.As<Napi::Object>();
+            // Web IDL reads dictionary members once, in lexicographic order.
+            const auto read = [&](const char* name, size_t index) {
+                const auto member = object.Get(name);
+                if (!member.IsUndefined())
+                {
+                    point[index] = member.ToNumber().DoubleValue();
+                }
+            };
+            read("w", 3);
+            read("x", 0);
+            read("y", 1);
+            read("z", 2);
+            return point;
+        }
+
+        static Napi::Object MakePoint(Napi::Env env, const Point& point)
+        {
+            auto result = Napi::Object::New(env);
+            result.Set("x", point[0]);
+            result.Set("y", point[1]);
+            result.Set("z", point[2]);
+            result.Set("w", point[3]);
+            return result;
+        }
+
         Napi::ObjectReference m_position{};
         Napi::ObjectReference m_orientation{};
         Napi::Reference<Napi::Float32Array> m_matrix{};
