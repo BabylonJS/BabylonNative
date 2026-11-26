@@ -63,6 +63,7 @@ set(SOURCES
     "Source/Tests.ExternalTexture.Msaa.cpp"
     "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
+    "Source/Tests.NativeXr.RigidTransform.cpp"
     "Source/Tests.NativeEngine.InstanceData.cpp"
     "Source/Tests.NativeEngine.ImageFormats.cpp"
     "Source/Tests.NativeEngine.IntegerClear.cpp"
@@ -132,6 +133,8 @@ endif()
 target_include_directories(UnitTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../Plugins/NativeEngine/Source")
 target_include_directories(UnitTests PRIVATE "${BGFX_DIR}/3rdparty")
 target_link_libraries(UnitTests
+    PRIVATE arcana
+    PRIVATE bx
     PRIVATE AppRuntime
     PRIVATE Blob
     PRIVATE Canvas
