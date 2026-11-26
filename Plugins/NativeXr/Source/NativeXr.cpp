@@ -75,6 +75,11 @@ namespace Babylon
             return {impl};
         }
 
+        void NativeXr::ReleaseJavaScriptReferences()
+        {
+            m_impl->ReleaseJavaScriptReferences();
+        }
+
         void NativeXr::UpdateWindow(void* windowPtr)
         {
             m_impl->UpdateWindow(windowPtr);

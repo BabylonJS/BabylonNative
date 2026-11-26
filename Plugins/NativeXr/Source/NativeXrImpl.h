@@ -10,6 +10,7 @@ namespace Babylon
             explicit Impl(Napi::Env);
 
             void UpdateWindow(void* windowPtr);
+            void ReleaseJavaScriptReferences();
             void SetSessionStateChangedCallback(std::function<void(bool)> callback);
 
             arcana::task<void, std::exception_ptr> BeginSessionAsync();

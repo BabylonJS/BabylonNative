@@ -21,6 +21,8 @@ namespace Babylon::Plugins
         static NativeXr BABYLON_API Initialize(Napi::Env env);
 
         void UpdateWindow(void* windowPtr);
+        // Called on the JS thread after the render loop has stopped, before its environment is destroyed.
+        void ReleaseJavaScriptReferences();
         void SetSessionStateChangedCallback(std::function<void(bool)> callback);
 
     private:
