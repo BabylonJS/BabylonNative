@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <gsl/util>
+#include "DeviceImplTestAccess.h"
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -11,9 +13,14 @@
 
 #include <chrono>
 #include <array>
+#include <condition_variable>
+#include <cstdlib>
 #include <future>
+#include <iostream>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <thread>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -286,3 +293,121 @@ TEST(Device, FrameCompletionScopeProvidesEncoderOutsideFrame)
         << "holding a FrameCompletionScope must guarantee a usable encoder; this is what lets the "
            "NativeXr framebuffer-creation clear run safely off-frame";
 }
+
+#ifdef BABYLON_NATIVE_GRAPHICS_TEST_HOOKS
+namespace
+{
+    class FrameGateWatchdog final
+    {
+    public:
+        FrameGateWatchdog()
+            : m_thread{[this] {
+                std::unique_lock lock{m_mutex};
+                if (!m_cv.wait_for(lock, std::chrono::seconds{30}, [this] { return m_finished; }))
+                {
+                    std::cerr << "Timed out in queued frame-scope regression (admission, flush, or closure)" << std::endl;
+                    std::quick_exit(1);
+                }
+            }}
+        {
+        }
+
+        ~FrameGateWatchdog()
+        {
+            {
+                std::scoped_lock lock{m_mutex};
+                m_finished = true;
+            }
+            m_cv.notify_all();
+            m_thread.join();
+        }
+
+    private:
+        std::mutex m_mutex;
+        std::condition_variable m_cv;
+        bool m_finished{};
+        std::thread m_thread;
+    };
+
+    void ExerciseQueuedFrameScope(bool flush)
+    {
+        using namespace Babylon::Graphics;
+        FrameGateWatchdog watchdog;
+        DeviceImpl device{g_deviceConfig};
+        auto& context = device.GetContext();
+        device.StartRenderingCurrentFrame();
+        device.FinishRenderingCurrentFrame();
+
+        std::promise<void> queued;
+        auto queuedFuture = queued.get_future();
+        std::promise<void> closing;
+        auto closingFuture = closing.get_future();
+        std::promise<void> completed;
+        auto completedFuture = completed.get_future();
+        bool encoderAvailable{};
+        bool encoderAvailableAfterFlush{};
+        bool flushed{};
+        uint32_t generationBeforeFlush{};
+        uint32_t generationAfterFlush{};
+
+        DeviceImplTestAccess::SetFrameScopeHooks(device,
+            [&](std::unique_lock<std::mutex>& lock) {
+                EXPECT_EQ(context.GetActiveEncoder(), nullptr);
+                EXPECT_EQ(DeviceImplTestAccess::WaitingFrameScopes(device), 1);
+                lock.unlock();
+                queued.set_value();
+                closingFuture.wait();
+                lock.lock();
+            },
+            [&] {
+                EXPECT_EQ(DeviceImplTestAccess::WaitingFrameScopes(device), 1);
+                // Finish holds the mutex: acquisition cannot win the race to the close predicate.
+                closing.set_value();
+            });
+
+        auto clearHooks = gsl::finally([&] { DeviceImplTestAccess::SetFrameScopeHooks(device, {}, {}); });
+        std::thread worker{[&] {
+            {
+                auto scope = context.AcquireFrameCompletionScope();
+                encoderAvailable = context.GetActiveEncoder() != nullptr;
+                if (flush)
+                {
+                    generationBeforeFlush = context.ViewIdGeneration();
+                    flushed = context.ForceMidFrameFlush();
+                    generationAfterFlush = context.ViewIdGeneration();
+                    encoderAvailableAfterFlush = context.GetActiveEncoder() != nullptr;
+                }
+            }
+            completed.set_value();
+        }};
+        auto joinWorker = gsl::finally([&] { worker.join(); });
+
+        queuedFuture.wait();
+        // The real request is reserved behind a closed gate. Do not wait for acquisition.
+        device.StartRenderingCurrentFrame();
+        device.FinishRenderingCurrentFrame();
+
+        EXPECT_TRUE(DeviceImplTestAccess::FrameScopesDrained(device))
+            << "Frame closure overtook a queued acquisition or an active scope";
+        EXPECT_EQ(context.GetActiveEncoder(), nullptr);
+        completedFuture.wait();
+        EXPECT_TRUE(encoderAvailable);
+        if (flush)
+        {
+            EXPECT_TRUE(flushed);
+            EXPECT_NE(generationBeforeFlush, generationAfterFlush);
+            EXPECT_TRUE(encoderAvailableAfterFlush);
+        }
+    }
+}
+
+TEST(Device, QueuedFrameScopeCompletesBeforeFrameClosure)
+{
+    ExerciseQueuedFrameScope(false);
+}
+
+TEST(Device, QueuedFrameScopeFlushesWhileFrameClosureWaits)
+{
+    ExerciseQueuedFrameScope(true);
+}
+#endif

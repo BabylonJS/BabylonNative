@@ -75,6 +75,11 @@ namespace Babylon
 
     void Program::Initialize(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo)
     {
+        std::lock_guard<std::recursive_mutex> lock{m_initializationMutex};
+        if (m_disposed)
+        {
+            return;
+        }
         arcana::trace_region region{"Program::Initialize"};
 
         auto vertexShader = CreateShader(shaderInfo, shaderInfo->VertexBytes);
@@ -129,6 +134,11 @@ namespace Babylon
 
     void Program::InitializeCompute(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo)
     {
+        std::lock_guard<std::recursive_mutex> lock{m_initializationMutex};
+        if (m_disposed)
+        {
+            return;
+        }
         arcana::trace_region region{"Program::InitializeCompute"};
 
         auto computeShader = CreateShader(shaderInfo, shaderInfo->ComputeBytes);
@@ -139,6 +149,11 @@ namespace Babylon
 
     void Program::InitializeTransformFeedback(std::shared_ptr<Graphics::BgfxShaderInfo> shaderInfo)
     {
+        std::lock_guard<std::recursive_mutex> lock{m_initializationMutex};
+        if (m_disposed)
+        {
+            return;
+        }
         InitializeCompute(shaderInfo);
         m_vertexAttributeLocations = shaderInfo->VertexAttributeLocations;
         m_transformFeedbackParams = GetUniformInfo(Graphics::TRANSFORM_FEEDBACK_PARAMS_UNIFORM);
@@ -181,6 +196,9 @@ namespace Babylon
 
     void Program::Dispose()
     {
+        // Async shader initialization and command-stream deletion run on different threads.
+        std::lock_guard<std::recursive_mutex> lock{m_initializationMutex};
+        m_disposed = true;
         const bool sameDevice = m_deviceID == m_deviceContext.GetDeviceId();
 
         if (bgfx::isValid(m_handle))

@@ -458,9 +458,17 @@ namespace Babylon::Graphics
         // rendering continues within the same logical frame.
         {
             std::unique_lock lock{m_frameSyncMutex};
+#ifdef BABYLON_NATIVE_GRAPHICS_TEST_HOOKS
+            if (m_frameClosingTestHook)
+            {
+                m_frameClosingTestHook();
+            }
+#endif
             while (true)
             {
-                m_frameSyncCV.wait(lock, [this] { return m_pendingFrameScopes == 0 || m_flushRequested; });
+                m_frameSyncCV.wait(lock, [this] {
+                    return (m_pendingFrameScopes == 0 && m_waitingFrameScopes == 0) || m_flushRequested;
+                });
 
                 if (m_flushRequested)
                 {
@@ -541,7 +549,16 @@ namespace Babylon::Graphics
     void DeviceImpl::IncrementPendingFrameScopes()
     {
         std::unique_lock lock{m_frameSyncMutex};
+        // Reserve admission before sleeping so frame closure cannot overtake this request.
+        ++m_waitingFrameScopes;
+#ifdef BABYLON_NATIVE_GRAPHICS_TEST_HOOKS
+        if (m_frameScopeQueuedTestHook)
+        {
+            m_frameScopeQueuedTestHook(lock);
+        }
+#endif
         m_frameSyncCV.wait(lock, [this] { return !m_frameBlocked; });
+        --m_waitingFrameScopes;
         m_pendingFrameScopes++;
     }
 
