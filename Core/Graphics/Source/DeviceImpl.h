@@ -305,6 +305,12 @@ namespace Babylon::Graphics
         int m_waitingFrameScopes{0};
         bool m_frameBlocked{true};
 
+#ifdef BABYLON_NATIVE_GRAPHICS_TEST_HOOKS
+        // Pin waiter/closer ordering in unit tests without relying on OS wakeup scheduling.
+        std::function<void(std::unique_lock<std::mutex>&)> m_frameScopeQueuedTestHook;
+        std::function<void()> m_frameClosingTestHook;
+#endif
+
         // Mid-frame flush handshake (guarded by m_frameSyncMutex):
         //   - JS thread sets m_flushRequested and waits on m_flushCompleteCV.
         //   - Render thread (parked in FinishRenderingCurrentFrame) services the

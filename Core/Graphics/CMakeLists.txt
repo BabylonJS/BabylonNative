@@ -30,6 +30,10 @@ endif()
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
+if(BABYLON_NATIVE_BUILD_APPS)
+    target_compile_definitions(Graphics PUBLIC BABYLON_NATIVE_GRAPHICS_TEST_HOOKS)
+endif()
+
 target_include_directories(Graphics
     PRIVATE "Include/Shared"
     PRIVATE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
