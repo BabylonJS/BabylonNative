@@ -10,6 +10,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -89,6 +90,8 @@ namespace Babylon
         const std::map<uint32_t, uint32_t>& BuiltInInstanceDataSlots() const { return m_builtInInstanceDataSlots; }
 
     private:
+        std::recursive_mutex m_initializationMutex;
+        bool m_disposed{false};
         Graphics::DeviceContext& m_deviceContext;
         uintptr_t m_deviceID;
         bgfx::ProgramHandle m_handle;

@@ -291,13 +291,18 @@ namespace Babylon::Graphics
         //   - Incremented by IncrementPendingFrameScopes (called by FrameCompletionScope constructor)
         //   - Decremented by DecrementPendingFrameScopes (called by FrameCompletionScope destructor)
         //
+        // m_waitingFrameScopes (int):
+        //   - Requests registered before waiting for the gate to open
+        //   - Closure also drains these requests so a wakeup cannot lose every frame
+        //
         // m_frameSyncMutex + m_frameSyncCV:
-        //   - Protects m_frameBlocked and m_pendingFrameScopes
+        //   - Protects m_frameBlocked and the waiting/active scope counters
         //   - CV is waited on by: main thread (for scopes==0) and JS thread (for !blocked)
         //   - CV is notified by: JS thread (scope released) and main thread (unblocked)
         std::mutex m_frameSyncMutex{};
         std::condition_variable m_frameSyncCV{};
         int m_pendingFrameScopes{0};
+        int m_waitingFrameScopes{0};
         bool m_frameBlocked{true};
 
         // Mid-frame flush handshake (guarded by m_frameSyncMutex):

@@ -460,7 +460,9 @@ namespace Babylon::Graphics
             std::unique_lock lock{m_frameSyncMutex};
             while (true)
             {
-                m_frameSyncCV.wait(lock, [this] { return m_pendingFrameScopes == 0 || m_flushRequested; });
+                m_frameSyncCV.wait(lock, [this] {
+                    return (m_pendingFrameScopes == 0 && m_waitingFrameScopes == 0) || m_flushRequested;
+                });
 
                 if (m_flushRequested)
                 {
@@ -541,7 +543,10 @@ namespace Babylon::Graphics
     void DeviceImpl::IncrementPendingFrameScopes()
     {
         std::unique_lock lock{m_frameSyncMutex};
+        // Reserve admission before sleeping so frame closure cannot overtake this request.
+        ++m_waitingFrameScopes;
         m_frameSyncCV.wait(lock, [this] { return !m_frameBlocked; });
+        --m_waitingFrameScopes;
         m_pendingFrameScopes++;
     }
 
